@@ -6,6 +6,7 @@
   "scripts": {
     "start": "bun run server.ts",
     "dev": "bun --watch server.ts",
+    "build": "bun build server.ts --outdir ./dist --target bun",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [
