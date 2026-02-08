@@ -1,149 +1,16 @@
 import { Hono } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
-import { OpenRouter } from '@openrouter/sdk';
-import type { ChatGenerationParams, ChatResponse } from '@openrouter/sdk/models';
+import type { ChatGenerationParams } from '@openrouter/sdk/models';
 import OpenAI from 'openai';
-import type { ChatCompletionMessageParam, ChatCompletionTool, ChatCompletionToolChoiceOption } from 'openai/resources/chat/completions';
 import { validateAgentRequest } from '../../middleware/validateRequest';
-
-interface AgentRequest {
-  model: string;
-  messages: ChatCompletionMessageParam[];
-  stream?: boolean;
-  temperature?: number;
-  max_tokens?: number;
-  top_p?: number;
-  frequency_penalty?: number;
-  presence_penalty?: number;
-  tools?: ChatCompletionTool[];
-  tool_choice?: ChatCompletionToolChoiceOption;
-}
+import {
+  type AgentRequest,
+  getClient,
+  convertMessagesToOpenRouter,
+  convertToolsToOpenRouter,
+} from '../../utils/agent';
 
 const router = new Hono<{ Variables: { validatedBody: AgentRequest } }>();
-
-// OpenRouter SDK client
-const openrouterClient = new OpenRouter({
-  apiKey: Bun.env.OPENROUTER_API_KEY || '',
-  httpReferer: "https://flixa.deniai.app",
-  xTitle: "Deni AI Flixa"
-});
-
-// Voids.top (OpenAI compatible) client
-const voidsClient = new OpenAI({
-  baseURL: Bun.env.OPENAI_COMPAT_BASE_URL || 'https://capi.voids.top/v2',
-  apiKey: Bun.env.OPENAI_COMPAT_API_KEY || 'a',
-});
-
-type ClientResult =
-  | { type: 'openrouter'; client: OpenRouter; providerName: string }
-  | { type: 'openai'; client: OpenAI; providerName: string }
-  | { error: string };
-
-function getClient(model: string): ClientResult {
-  const useOpenRouter = model.includes('/');
-
-  if (useOpenRouter) {
-    if (!Bun.env.OPENROUTER_API_KEY) {
-      return { error: 'OPENROUTER_API_KEY is required for OpenRouter models' };
-    }
-    return { type: 'openrouter', client: openrouterClient, providerName: 'openrouter' };
-  }
-
-  return { type: 'openai', client: voidsClient, providerName: 'voids.top' };
-}
-
-function logToolsRequest(model: string, tools?: ChatCompletionTool[], tool_choice?: ChatCompletionToolChoiceOption) {
-  if (!tools || tools.length === 0) return;
-
-  const toolNames = tools.map(t => {
-    if (t.type === 'function') {
-      return t.function.name;
-    }
-    return t.type;
-  });
-  console.log(`[Tools Request] model=${model} tools=[${toolNames.join(', ')}] tool_choice=${JSON.stringify(tool_choice) || 'auto'}`);
-}
-
-function logToolsResponseOpenAI(response: OpenAI.Chat.Completions.ChatCompletion) {
-  const toolCalls = response.choices[0]?.message?.tool_calls;
-  if (!toolCalls || toolCalls.length === 0) return;
-
-  for (const tc of toolCalls) {
-    if (tc.type === 'function') {
-      console.log(`[Tools Response] id=${tc.id} function=${tc.function.name} arguments=${tc.function.arguments}`);
-    }
-  }
-}
-
-function logToolsResponseOpenRouter(response: ChatResponse) {
-  const toolCalls = response.choices?.[0]?.message?.toolCalls;
-  if (!toolCalls || toolCalls.length === 0) return;
-
-  for (const tc of toolCalls) {
-    console.log(`[Tools Response] id=${tc.id} function=${tc.function.name} arguments=${tc.function.arguments}`);
-  }
-}
-
-// Convert OpenAI-style messages to OpenRouter format
-function convertMessagesToOpenRouter(messages: ChatCompletionMessageParam[]): ChatGenerationParams['messages'] {
-  return messages.map(msg => {
-    if (msg.role === 'system') {
-      return { role: 'system' as const, content: msg.content as string };
-    }
-    if (msg.role === 'user') {
-      return { role: 'user' as const, content: msg.content as string };
-    }
-    if (msg.role === 'assistant') {
-      const assistantMsg: any = { role: 'assistant' as const };
-      if (msg.content) {
-        assistantMsg.content = msg.content;
-      }
-      if (msg.tool_calls) {
-        assistantMsg.toolCalls = msg.tool_calls.map(tc => {
-          if (tc.type === 'function') {
-            return {
-              id: tc.id,
-              type: tc.type,
-              function: {
-                name: tc.function.name,
-                arguments: tc.function.arguments,
-              },
-            };
-          }
-          return tc;
-        });
-      }
-      return assistantMsg;
-    }
-    if (msg.role === 'tool') {
-      return {
-        role: 'tool' as const,
-        toolCallId: msg.tool_call_id,
-        content: msg.content as string,
-      };
-    }
-    return msg as any;
-  });
-}
-
-// Convert OpenAI-style tools to OpenRouter format
-function convertToolsToOpenRouter(tools?: ChatCompletionTool[]): ChatGenerationParams['tools'] {
-  if (!tools || tools.length === 0) return undefined;
-
-  return tools.map(tool => {
-    if (tool.type === 'function') {
-      return {
-        type: 'function' as const,
-        function: {
-          name: tool.function.name,
-          description: tool.function.description,
-          parameters: tool.function.parameters as Record<string, any>,
-        },
-      };
-    }
-    return tool as any;
-  });
-}
 
 /**
  * POST /v1/agent/chat/completions
@@ -153,8 +20,6 @@ router.post('/agent/chat/completions', validateAgentRequest, async (c) => {
   try {
     const body = c.get('validatedBody');
     const { messages, model, stream, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, tools, tool_choice } = body;
-
-    logToolsRequest(model, tools, tool_choice);
 
     if (!model) {
       return c.json({
@@ -234,7 +99,6 @@ router.post('/agent/chat/completions', validateAgentRequest, async (c) => {
         chatGenerationParams: { ...openrouterParams, stream: false },
       });
 
-      logToolsResponseOpenRouter(response);
       return c.json(response, 200);
     }
 
@@ -294,7 +158,6 @@ router.post('/agent/chat/completions', validateAgentRequest, async (c) => {
       stream: false,
     });
 
-    logToolsResponseOpenAI(response);
     return c.json(response, 200);
 
   } catch (error) {
