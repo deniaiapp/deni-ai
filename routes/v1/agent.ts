@@ -24,7 +24,7 @@ const router = new Hono<{ Variables: { validatedBody: AgentRequest } }>();
 // OpenRouter SDK client
 const openrouterClient = new OpenRouter({
   apiKey: Bun.env.OPENROUTER_API_KEY || '',
-  httpReferer: "https://deniai.app",
+  httpReferer: "https://flixa.deniai.app",
   xTitle: "Deni AI Flixa"
 });
 
