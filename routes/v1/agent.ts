@@ -3,6 +3,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import type { ChatGenerationParams } from '@openrouter/sdk/models';
 import OpenAI from 'openai';
 import { validateAgentRequest } from '../../middleware/validateRequest';
+import { validateAgentAuth, type AgentAuthContext } from '../../middleware/validateAgentAuth';
 import {
   type AgentRequest,
   getClient,
@@ -10,28 +11,18 @@ import {
   convertToolsToOpenRouter,
 } from '../../utils/agent';
 
-const router = new Hono<{ Variables: { validatedBody: AgentRequest } }>();
+const router = new Hono<{ Variables: { validatedBody: AgentRequest; agentAuth: AgentAuthContext } }>();
 
 /**
  * POST /v1/agent/chat/completions
  * OpenAI-style agent endpoint using official SDKs
  */
-router.post('/agent/chat/completions', validateAgentRequest, async (c) => {
+router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, async (c) => {
   try {
     const body = c.get('validatedBody');
     const { messages, model, stream, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, tools, tool_choice } = body;
 
-    if (!model) {
-      return c.json({
-        error: {
-          message: 'model is required',
-          type: 'invalid_request_error',
-          param: 'model',
-          code: 'missing_model'
-        }
-      }, 400);
-    }
-
+    // model is guaranteed to exist after validateAgentAuth middleware
     const clientResult = getClient(model);
     if ('error' in clientResult) {
       return c.json({
