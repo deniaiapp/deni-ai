@@ -61,3 +61,75 @@ export function convertToolsToOpenRouter(tools?: ChatCompletionTool[]): ChatGene
     return tool as any;
   });
 }
+
+// Convert OpenRouter response to OpenAI-compatible format
+export function convertOpenRouterResponseToOpenAI(response: any): any {
+  return {
+    id: response.id,
+    object: response.object,
+    created: response.created,
+    model: response.model,
+    system_fingerprint: response.systemFingerprint ?? null,
+    choices: response.choices.map((choice: any) => ({
+      index: choice.index,
+      message: {
+        role: choice.message.role,
+        content: choice.message.content ?? null,
+        tool_calls: choice.message.toolCalls?.map((tc: any) => ({
+          id: tc.id,
+          type: tc.type,
+          function: {
+            name: tc.function.name,
+            arguments: tc.function.arguments,
+          },
+        })),
+        refusal: choice.message.refusal ?? null,
+      },
+      logprobs: choice.logprobs ?? null,
+      finish_reason: choice.finishReason,
+    })),
+    usage: response.usage ? {
+      prompt_tokens: response.usage.promptTokens ?? response.usage.prompt_tokens,
+      completion_tokens: response.usage.completionTokens ?? response.usage.completion_tokens,
+      total_tokens: response.usage.totalTokens ?? response.usage.total_tokens,
+    } : undefined,
+  };
+}
+
+// Convert OpenRouter streaming chunk to OpenAI-compatible format
+export function convertOpenRouterStreamChunkToOpenAI(chunk: any): any {
+  // Handle both wrapped {data: ...} and unwrapped formats
+  const data = chunk.data ?? chunk;
+
+  return {
+    id: data.id,
+    object: data.object,
+    created: data.created,
+    model: data.model,
+    system_fingerprint: data.systemFingerprint ?? null,
+    choices: data.choices?.map((choice: any) => ({
+      index: choice.index,
+      delta: {
+        role: choice.delta?.role,
+        content: choice.delta?.content,
+        tool_calls: choice.delta?.toolCalls?.map((tc: any) => ({
+          index: tc.index,
+          id: tc.id,
+          type: tc.type,
+          function: tc.function ? {
+            name: tc.function.name,
+            arguments: tc.function.arguments,
+          } : undefined,
+        })),
+        refusal: choice.delta?.refusal,
+      },
+      logprobs: choice.logprobs ?? null,
+      finish_reason: choice.finishReason,
+    })) ?? [],
+    usage: data.usage ? {
+      prompt_tokens: data.usage.promptTokens ?? data.usage.prompt_tokens,
+      completion_tokens: data.usage.completionTokens ?? data.usage.completion_tokens,
+      total_tokens: data.usage.totalTokens ?? data.usage.total_tokens,
+    } : undefined,
+  };
+}

@@ -9,6 +9,8 @@ import {
   getClient,
   convertMessagesToOpenRouter,
   convertToolsToOpenRouter,
+  convertOpenRouterResponseToOpenAI,
+  convertOpenRouterStreamChunkToOpenAI,
 } from '../../utils/agent';
 
 const router = new Hono<{ Variables: { validatedBody: AgentRequest; agentAuth: AgentAuthContext } }>();
@@ -63,7 +65,8 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
           async start(controller) {
             try {
               for await (const chunk of streamResponse) {
-                const data = JSON.stringify(chunk);
+                const converted = convertOpenRouterStreamChunkToOpenAI(chunk);
+                const data = JSON.stringify(converted);
                 controller.enqueue(encoder.encode(`data: ${data}\n\n`));
               }
               controller.enqueue(encoder.encode('data: [DONE]\n\n'));
@@ -90,7 +93,7 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
         chatGenerationParams: { ...openrouterParams, stream: false },
       });
 
-      return c.json(response, 200);
+      return c.json(convertOpenRouterResponseToOpenAI(response), 200);
     }
 
     // Use OpenAI SDK for voids.top
