@@ -54,6 +54,21 @@ OpenAI-style agent endpoint (OpenRouter or OpenAI-compatible upstream).
 
 **Note:** The `model` field should use OpenRouter model format (e.g., `openai/gpt-4`, `anthropic/claude-3-opus`, `google/gemini-pro`, etc.). See [OpenRouter Models](https://openrouter.ai/models) for available models.
 
+#### POST `/v1/messages`
+
+Anthropic-compatible Messages API endpoint for Claude Code. Requires a direct Anthropic API key and supports `x-api-key` authentication.
+
+**Request Body (Anthropic format):**
+```json
+{
+  "model": "claude-3-5-sonnet-20240620",
+  "max_tokens": 1024,
+  "messages": [
+    { "role": "user", "content": "Hello from Claude Code" }
+  ]
+}
+```
+
 **Response (Non-streaming):**
 ```json
 {
@@ -93,6 +108,7 @@ OPENROUTER_API_KEY=your_openrouter_api_key_here
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_COMPAT_BASE_URL=https://capi.voids.top/v2
 OPENAI_COMPAT_API_KEY=a
+ANTHROPIC_API_KEY=your_anthropic_api_key_here
 ```
 
 Get your OpenRouter API key from [OpenRouter](https://openrouter.ai/keys).

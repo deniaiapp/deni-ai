@@ -4,6 +4,8 @@ import {
   getDeniUsageInfo,
   getModelCategory,
   hasQuotaForModel,
+  getRequiredTierForModel,
+  isTierSufficient,
 } from '../utils/deni';
 
 export interface AgentAuthContext {
@@ -13,9 +15,13 @@ export interface AgentAuthContext {
 }
 
 /**
- * Extract API key from Authorization header
+ * Extract API key from Authorization or x-api-key headers.
  */
-function extractApiKey(authHeader: string | undefined): string | null {
+function extractApiKey(authHeader: string | undefined, apiKeyHeader: string | undefined): string | null {
+  if (apiKeyHeader && apiKeyHeader.trim().length > 0) {
+    return apiKeyHeader.trim();
+  }
+
   if (!authHeader) return null;
 
   // Support "Bearer <key>" format
@@ -31,9 +37,10 @@ function extractApiKey(authHeader: string | undefined): string | null {
  * Must be placed AFTER validateAgentRequest middleware to access validatedBody
  */
 export async function validateAgentAuth(c: Context, next: Next) {
-  // Extract API key from Authorization header
+  // Extract API key from Authorization header or x-api-key
   const authHeader = c.req.header('Authorization');
-  const apiKey = extractApiKey(authHeader);
+  const apiKeyHeader = c.req.header('x-api-key');
+  const apiKey = extractApiKey(authHeader, apiKeyHeader);
 
   if (!apiKey) {
     return c.json(
@@ -112,10 +119,28 @@ export async function validateAgentAuth(c: Context, next: Next) {
     );
   }
 
+  // Check tier-based model restrictions
+  const requiredTier = getRequiredTierForModel(model);
+  const tier = usageInfo.tier;
+
+  if (requiredTier && !isTierSufficient(tier, requiredTier)) {
+    return c.json(
+      {
+        error: {
+          message: `The model "${model}" requires a ${requiredTier} plan or higher. Your current plan: ${tier}. Please upgrade your plan to access this model.`,
+          type: 'insufficient_plan',
+          param: 'model',
+          code: 'tier_restricted',
+        },
+      },
+      403
+    );
+  }
+
   // Store auth context for downstream handlers
   c.set('agentAuth', {
     userId: keyResult.userId,
-    tier: usageInfo.tier,
+    tier,
     modelCategory,
   } satisfies AgentAuthContext);
 

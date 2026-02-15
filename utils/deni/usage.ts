@@ -1,5 +1,6 @@
 import { getDeniPool } from './db';
 import type { DeniUsageInfo, BillingRow, UsageQuotaRow } from './types';
+import type { ModelCategory } from './models';
 
 // Active billing statuses
 const ACTIVE_STATUSES = ['active', 'trialing', 'past_due', 'incomplete', 'unpaid', 'paid'];
@@ -155,4 +156,47 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
     maxModeEligible,
     usage,
   };
+}
+
+/**
+ * Increment usage count by 1 for a given user and model category.
+ * Upserts the usage_quota row: increments if exists, inserts if not.
+ */
+export async function incrementUsage(userId: string, category: ModelCategory): Promise<void> {
+  const pool = getDeniPool();
+  const now = new Date();
+  const periodEnd = getNextMonthFirstDay();
+
+  try {
+    // First try to increment existing row (only if period hasn't expired)
+    const result = await pool.query(
+      `UPDATE usage_quota
+       SET used = CASE
+         WHEN period_end IS NOT NULL AND period_end < $3 THEN 1
+         ELSE used + 1
+       END,
+       period_start = CASE
+         WHEN period_end IS NOT NULL AND period_end < $3 THEN $3
+         ELSE period_start
+       END,
+       period_end = CASE
+         WHEN period_end IS NOT NULL AND period_end < $3 THEN $4
+         ELSE period_end
+       END
+       WHERE user_id = $1 AND category = $2`,
+      [userId, category, now, periodEnd]
+    );
+
+    // If no row was updated, insert a new one
+    if (result.rowCount === 0) {
+      await pool.query(
+        `INSERT INTO usage_quota (user_id, category, used, period_start, period_end)
+         VALUES ($1, $2, 1, $3, $4)
+         ON CONFLICT (user_id, category) DO UPDATE SET used = usage_quota.used + 1`,
+        [userId, category, now, periodEnd]
+      );
+    }
+  } catch (error) {
+    console.error(`[Usage] Failed to increment usage for user=${userId} category=${category}:`, error);
+  }
 }
