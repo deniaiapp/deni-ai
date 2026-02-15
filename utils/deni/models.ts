@@ -2,9 +2,9 @@ export type ModelCategory = 'basic' | 'premium';
 
 // Premium model patterns (high-end models)
 const PREMIUM_PATTERNS = [
-  // Claude models
-  /claude-.*-opus/i,
-  /claude-.*-sonnet/i,
+  // Claude models (matches both claude-3-opus and claude-opus-4-6 formats)
+  /claude-.*opus/i,
+  /claude-.*sonnet/i,
   // GPT-4 family
   /gpt-4o(?!-mini)/i,
   /gpt-4-turbo/i,

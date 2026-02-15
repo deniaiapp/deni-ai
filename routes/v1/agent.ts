@@ -19,10 +19,6 @@ import {
   convertToolsToOpenRouter,
   convertOpenRouterResponseToOpenAI,
   convertOpenRouterStreamChunkToOpenAI,
-  convertAnthropicRequestToOpenRouter,
-  convertOpenRouterResponseToAnthropic,
-  convertOpenRouterStreamChunkToAnthropicEvents,
-  openrouterClient,
 } from '../../utils/agent';
 
 const router = new Hono<{ Variables: { validatedBody: AgentRequest; agentAuth: AgentAuthContext } }>();
@@ -327,25 +323,40 @@ router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) 
 
     // Prefix model with anthropic/ for OpenRouter routing
     const openRouterModel = model.startsWith('anthropic/') ? model : `anthropic/${model}`;
-    const openrouterParams = convertAnthropicRequestToOpenRouter(body, openRouterModel);
 
-    if (stream) {
-      const streamResponse = await openrouterClient.chat.send({
-        chatGenerationParams: { ...openrouterParams, stream: true },
+    // Pass the Anthropic request body directly to OpenRouter's Anthropic-compatible endpoint
+    const openRouterBody = { ...body, model: openRouterModel };
+
+    const response = await fetch('https://openrouter.ai/api/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
+        'HTTP-Referer': 'https://flixa.deniai.app',
+        'X-Title': 'Deni AI Flixa',
+      },
+      body: JSON.stringify(openRouterBody),
+    });
+
+    if (!response.ok && !stream) {
+      const errorBody = await response.text();
+      console.error('[OpenRouter messages error]:', response.status, errorBody);
+      return new Response(errorBody, {
+        status: response.status,
+        headers: { 'Content-Type': 'application/json' },
       });
+    }
 
-      const encoder = new TextEncoder();
-      const streamState = { messageStarted: false, contentIndex: 0, model };
-
+    if (stream && response.body) {
+      // Pipe the SSE stream directly from OpenRouter to the client
+      const reader = response.body.getReader();
       const readable = new ReadableStream({
         async start(controller) {
           try {
-            for await (const chunk of streamResponse) {
-              const anthropicEvents = convertOpenRouterStreamChunkToAnthropicEvents(chunk, streamState);
-              for (const evt of anthropicEvents) {
-                controller.enqueue(encoder.encode(`event: ${evt.event}\n`));
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify(evt.data)}\n\n`));
-              }
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              controller.enqueue(value);
             }
             controller.close();
             incrementUsage(auth.userId, auth.modelCategory).catch(() => {});
@@ -357,7 +368,7 @@ router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) 
       });
 
       return new Response(readable, {
-        status: 200,
+        status: response.status,
         headers: {
           'Content-Type': 'text/event-stream',
           'Cache-Control': 'no-cache',
@@ -366,13 +377,13 @@ router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) 
       });
     }
 
-    // Non-streaming request
-    const response = await openrouterClient.chat.send({
-      chatGenerationParams: { ...openrouterParams, stream: false },
-    });
-
+    // Non-streaming: pass through the response directly
+    const responseBody = await response.text();
     incrementUsage(auth.userId, auth.modelCategory).catch(() => {});
-    return c.json(convertOpenRouterResponseToAnthropic(response, model), 200);
+    return new Response(responseBody, {
+      status: response.status,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Anthropic endpoint error:', error);
 
