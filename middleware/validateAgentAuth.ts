@@ -32,12 +32,19 @@ function extractApiKey(authHeader: string | undefined, apiKeyHeader: string | un
   return null;
 }
 
-/**
- * Middleware to validate Deni API key and check usage quota for agent requests
- * Must be placed AFTER validateAgentRequest middleware to access validatedBody
- */
-export async function validateAgentAuth(c: Context, next: Next) {
-  // Extract API key from Authorization header or x-api-key
+function authErrorMessage(code: string | null, fallback: string): string {
+  if (code === 'invalid_key') {
+    return 'Invalid API key. Please login again to Deni AI. If the issue persists, try updating the extension to the latest version.';
+  }
+
+  if (code === 'expired_key') {
+    return 'Your API key has expired. Please login again to Deni AI to generate a new key.';
+  }
+
+  return fallback;
+}
+
+async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string } | Response> {
   const authHeader = c.req.header('Authorization');
   const apiKeyHeader = c.req.header('x-api-key');
   const apiKey = extractApiKey(authHeader, apiKeyHeader);
@@ -56,21 +63,13 @@ export async function validateAgentAuth(c: Context, next: Next) {
     );
   }
 
-  // Validate API key
   const keyResult = await validateDeniApiKey(apiKey);
 
   if (!keyResult.valid) {
-    let message = keyResult.error;
-    if (keyResult.code === 'invalid_key') {
-      message = 'Invalid API key. Please login again to Deni AI. If the issue persists, try updating the extension to the latest version.';
-    } else if (keyResult.code === 'expired_key') {
-      message = 'Your API key has expired. Please login again to Deni AI to generate a new key.';
-    }
-
     return c.json(
       {
         error: {
-          message,
+          message: authErrorMessage(keyResult.code, keyResult.error),
           type: 'authentication_error',
           param: null,
           code: keyResult.code,
@@ -80,8 +79,35 @@ export async function validateAgentAuth(c: Context, next: Next) {
     );
   }
 
+  return { userId: keyResult.userId };
+}
+
+/**
+ * Middleware to validate Deni API key only.
+ * Used by endpoints that require authentication but do not need quota/tier checks by model.
+ */
+export async function validateAgentApiKey(c: Context, next: Next) {
+  const keyValidation = await validateApiKeyFromRequest(c);
+  if (keyValidation instanceof Response) {
+    return keyValidation;
+  }
+
+  c.set('agentUserId', keyValidation.userId);
+  await next();
+}
+
+/**
+ * Middleware to validate Deni API key and check usage quota for agent requests
+ * Must be placed AFTER validateAgentRequest middleware to access validatedBody
+ */
+export async function validateAgentAuth(c: Context, next: Next) {
+  const keyValidation = await validateApiKeyFromRequest(c);
+  if (keyValidation instanceof Response) {
+    return keyValidation;
+  }
+
   // Get user's usage info
-  const usageInfo = await getDeniUsageInfo(keyResult.userId);
+  const usageInfo = await getDeniUsageInfo(keyValidation.userId);
 
   // Get model from validated body
   const body = c.get('validatedBody') as { model?: string } | undefined;
@@ -139,7 +165,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
 
   // Store auth context for downstream handlers
   c.set('agentAuth', {
-    userId: keyResult.userId,
+    userId: keyValidation.userId,
     tier,
     modelCategory,
   } satisfies AgentAuthContext);

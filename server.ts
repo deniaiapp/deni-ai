@@ -3,6 +3,7 @@ import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
 import { agentRouter } from './routes/v1/agent';
 import { deniRouter } from './routes/v1/deni';
+import { modelsRouter } from './routes/v1/models';
 import { errorHandler } from './middleware/errorHandler';
 
 const app = new Hono();
@@ -19,6 +20,7 @@ app.get('/health', (c) => {
 // API Routes
 app.route('/v1', agentRouter);
 app.route('/v1', deniRouter);
+app.route('/v1', modelsRouter);
 
 // Error handling
 app.onError(errorHandler);

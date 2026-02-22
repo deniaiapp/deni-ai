@@ -6,6 +6,7 @@
   "scripts": {
     "start": "bun run server.ts",
     "dev": "bun --watch server.ts",
+    "dev:prod-env": "bun --env-file=.env.production --watch server.ts",
     "build": "bun build server.ts --outdir ./dist --target bun",
     "typecheck": "tsc --noEmit"
   },
@@ -32,6 +33,8 @@
   "devDependencies": {
     "@types/bun": "^1.3.8",
     "@types/pg": "^8.16.0",
+    "oxfmt": "^0.34.0",
+    "oxlint": "^1.49.0",
     "typescript": "^5.9.3"
   }
 }
