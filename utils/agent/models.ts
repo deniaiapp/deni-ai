@@ -9,6 +9,20 @@ export interface ModelDefinition {
 
 export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
+    id: "openai/gpt-5.4",
+    label: "GPT-5.4",
+    description: "Flagship model: top reasoning, code, long-context tasks.",
+    tags: ["general", "reasoning", "fast"],
+    tier: "free",
+  },
+  {
+    id: "openai/gpt-5.3-codex",
+    label: "GPT-5.3 Codex",
+    description: "Advanced agentic coding for complex engineering & security.",
+    tags: ["coding", "agentic", "fast"],
+    tier: "free",
+  },
+  {
     id: "openai/gpt-5.2-codex",
     label: "GPT-5.2 Codex",
     description: "Advanced agentic coding for complex engineering & security.",
@@ -68,7 +82,8 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
     id: "google/gemini-3.1-pro-preview",
     label: "Gemini 3.1 Pro Preview",
-    description: "Google frontier model: agentic coding, 1M context, multimodal.",
+    description:
+      "Google frontier model: agentic coding, 1M context, multimodal.",
     tags: ["powerful", "preview"],
     premium: true,
     tier: "free",
@@ -98,11 +113,15 @@ export function getModelLabel(modelId: string): string {
   return def ? def.label : modelId;
 }
 
-export function getModelDefinition(modelId: string): ModelDefinition | undefined {
+export function getModelDefinition(
+  modelId: string,
+): ModelDefinition | undefined {
   return MODEL_DEFINITIONS.find((m) => m.id === modelId);
 }
 
-export function getModelTierRequirement(model: string): "free" | "plus" | "pro" {
+export function getModelTierRequirement(
+  model: string,
+): "free" | "plus" | "pro" {
   const def = MODEL_DEFINITIONS.find((m) => m.id === model);
   return def ? def.tier : "free";
 }
