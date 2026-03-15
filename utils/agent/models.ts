@@ -105,7 +105,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
 ];
 
-export const DEFAULT_MODEL = "openai/gpt-5.2-codex";
+export const DEFAULT_MODEL = "openai/gpt-5.4";
 export const AVAILABLE_MODELS = MODEL_DEFINITIONS.map((model) => model.id);
 
 export function getModelLabel(modelId: string): string {
