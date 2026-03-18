@@ -11,11 +11,6 @@ import {
   type AgentRequest,
   getClient,
   convertMessagesToOpenRouter,
-  convertMessagesToAnthropic,
-  convertToolsToAnthropic,
-  extractAnthropicSystemPrompt,
-  convertAnthropicResponseToOpenAI,
-  convertAnthropicStreamEventToOpenAI,
   convertToolsToOpenRouter,
   convertOpenRouterResponseToOpenAI,
   convertOpenRouterStreamChunkToOpenAI,
@@ -30,7 +25,7 @@ const router = new Hono<{ Variables: { validatedBody: AgentRequest; agentAuth: A
 router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, async (c) => {
   try {
     const body = c.get('validatedBody');
-    const { messages, model, stream, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, tools, tool_choice } = body;
+    const { messages, model, stream, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, reasoning_effort, tools, tool_choice } = body;
     const auth = c.get('agentAuth') as AgentAuthContext;
 
     // model is guaranteed to exist after validateAgentAuth middleware
@@ -59,6 +54,7 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
         topP: top_p ?? undefined,
         frequencyPenalty: frequency_penalty ?? undefined,
         presencePenalty: presence_penalty ?? undefined,
+        reasoning: reasoning_effort ? { effort: reasoning_effort } : undefined,
         tools: convertToolsToOpenRouter(tools),
         toolChoice: tool_choice,
       };
@@ -107,98 +103,6 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
       return c.json(convertOpenRouterResponseToOpenAI(response), 200);
     }
 
-    // Use Anthropic SDK for direct Claude API access
-    if (clientResult.type === 'anthropic') {
-      const { client, providerName } = clientResult;
-
-      const systemPrompt = extractAnthropicSystemPrompt(messages);
-      const anthropicMessages = convertMessagesToAnthropic(messages);
-      const anthropicTools = convertToolsToAnthropic(tools);
-
-      const anthropicParams: Anthropic.Messages.MessageCreateParams = {
-        model,
-        messages: anthropicMessages,
-        max_tokens: max_tokens ?? 8192,
-        system: systemPrompt,
-        temperature: temperature ?? undefined,
-        top_p: top_p ?? undefined,
-        tools: anthropicTools,
-        stream: stream ?? false,
-      };
-
-      // Handle tool_choice conversion
-      if (anthropicTools && anthropicTools.length > 0 && tool_choice) {
-        if (tool_choice === 'auto') {
-          anthropicParams.tool_choice = { type: 'auto' };
-        } else if (tool_choice === 'required') {
-          anthropicParams.tool_choice = { type: 'any' };
-        } else if (tool_choice === 'none') {
-          anthropicParams.tool_choice = { type: 'none' };
-        } else if (typeof tool_choice === 'object' && tool_choice.type === 'function') {
-          anthropicParams.tool_choice = { type: 'tool', name: tool_choice.function.name };
-        }
-      }
-
-      if (stream) {
-        const streamResponse = client.messages.stream({
-          ...anthropicParams,
-          stream: undefined,
-        } as Anthropic.Messages.MessageCreateParamsNonStreaming);
-
-        const encoder = new TextEncoder();
-        let messageId = '';
-        let responseModel = model;
-
-        const readable = new ReadableStream({
-          async start(controller) {
-            try {
-              for await (const event of streamResponse) {
-                if (event.type === 'message_start') {
-                  messageId = event.message.id;
-                  responseModel = event.message.model || model;
-                }
-
-                const converted = convertAnthropicStreamEventToOpenAI(
-                  event as Anthropic.Messages.RawMessageStreamEvent,
-                  messageId,
-                  responseModel,
-                );
-
-                if (converted) {
-                  const data = JSON.stringify(converted);
-                  controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-                }
-              }
-              controller.enqueue(encoder.encode('data: [DONE]\n\n'));
-              controller.close();
-              incrementUsage(auth.userId, auth.modelCategory).catch(() => {});
-            } catch (error) {
-              console.error(`[Stream Error] provider=${providerName}:`, error);
-              controller.error(error);
-            }
-          },
-        });
-
-        return new Response(readable, {
-          status: 200,
-          headers: {
-            'Content-Type': 'text/event-stream',
-            'Cache-Control': 'no-cache',
-            'Connection': 'keep-alive',
-          },
-        });
-      }
-
-      // Non-streaming request
-      const response = await client.messages.create({
-        ...anthropicParams,
-        stream: false,
-      });
-
-      incrementUsage(auth.userId, auth.modelCategory).catch(() => {});
-      return c.json(convertAnthropicResponseToOpenAI(response, model), 200);
-    }
-
     // Use OpenAI SDK for voids.top (fallback)
     const { client, providerName } = clientResult;
 
@@ -211,6 +115,7 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
       top_p,
       frequency_penalty,
       presence_penalty,
+      reasoning_effort,
       tools: tools && tools.length > 0 ? tools : undefined,
       tool_choice: tools && tools.length > 0 ? tool_choice : undefined,
     };

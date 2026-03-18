@@ -10,7 +10,7 @@ import {
 
 export interface AgentAuthContext {
   userId: string;
-  tier: 'free' | 'plus' | 'pro';
+  tier: 'free' | 'plus' | 'pro' | "max";
   modelCategory: 'basic' | 'premium';
 }
 

@@ -1,5 +1,5 @@
 export interface DeniUsageInfo {
-  tier: 'free' | 'plus' | 'pro';
+  tier: 'free' | 'plus' | 'pro' | "max";
   planId: string | null;
   status: string | null;
   isTeam: boolean;

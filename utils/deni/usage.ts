@@ -7,8 +7,8 @@ const ACTIVE_STATUSES = ['active', 'trialing', 'past_due', 'incomplete', 'unpaid
 
 // Tier-based usage limits
 const TIER_LIMITS = {
-  basic: { free: 1500, plus: 3000, pro: 10000 },
-  premium: { free: 50, plus: 250, pro: 500 },
+  basic: { free: 500, plus: 1500, pro: 3000, max: 10000 },
+  premium: { free: 50, plus: 400, pro: 800, max: 2000 },
 } as const;
 
 /**
@@ -22,7 +22,7 @@ function getNextMonthFirstDay(): Date {
 /**
  * Determine tier from billing info
  */
-function determineTier(billing: BillingRow | null, isTeam: boolean): 'free' | 'plus' | 'pro' {
+function determineTier(billing: BillingRow | null, isTeam: boolean): 'free' | 'plus' | 'pro' | "max" {
   if (!billing) return 'free';
 
   const { plan_id, status, current_period_end } = billing;
@@ -39,6 +39,7 @@ function determineTier(billing: BillingRow | null, isTeam: boolean): 'free' | 'p
 
   // Personal billing: check plan_id
   if (plan_id.startsWith('pro')) return 'pro';
+  if (plan_id.startsWith('max')) return 'max';
   return 'plus';
 }
 

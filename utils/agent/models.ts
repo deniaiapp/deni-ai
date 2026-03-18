@@ -4,7 +4,7 @@ export interface ModelDefinition {
   description: string;
   tags: string[];
   premium?: boolean;
-  tier: "free" | "plus" | "pro";
+  tier: "free" | "plus" | "pro" | "max";
 }
 
 export const MODEL_DEFINITIONS: ModelDefinition[] = [
@@ -121,7 +121,7 @@ export function getModelDefinition(
 
 export function getModelTierRequirement(
   model: string,
-): "free" | "plus" | "pro" {
+): "free" | "plus" | "pro" | "max" {
   const def = MODEL_DEFINITIONS.find((m) => m.id === model);
   return def ? def.tier : "free";
 }

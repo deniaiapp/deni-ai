@@ -11,7 +11,7 @@ const PREMIUM_PATTERNS = [
 // Each entry maps a pattern to the minimum tier required
 const TIER_RESTRICTED_MODELS: Array<{
   pattern: RegExp;
-  minTier: "plus" | "pro";
+  minTier: "plus" | "pro" | "max";
 }> = [
   // claude-sonnet-4-5 requires plus or higher
   { pattern: /claude-sonnet-4[.-]5/i, minTier: "plus" },
@@ -40,7 +40,7 @@ export function getModelCategory(model: string): ModelCategory {
  * Check if user's tier allows access to a specific model.
  * Returns null if no restriction, or the minimum tier required if restricted.
  */
-export function getRequiredTierForModel(model: string): "plus" | "pro" | null {
+export function getRequiredTierForModel(model: string): "plus" | "pro" | "max" | null {
   for (const { pattern, minTier } of TIER_RESTRICTED_MODELS) {
     if (pattern.test(model)) {
       return minTier;
@@ -52,11 +52,11 @@ export function getRequiredTierForModel(model: string): "plus" | "pro" | null {
 /**
  * Check if a user's tier meets the minimum required tier for a model
  */
-const TIER_LEVELS: Record<string, number> = { free: 0, plus: 1, pro: 2 };
+const TIER_LEVELS: Record<string, number> = { free: 0, plus: 1, pro: 2, max: 3 };
 
 export function isTierSufficient(
-  userTier: "free" | "plus" | "pro",
-  requiredTier: "plus" | "pro",
+  userTier: "free" | "plus" | "pro" | "max",
+  requiredTier: "plus" | "pro" | "max",
 ): boolean {
   return (TIER_LEVELS[userTier] ?? 0) >= (TIER_LEVELS[requiredTier] ?? 0);
 }
