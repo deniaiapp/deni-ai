@@ -1,3 +1,5 @@
+import { getModelDefinition } from '../agent/models';
+
 export type ModelCategory = "basic" | "premium";
 
 // Premium model patterns (high-end models)
@@ -25,6 +27,11 @@ const TIER_RESTRICTED_MODELS: Array<{
  * Determine if a model is premium or basic category
  */
 export function getModelCategory(model: string): ModelCategory {
+  const definition = getModelDefinition(model);
+  if (definition?.premium) {
+    return "premium";
+  }
+
   const modelLower = model.toLowerCase();
 
   for (const pattern of PREMIUM_PATTERNS) {
@@ -41,6 +48,11 @@ export function getModelCategory(model: string): ModelCategory {
  * Returns null if no restriction, or the minimum tier required if restricted.
  */
 export function getRequiredTierForModel(model: string): "plus" | "pro" | "max" | null {
+  const definition = getModelDefinition(model);
+  if (definition && definition.tier !== 'free') {
+    return definition.tier;
+  }
+
   for (const { pattern, minTier } of TIER_RESTRICTED_MODELS) {
     if (pattern.test(model)) {
       return minTier;

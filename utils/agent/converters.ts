@@ -3,14 +3,27 @@ import type { ChatGenerationParams } from '@openrouter/sdk/models';
 import type Anthropic from '@anthropic-ai/sdk';
 import type { MessageParam, Tool, ToolResultBlockParam } from '@anthropic-ai/sdk/resources/messages/messages';
 
+function toTextContent(content: unknown): string | undefined {
+  return typeof content === 'string' ? content : undefined;
+}
+
+function safeParseJson(value: string, fallback: Record<string, unknown> = {}): Record<string, unknown> {
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === 'object' && parsed !== null ? parsed as Record<string, unknown> : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 // Convert OpenAI-style messages to OpenRouter format
 export function convertMessagesToOpenRouter(messages: ChatCompletionMessageParam[]): ChatGenerationParams['messages'] {
   return messages.map(msg => {
     if (msg.role === 'system') {
-      return { role: 'system' as const, content: msg.content as string };
+      return { role: 'system' as const, content: toTextContent(msg.content) ?? '' };
     }
     if (msg.role === 'user') {
-      return { role: 'user' as const, content: msg.content as string };
+      return { role: 'user' as const, content: toTextContent(msg.content) ?? '' };
     }
     if (msg.role === 'assistant') {
       const assistantMsg: any = { role: 'assistant' as const };
@@ -38,7 +51,7 @@ export function convertMessagesToOpenRouter(messages: ChatCompletionMessageParam
       return {
         role: 'tool' as const,
         toolCallId: msg.tool_call_id,
-        content: msg.content as string,
+        content: toTextContent(msg.content) ?? JSON.stringify(msg.content),
       };
     }
     return msg as any;
@@ -195,7 +208,7 @@ export function convertMessagesToAnthropic(messages: ChatCompletionMessageParam[
               type: 'tool_use',
               id: tc.id,
               name: tc.function.name,
-              input: JSON.parse(tc.function.arguments || '{}'),
+              input: safeParseJson(tc.function.arguments || '{}'),
             });
           }
         }
@@ -638,7 +651,7 @@ export function convertOpenRouterResponseToAnthropic(response: any, model: strin
         type: 'tool_use',
         id: tc.id,
         name: fn.name,
-        input: JSON.parse(fn.arguments || '{}'),
+        input: safeParseJson(fn.arguments || '{}'),
       });
     }
   }

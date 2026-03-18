@@ -6,7 +6,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { validateAgentRequest } from '../../middleware/validateRequest';
 import { validateAnthropicRequest } from '../../middleware/validateAnthropicRequest';
 import { validateAgentAuth, type AgentAuthContext } from '../../middleware/validateAgentAuth';
-import { incrementUsage } from '../../utils/deni';
+import { releaseUsageQuota } from '../../utils/deni';
 import {
   type AgentRequest,
   getClient,
@@ -18,19 +18,27 @@ import {
 
 const router = new Hono<{ Variables: { validatedBody: AgentRequest; agentAuth: AgentAuthContext } }>();
 
+async function releaseReservedUsage(auth: AgentAuthContext | undefined): Promise<void> {
+  if (!auth?.usageReserved) return;
+  auth.usageReserved = false;
+  await releaseUsageQuota(auth.userId, auth.modelCategory);
+}
+
 /**
  * POST /v1/agent/chat/completions
  * OpenAI-style agent endpoint using official SDKs
  */
 router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, async (c) => {
+  const auth = c.get('agentAuth') as AgentAuthContext;
+
   try {
     const body = c.get('validatedBody');
     const { messages, model, stream, temperature, max_tokens, top_p, frequency_penalty, presence_penalty, reasoning_effort, tools, tool_choice } = body;
-    const auth = c.get('agentAuth') as AgentAuthContext;
 
     // model is guaranteed to exist after validateAgentAuth middleware
     const clientResult = getClient(model);
     if ('error' in clientResult) {
+      await releaseReservedUsage(auth);
       return c.json({
         error: {
           message: clientResult.error,
@@ -60,8 +68,11 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
       };
 
       if (stream) {
+        const abortController = new AbortController();
         const streamResponse = await client.chat.send({
           chatGenerationParams: { ...openrouterParams, stream: true },
+        }, {
+          signal: abortController.signal,
         });
 
         // Convert OpenRouter stream to SSE Response
@@ -76,14 +87,17 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
               }
               controller.enqueue(encoder.encode('data: [DONE]\n\n'));
               controller.close();
-              incrementUsage(auth.userId, auth.modelCategory).catch(() => {});
             } catch (error) {
               console.error(`[Stream Error] provider=${providerName}:`, error);
               controller.error(error);
             }
-          }
+          },
+          cancel() {
+            abortController.abort();
+          },
         });
 
+        auth.usageReserved = false;
         return new Response(readable, {
           status: 200,
           headers: {
@@ -99,7 +113,7 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
         chatGenerationParams: { ...openrouterParams, stream: false },
       });
 
-      incrementUsage(auth.userId, auth.modelCategory).catch(() => {});
+      auth.usageReserved = false;
       return c.json(convertOpenRouterResponseToOpenAI(response), 200);
     }
 
@@ -121,9 +135,12 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
     };
 
     if (stream) {
+      const abortController = new AbortController();
       const streamResponse = await client.chat.completions.create({
         ...requestParams,
         stream: true,
+      }, {
+        signal: abortController.signal,
       });
 
       // Convert OpenAI stream to SSE Response
@@ -137,14 +154,17 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
             }
             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
             controller.close();
-            incrementUsage(auth.userId, auth.modelCategory).catch(() => {});
           } catch (error) {
             console.error(`[Stream Error] provider=${providerName}:`, error);
             controller.error(error);
           }
-        }
+        },
+        cancel() {
+          abortController.abort();
+        },
       });
 
+      auth.usageReserved = false;
       return new Response(readable, {
         status: 200,
         headers: {
@@ -161,10 +181,11 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
       stream: false,
     });
 
-    incrementUsage(auth.userId, auth.modelCategory).catch(() => {});
+    auth.usageReserved = false;
     return c.json(response, 200);
 
   } catch (error) {
+    await releaseReservedUsage(auth);
     console.error('Agent error:', error);
 
     if (error instanceof OpenAI.APIError) {
@@ -210,12 +231,14 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
  * Routes through OpenRouter: Anthropic request → OpenRouter → Anthropic response
  */
 router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) => {
+  const auth = c.get('agentAuth') as AgentAuthContext;
+
   try {
     const body = c.get('validatedBody') as Anthropic.Messages.MessageCreateParams;
     const { model, stream } = body;
-    const auth = c.get('agentAuth') as AgentAuthContext;
 
     if (!Bun.env.OPENROUTER_API_KEY) {
+      await releaseReservedUsage(auth);
       return c.json({
         error: {
           message: 'OPENROUTER_API_KEY is required for this endpoint',
@@ -232,6 +255,7 @@ router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) 
     // Pass the Anthropic request body directly to OpenRouter's Anthropic-compatible endpoint
     const openRouterBody = { ...body, model: openRouterModel };
 
+    const abortController = new AbortController();
     const response = await fetch('https://openrouter.ai/api/v1/messages', {
       method: 'POST',
       headers: {
@@ -241,11 +265,13 @@ router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) 
         'X-Title': 'Deni AI Flixa',
       },
       body: JSON.stringify(openRouterBody),
+      signal: abortController.signal,
     });
 
-    if (!response.ok && !stream) {
+    if (!response.ok) {
       const errorBody = await response.text();
       console.error('[OpenRouter messages error]:', response.status, errorBody);
+      await releaseReservedUsage(auth);
       return new Response(errorBody, {
         status: response.status,
         headers: { 'Content-Type': 'application/json' },
@@ -264,14 +290,18 @@ router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) 
               controller.enqueue(value);
             }
             controller.close();
-            incrementUsage(auth.userId, auth.modelCategory).catch(() => {});
           } catch (error) {
             console.error('[Stream Error] provider=openrouter (messages):', error);
             controller.error(error);
           }
         },
+        cancel() {
+          abortController.abort();
+          reader.cancel().catch(() => {});
+        },
       });
 
+      auth.usageReserved = false;
       return new Response(readable, {
         status: response.status,
         headers: {
@@ -284,12 +314,13 @@ router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) 
 
     // Non-streaming: pass through the response directly
     const responseBody = await response.text();
-    incrementUsage(auth.userId, auth.modelCategory).catch(() => {});
+    auth.usageReserved = false;
     return new Response(responseBody, {
       status: response.status,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
+    await releaseReservedUsage(auth);
     console.error('Anthropic endpoint error:', error);
 
     const err = error as Error;

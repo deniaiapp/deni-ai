@@ -2,6 +2,8 @@ import { getDeniPool } from './db';
 import type { DeniUsageInfo, BillingRow, UsageQuotaRow } from './types';
 import type { ModelCategory } from './models';
 
+export type UsageTier = 'free' | 'plus' | 'pro' | 'max';
+
 // Active billing statuses
 const ACTIVE_STATUSES = ['active', 'trialing', 'past_due', 'incomplete', 'unpaid', 'paid'];
 
@@ -22,7 +24,7 @@ function getNextMonthFirstDay(): Date {
 /**
  * Determine tier from billing info
  */
-function determineTier(billing: BillingRow | null, isTeam: boolean): 'free' | 'plus' | 'pro' | "max" {
+function determineTier(billing: BillingRow | null, isTeam: boolean): UsageTier {
   if (!billing) return 'free';
 
   const { plan_id, status, current_period_end } = billing;
@@ -160,44 +162,90 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
 }
 
 /**
- * Increment usage count by 1 for a given user and model category.
- * Upserts the usage_quota row: increments if exists, inserts if not.
+ * Atomically reserve one usage unit for the request before it is sent upstream.
+ * This prevents concurrent requests from oversubscribing the same quota.
  */
-export async function incrementUsage(userId: string, category: ModelCategory): Promise<void> {
+export async function reserveUsageQuota(
+  userId: string,
+  category: ModelCategory,
+  tier: UsageTier,
+): Promise<{ allowed: boolean; remaining: number }> {
   const pool = getDeniPool();
   const now = new Date();
   const periodEnd = getNextMonthFirstDay();
+  const limit = TIER_LIMITS[category][tier];
+  const client = await pool.connect();
 
   try {
-    // First try to increment existing row (only if period hasn't expired)
-    const result = await pool.query(
+    await client.query('BEGIN');
+
+    const result = await client.query<Pick<UsageQuotaRow, 'used' | 'period_end'>>(
+      `SELECT used, period_end
+       FROM usage_quota
+       WHERE user_id = $1 AND category = $2
+       FOR UPDATE`,
+      [userId, category]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query(
+        `INSERT INTO usage_quota (user_id, category, used, period_start, period_end)
+         VALUES ($1, $2, 1, $3, $4)`,
+        [userId, category, now, periodEnd]
+      );
+      await client.query('COMMIT');
+      return { allowed: true, remaining: Math.max(limit - 1, 0) };
+    }
+
+    const currentRow = result.rows[0];
+    const isPeriodExpired = currentRow.period_end && new Date(currentRow.period_end) < now;
+    const currentUsed = isPeriodExpired ? 0 : currentRow.used;
+
+    if (currentUsed >= limit) {
+      await client.query('ROLLBACK');
+      return { allowed: false, remaining: 0 };
+    }
+
+    await client.query(
       `UPDATE usage_quota
-       SET used = CASE
-         WHEN period_end IS NOT NULL AND period_end < $3 THEN 1
-         ELSE used + 1
-       END,
+       SET used = $3,
        period_start = CASE
-         WHEN period_end IS NOT NULL AND period_end < $3 THEN $3
+         WHEN period_end IS NOT NULL AND period_end < $4 THEN $4
          ELSE period_start
        END,
        period_end = CASE
-         WHEN period_end IS NOT NULL AND period_end < $3 THEN $4
+         WHEN period_end IS NOT NULL AND period_end < $4 THEN $5
          ELSE period_end
        END
        WHERE user_id = $1 AND category = $2`,
-      [userId, category, now, periodEnd]
+      [userId, category, currentUsed + 1, now, periodEnd]
     );
-
-    // If no row was updated, insert a new one
-    if (result.rowCount === 0) {
-      await pool.query(
-        `INSERT INTO usage_quota (user_id, category, used, period_start, period_end)
-         VALUES ($1, $2, 1, $3, $4)
-         ON CONFLICT (user_id, category) DO UPDATE SET used = usage_quota.used + 1`,
-        [userId, category, now, periodEnd]
-      );
-    }
+    await client.query('COMMIT');
+    return { allowed: true, remaining: Math.max(limit - (currentUsed + 1), 0) };
   } catch (error) {
-    console.error(`[Usage] Failed to increment usage for user=${userId} category=${category}:`, error);
+    await client.query('ROLLBACK').catch(() => {});
+    console.error(`[Usage] Failed to reserve usage for user=${userId} category=${category}:`, error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Release one reserved usage unit after an upstream request fails before producing
+ * a successful response for the client.
+ */
+export async function releaseUsageQuota(userId: string, category: ModelCategory): Promise<void> {
+  const pool = getDeniPool();
+
+  try {
+    await pool.query(
+      `UPDATE usage_quota
+       SET used = GREATEST(used - 1, 0)
+       WHERE user_id = $1 AND category = $2`,
+      [userId, category]
+    );
+  } catch (error) {
+    console.error(`[Usage] Failed to release usage for user=${userId} category=${category}:`, error);
   }
 }

@@ -8,13 +8,14 @@ let pool: Pool | null = null;
 export function getDeniPool(): Pool {
   if (!pool) {
     const connectionString = Bun.env.DENI_DATABASE_URL;
+    const disableTlsVerification = Bun.env.DENI_DATABASE_SSL_NO_VERIFY === 'true';
     if (!connectionString) {
       throw new Error('DENI_DATABASE_URL environment variable is not set');
     }
 
     pool = new Pool({
       connectionString,
-      ssl: { rejectUnauthorized: false },
+      ssl: disableTlsVerification ? { rejectUnauthorized: false } : { rejectUnauthorized: true },
       max: 10,
       idleTimeoutMillis: 30000,
       connectionTimeoutMillis: 10000,

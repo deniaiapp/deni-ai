@@ -3,15 +3,16 @@ import {
   validateDeniApiKey,
   getDeniUsageInfo,
   getModelCategory,
-  hasQuotaForModel,
   getRequiredTierForModel,
   isTierSufficient,
+  reserveUsageQuota,
 } from '../utils/deni';
 
 export interface AgentAuthContext {
   userId: string;
   tier: 'free' | 'plus' | 'pro' | "max";
   modelCategory: 'basic' | 'premium';
+  usageReserved: boolean;
 }
 
 /**
@@ -127,25 +128,8 @@ export async function validateAgentAuth(c: Context, next: Next) {
     );
   }
 
-  // Check model category and quota
+  // Check model category and reserve quota atomically
   const modelCategory = getModelCategory(model);
-  const quotaCheck = hasQuotaForModel(usageInfo.usage, modelCategory);
-
-  if (!quotaCheck.allowed) {
-    return c.json(
-      {
-        error: {
-          message: `You have exceeded your ${modelCategory} model quota. Remaining: ${quotaCheck.remaining}. Please upgrade your plan or wait for quota reset.`,
-          type: 'quota_exceeded',
-          param: null,
-          code: 'quota_exceeded',
-        },
-      },
-      429
-    );
-  }
-
-  // Check tier-based model restrictions
   const requiredTier = getRequiredTierForModel(model);
   const tier = usageInfo.tier;
 
@@ -163,11 +147,27 @@ export async function validateAgentAuth(c: Context, next: Next) {
     );
   }
 
+  const quotaReservation = await reserveUsageQuota(keyValidation.userId, modelCategory, tier);
+  if (!quotaReservation.allowed) {
+    return c.json(
+      {
+        error: {
+          message: `You have exceeded your ${modelCategory} model quota. Remaining: ${quotaReservation.remaining}. Please upgrade your plan or wait for quota reset.`,
+          type: 'quota_exceeded',
+          param: null,
+          code: 'quota_exceeded',
+        },
+      },
+      429
+    );
+  }
+
   // Store auth context for downstream handlers
   c.set('agentAuth', {
     userId: keyValidation.userId,
     tier,
     modelCategory,
+    usageReserved: true,
   } satisfies AgentAuthContext);
 
   await next();
