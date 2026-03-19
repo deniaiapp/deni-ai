@@ -1,6 +1,9 @@
 import { Hono } from 'hono';
 import { validateAgentApiKey } from '../../middleware/validateAgentAuth';
-import { MODEL_DEFINITIONS } from '../../utils/agent/models';
+import {
+  ANTHROPIC_MODEL_DEFINITIONS,
+  MODEL_DEFINITIONS,
+} from '../../utils/agent/models';
 
 const router = new Hono();
 
@@ -16,20 +19,16 @@ function hasAnthropicHeaders(headers: Headers): boolean {
 
 router.get('/models', validateAgentApiKey, async (c) => {
   if (hasAnthropicHeaders(c.req.raw.headers)) {
+    const firstModel = ANTHROPIC_MODEL_DEFINITIONS[0];
+    const lastModel =
+      ANTHROPIC_MODEL_DEFINITIONS[ANTHROPIC_MODEL_DEFINITIONS.length - 1];
+
     return c.json(
       {
-        object: 'list',
-        data: MODEL_DEFINITIONS.map((model) => ({
-          id: model.id,
-          object: 'model',
-          created: 0,
-          owned_by: model.id.includes('/') ? model.id.split('/')[0] : 'flixa',
-          display_name: model.label,
-          description: model.description,
-          tags: model.tags,
-          tier: model.tier,
-          premium: model.premium ?? false,
-        })),
+        data: ANTHROPIC_MODEL_DEFINITIONS,
+        has_more: false,
+        first_id: firstModel?.id ?? null,
+        last_id: lastModel?.id ?? null,
       },
       200,
     );

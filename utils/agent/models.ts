@@ -7,6 +7,46 @@ export interface ModelDefinition {
   tier: "free" | "plus" | "pro" | "max";
 }
 
+interface AnthropicCapabilityFlag {
+  supported: boolean;
+}
+
+interface AnthropicCapabilities {
+  batch: AnthropicCapabilityFlag;
+  citations: AnthropicCapabilityFlag;
+  code_execution: AnthropicCapabilityFlag;
+  context_management: AnthropicCapabilityFlag & {
+    clear_tool_uses_20250919: AnthropicCapabilityFlag;
+    clear_thinking_20251015: AnthropicCapabilityFlag;
+    compact_20260112: AnthropicCapabilityFlag;
+  };
+  effort: AnthropicCapabilityFlag & {
+    low: AnthropicCapabilityFlag;
+    medium: AnthropicCapabilityFlag;
+    high: AnthropicCapabilityFlag;
+    max: AnthropicCapabilityFlag;
+  };
+  image_input: AnthropicCapabilityFlag;
+  pdf_input: AnthropicCapabilityFlag;
+  structured_outputs: AnthropicCapabilityFlag;
+  thinking: AnthropicCapabilityFlag & {
+    types: {
+      enabled: AnthropicCapabilityFlag;
+      adaptive: AnthropicCapabilityFlag;
+    };
+  };
+}
+
+export interface AnthropicModelDefinition {
+  type: "model";
+  id: string;
+  display_name: string;
+  created_at: string;
+  max_input_tokens: number;
+  max_tokens: number;
+  capabilities: AnthropicCapabilities;
+}
+
 export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
     id: "openai/gpt-5.4",
@@ -107,6 +147,117 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
 
 export const DEFAULT_MODEL = "openai/gpt-5.4";
 export const AVAILABLE_MODELS = MODEL_DEFINITIONS.map((model) => model.id);
+
+export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
+  {
+    type: "model",
+    id: "claude-sonnet-4.6",
+    display_name: "Claude Sonnet 4.6",
+    created_at: "2026-02-17T00:00:00Z",
+    max_input_tokens: 1000000,
+    max_tokens: 128000,
+    capabilities: {
+      batch: { supported: true },
+      citations: { supported: true },
+      code_execution: { supported: true },
+      context_management: {
+        supported: true,
+        clear_tool_uses_20250919: { supported: true },
+        clear_thinking_20251015: { supported: true },
+        compact_20260112: { supported: true },
+      },
+      effort: {
+        supported: true,
+        low: { supported: true },
+        medium: { supported: true },
+        high: { supported: true },
+        max: { supported: true },
+      },
+      image_input: { supported: true },
+      pdf_input: { supported: true },
+      structured_outputs: { supported: true },
+      thinking: {
+        supported: true,
+        types: {
+          enabled: { supported: true },
+          adaptive: { supported: true },
+        },
+      },
+    },
+  },
+  {
+    type: "model",
+    id: "claude-opus-4.6",
+    display_name: "Claude Opus 4.6",
+    created_at: "2026-02-04T00:00:00Z",
+    max_input_tokens: 1000000,
+    max_tokens: 128000,
+    capabilities: {
+      batch: { supported: true },
+      citations: { supported: true },
+      code_execution: { supported: true },
+      context_management: {
+        supported: true,
+        clear_tool_uses_20250919: { supported: true },
+        clear_thinking_20251015: { supported: true },
+        compact_20260112: { supported: true },
+      },
+      effort: {
+        supported: true,
+        low: { supported: true },
+        medium: { supported: true },
+        high: { supported: true },
+        max: { supported: true },
+      },
+      image_input: { supported: true },
+      pdf_input: { supported: true },
+      structured_outputs: { supported: true },
+      thinking: {
+        supported: true,
+        types: {
+          enabled: { supported: true },
+          adaptive: { supported: true },
+        },
+      },
+    },
+  },
+  {
+    type: "model",
+    id: "claude-haiku-4.5",
+    display_name: "Claude Haiku 4.5",
+    created_at: "2025-10-15T00:00:00Z",
+    max_input_tokens: 200000,
+    max_tokens: 64000,
+    capabilities: {
+      batch: { supported: true },
+      citations: { supported: true },
+      code_execution: { supported: false },
+      context_management: {
+        supported: true,
+        clear_tool_uses_20250919: { supported: true },
+        clear_thinking_20251015: { supported: true },
+        compact_20260112: { supported: false },
+      },
+      effort: {
+        supported: false,
+        low: { supported: false },
+        medium: { supported: false },
+        high: { supported: false },
+        max: { supported: false },
+      },
+      image_input: { supported: true },
+      pdf_input: { supported: true },
+      structured_outputs: { supported: true },
+      thinking: {
+        supported: true,
+        types: {
+          enabled: { supported: true },
+          adaptive: { supported: false },
+        },
+      },
+    },
+  },
+];
 
 export function getModelLabel(modelId: string): string {
   const def = MODEL_DEFINITIONS.find((m) => m.id === modelId);
