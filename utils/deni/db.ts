@@ -2,6 +2,17 @@ import { Pool } from 'pg';
 
 let pool: Pool | null = null;
 
+function normalizeConnectionString(connectionString: string): string {
+  const url = new URL(connectionString);
+
+  // We set TLS behavior explicitly via the `ssl` pool option below.
+  // Removing legacy sslmode values here avoids pg's deprecation warning and
+  // keeps future parser changes from altering our runtime behavior.
+  url.searchParams.delete('sslmode');
+
+  return url.toString();
+}
+
 /**
  * Get or create a PostgreSQL connection pool for Deni AI database
  */
@@ -14,7 +25,7 @@ export function getDeniPool(): Pool {
     }
 
     pool = new Pool({
-      connectionString,
+      connectionString: normalizeConnectionString(connectionString),
       ssl: disableTlsVerification ? { rejectUnauthorized: false } : { rejectUnauthorized: true },
       max: 10,
       idleTimeoutMillis: 30000,

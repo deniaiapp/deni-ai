@@ -28,6 +28,7 @@ export interface UsageQuotaRow {
   category: string;
   plan_tier: 'free' | 'plus' | 'pro' | 'max';
   limit_amount: number | null;
+  unit: 'requests' | 'tokens';
   used: number;
   period_start: Date;
   period_end: Date | null;
