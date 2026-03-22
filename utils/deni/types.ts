@@ -26,6 +26,7 @@ export interface BillingRow {
 
 export interface UsageQuotaRow {
   category: string;
+  plan_tier: 'free' | 'plus' | 'pro' | 'max';
   limit_amount: number | null;
   used: number;
   period_start: Date;

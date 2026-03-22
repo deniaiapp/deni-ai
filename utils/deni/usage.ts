@@ -25,13 +25,15 @@ function getUsageLimit(category: ModelCategory, tier: UsageTier): number {
 }
 
 function shouldResetUsageRow(
-  quotaRow: Pick<UsageQuotaRow, 'limit_amount' | 'period_end'>,
+  quotaRow: Pick<UsageQuotaRow, 'limit_amount' | 'period_end' | 'plan_tier'>,
   now: Date,
   limit: number,
+  tier: UsageTier,
 ): boolean {
   const isPeriodExpired = quotaRow.period_end && new Date(quotaRow.period_end) < now;
   const hasLimitChanged = quotaRow.limit_amount !== limit;
-  return Boolean(isPeriodExpired || hasLimitChanged);
+  const hasTierChanged = quotaRow.plan_tier !== tier;
+  return Boolean(isPeriodExpired || hasLimitChanged || hasTierChanged);
 }
 
 /**
@@ -127,7 +129,7 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
 
   // Query usage quotas
   const usageResult = await pool.query<UsageQuotaRow>(
-    `SELECT category, limit_amount, used, period_start, period_end
+    `SELECT category, plan_tier, limit_amount, used, period_start, period_end
      FROM usage_quota
      WHERE user_id = $1`,
     [userId]
@@ -144,7 +146,7 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
     const limit = getUsageLimit(category, tier);
 
     if (quotaRow) {
-      const needsReset = shouldResetUsageRow(quotaRow, now, limit);
+      const needsReset = shouldResetUsageRow(quotaRow, now, limit, tier);
       const used = needsReset ? 0 : quotaRow.used;
       const remaining = Math.max(limit - used, 0);
 
@@ -202,8 +204,8 @@ export async function reserveUsageQuota(
   try {
     await client.query('BEGIN');
 
-    const result = await client.query<Pick<UsageQuotaRow, 'used' | 'period_end' | 'limit_amount'>>(
-      `SELECT used, period_end, limit_amount
+    const result = await client.query<Pick<UsageQuotaRow, 'used' | 'period_end' | 'limit_amount' | 'plan_tier'>>(
+      `SELECT used, period_end, limit_amount, plan_tier
        FROM usage_quota
        WHERE user_id = $1 AND category = $2
        FOR UPDATE`,
@@ -213,9 +215,9 @@ export async function reserveUsageQuota(
     if (result.rows.length === 0) {
       if (unit === 'requests') {
         await client.query(
-          `INSERT INTO usage_quota (user_id, category, limit_amount, used, period_start, period_end)
-           VALUES ($1, $2, $3, 1, $4, $5)`,
-          [userId, category, limit, now, periodEnd]
+          `INSERT INTO usage_quota (user_id, category, plan_tier, limit_amount, used, period_start, period_end)
+           VALUES ($1, $2, $3, $4, 1, $5, $6)`,
+          [userId, category, tier, limit, now, periodEnd]
         );
         await client.query('COMMIT');
         return { allowed: true, remaining: Math.max(limit - 1, 0), reserved: true, unit };
@@ -226,7 +228,7 @@ export async function reserveUsageQuota(
     }
 
     const currentRow = result.rows[0];
-    const needsReset = shouldResetUsageRow(currentRow, now, limit);
+    const needsReset = shouldResetUsageRow(currentRow, now, limit, tier);
     const currentUsed = needsReset ? 0 : currentRow.used;
 
     if (currentUsed >= limit) {
@@ -239,11 +241,12 @@ export async function reserveUsageQuota(
         await client.query(
           `UPDATE usage_quota
            SET used = 0,
-               limit_amount = $3,
-               period_start = $4,
-               period_end = $5
+               plan_tier = $3,
+               limit_amount = $4,
+               period_start = $5,
+               period_end = $6
            WHERE user_id = $1 AND category = $2`,
-          [userId, category, limit, now, periodEnd]
+          [userId, category, tier, limit, now, periodEnd]
         );
       }
 
@@ -254,11 +257,12 @@ export async function reserveUsageQuota(
     await client.query(
       `UPDATE usage_quota
        SET used = $3,
-           limit_amount = $4,
-           period_start = CASE WHEN $5 THEN $6 ELSE period_start END,
-           period_end = CASE WHEN $5 THEN $7 ELSE period_end END
+           plan_tier = $4,
+           limit_amount = $5,
+           period_start = CASE WHEN $6 THEN $7 ELSE period_start END,
+           period_end = CASE WHEN $6 THEN $8 ELSE period_end END
        WHERE user_id = $1 AND category = $2`,
-      [userId, category, currentUsed + 1, limit, needsReset, now, periodEnd]
+      [userId, category, currentUsed + 1, tier, limit, needsReset, now, periodEnd]
     );
     await client.query('COMMIT');
     return { allowed: true, remaining: Math.max(limit - (currentUsed + 1), 0), reserved: true, unit };
@@ -293,8 +297,8 @@ export async function recordUsageQuota(
   try {
     await client.query('BEGIN');
 
-    const result = await client.query<Pick<UsageQuotaRow, 'used' | 'period_end' | 'limit_amount'>>(
-      `SELECT used, period_end, limit_amount
+    const result = await client.query<Pick<UsageQuotaRow, 'used' | 'period_end' | 'limit_amount' | 'plan_tier'>>(
+      `SELECT used, period_end, limit_amount, plan_tier
        FROM usage_quota
        WHERE user_id = $1 AND category = $2
        FOR UPDATE`,
@@ -303,26 +307,27 @@ export async function recordUsageQuota(
 
     if (result.rows.length === 0) {
       await client.query(
-        `INSERT INTO usage_quota (user_id, category, limit_amount, used, period_start, period_end)
-         VALUES ($1, $2, $3, $4, $5, $6)`,
-        [userId, category, limit, amount, now, periodEnd]
+        `INSERT INTO usage_quota (user_id, category, plan_tier, limit_amount, used, period_start, period_end)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+        [userId, category, tier, limit, amount, now, periodEnd]
       );
       await client.query('COMMIT');
       return;
     }
 
     const currentRow = result.rows[0];
-    const needsReset = shouldResetUsageRow(currentRow, now, limit);
+    const needsReset = shouldResetUsageRow(currentRow, now, limit, tier);
     const currentUsed = needsReset ? 0 : currentRow.used;
 
     await client.query(
       `UPDATE usage_quota
        SET used = $3,
-           limit_amount = $4,
-           period_start = CASE WHEN $5 THEN $6 ELSE period_start END,
-           period_end = CASE WHEN $5 THEN $7 ELSE period_end END
+           plan_tier = $4,
+           limit_amount = $5,
+           period_start = CASE WHEN $6 THEN $7 ELSE period_start END,
+           period_end = CASE WHEN $6 THEN $8 ELSE period_end END
        WHERE user_id = $1 AND category = $2`,
-      [userId, category, currentUsed + amount, limit, needsReset, now, periodEnd]
+      [userId, category, currentUsed + amount, tier, limit, needsReset, now, periodEnd]
     );
     await client.query('COMMIT');
   } catch (error) {
