@@ -5,6 +5,7 @@ import {
   getModelCategory,
   getRequiredTierForModel,
   isTierSufficient,
+  getUsageUnitForTier,
   reserveUsageQuota,
 } from '../utils/deni';
 
@@ -12,6 +13,7 @@ export interface AgentAuthContext {
   userId: string;
   tier: 'free' | 'plus' | 'pro' | "max";
   modelCategory: 'basic' | 'premium';
+  usageUnit: 'requests' | 'tokens';
   usageReserved: boolean;
 }
 
@@ -128,7 +130,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
     );
   }
 
-  // Check model category and reserve quota atomically
+  // Check model category and reserve quota when needed
   const modelCategory = getModelCategory(model);
   const requiredTier = getRequiredTierForModel(model);
   const tier = usageInfo.tier;
@@ -149,10 +151,11 @@ export async function validateAgentAuth(c: Context, next: Next) {
 
   const quotaReservation = await reserveUsageQuota(keyValidation.userId, modelCategory, tier);
   if (!quotaReservation.allowed) {
+    const usageUnit = getUsageUnitForTier(tier);
     return c.json(
       {
         error: {
-          message: `You have exceeded your ${modelCategory} model quota. Remaining: ${quotaReservation.remaining}. Please upgrade your plan or wait for quota reset.`,
+          message: `You have exceeded your ${modelCategory} model ${usageUnit} quota. Remaining: ${quotaReservation.remaining}. Please upgrade your plan or wait for quota reset.`,
           type: 'quota_exceeded',
           param: null,
           code: 'quota_exceeded',
@@ -167,7 +170,8 @@ export async function validateAgentAuth(c: Context, next: Next) {
     userId: keyValidation.userId,
     tier,
     modelCategory,
-    usageReserved: true,
+    usageUnit: quotaReservation.unit,
+    usageReserved: quotaReservation.reserved,
   } satisfies AgentAuthContext);
 
   await next();

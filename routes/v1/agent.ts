@@ -6,7 +6,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { validateAgentRequest } from '../../middleware/validateRequest';
 import { validateAnthropicRequest } from '../../middleware/validateAnthropicRequest';
 import { validateAgentAuth, type AgentAuthContext } from '../../middleware/validateAgentAuth';
-import { releaseUsageQuota } from '../../utils/deni';
+import { recordUsageQuota, releaseUsageQuota } from '../../utils/deni';
 import {
   type AgentRequest,
   getClient,
@@ -18,10 +18,131 @@ import {
 
 const router = new Hono<{ Variables: { validatedBody: AgentRequest; agentAuth: AgentAuthContext } }>();
 
+function getNumericValue(value: unknown): number | null {
+  return typeof value === 'number' && Number.isFinite(value) ? value : null;
+}
+
+function extractTotalTokens(usage: unknown): number | null {
+  if (!usage || typeof usage !== 'object') {
+    return null;
+  }
+
+  const usageRecord = usage as Record<string, unknown>;
+  const explicitTotal = getNumericValue(usageRecord.total_tokens) ?? getNumericValue(usageRecord.totalTokens);
+  if (explicitTotal !== null) {
+    return explicitTotal;
+  }
+
+  const promptTokens =
+    getNumericValue(usageRecord.prompt_tokens) ??
+    getNumericValue(usageRecord.promptTokens) ??
+    getNumericValue(usageRecord.input_tokens) ??
+    getNumericValue(usageRecord.inputTokens) ??
+    0;
+  const completionTokens =
+    getNumericValue(usageRecord.completion_tokens) ??
+    getNumericValue(usageRecord.completionTokens) ??
+    getNumericValue(usageRecord.output_tokens) ??
+    getNumericValue(usageRecord.outputTokens) ??
+    0;
+  const cacheCreationTokens =
+    getNumericValue(usageRecord.cache_creation_input_tokens) ??
+    getNumericValue(usageRecord.cacheCreationInputTokens) ??
+    0;
+  const cacheReadTokens =
+    getNumericValue(usageRecord.cache_read_input_tokens) ??
+    getNumericValue(usageRecord.cacheReadInputTokens) ??
+    0;
+
+  const total = promptTokens + completionTokens + cacheCreationTokens + cacheReadTokens;
+  return total > 0 ? total : null;
+}
+
+function mergeUsageSnapshot(
+  current: Record<string, number>,
+  usage: unknown,
+): Record<string, number> {
+  if (!usage || typeof usage !== 'object') {
+    return current;
+  }
+
+  const next = { ...current };
+  for (const [key, value] of Object.entries(usage as Record<string, unknown>)) {
+    const numericValue = getNumericValue(value);
+    if (numericValue !== null) {
+      next[key] = numericValue;
+    }
+  }
+
+  return next;
+}
+
+function collectAnthropicUsageFromSseEvent(
+  eventBlock: string,
+  usageSnapshot: Record<string, number>,
+): Record<string, number> {
+  const payload = eventBlock
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith('data:'))
+    .map((line) => line.slice(5).trimStart())
+    .join('\n');
+
+  if (!payload || payload === '[DONE]') {
+    return usageSnapshot;
+  }
+
+  try {
+    const event = JSON.parse(payload) as {
+      type?: string;
+      message?: { usage?: unknown };
+      usage?: unknown;
+      delta?: { usage?: unknown };
+    };
+
+    if (event.type === 'message_start' && event.message?.usage) {
+      return mergeUsageSnapshot(usageSnapshot, event.message.usage);
+    }
+
+    if (event.usage) {
+      return mergeUsageSnapshot(usageSnapshot, event.usage);
+    }
+
+    if (event.delta?.usage) {
+      return mergeUsageSnapshot(usageSnapshot, event.delta.usage);
+    }
+  } catch {
+    return usageSnapshot;
+  }
+
+  return usageSnapshot;
+}
+
+async function finalizeUsage(
+  auth: AgentAuthContext | undefined,
+  totalTokens?: number | null,
+): Promise<void> {
+  if (!auth) return;
+
+  auth.usageReserved = false;
+
+  if (auth.usageUnit !== 'tokens' || totalTokens === null || totalTokens === undefined || totalTokens <= 0) {
+    return;
+  }
+
+  try {
+    await recordUsageQuota(auth.userId, auth.modelCategory, auth.tier, totalTokens);
+  } catch (error) {
+    console.error(
+      `[Usage] Failed to finalize token usage for user=${auth.userId} category=${auth.modelCategory}:`,
+      error,
+    );
+  }
+}
+
 async function releaseReservedUsage(auth: AgentAuthContext | undefined): Promise<void> {
   if (!auth?.usageReserved) return;
   auth.usageReserved = false;
-  await releaseUsageQuota(auth.userId, auth.modelCategory);
+  await releaseUsageQuota(auth.userId, auth.modelCategory, auth.tier);
 }
 
 /**
@@ -57,6 +178,7 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
         model,
         messages: convertMessagesToOpenRouter(messages),
         stream: stream ?? false,
+        streamOptions: stream ? { includeUsage: true } : undefined,
         temperature: temperature ?? undefined,
         maxTokens: max_tokens ?? undefined,
         topP: top_p ?? undefined,
@@ -79,16 +201,21 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
         const encoder = new TextEncoder();
         const readable = new ReadableStream({
           async start(controller) {
+            let streamedTokens: number | null = null;
+
             try {
               for await (const chunk of streamResponse) {
+                streamedTokens = extractTotalTokens(chunk.usage) ?? streamedTokens;
                 const converted = convertOpenRouterStreamChunkToOpenAI(chunk);
                 const data = JSON.stringify(converted);
                 controller.enqueue(encoder.encode(`data: ${data}\n\n`));
               }
+              await finalizeUsage(auth, streamedTokens);
               controller.enqueue(encoder.encode('data: [DONE]\n\n'));
               controller.close();
             } catch (error) {
               console.error(`[Stream Error] provider=${providerName}:`, error);
+              await releaseReservedUsage(auth);
               controller.error(error);
             }
           },
@@ -97,7 +224,6 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
           },
         });
 
-        auth.usageReserved = false;
         return new Response(readable, {
           status: 200,
           headers: {
@@ -113,7 +239,7 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
         chatGenerationParams: { ...openrouterParams, stream: false },
       });
 
-      auth.usageReserved = false;
+      await finalizeUsage(auth, extractTotalTokens(response.usage));
       return c.json(convertOpenRouterResponseToOpenAI(response), 200);
     }
 
@@ -124,6 +250,7 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
       model,
       messages,
       stream: stream ?? false,
+      stream_options: stream ? { include_usage: true } : undefined,
       temperature,
       max_tokens,
       top_p,
@@ -147,15 +274,20 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
       const encoder = new TextEncoder();
       const readable = new ReadableStream({
         async start(controller) {
+          let streamedTokens: number | null = null;
+
           try {
             for await (const chunk of streamResponse) {
+              streamedTokens = extractTotalTokens(chunk.usage) ?? streamedTokens;
               const data = JSON.stringify(chunk);
               controller.enqueue(encoder.encode(`data: ${data}\n\n`));
             }
+            await finalizeUsage(auth, streamedTokens);
             controller.enqueue(encoder.encode('data: [DONE]\n\n'));
             controller.close();
           } catch (error) {
             console.error(`[Stream Error] provider=${providerName}:`, error);
+            await releaseReservedUsage(auth);
             controller.error(error);
           }
         },
@@ -164,7 +296,6 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
         },
       });
 
-      auth.usageReserved = false;
       return new Response(readable, {
         status: 200,
         headers: {
@@ -181,7 +312,7 @@ router.post('/agent/chat/completions', validateAgentRequest, validateAgentAuth, 
       stream: false,
     });
 
-    auth.usageReserved = false;
+    await finalizeUsage(auth, extractTotalTokens(response.usage));
     return c.json(response, 200);
 
   } catch (error) {
@@ -281,17 +412,37 @@ router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) 
     if (stream && response.body) {
       // Pipe the SSE stream directly from OpenRouter to the client
       const reader = response.body.getReader();
+      const decoder = new TextDecoder();
       const readable = new ReadableStream({
         async start(controller) {
+          let buffer = '';
+          let usageSnapshot: Record<string, number> = {};
+
           try {
             while (true) {
               const { done, value } = await reader.read();
               if (done) break;
+
+              buffer += decoder.decode(value, { stream: true });
+              const eventBlocks = buffer.split(/\r?\n\r?\n/);
+              buffer = eventBlocks.pop() ?? '';
+              for (const eventBlock of eventBlocks) {
+                usageSnapshot = collectAnthropicUsageFromSseEvent(eventBlock, usageSnapshot);
+              }
+
               controller.enqueue(value);
             }
+
+            buffer += decoder.decode();
+            if (buffer.trim()) {
+              usageSnapshot = collectAnthropicUsageFromSseEvent(buffer, usageSnapshot);
+            }
+
+            await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
             controller.close();
           } catch (error) {
             console.error('[Stream Error] provider=openrouter (messages):', error);
+            await releaseReservedUsage(auth);
             controller.error(error);
           }
         },
@@ -301,7 +452,6 @@ router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) 
         },
       });
 
-      auth.usageReserved = false;
       return new Response(readable, {
         status: response.status,
         headers: {
@@ -314,7 +464,15 @@ router.post('/messages', validateAnthropicRequest, validateAgentAuth, async (c) 
 
     // Non-streaming: pass through the response directly
     const responseBody = await response.text();
-    auth.usageReserved = false;
+    let parsedResponse: { usage?: unknown } | null = null;
+
+    try {
+      parsedResponse = JSON.parse(responseBody) as { usage?: unknown };
+    } catch {
+      parsedResponse = null;
+    }
+
+    await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
     return new Response(responseBody, {
       status: response.status,
       headers: { 'Content-Type': 'application/json' },

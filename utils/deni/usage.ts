@@ -3,15 +3,36 @@ import type { DeniUsageInfo, BillingRow, UsageQuotaRow } from './types';
 import type { ModelCategory } from './models';
 
 export type UsageTier = 'free' | 'plus' | 'pro' | 'max';
+export type UsageUnit = 'requests' | 'tokens';
 
 // Active billing statuses
 const ACTIVE_STATUSES = ['active', 'trialing', 'past_due', 'incomplete', 'unpaid', 'paid'];
 
 // Tier-based usage limits
 const TIER_LIMITS = {
-  basic: { free: 500, plus: 1500, pro: 3000, max: 10000 },
-  premium: { free: 50, plus: 400, pro: 800, max: 2000 },
+  free: { unit: 'requests', basic: 500, premium: 50 },
+  plus: { unit: 'tokens', basic: 20_000_000, premium: 5_000_000 },
+  pro: { unit: 'tokens', basic: 50_000_000, premium: 15_000_000 },
+  max: { unit: 'tokens', basic: 120_000_000, premium: 40_000_000 },
 } as const;
+
+export function getUsageUnitForTier(tier: UsageTier): UsageUnit {
+  return TIER_LIMITS[tier].unit;
+}
+
+function getUsageLimit(category: ModelCategory, tier: UsageTier): number {
+  return TIER_LIMITS[tier][category];
+}
+
+function shouldResetUsageRow(
+  quotaRow: Pick<UsageQuotaRow, 'limit_amount' | 'period_end'>,
+  now: Date,
+  limit: number,
+): boolean {
+  const isPeriodExpired = quotaRow.period_end && new Date(quotaRow.period_end) < now;
+  const hasLimitChanged = quotaRow.limit_amount !== limit;
+  return Boolean(isPeriodExpired || hasLimitChanged);
+}
 
 /**
  * Get the first day of next month in UTC
@@ -113,37 +134,38 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   );
 
   const now = new Date();
+  const defaultPeriodEnd = getNextMonthFirstDay().toISOString();
+  const unit = getUsageUnitForTier(tier);
   const usage: DeniUsageInfo['usage'] = [];
 
   // Process each category
   for (const category of ['basic', 'premium'] as const) {
     const quotaRow = usageResult.rows.find(r => r.category === category);
+    const limit = getUsageLimit(category, tier);
 
     if (quotaRow) {
-      // Check if period has expired (reset used to 0)
-      const isPeriodExpired = quotaRow.period_end && new Date(quotaRow.period_end) < now;
-      const used = isPeriodExpired ? 0 : quotaRow.used;
-      const limit = TIER_LIMITS[category][tier];
+      const needsReset = shouldResetUsageRow(quotaRow, now, limit);
+      const used = needsReset ? 0 : quotaRow.used;
       const remaining = Math.max(limit - used, 0);
 
       usage.push({
         category,
+        unit,
         limit,
         used,
         remaining,
-        periodStart: new Date(quotaRow.period_start).toISOString(),
-        periodEnd: quotaRow.period_end ? new Date(quotaRow.period_end).toISOString() : null,
+        periodStart: needsReset ? now.toISOString() : new Date(quotaRow.period_start).toISOString(),
+        periodEnd: needsReset ? defaultPeriodEnd : quotaRow.period_end ? new Date(quotaRow.period_end).toISOString() : null,
       });
     } else {
-      // No quota record exists, assume fresh start
-      const limit = TIER_LIMITS[category][tier];
       usage.push({
         category,
+        unit,
         limit,
         used: 0,
         remaining: limit,
         periodStart: now.toISOString(),
-        periodEnd: getNextMonthFirstDay().toISOString(),
+        periodEnd: defaultPeriodEnd,
       });
     }
   }
@@ -169,18 +191,19 @@ export async function reserveUsageQuota(
   userId: string,
   category: ModelCategory,
   tier: UsageTier,
-): Promise<{ allowed: boolean; remaining: number }> {
+): Promise<{ allowed: boolean; remaining: number; reserved: boolean; unit: UsageUnit }> {
   const pool = getDeniPool();
   const now = new Date();
   const periodEnd = getNextMonthFirstDay();
-  const limit = TIER_LIMITS[category][tier];
+  const limit = getUsageLimit(category, tier);
+  const unit = getUsageUnitForTier(tier);
   const client = await pool.connect();
 
   try {
     await client.query('BEGIN');
 
-    const result = await client.query<Pick<UsageQuotaRow, 'used' | 'period_end'>>(
-      `SELECT used, period_end
+    const result = await client.query<Pick<UsageQuotaRow, 'used' | 'period_end' | 'limit_amount'>>(
+      `SELECT used, period_end, limit_amount
        FROM usage_quota
        WHERE user_id = $1 AND category = $2
        FOR UPDATE`,
@@ -188,40 +211,57 @@ export async function reserveUsageQuota(
     );
 
     if (result.rows.length === 0) {
-      await client.query(
-        `INSERT INTO usage_quota (user_id, category, used, period_start, period_end)
-         VALUES ($1, $2, 1, $3, $4)`,
-        [userId, category, now, periodEnd]
-      );
+      if (unit === 'requests') {
+        await client.query(
+          `INSERT INTO usage_quota (user_id, category, limit_amount, used, period_start, period_end)
+           VALUES ($1, $2, $3, 1, $4, $5)`,
+          [userId, category, limit, now, periodEnd]
+        );
+        await client.query('COMMIT');
+        return { allowed: true, remaining: Math.max(limit - 1, 0), reserved: true, unit };
+      }
+
       await client.query('COMMIT');
-      return { allowed: true, remaining: Math.max(limit - 1, 0) };
+      return { allowed: true, remaining: limit, reserved: false, unit };
     }
 
     const currentRow = result.rows[0];
-    const isPeriodExpired = currentRow.period_end && new Date(currentRow.period_end) < now;
-    const currentUsed = isPeriodExpired ? 0 : currentRow.used;
+    const needsReset = shouldResetUsageRow(currentRow, now, limit);
+    const currentUsed = needsReset ? 0 : currentRow.used;
 
     if (currentUsed >= limit) {
       await client.query('ROLLBACK');
-      return { allowed: false, remaining: 0 };
+      return { allowed: false, remaining: 0, reserved: false, unit };
+    }
+
+    if (unit !== 'requests') {
+      if (needsReset) {
+        await client.query(
+          `UPDATE usage_quota
+           SET used = 0,
+               limit_amount = $3,
+               period_start = $4,
+               period_end = $5
+           WHERE user_id = $1 AND category = $2`,
+          [userId, category, limit, now, periodEnd]
+        );
+      }
+
+      await client.query('COMMIT');
+      return { allowed: true, remaining: Math.max(limit - currentUsed, 0), reserved: false, unit };
     }
 
     await client.query(
       `UPDATE usage_quota
        SET used = $3,
-       period_start = CASE
-         WHEN period_end IS NOT NULL AND period_end < $4 THEN $4
-         ELSE period_start
-       END,
-       period_end = CASE
-         WHEN period_end IS NOT NULL AND period_end < $4 THEN $5
-         ELSE period_end
-       END
+           limit_amount = $4,
+           period_start = CASE WHEN $5 THEN $6 ELSE period_start END,
+           period_end = CASE WHEN $5 THEN $7 ELSE period_end END
        WHERE user_id = $1 AND category = $2`,
-      [userId, category, currentUsed + 1, now, periodEnd]
+      [userId, category, currentUsed + 1, limit, needsReset, now, periodEnd]
     );
     await client.query('COMMIT');
-    return { allowed: true, remaining: Math.max(limit - (currentUsed + 1), 0) };
+    return { allowed: true, remaining: Math.max(limit - (currentUsed + 1), 0), reserved: true, unit };
   } catch (error) {
     await client.query('ROLLBACK').catch(() => {});
     console.error(`[Usage] Failed to reserve usage for user=${userId} category=${category}:`, error);
@@ -232,10 +272,81 @@ export async function reserveUsageQuota(
 }
 
 /**
- * Release one reserved usage unit after an upstream request fails before producing
- * a successful response for the client.
+ * Record usage after an upstream request succeeds. Paid tiers are tracked in tokens.
  */
-export async function releaseUsageQuota(userId: string, category: ModelCategory): Promise<void> {
+export async function recordUsageQuota(
+  userId: string,
+  category: ModelCategory,
+  tier: UsageTier,
+  amount: number,
+): Promise<void> {
+  if (getUsageUnitForTier(tier) !== 'tokens' || !Number.isFinite(amount) || amount <= 0) {
+    return;
+  }
+
+  const pool = getDeniPool();
+  const now = new Date();
+  const periodEnd = getNextMonthFirstDay();
+  const limit = getUsageLimit(category, tier);
+  const client = await pool.connect();
+
+  try {
+    await client.query('BEGIN');
+
+    const result = await client.query<Pick<UsageQuotaRow, 'used' | 'period_end' | 'limit_amount'>>(
+      `SELECT used, period_end, limit_amount
+       FROM usage_quota
+       WHERE user_id = $1 AND category = $2
+       FOR UPDATE`,
+      [userId, category]
+    );
+
+    if (result.rows.length === 0) {
+      await client.query(
+        `INSERT INTO usage_quota (user_id, category, limit_amount, used, period_start, period_end)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, category, limit, amount, now, periodEnd]
+      );
+      await client.query('COMMIT');
+      return;
+    }
+
+    const currentRow = result.rows[0];
+    const needsReset = shouldResetUsageRow(currentRow, now, limit);
+    const currentUsed = needsReset ? 0 : currentRow.used;
+
+    await client.query(
+      `UPDATE usage_quota
+       SET used = $3,
+           limit_amount = $4,
+           period_start = CASE WHEN $5 THEN $6 ELSE period_start END,
+           period_end = CASE WHEN $5 THEN $7 ELSE period_end END
+       WHERE user_id = $1 AND category = $2`,
+      [userId, category, currentUsed + amount, limit, needsReset, now, periodEnd]
+    );
+    await client.query('COMMIT');
+  } catch (error) {
+    await client.query('ROLLBACK').catch(() => {});
+    console.error(`[Usage] Failed to record usage for user=${userId} category=${category}:`, error);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
+ * Release one reserved usage unit after an upstream request fails before producing
+ * a successful response for the client. Free tier is tracked in requests.
+ */
+export async function releaseUsageQuota(
+  userId: string,
+  category: ModelCategory,
+  tier: UsageTier,
+): Promise<void> {
+  if (getUsageUnitForTier(tier) !== 'requests') {
+    return;
+  }
+
   const pool = getDeniPool();
 
   try {

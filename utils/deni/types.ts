@@ -8,6 +8,7 @@ export interface DeniUsageInfo {
   maxModeEligible: boolean;
   usage: Array<{
     category: 'basic' | 'premium';
+    unit: 'requests' | 'tokens';
     limit: number | null;
     used: number;
     remaining: number | null;
