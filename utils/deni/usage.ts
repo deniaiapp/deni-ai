@@ -8,6 +8,12 @@ export type UsageUnit = 'requests' | 'tokens';
 // Active billing statuses
 const ACTIVE_STATUSES = ['active', 'trialing', 'past_due', 'incomplete', 'unpaid', 'paid'];
 
+const BILLING_PRIORITY_ORDER = `CASE
+  WHEN status IN ('active', 'trialing', 'past_due', 'incomplete', 'unpaid', 'paid') THEN 0
+  WHEN status = 'canceled' AND current_period_end IS NOT NULL AND current_period_end > NOW() THEN 1
+  ELSE 2
+END`;
+
 // Tier-based usage limits
 const TIER_LIMITS = {
   free: { unit: 'requests', basic: 500, premium: 50 },
@@ -67,7 +73,8 @@ function determineTier(billing: BillingRow | null, isTeam: boolean): UsageTier {
   // Personal billing: check plan_id
   if (plan_id?.startsWith('pro')) return 'pro';
   if (plan_id?.startsWith('max')) return 'max';
-  return 'plus';
+  if (plan_id?.startsWith('plus')) return 'plus';
+  return 'free';
 }
 
 /**
@@ -84,6 +91,7 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
      WHERE m.user_id = $1
        AND b.organization_id IS NOT NULL
        AND b.plan_id LIKE 'pro_team%'
+     ORDER BY ${BILLING_PRIORITY_ORDER.replaceAll('status', 'b.status').replaceAll('current_period_end', 'b.current_period_end')}, b.current_period_end DESC NULLS LAST
      LIMIT 1`,
     [userId]
   );
@@ -93,6 +101,7 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
     `SELECT plan_id, status, current_period_end, max_mode_enabled
      FROM billing
      WHERE user_id = $1 AND organization_id IS NULL
+     ORDER BY ${BILLING_PRIORITY_ORDER}, current_period_end DESC NULLS LAST
      LIMIT 1`,
     [userId]
   );
