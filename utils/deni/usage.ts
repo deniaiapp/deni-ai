@@ -16,10 +16,10 @@ END`;
 
 // Tier-based usage limits
 const TIER_LIMITS = {
-  free: { unit: 'requests', basic: 500, premium: 50 },
-  plus: { unit: 'tokens', basic: 20_000_000, premium: 5_000_000 },
-  pro: { unit: 'tokens', basic: 50_000_000, premium: 15_000_000 },
-  max: { unit: 'tokens', basic: 120_000_000, premium: 40_000_000 },
+  free: { unit: 'requests', basic: 1000, premium: 100 },
+  plus: { unit: 'tokens', basic: 100_000_000, premium: 50_000_000 },
+  pro: { unit: 'tokens', basic: 250_000_000, premium: 150_000_000 },
+  max: { unit: 'tokens', basic: 750_000_000, premium: 450_000_000 },
 } as const;
 
 export function getUsageUnitForTier(tier: UsageTier): UsageUnit {

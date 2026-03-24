@@ -18,9 +18,8 @@ const TIER_RESTRICTED_MODELS: Array<{
   // claude-sonnet-4-5 requires plus or higher
   { pattern: /claude-sonnet-4[.-]5/i, minTier: "plus" },
   { pattern: /anthropic\/claude-sonnet-4[.-]5/i, minTier: "plus" },
-  // claude-opus-4-6 requires pro
-  { pattern: /claude-opus-4[.-]6/i, minTier: "pro" },
-  { pattern: /anthropic\/claude-opus-4[.-]6/i, minTier: "pro" },
+  { pattern: /claude-opus-4[.-]6/i, minTier: "plus" },
+  { pattern: /anthropic\/claude-opus-4[.-]6/i, minTier: "plus" },
 ];
 
 /**
