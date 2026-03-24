@@ -18,7 +18,7 @@ export interface DeniUsageInfo {
 }
 
 export interface BillingRow {
-  plan_id: string;
+  plan_id: string | null;
   status: string;
   current_period_end: Date | null;
   max_mode_enabled: boolean;

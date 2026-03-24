@@ -65,8 +65,8 @@ function determineTier(billing: BillingRow | null, isTeam: boolean): UsageTier {
   if (isTeam) return 'pro';
 
   // Personal billing: check plan_id
-  if (plan_id.startsWith('pro')) return 'pro';
-  if (plan_id.startsWith('max')) return 'max';
+  if (plan_id?.startsWith('pro')) return 'pro';
+  if (plan_id?.startsWith('max')) return 'max';
   return 'plus';
 }
 
@@ -122,7 +122,7 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   const tier = determineTier(billing, isTeam);
 
   // Determine Max Mode eligibility
-  const maxModeEligible = billing ? billing.plan_id.startsWith('pro') && billing.status === 'active' : false;
+  const maxModeEligible = billing?.plan_id?.startsWith('pro') === true && billing.status === 'active';
   const maxModeEnabled = maxModeEligible && (billing?.max_mode_enabled ?? false);
 
   // Determine period end
