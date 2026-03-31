@@ -6,7 +6,7 @@ import type { ClientResult } from './types';
 export const openrouterClient = new OpenRouter({
   apiKey: Bun.env.OPENROUTER_API_KEY || '',
   httpReferer: "https://flixa.deniai.app",
-  xTitle: "Deni AI Flixa"
+  appTitle: "Deni AI Flixa"
 });
 
 // Voids.top (OpenAI compatible) client

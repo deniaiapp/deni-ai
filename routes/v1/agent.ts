@@ -16,11 +16,14 @@ import { recordUsageQuota, releaseUsageQuota } from "../../utils/deni";
 import {
   type AgentRequest,
   type ResponsesRequest,
+  cacheResponsesState,
+  collectCompletedResponseFromSseEvent,
   getClient,
   convertMessagesToOpenRouter,
   convertToolsToOpenRouter,
   convertOpenRouterResponseToOpenAI,
   convertOpenRouterStreamChunkToOpenAI,
+  resolveResponsesRequestState,
 } from "../../utils/agent";
 
 const router = new Hono<{
@@ -252,7 +255,7 @@ function normalizeResponsesToolChoice(
     return toolChoice;
   }
 
-  const toolChoiceRecord = toolChoice as Record<string, unknown>;
+  const toolChoiceRecord = toolChoice as unknown as Record<string, unknown>;
   if (
     toolChoiceRecord.type === "function" &&
     typeof toolChoiceRecord.name === "string"
@@ -282,6 +285,46 @@ function normalizeResponsesToolChoice(
   }
 
   return toolChoice;
+}
+
+function normalizeOpenRouterToolChoice(
+  toolChoice: AgentRequest["tool_choice"],
+): ChatGenerationParams["toolChoice"] | undefined {
+  if (
+    toolChoice === undefined ||
+    toolChoice === "none" ||
+    toolChoice === "auto" ||
+    toolChoice === "required"
+  ) {
+    return toolChoice;
+  }
+
+  if (!toolChoice || typeof toolChoice !== "object") {
+    return undefined;
+  }
+
+  const toolChoiceRecord = toolChoice as unknown as Record<string, unknown>;
+  const functionRecord =
+    toolChoiceRecord.function &&
+    typeof toolChoiceRecord.function === "object" &&
+    !Array.isArray(toolChoiceRecord.function)
+      ? (toolChoiceRecord.function as Record<string, unknown>)
+      : null;
+
+  if (
+    toolChoiceRecord.type === "function" &&
+    functionRecord &&
+    typeof functionRecord.name === "string"
+  ) {
+    return {
+      type: "function",
+      function: {
+        name: functionRecord.name,
+      },
+    };
+  }
+
+  return undefined;
 }
 
 function normalizeResponsesInput(body: ResponsesRequest): unknown {
@@ -509,7 +552,7 @@ router.post(
             ? { effort: reasoning_effort }
             : undefined,
           tools: convertToolsToOpenRouter(tools),
-          toolChoice: tool_choice,
+          toolChoice: normalizeOpenRouterToolChoice(tool_choice),
         };
 
         if (stream) {
@@ -738,12 +781,13 @@ router.post(
       const url = getResponsesBaseUrl(clientResult);
       const headers = getResponsesHeaders(clientResult);
       const normalizedBody = normalizeResponsesRequest(body);
+      const providerRequest = resolveResponsesRequestState(normalizedBody);
 
       const abortController = new AbortController();
       const response = await fetch(url, {
         method: "POST",
         headers,
-        body: JSON.stringify(normalizedBody),
+        body: JSON.stringify(providerRequest),
         signal: abortController.signal,
       });
 
@@ -767,6 +811,7 @@ router.post(
           async start(controller) {
             let buffer = "";
             let usageSnapshot: Record<string, number> = {};
+            let completedResponse: unknown = null;
 
             try {
               while (true) {
@@ -782,6 +827,10 @@ router.post(
                     eventBlock,
                     usageSnapshot,
                   );
+                  completedResponse = collectCompletedResponseFromSseEvent(
+                    eventBlock,
+                    completedResponse,
+                  );
                 }
 
                 controller.enqueue(value);
@@ -793,9 +842,16 @@ router.post(
                   buffer,
                   usageSnapshot,
                 );
+                completedResponse = collectCompletedResponseFromSseEvent(
+                  buffer,
+                  completedResponse,
+                );
               }
 
               await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
+              if (completedResponse) {
+                cacheResponsesState(providerRequest, completedResponse);
+              }
               controller.close();
             } catch (error) {
               await releaseReservedUsage(auth);
@@ -830,6 +886,9 @@ router.post(
       }
 
       await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
+      if (parsedResponse) {
+        cacheResponsesState(providerRequest, parsedResponse);
+      }
       return new Response(responseBody, {
         status: response.status,
         headers: {
