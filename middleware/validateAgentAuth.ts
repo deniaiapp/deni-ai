@@ -1,4 +1,5 @@
 import { Context, Next } from 'hono';
+import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {
   validateDeniApiKey,
   getDeniUsageInfo,
@@ -47,6 +48,23 @@ function authErrorMessage(code: string | null, fallback: string): string {
   return fallback;
 }
 
+function getAuthErrorResponseConfig(code: string | null): {
+  status: ContentfulStatusCode;
+  type: 'authentication_error' | 'server_error';
+} {
+  if (code === 'db_error') {
+    return {
+      status: 503,
+      type: 'server_error',
+    };
+  }
+
+  return {
+    status: 401,
+    type: 'authentication_error',
+  };
+}
+
 async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string } | Response> {
   const authHeader = c.req.header('Authorization');
   const apiKeyHeader = c.req.header('x-api-key');
@@ -69,16 +87,17 @@ async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string }
   const keyResult = await validateDeniApiKey(apiKey);
 
   if (!keyResult.valid) {
-    return c.json(
-      {
-        error: {
-          message: authErrorMessage(keyResult.code, keyResult.error),
-          type: 'authentication_error',
+    const errorResponse = getAuthErrorResponseConfig(keyResult.code);
+      return c.json(
+        {
+          error: {
+            message: authErrorMessage(keyResult.code, keyResult.error),
+            type: errorResponse.type,
           param: null,
           code: keyResult.code,
+          },
         },
-      },
-      401
+      { status: errorResponse.status }
     );
   }
 

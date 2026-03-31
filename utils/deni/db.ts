@@ -2,6 +2,20 @@ import { Pool } from 'pg';
 
 let pool: Pool | null = null;
 
+function getTimeoutMs(envKey: string, fallback: number): number {
+  const rawValue = Bun.env[envKey];
+  if (!rawValue) {
+    return fallback;
+  }
+
+  const parsedValue = Number.parseInt(rawValue, 10);
+  if (!Number.isFinite(parsedValue) || parsedValue <= 0) {
+    return fallback;
+  }
+
+  return parsedValue;
+}
+
 function normalizeConnectionString(connectionString: string): string {
   const url = new URL(connectionString);
 
@@ -29,7 +43,9 @@ export function getDeniPool(): Pool {
       ssl: disableTlsVerification ? { rejectUnauthorized: false } : { rejectUnauthorized: true },
       max: 10,
       idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: 10000,
+      connectionTimeoutMillis: getTimeoutMs('DENI_DATABASE_CONNECTION_TIMEOUT_MS', 5000),
+      query_timeout: getTimeoutMs('DENI_DATABASE_QUERY_TIMEOUT_MS', 5000),
+      statement_timeout: getTimeoutMs('DENI_DATABASE_STATEMENT_TIMEOUT_MS', 5000),
     });
   }
   return pool;
