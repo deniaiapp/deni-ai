@@ -1,5 +1,6 @@
 import { Context, Next } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { resolveAvailableModelId } from "../utils/agent/models";
 
 interface ChatRequestBody {
   messages?: unknown[];
@@ -528,7 +529,10 @@ export async function validateAgentRequest(c: Context, next: Next) {
       return toolsError;
     }
 
-    c.set("validatedBody", body);
+    c.set("validatedBody", {
+      ...body,
+      model: resolveAvailableModelId(model),
+    });
     await next();
   } catch {
     return invalidRequest(
@@ -720,7 +724,10 @@ export async function validateResponsesRequest(c: Context, next: Next) {
       );
     }
 
-    c.set("validatedBody", body);
+    c.set("validatedBody", {
+      ...body,
+      model: resolveAvailableModelId(model),
+    });
     await next();
   } catch {
     return invalidRequest(

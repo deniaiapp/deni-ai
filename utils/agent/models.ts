@@ -148,6 +148,36 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
 export const DEFAULT_MODEL = "openai/gpt-5.4";
 export const AVAILABLE_MODELS = MODEL_DEFINITIONS.map((model) => model.id);
 
+function stripModelProvider(modelId: string): string {
+  const slashIndex = modelId.indexOf("/");
+  return slashIndex === -1 ? modelId : modelId.slice(slashIndex + 1);
+}
+
+export function resolveAvailableModelId(modelId: string): string {
+  if (!modelId) {
+    return modelId;
+  }
+
+  const exactMatch = MODEL_DEFINITIONS.find((model) => model.id === modelId);
+  if (exactMatch) {
+    return exactMatch.id;
+  }
+
+  if (modelId.includes("/")) {
+    return modelId;
+  }
+
+  const matchedModels = MODEL_DEFINITIONS.filter(
+    (model) => stripModelProvider(model.id) === modelId,
+  );
+
+  if (matchedModels.length === 1) {
+    return matchedModels[0].id;
+  }
+
+  return modelId;
+}
+
 export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
   {
     type: "model",
@@ -260,19 +290,22 @@ export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
 ];
 
 export function getModelLabel(modelId: string): string {
-  const def = MODEL_DEFINITIONS.find((m) => m.id === modelId);
+  const resolvedModelId = resolveAvailableModelId(modelId);
+  const def = MODEL_DEFINITIONS.find((m) => m.id === resolvedModelId);
   return def ? def.label : modelId;
 }
 
 export function getModelDefinition(
   modelId: string,
 ): ModelDefinition | undefined {
-  return MODEL_DEFINITIONS.find((m) => m.id === modelId);
+  const resolvedModelId = resolveAvailableModelId(modelId);
+  return MODEL_DEFINITIONS.find((m) => m.id === resolvedModelId);
 }
 
 export function getModelTierRequirement(
   model: string,
 ): "free" | "plus" | "pro" | "max" {
-  const def = MODEL_DEFINITIONS.find((m) => m.id === model);
+  const resolvedModel = resolveAvailableModelId(model);
+  const def = MODEL_DEFINITIONS.find((m) => m.id === resolvedModel);
   return def ? def.tier : "free";
 }
