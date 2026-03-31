@@ -170,7 +170,10 @@ function validateChatMessages(c: Context, messages: unknown) {
 function validateTools(
   c: Context,
   tools: unknown,
-  options?: { allowChatStyleFunctionWrapper?: boolean },
+  options?: {
+    allowChatStyleFunctionWrapper?: boolean;
+    allowNonFunctionTypes?: boolean;
+  },
 ) {
   if (tools === undefined) {
     return null;
@@ -188,10 +191,10 @@ function validateTools(
   for (let i = 0; i < tools.length; i++) {
     const tool = tools[i];
 
-    if (!isObject(tool) || tool.type !== "function") {
+    if (!isObject(tool) || typeof tool.type !== "string") {
       return invalidRequest(
         c,
-        `Tool at index ${i} must have type 'function'`,
+        `Tool at index ${i} must have a string 'type' field`,
         `tools[${i}]`,
         "invalid_tool",
       );
@@ -199,6 +202,20 @@ function validateTools(
 
     const allowChatStyleFunctionWrapper =
       options?.allowChatStyleFunctionWrapper ?? false;
+    const allowNonFunctionTypes = options?.allowNonFunctionTypes ?? false;
+
+    if (tool.type !== "function") {
+      if (allowNonFunctionTypes) {
+        continue;
+      }
+
+      return invalidRequest(
+        c,
+        `Tool at index ${i} must have type 'function'`,
+        `tools[${i}]`,
+        "invalid_tool",
+      );
+    }
 
     if (allowChatStyleFunctionWrapper) {
       const directName = typeof tool.name === "string" ? tool.name : null;
@@ -277,9 +294,13 @@ function validateResponsesToolChoice(c: Context, toolChoice: unknown) {
   }
 
   if (toolChoice.type !== "function") {
+    if (typeof toolChoice.type === "string") {
+      return null;
+    }
+
     return invalidRequest(
       c,
-      'tool_choice must be one of "none", "auto", "required", or a function selector',
+      'tool_choice must be one of "none", "auto", "required", or a valid tool selector',
       "tool_choice",
       "invalid_parameter",
     );
@@ -651,6 +672,7 @@ export async function validateResponsesRequest(c: Context, next: Next) {
 
     const toolsError = validateTools(c, tools, {
       allowChatStyleFunctionWrapper: true,
+      allowNonFunctionTypes: true,
     });
     if (toolsError) {
       return toolsError;
