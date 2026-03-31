@@ -5,12 +5,14 @@ import { agentRouter } from "./routes/v1/agent";
 import { deniRouter } from "./routes/v1/deni";
 import { modelsRouter } from "./routes/v1/models";
 import { errorHandler } from "./middleware/errorHandler";
+import { logErrorResponses } from "./middleware/logErrorResponses";
 
 const app = new Hono();
 
 // Middleware
 app.use("*", logger());
 app.use("*", cors());
+app.use("*", logErrorResponses);
 
 // Health check
 app.get("/health", (c) => {
