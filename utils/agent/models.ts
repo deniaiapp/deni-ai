@@ -100,6 +100,14 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
     id: "anthropic/claude-opus-4.6",
     label: "Claude Opus 4.6",
+    description: "Legacy Claude Opus model.",
+    tags: ["powerful", "agentic"],
+    premium: true,
+    tier: "plus",
+  },
+  {
+    id: "anthropic/claude-opus-4.7",
+    label: "Claude Opus 4.7",
     description: "Most capable: hybrid reasoning & long-horizon tasks.",
     tags: ["powerful", "agentic"],
     premium: true,
