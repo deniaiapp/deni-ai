@@ -35,7 +35,7 @@ interface ResponsesRequestBody {
   messages?: unknown[];
 }
 
-const VALID_CHAT_ROLES = ["system", "user", "assistant", "tool"] as const;
+const VALID_CHAT_ROLES = ["system", "developer", "user", "assistant", "tool"] as const;
 const VALID_REASONING_EFFORTS = [
   "none",
   "minimal",

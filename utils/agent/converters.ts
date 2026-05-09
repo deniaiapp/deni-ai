@@ -3,10 +3,6 @@ import type { ChatGenerationParams } from '@openrouter/sdk/models';
 import type Anthropic from '@anthropic-ai/sdk';
 import type { MessageParam, Tool, ToolResultBlockParam } from '@anthropic-ai/sdk/resources/messages/messages';
 
-function toTextContent(content: unknown): string | undefined {
-  return typeof content === 'string' ? content : undefined;
-}
-
 function safeParseJson(value: string, fallback: Record<string, unknown> = {}): Record<string, unknown> {
   try {
     const parsed = JSON.parse(value);
@@ -16,43 +12,114 @@ function safeParseJson(value: string, fallback: Record<string, unknown> = {}): R
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function normalizeOpenRouterContentPart(part: unknown): unknown {
+  if (!isRecord(part)) {
+    return part;
+  }
+
+  const normalized: Record<string, unknown> = { ...part };
+
+  if (normalized.image_url !== undefined) {
+    normalized.imageUrl = normalized.image_url;
+    delete normalized.image_url;
+  }
+
+  if (normalized.input_audio !== undefined) {
+    normalized.inputAudio = normalized.input_audio;
+    delete normalized.input_audio;
+  }
+
+  if (normalized.video_url !== undefined) {
+    normalized.videoUrl = normalized.video_url;
+    delete normalized.video_url;
+  }
+
+  if (isRecord(normalized.file)) {
+    const file = { ...normalized.file };
+    if (file.file_data !== undefined) {
+      file.fileData = file.file_data;
+      delete file.file_data;
+    }
+    if (file.file_id !== undefined) {
+      file.fileId = file.file_id;
+      delete file.file_id;
+    }
+    normalized.file = file;
+  }
+
+  if (isRecord(normalized.cache_control)) {
+    normalized.cacheControl = normalized.cache_control;
+    delete normalized.cache_control;
+  }
+
+  return normalized;
+}
+
+function normalizeOpenRouterContent(content: unknown): unknown {
+  return Array.isArray(content)
+    ? content.map((part) => normalizeOpenRouterContentPart(part))
+    : content;
+}
+
+function normalizeOpenRouterToolCall(toolCall: unknown): unknown {
+  if (!isRecord(toolCall)) {
+    return toolCall;
+  }
+
+  return { ...toolCall };
+}
+
 // Convert OpenAI-style messages to OpenRouter format
 export function convertMessagesToOpenRouter(messages: ChatCompletionMessageParam[]): ChatGenerationParams['messages'] {
   return messages.map(msg => {
     if (msg.role === 'system') {
-      return { role: 'system' as const, content: toTextContent(msg.content) ?? '' };
+      return {
+        ...msg,
+        role: 'system' as const,
+        content: normalizeOpenRouterContent(msg.content),
+      } as ChatGenerationParams['messages'][number];
+    }
+    if (msg.role === 'developer') {
+      return {
+        ...msg,
+        role: 'developer' as const,
+        content: normalizeOpenRouterContent(msg.content),
+      } as ChatGenerationParams['messages'][number];
     }
     if (msg.role === 'user') {
-      return { role: 'user' as const, content: toTextContent(msg.content) ?? '' };
+      return {
+        ...msg,
+        role: 'user' as const,
+        content: normalizeOpenRouterContent(msg.content),
+      } as ChatGenerationParams['messages'][number];
     }
     if (msg.role === 'assistant') {
-      const assistantMsg: any = { role: 'assistant' as const };
-      if (msg.content) {
-        assistantMsg.content = msg.content;
+      const assistantMsg: any = {
+        ...msg,
+        role: 'assistant' as const,
+      };
+      if (msg.content !== undefined) {
+        assistantMsg.content = normalizeOpenRouterContent(msg.content);
       }
       if (msg.tool_calls) {
-        assistantMsg.toolCalls = msg.tool_calls.map(tc => {
-          if (tc.type === 'function') {
-            return {
-              id: tc.id,
-              type: tc.type,
-              function: {
-                name: tc.function.name,
-                arguments: tc.function.arguments,
-              },
-            };
-          }
-          return tc;
-        });
+        assistantMsg.toolCalls = msg.tool_calls.map(normalizeOpenRouterToolCall);
+        delete assistantMsg.tool_calls;
       }
       return assistantMsg;
     }
     if (msg.role === 'tool') {
-      return {
+      const toolMsg: any = {
+        ...msg,
         role: 'tool' as const,
         toolCallId: msg.tool_call_id,
-        content: toTextContent(msg.content) ?? JSON.stringify(msg.content),
+        content: normalizeOpenRouterContent(msg.content),
       };
+      delete toolMsg.tool_call_id;
+      return toolMsg;
     }
     return msg as any;
   });
@@ -84,13 +151,13 @@ export function convertOpenRouterResponseToOpenAI(response: any): any {
     object: response.object,
     created: response.created,
     model: response.model,
-    system_fingerprint: response.systemFingerprint ?? null,
+    system_fingerprint: response.systemFingerprint ?? response.system_fingerprint ?? null,
     choices: response.choices.map((choice: any) => ({
       index: choice.index,
       message: {
         role: choice.message.role,
         content: choice.message.content ?? null,
-        tool_calls: choice.message.toolCalls?.map((tc: any) => ({
+        tool_calls: (choice.message.toolCalls ?? choice.message.tool_calls)?.map((tc: any) => ({
           id: tc.id,
           type: tc.type,
           function: {
@@ -101,7 +168,7 @@ export function convertOpenRouterResponseToOpenAI(response: any): any {
         refusal: choice.message.refusal ?? null,
       },
       logprobs: choice.logprobs ?? null,
-      finish_reason: choice.finishReason,
+      finish_reason: choice.finishReason ?? choice.finish_reason,
     })),
     usage: response.usage ? {
       prompt_tokens: response.usage.promptTokens ?? response.usage.prompt_tokens,
@@ -466,13 +533,13 @@ export function convertOpenRouterStreamChunkToOpenAI(chunk: any): any {
     object: data.object,
     created: data.created,
     model: data.model,
-    system_fingerprint: data.systemFingerprint ?? null,
+    system_fingerprint: data.systemFingerprint ?? data.system_fingerprint ?? null,
     choices: data.choices?.map((choice: any) => ({
       index: choice.index,
       delta: {
         role: choice.delta?.role,
         content: choice.delta?.content,
-        tool_calls: choice.delta?.toolCalls?.map((tc: any) => ({
+        tool_calls: (choice.delta?.toolCalls ?? choice.delta?.tool_calls)?.map((tc: any) => ({
           index: tc.index,
           id: tc.id,
           type: tc.type,
@@ -484,7 +551,7 @@ export function convertOpenRouterStreamChunkToOpenAI(chunk: any): any {
         refusal: choice.delta?.refusal,
       },
       logprobs: choice.logprobs ?? null,
-      finish_reason: choice.finishReason,
+      finish_reason: choice.finishReason ?? choice.finish_reason,
     })) ?? [],
     usage: data.usage ? {
       prompt_tokens: data.usage.promptTokens ?? data.usage.prompt_tokens,

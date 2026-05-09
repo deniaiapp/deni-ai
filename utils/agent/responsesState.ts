@@ -25,15 +25,16 @@ function asRecord(value: unknown): Record<string, unknown> | null {
   return value as Record<string, unknown>;
 }
 
-function asArray(value: unknown): unknown[] | undefined {
-  return Array.isArray(value) ? value : undefined;
-}
+function asInputArray(value: unknown): unknown[] | undefined {
+  if (Array.isArray(value)) {
+    return value;
+  }
 
-function hasFunctionCallOutput(input: unknown[]): boolean {
-  return input.some((item) => {
-    const record = asRecord(item);
-    return record?.type === "function_call_output";
-  });
+  if (typeof value === "string") {
+    return [{ role: "user", content: value }];
+  }
+
+  return undefined;
 }
 
 const responsesStateCache = new Map<string, CachedResponsesState>();
@@ -97,9 +98,9 @@ export function resolveResponsesRequestState(
     typeof request.previous_response_id === "string"
       ? request.previous_response_id
       : undefined;
-  const input = asArray(request.input);
+  const input = asInputArray(request.input);
 
-  if (!previousResponseId || !input || !hasFunctionCallOutput(input)) {
+  if (!previousResponseId || !input) {
     return request;
   }
 
@@ -141,8 +142,10 @@ export function cacheResponsesState(
 
   responsesStateCache.set(responseId, {
     id: responseId,
-    input: asArray(request.input)?.map((item) => cloneValue(item)),
-    output: asArray(responseRecord?.output)?.map((item) => cloneValue(item)),
+    input: asInputArray(request.input)?.map((item) => cloneValue(item)),
+    output: Array.isArray(responseRecord?.output)
+      ? responseRecord.output.map((item) => cloneValue(item))
+      : undefined,
     previousResponseId,
     createdAt: Date.now(),
   });
