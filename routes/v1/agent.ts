@@ -367,6 +367,33 @@ function hasResponsesToolOutput(input: unknown): boolean {
   return record.type === "function_call_output" || record.role === "tool";
 }
 
+function hasAnthropicToolResult(
+  messages: Anthropic.Messages.MessageCreateParams["messages"],
+): boolean {
+  const lastMessage = messages[messages.length - 1];
+  if (lastMessage?.role !== "user" || !Array.isArray(lastMessage.content)) {
+    return false;
+  }
+
+  return lastMessage.content.some((block) => block.type === "tool_result");
+}
+
+function normalizeAnthropicToolChoiceAfterToolResult(
+  body: Anthropic.Messages.MessageCreateParams,
+): Anthropic.Messages.MessageCreateParams["tool_choice"] {
+  const toolChoice = body.tool_choice;
+  if (
+    !hasAnthropicToolResult(body.messages) ||
+    toolChoice === undefined ||
+    toolChoice.type === "none" ||
+    toolChoice.type === "auto"
+  ) {
+    return toolChoice;
+  }
+
+  return { type: "auto" };
+}
+
 function normalizeResponsesInput(body: ResponsesRequest): unknown {
   if (body.input !== undefined) {
     return body.input;
@@ -1037,8 +1064,12 @@ router.post(
         ? model
         : `anthropic/${model}`;
 
-      // Pass the Anthropic request body directly to OpenRouter's Anthropic-compatible endpoint
-      const openRouterBody = { ...body, model: openRouterModel };
+      // Pass through Anthropic format, but do not keep forcing tool use after a tool result.
+      const openRouterBody = {
+        ...body,
+        model: openRouterModel,
+        tool_choice: normalizeAnthropicToolChoiceAfterToolResult(body),
+      };
 
       const abortController = new AbortController();
       const response = await fetch("https://openrouter.ai/api/v1/messages", {
