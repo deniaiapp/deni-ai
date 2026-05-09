@@ -242,7 +242,12 @@ function normalizeResponsesTools(
 
 function normalizeResponsesToolChoice(
   toolChoice: ResponsesRequest["tool_choice"],
+  hasToolOutput = false,
 ): unknown {
+  if (hasToolOutput && toolChoice !== undefined && toolChoice !== "none") {
+    return "auto";
+  }
+
   if (
     toolChoice === undefined ||
     toolChoice === "none" ||
@@ -290,7 +295,12 @@ function normalizeResponsesToolChoice(
 
 function normalizeOpenRouterToolChoice(
   toolChoice: AgentRequest["tool_choice"],
+  hasToolResult = false,
 ): ChatGenerationParams["toolChoice"] | undefined {
+  if (hasToolResult && toolChoice !== undefined && toolChoice !== "none") {
+    return "auto";
+  }
+
   if (
     toolChoice === undefined ||
     toolChoice === "none" ||
@@ -328,6 +338,35 @@ function normalizeOpenRouterToolChoice(
   return undefined;
 }
 
+function normalizeOpenAIChatToolChoice(
+  toolChoice: AgentRequest["tool_choice"],
+  hasToolResult: boolean,
+): AgentRequest["tool_choice"] | undefined {
+  if (hasToolResult && toolChoice !== undefined && toolChoice !== "none") {
+    return "auto";
+  }
+
+  return toolChoice;
+}
+
+function hasChatToolResult(messages: AgentRequest["messages"]): boolean {
+  return messages[messages.length - 1]?.role === "tool";
+}
+
+function hasResponsesToolOutput(input: unknown): boolean {
+  if (!Array.isArray(input)) {
+    return false;
+  }
+
+  const lastInput = input[input.length - 1];
+  if (!lastInput || typeof lastInput !== "object" || Array.isArray(lastInput)) {
+    return false;
+  }
+
+  const record = lastInput as Record<string, unknown>;
+  return record.type === "function_call_output" || record.role === "tool";
+}
+
 function normalizeResponsesInput(body: ResponsesRequest): unknown {
   if (body.input !== undefined) {
     return body.input;
@@ -343,9 +382,10 @@ function normalizeResponsesInput(body: ResponsesRequest): unknown {
 function normalizeResponsesRequest(
   body: ResponsesRequest,
 ): Record<string, unknown> {
+  const normalizedInput = normalizeResponsesInput(body);
   const normalized: Record<string, unknown> = {
     model: body.model,
-    input: normalizeResponsesInput(body),
+    input: normalizedInput,
   };
 
   if (body.instructions !== undefined) {
@@ -385,7 +425,10 @@ function normalizeResponsesRequest(
   }
 
   if (body.tool_choice !== undefined) {
-    normalized.tool_choice = normalizeResponsesToolChoice(body.tool_choice);
+    normalized.tool_choice = normalizeResponsesToolChoice(
+      body.tool_choice,
+      hasResponsesToolOutput(normalizedInput),
+    );
   }
 
   if (body.text !== undefined) {
@@ -517,6 +560,7 @@ router.post(
         tools,
         tool_choice,
       } = body;
+      const hasToolResult = hasChatToolResult(messages);
 
       // model is guaranteed to exist after validateAgentAuth middleware
       const clientResult = getClient(model);
@@ -553,7 +597,7 @@ router.post(
             ? { effort: reasoning_effort }
             : undefined,
           tools: convertToolsToOpenRouter(tools),
-          toolChoice: normalizeOpenRouterToolChoice(tool_choice),
+          toolChoice: normalizeOpenRouterToolChoice(tool_choice, hasToolResult),
         };
 
         if (stream) {
@@ -634,7 +678,10 @@ router.post(
         presence_penalty,
         reasoning_effort,
         tools: tools && tools.length > 0 ? tools : undefined,
-        tool_choice: tools && tools.length > 0 ? tool_choice : undefined,
+        tool_choice:
+          tools && tools.length > 0
+            ? normalizeOpenAIChatToolChoice(tool_choice, hasToolResult)
+            : undefined,
       };
 
       if (stream) {
