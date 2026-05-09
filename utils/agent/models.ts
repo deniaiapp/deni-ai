@@ -183,6 +183,10 @@ export function resolveAvailableModelId(modelId: string): string {
     return matchedModels[0].id;
   }
 
+  if (modelId.toLowerCase().includes("gpt")) {
+    return `openai/${modelId}`;
+  }
+
   return modelId;
 }
 

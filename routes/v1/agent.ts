@@ -159,7 +159,8 @@ function getResponsesHeaders(
       "Content-Type": "application/json",
       Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
       "HTTP-Referer": "https://flixa.deniai.app",
-      "X-Title": "Deni AI Flixa",
+      "X-OpenRouter-Title": "Deni AI Flixa",
+      "X-OpenRouter-Categories": "cli-agent,ide-extension",
     };
   }
 
