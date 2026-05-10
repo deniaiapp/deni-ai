@@ -19,6 +19,7 @@ import {
   cacheResponsesState,
   collectCompletedResponseFromSseEvent,
   getClient,
+  convertMessagesToResponsesInput,
   convertMessagesToOpenRouter,
   convertToolsToOpenRouter,
   convertOpenRouterResponseToOpenAI,
@@ -394,13 +395,30 @@ function normalizeAnthropicToolChoiceAfterToolResult(
   return { type: "auto" };
 }
 
+function hasChatToolTranscript(input: unknown[]): boolean {
+  return input.some((item) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return false;
+    }
+
+    const record = item as Record<string, unknown>;
+    return record.role === "tool" || Array.isArray(record.tool_calls);
+  });
+}
+
 function normalizeResponsesInput(body: ResponsesRequest): unknown {
   if (body.input !== undefined) {
+    if (Array.isArray(body.input) && hasChatToolTranscript(body.input)) {
+      return convertMessagesToResponsesInput(
+        body.input as AgentRequest["messages"],
+      );
+    }
+
     return body.input;
   }
 
   if (body.messages !== undefined) {
-    return body.messages;
+    return convertMessagesToResponsesInput(body.messages);
   }
 
   return undefined;

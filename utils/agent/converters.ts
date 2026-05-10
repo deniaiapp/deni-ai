@@ -73,6 +73,139 @@ function normalizeOpenRouterToolCall(toolCall: unknown): unknown {
   return { ...toolCall };
 }
 
+function chatContentToResponsesInputContent(content: unknown): unknown {
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  if (!Array.isArray(content)) {
+    return '';
+  }
+
+  return content
+    .map((part) => {
+      if (!isRecord(part)) {
+        return null;
+      }
+
+      if (part.type === 'text' && typeof part.text === 'string') {
+        return { type: 'input_text', text: part.text };
+      }
+
+      const imageUrl = part.image_url;
+      if (part.type === 'image_url' && imageUrl) {
+        if (typeof imageUrl === 'string') {
+          return { type: 'input_image', image_url: imageUrl, detail: 'auto' };
+        }
+
+        if (isRecord(imageUrl) && typeof imageUrl.url === 'string') {
+          return {
+            type: 'input_image',
+            image_url: imageUrl.url,
+            detail: typeof imageUrl.detail === 'string' ? imageUrl.detail : 'auto',
+          };
+        }
+      }
+
+      return null;
+    })
+    .filter((part) => part !== null);
+}
+
+function chatContentToResponsesOutputContent(content: unknown): unknown[] {
+  if (typeof content === 'string') {
+    return content ? [{ type: 'output_text', text: content }] : [];
+  }
+
+  if (!Array.isArray(content)) {
+    return [];
+  }
+
+  return content
+    .map((part) => {
+      if (isRecord(part) && part.type === 'text' && typeof part.text === 'string') {
+        return { type: 'output_text', text: part.text };
+      }
+
+      return null;
+    })
+    .filter((part) => part !== null);
+}
+
+function chatContentToResponsesToolOutput(content: unknown): string {
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  if (Array.isArray(content)) {
+    const text = content
+      .map((part) => {
+        if (isRecord(part) && part.type === 'text' && typeof part.text === 'string') {
+          return part.text;
+        }
+
+        return null;
+      })
+      .filter((part): part is string => part !== null)
+      .join('\n');
+
+    return text || JSON.stringify(content);
+  }
+
+  return content === undefined ? '' : JSON.stringify(content);
+}
+
+export function convertMessagesToResponsesInput(messages: ChatCompletionMessageParam[]): unknown[] {
+  const input: unknown[] = [];
+
+  for (const msg of messages) {
+    if (msg.role === 'system' || msg.role === 'developer' || msg.role === 'user') {
+      input.push({
+        role: msg.role,
+        content: chatContentToResponsesInputContent(msg.content),
+      });
+      continue;
+    }
+
+    if (msg.role === 'assistant') {
+      const outputContent = chatContentToResponsesOutputContent(msg.content);
+      if (outputContent.length > 0) {
+        input.push({
+          type: 'message',
+          role: 'assistant',
+          status: 'completed',
+          content: outputContent,
+        });
+      }
+
+      for (const toolCall of msg.tool_calls ?? []) {
+        if (toolCall.type !== 'function') {
+          continue;
+        }
+
+        input.push({
+          type: 'function_call',
+          call_id: toolCall.id,
+          name: toolCall.function.name,
+          arguments: toolCall.function.arguments,
+          status: 'completed',
+        });
+      }
+      continue;
+    }
+
+    if (msg.role === 'tool') {
+      input.push({
+        type: 'function_call_output',
+        call_id: msg.tool_call_id,
+        output: chatContentToResponsesToolOutput(msg.content),
+      });
+    }
+  }
+
+  return input;
+}
+
 // Convert OpenAI-style messages to OpenRouter format
 export function convertMessagesToOpenRouter(messages: ChatCompletionMessageParam[]): ChatGenerationParams['messages'] {
   return messages.map(msg => {
