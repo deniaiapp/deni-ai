@@ -31,6 +31,24 @@ const router = new Hono<{
   };
 }>();
 
+function isAgentDebugLogEnabled(): boolean {
+  const value = Bun.env.FLIXA_AGENT_DEBUG_LOGS?.toLowerCase();
+  return value === "1" || value === "true" || value === "yes";
+}
+
+function agentDebugLog(event: string, data: Record<string, unknown>): void {
+  if (!isAgentDebugLogEnabled()) {
+    return;
+  }
+
+  console.log(
+    `[AgentDebug] ${event} ${JSON.stringify({
+      ts: new Date().toISOString(),
+      ...data,
+    })}`,
+  );
+}
+
 function getNumericValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -91,6 +109,131 @@ function mergeUsageSnapshot(
   }
 
   return next;
+}
+
+function getContentSummary(content: unknown): Record<string, unknown> {
+  if (typeof content === "string") {
+    return { kind: "string", length: content.length };
+  }
+
+  if (Array.isArray(content)) {
+    return {
+      kind: "array",
+      blocks: content.map((block) => {
+        if (!block || typeof block !== "object" || Array.isArray(block)) {
+          return { type: typeof block };
+        }
+
+        const record = block as Record<string, unknown>;
+        return {
+          type: record.type,
+          textLength:
+            typeof record.text === "string" ? record.text.length : undefined,
+        };
+      }),
+    };
+  }
+
+  if (content === null) {
+    return { kind: "null" };
+  }
+
+  return { kind: typeof content };
+}
+
+function summarizeChatMessage(message: unknown): Record<string, unknown> {
+  if (!message || typeof message !== "object" || Array.isArray(message)) {
+    return { type: typeof message };
+  }
+
+  const record = message as Record<string, unknown>;
+  const toolCalls = Array.isArray(record.tool_calls)
+    ? record.tool_calls
+    : Array.isArray(record.toolCalls)
+      ? record.toolCalls
+      : undefined;
+
+  return {
+    role: record.role,
+    content:
+      record.content !== undefined
+        ? getContentSummary(record.content)
+        : undefined,
+    tool_call_id:
+      typeof record.tool_call_id === "string" ? record.tool_call_id : undefined,
+    toolCalls: toolCalls?.map((toolCall) => {
+      if (!toolCall || typeof toolCall !== "object" || Array.isArray(toolCall)) {
+        return { type: typeof toolCall };
+      }
+
+      const toolCallRecord = toolCall as Record<string, unknown>;
+      const fn =
+        toolCallRecord.function &&
+        typeof toolCallRecord.function === "object" &&
+        !Array.isArray(toolCallRecord.function)
+          ? (toolCallRecord.function as Record<string, unknown>)
+          : {};
+
+      return {
+        id: toolCallRecord.id,
+        type: toolCallRecord.type,
+        name: fn.name,
+        argumentsLength:
+          typeof fn.arguments === "string" ? fn.arguments.length : undefined,
+      };
+    }),
+  };
+}
+
+function summarizeChatMessages(messages: unknown[]): Record<string, unknown> {
+  return {
+    count: messages.length,
+    tail: messages.slice(-8).map(summarizeChatMessage),
+  };
+}
+
+function summarizeTools(tools: unknown): unknown {
+  if (!Array.isArray(tools)) {
+    return undefined;
+  }
+
+  return tools.map((tool) => {
+    if (!tool || typeof tool !== "object" || Array.isArray(tool)) {
+      return { type: typeof tool };
+    }
+
+    const record = tool as Record<string, unknown>;
+    const fn =
+      record.function &&
+      typeof record.function === "object" &&
+      !Array.isArray(record.function)
+        ? (record.function as Record<string, unknown>)
+        : {};
+
+    return {
+      type: record.type,
+      name: record.name ?? fn.name,
+    };
+  });
+}
+
+function summarizeToolChoice(toolChoice: unknown): unknown {
+  if (!toolChoice || typeof toolChoice !== "object") {
+    return toolChoice;
+  }
+
+  const record = toolChoice as Record<string, unknown>;
+  const fn =
+    record.function &&
+    typeof record.function === "object" &&
+    !Array.isArray(record.function)
+      ? (record.function as Record<string, unknown>)
+      : {};
+
+  return {
+    type: record.type,
+    name: record.name ?? fn.name,
+  };
 }
 
 function collectAnthropicUsageFromSseEvent(
@@ -562,6 +705,131 @@ function collectChatUsageFromSseEvent(
   return usageSnapshot;
 }
 
+interface ChatStreamDebugSummary {
+  chunks: number;
+  contentDeltaChars: number;
+  finishReasons: string[];
+  toolCallDeltas: Array<{
+    index?: number;
+    id?: unknown;
+    type?: unknown;
+    name?: unknown;
+    argumentsLength?: number;
+  }>;
+}
+
+function createChatStreamDebugSummary(): ChatStreamDebugSummary {
+  return {
+    chunks: 0,
+    contentDeltaChars: 0,
+    finishReasons: [],
+    toolCallDeltas: [],
+  };
+}
+
+function collectChatDebugFromSseEvent(
+  eventBlock: string,
+  summary: ChatStreamDebugSummary,
+): void {
+  const payload = eventBlock
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trimStart())
+    .join("\n");
+
+  if (!payload || payload === "[DONE]") {
+    return;
+  }
+
+  try {
+    const event = JSON.parse(payload) as {
+      choices?: Array<{
+        delta?: {
+          content?: unknown;
+          tool_calls?: unknown;
+          toolCalls?: unknown;
+        };
+        finish_reason?: unknown;
+        finishReason?: unknown;
+      }>;
+    };
+
+    summary.chunks += 1;
+
+    for (const choice of event.choices ?? []) {
+      if (typeof choice.delta?.content === "string") {
+        summary.contentDeltaChars += choice.delta.content.length;
+      }
+
+      const finishReason = choice.finish_reason ?? choice.finishReason;
+      if (typeof finishReason === "string") {
+        summary.finishReasons.push(finishReason);
+      }
+
+      const toolCalls = Array.isArray(choice.delta?.tool_calls)
+        ? choice.delta.tool_calls
+        : Array.isArray(choice.delta?.toolCalls)
+          ? choice.delta.toolCalls
+          : [];
+
+      for (const toolCall of toolCalls) {
+        if (!toolCall || typeof toolCall !== "object" || Array.isArray(toolCall)) {
+          continue;
+        }
+
+        const toolCallRecord = toolCall as Record<string, unknown>;
+        const fn =
+          toolCallRecord.function &&
+          typeof toolCallRecord.function === "object" &&
+          !Array.isArray(toolCallRecord.function)
+            ? (toolCallRecord.function as Record<string, unknown>)
+            : {};
+
+        summary.toolCallDeltas.push({
+          index:
+            typeof toolCallRecord.index === "number"
+              ? toolCallRecord.index
+              : undefined,
+          id: toolCallRecord.id,
+          type: toolCallRecord.type,
+          name: fn.name,
+          argumentsLength:
+            typeof fn.arguments === "string" ? fn.arguments.length : undefined,
+        });
+      }
+    }
+  } catch {
+    return;
+  }
+}
+
+function summarizeChatCompletionResponse(response: unknown): Record<string, unknown> {
+  if (!response || typeof response !== "object" || Array.isArray(response)) {
+    return { type: typeof response };
+  }
+
+  const record = response as Record<string, unknown>;
+  return {
+    id: record.id,
+    model: record.model,
+    choices: Array.isArray(record.choices)
+      ? record.choices.map((choice) => {
+          if (!choice || typeof choice !== "object" || Array.isArray(choice)) {
+            return { type: typeof choice };
+          }
+
+          const choiceRecord = choice as Record<string, unknown>;
+          return {
+            index: choiceRecord.index,
+            finishReason: choiceRecord.finish_reason ?? choiceRecord.finishReason,
+            message: summarizeChatMessage(choiceRecord.message),
+          };
+        })
+      : undefined,
+    usage: record.usage,
+  };
+}
+
 async function finalizeUsage(
   auth: AgentAuthContext | undefined,
   totalTokens?: number | null,
@@ -612,6 +880,7 @@ router.post(
   validateAgentAuth,
   async (c) => {
     const auth = c.get("agentAuth") as AgentAuthContext;
+    const requestId = crypto.randomUUID();
 
     try {
       const body = c.get("validatedBody") as AgentRequest;
@@ -630,9 +899,23 @@ router.post(
       } = body;
       const hasToolResult = hasChatToolResult(messages);
 
+      agentDebugLog("chat.request", {
+        requestId,
+        model,
+        stream: stream ?? false,
+        hasToolResult,
+        toolChoice: summarizeToolChoice(tool_choice),
+        tools: summarizeTools(tools),
+        messages: summarizeChatMessages(messages),
+      });
+
       // model is guaranteed to exist after validateAgentAuth middleware
       const clientResult = getClient(model);
       if ("error" in clientResult) {
+        agentDebugLog("chat.provider_error", {
+          requestId,
+          error: clientResult.error,
+        });
         await releaseReservedUsage(auth);
         return c.json(
           {
@@ -650,6 +933,10 @@ router.post(
       // Use OpenRouter SDK for OpenRouter models
       if (clientResult.type === "openrouter") {
         const providerName = clientResult.providerName;
+        const normalizedToolChoice = normalizeOpenRouterToolChoice(
+          tool_choice,
+          hasToolResult,
+        );
         const openrouterBody = {
           model,
           messages,
@@ -664,8 +951,18 @@ router.post(
             ? { effort: reasoning_effort }
             : undefined,
           tools: convertToolsToOpenRouter(tools),
-          tool_choice: normalizeOpenRouterToolChoice(tool_choice, hasToolResult),
+          tool_choice: normalizedToolChoice,
         };
+
+        agentDebugLog("chat.upstream_request", {
+          requestId,
+          provider: providerName,
+          model,
+          stream: openrouterBody.stream,
+          toolChoice: summarizeToolChoice(normalizedToolChoice),
+          tools: summarizeTools(openrouterBody.tools),
+          messages: summarizeChatMessages(messages),
+        });
 
         const abortController = new AbortController();
         const response = await fetch(
@@ -686,6 +983,13 @@ router.post(
 
         if (!response.ok) {
           const errorBody = await response.text();
+          agentDebugLog("chat.upstream_error", {
+            requestId,
+            provider: providerName,
+            status: response.status,
+            contentType: response.headers.get("content-type"),
+            bodyLength: errorBody.length,
+          });
           await releaseReservedUsage(auth);
           return new Response(errorBody, {
             status: response.status,
@@ -699,6 +1003,7 @@ router.post(
         if (stream && response.body) {
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
+          const streamDebug = createChatStreamDebugSummary();
 
           const readable = new ReadableStream({
             async start(controller) {
@@ -719,6 +1024,7 @@ router.post(
                       eventBlock,
                       usageSnapshot,
                     );
+                    collectChatDebugFromSseEvent(eventBlock, streamDebug);
                   }
 
                   controller.enqueue(value);
@@ -730,11 +1036,23 @@ router.post(
                     buffer,
                     usageSnapshot,
                   );
+                  collectChatDebugFromSseEvent(buffer, streamDebug);
                 }
 
                 await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
+                agentDebugLog("chat.stream_complete", {
+                  requestId,
+                  provider: providerName,
+                  usage: usageSnapshot,
+                  stream: streamDebug,
+                });
                 controller.close();
               } catch (error) {
+                agentDebugLog("chat.stream_error", {
+                  requestId,
+                  provider: providerName,
+                  error: error instanceof Error ? error.message : String(error),
+                });
                 console.error(
                   `[Stream Error] provider=${providerName}:`,
                   error,
@@ -771,6 +1089,12 @@ router.post(
         }
 
         await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
+        agentDebugLog("chat.response", {
+          requestId,
+          provider: providerName,
+          status: response.status,
+          response: summarizeChatCompletionResponse(parsedResponse),
+        });
         return new Response(responseBody, {
           status: response.status,
           headers: {
@@ -782,6 +1106,10 @@ router.post(
 
       // Use OpenAI SDK for voids.top (fallback)
       const { client, providerName } = clientResult;
+      const normalizedToolChoice =
+        tools && tools.length > 0
+          ? normalizeOpenAIChatToolChoice(tool_choice, hasToolResult)
+          : undefined;
 
       const requestParams:
         | OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming
@@ -797,11 +1125,18 @@ router.post(
         presence_penalty,
         reasoning_effort,
         tools: tools && tools.length > 0 ? tools : undefined,
-        tool_choice:
-          tools && tools.length > 0
-            ? normalizeOpenAIChatToolChoice(tool_choice, hasToolResult)
-            : undefined,
+        tool_choice: normalizedToolChoice,
       };
+
+      agentDebugLog("chat.upstream_request", {
+        requestId,
+        provider: providerName,
+        model,
+        stream: requestParams.stream,
+        toolChoice: summarizeToolChoice(normalizedToolChoice),
+        tools: summarizeTools(requestParams.tools),
+        messages: summarizeChatMessages(messages),
+      });
 
       if (stream) {
         const abortController = new AbortController();
@@ -820,18 +1155,31 @@ router.post(
         const readable = new ReadableStream({
           async start(controller) {
             let streamedTokens: number | null = null;
+            const streamDebug = createChatStreamDebugSummary();
 
             try {
               for await (const chunk of streamResponse) {
                 streamedTokens =
                   extractTotalTokens(chunk.usage) ?? streamedTokens;
                 const data = JSON.stringify(chunk);
+                collectChatDebugFromSseEvent(`data: ${data}\n\n`, streamDebug);
                 controller.enqueue(encoder.encode(`data: ${data}\n\n`));
               }
               await finalizeUsage(auth, streamedTokens);
+              agentDebugLog("chat.stream_complete", {
+                requestId,
+                provider: providerName,
+                usage: streamedTokens ? { total_tokens: streamedTokens } : {},
+                stream: streamDebug,
+              });
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
               controller.close();
             } catch (error) {
+              agentDebugLog("chat.stream_error", {
+                requestId,
+                provider: providerName,
+                error: error instanceof Error ? error.message : String(error),
+              });
               console.error(`[Stream Error] provider=${providerName}:`, error);
               await releaseReservedUsage(auth);
               controller.error(error);
@@ -859,9 +1207,18 @@ router.post(
       });
 
       await finalizeUsage(auth, extractTotalTokens(response.usage));
+      agentDebugLog("chat.response", {
+        requestId,
+        provider: providerName,
+        response: summarizeChatCompletionResponse(response),
+      });
       return c.json(response, 200);
     } catch (error) {
       await releaseReservedUsage(auth);
+      agentDebugLog("chat.error", {
+        requestId,
+        error: error instanceof Error ? error.message : String(error),
+      });
       console.error("Agent error:", error);
 
       if (error instanceof OpenAI.APIError) {
