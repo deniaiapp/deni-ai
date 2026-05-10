@@ -9,6 +9,10 @@ interface CachedResponsesState {
   createdAt: number;
 }
 
+interface ExpandedInputOptions {
+  omitToolCallProgressMessages?: boolean;
+}
+
 function cloneValue<T>(value: T): T {
   try {
     return structuredClone(value);
@@ -37,6 +41,76 @@ function asInputArray(value: unknown): unknown[] | undefined {
   return undefined;
 }
 
+function isFunctionCallOutputItem(value: unknown): boolean {
+  const record = asRecord(value);
+  return record?.type === "function_call_output";
+}
+
+function isAssistantOutputMessage(value: unknown): boolean {
+  const record = asRecord(value);
+  return record?.type === "message" && record.role === "assistant";
+}
+
+function hasFunctionCallOutputOnly(input: unknown[]): boolean {
+  return input.length > 0 && input.every(isFunctionCallOutputItem);
+}
+
+function hasFunctionCallOutput(output: unknown[] | undefined): boolean {
+  return (
+    output?.some((item) => asRecord(item)?.type === "function_call") ?? false
+  );
+}
+
+function inputAlreadyContainsHistory(input: unknown[]): boolean {
+  let userMessageCount = 0;
+
+  for (const item of input) {
+    const record = asRecord(item);
+    if (!record) {
+      continue;
+    }
+
+    if (record.type === "function_call" || record.type === "reasoning") {
+      return true;
+    }
+
+    if (
+      record.role === "assistant" ||
+      record.role === "system" ||
+      record.role === "developer"
+    ) {
+      return true;
+    }
+
+    if (record.role === "user") {
+      userMessageCount += 1;
+    }
+  }
+
+  return userMessageCount > 1;
+}
+
+function getExpandedOutput(
+  state: CachedResponsesState,
+  options: ExpandedInputOptions,
+): unknown[] | undefined {
+  if (!state.output) {
+    return undefined;
+  }
+
+  if (
+    options.omitToolCallProgressMessages &&
+    hasFunctionCallOutput(state.output)
+  ) {
+    const filteredOutput = state.output.filter(
+      (item) => !isAssistantOutputMessage(item),
+    );
+    return filteredOutput.length > 0 ? filteredOutput : undefined;
+  }
+
+  return state.output;
+}
+
 const responsesStateCache = new Map<string, CachedResponsesState>();
 
 function pruneResponsesStateCache(now = Date.now()): void {
@@ -56,7 +130,10 @@ function pruneResponsesStateCache(now = Date.now()): void {
   }
 }
 
-function buildExpandedInput(previousResponseId: string): unknown[] | null {
+function buildExpandedInput(
+  previousResponseId: string,
+  options: ExpandedInputOptions = {},
+): unknown[] | null {
   const seen = new Set<string>();
   const states: CachedResponsesState[] = [];
 
@@ -81,8 +158,9 @@ function buildExpandedInput(previousResponseId: string): unknown[] | null {
       expanded.push(...cloneValue(state.input));
     }
 
-    if (state.output) {
-      expanded.push(...cloneValue(state.output));
+    const output = getExpandedOutput(state, options);
+    if (output) {
+      expanded.push(...cloneValue(output));
     }
   }
 
@@ -104,7 +182,15 @@ export function resolveResponsesRequestState(
     return request;
   }
 
-  const expandedInput = buildExpandedInput(previousResponseId);
+  if (inputAlreadyContainsHistory(input)) {
+    const resolvedRequest = { ...request };
+    delete resolvedRequest.previous_response_id;
+    return resolvedRequest;
+  }
+
+  const expandedInput = buildExpandedInput(previousResponseId, {
+    omitToolCallProgressMessages: hasFunctionCallOutputOnly(input),
+  });
   if (!expandedInput) {
     return request;
   }
