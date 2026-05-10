@@ -20,10 +20,7 @@ import {
   collectCompletedResponseFromSseEvent,
   getClient,
   convertMessagesToResponsesInput,
-  convertMessagesToOpenRouter,
   convertToolsToOpenRouter,
-  convertOpenRouterResponseToOpenAI,
-  convertOpenRouterStreamChunkToOpenAI,
   resolveResponsesRequestState,
 } from "../../utils/agent";
 
@@ -539,6 +536,32 @@ function collectResponsesUsageFromSseEvent(
   return usageSnapshot;
 }
 
+function collectChatUsageFromSseEvent(
+  eventBlock: string,
+  usageSnapshot: Record<string, number>,
+): Record<string, number> {
+  const payload = eventBlock
+    .split(/\r?\n/)
+    .filter((line) => line.startsWith("data:"))
+    .map((line) => line.slice(5).trimStart())
+    .join("\n");
+
+  if (!payload || payload === "[DONE]") {
+    return usageSnapshot;
+  }
+
+  try {
+    const event = JSON.parse(payload) as { usage?: unknown };
+    if (event.usage) {
+      return mergeUsageSnapshot(usageSnapshot, event.usage);
+    }
+  } catch {
+    return usageSnapshot;
+  }
+
+  return usageSnapshot;
+}
+
 async function finalizeUsage(
   auth: AgentAuthContext | undefined,
   totalTokens?: number | null,
@@ -626,52 +649,90 @@ router.post(
 
       // Use OpenRouter SDK for OpenRouter models
       if (clientResult.type === "openrouter") {
-        const { client, providerName } = clientResult;
-
-        const openrouterParams: ChatGenerationParams = {
+        const providerName = clientResult.providerName;
+        const openrouterBody = {
           model,
-          messages: convertMessagesToOpenRouter(messages),
+          messages,
           stream: stream ?? false,
-          streamOptions: stream ? { includeUsage: true } : undefined,
+          stream_options: stream ? { include_usage: true } : undefined,
           temperature: temperature ?? undefined,
-          maxTokens: max_tokens ?? undefined,
-          topP: top_p ?? undefined,
-          frequencyPenalty: frequency_penalty ?? undefined,
-          presencePenalty: presence_penalty ?? undefined,
+          max_tokens: max_tokens ?? undefined,
+          top_p: top_p ?? undefined,
+          frequency_penalty: frequency_penalty ?? undefined,
+          presence_penalty: presence_penalty ?? undefined,
           reasoning: reasoning_effort
             ? { effort: reasoning_effort }
             : undefined,
           tools: convertToolsToOpenRouter(tools),
-          toolChoice: normalizeOpenRouterToolChoice(tool_choice, hasToolResult),
+          tool_choice: normalizeOpenRouterToolChoice(tool_choice, hasToolResult),
         };
 
-        if (stream) {
-          const abortController = new AbortController();
-          const streamResponse = await client.chat.send(
-            {
-              chatGenerationParams: { ...openrouterParams, stream: true },
+        const abortController = new AbortController();
+        const response = await fetch(
+          "https://openrouter.ai/api/v1/chat/completions",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
+              "HTTP-Referer": "https://flixa.deniai.app",
+              "X-OpenRouter-Title": "Deni AI Flixa",
+              "X-OpenRouter-Categories": "cli-agent,ide-extension",
             },
-            {
-              signal: abortController.signal,
-            },
-          );
+            body: JSON.stringify(openrouterBody),
+            signal: abortController.signal,
+          },
+        );
 
-          // Convert OpenRouter stream to SSE Response
-          const encoder = new TextEncoder();
+        if (!response.ok) {
+          const errorBody = await response.text();
+          await releaseReservedUsage(auth);
+          return new Response(errorBody, {
+            status: response.status,
+            headers: {
+              "Content-Type":
+                response.headers.get("content-type") || "application/json",
+            },
+          });
+        }
+
+        if (stream && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
           const readable = new ReadableStream({
             async start(controller) {
-              let streamedTokens: number | null = null;
+              let buffer = "";
+              let usageSnapshot: Record<string, number> = {};
 
               try {
-                for await (const chunk of streamResponse) {
-                  streamedTokens =
-                    extractTotalTokens(chunk.usage) ?? streamedTokens;
-                  const converted = convertOpenRouterStreamChunkToOpenAI(chunk);
-                  const data = JSON.stringify(converted);
-                  controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+
+                  buffer += decoder.decode(value, { stream: true });
+                  const eventBlocks = buffer.split(/\r?\n\r?\n/);
+                  buffer = eventBlocks.pop() ?? "";
+
+                  for (const eventBlock of eventBlocks) {
+                    usageSnapshot = collectChatUsageFromSseEvent(
+                      eventBlock,
+                      usageSnapshot,
+                    );
+                  }
+
+                  controller.enqueue(value);
                 }
-                await finalizeUsage(auth, streamedTokens);
-                controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+
+                buffer += decoder.decode();
+                if (buffer.trim()) {
+                  usageSnapshot = collectChatUsageFromSseEvent(
+                    buffer,
+                    usageSnapshot,
+                  );
+                }
+
+                await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
                 controller.close();
               } catch (error) {
                 console.error(
@@ -684,26 +745,39 @@ router.post(
             },
             cancel() {
               abortController.abort();
+              reader.cancel().catch(() => {});
             },
           });
 
           return new Response(readable, {
-            status: 200,
+            status: response.status,
             headers: {
-              "Content-Type": "text/event-stream",
-              "Cache-Control": "no-cache",
+              "Content-Type":
+                response.headers.get("content-type") || "text/event-stream",
+              "Cache-Control":
+                response.headers.get("cache-control") || "no-cache",
               Connection: "keep-alive",
             },
           });
         }
 
-        // Non-streaming request
-        const response = await client.chat.send({
-          chatGenerationParams: { ...openrouterParams, stream: false },
-        });
+        const responseBody = await response.text();
+        let parsedResponse: { usage?: unknown } | null = null;
 
-        await finalizeUsage(auth, extractTotalTokens(response.usage));
-        return c.json(convertOpenRouterResponseToOpenAI(response), 200);
+        try {
+          parsedResponse = JSON.parse(responseBody) as { usage?: unknown };
+        } catch {
+          parsedResponse = null;
+        }
+
+        await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
+        return new Response(responseBody, {
+          status: response.status,
+          headers: {
+            "Content-Type":
+              response.headers.get("content-type") || "application/json",
+          },
+        });
       }
 
       // Use OpenAI SDK for voids.top (fallback)
