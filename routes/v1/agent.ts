@@ -16,12 +16,9 @@ import { recordUsageQuota, releaseUsageQuota } from "../../utils/deni";
 import {
   type AgentRequest,
   type ResponsesRequest,
-  cacheResponsesState,
-  collectCompletedResponseFromSseEvent,
   getClient,
   convertMessagesToResponsesInput,
   convertToolsToOpenRouter,
-  resolveResponsesRequestState,
 } from "../../utils/agent";
 
 const router = new Hono<{
@@ -1304,8 +1301,7 @@ router.post(
 
       const url = getResponsesBaseUrl(clientResult);
       const headers = getResponsesHeaders(clientResult);
-      const normalizedBody = normalizeResponsesRequest(body);
-      const providerRequest = resolveResponsesRequestState(normalizedBody);
+      const providerRequest = normalizeResponsesRequest(body);
 
       const abortController = new AbortController();
       const response = await fetch(url, {
@@ -1335,7 +1331,6 @@ router.post(
           async start(controller) {
             let buffer = "";
             let usageSnapshot: Record<string, number> = {};
-            let completedResponse: unknown = null;
 
             try {
               while (true) {
@@ -1351,10 +1346,6 @@ router.post(
                     eventBlock,
                     usageSnapshot,
                   );
-                  completedResponse = collectCompletedResponseFromSseEvent(
-                    eventBlock,
-                    completedResponse,
-                  );
                 }
 
                 controller.enqueue(value);
@@ -1366,16 +1357,9 @@ router.post(
                   buffer,
                   usageSnapshot,
                 );
-                completedResponse = collectCompletedResponseFromSseEvent(
-                  buffer,
-                  completedResponse,
-                );
               }
 
               await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
-              if (completedResponse) {
-                cacheResponsesState(providerRequest, completedResponse);
-              }
               controller.close();
             } catch (error) {
               await releaseReservedUsage(auth);
@@ -1410,9 +1394,6 @@ router.post(
       }
 
       await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
-      if (parsedResponse) {
-        cacheResponsesState(providerRequest, parsedResponse);
-      }
       return new Response(responseBody, {
         status: response.status,
         headers: {
