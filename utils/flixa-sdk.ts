@@ -1,6 +1,39 @@
-export type ChatMessage = {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
+export type ChatContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image_url'; image_url: { url: string; detail?: 'auto' | 'low' | 'high' } };
+
+export type ChatToolCall = {
+  id: string;
+  type: 'function';
+  function: {
+    name: string;
+    arguments: string;
+  };
+};
+
+export type ChatMessage =
+  | {
+      role: 'system' | 'user';
+      content: string | ChatContentPart[];
+    }
+  | {
+      role: 'assistant';
+      content?: string | ChatContentPart[] | null;
+      tool_calls?: ChatToolCall[];
+    }
+  | {
+      role: 'tool';
+      tool_call_id: string;
+      content: string | ChatContentPart[];
+    };
+
+export type ChatTool = {
+  type: 'function';
+  function: {
+    name: string;
+    description?: string;
+    parameters?: Record<string, unknown>;
+  };
 };
 
 export type ChatCompletionRequest = {
@@ -12,6 +45,12 @@ export type ChatCompletionRequest = {
   top_p?: number;
   frequency_penalty?: number;
   presence_penalty?: number;
+  tools?: ChatTool[];
+  tool_choice?:
+    | 'none'
+    | 'auto'
+    | 'required'
+    | { type: 'function'; function: { name: string } };
   [key: string]: unknown;
 };
 
@@ -24,7 +63,8 @@ export type ChatCompletionResponse = {
     index: number;
     message: {
       role: 'assistant';
-      content: string;
+      content: string | null;
+      tool_calls?: ChatToolCall[];
     };
     finish_reason: string | null;
   }>;
