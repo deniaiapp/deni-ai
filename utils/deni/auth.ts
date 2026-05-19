@@ -3,7 +3,10 @@ import { getDeniPool } from './db';
 
 export type ApiKeyValidationResult =
   | { valid: true; userId: string }
-  | { valid: false; error: string; code: 'invalid_key' | 'expired_key' | 'db_error' };
+  | { valid: false; error: string; code: 'invalid_key' | 'expired_key' | 'guest_account' | 'db_error' };
+
+export const GUEST_ACCOUNT_ERROR_MESSAGE =
+  'Guest accounts are not supported. Please sign in with a permanent account.';
 
 /**
  * Hash an API key using SHA-256
@@ -27,8 +30,12 @@ export async function validateDeniApiKey(rawKey: string): Promise<ApiKeyValidati
     const result = await pool.query<{
       user_id: string;
       expires_at: Date | null;
+      is_anonymous: boolean;
     }>(
-      `SELECT user_id, expires_at FROM api_key WHERE key_hash = $1`,
+      `SELECT k.user_id, k.expires_at, COALESCE(u.is_anonymous, false) AS is_anonymous
+       FROM api_key k
+       JOIN "user" u ON u.id = k.user_id
+       WHERE k.key_hash = $1`,
       [keyHash]
     );
 
@@ -36,7 +43,11 @@ export async function validateDeniApiKey(rawKey: string): Promise<ApiKeyValidati
       return { valid: false, error: 'API key not found', code: 'invalid_key' };
     }
 
-    const { user_id, expires_at } = result.rows[0];
+    const { user_id, expires_at, is_anonymous } = result.rows[0];
+
+    if (is_anonymous) {
+      return { valid: false, error: GUEST_ACCOUNT_ERROR_MESSAGE, code: 'guest_account' };
+    }
 
     // Check expiration
     if (expires_at && new Date(expires_at) < new Date()) {

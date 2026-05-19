@@ -1,6 +1,7 @@
 import { Context, Next } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {
+  GUEST_ACCOUNT_ERROR_MESSAGE,
   validateDeniApiKey,
   getDeniUsageInfo,
   getModelCategory,
@@ -37,6 +38,10 @@ function extractApiKey(authHeader: string | undefined, apiKeyHeader: string | un
 }
 
 function authErrorMessage(code: string | null, fallback: string): string {
+  if (code === 'guest_account') {
+    return GUEST_ACCOUNT_ERROR_MESSAGE;
+  }
+
   if (code === 'invalid_key') {
     return 'Invalid API key. Please login again to Deni AI. If the issue persists, try updating the extension to the latest version.';
   }
@@ -52,6 +57,13 @@ function getAuthErrorResponseConfig(code: string | null): {
   status: ContentfulStatusCode;
   type: 'authentication_error' | 'server_error';
 } {
+  if (code === 'guest_account') {
+    return {
+      status: 403,
+      type: 'authentication_error',
+    };
+  }
+
   if (code === 'db_error') {
     return {
       status: 503,
@@ -88,15 +100,15 @@ async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string }
 
   if (!keyResult.valid) {
     const errorResponse = getAuthErrorResponseConfig(keyResult.code);
-      return c.json(
-        {
-          error: {
-            message: authErrorMessage(keyResult.code, keyResult.error),
-            type: errorResponse.type,
+    return c.json(
+      {
+        error: {
+          message: authErrorMessage(keyResult.code, keyResult.error),
+          type: errorResponse.type,
           param: null,
           code: keyResult.code,
-          },
         },
+      },
       { status: errorResponse.status }
     );
   }

@@ -38,7 +38,13 @@ router.get('/deni/usage', async (c) => {
   // Validate API key
   const validationResult = await validateDeniApiKey(apiKey);
   if (!validationResult.valid) {
-    const statusCode = validationResult.code === 'db_error' ? 500 : 401;
+    let statusCode: 401 | 403 | 500 = 401;
+    if (validationResult.code === 'db_error') {
+      statusCode = 500;
+    } else if (validationResult.code === 'guest_account') {
+      statusCode = 403;
+    }
+
     return c.json({
       error: {
         message: validationResult.error,

@@ -1,5 +1,5 @@
 export { getDeniPool, closeDeniPool } from './db';
-export { hashApiKey, validateDeniApiKey } from './auth';
+export { GUEST_ACCOUNT_ERROR_MESSAGE, hashApiKey, validateDeniApiKey } from './auth';
 export type { ApiKeyValidationResult } from './auth';
 export { getDeniUsageInfo, getUsageUnitForTier, reserveUsageQuota, recordUsageQuota, releaseUsageQuota } from './usage';
 export type { UsageTier, UsageUnit } from './usage';
