@@ -845,11 +845,13 @@ async function finalizeUsage(
   }
 
   try {
+    const meteredTokens = Math.ceil(totalTokens * auth.tokenUsageMultiplier);
     await recordUsageQuota(
       auth.userId,
       auth.modelCategory,
       auth.tier,
-      totalTokens,
+      meteredTokens,
+      auth.hasVerifiedPaymentMethod,
     );
   } catch (error) {
     console.error(

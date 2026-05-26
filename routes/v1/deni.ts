@@ -1,15 +1,15 @@
 import { Hono } from 'hono';
+import type { Context } from 'hono';
 import { validateDeniApiKey, getDeniUsageInfo } from '../../utils/deni';
 
 const router = new Hono();
 
 /**
- * GET /v1/deni/usage
- * Get Deni AI user's plan info, usage, and remaining quota
+ * Get Deni AI user's billing status, usage, and remaining quota
  *
  * Authentication: Bearer token with deni_ prefixed API key
  */
-router.get('/deni/usage', async (c) => {
+async function handleBillingStatus(c: Context) {
   // Extract API key from Authorization header
   const authHeader = c.req.header('Authorization');
   if (!authHeader) {
@@ -70,6 +70,9 @@ router.get('/deni/usage', async (c) => {
       }
     }, 500);
   }
-});
+}
+
+router.get('/deni/usage', handleBillingStatus);
+router.get('/deni/billing-status', handleBillingStatus);
 
 export { router as deniRouter };

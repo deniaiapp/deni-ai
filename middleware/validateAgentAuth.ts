@@ -4,12 +4,14 @@ import {
   GUEST_ACCOUNT_ERROR_MESSAGE,
   validateDeniApiKey,
   getDeniUsageInfo,
+  getUpgradeUrl,
   getModelCategory,
   getRequiredTierForModel,
   isTierSufficient,
-  getUsageUnitForTier,
+  getVerifyUrl,
   reserveUsageQuota,
 } from '../utils/deni';
+import { getModelTokenUsageMultiplier } from '../utils/agent/models';
 
 export interface AgentAuthContext {
   userId: string;
@@ -17,6 +19,8 @@ export interface AgentAuthContext {
   modelCategory: 'basic' | 'premium';
   usageUnit: 'requests' | 'tokens';
   usageReserved: boolean;
+  hasVerifiedPaymentMethod: boolean;
+  tokenUsageMultiplier: number;
 }
 
 /**
@@ -163,6 +167,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
 
   // Check model category and reserve quota when needed
   const modelCategory = getModelCategory(model);
+  const tokenUsageMultiplier = getModelTokenUsageMultiplier(model);
   const requiredTier = getRequiredTierForModel(model);
   const tier = usageInfo.tier;
 
@@ -180,16 +185,26 @@ export async function validateAgentAuth(c: Context, next: Next) {
     );
   }
 
-  const quotaReservation = await reserveUsageQuota(keyValidation.userId, modelCategory, tier);
+  const quotaReservation = await reserveUsageQuota(
+    keyValidation.userId,
+    modelCategory,
+    tier,
+    usageInfo.hasVerifiedPaymentMethod,
+  );
   if (!quotaReservation.allowed) {
-    const usageUnit = getUsageUnitForTier(tier);
     return c.json(
       {
         error: {
-          message: `You have exceeded your ${modelCategory} model ${usageUnit} quota. Remaining: ${quotaReservation.remaining}. Please upgrade your plan or wait for quota reset.`,
+          message: `You have exceeded your ${modelCategory} model ${quotaReservation.unit} quota. Remaining: ${quotaReservation.remaining}. Please upgrade your plan or wait for quota reset.`,
           type: 'quota_exceeded',
           param: null,
-          code: 'quota_exceeded',
+          code: 'USAGE_LIMIT_EXCEEDED',
+          category: modelCategory,
+          tier,
+          canVerifyForBoost: tier === 'free' && !usageInfo.hasVerifiedPaymentMethod,
+          canUpgrade: tier !== 'max',
+          verifyUrl: getVerifyUrl(),
+          upgradeUrl: getUpgradeUrl(),
         },
       },
       429
@@ -203,6 +218,8 @@ export async function validateAgentAuth(c: Context, next: Next) {
     modelCategory,
     usageUnit: quotaReservation.unit,
     usageReserved: quotaReservation.reserved,
+    hasVerifiedPaymentMethod: usageInfo.hasVerifiedPaymentMethod,
+    tokenUsageMultiplier,
   } satisfies AgentAuthContext);
 
   await next();

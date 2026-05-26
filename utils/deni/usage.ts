@@ -23,38 +23,71 @@ END`;
 
 // Tier-based usage limits
 const TIER_LIMITS = {
-  free: { unit: "requests", basic: 300, premium: 100 },
+  free: { unit: "tokens", basic: 10_000_000, premium: 1_000_000 },
   plus: { unit: "tokens", basic: 150_000_000, premium: 50_000_000 },
   pro: { unit: "tokens", basic: 300_000_000, premium: 150_000_000 },
   max: { unit: "tokens", basic: 800_000_000, premium: 450_000_000 },
+} as const;
+
+const VERIFIED_FREE_LIMITS = {
+  basic: 25_000_000,
+  premium: 2_000_000,
 } as const;
 
 export function getUsageUnitForTier(tier: UsageTier): UsageUnit {
   return TIER_LIMITS[tier].unit;
 }
 
-function getUsageLimit(category: ModelCategory, tier: UsageTier): number {
+function getUsageLimit(
+  category: ModelCategory,
+  tier: UsageTier,
+  hasVerifiedPaymentMethod = false,
+): number {
+  if (tier === "free" && hasVerifiedPaymentMethod) {
+    return VERIFIED_FREE_LIMITS[category];
+  }
+
   return TIER_LIMITS[tier][category];
 }
 
+function getWebBaseUrl(): string {
+  const baseUrl =
+    Bun.env.DENI_WEB_BASE_URL ??
+    Bun.env.FLIXA_WEB_BASE_URL ??
+    Bun.env.WEB_BASE_URL ??
+    "https://deniai.app";
+
+  return baseUrl.replace(/\/+$/, "");
+}
+
+function buildWebUrl(pathOrUrl: string): string {
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    return pathOrUrl;
+  }
+
+  const path = pathOrUrl.startsWith("/") ? pathOrUrl : `/${pathOrUrl}`;
+  return `${getWebBaseUrl()}${path}`;
+}
+
+export function getVerifyUrl(): string {
+  return buildWebUrl(Bun.env.DENI_VERIFY_PATH ?? "/settings/billing");
+}
+
+export function getUpgradeUrl(): string {
+  return buildWebUrl(Bun.env.DENI_UPGRADE_PATH ?? "/settings/billing");
+}
+
 function shouldResetUsageRow(
-  quotaRow: Pick<
-    UsageQuotaRow,
-    "limit_amount" | "period_end" | "plan_tier" | "unit"
-  >,
+  quotaRow: Pick<UsageQuotaRow, "period_end" | "plan_tier" | "unit">,
   now: Date,
-  limit: number,
   tier: UsageTier,
   unit: UsageUnit,
 ): boolean {
   const isPeriodExpired =
     quotaRow.period_end && new Date(quotaRow.period_end) <= now;
-  const hasLimitChanged = quotaRow.limit_amount !== limit;
   const hasTierChanged = quotaRow.plan_tier !== tier;
   const hasUnitChanged = quotaRow.unit !== unit;
-  return Boolean(
-    isPeriodExpired || hasLimitChanged || hasTierChanged || hasUnitChanged,
-  );
+  return Boolean(isPeriodExpired || hasTierChanged || hasUnitChanged);
 }
 
 /**
@@ -103,7 +136,8 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
 
   // Query team billing first (higher priority)
   const teamBillingResult = await pool.query<BillingRow>(
-    `SELECT b.plan_id, b.status, b.current_period_end, b.max_mode_enabled
+    `SELECT b.plan_id, b.status, b.current_period_end, b.max_mode_enabled,
+            b.payment_method_fingerprint, b.card_funding, b.card_verified_at
      FROM billing b
      INNER JOIN member m ON b.organization_id = m.organization_id
      WHERE m.user_id = $1
@@ -116,7 +150,8 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
 
   // Query personal billing as fallback
   const personalBillingResult = await pool.query<BillingRow>(
-    `SELECT plan_id, status, current_period_end, max_mode_enabled
+    `SELECT plan_id, status, current_period_end, max_mode_enabled,
+            payment_method_fingerprint, card_funding, card_verified_at
      FROM billing
      WHERE user_id = $1 AND organization_id IS NULL
      ORDER BY ${BILLING_PRIORITY_ORDER}, current_period_end DESC NULLS LAST
@@ -148,6 +183,9 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   }
 
   const tier = determineTier(billing, isTeam);
+  const hasVerifiedPaymentMethod =
+    billing?.payment_method_fingerprint !== null &&
+    billing?.payment_method_fingerprint !== undefined;
 
   // Determine Max Mode eligibility
   const maxModeEligible =
@@ -175,10 +213,10 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   // Process each category
   for (const category of ["basic", "premium"] as const) {
     const quotaRow = usageResult.rows.find((r) => r.category === category);
-    const limit = getUsageLimit(category, tier);
+    const limit = getUsageLimit(category, tier, hasVerifiedPaymentMethod);
 
     if (quotaRow) {
-      const needsReset = shouldResetUsageRow(quotaRow, now, limit, tier, unit);
+      const needsReset = shouldResetUsageRow(quotaRow, now, tier, unit);
       const used = needsReset ? 0 : quotaRow.used;
       const remaining = Math.max(limit - used, 0);
 
@@ -212,6 +250,13 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
 
   return {
     tier,
+    hasVerifiedPaymentMethod,
+    cardVerifiedAt: billing?.card_verified_at
+      ? new Date(billing.card_verified_at).toISOString()
+      : null,
+    cardFunding: billing?.card_funding ?? null,
+    verifyUrl: getVerifyUrl(),
+    upgradeUrl: getUpgradeUrl(),
     isTeam,
     planId: billing?.plan_id ?? null,
     status: billing?.status ?? null,
@@ -230,6 +275,7 @@ export async function reserveUsageQuota(
   userId: string,
   category: ModelCategory,
   tier: UsageTier,
+  hasVerifiedPaymentMethod = false,
 ): Promise<{
   allowed: boolean;
   remaining: number;
@@ -239,7 +285,7 @@ export async function reserveUsageQuota(
   const pool = getDeniPool();
   const now = new Date();
   const periodEnd = getNextMonthFirstDay();
-  const limit = getUsageLimit(category, tier);
+  const limit = getUsageLimit(category, tier, hasVerifiedPaymentMethod);
   const unit = getUsageUnitForTier(tier);
   const client = await pool.connect();
 
@@ -280,7 +326,7 @@ export async function reserveUsageQuota(
     }
 
     const currentRow = result.rows[0];
-    const needsReset = shouldResetUsageRow(currentRow, now, limit, tier, unit);
+    const needsReset = shouldResetUsageRow(currentRow, now, tier, unit);
     const currentUsed = needsReset ? 0 : currentRow.used;
 
     if (currentUsed >= limit) {
@@ -360,6 +406,7 @@ export async function recordUsageQuota(
   category: ModelCategory,
   tier: UsageTier,
   amount: number,
+  hasVerifiedPaymentMethod = false,
 ): Promise<void> {
   if (
     getUsageUnitForTier(tier) !== "tokens" ||
@@ -372,7 +419,7 @@ export async function recordUsageQuota(
   const pool = getDeniPool();
   const now = new Date();
   const periodEnd = getNextMonthFirstDay();
-  const limit = getUsageLimit(category, tier);
+  const limit = getUsageLimit(category, tier, hasVerifiedPaymentMethod);
   const client = await pool.connect();
 
   try {
@@ -403,7 +450,7 @@ export async function recordUsageQuota(
     }
 
     const currentRow = result.rows[0];
-    const needsReset = shouldResetUsageRow(currentRow, now, limit, tier, unit);
+    const needsReset = shouldResetUsageRow(currentRow, now, tier, unit);
     const currentUsed = needsReset ? 0 : currentRow.used;
 
     await client.query(

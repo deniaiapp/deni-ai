@@ -4,6 +4,7 @@ export interface ModelDefinition {
   description: string;
   tags: string[];
   premium?: boolean;
+  tokenUsageMultiplier?: number;
   tier: "free" | "plus" | "pro" | "max";
 }
 
@@ -48,6 +49,14 @@ export interface AnthropicModelDefinition {
 }
 
 export const MODEL_DEFINITIONS: ModelDefinition[] = [
+  {
+    id: "openai/gpt-5.5",
+    label: "GPT-5.5",
+    description: "Flagship model: top reasoning, code, long-context tasks.",
+    tags: ["general", "reasoning", "fast"],
+    tokenUsageMultiplier: 1.5,
+    tier: "free",
+  },
   {
     id: "openai/gpt-5.4",
     label: "GPT-5.4",
@@ -103,6 +112,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     description: "Legacy Claude Opus model.",
     tags: ["powerful", "agentic"],
     premium: true,
+    tokenUsageMultiplier: 3,
     tier: "plus",
   },
   {
@@ -111,6 +121,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     description: "Most capable: hybrid reasoning & long-horizon tasks.",
     tags: ["powerful", "agentic"],
     premium: true,
+    tokenUsageMultiplier: 3,
     tier: "pro",
   },
   {
@@ -133,7 +144,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     description:
       "Google frontier model: agentic coding, 1M context, multimodal.",
     tags: ["powerful", "preview"],
-    premium: true,
+    tokenUsageMultiplier: 3,
     tier: "free",
   },
   {
@@ -145,16 +156,31 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tier: "free",
   },
   {
+    id: "google/gemini-3.5-flash",
+    label: "Gemini 3.5 Flash",
+    description: "Ultra-fast multimodal model with strong reasoning.",
+    tags: ["fast"],
+    tier: "free",
+  },
+  {
     id: "google/gemini-3-flash-preview",
     label: "Gemini 3 Flash Preview",
     description: "Ultra-fast multimodal preview with strong reasoning.",
     tags: ["fast", "preview"],
     tier: "free",
   },
+  {
+    id: "google/gemini-3.1-flash-lite",
+    label: "Gemini 3.1 Flash Lite",
+    description: "Ultra-fast model for fast tasks.",
+    tags: ["fast"],
+    tier: "free",
+  },
 ];
 
 export const DEFAULT_MODEL = "openai/gpt-5.4";
 export const AVAILABLE_MODELS = MODEL_DEFINITIONS.map((model) => model.id);
+export const DEFAULT_TOKEN_USAGE_MULTIPLIER = 1;
 
 function stripModelProvider(modelId: string): string {
   const slashIndex = modelId.indexOf("/");
@@ -312,6 +338,16 @@ export function getModelDefinition(
 ): ModelDefinition | undefined {
   const resolvedModelId = resolveAvailableModelId(modelId);
   return MODEL_DEFINITIONS.find((m) => m.id === resolvedModelId);
+}
+
+export function getModelTokenUsageMultiplier(modelId: string): number {
+  const multiplier =
+    getModelDefinition(modelId)?.tokenUsageMultiplier ??
+    DEFAULT_TOKEN_USAGE_MULTIPLIER;
+
+  return Number.isFinite(multiplier) && multiplier > 0
+    ? multiplier
+    : DEFAULT_TOKEN_USAGE_MULTIPLIER;
 }
 
 export function getModelTierRequirement(
