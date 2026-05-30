@@ -16,6 +16,7 @@ import { recordUsageQuota, releaseUsageQuota } from "../../utils/deni";
 import {
   type AgentRequest,
   type ResponsesRequest,
+  applyAutomaticPromptCaching,
   getClient,
   convertMessagesToResponsesInput,
   convertToolsToOpenRouter,
@@ -936,7 +937,7 @@ router.post(
           tool_choice,
           hasToolResult,
         );
-        const openrouterBody = {
+        const openrouterBody = applyAutomaticPromptCaching({
           model,
           messages,
           stream: stream ?? false,
@@ -951,7 +952,7 @@ router.post(
             : undefined,
           tools: convertToolsToOpenRouter(tools),
           tool_choice: normalizedToolChoice,
-        };
+        }, model);
 
         agentDebugLog("chat.upstream_request", {
           requestId,
@@ -1303,7 +1304,11 @@ router.post(
 
       const url = getResponsesBaseUrl(clientResult);
       const headers = getResponsesHeaders(clientResult);
-      const providerRequest = normalizeResponsesRequest(body);
+      const normalizedResponsesRequest = normalizeResponsesRequest(body);
+      const providerRequest =
+        clientResult.type === "openrouter"
+          ? applyAutomaticPromptCaching(normalizedResponsesRequest, body.model)
+          : normalizedResponsesRequest;
 
       const abortController = new AbortController();
       const response = await fetch(url, {
@@ -1497,11 +1502,11 @@ router.post(
         : `anthropic/${model}`;
 
       // Pass through Anthropic format, but do not keep forcing tool use after a tool result.
-      const openRouterBody = {
+      const openRouterBody = applyAutomaticPromptCaching({
         ...body,
         model: openRouterModel,
         tool_choice: normalizeAnthropicToolChoiceAfterToolResult(body),
-      };
+      }, openRouterModel);
 
       const abortController = new AbortController();
       const response = await fetch("https://openrouter.ai/api/v1/messages", {
