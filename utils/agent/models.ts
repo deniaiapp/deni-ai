@@ -54,14 +54,15 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     label: "GPT-5.5",
     description: "Flagship model: top reasoning, code, long-context tasks.",
     tags: ["general", "reasoning", "fast"],
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 1.75,
     tier: "free",
   },
   {
     id: "openai/gpt-5.4",
     label: "GPT-5.4",
-    description: "Flagship model: top reasoning, code, long-context tasks.",
+    description: "Flagship model: top reasoning, code tasks. low-cost than GPT-5.5.",
     tags: ["general", "reasoning", "fast"],
+    tokenUsageMultiplier: 1.5,
     tier: "free",
   },
   {
@@ -93,18 +94,20 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tier: "free",
   },
   {
-    id: "anthropic/claude-sonnet-4.5",
-    label: "Claude Sonnet 4.5",
-    description: "Balanced flagship: best coding, agents & reasoning.",
-    tags: ["balanced", "coding"],
-    tier: "plus",
-  },
-  {
     id: "anthropic/claude-sonnet-4.6",
     label: "Claude Sonnet 4.6",
     description: "Latest balanced model with frontier performance.",
     tags: ["balanced", "latest"],
     tier: "plus",
+  },
+  {
+    id: "anthropic/claude-opus-4.7",
+    label: "Claude Opus 4.7",
+    description: "Most capable: hybrid reasoning & long-horizon tasks.",
+    tags: ["powerful", "agentic"],
+    premium: true,
+    tokenUsageMultiplier: 3,
+    tier: "pro",
   },
   {
     id: "anthropic/claude-opus-4.6",
@@ -116,13 +119,11 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tier: "plus",
   },
   {
-    id: "anthropic/claude-opus-4.7",
-    label: "Claude Opus 4.7",
-    description: "Most capable: hybrid reasoning & long-horizon tasks.",
-    tags: ["powerful", "agentic"],
-    premium: true,
-    tokenUsageMultiplier: 3,
-    tier: "pro",
+    id: "anthropic/claude-sonnet-4.5",
+    label: "Claude Sonnet 4.5",
+    description: "Balanced flagship: best coding, agents & reasoning.",
+    tags: ["balanced", "coding"],
+    tier: "plus",
   },
   {
     id: "glm-4.6",
@@ -141,10 +142,9 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
     id: "google/gemini-3.1-pro-preview",
     label: "Gemini 3.1 Pro Preview",
-    description:
-      "Google frontier model: agentic coding, 1M context, multimodal.",
+    description: "Google frontier model: agentic coding, 1M context, multimodal.",
     tags: ["powerful", "preview"],
-    tokenUsageMultiplier: 3,
+    tokenUsageMultiplier: 1.5,
     tier: "free",
   },
   {
@@ -152,6 +152,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     label: "Gemini 3 Pro Preview",
     description: "Cutting-edge preview: advanced reasoning & agents.",
     tags: ["powerful", "preview"],
+    tokenUsageMultiplier: 1.5,
     premium: true,
     tier: "free",
   },
@@ -178,7 +179,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
 ];
 
-export const DEFAULT_MODEL = "openai/gpt-5.4";
+export const DEFAULT_MODEL = "openai/gpt-5.5";
 export const AVAILABLE_MODELS = MODEL_DEFINITIONS.map((model) => model.id);
 export const DEFAULT_TOKEN_USAGE_MULTIPLIER = 1;
 
@@ -333,26 +334,21 @@ export function getModelLabel(modelId: string): string {
   return def ? def.label : modelId;
 }
 
-export function getModelDefinition(
-  modelId: string,
-): ModelDefinition | undefined {
+export function getModelDefinition(modelId: string): ModelDefinition | undefined {
   const resolvedModelId = resolveAvailableModelId(modelId);
   return MODEL_DEFINITIONS.find((m) => m.id === resolvedModelId);
 }
 
 export function getModelTokenUsageMultiplier(modelId: string): number {
   const multiplier =
-    getModelDefinition(modelId)?.tokenUsageMultiplier ??
-    DEFAULT_TOKEN_USAGE_MULTIPLIER;
+    getModelDefinition(modelId)?.tokenUsageMultiplier ?? DEFAULT_TOKEN_USAGE_MULTIPLIER;
 
   return Number.isFinite(multiplier) && multiplier > 0
     ? multiplier
     : DEFAULT_TOKEN_USAGE_MULTIPLIER;
 }
 
-export function getModelTierRequirement(
-  model: string,
-): "free" | "plus" | "pro" | "max" {
+export function getModelTierRequirement(model: string): "free" | "plus" | "pro" | "max" {
   const resolvedModel = resolveAvailableModelId(model);
   const def = MODEL_DEFINITIONS.find((m) => m.id === resolvedModel);
   return def ? def.tier : "free";
