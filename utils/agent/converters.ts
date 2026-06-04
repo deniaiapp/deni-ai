@@ -1,7 +1,13 @@
 import type { ChatCompletionMessageParam, ChatCompletionTool } from 'openai/resources/chat/completions';
-import type { ChatGenerationParams } from '@openrouter/sdk/models';
 import type Anthropic from '@anthropic-ai/sdk';
 import type { MessageParam, Tool, ToolResultBlockParam } from '@anthropic-ai/sdk/resources/messages/messages';
+
+type OpenRouterChatMessage = Record<string, unknown>;
+type OpenRouterTool = Record<string, unknown>;
+type OpenRouterChatParams = Record<string, unknown> & {
+  model: string;
+  messages: OpenRouterChatMessage[];
+};
 
 function safeParseJson(value: string, fallback: Record<string, unknown> = {}): Record<string, unknown> {
   try {
@@ -207,28 +213,28 @@ export function convertMessagesToResponsesInput(messages: ChatCompletionMessageP
 }
 
 // Convert OpenAI-style messages to OpenRouter format
-export function convertMessagesToOpenRouter(messages: ChatCompletionMessageParam[]): ChatGenerationParams['messages'] {
+export function convertMessagesToOpenRouter(messages: ChatCompletionMessageParam[]): OpenRouterChatMessage[] {
   return messages.map(msg => {
     if (msg.role === 'system') {
       return {
         ...msg,
         role: 'system' as const,
         content: normalizeOpenRouterContent(msg.content),
-      } as ChatGenerationParams['messages'][number];
+      };
     }
     if (msg.role === 'developer') {
       return {
         ...msg,
         role: 'developer' as const,
         content: normalizeOpenRouterContent(msg.content),
-      } as ChatGenerationParams['messages'][number];
+      };
     }
     if (msg.role === 'user') {
       return {
         ...msg,
         role: 'user' as const,
         content: normalizeOpenRouterContent(msg.content),
-      } as ChatGenerationParams['messages'][number];
+      };
     }
     if (msg.role === 'assistant') {
       const assistantMsg: any = {
@@ -259,7 +265,7 @@ export function convertMessagesToOpenRouter(messages: ChatCompletionMessageParam
 }
 
 // Convert OpenAI-style tools to OpenRouter format
-export function convertToolsToOpenRouter(tools?: ChatCompletionTool[]): ChatGenerationParams['tools'] {
+export function convertToolsToOpenRouter(tools?: ChatCompletionTool[]): OpenRouterTool[] | undefined {
   if (!tools || tools.length === 0) return undefined;
 
   return tools.map(tool => {
@@ -703,8 +709,8 @@ export function convertOpenRouterStreamChunkToOpenAI(chunk: any): any {
 export function convertAnthropicRequestToOpenRouter(
   body: any,
   openRouterModel: string,
-): ChatGenerationParams {
-  const messages: ChatGenerationParams['messages'] = [];
+): OpenRouterChatParams {
+  const messages: OpenRouterChatMessage[] = [];
 
   // Add system message if present
   if (body.system) {
@@ -806,7 +812,7 @@ export function convertAnthropicRequestToOpenRouter(
 /**
  * Convert Anthropic tools to OpenRouter tool format
  */
-function convertToolsFromAnthropicToOpenRouter(tools?: any[]): ChatGenerationParams['tools'] {
+function convertToolsFromAnthropicToOpenRouter(tools?: any[]): OpenRouterTool[] | undefined {
   if (!tools || tools.length === 0) return undefined;
 
   return tools.map((tool: any) => ({

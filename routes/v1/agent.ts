@@ -1,6 +1,5 @@
 import { Hono } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
-import type { ChatGenerationParams } from "@openrouter/sdk/models";
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
 import {
@@ -491,7 +490,7 @@ function normalizeResponsesToolChoice(
 function normalizeOpenRouterToolChoice(
   toolChoice: AgentRequest["tool_choice"],
   hasToolResult = false,
-): ChatGenerationParams["toolChoice"] | undefined {
+): unknown {
   if (hasToolResult && toolChoice !== undefined && toolChoice !== "none") {
     return "auto";
   }
