@@ -38,6 +38,15 @@ const anthropicFailoverClient = new Anthropic({
   apiKey: Bun.env.ANTHROPIC_API_KEY || "",
 });
 
+const OPENROUTER_MESSAGES_FAILOVER_TTL_MS = 60 * 60 * 1000;
+const openRouterMessagesFailoverCache = new Map<
+  string,
+  {
+    expiresAt: number;
+    status: number;
+  }
+>();
+
 function isAgentDebugLogEnabled(): boolean {
   const value = Bun.env.FLIXA_AGENT_DEBUG_LOGS?.toLowerCase();
   return value === "1" || value === "true" || value === "yes";
@@ -335,6 +344,46 @@ function hasAnthropicFailoverKey(): boolean {
 
 function shouldFailoverToAnthropic(status: number, model: string): boolean {
   return status === 402 && isAnthropicModel(model) && hasAnthropicFailoverKey();
+}
+
+function getOpenRouterMessagesFailoverCacheKey(model: string): string {
+  return model.toLowerCase();
+}
+
+function getOpenRouterMessagesFailoverState(
+  model: string,
+): { expiresAt: number; status: number } | null {
+  const cacheKey = getOpenRouterMessagesFailoverCacheKey(model);
+  const state = openRouterMessagesFailoverCache.get(cacheKey);
+  if (!state) {
+    return null;
+  }
+
+  if (state.expiresAt <= Date.now()) {
+    openRouterMessagesFailoverCache.delete(cacheKey);
+    return null;
+  }
+
+  return state;
+}
+
+function setOpenRouterMessagesFailoverState(
+  model: string,
+  status: number,
+): void {
+  openRouterMessagesFailoverCache.set(
+    getOpenRouterMessagesFailoverCacheKey(model),
+    {
+      expiresAt: Date.now() + OPENROUTER_MESSAGES_FAILOVER_TTL_MS,
+      status,
+    },
+  );
+}
+
+function clearOpenRouterMessagesFailoverState(model: string): void {
+  openRouterMessagesFailoverCache.delete(
+    getOpenRouterMessagesFailoverCacheKey(model),
+  );
 }
 
 function toAnthropicModelName(model: string): string {
@@ -1885,6 +1934,26 @@ router.post(
         ? model
         : `anthropic/${model}`;
 
+      const cachedFailoverState =
+        getOpenRouterMessagesFailoverState(openRouterModel);
+      if (
+        cachedFailoverState &&
+        isAnthropicModel(openRouterModel) &&
+        hasAnthropicFailoverKey()
+      ) {
+        agentDebugLog("messages.failover_cache_hit", {
+          provider: "openrouter",
+          model: openRouterModel,
+          status: cachedFailoverState.status,
+          expiresAt: new Date(cachedFailoverState.expiresAt).toISOString(),
+        });
+        return await createAnthropicMessagesFailoverResponse(
+          auth,
+          c.req.raw.headers,
+          body,
+        );
+      }
+
       // Pass through Anthropic format, but do not keep forcing tool use after a tool result.
       const openRouterBody = applyAutomaticPromptCaching({
         ...body,
@@ -1917,6 +1986,13 @@ router.post(
         );
 
         if (shouldFailoverToAnthropic(response.status, openRouterModel)) {
+          setOpenRouterMessagesFailoverState(openRouterModel, response.status);
+          agentDebugLog("messages.failover_cache_set", {
+            provider: "openrouter",
+            model: openRouterModel,
+            status: response.status,
+            ttlMs: OPENROUTER_MESSAGES_FAILOVER_TTL_MS,
+          });
           return await createAnthropicMessagesFailoverResponse(
             auth,
             c.req.raw.headers,
@@ -1933,6 +2009,8 @@ router.post(
           },
         });
       }
+
+      clearOpenRouterMessagesFailoverState(openRouterModel);
 
       if (stream && response.body) {
         // Pipe the SSE stream directly from OpenRouter to the client.
