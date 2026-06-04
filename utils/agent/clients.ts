@@ -15,6 +15,11 @@ export const voidsClient = new OpenAI({
   apiKey: Bun.env.OPENAI_COMPAT_API_KEY || 'a',
 });
 
+export function isAnthropicModel(model: string): boolean {
+  const normalizedModel = model.toLowerCase();
+  return normalizedModel.startsWith('anthropic/') || normalizedModel.includes('claude');
+}
+
 export function getClient(model: string): ClientResult {
   // Models with a slash (e.g. "anthropic/claude-3.5-sonnet") go through OpenRouter
   const useOpenRouter = model.includes('/');

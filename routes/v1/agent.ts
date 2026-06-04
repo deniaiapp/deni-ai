@@ -18,6 +18,12 @@ import {
   type ResponsesRequest,
   applyAutomaticPromptCaching,
   getClient,
+  isAnthropicModel,
+  convertAnthropicResponseToOpenAI,
+  convertAnthropicStreamEventToOpenAI,
+  convertMessagesToAnthropic,
+  convertToolsToAnthropic,
+  extractAnthropicSystemPrompt,
   convertMessagesToResponsesInput,
   convertToolsToOpenRouter,
 } from "../../utils/agent";
@@ -28,6 +34,10 @@ const router = new Hono<{
     agentAuth: AgentAuthContext;
   };
 }>();
+
+const anthropicFailoverClient = new Anthropic({
+  apiKey: Bun.env.ANTHROPIC_API_KEY || "",
+});
 
 function isAgentDebugLogEnabled(): boolean {
   const value = Bun.env.FLIXA_AGENT_DEBUG_LOGS?.toLowerCase();
@@ -300,6 +310,7 @@ function getResponsesHeaders(
       "HTTP-Referer": "https://flixa.deniai.app",
       "X-OpenRouter-Title": "Deni AI Flixa",
       "X-OpenRouter-Categories": "cli-agent,ide-extension",
+      "X-OpenRouter-Experimental-Metadata": "enabled",
     };
   }
 
@@ -307,6 +318,51 @@ function getResponsesHeaders(
     "Content-Type": "application/json",
     Authorization: `Bearer ${Bun.env.OPENAI_COMPAT_API_KEY || "a"}`,
   };
+}
+
+function getOpenRouterProviderRouting(
+  model: string,
+): { only: string[] } | undefined {
+  if (isAnthropicModel(model)) {
+    return { only: ["anthropic"] };
+  }
+
+  return undefined;
+}
+
+function hasAnthropicFailoverKey(): boolean {
+  return Boolean(Bun.env.ANTHROPIC_API_KEY);
+}
+
+function shouldFailoverToAnthropic(status: number, model: string): boolean {
+  return status === 402 && isAnthropicModel(model) && hasAnthropicFailoverKey();
+}
+
+function toAnthropicModelName(model: string): string {
+  return model.startsWith("anthropic/")
+    ? model.slice("anthropic/".length)
+    : model;
+}
+
+function getAnthropicHeaders(requestHeaders: Headers): Record<string, string> {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    "x-api-key": Bun.env.ANTHROPIC_API_KEY || "",
+    "anthropic-version":
+      requestHeaders.get("anthropic-version") || "2023-06-01",
+  };
+
+  for (const [key, value] of requestHeaders.entries()) {
+    const normalizedKey = key.toLowerCase();
+    if (
+      normalizedKey.startsWith("anthropic-") &&
+      normalizedKey !== "anthropic-version"
+    ) {
+      headers[normalizedKey] = value;
+    }
+  }
+
+  return headers;
 }
 
 function normalizeResponsesTools(
@@ -531,6 +587,49 @@ function normalizeAnthropicToolChoiceAfterToolResult(
   }
 
   return { type: "auto" };
+}
+
+function normalizeAnthropicChatToolChoice(
+  toolChoice: AgentRequest["tool_choice"],
+  hasToolResult: boolean,
+): Anthropic.Messages.MessageCreateParams["tool_choice"] {
+  if (hasToolResult && toolChoice !== undefined && toolChoice !== "none") {
+    return { type: "auto" };
+  }
+
+  if (toolChoice === undefined) {
+    return undefined;
+  }
+
+  if (toolChoice === "none" || toolChoice === "auto") {
+    return { type: toolChoice };
+  }
+
+  if (toolChoice === "required") {
+    return { type: "any" };
+  }
+
+  if (!toolChoice || typeof toolChoice !== "object") {
+    return undefined;
+  }
+
+  const toolChoiceRecord = toolChoice as unknown as Record<string, unknown>;
+  const functionRecord =
+    toolChoiceRecord.function &&
+    typeof toolChoiceRecord.function === "object" &&
+    !Array.isArray(toolChoiceRecord.function)
+      ? (toolChoiceRecord.function as Record<string, unknown>)
+      : null;
+
+  if (
+    toolChoiceRecord.type === "function" &&
+    functionRecord &&
+    typeof functionRecord.name === "string"
+  ) {
+    return { type: "tool", name: functionRecord.name };
+  }
+
+  return undefined;
 }
 
 function hasChatToolTranscript(input: unknown[]): boolean {
@@ -870,6 +969,268 @@ async function releaseReservedUsage(
   await releaseUsageQuota(auth.userId, auth.modelCategory, auth.tier);
 }
 
+async function createAnthropicChatFailoverResponse(
+  auth: AgentAuthContext,
+  requestId: string,
+  body: AgentRequest,
+  hasToolResult: boolean,
+): Promise<Response> {
+  const {
+    messages,
+    model,
+    stream,
+    temperature,
+    max_tokens,
+    top_p,
+    tools,
+    tool_choice,
+  } = body;
+  const anthropicModel = toAnthropicModelName(model);
+  const anthropicMessages = convertMessagesToAnthropic(messages);
+  const anthropicTools = convertToolsToAnthropic(tools);
+  const system = extractAnthropicSystemPrompt(messages);
+  const normalizedToolChoice = normalizeAnthropicChatToolChoice(
+    tool_choice,
+    hasToolResult,
+  );
+
+  const requestParams = {
+    model: anthropicModel,
+    messages: anthropicMessages,
+    stream: stream ?? false,
+    max_tokens: max_tokens ?? 4096,
+    temperature: temperature ?? undefined,
+    top_p: top_p ?? undefined,
+    system,
+    tools: anthropicTools,
+    tool_choice: normalizedToolChoice,
+  } satisfies Anthropic.Messages.MessageCreateParams;
+
+  agentDebugLog("chat.failover_request", {
+    requestId,
+    provider: "anthropic",
+    model: anthropicModel,
+    stream: requestParams.stream,
+    toolChoice: normalizedToolChoice,
+    tools: summarizeTools(anthropicTools),
+    messages: summarizeChatMessages(anthropicMessages),
+  });
+
+  if (stream) {
+    const abortController = new AbortController();
+    const streamResponse = await anthropicFailoverClient.messages.create(
+      {
+        ...requestParams,
+        stream: true,
+      },
+      { signal: abortController.signal },
+    );
+
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        let messageId = `chatcmpl_${requestId}`;
+        let usageSnapshot: Record<string, number> = {};
+        const streamDebug = createChatStreamDebugSummary();
+
+        try {
+          for await (const event of streamResponse) {
+            if (event.type === "message_start") {
+              messageId = event.message.id;
+              usageSnapshot = mergeUsageSnapshot(
+                usageSnapshot,
+                event.message.usage,
+              );
+            }
+
+            if (event.type === "message_delta" && event.usage) {
+              usageSnapshot = mergeUsageSnapshot(usageSnapshot, event.usage);
+            }
+
+            const chunk = convertAnthropicStreamEventToOpenAI(
+              event,
+              messageId,
+              model,
+            );
+            if (!chunk) {
+              continue;
+            }
+
+            const data = JSON.stringify(chunk);
+            collectChatDebugFromSseEvent(`data: ${data}\n\n`, streamDebug);
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+          }
+
+          await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
+          agentDebugLog("chat.failover_stream_complete", {
+            requestId,
+            provider: "anthropic",
+            usage: usageSnapshot,
+            stream: streamDebug,
+          });
+          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+          controller.close();
+        } catch (error) {
+          agentDebugLog("chat.failover_stream_error", {
+            requestId,
+            provider: "anthropic",
+            error: error instanceof Error ? error.message : String(error),
+          });
+          console.error("[Stream Error] provider=anthropic failover:", error);
+          await releaseReservedUsage(auth);
+          controller.error(error);
+        }
+      },
+      cancel() {
+        abortController.abort();
+      },
+    });
+
+    return new Response(readable, {
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  }
+
+  const response = await anthropicFailoverClient.messages.create({
+    ...requestParams,
+    stream: false,
+  });
+  const openAiResponse = convertAnthropicResponseToOpenAI(response, model);
+
+  await finalizeUsage(auth, extractTotalTokens(response.usage));
+  agentDebugLog("chat.failover_response", {
+    requestId,
+    provider: "anthropic",
+    response: summarizeChatCompletionResponse(openAiResponse),
+  });
+
+  return new Response(JSON.stringify(openAiResponse), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+async function createAnthropicMessagesFailoverResponse(
+  auth: AgentAuthContext,
+  requestHeaders: Headers,
+  body: Anthropic.Messages.MessageCreateParams,
+): Promise<Response> {
+  const anthropicBody = {
+    ...body,
+    model: toAnthropicModelName(body.model),
+    tool_choice: normalizeAnthropicToolChoiceAfterToolResult(body),
+  };
+
+  const abortController = new AbortController();
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: getAnthropicHeaders(requestHeaders),
+    body: JSON.stringify(anthropicBody),
+    signal: abortController.signal,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    console.error(
+      "[Anthropic messages failover error]:",
+      response.status,
+      errorBody,
+    );
+    await releaseReservedUsage(auth);
+    return new Response(errorBody, {
+      status: response.status,
+      headers: {
+        "Content-Type":
+          response.headers.get("content-type") || "application/json",
+      },
+    });
+  }
+
+  if (body.stream && response.body) {
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    const readable = new ReadableStream({
+      async start(controller) {
+        let buffer = "";
+        let usageSnapshot: Record<string, number> = {};
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const eventBlocks = buffer.split(/\r?\n\r?\n/);
+            buffer = eventBlocks.pop() ?? "";
+            for (const eventBlock of eventBlocks) {
+              usageSnapshot = collectAnthropicUsageFromSseEvent(
+                eventBlock,
+                usageSnapshot,
+              );
+            }
+
+            controller.enqueue(value);
+          }
+
+          buffer += decoder.decode();
+          if (buffer.trim()) {
+            usageSnapshot = collectAnthropicUsageFromSseEvent(
+              buffer,
+              usageSnapshot,
+            );
+          }
+
+          await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
+          controller.close();
+        } catch (error) {
+          console.error(
+            "[Stream Error] provider=anthropic failover (messages):",
+            error,
+          );
+          await releaseReservedUsage(auth);
+          controller.error(error);
+        }
+      },
+      cancel() {
+        abortController.abort();
+        reader.cancel().catch(() => {});
+      },
+    });
+
+    return new Response(readable, {
+      status: response.status,
+      headers: {
+        "Content-Type":
+          response.headers.get("content-type") || "text/event-stream",
+        "Cache-Control": response.headers.get("cache-control") || "no-cache",
+        Connection: "keep-alive",
+      },
+    });
+  }
+
+  const responseBody = await response.text();
+  let parsedResponse: { usage?: unknown } | null = null;
+
+  try {
+    parsedResponse = JSON.parse(responseBody) as { usage?: unknown };
+  } catch {
+    parsedResponse = null;
+  }
+
+  await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
+  return new Response(responseBody, {
+    status: response.status,
+    headers: {
+      "Content-Type": response.headers.get("content-type") || "application/json",
+    },
+  });
+}
+
 /**
  * POST /v1/agent/chat/completions
  * OpenAI-style agent endpoint using official SDKs
@@ -939,6 +1300,7 @@ router.post(
         );
         const openrouterBody = applyAutomaticPromptCaching({
           model,
+          provider: getOpenRouterProviderRouting(model),
           messages,
           stream: stream ?? false,
           stream_options: stream ? { include_usage: true } : undefined,
@@ -975,6 +1337,7 @@ router.post(
               "HTTP-Referer": "https://flixa.deniai.app",
               "X-OpenRouter-Title": "Deni AI Flixa",
               "X-OpenRouter-Categories": "cli-agent,ide-extension",
+              "X-OpenRouter-Experimental-Metadata": "enabled",
             },
             body: JSON.stringify(openrouterBody),
             signal: abortController.signal,
@@ -990,6 +1353,22 @@ router.post(
             contentType: response.headers.get("content-type"),
             bodyLength: errorBody.length,
           });
+
+          if (shouldFailoverToAnthropic(response.status, model)) {
+            agentDebugLog("chat.failover_start", {
+              requestId,
+              fromProvider: providerName,
+              toProvider: "anthropic",
+              status: response.status,
+            });
+            return await createAnthropicChatFailoverResponse(
+              auth,
+              requestId,
+              body,
+              hasToolResult,
+            );
+          }
+
           await releaseReservedUsage(auth);
           return new Response(errorBody, {
             status: response.status,
@@ -1307,7 +1686,13 @@ router.post(
       const normalizedResponsesRequest = normalizeResponsesRequest(body);
       const providerRequest =
         clientResult.type === "openrouter"
-          ? applyAutomaticPromptCaching(normalizedResponsesRequest, body.model)
+          ? applyAutomaticPromptCaching(
+              {
+                ...normalizedResponsesRequest,
+                provider: getOpenRouterProviderRouting(body.model),
+              },
+              body.model,
+            )
           : normalizedResponsesRequest;
 
       const abortController = new AbortController();
@@ -1466,7 +1851,7 @@ router.post(
 /**
  * POST /v1/messages
  * Anthropic-compatible endpoint for Claude Code.
- * Routes through OpenRouter: Anthropic request → OpenRouter → Anthropic response
+ * Routes through OpenRouter with Anthropic provider routing for BYOK traffic.
  */
 router.post(
   "/messages",
@@ -1496,7 +1881,7 @@ router.post(
         );
       }
 
-      // Prefix model with anthropic/ for OpenRouter routing
+      // Prefix model with anthropic/ for OpenRouter routing.
       const openRouterModel = model.startsWith("anthropic/")
         ? model
         : `anthropic/${model}`;
@@ -1505,6 +1890,7 @@ router.post(
       const openRouterBody = applyAutomaticPromptCaching({
         ...body,
         model: openRouterModel,
+        provider: getOpenRouterProviderRouting(openRouterModel),
         tool_choice: normalizeAnthropicToolChoiceAfterToolResult(body),
       }, openRouterModel);
 
@@ -1515,7 +1901,9 @@ router.post(
           "Content-Type": "application/json",
           Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
           "HTTP-Referer": "https://flixa.deniai.app",
-          "X-Title": "Deni AI Flixa",
+          "X-OpenRouter-Title": "Deni AI Flixa",
+          "X-OpenRouter-Categories": "cli-agent,ide-extension",
+          "X-OpenRouter-Experimental-Metadata": "enabled",
         },
         body: JSON.stringify(openRouterBody),
         signal: abortController.signal,
@@ -1528,15 +1916,27 @@ router.post(
           response.status,
           errorBody,
         );
+
+        if (shouldFailoverToAnthropic(response.status, openRouterModel)) {
+          return await createAnthropicMessagesFailoverResponse(
+            auth,
+            c.req.raw.headers,
+            body,
+          );
+        }
+
         await releaseReservedUsage(auth);
         return new Response(errorBody, {
           status: response.status,
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type":
+              response.headers.get("content-type") || "application/json",
+          },
         });
       }
 
       if (stream && response.body) {
-        // Pipe the SSE stream directly from OpenRouter to the client
+        // Pipe the SSE stream directly from OpenRouter to the client.
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         const readable = new ReadableStream({
@@ -1610,7 +2010,10 @@ router.post(
       await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
       return new Response(responseBody, {
         status: response.status,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type":
+            response.headers.get("content-type") || "application/json",
+        },
       });
     } catch (error) {
       await releaseReservedUsage(auth);
