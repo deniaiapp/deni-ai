@@ -117,7 +117,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tags: ["powerful", "agentic"],
     premium: true,
     tokenUsageMultiplier: 3,
-    tier: "pro",
+    tier: "plus",
   },
   {
     id: "anthropic/claude-opus-4.7",
@@ -126,7 +126,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tags: ["powerful", "agentic"],
     premium: true,
     tokenUsageMultiplier: 3,
-    tier: "pro",
+    tier: "plus",
   },
   {
     id: "anthropic/claude-opus-4.6",
