@@ -33,21 +33,53 @@ export function getPromptCacheControl(): PromptCacheControl | undefined {
   return ttl === "1h" ? { type: "ephemeral", ttl } : { type: "ephemeral" };
 }
 
-function hasPromptCacheBreakpoint(value: unknown): boolean {
-  if (!value || typeof value !== "object") {
+function hasOwnCacheControl(value: unknown): boolean {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
   }
 
-  if (Array.isArray(value)) {
-    return value.some(hasPromptCacheBreakpoint);
-  }
-
   const record = value as Record<string, unknown>;
-  if (record.cache_control !== undefined || record.cacheControl !== undefined) {
+  return record.cache_control !== undefined || record.cacheControl !== undefined;
+}
+
+/**
+ * Shallow scan for existing cache breakpoints in the places clients actually
+ * put them: top-level, system blocks, messages, and message content blocks.
+ * Avoids a full recursive walk of the request body (tool schemas can be huge).
+ */
+function hasPromptCacheBreakpoint(requestBody: Record<string, unknown>): boolean {
+  if (hasOwnCacheControl(requestBody)) {
     return true;
   }
 
-  return Object.values(record).some(hasPromptCacheBreakpoint);
+  if (Array.isArray(requestBody.system)) {
+    if (requestBody.system.some(hasOwnCacheControl)) {
+      return true;
+    }
+  }
+
+  if (Array.isArray(requestBody.tools)) {
+    if (requestBody.tools.some(hasOwnCacheControl)) {
+      return true;
+    }
+  }
+
+  if (!Array.isArray(requestBody.messages)) {
+    return false;
+  }
+
+  return requestBody.messages.some((message) => {
+    if (hasOwnCacheControl(message)) {
+      return true;
+    }
+
+    if (!message || typeof message !== "object" || Array.isArray(message)) {
+      return false;
+    }
+
+    const content = (message as Record<string, unknown>).content;
+    return Array.isArray(content) && content.some(hasOwnCacheControl);
+  });
 }
 
 function isCacheableMessage(message: unknown): message is Record<string, unknown> {
@@ -93,6 +125,94 @@ function addCacheBreakpointToContent(content: unknown): unknown {
         }
       : part,
   );
+}
+
+function addCacheControlToAnthropicBlocks(blocks: unknown[]): unknown[] {
+  const cacheControl = getPromptCacheControl();
+  if (!cacheControl) {
+    return blocks;
+  }
+
+  const targetIndex = blocks.findLastIndex(
+    (block) =>
+      block &&
+      typeof block === "object" &&
+      !Array.isArray(block) &&
+      ((block as Record<string, unknown>).type === "text" ||
+        (block as Record<string, unknown>).type === "tool_result") &&
+      (block as Record<string, unknown>).cache_control === undefined,
+  );
+
+  if (targetIndex === -1) {
+    return blocks;
+  }
+
+  return blocks.map((block, index) =>
+    index === targetIndex
+      ? { ...(block as Record<string, unknown>), cache_control: cacheControl }
+      : block,
+  );
+}
+
+/**
+ * Add explicit cache breakpoints to an Anthropic-native (Messages API) request
+ * body. The native API has no top-level cache_control, so without breakpoints
+ * a direct-to-Anthropic failover request gets zero prompt caching — which is
+ * up to a 10x input-cost difference for agent workloads.
+ *
+ * Breakpoints are added to the system prompt and the last user message. If the
+ * client already provided any breakpoint, the body is left untouched.
+ */
+export function applyAnthropicNativePromptCaching<
+  T extends Record<string, unknown>,
+>(requestBody: T): T {
+  if (!isPromptCachingEnabled() || hasPromptCacheBreakpoint(requestBody)) {
+    return requestBody;
+  }
+
+  const cacheControl = getPromptCacheControl();
+  if (!cacheControl) {
+    return requestBody;
+  }
+
+  const result: Record<string, unknown> = { ...requestBody };
+
+  if (typeof result.system === "string" && result.system) {
+    result.system = [
+      { type: "text", text: result.system, cache_control: cacheControl },
+    ];
+  } else if (Array.isArray(result.system)) {
+    result.system = addCacheControlToAnthropicBlocks(result.system);
+  }
+
+  if (Array.isArray(result.messages)) {
+    const targetIndex = result.messages.findLastIndex(
+      (message) =>
+        message &&
+        typeof message === "object" &&
+        !Array.isArray(message) &&
+        (message as Record<string, unknown>).role === "user",
+    );
+
+    if (targetIndex !== -1) {
+      const target = result.messages[targetIndex] as Record<string, unknown>;
+      let content = target.content;
+
+      if (typeof content === "string" && content) {
+        content = [{ type: "text", text: content, cache_control: cacheControl }];
+      } else if (Array.isArray(content)) {
+        content = addCacheControlToAnthropicBlocks(content);
+      }
+
+      if (content !== target.content) {
+        result.messages = result.messages.map((message, index) =>
+          index === targetIndex ? { ...target, content } : message,
+        );
+      }
+    }
+  }
+
+  return result as T;
 }
 
 function applyExplicitPromptCaching<T extends Record<string, unknown>>(

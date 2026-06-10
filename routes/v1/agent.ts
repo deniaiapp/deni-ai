@@ -15,6 +15,7 @@ import { recordUsageQuota, releaseUsageQuota } from "../../utils/deni";
 import {
   type AgentRequest,
   type ResponsesRequest,
+  applyAnthropicNativePromptCaching,
   applyAutomaticPromptCaching,
   getClient,
   isAnthropicModel,
@@ -47,20 +48,31 @@ const openRouterMessagesFailoverCache = new Map<
   }
 >();
 
-function isAgentDebugLogEnabled(): boolean {
+// Resolved once at startup so the hot path can skip all debug work
+// (summaries, extra SSE JSON.parse passes) with a single boolean check.
+const AGENT_DEBUG_LOGS_ENABLED = (() => {
   const value = Bun.env.FLIXA_AGENT_DEBUG_LOGS?.toLowerCase();
   return value === "1" || value === "true" || value === "yes";
-}
+})();
 
-function agentDebugLog(event: string, data: Record<string, unknown>): void {
-  if (!isAgentDebugLogEnabled()) {
+/**
+ * Debug log with optionally-lazy payload: pass a thunk for payloads that are
+ * expensive to build (message/tool summaries) so they are only computed when
+ * debug logging is actually enabled.
+ */
+function agentDebugLog(
+  event: string,
+  data: Record<string, unknown> | (() => Record<string, unknown>),
+): void {
+  if (!AGENT_DEBUG_LOGS_ENABLED) {
     return;
   }
 
+  const payload = typeof data === "function" ? data() : data;
   console.log(
     `[AgentDebug] ${event} ${JSON.stringify({
       ts: new Date().toISOString(),
-      ...data,
+      ...payload,
     })}`,
   );
 }
@@ -876,6 +888,12 @@ function collectChatDebugFromSseEvent(
   eventBlock: string,
   summary: ChatStreamDebugSummary,
 ): void {
+  // This is a debug-only second JSON.parse pass over every SSE chunk —
+  // skip it entirely unless debug logging is on.
+  if (!AGENT_DEBUG_LOGS_ENABLED) {
+    return;
+  }
+
   const payload = eventBlock
     .split(/\r?\n/)
     .filter((line) => line.startsWith("data:"))
@@ -1042,7 +1060,10 @@ async function createAnthropicChatFailoverResponse(
     hasToolResult,
   );
 
-  const requestParams = {
+  // The native Anthropic API has no top-level cache_control (unlike
+  // OpenRouter), so add explicit breakpoints to keep prompt caching working
+  // during failover.
+  const requestParams = applyAnthropicNativePromptCaching({
     model: anthropicModel,
     messages: anthropicMessages,
     stream: stream ?? false,
@@ -1052,9 +1073,9 @@ async function createAnthropicChatFailoverResponse(
     system,
     tools: anthropicTools,
     tool_choice: normalizedToolChoice,
-  } satisfies Anthropic.Messages.MessageCreateParams;
+  } satisfies Anthropic.Messages.MessageCreateParams);
 
-  agentDebugLog("chat.failover_request", {
+  agentDebugLog("chat.failover_request", () => ({
     requestId,
     provider: "anthropic",
     model: anthropicModel,
@@ -1062,7 +1083,7 @@ async function createAnthropicChatFailoverResponse(
     toolChoice: normalizedToolChoice,
     tools: summarizeTools(anthropicTools),
     messages: summarizeChatMessages(anthropicMessages),
-  });
+  }));
 
   if (stream) {
     const abortController = new AbortController();
@@ -1075,10 +1096,11 @@ async function createAnthropicChatFailoverResponse(
     );
 
     const encoder = new TextEncoder();
+    let usageSnapshot: Record<string, number> = {};
+    let usageSettled = false;
     const readable = new ReadableStream({
       async start(controller) {
         let messageId = `chatcmpl_${requestId}`;
-        let usageSnapshot: Record<string, number> = {};
         const streamDebug = createChatStreamDebugSummary();
 
         try {
@@ -1109,6 +1131,7 @@ async function createAnthropicChatFailoverResponse(
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
 
+          usageSettled = true;
           await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
           agentDebugLog("chat.failover_stream_complete", {
             requestId,
@@ -1125,12 +1148,24 @@ async function createAnthropicChatFailoverResponse(
             error: error instanceof Error ? error.message : String(error),
           });
           console.error("[Stream Error] provider=anthropic failover:", error);
-          await releaseReservedUsage(auth);
+          if (!usageSettled) {
+            usageSettled = true;
+            await releaseReservedUsage(auth);
+          }
           controller.error(error);
         }
       },
       cancel() {
         abortController.abort();
+        // The client disconnected mid-stream; upstream tokens were still
+        // consumed, so meter what we have observed so far.
+        if (!usageSettled) {
+          usageSettled = true;
+          finalizeUsage(auth, extractTotalTokens(usageSnapshot)).catch(
+            (error) =>
+              console.error("[Usage] finalize-on-cancel failed:", error),
+          );
+        }
       },
     });
 
@@ -1151,11 +1186,11 @@ async function createAnthropicChatFailoverResponse(
   const openAiResponse = convertAnthropicResponseToOpenAI(response, model);
 
   await finalizeUsage(auth, extractTotalTokens(response.usage));
-  agentDebugLog("chat.failover_response", {
+  agentDebugLog("chat.failover_response", () => ({
     requestId,
     provider: "anthropic",
     response: summarizeChatCompletionResponse(openAiResponse),
-  });
+  }));
 
   return new Response(JSON.stringify(openAiResponse), {
     status: 200,
@@ -1168,11 +1203,14 @@ async function createAnthropicMessagesFailoverResponse(
   requestHeaders: Headers,
   body: Anthropic.Messages.MessageCreateParams,
 ): Promise<Response> {
-  const anthropicBody = {
+  // The native Anthropic API has no top-level cache_control (unlike
+  // OpenRouter), so add explicit breakpoints to keep prompt caching working
+  // during failover.
+  const anthropicBody = applyAnthropicNativePromptCaching({
     ...body,
     model: toAnthropicModelName(body.model),
     tool_choice: normalizeAnthropicToolChoiceAfterToolResult(body),
-  };
+  });
 
   const abortController = new AbortController();
   const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -1202,10 +1240,11 @@ async function createAnthropicMessagesFailoverResponse(
   if (body.stream && response.body) {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    let usageSnapshot: Record<string, number> = {};
+    let usageSettled = false;
     const readable = new ReadableStream({
       async start(controller) {
         let buffer = "";
-        let usageSnapshot: Record<string, number> = {};
 
         try {
           while (true) {
@@ -1233,6 +1272,7 @@ async function createAnthropicMessagesFailoverResponse(
             );
           }
 
+          usageSettled = true;
           await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
           controller.close();
         } catch (error) {
@@ -1240,13 +1280,25 @@ async function createAnthropicMessagesFailoverResponse(
             "[Stream Error] provider=anthropic failover (messages):",
             error,
           );
-          await releaseReservedUsage(auth);
+          if (!usageSettled) {
+            usageSettled = true;
+            await releaseReservedUsage(auth);
+          }
           controller.error(error);
         }
       },
       cancel() {
         abortController.abort();
         reader.cancel().catch(() => {});
+        // The client disconnected mid-stream; upstream tokens were still
+        // consumed, so meter what we have observed so far.
+        if (!usageSettled) {
+          usageSettled = true;
+          finalizeUsage(auth, extractTotalTokens(usageSnapshot)).catch(
+            (error) =>
+              console.error("[Usage] finalize-on-cancel failed:", error),
+          );
+        }
       },
     });
 
@@ -1308,7 +1360,7 @@ router.post(
       } = body;
       const hasToolResult = hasChatToolResult(messages);
 
-      agentDebugLog("chat.request", {
+      agentDebugLog("chat.request", () => ({
         requestId,
         model,
         stream: stream ?? false,
@@ -1316,7 +1368,7 @@ router.post(
         toolChoice: summarizeToolChoice(tool_choice),
         tools: summarizeTools(tools),
         messages: summarizeChatMessages(messages),
-      });
+      }));
 
       // model is guaranteed to exist after validateAgentAuth middleware
       const clientResult = getClient(model);
@@ -1364,7 +1416,7 @@ router.post(
           tool_choice: normalizedToolChoice,
         }, model);
 
-        agentDebugLog("chat.upstream_request", {
+        agentDebugLog("chat.upstream_request", () => ({
           requestId,
           provider: providerName,
           model,
@@ -1372,7 +1424,7 @@ router.post(
           toolChoice: summarizeToolChoice(normalizedToolChoice),
           tools: summarizeTools(openrouterBody.tools),
           messages: summarizeChatMessages(messages),
-        });
+        }));
 
         const abortController = new AbortController();
         const response = await fetch(
@@ -1431,11 +1483,12 @@ router.post(
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
           const streamDebug = createChatStreamDebugSummary();
+          let usageSnapshot: Record<string, number> = {};
+          let usageSettled = false;
 
           const readable = new ReadableStream({
             async start(controller) {
               let buffer = "";
-              let usageSnapshot: Record<string, number> = {};
 
               try {
                 while (true) {
@@ -1466,6 +1519,7 @@ router.post(
                   collectChatDebugFromSseEvent(buffer, streamDebug);
                 }
 
+                usageSettled = true;
                 await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
                 agentDebugLog("chat.stream_complete", {
                   requestId,
@@ -1484,13 +1538,25 @@ router.post(
                   `[Stream Error] provider=${providerName}:`,
                   error,
                 );
-                await releaseReservedUsage(auth);
+                if (!usageSettled) {
+                  usageSettled = true;
+                  await releaseReservedUsage(auth);
+                }
                 controller.error(error);
               }
             },
             cancel() {
               abortController.abort();
               reader.cancel().catch(() => {});
+              // The client disconnected mid-stream; upstream tokens were
+              // still consumed, so meter what we have observed so far.
+              if (!usageSettled) {
+                usageSettled = true;
+                finalizeUsage(auth, extractTotalTokens(usageSnapshot)).catch(
+                  (error) =>
+                    console.error("[Usage] finalize-on-cancel failed:", error),
+                );
+              }
             },
           });
 
@@ -1516,12 +1582,12 @@ router.post(
         }
 
         await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
-        agentDebugLog("chat.response", {
+        agentDebugLog("chat.response", () => ({
           requestId,
           provider: providerName,
           status: response.status,
           response: summarizeChatCompletionResponse(parsedResponse),
-        });
+        }));
         return new Response(responseBody, {
           status: response.status,
           headers: {
@@ -1555,7 +1621,7 @@ router.post(
         tool_choice: normalizedToolChoice,
       };
 
-      agentDebugLog("chat.upstream_request", {
+      agentDebugLog("chat.upstream_request", () => ({
         requestId,
         provider: providerName,
         model,
@@ -1563,7 +1629,7 @@ router.post(
         toolChoice: summarizeToolChoice(normalizedToolChoice),
         tools: summarizeTools(requestParams.tools),
         messages: summarizeChatMessages(messages),
-      });
+      }));
 
       if (stream) {
         const abortController = new AbortController();
@@ -1579,9 +1645,10 @@ router.post(
 
         // Convert OpenAI stream to SSE Response
         const encoder = new TextEncoder();
+        let streamedTokens: number | null = null;
+        let usageSettled = false;
         const readable = new ReadableStream({
           async start(controller) {
-            let streamedTokens: number | null = null;
             const streamDebug = createChatStreamDebugSummary();
 
             try {
@@ -1592,6 +1659,7 @@ router.post(
                 collectChatDebugFromSseEvent(`data: ${data}\n\n`, streamDebug);
                 controller.enqueue(encoder.encode(`data: ${data}\n\n`));
               }
+              usageSettled = true;
               await finalizeUsage(auth, streamedTokens);
               agentDebugLog("chat.stream_complete", {
                 requestId,
@@ -1608,12 +1676,23 @@ router.post(
                 error: error instanceof Error ? error.message : String(error),
               });
               console.error(`[Stream Error] provider=${providerName}:`, error);
-              await releaseReservedUsage(auth);
+              if (!usageSettled) {
+                usageSettled = true;
+                await releaseReservedUsage(auth);
+              }
               controller.error(error);
             }
           },
           cancel() {
             abortController.abort();
+            // The client disconnected mid-stream; upstream tokens were still
+            // consumed, so meter what we have observed so far.
+            if (!usageSettled) {
+              usageSettled = true;
+              finalizeUsage(auth, streamedTokens).catch((error) =>
+                console.error("[Usage] finalize-on-cancel failed:", error),
+              );
+            }
           },
         });
 
@@ -1634,11 +1713,11 @@ router.post(
       });
 
       await finalizeUsage(auth, extractTotalTokens(response.usage));
-      agentDebugLog("chat.response", {
+      agentDebugLog("chat.response", () => ({
         requestId,
         provider: providerName,
         response: summarizeChatCompletionResponse(response),
-      });
+      }));
       return c.json(response, 200);
     } catch (error) {
       await releaseReservedUsage(auth);
@@ -1766,11 +1845,12 @@ router.post(
       if (body.stream && response.body) {
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let usageSnapshot: Record<string, number> = {};
+        let usageSettled = false;
 
         const readable = new ReadableStream({
           async start(controller) {
             let buffer = "";
-            let usageSnapshot: Record<string, number> = {};
 
             try {
               while (true) {
@@ -1799,16 +1879,29 @@ router.post(
                 );
               }
 
+              usageSettled = true;
               await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
               controller.close();
             } catch (error) {
-              await releaseReservedUsage(auth);
+              if (!usageSettled) {
+                usageSettled = true;
+                await releaseReservedUsage(auth);
+              }
               controller.error(error);
             }
           },
           cancel() {
             abortController.abort();
             reader.cancel().catch(() => {});
+            // The client disconnected mid-stream; upstream tokens were still
+            // consumed, so meter what we have observed so far.
+            if (!usageSettled) {
+              usageSettled = true;
+              finalizeUsage(auth, extractTotalTokens(usageSnapshot)).catch(
+                (error) =>
+                  console.error("[Usage] finalize-on-cancel failed:", error),
+              );
+            }
           },
         });
 
@@ -2016,10 +2109,11 @@ router.post(
         // Pipe the SSE stream directly from OpenRouter to the client.
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let usageSnapshot: Record<string, number> = {};
+        let usageSettled = false;
         const readable = new ReadableStream({
           async start(controller) {
             let buffer = "";
-            let usageSnapshot: Record<string, number> = {};
 
             try {
               while (true) {
@@ -2047,6 +2141,7 @@ router.post(
                 );
               }
 
+              usageSettled = true;
               await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
               controller.close();
             } catch (error) {
@@ -2054,13 +2149,25 @@ router.post(
                 "[Stream Error] provider=openrouter (messages):",
                 error,
               );
-              await releaseReservedUsage(auth);
+              if (!usageSettled) {
+                usageSettled = true;
+                await releaseReservedUsage(auth);
+              }
               controller.error(error);
             }
           },
           cancel() {
             abortController.abort();
             reader.cancel().catch(() => {});
+            // The client disconnected mid-stream; upstream tokens were still
+            // consumed, so meter what we have observed so far.
+            if (!usageSettled) {
+              usageSettled = true;
+              finalizeUsage(auth, extractTotalTokens(usageSnapshot)).catch(
+                (error) =>
+                  console.error("[Usage] finalize-on-cancel failed:", error),
+              );
+            }
           },
         });
 

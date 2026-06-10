@@ -3,7 +3,7 @@ import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {
   GUEST_ACCOUNT_ERROR_MESSAGE,
   validateDeniApiKey,
-  getDeniUsageInfo,
+  getDeniBillingProfile,
   getUpgradeUrl,
   getModelCategory,
   getRequiredTierForModel,
@@ -144,8 +144,9 @@ export async function validateAgentAuth(c: Context, next: Next) {
     return keyValidation;
   }
 
-  // Get user's usage info
-  const usageInfo = await getDeniUsageInfo(keyValidation.userId);
+  // Get user's billing tier (cached, no usage rows — reserveUsageQuota reads
+  // the quota row itself, so fetching it here would be a redundant query)
+  const billingProfile = await getDeniBillingProfile(keyValidation.userId);
 
   // Get model from validated body
   const body = c.get('validatedBody') as { model?: string } | undefined;
@@ -169,7 +170,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
   const modelCategory = getModelCategory(model);
   const tokenUsageMultiplier = getModelTokenUsageMultiplier(model);
   const requiredTier = getRequiredTierForModel(model);
-  const tier = usageInfo.tier;
+  const tier = billingProfile.tier;
 
   if (requiredTier && !isTierSufficient(tier, requiredTier)) {
     return c.json(
@@ -189,7 +190,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
     keyValidation.userId,
     modelCategory,
     tier,
-    usageInfo.hasVerifiedPaymentMethod,
+    billingProfile.hasVerifiedPaymentMethod,
   );
   if (!quotaReservation.allowed) {
     return c.json(
@@ -201,7 +202,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
           code: 'USAGE_LIMIT_EXCEEDED',
           category: modelCategory,
           tier,
-          canVerifyForBoost: tier === 'free' && !usageInfo.hasVerifiedPaymentMethod,
+          canVerifyForBoost: tier === 'free' && !billingProfile.hasVerifiedPaymentMethod,
           canUpgrade: tier !== 'max',
           verifyUrl: getVerifyUrl(),
           upgradeUrl: getUpgradeUrl(),
@@ -218,7 +219,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
     modelCategory,
     usageUnit: quotaReservation.unit,
     usageReserved: quotaReservation.reserved,
-    hasVerifiedPaymentMethod: usageInfo.hasVerifiedPaymentMethod,
+    hasVerifiedPaymentMethod: billingProfile.hasVerifiedPaymentMethod,
     tokenUsageMultiplier,
   } satisfies AgentAuthContext);
 
