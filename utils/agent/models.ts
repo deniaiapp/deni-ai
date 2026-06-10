@@ -60,7 +60,8 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
     id: "openai/gpt-5.4",
     label: "GPT-5.4",
-    description: "Flagship model: top reasoning, code tasks. low-cost than GPT-5.5.",
+    description:
+      "Flagship model: top reasoning, code tasks. low-cost than GPT-5.5.",
     tags: ["general", "reasoning", "fast"],
     tokenUsageMultiplier: 1.5,
     tier: "free",
@@ -99,6 +100,24 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     description: "Latest balanced model with frontier performance.",
     tags: ["balanced", "latest"],
     tier: "plus",
+  },
+  {
+    id: "anthropic/claude-fable-5",
+    label: "Claude Fable 5",
+    description: "Mythos-class model from Anthropic.",
+    tags: ["powerful", "agentic"],
+    premium: true,
+    tokenUsageMultiplier: 5,
+    tier: "plus",
+  },
+  {
+    id: "anthropic/claude-opus-4.8",
+    label: "Claude Opus 4.8",
+    description: "Most capable: hybrid reasoning & long-horizon tasks.",
+    tags: ["powerful", "agentic"],
+    premium: true,
+    tokenUsageMultiplier: 3,
+    tier: "pro",
   },
   {
     id: "anthropic/claude-opus-4.7",
@@ -142,7 +161,8 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
     id: "google/gemini-3.1-pro-preview",
     label: "Gemini 3.1 Pro Preview",
-    description: "Google frontier model: agentic coding, 1M context, multimodal.",
+    description:
+      "Google frontier model: agentic coding, 1M context, multimodal.",
     tags: ["powerful", "preview"],
     tokenUsageMultiplier: 1.5,
     tier: "free",
@@ -334,21 +354,26 @@ export function getModelLabel(modelId: string): string {
   return def ? def.label : modelId;
 }
 
-export function getModelDefinition(modelId: string): ModelDefinition | undefined {
+export function getModelDefinition(
+  modelId: string,
+): ModelDefinition | undefined {
   const resolvedModelId = resolveAvailableModelId(modelId);
   return MODEL_DEFINITIONS.find((m) => m.id === resolvedModelId);
 }
 
 export function getModelTokenUsageMultiplier(modelId: string): number {
   const multiplier =
-    getModelDefinition(modelId)?.tokenUsageMultiplier ?? DEFAULT_TOKEN_USAGE_MULTIPLIER;
+    getModelDefinition(modelId)?.tokenUsageMultiplier ??
+    DEFAULT_TOKEN_USAGE_MULTIPLIER;
 
   return Number.isFinite(multiplier) && multiplier > 0
     ? multiplier
     : DEFAULT_TOKEN_USAGE_MULTIPLIER;
 }
 
-export function getModelTierRequirement(model: string): "free" | "plus" | "pro" | "max" {
+export function getModelTierRequirement(
+  model: string,
+): "free" | "plus" | "pro" | "max" {
   const resolvedModel = resolveAvailableModelId(model);
   const def = MODEL_DEFINITIONS.find((m) => m.id === resolvedModel);
   return def ? def.tier : "free";
