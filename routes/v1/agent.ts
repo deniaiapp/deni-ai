@@ -27,6 +27,7 @@ import {
   convertMessagesToResponsesInput,
   convertToolsToOpenRouter,
 } from "../../utils/agent";
+import { computeMeteredTokens } from "../../utils/agent/usageMetering";
 
 const router = new Hono<{
   Variables: {
@@ -81,45 +82,6 @@ function getNumericValue(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
-function extractTotalTokens(usage: unknown): number | null {
-  if (!usage || typeof usage !== "object") {
-    return null;
-  }
-
-  const usageRecord = usage as Record<string, unknown>;
-  const explicitTotal =
-    getNumericValue(usageRecord.total_tokens) ??
-    getNumericValue(usageRecord.totalTokens);
-  if (explicitTotal !== null) {
-    return explicitTotal;
-  }
-
-  const promptTokens =
-    getNumericValue(usageRecord.prompt_tokens) ??
-    getNumericValue(usageRecord.promptTokens) ??
-    getNumericValue(usageRecord.input_tokens) ??
-    getNumericValue(usageRecord.inputTokens) ??
-    0;
-  const completionTokens =
-    getNumericValue(usageRecord.completion_tokens) ??
-    getNumericValue(usageRecord.completionTokens) ??
-    getNumericValue(usageRecord.output_tokens) ??
-    getNumericValue(usageRecord.outputTokens) ??
-    0;
-  const cacheCreationTokens =
-    getNumericValue(usageRecord.cache_creation_input_tokens) ??
-    getNumericValue(usageRecord.cacheCreationInputTokens) ??
-    0;
-  const cacheReadTokens =
-    getNumericValue(usageRecord.cache_read_input_tokens) ??
-    getNumericValue(usageRecord.cacheReadInputTokens) ??
-    0;
-
-  const total =
-    promptTokens + completionTokens + cacheCreationTokens + cacheReadTokens;
-  return total > 0 ? total : null;
-}
-
 function mergeUsageSnapshot(
   current: Record<string, number>,
   usage: unknown,
@@ -133,6 +95,27 @@ function mergeUsageSnapshot(
     const numericValue = getNumericValue(value);
     if (numericValue !== null) {
       next[key] = numericValue;
+      continue;
+    }
+
+    // Flatten OpenAI-style `prompt_tokens_details.cached_tokens` so the
+    // cache-read breakdown survives into the snapshot for weighted metering.
+    if (
+      (key === "prompt_tokens_details" ||
+        key === "promptTokensDetails" ||
+        key === "input_tokens_details" ||
+        key === "inputTokensDetails") &&
+      value &&
+      typeof value === "object" &&
+      !Array.isArray(value)
+    ) {
+      const details = value as Record<string, unknown>;
+      const cachedTokens =
+        getNumericValue(details.cached_tokens) ??
+        getNumericValue(details.cachedTokens);
+      if (cachedTokens !== null) {
+        next.cached_tokens = cachedTokens;
+      }
     }
   }
 
@@ -995,23 +978,25 @@ function summarizeChatCompletionResponse(response: unknown): Record<string, unkn
 
 async function finalizeUsage(
   auth: AgentAuthContext | undefined,
-  totalTokens?: number | null,
+  usage: unknown,
 ): Promise<void> {
   if (!auth) return;
 
   auth.usageReserved = false;
 
-  if (
-    auth.usageUnit !== "tokens" ||
-    totalTokens === null ||
-    totalTokens === undefined ||
-    totalTokens <= 0
-  ) {
+  if (auth.usageUnit !== "tokens") {
+    return;
+  }
+
+  // Cost-weighted: cache reads/writes and output tokens are weighted by
+  // their relative upstream price instead of counted 1:1.
+  const weightedTokens = computeMeteredTokens(usage);
+  if (weightedTokens === null || weightedTokens <= 0) {
     return;
   }
 
   try {
-    const meteredTokens = Math.ceil(totalTokens * auth.tokenUsageMultiplier);
+    const meteredTokens = Math.ceil(weightedTokens * auth.tokenUsageMultiplier);
     await recordUsageQuota(
       auth.userId,
       auth.modelCategory,
@@ -1132,7 +1117,7 @@ async function createAnthropicChatFailoverResponse(
           }
 
           usageSettled = true;
-          await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
+          await finalizeUsage(auth, usageSnapshot);
           agentDebugLog("chat.failover_stream_complete", {
             requestId,
             provider: "anthropic",
@@ -1161,7 +1146,7 @@ async function createAnthropicChatFailoverResponse(
         // consumed, so meter what we have observed so far.
         if (!usageSettled) {
           usageSettled = true;
-          finalizeUsage(auth, extractTotalTokens(usageSnapshot)).catch(
+          finalizeUsage(auth, usageSnapshot).catch(
             (error) =>
               console.error("[Usage] finalize-on-cancel failed:", error),
           );
@@ -1185,7 +1170,7 @@ async function createAnthropicChatFailoverResponse(
   });
   const openAiResponse = convertAnthropicResponseToOpenAI(response, model);
 
-  await finalizeUsage(auth, extractTotalTokens(response.usage));
+  await finalizeUsage(auth, response.usage);
   agentDebugLog("chat.failover_response", () => ({
     requestId,
     provider: "anthropic",
@@ -1273,7 +1258,7 @@ async function createAnthropicMessagesFailoverResponse(
           }
 
           usageSettled = true;
-          await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
+          await finalizeUsage(auth, usageSnapshot);
           controller.close();
         } catch (error) {
           console.error(
@@ -1294,7 +1279,7 @@ async function createAnthropicMessagesFailoverResponse(
         // consumed, so meter what we have observed so far.
         if (!usageSettled) {
           usageSettled = true;
-          finalizeUsage(auth, extractTotalTokens(usageSnapshot)).catch(
+          finalizeUsage(auth, usageSnapshot).catch(
             (error) =>
               console.error("[Usage] finalize-on-cancel failed:", error),
           );
@@ -1322,7 +1307,7 @@ async function createAnthropicMessagesFailoverResponse(
     parsedResponse = null;
   }
 
-  await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
+  await finalizeUsage(auth, parsedResponse?.usage);
   return new Response(responseBody, {
     status: response.status,
     headers: {
@@ -1520,7 +1505,7 @@ router.post(
                 }
 
                 usageSettled = true;
-                await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
+                await finalizeUsage(auth, usageSnapshot);
                 agentDebugLog("chat.stream_complete", {
                   requestId,
                   provider: providerName,
@@ -1552,7 +1537,7 @@ router.post(
               // still consumed, so meter what we have observed so far.
               if (!usageSettled) {
                 usageSettled = true;
-                finalizeUsage(auth, extractTotalTokens(usageSnapshot)).catch(
+                finalizeUsage(auth, usageSnapshot).catch(
                   (error) =>
                     console.error("[Usage] finalize-on-cancel failed:", error),
                 );
@@ -1581,7 +1566,7 @@ router.post(
           parsedResponse = null;
         }
 
-        await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
+        await finalizeUsage(auth, parsedResponse?.usage);
         agentDebugLog("chat.response", () => ({
           requestId,
           provider: providerName,
@@ -1645,7 +1630,7 @@ router.post(
 
         // Convert OpenAI stream to SSE Response
         const encoder = new TextEncoder();
-        let streamedTokens: number | null = null;
+        let usageSnapshot: Record<string, number> = {};
         let usageSettled = false;
         const readable = new ReadableStream({
           async start(controller) {
@@ -1653,18 +1638,22 @@ router.post(
 
             try {
               for await (const chunk of streamResponse) {
-                streamedTokens =
-                  extractTotalTokens(chunk.usage) ?? streamedTokens;
+                if (chunk.usage) {
+                  usageSnapshot = mergeUsageSnapshot(
+                    usageSnapshot,
+                    chunk.usage,
+                  );
+                }
                 const data = JSON.stringify(chunk);
                 collectChatDebugFromSseEvent(`data: ${data}\n\n`, streamDebug);
                 controller.enqueue(encoder.encode(`data: ${data}\n\n`));
               }
               usageSettled = true;
-              await finalizeUsage(auth, streamedTokens);
+              await finalizeUsage(auth, usageSnapshot);
               agentDebugLog("chat.stream_complete", {
                 requestId,
                 provider: providerName,
-                usage: streamedTokens ? { total_tokens: streamedTokens } : {},
+                usage: usageSnapshot,
                 stream: streamDebug,
               });
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
@@ -1689,7 +1678,7 @@ router.post(
             // consumed, so meter what we have observed so far.
             if (!usageSettled) {
               usageSettled = true;
-              finalizeUsage(auth, streamedTokens).catch((error) =>
+              finalizeUsage(auth, usageSnapshot).catch((error) =>
                 console.error("[Usage] finalize-on-cancel failed:", error),
               );
             }
@@ -1712,7 +1701,7 @@ router.post(
         stream: false,
       });
 
-      await finalizeUsage(auth, extractTotalTokens(response.usage));
+      await finalizeUsage(auth, response.usage);
       agentDebugLog("chat.response", () => ({
         requestId,
         provider: providerName,
@@ -1880,7 +1869,7 @@ router.post(
               }
 
               usageSettled = true;
-              await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
+              await finalizeUsage(auth, usageSnapshot);
               controller.close();
             } catch (error) {
               if (!usageSettled) {
@@ -1897,7 +1886,7 @@ router.post(
             // consumed, so meter what we have observed so far.
             if (!usageSettled) {
               usageSettled = true;
-              finalizeUsage(auth, extractTotalTokens(usageSnapshot)).catch(
+              finalizeUsage(auth, usageSnapshot).catch(
                 (error) =>
                   console.error("[Usage] finalize-on-cancel failed:", error),
               );
@@ -1926,7 +1915,7 @@ router.post(
         parsedResponse = null;
       }
 
-      await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
+      await finalizeUsage(auth, parsedResponse?.usage);
       return new Response(responseBody, {
         status: response.status,
         headers: {
@@ -2142,7 +2131,7 @@ router.post(
               }
 
               usageSettled = true;
-              await finalizeUsage(auth, extractTotalTokens(usageSnapshot));
+              await finalizeUsage(auth, usageSnapshot);
               controller.close();
             } catch (error) {
               console.error(
@@ -2163,7 +2152,7 @@ router.post(
             // consumed, so meter what we have observed so far.
             if (!usageSettled) {
               usageSettled = true;
-              finalizeUsage(auth, extractTotalTokens(usageSnapshot)).catch(
+              finalizeUsage(auth, usageSnapshot).catch(
                 (error) =>
                   console.error("[Usage] finalize-on-cancel failed:", error),
               );
@@ -2191,7 +2180,7 @@ router.post(
         parsedResponse = null;
       }
 
-      await finalizeUsage(auth, extractTotalTokens(parsedResponse?.usage));
+      await finalizeUsage(auth, parsedResponse?.usage);
       return new Response(responseBody, {
         status: response.status,
         headers: {
