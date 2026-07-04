@@ -1083,6 +1083,7 @@ async function createAnthropicChatFailoverResponse(
     const encoder = new TextEncoder();
     let usageSnapshot: Record<string, number> = {};
     let usageSettled = false;
+    let cancelled = false;
     const readable = new ReadableStream({
       async start(controller) {
         let messageId = `chatcmpl_${requestId}`;
@@ -1090,6 +1091,7 @@ async function createAnthropicChatFailoverResponse(
 
         try {
           for await (const event of streamResponse) {
+            if (cancelled) return;
             if (event.type === "message_start") {
               messageId = event.message.id;
               usageSnapshot = mergeUsageSnapshot(
@@ -1116,6 +1118,7 @@ async function createAnthropicChatFailoverResponse(
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
 
+          if (cancelled) return;
           usageSettled = true;
           await finalizeUsage(auth, usageSnapshot);
           agentDebugLog("chat.failover_stream_complete", {
@@ -1127,6 +1130,7 @@ async function createAnthropicChatFailoverResponse(
           controller.enqueue(encoder.encode("data: [DONE]\n\n"));
           controller.close();
         } catch (error) {
+          if (cancelled) return;
           agentDebugLog("chat.failover_stream_error", {
             requestId,
             provider: "anthropic",
@@ -1141,6 +1145,7 @@ async function createAnthropicChatFailoverResponse(
         }
       },
       cancel() {
+        cancelled = true;
         abortController.abort();
         // The client disconnected mid-stream; upstream tokens were still
         // consumed, so meter what we have observed so far.
@@ -1227,6 +1232,7 @@ async function createAnthropicMessagesFailoverResponse(
     const decoder = new TextDecoder();
     let usageSnapshot: Record<string, number> = {};
     let usageSettled = false;
+    let cancelled = false;
     const readable = new ReadableStream({
       async start(controller) {
         let buffer = "";
@@ -1234,6 +1240,7 @@ async function createAnthropicMessagesFailoverResponse(
         try {
           while (true) {
             const { done, value } = await reader.read();
+            if (cancelled) return;
             if (done) break;
 
             buffer += decoder.decode(value, { stream: true });
@@ -1261,6 +1268,7 @@ async function createAnthropicMessagesFailoverResponse(
           await finalizeUsage(auth, usageSnapshot);
           controller.close();
         } catch (error) {
+          if (cancelled) return;
           console.error(
             "[Stream Error] provider=anthropic failover (messages):",
             error,
@@ -1273,6 +1281,7 @@ async function createAnthropicMessagesFailoverResponse(
         }
       },
       cancel() {
+        cancelled = true;
         abortController.abort();
         reader.cancel().catch(() => {});
         // The client disconnected mid-stream; upstream tokens were still
@@ -1470,6 +1479,7 @@ router.post(
           const streamDebug = createChatStreamDebugSummary();
           let usageSnapshot: Record<string, number> = {};
           let usageSettled = false;
+          let cancelled = false;
 
           const readable = new ReadableStream({
             async start(controller) {
@@ -1478,6 +1488,7 @@ router.post(
               try {
                 while (true) {
                   const { done, value } = await reader.read();
+                  if (cancelled) return;
                   if (done) break;
 
                   buffer += decoder.decode(value, { stream: true });
@@ -1495,6 +1506,7 @@ router.post(
                   controller.enqueue(value);
                 }
 
+                if (cancelled) return;
                 buffer += decoder.decode();
                 if (buffer.trim()) {
                   usageSnapshot = collectChatUsageFromSseEvent(
@@ -1514,6 +1526,7 @@ router.post(
                 });
                 controller.close();
               } catch (error) {
+                if (cancelled) return;
                 agentDebugLog("chat.stream_error", {
                   requestId,
                   provider: providerName,
@@ -1531,6 +1544,7 @@ router.post(
               }
             },
             cancel() {
+              cancelled = true;
               abortController.abort();
               reader.cancel().catch(() => {});
               // The client disconnected mid-stream; upstream tokens were
@@ -1632,12 +1646,14 @@ router.post(
         const encoder = new TextEncoder();
         let usageSnapshot: Record<string, number> = {};
         let usageSettled = false;
+        let cancelled = false;
         const readable = new ReadableStream({
           async start(controller) {
             const streamDebug = createChatStreamDebugSummary();
 
             try {
               for await (const chunk of streamResponse) {
+                if (cancelled) return;
                 if (chunk.usage) {
                   usageSnapshot = mergeUsageSnapshot(
                     usageSnapshot,
@@ -1648,6 +1664,7 @@ router.post(
                 collectChatDebugFromSseEvent(`data: ${data}\n\n`, streamDebug);
                 controller.enqueue(encoder.encode(`data: ${data}\n\n`));
               }
+              if (cancelled) return;
               usageSettled = true;
               await finalizeUsage(auth, usageSnapshot);
               agentDebugLog("chat.stream_complete", {
@@ -1659,6 +1676,7 @@ router.post(
               controller.enqueue(encoder.encode("data: [DONE]\n\n"));
               controller.close();
             } catch (error) {
+              if (cancelled) return;
               agentDebugLog("chat.stream_error", {
                 requestId,
                 provider: providerName,
@@ -1673,6 +1691,7 @@ router.post(
             }
           },
           cancel() {
+            cancelled = true;
             abortController.abort();
             // The client disconnected mid-stream; upstream tokens were still
             // consumed, so meter what we have observed so far.
@@ -1836,6 +1855,7 @@ router.post(
         const decoder = new TextDecoder();
         let usageSnapshot: Record<string, number> = {};
         let usageSettled = false;
+        let cancelled = false;
 
         const readable = new ReadableStream({
           async start(controller) {
@@ -1844,6 +1864,7 @@ router.post(
             try {
               while (true) {
                 const { done, value } = await reader.read();
+                if (cancelled) return;
                 if (done) break;
 
                 buffer += decoder.decode(value, { stream: true });
@@ -1860,6 +1881,7 @@ router.post(
                 controller.enqueue(value);
               }
 
+              if (cancelled) return;
               buffer += decoder.decode();
               if (buffer.trim()) {
                 usageSnapshot = collectResponsesUsageFromSseEvent(
@@ -1872,6 +1894,7 @@ router.post(
               await finalizeUsage(auth, usageSnapshot);
               controller.close();
             } catch (error) {
+              if (cancelled) return;
               if (!usageSettled) {
                 usageSettled = true;
                 await releaseReservedUsage(auth);
@@ -1880,6 +1903,7 @@ router.post(
             }
           },
           cancel() {
+            cancelled = true;
             abortController.abort();
             reader.cancel().catch(() => {});
             // The client disconnected mid-stream; upstream tokens were still
@@ -2100,6 +2124,7 @@ router.post(
         const decoder = new TextDecoder();
         let usageSnapshot: Record<string, number> = {};
         let usageSettled = false;
+        let cancelled = false;
         const readable = new ReadableStream({
           async start(controller) {
             let buffer = "";
@@ -2107,6 +2132,7 @@ router.post(
             try {
               while (true) {
                 const { done, value } = await reader.read();
+                if (cancelled) return;
                 if (done) break;
 
                 buffer += decoder.decode(value, { stream: true });
@@ -2122,6 +2148,7 @@ router.post(
                 controller.enqueue(value);
               }
 
+              if (cancelled) return;
               buffer += decoder.decode();
               if (buffer.trim()) {
                 usageSnapshot = collectAnthropicUsageFromSseEvent(
@@ -2134,6 +2161,7 @@ router.post(
               await finalizeUsage(auth, usageSnapshot);
               controller.close();
             } catch (error) {
+              if (cancelled) return;
               console.error(
                 "[Stream Error] provider=openrouter (messages):",
                 error,
@@ -2146,6 +2174,7 @@ router.post(
             }
           },
           cancel() {
+            cancelled = true;
             abortController.abort();
             reader.cancel().catch(() => {});
             // The client disconnected mid-stream; upstream tokens were still

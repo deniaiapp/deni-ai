@@ -57,5 +57,11 @@ const port = getPort();
 
 export default {
   port,
-  fetch: app.fetch,
+  // Bun's default 10s idle timeout kills SSE connections when an upstream model
+  // goes quiet (e.g. extended-thinking pauses) longer than that between chunks.
+  // Client disconnects are already handled via ReadableStream.cancel() in agent.ts.
+  fetch(req: Request, server: Bun.Server<undefined>) {
+    server.timeout(req, 0);
+    return app.fetch(req, { server });
+  },
 };

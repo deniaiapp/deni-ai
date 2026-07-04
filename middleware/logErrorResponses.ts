@@ -29,15 +29,12 @@ async function getResponseBodyPreview(c: Context): Promise<string | null> {
   }
 }
 
-export async function logErrorResponses(
-  c: Context,
-  next: Next,
-): Promise<void> {
+export async function logErrorResponses(c: Context, next: Next): Promise<void> {
   const startedAt = Date.now();
 
   await next();
 
-  if (c.res.status < 400) {
+  if (c.res.status < 400 || c.res.status == 404) {
     return;
   }
 
