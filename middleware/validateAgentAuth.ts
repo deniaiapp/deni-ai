@@ -15,11 +15,13 @@ import { getModelTokenUsageMultiplier } from '../utils/agent/models';
 
 export interface AgentAuthContext {
   userId: string;
+  modelId: string;
   tier: 'free' | 'plus' | 'pro' | "max";
   modelCategory: 'basic' | 'premium';
   usageUnit: 'requests' | 'tokens';
   usageReserved: boolean;
   hasVerifiedPaymentMethod: boolean;
+  /** Base model multiplier; long-context surcharge is applied at finalize. */
   tokenUsageMultiplier: number;
 }
 
@@ -215,6 +217,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
   // Store auth context for downstream handlers
   c.set('agentAuth', {
     userId: keyValidation.userId,
+    modelId: model,
     tier,
     modelCategory,
     usageUnit: quotaReservation.unit,

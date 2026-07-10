@@ -28,6 +28,7 @@ import {
   convertToolsToOpenRouter,
 } from "../../utils/agent";
 import { computeMeteredTokens } from "../../utils/agent/usageMetering";
+import { getLongContextUsageMultiplier } from "../../utils/agent/models";
 
 const router = new Hono<{
   Variables: {
@@ -996,7 +997,14 @@ async function finalizeUsage(
   }
 
   try {
-    const meteredTokens = Math.ceil(weightedTokens * auth.tokenUsageMultiplier);
+    // OpenAI 1M-context models: 2x usage when prompt tokens exceed 200k.
+    const longContextMultiplier = getLongContextUsageMultiplier(
+      auth.modelId,
+      usage,
+    );
+    const meteredTokens = Math.ceil(
+      weightedTokens * auth.tokenUsageMultiplier * longContextMultiplier,
+    );
     await recordUsageQuota(
       auth.userId,
       auth.modelCategory,

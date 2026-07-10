@@ -5,8 +5,21 @@ export interface ModelDefinition {
   tags: string[];
   premium?: boolean;
   tokenUsageMultiplier?: number;
+  /**
+   * OpenAI 1M-context models charge more once the prompt exceeds this
+   * threshold (prompt/input tokens). Applied on top of tokenUsageMultiplier.
+   */
+  longContextThreshold?: number;
+  /** Multiplier applied when prompt tokens exceed longContextThreshold. */
+  longContextUsageMultiplier?: number;
   tier: "free" | "plus" | "pro" | "max";
 }
+
+/** Default long-context surcharge for OpenAI 1M-context models. */
+const OPENAI_1M_LONG_CONTEXT = {
+  longContextThreshold: 200_000,
+  longContextUsageMultiplier: 2,
+} as const;
 
 interface AnthropicCapabilityFlag {
   supported: boolean;
@@ -50,11 +63,41 @@ export interface AnthropicModelDefinition {
 
 export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
+    id: "openai/gpt-5.6-sol",
+    label: "GPT-5.6 Sol",
+    description:
+      "GPT-5.6 flagship: frontier reasoning, coding, agentic & long-context work.",
+    tags: ["general", "reasoning", "agentic", "long-context"],
+    tokenUsageMultiplier: 2,
+    ...OPENAI_1M_LONG_CONTEXT,
+    tier: "free",
+  },
+  {
+    id: "openai/gpt-5.6-terra",
+    label: "GPT-5.6 Terra",
+    description:
+      "GPT-5.6 balanced tier: GPT-5.5-competitive performance at lower cost.",
+    tags: ["general", "reasoning", "balanced", "long-context"],
+    tokenUsageMultiplier: 1.5,
+    ...OPENAI_1M_LONG_CONTEXT,
+    tier: "free",
+  },
+  {
+    id: "openai/gpt-5.6-luna",
+    label: "GPT-5.6 Luna",
+    description:
+      "GPT-5.6 fast & affordable tier for high-volume and lighter tasks.",
+    tags: ["fast", "lightweight", "long-context"],
+    ...OPENAI_1M_LONG_CONTEXT,
+    tier: "free",
+  },
+  {
     id: "openai/gpt-5.5",
     label: "GPT-5.5",
     description: "Flagship model: top reasoning, code, long-context tasks.",
-    tags: ["general", "reasoning", "fast"],
-    tokenUsageMultiplier: 1.75,
+    tags: ["general", "reasoning", "fast", "long-context"],
+    tokenUsageMultiplier: 2,
+    ...OPENAI_1M_LONG_CONTEXT,
     tier: "free",
   },
   {
@@ -62,8 +105,9 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     label: "GPT-5.4",
     description:
       "Flagship model: top reasoning, code tasks. low-cost than GPT-5.5.",
-    tags: ["general", "reasoning", "fast"],
+    tags: ["general", "reasoning", "fast", "long-context"],
     tokenUsageMultiplier: 1.5,
+    ...OPENAI_1M_LONG_CONTEXT,
     tier: "free",
   },
   {
@@ -104,8 +148,9 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
     id: "anthropic/claude-fable-5",
     label: "Claude Fable 5",
-    description: "Mythos-class model from Anthropic.",
-    tags: ["powerful", "agentic"],
+    description:
+      "Mythos-class model from Anthropic: frontier intelligence for long-horizon coding & knowledge work.",
+    tags: ["powerful", "agentic", "long-context"],
     premium: true,
     tokenUsageMultiplier: 5,
     tier: "plus",
@@ -237,7 +282,45 @@ export function resolveAvailableModelId(modelId: string): string {
   return modelId;
 }
 
+const ANTHROPIC_FULL_CAPABILITIES: AnthropicCapabilities = {
+  batch: { supported: true },
+  citations: { supported: true },
+  code_execution: { supported: true },
+  context_management: {
+    supported: true,
+    clear_tool_uses_20250919: { supported: true },
+    clear_thinking_20251015: { supported: true },
+    compact_20260112: { supported: true },
+  },
+  effort: {
+    supported: true,
+    low: { supported: true },
+    medium: { supported: true },
+    high: { supported: true },
+    max: { supported: true },
+  },
+  image_input: { supported: true },
+  pdf_input: { supported: true },
+  structured_outputs: { supported: true },
+  thinking: {
+    supported: true,
+    types: {
+      enabled: { supported: true },
+      adaptive: { supported: true },
+    },
+  },
+};
+
 export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
+  {
+    type: "model",
+    id: "claude-fable-5",
+    display_name: "Claude Fable 5",
+    created_at: "2026-06-09T00:00:00Z",
+    max_input_tokens: 1000000,
+    max_tokens: 128000,
+    capabilities: ANTHROPIC_FULL_CAPABILITIES,
+  },
   {
     type: "model",
     id: "claude-sonnet-4.6",
@@ -245,34 +328,7 @@ export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
     created_at: "2026-02-17T00:00:00Z",
     max_input_tokens: 1000000,
     max_tokens: 128000,
-    capabilities: {
-      batch: { supported: true },
-      citations: { supported: true },
-      code_execution: { supported: true },
-      context_management: {
-        supported: true,
-        clear_tool_uses_20250919: { supported: true },
-        clear_thinking_20251015: { supported: true },
-        compact_20260112: { supported: true },
-      },
-      effort: {
-        supported: true,
-        low: { supported: true },
-        medium: { supported: true },
-        high: { supported: true },
-        max: { supported: true },
-      },
-      image_input: { supported: true },
-      pdf_input: { supported: true },
-      structured_outputs: { supported: true },
-      thinking: {
-        supported: true,
-        types: {
-          enabled: { supported: true },
-          adaptive: { supported: true },
-        },
-      },
-    },
+    capabilities: ANTHROPIC_FULL_CAPABILITIES,
   },
   {
     type: "model",
@@ -281,34 +337,7 @@ export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
     created_at: "2026-02-04T00:00:00Z",
     max_input_tokens: 1000000,
     max_tokens: 128000,
-    capabilities: {
-      batch: { supported: true },
-      citations: { supported: true },
-      code_execution: { supported: true },
-      context_management: {
-        supported: true,
-        clear_tool_uses_20250919: { supported: true },
-        clear_thinking_20251015: { supported: true },
-        compact_20260112: { supported: true },
-      },
-      effort: {
-        supported: true,
-        low: { supported: true },
-        medium: { supported: true },
-        high: { supported: true },
-        max: { supported: true },
-      },
-      image_input: { supported: true },
-      pdf_input: { supported: true },
-      structured_outputs: { supported: true },
-      thinking: {
-        supported: true,
-        types: {
-          enabled: { supported: true },
-          adaptive: { supported: true },
-        },
-      },
-    },
+    capabilities: ANTHROPIC_FULL_CAPABILITIES,
   },
   {
     type: "model",
@@ -361,6 +390,59 @@ export function getModelDefinition(
   return MODEL_DEFINITIONS.find((m) => m.id === resolvedModelId);
 }
 
+function numField(
+  record: Record<string, unknown>,
+  ...keys: string[]
+): number | null {
+  for (const key of keys) {
+    const value = record[key];
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+  }
+  return null;
+}
+
+/**
+ * Prompt/context size for long-context threshold checks.
+ * - OpenAI-style: `prompt_tokens` already includes cached tokens.
+ * - Anthropic-style: `input_tokens` excludes cache tokens; add them back.
+ */
+function getPromptTokenCount(usage: unknown): number | null {
+  if (!usage || typeof usage !== "object") {
+    return null;
+  }
+
+  const record = usage as Record<string, unknown>;
+  const cacheRead = numField(
+    record,
+    "cache_read_input_tokens",
+    "cacheReadInputTokens",
+  );
+  const cacheWrite = numField(
+    record,
+    "cache_creation_input_tokens",
+    "cacheCreationInputTokens",
+  );
+
+  // Prefer OpenAI prompt_tokens when present (includes cached subset).
+  const openaiPrompt = numField(record, "prompt_tokens", "promptTokens");
+  if (openaiPrompt !== null) {
+    return openaiPrompt;
+  }
+
+  const inputTokens = numField(record, "input_tokens", "inputTokens");
+  if (inputTokens === null && cacheRead === null && cacheWrite === null) {
+    return null;
+  }
+
+  // Anthropic-style: sum input + cache tokens for total context size.
+  return (inputTokens ?? 0) + (cacheRead ?? 0) + (cacheWrite ?? 0);
+}
+
+/**
+ * Base per-model usage multiplier (ignores long-context surcharge).
+ */
 export function getModelTokenUsageMultiplier(modelId: string): number {
   const multiplier =
     getModelDefinition(modelId)?.tokenUsageMultiplier ??
@@ -369,6 +451,52 @@ export function getModelTokenUsageMultiplier(modelId: string): number {
   return Number.isFinite(multiplier) && multiplier > 0
     ? multiplier
     : DEFAULT_TOKEN_USAGE_MULTIPLIER;
+}
+
+/**
+ * Long-context surcharge for OpenAI 1M models (and any model that defines
+ * longContextThreshold / longContextUsageMultiplier).
+ * Returns 1 when the prompt is within the short-context band or the model
+ * has no long-context pricing.
+ */
+export function getLongContextUsageMultiplier(
+  modelId: string,
+  usage: unknown,
+): number {
+  const def = getModelDefinition(modelId);
+  const threshold = def?.longContextThreshold;
+  const longMultiplier = def?.longContextUsageMultiplier;
+
+  if (
+    threshold === undefined ||
+    longMultiplier === undefined ||
+    !Number.isFinite(threshold) ||
+    !Number.isFinite(longMultiplier) ||
+    longMultiplier <= 0
+  ) {
+    return 1;
+  }
+
+  const promptTokens = getPromptTokenCount(usage);
+  if (promptTokens === null || promptTokens <= threshold) {
+    return 1;
+  }
+
+  return longMultiplier;
+}
+
+/**
+ * Combined multiplier: base model rate × long-context surcharge (if any).
+ */
+export function getEffectiveTokenUsageMultiplier(
+  modelId: string,
+  usage?: unknown,
+): number {
+  const base = getModelTokenUsageMultiplier(modelId);
+  if (usage === undefined) {
+    return base;
+  }
+  return base * getLongContextUsageMultiplier(modelId, usage);
 }
 
 export function getModelTierRequirement(
