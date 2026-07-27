@@ -51,6 +51,25 @@ function getCachedValidKey(keyHash: string): string | null {
 }
 
 /**
+ * Drop cached successful key validations for a user (or the entire cache).
+ * Called when keys are revoked (e.g. Flixa ban) so ban takes effect immediately.
+ */
+export function invalidateUserAuthCache(userId?: string): void {
+  if (!userId) {
+    keyValidationCache.clear();
+    lastUsedWriteAt.clear();
+    return;
+  }
+
+  for (const [keyHash, entry] of keyValidationCache) {
+    if (entry.userId === userId) {
+      keyValidationCache.delete(keyHash);
+      lastUsedWriteAt.delete(keyHash);
+    }
+  }
+}
+
+/**
  * Update last_used_at at most once per LAST_USED_UPDATE_INTERVAL_MS per key
  * instead of on every request (fire and forget).
  */

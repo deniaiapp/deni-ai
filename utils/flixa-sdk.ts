@@ -96,6 +96,8 @@ function resolveDefaultBaseUrl() {
   return envBaseUrl || 'http://localhost:3000';
 }
 
+const FLIXA_SDK_USER_AGENT = 'flixa-sdk/1.0';
+
 export class FlixaClient {
   private baseUrl: string;
   private headers: Record<string, string>;
@@ -125,10 +127,14 @@ export class FlixaClient {
 
   private async request(body: ChatCompletionRequest) {
     const url = this.buildUrl('/v1/agent/chat/completions');
+    // Always identify as Flixa so server-side abuse prevention accepts the call.
+    // Callers can still override via options.headers (spread after defaults).
     return await this.fetcher(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'User-Agent': FLIXA_SDK_USER_AGENT,
+        'x-flixa-client': 'sdk',
         ...this.headers
       },
       body: JSON.stringify(body)

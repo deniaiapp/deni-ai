@@ -10,6 +10,14 @@ import {
   isTierSufficient,
   getVerifyUrl,
   reserveUsageQuota,
+  isUserBannedFromFlixa,
+  banUserFromFlixa,
+  BANNED_ERROR_MESSAGE,
+  CLIENT_UPDATE_REQUIRED_MESSAGE,
+  isClientSignalEnforcementEnabled,
+  detectClientSignal,
+  isLegacyAiSdkUserAgent,
+  summarizeClientHeaders,
 } from '../utils/deni';
 import { getModelTokenUsageMultiplier } from '../utils/agent/models';
 
@@ -48,6 +56,14 @@ function authErrorMessage(code: string | null, fallback: string): string {
     return GUEST_ACCOUNT_ERROR_MESSAGE;
   }
 
+  if (code === 'service_unavailable' || code === 'banned') {
+    return BANNED_ERROR_MESSAGE;
+  }
+
+  if (code === 'client_update_required') {
+    return CLIENT_UPDATE_REQUIRED_MESSAGE;
+  }
+
   if (code === 'invalid_key') {
     return 'Invalid API key. Please login again to Deni AI. If the issue persists, try updating the extension to the latest version.';
   }
@@ -63,7 +79,12 @@ function getAuthErrorResponseConfig(code: string | null): {
   status: ContentfulStatusCode;
   type: 'authentication_error' | 'server_error';
 } {
-  if (code === 'guest_account') {
+  if (
+    code === 'guest_account' ||
+    code === 'service_unavailable' ||
+    code === 'banned' ||
+    code === 'client_update_required'
+  ) {
     return {
       status: 403,
       type: 'authentication_error',
@@ -81,6 +102,81 @@ function getAuthErrorResponseConfig(code: string | null): {
     status: 401,
     type: 'authentication_error',
   };
+}
+
+function forbiddenAuthResponse(
+  c: Context,
+  code: 'service_unavailable' | 'client_update_required',
+  message: string,
+) {
+  const errorResponse = getAuthErrorResponseConfig(code);
+  return c.json(
+    {
+      error: {
+        message: authErrorMessage(code, message),
+        type: errorResponse.type,
+        param: null,
+        code,
+      },
+    },
+    { status: errorResponse.status },
+  );
+}
+
+/**
+ * After a key is valid, reject banned users and ban accounts that call the
+ * agent API without an allowed client signal (Codex / Claude Code / OpenCode / Flixa).
+ *
+ * Legacy AI SDK User-Agents (`ai/…`, `ai-sdk…`) get a soft "please update"
+ * response without banning — these are typically outdated Flixa clients.
+ */
+async function enforceFlixaAccessPolicy(
+  c: Context,
+  userId: string,
+): Promise<Response | null> {
+  if (await isUserBannedFromFlixa(userId)) {
+    // Do not expose "banned" in the API response.
+    return forbiddenAuthResponse(c, 'service_unavailable', BANNED_ERROR_MESSAGE);
+  }
+
+  if (!isClientSignalEnforcementEnabled()) {
+    return null;
+  }
+
+  const headers = c.req.raw.headers;
+  const signal = detectClientSignal(headers);
+  if (signal.allowed) {
+    return null;
+  }
+
+  const clientHeaders = summarizeClientHeaders(headers);
+
+  // Outdated Flixa / raw AI SDK: nudge to update, do not ban.
+  if (isLegacyAiSdkUserAgent(headers)) {
+    console.warn(
+      `[ClientSignal] legacy ai-sdk ua user=${userId} path=${c.req.path}`,
+      clientHeaders,
+    );
+    return forbiddenAuthResponse(
+      c,
+      'client_update_required',
+      CLIENT_UPDATE_REQUIRED_MESSAGE,
+    );
+  }
+
+  console.warn(
+    `[ClientSignal] missing signal user=${userId} path=${c.req.path}`,
+    clientHeaders,
+  );
+
+  await banUserFromFlixa(userId, 'missing_client_signal', clientHeaders);
+
+  // Same public response as an already-banned account (do not expose ban/signal).
+  return forbiddenAuthResponse(
+    c,
+    'service_unavailable',
+    BANNED_ERROR_MESSAGE,
+  );
 }
 
 async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string } | Response> {
@@ -117,6 +213,11 @@ async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string }
       },
       { status: errorResponse.status }
     );
+  }
+
+  const policyBlock = await enforceFlixaAccessPolicy(c, keyResult.userId);
+  if (policyBlock) {
+    return policyBlock;
   }
 
   return { userId: keyResult.userId };
