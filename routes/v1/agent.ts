@@ -2014,9 +2014,18 @@ router.post(
  * POST /v1/messages
  * Anthropic-compatible endpoint for Claude Code.
  * Routes through OpenRouter with Anthropic provider routing for BYOK traffic.
+ *
+ * Aliases for clients that nest Anthropic paths under an agent base URL:
+ *   POST /v1/agent/messages
+ *   POST /v1/agent/v1/messages
  */
-router.post(
+for (const messagesPath of [
   "/messages",
+  "/agent/messages",
+  "/agent/v1/messages",
+] as const) {
+router.post(
+  messagesPath,
   validateAnthropicRequest,
   validateAgentAuth,
   async (c) => {
@@ -2244,5 +2253,6 @@ router.post(
     }
   },
 );
+}
 
 export { router as agentRouter };
