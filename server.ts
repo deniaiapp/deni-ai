@@ -4,6 +4,8 @@ import { logger } from "hono/logger";
 import { agentRouter } from "./routes/v1/agent";
 import { deniRouter } from "./routes/v1/deni";
 import { modelsRouter } from "./routes/v1/models";
+import { adminLookupRouter } from "./routes/admin/lookup";
+import { adminBasicAuth } from "./middleware/adminBasicAuth";
 import { errorHandler } from "./middleware/errorHandler";
 import { logErrorResponses } from "./middleware/logErrorResponses";
 
@@ -18,6 +20,10 @@ app.use("*", logErrorResponses);
 app.get("/health", (c) => {
   return c.json({ status: "ok" });
 });
+
+// Admin (HTTP Basic Auth — set ADMIN_PASSWORD, optional ADMIN_USER)
+app.use("/admin/*", adminBasicAuth);
+app.route("/admin", adminLookupRouter);
 
 // API Routes
 app.route("/v1", agentRouter);

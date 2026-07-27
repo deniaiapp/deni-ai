@@ -19,6 +19,17 @@ export {
 } from './clientSignal';
 export type { ClientSignalResult, KnownClient } from './clientSignal';
 export {
+  recordClientSignalLog,
+  queryClientSignalLogs,
+  getClientSignalLogStats,
+  clearClientSignalLogs,
+} from './clientSignalLog';
+export type {
+  ClientSignalLogEntry,
+  ClientSignalLogOutcome,
+  ClientSignalLogQuery,
+} from './clientSignalLog';
+export {
   banUserFromFlixa,
   unbanUserFromFlixa,
   unbanUserFromFlixaByEmail,

@@ -84,6 +84,40 @@ describe("detectClientSignal", () => {
     ).toEqual({ allowed: true, client: "opencode" });
   });
 
+  test("detects Flixa CLI via user-agent, x-client, and x-flixa-client", () => {
+    expect(
+      detectClientSignal(
+        headers({
+          "user-agent": "flixa-cli/0.1.0",
+        }),
+      ),
+    ).toEqual({ allowed: true, client: "flixa_cli" });
+
+    expect(
+      detectClientSignal(
+        headers({
+          "x-client": "flixa-cli",
+        }),
+      ),
+    ).toEqual({ allowed: true, client: "flixa_cli" });
+
+    expect(
+      detectClientSignal(
+        headers({
+          "x-flixa-client": "cli/0.1.0",
+        }),
+      ),
+    ).toEqual({ allowed: true, client: "flixa_cli" });
+
+    expect(
+      detectClientSignal(
+        headers({
+          originator: "flixa-cli",
+        }),
+      ),
+    ).toEqual({ allowed: true, client: "flixa_cli" });
+  });
+
   test("detects Flixa via user-agent, x-flixa-client, and referer", () => {
     expect(
       detectClientSignal(

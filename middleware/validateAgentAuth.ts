@@ -19,6 +19,7 @@ import {
   isLegacyAiSdkUserAgent,
   summarizeClientHeaders,
 } from '../utils/deni';
+import { recordClientSignalLog } from '../utils/deni/clientSignalLog';
 import { getModelTokenUsageMultiplier } from '../utils/agent/models';
 
 export interface AgentAuthContext {
@@ -127,36 +128,60 @@ function forbiddenAuthResponse(
  * After a key is valid, reject banned users and ban accounts that call the
  * agent API without an allowed client signal (Codex / Claude Code / OpenCode / Flixa).
  *
- * Legacy AI SDK User-Agents (`ai/…`, `ai-sdk…`) get a soft "please update"
- * response without banning — these are typically outdated Flixa clients.
+ * Every request records a client-signal log (console + in-memory ring buffer
+ * for /admin/lookup). Legacy AI SDK User-Agents (`ai/…`, `ai-sdk…`) get a soft
+ * "please update" response without banning — typically outdated Flixa clients.
  */
 async function enforceFlixaAccessPolicy(
   c: Context,
   userId: string,
 ): Promise<Response | null> {
+  const headers = c.req.raw.headers;
+  const signal = detectClientSignal(headers);
+  const clientHeaders = summarizeClientHeaders(headers);
+  const logBase = {
+    userId,
+    path: c.req.path,
+    method: c.req.method,
+    client: signal.client,
+    headers: clientHeaders,
+  };
+
   if (await isUserBannedFromFlixa(userId)) {
+    recordClientSignalLog({
+      ...logBase,
+      allowed: signal.allowed,
+      outcome: 'already_banned',
+    });
     // Do not expose "banned" in the API response.
     return forbiddenAuthResponse(c, 'service_unavailable', BANNED_ERROR_MESSAGE);
   }
 
   if (!isClientSignalEnforcementEnabled()) {
+    recordClientSignalLog({
+      ...logBase,
+      allowed: true,
+      outcome: 'enforcement_disabled',
+    });
     return null;
   }
 
-  const headers = c.req.raw.headers;
-  const signal = detectClientSignal(headers);
   if (signal.allowed) {
+    recordClientSignalLog({
+      ...logBase,
+      allowed: true,
+      outcome: 'allowed',
+    });
     return null;
   }
-
-  const clientHeaders = summarizeClientHeaders(headers);
 
   // Outdated Flixa / raw AI SDK: nudge to update, do not ban.
   if (isLegacyAiSdkUserAgent(headers)) {
-    console.warn(
-      `[ClientSignal] legacy ai-sdk ua user=${userId} path=${c.req.path}`,
-      clientHeaders,
-    );
+    recordClientSignalLog({
+      ...logBase,
+      allowed: false,
+      outcome: 'legacy_update_required',
+    });
     return forbiddenAuthResponse(
       c,
       'client_update_required',
@@ -164,10 +189,11 @@ async function enforceFlixaAccessPolicy(
     );
   }
 
-  console.warn(
-    `[ClientSignal] missing signal user=${userId} path=${c.req.path}`,
-    clientHeaders,
-  );
+  recordClientSignalLog({
+    ...logBase,
+    allowed: false,
+    outcome: 'missing_banned',
+  });
 
   await banUserFromFlixa(userId, 'missing_client_signal', clientHeaders);
 

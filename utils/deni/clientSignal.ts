@@ -2,11 +2,17 @@
  * Detect allowed coding-agent / Flixa client signals.
  *
  * Abuse prevention: Deni AI API keys must only be used from known clients
- * (Codex, Claude Code, OpenCode, Flixa). Requests without a matching signal
- * are treated as unauthorized automation and trigger a Flixa ban.
+ * (Codex, Claude Code, OpenCode, Flixa VS Code / SDK, Flixa CLI).
+ * Requests without a matching signal are treated as unauthorized automation
+ * and trigger a Flixa ban.
  */
 
-export type KnownClient = "codex" | "claude_code" | "opencode" | "flixa";
+export type KnownClient =
+  | "codex"
+  | "claude_code"
+  | "opencode"
+  | "flixa"
+  | "flixa_cli";
 
 export type ClientSignalResult =
   | { allowed: true; client: KnownClient }
@@ -78,12 +84,41 @@ export function detectClientSignal(headers: Headers): ClientSignalResult {
     headerValue(headers, "referer") || headerValue(headers, "http-referer"),
   );
 
+  const xFlixaClient = lower(headerValue(headers, "x-flixa-client"));
+
+  // ── Flixa CLI (first-party terminal client) ──────────────────────────────
+  // Recommended headers (any one is enough):
+  //   User-Agent: flixa-cli/<version>
+  //   x-client: flixa-cli
+  //   x-flixa-client: cli/<version>
+  //   originator: flixa-cli
+  if (
+    userAgent.includes("flixa-cli") ||
+    userAgent.includes("flixa_cli") ||
+    xClient === "flixa-cli" ||
+    xClient === "flixa_cli" ||
+    xClient.startsWith("flixa-cli/") ||
+    xClient.startsWith("flixa_cli/") ||
+    xFlixaClient === "cli" ||
+    xFlixaClient.startsWith("cli/") ||
+    xFlixaClient.includes("flixa-cli") ||
+    originator === "flixa-cli" ||
+    originator === "flixa_cli" ||
+    originator.startsWith("flixa-cli")
+  ) {
+    return { allowed: true, client: "flixa_cli" };
+  }
+
   // ── Flixa (first-party extension / SDK) ──────────────────────────────────
+  // Recommended headers:
+  //   User-Agent: flixa-vscode/<version> | flixa-sdk/<version>
+  //   x-flixa-client: vscode/<version> | sdk
+  //   x-client: flixa-vscode
   if (
     hasFlixaSignalSecret(headers) ||
     userAgent.includes("flixa") ||
     xClient.includes("flixa") ||
-    headerValue(headers, "x-flixa-client").length > 0 ||
+    xFlixaClient.length > 0 ||
     referer.includes("flixa.deniai.app") ||
     referer.includes("flixa.")
   ) {
