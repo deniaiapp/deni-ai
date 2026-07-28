@@ -10,6 +10,7 @@
     "build": "bun build server.ts --outdir ./dist --target bun",
     "typecheck": "tsc --noEmit",
     "tools:revoke-anonymous-api-keys": "bun run tools/revoke-anonymous-api-keys.ts",
+    "tools:ban-flixa-user": "bun run tools/ban-flixa-user.ts",
     "tools:unban-flixa-user": "bun run tools/unban-flixa-user.ts"
   },
   "keywords": [

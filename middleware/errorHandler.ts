@@ -1,5 +1,6 @@
-import { Context } from 'hono';
-import type { ContentfulStatusCode } from 'hono/utils/http-status';
+import { Context } from "hono";
+import { HTTPException } from "hono/http-exception";
+import type { ContentfulStatusCode } from "hono/utils/http-status";
 
 interface ErrorWithStatus extends Error {
   statusCode?: number;
@@ -10,20 +11,47 @@ interface ErrorWithStatus extends Error {
 }
 
 /**
- * Global error handler middleware
+ * Global error handler middleware.
+ *
+ * Hono middleware such as `basicAuth` throws `HTTPException` with a prepared
+ * Response (status, body, WWW-Authenticate, etc.). Those must be returned as-is
+ * so browser Basic Auth challenges and correct status bodies are preserved.
  */
 export function errorHandler(err: ErrorWithStatus, c: Context) {
-  console.error('Error:', err);
-
-  // OpenAI-style error response
-  const statusCode = (err.statusCode || err.status || 500) as ContentfulStatusCode;
-  
-  return c.json({
-    error: {
-      message: err.message || 'Internal server error',
-      type: err.type || 'server_error',
-      param: err.param || null,
-      code: err.code || null
+  // Prefer HTTPException.getResponse() — matches Hono's default onError.
+  if (err instanceof HTTPException) {
+    const res = err.getResponse();
+    // Expected auth failures shouldn't spam as "Error:"; other HTTPExceptions might.
+    if (err.status >= 500) {
+      console.error("Error:", err);
     }
-  }, statusCode);
+    return c.newResponse(res.body, res);
+  }
+
+  // Some libraries attach getResponse without being instanceof HTTPException.
+  const maybeGetResponse = (err as unknown as { getResponse?: () => Response })
+    .getResponse;
+  if (typeof maybeGetResponse === "function") {
+    const res = maybeGetResponse.call(err);
+    return c.newResponse(res.body, res);
+  }
+
+  console.error("Error:", err);
+
+  // OpenAI-style error response for unexpected failures
+  const statusCode = (err.statusCode ||
+    err.status ||
+    500) as ContentfulStatusCode;
+
+  return c.json(
+    {
+      error: {
+        message: err.message || "Internal server error",
+        type: err.type || "server_error",
+        param: err.param || null,
+        code: err.code || null,
+      },
+    },
+    statusCode,
+  );
 }

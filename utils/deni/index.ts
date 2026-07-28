@@ -31,6 +31,7 @@ export type {
 } from './clientSignalLog';
 export {
   banUserFromFlixa,
+  banUserFromFlixaByEmail,
   unbanUserFromFlixa,
   unbanUserFromFlixaByEmail,
   isUserBannedFromFlixa,

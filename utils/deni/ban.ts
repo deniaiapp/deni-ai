@@ -191,6 +191,103 @@ export async function unbanUserFromFlixa(userId: string): Promise<UnbanResult> {
   }
 }
 
+type UserLookupRow = { id: string; email: string | null };
+
+async function findUserByEmail(
+  email: string,
+): Promise<
+  | { found: true; userId: string; email: string }
+  | { found: false; error: string }
+> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) {
+    return { found: false, error: "Email is required" };
+  }
+
+  const pool = getDeniPool();
+  const userResult = await pool.query<UserLookupRow>(
+    `SELECT id, email FROM "user" WHERE lower(email) = $1 LIMIT 1`,
+    [normalizedEmail],
+  );
+
+  if (userResult.rows.length === 0) {
+    return {
+      found: false,
+      error: `No user found with email: ${normalizedEmail}`,
+    };
+  }
+
+  const user = userResult.rows[0]!;
+  return {
+    found: true,
+    userId: user.id,
+    email: user.email ?? normalizedEmail,
+  };
+}
+
+/**
+ * Look up a Deni user by email (case-insensitive) and ban them from Flixa.
+ * Revokes all API keys for that user.
+ */
+export async function banUserFromFlixaByEmail(
+  email: string,
+  reason: BanReason = "manual",
+  clientHeaders?: Record<string, string | null>,
+): Promise<
+  | {
+      banned: true;
+      userId: string;
+      email: string;
+      alreadyBanned: boolean;
+      reason: BanReason;
+    }
+  | { banned: false; error: string; code: "user_not_found" | "ban_failed" }
+> {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail) {
+    return { banned: false, error: "Email is required", code: "user_not_found" };
+  }
+
+  try {
+    const lookup = await findUserByEmail(normalizedEmail);
+    if (!lookup.found) {
+      return {
+        banned: false,
+        error: lookup.error,
+        code: "user_not_found",
+      };
+    }
+
+    const result = await banUserFromFlixa(
+      lookup.userId,
+      reason,
+      clientHeaders,
+    );
+    if (!result.banned) {
+      return {
+        banned: false,
+        error: result.error,
+        code: "ban_failed",
+      };
+    }
+
+    return {
+      banned: true,
+      userId: lookup.userId,
+      email: lookup.email,
+      alreadyBanned: result.alreadyBanned,
+      reason,
+    };
+  } catch (error) {
+    console.error(`[Ban] Failed to ban by email=${normalizedEmail}:`, error);
+    return {
+      banned: false,
+      error: error instanceof Error ? error.message : "ban_failed",
+      code: "ban_failed",
+    };
+  }
+}
+
 /**
  * Look up a Deni user by email (case-insensitive) and remove their Flixa ban.
  */
@@ -206,22 +303,16 @@ export async function unbanUserFromFlixaByEmail(
   }
 
   try {
-    const pool = getDeniPool();
-    const userResult = await pool.query<{ id: string; email: string | null }>(
-      `SELECT id, email FROM "user" WHERE lower(email) = $1 LIMIT 1`,
-      [normalizedEmail],
-    );
-
-    if (userResult.rows.length === 0) {
+    const lookup = await findUserByEmail(normalizedEmail);
+    if (!lookup.found) {
       return {
         unbanned: false,
-        error: `No user found with email: ${normalizedEmail}`,
+        error: lookup.error,
         code: "user_not_found",
       };
     }
 
-    const user = userResult.rows[0];
-    const result = await unbanUserFromFlixa(user.id);
+    const result = await unbanUserFromFlixa(lookup.userId);
     if (!result.unbanned) {
       return {
         unbanned: false,
@@ -233,7 +324,7 @@ export async function unbanUserFromFlixaByEmail(
     return {
       unbanned: true,
       userId: result.userId,
-      email: user.email ?? normalizedEmail,
+      email: lookup.email,
       wasBanned: result.wasBanned,
     };
   } catch (error) {
