@@ -41,3 +41,16 @@ PRs should include:
 
 ## Security & Configuration Tips
 Do not commit real API keys or database URLs. Keep secrets in `.env` or deployment-managed env vars such as `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, and `DENI_DATABASE_URL`.
+
+Admin UI (`/admin/*`) uses a **cookie session** via `/admin/login` (`ADMIN_USER` / `ADMIN_PASSWORD`). Do not rely on browser HTTP Basic Auth dialogs for day-to-day admin access — Chrome often caches bad Basic credentials and then spins forever on 401 when revisiting later. Scripts may still send `Authorization: Basic …`.
+
+## Shell pitfalls (Windows)
+Do **not** create or commit a repo-root file named `nul` (or other Windows reserved names like `con`, `prn`, `aux`).
+
+On `cmd`, `> nul` / `2>nul` discards output. In **Git Bash / MSYS**, `nul` is a normal path, so redirects such as `command 2>nul` write a real `./nul` file. Prefer:
+
+- bash: `command 2>/dev/null`
+- PowerShell: `command 2>$null`
+- cmd only: `command 2>nul`
+
+If a stray `nul` appears, delete it (Windows may need an extended path: `\\?\D:\devs\flixa-backend\nul`) and never add it to git.

@@ -250,6 +250,8 @@ function renderLookupPage(): string {
       <h1>Client Signal Lookup</h1>
       <div class="meta" style="margin-top:0.35rem">
         <a href="/admin/rules" style="color:var(--accent);text-decoration:none">Silent ban rules →</a>
+        ·
+        <a href="/admin/logout" style="color:var(--muted);text-decoration:none">Log out</a>
       </div>
     </div>
     <div class="meta" id="stats">Loading…</div>
@@ -352,6 +354,10 @@ function renderLookupPage(): string {
           headers: { Accept: 'application/json' },
         });
         if (!res.ok) {
+          if (res.status === 401) {
+            location.href = '/admin/login?next=' + encodeURIComponent(location.pathname + location.search);
+            return;
+          }
           const text = await res.text();
           rows.innerHTML = '<tr><td colspan="6" class="error">' + esc(res.status + ' ' + text) + '</td></tr>';
           return;

@@ -436,6 +436,8 @@ function renderRulesPage(): string {
       <div class="meta" style="margin-top:0.35rem">
         <a href="/admin/lookup">← Client signal lookup</a>
         · match → count hits → ban after N requests (silent)
+        · session login ·
+        <a href="/admin/logout">Log out</a>
       </div>
     </div>
     <div class="meta" id="stats">Loading…</div>
@@ -659,10 +661,9 @@ function renderRulesPage(): string {
         tr.querySelector('.edit').addEventListener('click', () => loadRuleIntoForm(rule));
         tr.querySelector('.toggle').addEventListener('click', async () => {
           try {
-            const res = await fetch('/admin/rules/api/' + encodeURIComponent(id), {
+            const res = await adminFetch('/admin/rules/api/' + encodeURIComponent(id), {
               method: 'PATCH',
-              credentials: 'same-origin',
-              headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+              headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ enabled: !rule.enabled }),
             });
             const data = await res.json();
@@ -701,10 +702,8 @@ function renderRulesPage(): string {
           if (!confirm('Reset hit counter for this user/rule?')) return;
           try {
             const params = new URLSearchParams({ userId, ruleId });
-            const res = await fetch('/admin/rules/api/hits?' + params.toString(), {
+            const res = await adminFetch('/admin/rules/api/hits?' + params.toString(), {
               method: 'DELETE',
-              credentials: 'same-origin',
-              headers: { Accept: 'application/json' },
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || res.statusText);
@@ -716,16 +715,52 @@ function renderRulesPage(): string {
       });
     }
 
+    async function adminFetch(url, options) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 15000);
+      try {
+        return await fetch(url, {
+          credentials: 'same-origin',
+          signal: controller.signal,
+          ...options,
+          headers: {
+            Accept: 'application/json',
+            ...(options && options.headers ? options.headers : {}),
+          },
+        });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function formatLoadError(err, status, bodyText) {
+      if (err && err.name === 'AbortError') {
+        return 'Timed out after 15s loading rules. Check DENI_DATABASE_URL / DB connectivity (rules are stored in Postgres).';
+      }
+      if (status === 401) {
+        location.href = '/admin/login?next=' + encodeURIComponent(location.pathname + location.search);
+        return 'Session expired — redirecting to login…';
+      }
+      if (status === 503) {
+        return bodyText || 'Admin is not configured. Set ADMIN_PASSWORD on the server.';
+      }
+      if (status) {
+        return status + ' ' + (bodyText || '');
+      }
+      return err && err.message ? err.message : String(err);
+    }
+
     async function load() {
       listMsg.innerHTML = '';
+      statsEl.textContent = 'Loading…';
       try {
-        const res = await fetch('/admin/rules/api', {
-          credentials: 'same-origin',
-          headers: { Accept: 'application/json' },
-        });
+        const res = await adminFetch('/admin/rules/api');
         if (!res.ok) {
           const text = await res.text();
-          throw new Error(res.status + ' ' + text);
+          throw Object.assign(new Error(formatLoadError(null, res.status, text)), {
+            status: res.status,
+            bodyText: text,
+          });
         }
         const data = await res.json();
         rules = data.rules || [];
@@ -738,8 +773,11 @@ function renderRulesPage(): string {
         renderRules();
         renderHits();
       } catch (err) {
-        ruleRows.innerHTML = '<tr><td colspan="5" class="error">' + esc(err.message || err) + '</td></tr>';
+        const msg = formatLoadError(err, err && err.status, err && err.bodyText);
+        ruleRows.innerHTML = '<tr><td colspan="5" class="error">' + esc(msg) + '</td></tr>';
+        hitRows.innerHTML = '<tr><td colspan="5" class="empty">—</td></tr>';
         statsEl.textContent = 'Error loading rules';
+        listMsg.innerHTML = '<div class="error">' + esc(msg) + '</div>';
       }
     }
 
@@ -755,12 +793,14 @@ function renderRulesPage(): string {
       };
       const id = form.ruleId.value.trim();
       try {
-        const res = await fetch(id ? '/admin/rules/api/' + encodeURIComponent(id) : '/admin/rules/api', {
-          method: id ? 'PUT' : 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-          body: JSON.stringify(payload),
-        });
+        const res = await adminFetch(
+          id ? '/admin/rules/api/' + encodeURIComponent(id) : '/admin/rules/api',
+          {
+            method: id ? 'PUT' : 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          },
+        );
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || res.statusText);
         formMsg.innerHTML = '<div class="okmsg">Saved.</div>';
@@ -776,10 +816,8 @@ function renderRulesPage(): string {
       if (!id) return;
       if (!confirm('Delete this rule and its hit counters?')) return;
       try {
-        const res = await fetch('/admin/rules/api/' + encodeURIComponent(id), {
+        const res = await adminFetch('/admin/rules/api/' + encodeURIComponent(id), {
           method: 'DELETE',
-          credentials: 'same-origin',
-          headers: { Accept: 'application/json' },
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || res.statusText);

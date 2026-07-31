@@ -38,6 +38,16 @@ export async function logErrorResponses(c: Context, next: Next): Promise<void> {
     return;
   }
 
+  // Browser Basic Auth: first hit without Authorization is expected 401 with
+  // WWW-Authenticate. Logging it as an error looks like a bug and confuses
+  // debugging when the admin UI is still prompting for credentials.
+  if (
+    c.res.status === 401 &&
+    c.res.headers.has("www-authenticate")
+  ) {
+    return;
+  }
+
   const responseBody = await getResponseBodyPreview(c);
 
   console.error("[http_error_response]", {

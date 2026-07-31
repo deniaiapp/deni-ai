@@ -6,7 +6,8 @@ import { deniRouter } from "./routes/v1/deni";
 import { modelsRouter } from "./routes/v1/models";
 import { adminLookupRouter } from "./routes/admin/lookup";
 import { adminRulesRouter } from "./routes/admin/rules";
-import { adminBasicAuth } from "./middleware/adminBasicAuth";
+import { adminAuthRouter } from "./routes/admin/auth";
+import { adminAuth } from "./middleware/adminAuth";
 import { errorHandler } from "./middleware/errorHandler";
 import { logErrorResponses } from "./middleware/logErrorResponses";
 
@@ -22,8 +23,10 @@ app.get("/health", (c) => {
   return c.json({ status: "ok" });
 });
 
-// Admin (HTTP Basic Auth — set ADMIN_PASSWORD, optional ADMIN_USER)
-app.use("/admin/*", adminBasicAuth);
+// Admin (cookie session via /admin/login; optional Basic for scripts)
+// Login/logout are public; everything else under /admin/* requires auth.
+app.use("/admin/*", adminAuth);
+app.route("/admin", adminAuthRouter);
 app.route("/admin", adminLookupRouter);
 app.route("/admin", adminRulesRouter);
 
