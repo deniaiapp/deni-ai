@@ -5,9 +5,14 @@ import {
   setAdminSessionCookie,
   verifyAdminCredentials,
   verifyAdminSessionToken,
+  ADMIN_SESSION_COOKIE,
 } from "../../middleware/adminAuth";
 import { getCookie } from "hono/cookie";
-import { ADMIN_SESSION_COOKIE } from "../../middleware/adminAuth";
+import {
+  clientIpFromHeaders,
+  failedLoginDelay,
+  logAdminAudit,
+} from "../../utils/adminSecurity";
 
 export const adminAuthRouter = new Hono();
 
@@ -59,6 +64,7 @@ adminAuthRouter.post("/login", async (c) => {
     );
   }
 
+  const ip = clientIpFromHeaders(c.req.raw.headers);
   const contentType = c.req.header("content-type") || "";
   let username = "";
   let pass = "";
@@ -80,9 +86,17 @@ adminAuthRouter.post("/login", async (c) => {
     nextRaw = String(body.next ?? nextRaw);
   }
 
-  if (!verifyAdminCredentials(username, pass)) {
+  const ok = await verifyAdminCredentials(username, pass);
+  if (!ok) {
+    await failedLoginDelay();
+    logAdminAudit("login_failed", {
+      ip,
+      path: "/admin/login",
+      username,
+      reason: "form",
+    });
+
     const next = safeNextPath(nextRaw);
-    // Form posts: redirect back with error. JSON: 401.
     if (contentType.includes("application/json")) {
       return c.json({ error: "invalid_credentials" }, 401);
     }
@@ -92,10 +106,12 @@ adminAuthRouter.post("/login", async (c) => {
     );
   }
 
+  // Rotate session on every successful login.
   const token = await createAdminSessionToken();
   setAdminSessionCookie(c, token);
-  const next = safeNextPath(nextRaw);
+  logAdminAudit("login_ok", { ip, path: "/admin/login", username });
 
+  const next = safeNextPath(nextRaw);
   if (contentType.includes("application/json")) {
     return c.json({ ok: true, next });
   }
@@ -103,12 +119,16 @@ adminAuthRouter.post("/login", async (c) => {
 });
 
 adminAuthRouter.get("/logout", (c) => {
+  const ip = clientIpFromHeaders(c.req.raw.headers);
   clearAdminSessionCookie(c);
+  logAdminAudit("logout", { ip, path: "/admin/logout" });
   return c.redirect("/admin/login", 302);
 });
 
 adminAuthRouter.post("/logout", (c) => {
+  const ip = clientIpFromHeaders(c.req.raw.headers);
   clearAdminSessionCookie(c);
+  logAdminAudit("logout", { ip, path: "/admin/logout" });
   if ((c.req.header("Accept") || "").includes("application/json")) {
     return c.json({ ok: true });
   }
@@ -126,6 +146,7 @@ function renderLoginPage(next: string, showError: boolean): string {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex,nofollow" />
   <title>Admin Login · Flixa</title>
   <style>
     :root {
@@ -224,12 +245,12 @@ function renderLoginPage(next: string, showError: boolean): string {
 <body>
   <div class="card">
     <h1>Flixa Admin</h1>
-    <p>Sign in with <code>ADMIN_USER</code> / <code>ADMIN_PASSWORD</code>. Session is stored in a cookie (no browser Basic Auth dialog).</p>
+    <p>Sign in with your admin credentials. Session cookie is httpOnly (no Basic Auth dialog).</p>
     ${showError ? '<div class="error">Invalid username or password.</div>' : ""}
     <form method="post" action="/admin/login" autocomplete="username">
       <input type="hidden" name="next" value="${nextAttr}" />
       <label>Username
-        <input name="username" type="text" required autocomplete="username" value="admin" autofocus />
+        <input name="username" type="text" required autocomplete="username" autofocus />
       </label>
       <label>Password
         <input name="password" type="password" required autocomplete="current-password" />
@@ -237,8 +258,8 @@ function renderLoginPage(next: string, showError: boolean): string {
       <button type="submit">Sign in</button>
     </form>
     <p class="hint">
-      If an old Basic Auth prompt still appears, cancel it and use this form.
-      Clear saved passwords for this site if the tab used to spin on 401.
+      Use a long random <code>ADMIN_PASSWORD</code>.
+      Failed attempts are rate-limited and logged.
     </p>
   </div>
 </body>

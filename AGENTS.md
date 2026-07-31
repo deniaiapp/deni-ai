@@ -42,7 +42,38 @@ PRs should include:
 ## Security & Configuration Tips
 Do not commit real API keys or database URLs. Keep secrets in `.env` or deployment-managed env vars such as `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, and `DENI_DATABASE_URL`.
 
-Admin UI (`/admin/*`) uses a **cookie session** via `/admin/login` (`ADMIN_USER` / `ADMIN_PASSWORD`). Do not rely on browser HTTP Basic Auth dialogs for day-to-day admin access — Chrome often caches bad Basic credentials and then spins forever on 401 when revisiting later. Scripts may still send `Authorization: Basic …`.
+Admin UI (`/admin/*`) uses a **cookie session** via `/admin/login` (`ADMIN_USER` / `ADMIN_PASSWORD`). Do not rely on browser HTTP Basic Auth dialogs for day-to-day admin access — Chrome often caches bad Basic credentials and then spins forever on 401 when revisiting later. Scripts may still send `Authorization: Basic …` unless `ADMIN_ALLOW_BASIC=false`.
+
+Admin security env:
+
+| Env | Purpose |
+|-----|---------|
+| `ADMIN_PASSWORD` | Required; prefer 16+ random chars |
+| `ADMIN_USER` | Optional username (default `admin`) |
+| `ADMIN_COOKIE_SECURE` | Force `Secure` session cookie (`true` recommended behind HTTPS) |
+| `ADMIN_SESSION_DAYS` | Session lifetime (default 7, max 30) |
+| `ADMIN_ALLOW_BASIC` | Allow HTTP Basic for scripts (default on; set `false` to disable) |
+| `ADMIN_IP_ALLOWLIST` | **Optional.** Comma-separated IPs / IPv4 CIDRs. Leave empty for mobile / changing IPs |
+
+Do **not** require IP allowlist if you log in from mobile or CGNAT — the address changes and you will lock yourself out. Prefer a long `ADMIN_PASSWORD`, login rate limits, and HTTPS. Allowlist is only useful for fixed office / VPN egress IPs.
+
+Failed logins are rate-limited, delayed slightly, and logged as `[AdminAuth] login_failed` (password never logged). Startup warns on weak passwords only.
+
+### Rate limiting
+In-process fixed-window limits (per instance). Disable with `RATE_LIMIT_ENABLED=false`.
+
+| Scope | Env | Default |
+|-------|-----|---------|
+| `/v1/*` by IP | `RATE_LIMIT_IP_MAX` / `RATE_LIMIT_IP_WINDOW_MS` | 180 / 60s |
+| Authenticated user | `RATE_LIMIT_USER_MAX` / `RATE_LIMIT_USER_WINDOW_MS` | 90 / 60s |
+| Admin login POST | `RATE_LIMIT_ADMIN_LOGIN_MAX` / `RATE_LIMIT_ADMIN_LOGIN_WINDOW_MS` | 20 / 15m |
+
+**Exempt (no short-window rate limit):** agent inference paths —  
+`/v1/agent/chat/completions`, `/v1/agent/responses`, `/v1/agent/responses/compact`,  
+`/v1/messages`, `/v1/agent/messages`, `/v1/agent/v1/messages`  
+(these still use monthly usage quota).
+
+Responses use `429` + `Retry-After` / `X-RateLimit-*` headers. This is separate from monthly usage quota.
 
 ## Shell pitfalls (Windows)
 Do **not** create or commit a repo-root file named `nul` (or other Windows reserved names like `con`, `prn`, `aux`).

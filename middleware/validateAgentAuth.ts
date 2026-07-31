@@ -22,6 +22,7 @@ import {
 } from '../utils/deni';
 import { recordClientSignalLog } from '../utils/deni/clientSignalLog';
 import { getModelTokenUsageMultiplier } from '../utils/agent/models';
+import { checkUserRateLimit } from './rateLimit';
 
 export interface AgentAuthContext {
   userId: string;
@@ -262,6 +263,12 @@ async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string }
   const policyBlock = await enforceFlixaAccessPolicy(c, keyResult.userId);
   if (policyBlock) {
     return policyBlock;
+  }
+
+  // Short-window request rate limit (separate from monthly usage quota).
+  const rateLimited = checkUserRateLimit(c, keyResult.userId);
+  if (rateLimited) {
+    return rateLimited;
   }
 
   return { userId: keyResult.userId };

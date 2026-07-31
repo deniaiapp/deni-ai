@@ -1,5 +1,13 @@
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
+import {
+  clientIpFromHeaders,
+  failedLoginDelay,
+  isAdminIpAllowed,
+  isAdminIpAllowlistEnabled,
+  logAdminAudit,
+  verifyAdminCredentialsSecure,
+} from "../utils/adminSecurity";
 
 /**
  * Admin auth for /admin/*.
@@ -9,12 +17,16 @@ import { getCookie, setCookie, deleteCookie } from "hono/cookie";
  * often caches bad credentials and then spins forever on 401 challenges when
  * revisiting days later.
  *
- * Curl / scripts may still send `Authorization: Basic …`.
+ * Curl / scripts may still send `Authorization: Basic …` unless
+ * ADMIN_ALLOW_BASIC=false.
  *
  * Env:
- *   ADMIN_USER     (default: "admin")
- *   ADMIN_PASSWORD (required — admin is disabled when unset)
- *   ADMIN_SESSION_DAYS (optional, default 14)
+ *   ADMIN_USER            (default: "admin")
+ *   ADMIN_PASSWORD        (required — admin disabled when unset)
+ *   ADMIN_SESSION_DAYS    (default: 7, max 30)
+ *   ADMIN_COOKIE_SECURE   (force Secure cookies)
+ *   ADMIN_IP_ALLOWLIST    (comma-separated IPs / IPv4 CIDRs)
+ *   ADMIN_ALLOW_BASIC     (default true; set false to disable Basic)
  */
 
 export const ADMIN_SESSION_COOKIE = "flixa_admin_session";
@@ -30,10 +42,10 @@ function adminPassword(): string | undefined {
 
 function sessionDays(): number {
   const raw = Bun.env.ADMIN_SESSION_DAYS;
-  if (!raw) return 14;
+  if (!raw) return 7;
   const n = Number.parseInt(raw, 10);
-  if (!Number.isFinite(n) || n < 1) return 14;
-  return Math.min(n, 90);
+  if (!Number.isFinite(n) || n < 1) return 7;
+  return Math.min(n, 30);
 }
 
 function sessionTtlMs(): number {
@@ -43,6 +55,36 @@ function sessionTtlMs(): number {
 function sessionSecret(): string {
   // Password changes invalidate all sessions.
   return `flixa-admin-v1:${adminPassword() ?? ""}`;
+}
+
+function isBasicAuthAllowed(): boolean {
+  const raw = Bun.env.ADMIN_ALLOW_BASIC?.toLowerCase();
+  if (raw === "0" || raw === "false" || raw === "no" || raw === "off") {
+    return false;
+  }
+  return true;
+}
+
+function requestIsHttps(c: Context): boolean {
+  if (c.req.url.startsWith("https://")) return true;
+  const proto = (
+    c.req.header("x-forwarded-proto") ||
+    c.req.header("x-forwarded-protocol") ||
+    ""
+  )
+    .split(",")[0]
+    ?.trim()
+    .toLowerCase();
+  if (proto === "https") return true;
+  if (Bun.env.ADMIN_COOKIE_SECURE === "true") return true;
+  if (
+    process.env.NODE_ENV === "production" &&
+    Bun.env.ADMIN_COOKIE_SECURE !== "false"
+  ) {
+    // Prefer Secure in production unless explicitly disabled for local-prod tests.
+    return true;
+  }
+  return false;
 }
 
 async function hmacSha256Base64Url(
@@ -64,7 +106,10 @@ async function hmacSha256Base64Url(
   const bytes = new Uint8Array(sig);
   let binary = "";
   for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
 }
 
 function timingSafeEqualString(a: string, b: string): boolean {
@@ -78,7 +123,8 @@ function timingSafeEqualString(a: string, b: string): boolean {
 
 export async function createAdminSessionToken(): Promise<string> {
   const exp = Date.now() + sessionTtlMs();
-  const payload = `v1.${exp}`;
+  const nonce = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
+  const payload = `v2.${exp}.${nonce}`;
   const sig = await hmacSha256Base64Url(payload, sessionSecret());
   return `${payload}.${sig}`;
 }
@@ -88,23 +134,33 @@ export async function verifyAdminSessionToken(
 ): Promise<boolean> {
   if (!token) return false;
   const parts = token.split(".");
-  if (parts.length !== 3) return false;
-  const [version, expRaw, sig] = parts;
-  if (version !== "v1" || !expRaw || !sig) return false;
+  // v2: version.exp.nonce.sig  OR legacy v1: version.exp.sig
+  if (parts.length === 4 && parts[0] === "v2") {
+    const [version, expRaw, nonce, sig] = parts;
+    if (!expRaw || !nonce || !sig) return false;
+    const exp = Number.parseInt(expRaw, 10);
+    if (!Number.isFinite(exp) || exp <= Date.now()) return false;
+    const payload = `${version}.${expRaw}.${nonce}`;
+    const expected = await hmacSha256Base64Url(payload, sessionSecret());
+    return timingSafeEqualString(sig, expected);
+  }
 
-  const exp = Number.parseInt(expRaw, 10);
-  if (!Number.isFinite(exp) || exp <= Date.now()) return false;
+  if (parts.length === 3 && parts[0] === "v1") {
+    const [version, expRaw, sig] = parts;
+    if (!expRaw || !sig) return false;
+    const exp = Number.parseInt(expRaw, 10);
+    if (!Number.isFinite(exp) || exp <= Date.now()) return false;
+    const payload = `${version}.${expRaw}`;
+    const expected = await hmacSha256Base64Url(payload, sessionSecret());
+    return timingSafeEqualString(sig, expected);
+  }
 
-  const payload = `${version}.${expRaw}`;
-  const expected = await hmacSha256Base64Url(payload, sessionSecret());
-  return timingSafeEqualString(sig, expected);
+  return false;
 }
 
 export function setAdminSessionCookie(c: Context, token: string): void {
   const maxAge = Math.floor(sessionTtlMs() / 1000);
-  const secure =
-    c.req.url.startsWith("https://") ||
-    Bun.env.ADMIN_COOKIE_SECURE === "true";
+  const secure = requestIsHttps(c);
 
   setCookie(c, ADMIN_SESSION_COOKIE, token, {
     path: COOKIE_PATH,
@@ -119,16 +175,18 @@ export function clearAdminSessionCookie(c: Context): void {
   deleteCookie(c, ADMIN_SESSION_COOKIE, { path: COOKIE_PATH });
 }
 
-export function verifyAdminCredentials(
+export async function verifyAdminCredentials(
   username: string,
   password: string,
-): boolean {
+): Promise<boolean> {
   const expectedUser = adminUsername();
   const expectedPass = adminPassword();
   if (!expectedPass) return false;
-  return (
-    timingSafeEqualString(username, expectedUser) &&
-    timingSafeEqualString(password, expectedPass)
+  return verifyAdminCredentialsSecure(
+    username,
+    password,
+    expectedUser,
+    expectedPass,
   );
 }
 
@@ -160,11 +218,9 @@ function prefersHtml(c: Context): boolean {
 
   if (mode === "navigate" || dest === "document") return true;
   if (accept.includes("text/html")) return true;
-  // JSON API clients
   if (accept.includes("application/json") && !accept.includes("text/html")) {
     return false;
   }
-  // Default: browser-ish GETs without explicit JSON
   return c.req.method === "GET";
 }
 
@@ -186,16 +242,55 @@ function loginRedirect(c: Context): Response {
   );
 }
 
+function applyAdminSecurityHeaders(c: Context): void {
+  c.header("X-Content-Type-Options", "nosniff");
+  c.header("X-Frame-Options", "DENY");
+  c.header("Referrer-Policy", "no-referrer");
+  c.header("Cache-Control", "no-store");
+  c.header("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+}
+
+function ipDeniedResponse(c: Context, ip: string): Response {
+  logAdminAudit("ip_denied", { ip, path: c.req.path });
+  if (prefersHtml(c)) {
+    return c.text(
+      "Admin access is not allowed from this IP. Set ADMIN_IP_ALLOWLIST if this is unexpected.",
+      403,
+    );
+  }
+  return c.json(
+    {
+      error: {
+        message: "Admin access denied from this IP",
+        type: "authentication_error",
+        param: null,
+        code: "admin_ip_denied",
+      },
+    },
+    403,
+  );
+}
+
 /**
  * Protect /admin/* with cookie session (and optional Basic for scripts).
  */
 export const adminAuth: MiddlewareHandler = async (c: Context, next: Next) => {
+  applyAdminSecurityHeaders(c);
+
   const password = adminPassword();
   if (!password) {
     return c.text(
       "Admin is not configured. Set ADMIN_PASSWORD (and optionally ADMIN_USER).",
       503,
     );
+  }
+
+  const ip = clientIpFromHeaders(c.req.raw.headers);
+
+  // Allowlist applies to all admin routes including login (login is public auth-wise
+  // but still IP-gated when configured).
+  if (isAdminIpAllowlistEnabled() && !isAdminIpAllowed(ip)) {
+    return ipDeniedResponse(c, ip);
   }
 
   if (isPublicAdminPath(c.req.path)) {
@@ -209,24 +304,37 @@ export const adminAuth: MiddlewareHandler = async (c: Context, next: Next) => {
     return;
   }
 
-  const basic = parseBasicAuthHeader(c.req.header("Authorization"));
-  if (basic && verifyAdminCredentials(basic.username, basic.password)) {
-    // Upgrade browser/scripts to a session so later navigations do not rely on
-    // sticky Basic credentials (which cause infinite 401 spinners in Chrome).
-    const token = await createAdminSessionToken();
-    setAdminSessionCookie(c, token);
-    await next();
-    return;
+  if (isBasicAuthAllowed()) {
+    const basic = parseBasicAuthHeader(c.req.header("Authorization"));
+    if (basic) {
+      const ok = await verifyAdminCredentials(basic.username, basic.password);
+      if (ok) {
+        const token = await createAdminSessionToken();
+        setAdminSessionCookie(c, token);
+        logAdminAudit("basic_ok", { ip, path: c.req.path });
+        await next();
+        return;
+      }
+      await failedLoginDelay();
+      logAdminAudit("login_failed", {
+        ip,
+        path: c.req.path,
+        username: basic.username,
+        reason: "basic",
+      });
+    }
   }
 
   if (prefersHtml(c)) {
     return loginRedirect(c);
   }
 
+  logAdminAudit("unauthorized", { ip, path: c.req.path });
   return c.json(
     {
       error: {
-        message: "Admin authentication required. Open /admin/login or send Basic credentials.",
+        message:
+          "Admin authentication required. Open /admin/login or send Basic credentials.",
         type: "authentication_error",
         param: null,
         code: "admin_unauthorized",

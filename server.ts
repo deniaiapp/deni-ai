@@ -10,6 +10,13 @@ import { adminAuthRouter } from "./routes/admin/auth";
 import { adminAuth } from "./middleware/adminAuth";
 import { errorHandler } from "./middleware/errorHandler";
 import { logErrorResponses } from "./middleware/logErrorResponses";
+import {
+  adminLoginRateLimitMiddleware,
+  ipRateLimitMiddleware,
+} from "./middleware/rateLimit";
+import { warnAdminConfigAtStartup } from "./utils/adminSecurity";
+
+warnAdminConfigAtStartup();
 
 const app = new Hono();
 
@@ -25,12 +32,15 @@ app.get("/health", (c) => {
 
 // Admin (cookie session via /admin/login; optional Basic for scripts)
 // Login/logout are public; everything else under /admin/* requires auth.
+app.use("/admin/login", adminLoginRateLimitMiddleware());
 app.use("/admin/*", adminAuth);
 app.route("/admin", adminAuthRouter);
 app.route("/admin", adminLookupRouter);
 app.route("/admin", adminRulesRouter);
 
-// API Routes
+// API Routes — IP rate limit before handlers (pre-auth abuse shield).
+// Per-user limits run after API key validation in validateAgentAuth.
+app.use("/v1/*", ipRateLimitMiddleware());
 app.route("/v1", agentRouter);
 app.route("/v1", deniRouter);
 app.route("/v1", modelsRouter);
