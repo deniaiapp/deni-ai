@@ -5,6 +5,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import {
   validateAgentRequest,
   validateResponsesRequest,
+  validateResponsesCompactRequest,
 } from "../../middleware/validateRequest";
 import { validateAnthropicRequest } from "../../middleware/validateAnthropicRequest";
 import {
@@ -15,6 +16,7 @@ import { recordUsageQuota, releaseUsageQuota } from "../../utils/deni";
 import {
   type AgentRequest,
   type ResponsesRequest,
+  type ResponsesCompactRequest,
   applyAnthropicNativePromptCaching,
   applyAutomaticPromptCaching,
   getClient,
@@ -26,6 +28,14 @@ import {
   extractAnthropicSystemPrompt,
   convertMessagesToResponsesInput,
   convertToolsToOpenRouter,
+  convertResponsesToChatCompletion,
+  convertResponsesStreamEventToChatChunks,
+  convertResponsesUsageToChatUsage,
+  createResponsesToChatStreamState,
+  applyResponsesBestPractices,
+  isChatViaResponsesEnabled,
+  isOpenAIFamilyModel,
+  type ResponsesProviderKind,
 } from "../../utils/agent";
 import { computeMeteredTokens } from "../../utils/agent/usageMetering";
 import { getLongContextUsageMultiplier } from "../../utils/agent/models";
@@ -707,6 +717,7 @@ function normalizeResponsesInput(body: ResponsesRequest): unknown {
 
 function normalizeResponsesRequest(
   body: ResponsesRequest,
+  provider: ResponsesProviderKind,
 ): Record<string, unknown> {
   const normalizedInput = normalizeResponsesInput(body);
   const normalized: Record<string, unknown> = {
@@ -777,7 +788,480 @@ function normalizeResponsesRequest(
     normalized.metadata = body.metadata;
   }
 
+  // null = explicitly disable; undefined = apply provider defaults.
+  if (body.context_management !== undefined) {
+    normalized.context_management = body.context_management;
+  }
+
+  return applyResponsesBestPractices(normalized, provider);
+}
+
+/**
+ * Build a Responses request from a Chat Completions body so OpenAI-style
+ * agent traffic can use retained reasoning under the hood.
+ */
+function buildResponsesRequestFromChat(
+  body: AgentRequest,
+  provider: ResponsesProviderKind,
+): Record<string, unknown> {
+  const hasToolResult = hasChatToolResult(body.messages);
+  const input = convertMessagesToResponsesInput(body.messages);
+  const tools = normalizeResponsesTools(body.tools);
+  const toolChoice =
+    tools && tools.length > 0
+      ? normalizeResponsesToolChoice(
+          body.tool_choice as ResponsesRequest["tool_choice"],
+          hasToolResult,
+        )
+      : undefined;
+
+  const reasoning = body.reasoning_effort
+    ? { effort: body.reasoning_effort }
+    : undefined;
+
+  const normalized: Record<string, unknown> = {
+    model: body.model,
+    input,
+    stream: body.stream ?? false,
+  };
+
+  if (body.temperature !== undefined) {
+    normalized.temperature = body.temperature;
+  }
+  if (body.top_p !== undefined) {
+    normalized.top_p = body.top_p;
+  }
+  if (body.max_tokens !== undefined) {
+    normalized.max_output_tokens = body.max_tokens;
+  }
+  if (reasoning !== undefined) {
+    normalized.reasoning = reasoning;
+  }
+  if (tools !== undefined) {
+    normalized.tools = tools;
+  }
+  if (toolChoice !== undefined) {
+    normalized.tool_choice = toolChoice;
+  }
+
+  return applyResponsesBestPractices(normalized, provider);
+}
+
+function shouldRouteChatViaResponses(model: string): boolean {
+  // Prefer Responses for OpenAI family only — retained reasoning is
+  // OpenAI-centric; keep other providers on Chat Completions.
+  return (
+    isChatViaResponsesEnabled() &&
+    !isAnthropicModel(model) &&
+    isOpenAIFamilyModel(model)
+  );
+}
+
+function normalizeCompactRequest(
+  body: ResponsesCompactRequest,
+  provider: ResponsesProviderKind,
+): Record<string, unknown> {
+  const input =
+    body.input !== undefined
+      ? Array.isArray(body.input) && hasChatToolTranscript(body.input)
+        ? convertMessagesToResponsesInput(
+            body.input as AgentRequest["messages"],
+          )
+        : body.input
+      : body.messages !== undefined
+        ? convertMessagesToResponsesInput(body.messages)
+        : undefined;
+
+  const normalized: Record<string, unknown> = {
+    model: body.model,
+  };
+
+  if (input !== undefined) {
+    normalized.input = input;
+  }
+  if (body.instructions !== undefined) {
+    normalized.instructions = body.instructions;
+  }
+  if (body.previous_response_id !== undefined) {
+    normalized.previous_response_id = body.previous_response_id;
+  }
+
+  // Compact is always stateless / ZDR-friendly on our side.
+  if (provider === "openrouter") {
+    delete normalized.previous_response_id;
+  }
+
   return normalized;
+}
+
+async function proxyResponsesUpstream(options: {
+  auth: AgentAuthContext;
+  requestId?: string;
+  clientResult: Extract<
+    ReturnType<typeof getClient>,
+    { type: "openrouter" | "openai" }
+  >;
+  providerRequest: Record<string, unknown>;
+  stream: boolean;
+  /** When true, convert Responses payload/stream back to Chat Completions. */
+  asChatCompletion?: boolean;
+  model: string;
+}): Promise<Response> {
+  const {
+    auth,
+    requestId,
+    clientResult,
+    providerRequest,
+    stream,
+    asChatCompletion,
+    model,
+  } = options;
+  const providerName = clientResult.providerName;
+  const url = getResponsesBaseUrl(clientResult);
+  const headers = getResponsesHeaders(clientResult);
+
+  const upstreamBody: Record<string, unknown> =
+    clientResult.type === "openrouter"
+      ? applyAutomaticPromptCaching(
+          {
+            ...providerRequest,
+            provider: getOpenRouterProviderRouting(model),
+          } as Record<string, unknown>,
+          model,
+        )
+      : providerRequest;
+
+  agentDebugLog("responses.upstream_request", () => ({
+    requestId,
+    provider: providerName,
+    model,
+    stream,
+    asChatCompletion: asChatCompletion ?? false,
+    hasContextManagement: upstreamBody.context_management !== undefined,
+    store: upstreamBody.store,
+    include: upstreamBody.include,
+    reasoning: upstreamBody.reasoning,
+  }));
+
+  const abortController = new AbortController();
+  const response = await fetch(url, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(upstreamBody),
+    signal: abortController.signal,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    agentDebugLog("responses.upstream_error", {
+      requestId,
+      provider: providerName,
+      status: response.status,
+      bodyLength: errorBody.length,
+    });
+    await releaseReservedUsage(auth);
+    return new Response(errorBody, {
+      status: response.status,
+      headers: {
+        "Content-Type":
+          response.headers.get("content-type") || "application/json",
+      },
+    });
+  }
+
+  if (stream && response.body) {
+    if (asChatCompletion) {
+      return createChatStreamFromResponsesUpstream(
+        auth,
+        requestId,
+        providerName,
+        model,
+        response,
+        abortController,
+      );
+    }
+
+    return createResponsesPassthroughStream(
+      auth,
+      response,
+      abortController,
+    );
+  }
+
+  const responseBody = await response.text();
+  let parsedResponse: Record<string, unknown> | null = null;
+  try {
+    parsedResponse = JSON.parse(responseBody) as Record<string, unknown>;
+  } catch {
+    parsedResponse = null;
+  }
+
+  if (asChatCompletion) {
+    const chatCompletion = convertResponsesToChatCompletion(
+      parsedResponse ?? {},
+      model,
+    );
+    await finalizeUsage(auth, chatCompletion.usage);
+    agentDebugLog("chat.response_via_responses", () => ({
+      requestId,
+      provider: providerName,
+      response: summarizeChatCompletionResponse(chatCompletion),
+    }));
+    return new Response(JSON.stringify(chatCompletion), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
+
+  await finalizeUsage(auth, parsedResponse?.usage);
+  return new Response(responseBody, {
+    status: response.status,
+    headers: {
+      "Content-Type":
+        response.headers.get("content-type") || "application/json",
+    },
+  });
+}
+
+function createResponsesPassthroughStream(
+  auth: AgentAuthContext,
+  response: Response,
+  abortController: AbortController,
+): Response {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  let usageSnapshot: Record<string, number> = {};
+  let usageSettled = false;
+  let cancelled = false;
+
+  const readable = new ReadableStream({
+    async start(controller) {
+      let buffer = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (cancelled) return;
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const eventBlocks = buffer.split(/\r?\n\r?\n/);
+          buffer = eventBlocks.pop() ?? "";
+
+          for (const eventBlock of eventBlocks) {
+            usageSnapshot = collectResponsesUsageFromSseEvent(
+              eventBlock,
+              usageSnapshot,
+            );
+          }
+
+          controller.enqueue(value);
+        }
+
+        if (cancelled) return;
+        buffer += decoder.decode();
+        if (buffer.trim()) {
+          usageSnapshot = collectResponsesUsageFromSseEvent(
+            buffer,
+            usageSnapshot,
+          );
+        }
+
+        usageSettled = true;
+        await finalizeUsage(auth, usageSnapshot);
+        controller.close();
+      } catch (error) {
+        if (cancelled) return;
+        if (!usageSettled) {
+          usageSettled = true;
+          await releaseReservedUsage(auth);
+        }
+        controller.error(error);
+      }
+    },
+    cancel() {
+      cancelled = true;
+      abortController.abort();
+      reader.cancel().catch(() => {});
+      if (!usageSettled) {
+        usageSettled = true;
+        finalizeUsage(auth, usageSnapshot).catch((error) =>
+          console.error("[Usage] finalize-on-cancel failed:", error),
+        );
+      }
+    },
+  });
+
+  return new Response(readable, {
+    status: response.status,
+    headers: {
+      "Content-Type":
+        response.headers.get("content-type") || "text/event-stream",
+      "Cache-Control": response.headers.get("cache-control") || "no-cache",
+      Connection: "keep-alive",
+    },
+  });
+}
+
+function createChatStreamFromResponsesUpstream(
+  auth: AgentAuthContext,
+  requestId: string | undefined,
+  providerName: string,
+  model: string,
+  response: Response,
+  abortController: AbortController,
+): Response {
+  const reader = response.body!.getReader();
+  const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
+  const streamState = createResponsesToChatStreamState(model);
+  const streamDebug = createChatStreamDebugSummary();
+  let usageSnapshot: Record<string, number> = {};
+  let usageSettled = false;
+  let cancelled = false;
+  let finished = false;
+
+  const readable = new ReadableStream({
+    async start(controller) {
+      let buffer = "";
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (cancelled) return;
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const eventBlocks = buffer.split(/\r?\n\r?\n/);
+          buffer = eventBlocks.pop() ?? "";
+
+          for (const eventBlock of eventBlocks) {
+            const payload = eventBlock
+              .split(/\r?\n/)
+              .filter((line) => line.startsWith("data:"))
+              .map((line) => line.slice(5).trimStart())
+              .join("\n");
+
+            if (!payload || payload === "[DONE]") {
+              continue;
+            }
+
+            let event: unknown;
+            try {
+              event = JSON.parse(payload);
+            } catch {
+              continue;
+            }
+
+            usageSnapshot = collectResponsesUsageFromSseEvent(
+              eventBlock,
+              usageSnapshot,
+            );
+
+            const chunks = convertResponsesStreamEventToChatChunks(
+              event,
+              streamState,
+            );
+            for (const chunk of chunks) {
+              const data = JSON.stringify(chunk);
+              collectChatDebugFromSseEvent(`data: ${data}\n\n`, streamDebug);
+              if (chunk.usage) {
+                usageSnapshot = mergeUsageSnapshot(usageSnapshot, chunk.usage);
+              }
+              controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+              if (
+                Array.isArray(chunk.choices) &&
+                chunk.choices[0] &&
+                typeof chunk.choices[0] === "object" &&
+                (chunk.choices[0] as { finish_reason?: unknown })
+                  .finish_reason
+              ) {
+                finished = true;
+              }
+            }
+          }
+        }
+
+        if (cancelled) return;
+        buffer += decoder.decode();
+        if (buffer.trim()) {
+          usageSnapshot = collectResponsesUsageFromSseEvent(
+            buffer,
+            usageSnapshot,
+          );
+        }
+
+        if (!finished) {
+          const usage = convertResponsesUsageToChatUsage(usageSnapshot);
+          const finalChunk = {
+            id: streamState.id,
+            object: "chat.completion.chunk",
+            created: streamState.created,
+            model: streamState.model,
+            choices: [
+              {
+                index: 0,
+                delta: {},
+                finish_reason: streamState.finishReason ?? "stop",
+                logprobs: null,
+              },
+            ],
+            ...(usage ? { usage } : {}),
+          };
+          controller.enqueue(
+            encoder.encode(`data: ${JSON.stringify(finalChunk)}\n\n`),
+          );
+        }
+
+        usageSettled = true;
+        await finalizeUsage(
+          auth,
+          streamState.usage ?? usageSnapshot,
+        );
+        agentDebugLog("chat.stream_complete_via_responses", {
+          requestId,
+          provider: providerName,
+          usage: streamState.usage ?? usageSnapshot,
+          stream: streamDebug,
+        });
+        controller.enqueue(encoder.encode("data: [DONE]\n\n"));
+        controller.close();
+      } catch (error) {
+        if (cancelled) return;
+        agentDebugLog("chat.stream_error_via_responses", {
+          requestId,
+          provider: providerName,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        if (!usageSettled) {
+          usageSettled = true;
+          await releaseReservedUsage(auth);
+        }
+        controller.error(error);
+      }
+    },
+    cancel() {
+      cancelled = true;
+      abortController.abort();
+      reader.cancel().catch(() => {});
+      if (!usageSettled) {
+        usageSettled = true;
+        finalizeUsage(auth, streamState.usage ?? usageSnapshot).catch(
+          (error) =>
+            console.error("[Usage] finalize-on-cancel failed:", error),
+        );
+      }
+    },
+  });
+
+  return new Response(readable, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+    },
+  });
 }
 
 function collectResponsesUsageFromSseEvent(
@@ -1393,6 +1877,33 @@ router.post(
         );
       }
 
+      // OpenAI recommendation: prefer Responses API (retained reasoning)
+      // for OpenAI-family models. Client-facing shape stays Chat Completions.
+      if (
+        shouldRouteChatViaResponses(model) &&
+        (clientResult.type === "openrouter" || clientResult.type === "openai")
+      ) {
+        const provider: ResponsesProviderKind = clientResult.type;
+        const responsesBody = buildResponsesRequestFromChat(body, provider);
+
+        agentDebugLog("chat.via_responses", {
+          requestId,
+          provider: clientResult.providerName,
+          model,
+          stream: stream ?? false,
+        });
+
+        return await proxyResponsesUpstream({
+          auth,
+          requestId,
+          clientResult,
+          providerRequest: responsesBody,
+          stream: stream ?? false,
+          asChatCompletion: true,
+          model,
+        });
+      }
+
       // Use OpenRouter SDK for OpenRouter models
       if (clientResult.type === "openrouter") {
         const providerName = clientResult.providerName;
@@ -1796,7 +2307,8 @@ router.post(
 
 /**
  * POST /v1/agent/responses
- * OpenAI Responses API compatible endpoint
+ * OpenAI Responses API compatible endpoint with retained reasoning defaults.
+ * Compaction is client-driven via POST /agent/responses/compact.
  */
 router.post(
   "/agent/responses",
@@ -1824,136 +2336,33 @@ router.post(
         );
       }
 
-      const url = getResponsesBaseUrl(clientResult);
-      const headers = getResponsesHeaders(clientResult);
-      const normalizedResponsesRequest = normalizeResponsesRequest(body);
-      const providerRequest =
-        clientResult.type === "openrouter"
-          ? applyAutomaticPromptCaching(
-              {
-                ...normalizedResponsesRequest,
-                provider: getOpenRouterProviderRouting(body.model),
-              },
-              body.model,
-            )
-          : normalizedResponsesRequest;
-
-      const abortController = new AbortController();
-      const response = await fetch(url, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(providerRequest),
-        signal: abortController.signal,
-      });
-
-      if (!response.ok) {
-        const errorBody = await response.text();
+      if (clientResult.type !== "openrouter" && clientResult.type !== "openai") {
         await releaseReservedUsage(auth);
-        return new Response(errorBody, {
-          status: response.status,
-          headers: {
-            "Content-Type":
-              response.headers.get("content-type") || "application/json",
+        return c.json(
+          {
+            error: {
+              message: "Unsupported provider for Responses API",
+              type: "server_error",
+              param: null,
+              code: "unsupported_provider",
+            },
           },
-        });
+          500,
+        );
       }
 
-      if (body.stream && response.body) {
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let usageSnapshot: Record<string, number> = {};
-        let usageSettled = false;
-        let cancelled = false;
+      const provider: ResponsesProviderKind = clientResult.type;
+      const normalizedResponsesRequest = normalizeResponsesRequest(
+        body,
+        provider,
+      );
 
-        const readable = new ReadableStream({
-          async start(controller) {
-            let buffer = "";
-
-            try {
-              while (true) {
-                const { done, value } = await reader.read();
-                if (cancelled) return;
-                if (done) break;
-
-                buffer += decoder.decode(value, { stream: true });
-                const eventBlocks = buffer.split(/\r?\n\r?\n/);
-                buffer = eventBlocks.pop() ?? "";
-
-                for (const eventBlock of eventBlocks) {
-                  usageSnapshot = collectResponsesUsageFromSseEvent(
-                    eventBlock,
-                    usageSnapshot,
-                  );
-                }
-
-                controller.enqueue(value);
-              }
-
-              if (cancelled) return;
-              buffer += decoder.decode();
-              if (buffer.trim()) {
-                usageSnapshot = collectResponsesUsageFromSseEvent(
-                  buffer,
-                  usageSnapshot,
-                );
-              }
-
-              usageSettled = true;
-              await finalizeUsage(auth, usageSnapshot);
-              controller.close();
-            } catch (error) {
-              if (cancelled) return;
-              if (!usageSettled) {
-                usageSettled = true;
-                await releaseReservedUsage(auth);
-              }
-              controller.error(error);
-            }
-          },
-          cancel() {
-            cancelled = true;
-            abortController.abort();
-            reader.cancel().catch(() => {});
-            // The client disconnected mid-stream; upstream tokens were still
-            // consumed, so meter what we have observed so far.
-            if (!usageSettled) {
-              usageSettled = true;
-              finalizeUsage(auth, usageSnapshot).catch(
-                (error) =>
-                  console.error("[Usage] finalize-on-cancel failed:", error),
-              );
-            }
-          },
-        });
-
-        return new Response(readable, {
-          status: response.status,
-          headers: {
-            "Content-Type":
-              response.headers.get("content-type") || "text/event-stream",
-            "Cache-Control":
-              response.headers.get("cache-control") || "no-cache",
-            Connection: "keep-alive",
-          },
-        });
-      }
-
-      const responseBody = await response.text();
-      let parsedResponse: { usage?: unknown } | null = null;
-
-      try {
-        parsedResponse = JSON.parse(responseBody) as { usage?: unknown };
-      } catch {
-        parsedResponse = null;
-      }
-
-      await finalizeUsage(auth, parsedResponse?.usage);
-      return new Response(responseBody, {
-        status: response.status,
-        headers: {
-          "Content-Type":
-            response.headers.get("content-type") || "application/json",
-        },
+      return await proxyResponsesUpstream({
+        auth,
+        clientResult,
+        providerRequest: normalizedResponsesRequest,
+        stream: body.stream ?? false,
+        model: body.model,
       });
     } catch (error) {
       await releaseReservedUsage(auth);
@@ -1993,6 +2402,113 @@ router.post(
           statusCode,
         );
       }
+
+      const err = error as Error;
+      return c.json(
+        {
+          error: {
+            message: err.message || "Internal server error",
+            type: "server_error",
+            param: null,
+            code: null,
+          },
+        },
+        500,
+      );
+    }
+  },
+);
+
+/**
+ * POST /v1/agent/responses/compact
+ * Standalone compaction for long-running agent context windows.
+ * Returns a compacted window (including encrypted compaction item) for the
+ * next /responses call. See OpenAI compaction guide.
+ */
+router.post(
+  "/agent/responses/compact",
+  validateResponsesCompactRequest,
+  validateAgentAuth,
+  async (c) => {
+    const auth = c.get("agentAuth") as AgentAuthContext;
+
+    try {
+      const body = c.get("validatedBody") as ResponsesCompactRequest;
+      const clientResult = getClient(body.model);
+
+      if ("error" in clientResult) {
+        await releaseReservedUsage(auth);
+        return c.json(
+          {
+            error: {
+              message: clientResult.error,
+              type: "server_error",
+              param: null,
+              code: "missing_provider_key",
+            },
+          },
+          500,
+        );
+      }
+
+      if (clientResult.type !== "openrouter" && clientResult.type !== "openai") {
+        await releaseReservedUsage(auth);
+        return c.json(
+          {
+            error: {
+              message: "Unsupported provider for Responses compact",
+              type: "server_error",
+              param: null,
+              code: "unsupported_provider",
+            },
+          },
+          500,
+        );
+      }
+
+      const provider: ResponsesProviderKind = clientResult.type;
+      const compactBody = normalizeCompactRequest(body, provider);
+      // Upstream paths are .../responses → .../responses/compact
+      const compactUrl = `${getResponsesBaseUrl(clientResult)}/compact`;
+      const headers = getResponsesHeaders(clientResult);
+
+      const response = await fetch(compactUrl, {
+        method: "POST",
+        headers,
+        body: JSON.stringify(compactBody),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.text();
+        await releaseReservedUsage(auth);
+        return new Response(errorBody, {
+          status: response.status,
+          headers: {
+            "Content-Type":
+              response.headers.get("content-type") || "application/json",
+          },
+        });
+      }
+
+      const responseBody = await response.text();
+      let parsedResponse: { usage?: unknown } | null = null;
+      try {
+        parsedResponse = JSON.parse(responseBody) as { usage?: unknown };
+      } catch {
+        parsedResponse = null;
+      }
+
+      await finalizeUsage(auth, parsedResponse?.usage);
+      return new Response(responseBody, {
+        status: response.status,
+        headers: {
+          "Content-Type":
+            response.headers.get("content-type") || "application/json",
+        },
+      });
+    } catch (error) {
+      await releaseReservedUsage(auth);
+      console.error("Agent responses compact error:", error);
 
       const err = error as Error;
       return c.json(

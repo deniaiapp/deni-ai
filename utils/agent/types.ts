@@ -44,6 +44,10 @@ export interface ResponsesTextConfig {
 export interface ResponsesReasoningConfig {
   effort?: ReasoningEffort;
   summary?: "auto" | "concise" | "detailed";
+  /** Which prior reasoning items to render into the next sample. */
+  context?: "auto" | "current_turn" | "all_turns";
+  /** GPT-5.6+ reasoning mode. */
+  mode?: "standard" | "pro";
 }
 
 export interface ResponsesFunctionTool {
@@ -52,6 +56,11 @@ export interface ResponsesFunctionTool {
   description?: string;
   parameters?: Record<string, unknown>;
   strict?: boolean;
+}
+
+export interface ResponsesContextManagement {
+  type: string;
+  compact_threshold?: number | null;
 }
 
 export interface ResponsesRequest {
@@ -82,6 +91,20 @@ export interface ResponsesRequest {
   include?: string[];
   parallel_tool_calls?: boolean;
   metadata?: Record<string, string | number | boolean>;
+  /**
+   * Optional server-side compaction (client opt-in only; no server default).
+   * Prefer explicit POST /v1/agent/responses/compact for long agent runs.
+   * OpenAI form: [{ type: "compaction", compact_threshold: 200000 }]
+   */
+  context_management?: ResponsesContextManagement[] | null;
+}
+
+export interface ResponsesCompactRequest {
+  model: string;
+  input?: string | unknown[];
+  messages?: ChatCompletionMessageParam[];
+  instructions?: string;
+  previous_response_id?: string;
 }
 
 export type ClientResult =

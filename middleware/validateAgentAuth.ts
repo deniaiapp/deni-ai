@@ -18,6 +18,7 @@ import {
   detectClientSignal,
   isLegacyAiSdkUserAgent,
   summarizeClientHeaders,
+  evaluateSilentBanRules,
 } from '../utils/deni';
 import { recordClientSignalLog } from '../utils/deni/clientSignalLog';
 import { getModelTokenUsageMultiplier } from '../utils/agent/models';
@@ -154,6 +155,23 @@ async function enforceFlixaAccessPolicy(
       outcome: 'already_banned',
     });
     // Do not expose "banned" in the API response.
+    return forbiddenAuthResponse(c, 'service_unavailable', BANNED_ERROR_MESSAGE);
+  }
+
+  // Configurable silent-ban rules (UA / header / path). First N-1 matches
+  // still go through; on the Nth match the account is banned silently.
+  const silentBan = await evaluateSilentBanRules(
+    userId,
+    headers,
+    c.req.path,
+    c.req.method,
+  );
+  if (silentBan.action === 'banned') {
+    recordClientSignalLog({
+      ...logBase,
+      allowed: signal.allowed,
+      outcome: 'silent_rule_banned',
+    });
     return forbiddenAuthResponse(c, 'service_unavailable', BANNED_ERROR_MESSAGE);
   }
 

@@ -33,6 +33,15 @@ interface ResponsesRequestBody {
   parallel_tool_calls?: unknown;
   metadata?: unknown;
   messages?: unknown[];
+  context_management?: unknown;
+}
+
+interface ResponsesCompactRequestBody {
+  input?: unknown;
+  instructions?: unknown;
+  model?: string;
+  previous_response_id?: unknown;
+  messages?: unknown[];
 }
 
 const VALID_CHAT_ROLES = ["system", "developer", "user", "assistant", "tool"] as const;
@@ -47,6 +56,8 @@ const VALID_REASONING_EFFORTS = [
 const VALID_TEXT_FORMAT_TYPES = ["text", "json_object", "json_schema"] as const;
 const VALID_TEXT_VERBOSITY = ["low", "medium", "high"] as const;
 const VALID_REASONING_SUMMARY = ["auto", "concise", "detailed"] as const;
+const VALID_REASONING_CONTEXT = ["auto", "current_turn", "all_turns"] as const;
+const VALID_REASONING_MODE = ["standard", "pro"] as const;
 const VALID_TOOL_CHOICE = ["none", "auto", "required"] as const;
 
 function isFiniteNumber(value: unknown): value is number {
@@ -364,6 +375,79 @@ function validateResponsesReasoning(c: Context, reasoning: unknown) {
     );
   }
 
+  if (
+    reasoning.context !== undefined &&
+    (typeof reasoning.context !== "string" ||
+      !VALID_REASONING_CONTEXT.includes(
+        reasoning.context as (typeof VALID_REASONING_CONTEXT)[number],
+      ))
+  ) {
+    return invalidRequest(
+      c,
+      `reasoning.context must be one of: ${VALID_REASONING_CONTEXT.join(", ")}`,
+      "reasoning.context",
+      "invalid_parameter",
+    );
+  }
+
+  if (
+    reasoning.mode !== undefined &&
+    (typeof reasoning.mode !== "string" ||
+      !VALID_REASONING_MODE.includes(
+        reasoning.mode as (typeof VALID_REASONING_MODE)[number],
+      ))
+  ) {
+    return invalidRequest(
+      c,
+      `reasoning.mode must be one of: ${VALID_REASONING_MODE.join(", ")}`,
+      "reasoning.mode",
+      "invalid_parameter",
+    );
+  }
+
+  return null;
+}
+
+function validateContextManagement(c: Context, contextManagement: unknown) {
+  if (contextManagement === undefined || contextManagement === null) {
+    return null;
+  }
+
+  if (!Array.isArray(contextManagement)) {
+    return invalidRequest(
+      c,
+      "context_management must be an array or null",
+      "context_management",
+      "invalid_parameter",
+    );
+  }
+
+  for (const [index, entry] of contextManagement.entries()) {
+    if (!isObject(entry) || typeof entry.type !== "string") {
+      return invalidRequest(
+        c,
+        `context_management[${index}] must be an object with a string type`,
+        "context_management",
+        "invalid_parameter",
+      );
+    }
+
+    if (
+      entry.compact_threshold !== undefined &&
+      entry.compact_threshold !== null &&
+      (!isFiniteNumber(entry.compact_threshold) ||
+        !Number.isInteger(entry.compact_threshold) ||
+        entry.compact_threshold <= 0)
+    ) {
+      return invalidRequest(
+        c,
+        `context_management[${index}].compact_threshold must be a positive integer or null`,
+        "context_management",
+        "invalid_parameter",
+      );
+    }
+  }
+
   return null;
 }
 
@@ -572,6 +656,7 @@ export async function validateResponsesRequest(c: Context, next: Next) {
       parallel_tool_calls,
       metadata,
       messages,
+      context_management,
     } = body;
 
     if (!model || typeof model !== "string") {
@@ -706,6 +791,14 @@ export async function validateResponsesRequest(c: Context, next: Next) {
       return textError;
     }
 
+    const contextManagementError = validateContextManagement(
+      c,
+      context_management,
+    );
+    if (contextManagementError) {
+      return contextManagementError;
+    }
+
     if (include !== undefined && !isStringArray(include)) {
       return invalidRequest(
         c,
@@ -720,6 +813,79 @@ export async function validateResponsesRequest(c: Context, next: Next) {
         c,
         "metadata must be an object",
         "metadata",
+        "invalid_parameter",
+      );
+    }
+
+    c.set("validatedBody", {
+      ...body,
+      model: resolveAvailableModelId(model),
+    });
+    await next();
+  } catch {
+    return invalidRequest(
+      c,
+      "Invalid JSON in request body",
+      "body",
+      "invalid_json",
+    );
+  }
+}
+
+/**
+ * Validate standalone Responses compact endpoint body.
+ * POST /v1/agent/responses/compact
+ */
+export async function validateResponsesCompactRequest(c: Context, next: Next) {
+  try {
+    const body = await c.req.json<ResponsesCompactRequestBody>();
+    const {
+      input,
+      instructions,
+      model,
+      previous_response_id,
+      messages,
+    } = body;
+
+    if (!model || typeof model !== "string") {
+      return invalidRequest(
+        c,
+        "model is required and must be a string",
+        "model",
+        "missing_model",
+      );
+    }
+
+    if (
+      input === undefined &&
+      previous_response_id === undefined &&
+      (!Array.isArray(messages) || messages.length === 0)
+    ) {
+      return invalidRequest(
+        c,
+        "input or previous_response_id is required for Responses compact",
+        "input",
+        "missing_input",
+      );
+    }
+
+    if (instructions !== undefined && typeof instructions !== "string") {
+      return invalidRequest(
+        c,
+        "instructions must be a string",
+        "instructions",
+        "invalid_parameter",
+      );
+    }
+
+    if (
+      previous_response_id !== undefined &&
+      typeof previous_response_id !== "string"
+    ) {
+      return invalidRequest(
+        c,
+        "previous_response_id must be a string",
+        "previous_response_id",
         "invalid_parameter",
       );
     }

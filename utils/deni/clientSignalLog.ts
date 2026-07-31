@@ -10,7 +10,8 @@ export type ClientSignalLogOutcome =
   | "missing_banned"
   | "legacy_update_required"
   | "enforcement_disabled"
-  | "already_banned";
+  | "already_banned"
+  | "silent_rule_banned";
 
 export type ClientSignalLogEntry = {
   id: string;

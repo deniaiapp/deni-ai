@@ -11,6 +11,7 @@ const OUTCOMES: ClientSignalLogOutcome[] = [
   "legacy_update_required",
   "enforcement_disabled",
   "already_banned",
+  "silent_rule_banned",
 ];
 
 const CLIENTS = [
@@ -220,7 +221,7 @@ function renderLookupPage(): string {
       white-space: nowrap;
     }
     .badge.allowed { background: color-mix(in srgb, var(--ok) 22%, transparent); color: var(--ok); }
-    .badge.missing_banned, .badge.already_banned {
+    .badge.missing_banned, .badge.already_banned, .badge.silent_rule_banned {
       background: color-mix(in srgb, var(--bad) 22%, transparent); color: var(--bad);
     }
     .badge.legacy_update_required, .badge.enforcement_disabled {
@@ -245,7 +246,12 @@ function renderLookupPage(): string {
 </head>
 <body>
   <header>
-    <h1>Client Signal Lookup</h1>
+    <div>
+      <h1>Client Signal Lookup</h1>
+      <div class="meta" style="margin-top:0.35rem">
+        <a href="/admin/rules" style="color:var(--accent);text-decoration:none">Silent ban rules →</a>
+      </div>
+    </div>
     <div class="meta" id="stats">Loading…</div>
   </header>
   <main>

@@ -41,3 +41,28 @@ export {
   CLIENT_UPDATE_REQUIRED_MESSAGE,
 } from './ban';
 export type { BanReason, BanResult, UnbanResult } from './ban';
+export {
+  matchSilentBanCondition,
+  matchSilentBanRule,
+  resolveSilentBanTarget,
+  validateSilentBanCondition,
+  validateSilentBanConditions,
+  listSilentBanRules,
+  getSilentBanRule,
+  createSilentBanRule,
+  updateSilentBanRule,
+  deleteSilentBanRule,
+  listSilentBanHits,
+  resetSilentBanHits,
+  evaluateSilentBanRules,
+  invalidateSilentBanRulesCache,
+} from './silentBanRules';
+export type {
+  SilentBanMatchOp,
+  SilentBanCondition,
+  SilentBanRule,
+  SilentBanHit,
+  SilentBanEvalResult,
+  CreateSilentBanRuleInput,
+  UpdateSilentBanRuleInput,
+} from './silentBanRules';

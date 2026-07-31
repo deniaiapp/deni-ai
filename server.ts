@@ -5,6 +5,7 @@ import { agentRouter } from "./routes/v1/agent";
 import { deniRouter } from "./routes/v1/deni";
 import { modelsRouter } from "./routes/v1/models";
 import { adminLookupRouter } from "./routes/admin/lookup";
+import { adminRulesRouter } from "./routes/admin/rules";
 import { adminBasicAuth } from "./middleware/adminBasicAuth";
 import { errorHandler } from "./middleware/errorHandler";
 import { logErrorResponses } from "./middleware/logErrorResponses";
@@ -24,6 +25,7 @@ app.get("/health", (c) => {
 // Admin (HTTP Basic Auth — set ADMIN_PASSWORD, optional ADMIN_USER)
 app.use("/admin/*", adminBasicAuth);
 app.route("/admin", adminLookupRouter);
+app.route("/admin", adminRulesRouter);
 
 // API Routes
 app.route("/v1", agentRouter);

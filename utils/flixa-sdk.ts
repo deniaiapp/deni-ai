@@ -45,12 +45,47 @@ export type ChatCompletionRequest = {
   top_p?: number;
   frequency_penalty?: number;
   presence_penalty?: number;
+  reasoning_effort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
   tools?: ChatTool[];
   tool_choice?:
     | 'none'
     | 'auto'
     | 'required'
     | { type: 'function'; function: { name: string } };
+  [key: string]: unknown;
+};
+
+export type ResponsesRequest = {
+  model: string;
+  input?: string | unknown[];
+  instructions?: string;
+  previous_response_id?: string;
+  stream?: boolean;
+  temperature?: number;
+  max_output_tokens?: number;
+  reasoning?: {
+    effort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+    summary?: 'auto' | 'concise' | 'detailed';
+    context?: 'auto' | 'current_turn' | 'all_turns';
+    mode?: 'standard' | 'pro';
+  };
+  tools?: Array<Record<string, unknown>>;
+  tool_choice?: unknown;
+  store?: boolean;
+  include?: string[];
+  /** Optional server-side compaction (opt-in). Prefer compactResponse() for client-driven compact. */
+  context_management?: Array<{
+    type: string;
+    compact_threshold?: number | null;
+  }> | null;
+  [key: string]: unknown;
+};
+
+export type ResponsesCompactRequest = {
+  model: string;
+  input?: string | unknown[];
+  instructions?: string;
+  previous_response_id?: string;
   [key: string]: unknown;
 };
 
@@ -110,7 +145,10 @@ export class FlixaClient {
   }
 
   async createChatCompletion(body: ChatCompletionRequest): Promise<ChatCompletionResponse> {
-    const response = await this.request({ ...body, stream: false });
+    const response = await this.request('/v1/agent/chat/completions', {
+      ...body,
+      stream: false,
+    });
     if (!response.ok) {
       throw await this.buildError(response);
     }
@@ -118,15 +156,53 @@ export class FlixaClient {
   }
 
   async streamChatCompletion(body: ChatCompletionRequest): Promise<Response> {
-    const response = await this.request({ ...body, stream: true });
+    const response = await this.request('/v1/agent/chat/completions', {
+      ...body,
+      stream: true,
+    });
     if (!response.ok) {
       throw await this.buildError(response);
     }
     return response;
   }
 
-  private async request(body: ChatCompletionRequest) {
-    const url = this.buildUrl('/v1/agent/chat/completions');
+  /**
+   * Preferred for long-running agents (OpenAI recommendation):
+   * Responses API with retained reasoning + optional server-side compaction.
+   */
+  async createResponse(body: ResponsesRequest): Promise<unknown> {
+    const response = await this.request('/v1/agent/responses', {
+      ...body,
+      stream: false,
+    });
+    if (!response.ok) {
+      throw await this.buildError(response);
+    }
+    return await response.json();
+  }
+
+  async streamResponse(body: ResponsesRequest): Promise<Response> {
+    const response = await this.request('/v1/agent/responses', {
+      ...body,
+      stream: true,
+    });
+    if (!response.ok) {
+      throw await this.buildError(response);
+    }
+    return response;
+  }
+
+  /** Compact a long context window for the next Responses call. */
+  async compactResponse(body: ResponsesCompactRequest): Promise<unknown> {
+    const response = await this.request('/v1/agent/responses/compact', body);
+    if (!response.ok) {
+      throw await this.buildError(response);
+    }
+    return await response.json();
+  }
+
+  private async request(path: string, body: Record<string, unknown>) {
+    const url = this.buildUrl(path);
     // Always identify as Flixa so server-side abuse prevention accepts the call.
     // Callers can still override via options.headers (spread after defaults).
     return await this.fetcher(url, {
