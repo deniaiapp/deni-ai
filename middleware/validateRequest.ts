@@ -52,6 +52,7 @@ const VALID_REASONING_EFFORTS = [
   "medium",
   "high",
   "xhigh",
+  "max",
 ] as const;
 const VALID_TEXT_FORMAT_TYPES = ["text", "json_object", "json_schema"] as const;
 const VALID_TEXT_VERBOSITY = ["low", "medium", "high"] as const;

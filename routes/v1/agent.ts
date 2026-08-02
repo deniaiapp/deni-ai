@@ -2122,6 +2122,7 @@ router.post(
           ? normalizeOpenAIChatToolChoice(tool_choice, hasToolResult)
           : undefined;
 
+      // OpenAI SDK types lag newer effort value (`max`); pass through as-is.
       const requestParams:
         | OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming
         | OpenAI.Chat.Completions.ChatCompletionCreateParamsStreaming = {
@@ -2134,7 +2135,9 @@ router.post(
         top_p,
         frequency_penalty,
         presence_penalty,
-        reasoning_effort,
+        reasoning_effort: reasoning_effort as
+          | OpenAI.ReasoningEffort
+          | undefined,
         tools: tools && tools.length > 0 ? tools : undefined,
         tool_choice: normalizedToolChoice,
       };

@@ -45,7 +45,14 @@ export type ChatCompletionRequest = {
   top_p?: number;
   frequency_penalty?: number;
   presence_penalty?: number;
-  reasoning_effort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+  reasoning_effort?:
+    | 'none'
+    | 'minimal'
+    | 'low'
+    | 'medium'
+    | 'high'
+    | 'xhigh'
+    | 'max';
   tools?: ChatTool[];
   tool_choice?:
     | 'none'
@@ -64,7 +71,14 @@ export type ResponsesRequest = {
   temperature?: number;
   max_output_tokens?: number;
   reasoning?: {
-    effort?: 'none' | 'minimal' | 'low' | 'medium' | 'high' | 'xhigh';
+    effort?:
+      | 'none'
+      | 'minimal'
+      | 'low'
+      | 'medium'
+      | 'high'
+      | 'xhigh'
+      | 'max';
     summary?: 'auto' | 'concise' | 'detailed';
     context?: 'auto' | 'current_turn' | 'all_turns';
     mode?: 'standard' | 'pro';
