@@ -52,6 +52,16 @@ const router = new Hono<{
   };
 }>();
 
+/**
+ * GET /v1/agent
+ *
+ * Provider base URL compatibility probe. Hono dispatches HEAD requests to the
+ * matching GET handler, so this also covers HEAD /v1/agent.
+ */
+router.get("/agent", (c) => {
+  return c.json({ object: "agent", status: "ok" }, 200);
+});
+
 const anthropicFailoverClient = new Anthropic({
   apiKey: Bun.env.ANTHROPIC_API_KEY || "",
 });
