@@ -23,6 +23,7 @@ const LAST_USED_UPDATE_INTERVAL_MS = 5 * 60_000;
 // per request on hot keys. Only valid results are cached so revocations take
 // effect within AUTH_CACHE_TTL_MS and invalid-key spam cannot grow the map.
 const keyValidationCache = new Map<string, { userId: string; expiresAt: number }>();
+const keyValidationInFlight = new Map<string, Promise<ApiKeyValidationResult>>();
 const lastUsedWriteAt = new Map<string, number>();
 
 function cacheValidKey(keyHash: string, userId: string): void {
@@ -113,50 +114,71 @@ export async function validateDeniApiKey(rawKey: string): Promise<ApiKeyValidati
     return { valid: true, userId: cachedUserId };
   }
 
-  const pool = getDeniPool();
+  const existing = keyValidationInFlight.get(keyHash);
+  if (existing) return existing;
 
-  try {
-    const result = await pool.query<{
-      user_id: string;
-      expires_at: Date | null;
-      is_anonymous: boolean;
-    }>(
-      `SELECT k.user_id, k.expires_at, COALESCE(u.is_anonymous, false) AS is_anonymous
-       FROM api_key k
-       JOIN "user" u ON u.id = k.user_id
-       WHERE k.key_hash = $1`,
-      [keyHash]
-    );
+  const validation = (async (): Promise<ApiKeyValidationResult> => {
+    const pool = getDeniPool();
 
-    if (result.rows.length === 0) {
-      return { valid: false, error: 'API key not found', code: 'invalid_key' };
+    try {
+      const result = await pool.query<{
+        user_id: string;
+        expires_at: Date | null;
+        is_anonymous: boolean;
+      }>(
+        `SELECT k.user_id, k.expires_at, COALESCE(u.is_anonymous, false) AS is_anonymous
+         FROM api_key k
+         JOIN "user" u ON u.id = k.user_id
+         WHERE k.key_hash = $1`,
+        [keyHash]
+      );
+
+      if (result.rows.length === 0) {
+        return { valid: false, error: 'API key not found', code: 'invalid_key' };
+      }
+
+      const { user_id, expires_at, is_anonymous } = result.rows[0];
+
+      if (is_anonymous) {
+        return { valid: false, error: GUEST_ACCOUNT_ERROR_MESSAGE, code: 'guest_account' };
+      }
+
+      // Check expiration
+      if (expires_at && new Date(expires_at) < new Date()) {
+        return { valid: false, error: 'API key has expired', code: 'expired_key' };
+      }
+
+      // Cache only until shortly before expiration so an expiring key is not
+      // served from cache past its expiry.
+      if (
+        !expires_at ||
+        new Date(expires_at).getTime() - Date.now() > AUTH_CACHE_TTL_MS
+      ) {
+        cacheValidKey(keyHash, user_id);
+      }
+
+      touchLastUsedAt(keyHash);
+
+      return { valid: true, userId: user_id };
+    } catch (error) {
+      console.error('API key validation error:', error);
+      return { valid: false, error: 'Database error during validation', code: 'db_error' };
     }
+  })();
 
-    const { user_id, expires_at, is_anonymous } = result.rows[0];
+  keyValidationInFlight.set(keyHash, validation);
+  void validation.then(
+    () => {
+      if (keyValidationInFlight.get(keyHash) === validation) {
+        keyValidationInFlight.delete(keyHash);
+      }
+    },
+    () => {
+      if (keyValidationInFlight.get(keyHash) === validation) {
+        keyValidationInFlight.delete(keyHash);
+      }
+    },
+  );
 
-    if (is_anonymous) {
-      return { valid: false, error: GUEST_ACCOUNT_ERROR_MESSAGE, code: 'guest_account' };
-    }
-
-    // Check expiration
-    if (expires_at && new Date(expires_at) < new Date()) {
-      return { valid: false, error: 'API key has expired', code: 'expired_key' };
-    }
-
-    // Cache only until shortly before expiration so an expiring key is not
-    // served from cache past its expiry.
-    if (
-      !expires_at ||
-      new Date(expires_at).getTime() - Date.now() > AUTH_CACHE_TTL_MS
-    ) {
-      cacheValidKey(keyHash, user_id);
-    }
-
-    touchLastUsedAt(keyHash);
-
-    return { valid: true, userId: user_id };
-  } catch (error) {
-    console.error('API key validation error:', error);
-    return { valid: false, error: 'Database error during validation', code: 'db_error' };
-  }
+  return validation;
 }

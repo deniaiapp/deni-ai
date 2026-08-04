@@ -148,45 +148,55 @@ const billingProfileCache = new Map<
   string,
   { profile: BillingProfile; expiresAt: number }
 >();
+const billingProfileInFlight = new Map<string, Promise<BillingProfile>>();
 
 /**
  * Fetch the user's billing rows and derive tier info.
- * Two queries (team + personal billing); no usage rows.
+ * Team and personal billing are selected in one query; no usage rows.
  */
 async function fetchBillingProfile(userId: string): Promise<BillingProfile> {
   const pool = getDeniPool();
 
-  // Query team billing first (higher priority)
-  const teamBillingResult = await pool.query<BillingRow>(
-    `SELECT b.plan_id, b.status, b.current_period_end, b.max_mode_enabled,
-            b.payment_method_fingerprint, b.card_funding, b.card_verified_at
-     FROM billing b
-     INNER JOIN member m ON b.organization_id = m.organization_id
-     WHERE m.user_id = $1
-       AND b.organization_id IS NOT NULL
-       AND b.plan_id LIKE 'pro_team%'
-     ORDER BY ${BILLING_PRIORITY_ORDER.replaceAll("status", "b.status").replaceAll("current_period_end", "b.current_period_end")}, b.current_period_end DESC NULLS LAST
-     LIMIT 1`,
+  // Fetch the highest-priority team and personal rows in one round trip. The
+  // old sequential pair of queries made every billing-cache miss pay two DB
+  // network round trips before quota checking could begin.
+  const billingResult = await pool.query<
+    BillingRow & { is_team: boolean }
+  >(
+    `WITH team_billing AS (
+       SELECT b.plan_id, b.status, b.current_period_end, b.max_mode_enabled,
+              b.payment_method_fingerprint, b.card_funding, b.card_verified_at,
+              TRUE AS is_team
+       FROM billing b
+       INNER JOIN member m ON b.organization_id = m.organization_id
+       WHERE m.user_id = $1
+         AND b.organization_id IS NOT NULL
+         AND b.plan_id LIKE 'pro_team%'
+       ORDER BY ${BILLING_PRIORITY_ORDER.replaceAll("status", "b.status").replaceAll("current_period_end", "b.current_period_end")}, b.current_period_end DESC NULLS LAST
+       LIMIT 1
+     ), personal_billing AS (
+       SELECT plan_id, status, current_period_end, max_mode_enabled,
+              payment_method_fingerprint, card_funding, card_verified_at,
+              FALSE AS is_team
+       FROM billing
+       WHERE user_id = $1 AND organization_id IS NULL
+       ORDER BY ${BILLING_PRIORITY_ORDER}, current_period_end DESC NULLS LAST
+       LIMIT 1
+     )
+     SELECT * FROM team_billing
+     UNION ALL
+     SELECT * FROM personal_billing`,
     [userId],
   );
 
-  // Query personal billing as fallback
-  const personalBillingResult = await pool.query<BillingRow>(
-    `SELECT plan_id, status, current_period_end, max_mode_enabled,
-            payment_method_fingerprint, card_funding, card_verified_at
-     FROM billing
-     WHERE user_id = $1 AND organization_id IS NULL
-     ORDER BY ${BILLING_PRIORITY_ORDER}, current_period_end DESC NULLS LAST
-     LIMIT 1`,
-    [userId],
-  );
+  const teamBilling = billingResult.rows.find((row) => row.is_team);
+  const personalBilling = billingResult.rows.find((row) => !row.is_team);
 
   // Determine which billing to use
   let billing: BillingRow | null = null;
   let isTeam = false;
 
-  if (teamBillingResult.rows.length > 0) {
-    const teamBilling = teamBillingResult.rows[0];
+  if (teamBilling) {
     const isActiveStatus = ACTIVE_STATUSES.includes(teamBilling.status);
     const isInGracePeriod =
       teamBilling.status === "canceled" &&
@@ -200,8 +210,8 @@ async function fetchBillingProfile(userId: string): Promise<BillingProfile> {
   }
 
   // Fallback to personal billing if no active team billing
-  if (!billing && personalBillingResult.rows.length > 0) {
-    billing = personalBillingResult.rows[0];
+  if (!billing && personalBilling) {
+    billing = personalBilling;
   }
 
   const tier = determineTier(billing, isTeam);
@@ -227,19 +237,37 @@ export async function getDeniBillingProfile(
     }
   }
 
-  const profile = await fetchBillingProfile(userId);
+  const existing = billingProfileInFlight.get(userId);
+  if (existing) return existing;
 
-  if (BILLING_CACHE_TTL_MS > 0) {
-    if (billingProfileCache.size >= BILLING_CACHE_MAX_ENTRIES) {
-      billingProfileCache.clear();
+  const pending = fetchBillingProfile(userId).then((profile) => {
+    if (BILLING_CACHE_TTL_MS > 0) {
+      if (billingProfileCache.size >= BILLING_CACHE_MAX_ENTRIES) {
+        billingProfileCache.clear();
+      }
+      billingProfileCache.set(userId, {
+        profile,
+        expiresAt: Date.now() + BILLING_CACHE_TTL_MS,
+      });
     }
-    billingProfileCache.set(userId, {
-      profile,
-      expiresAt: Date.now() + BILLING_CACHE_TTL_MS,
-    });
-  }
+    return profile;
+  });
 
-  return profile;
+  billingProfileInFlight.set(userId, pending);
+  void pending.then(
+    () => {
+      if (billingProfileInFlight.get(userId) === pending) {
+        billingProfileInFlight.delete(userId);
+      }
+    },
+    () => {
+      if (billingProfileInFlight.get(userId) === pending) {
+        billingProfileInFlight.delete(userId);
+      }
+    },
+  );
+
+  return pending;
 }
 
 /**
@@ -247,8 +275,16 @@ export async function getDeniBillingProfile(
  */
 export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   const pool = getDeniPool();
-  const { billing, isTeam, tier, hasVerifiedPaymentMethod } =
-    await fetchBillingProfile(userId);
+  const [billingProfile, usageResult] = await Promise.all([
+    getDeniBillingProfile(userId),
+    pool.query<UsageQuotaRow>(
+      `SELECT category, plan_tier, limit_amount, unit, used, period_start, period_end
+       FROM usage_quota
+       WHERE user_id = $1`,
+      [userId],
+    ),
+  ]);
+  const { billing, isTeam, tier, hasVerifiedPaymentMethod } = billingProfile;
 
   // Determine Max Mode eligibility
   const maxModeEligible =
@@ -257,16 +293,7 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
     maxModeEligible && (billing?.max_mode_enabled ?? false);
 
   // Determine period end
-  let periodEnd: string | null = null;
-  periodEnd = getNextMonthFirstDay().toISOString();
-
-  // Query usage quotas
-  const usageResult = await pool.query<UsageQuotaRow>(
-    `SELECT category, plan_tier, limit_amount, unit, used, period_start, period_end
-     FROM usage_quota
-     WHERE user_id = $1`,
-    [userId],
-  );
+  const periodEnd: string | null = getNextMonthFirstDay().toISOString();
 
   const now = new Date();
   const defaultPeriodEnd = getNextMonthFirstDay().toISOString();
@@ -390,82 +417,60 @@ export async function reserveUsageQuota(
       };
     }
 
-    // Request-metered tiers reserve one unit atomically under a row lock.
-    const client = await pool.connect();
-    try {
-      await client.query("BEGIN");
+    // Request-metered tiers use one atomic upsert. Besides removing the
+    // BEGIN/SELECT FOR UPDATE/UPDATE/COMMIT round trips, this also handles
+    // concurrent first requests without a unique-violation race.
+    const result = await pool.query<Pick<UsageQuotaRow, "used">>(
+      `INSERT INTO usage_quota
+         (user_id, category, plan_tier, limit_amount, unit, used, period_start, period_end)
+       VALUES ($1, $2, $3, $4, $5, 1, $6, $7)
+       ON CONFLICT (user_id, category) DO UPDATE
+       SET used = CASE
+             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
+                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
+                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
+               THEN 1
+             ELSE usage_quota.used + 1
+           END,
+           plan_tier = EXCLUDED.plan_tier,
+           limit_amount = EXCLUDED.limit_amount,
+           unit = EXCLUDED.unit,
+           period_start = CASE
+             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
+                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
+                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
+               THEN EXCLUDED.period_start
+             ELSE usage_quota.period_start
+           END,
+           period_end = CASE
+             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
+                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
+                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
+               THEN EXCLUDED.period_end
+             ELSE usage_quota.period_end
+           END
+       WHERE CASE
+               WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
+                    OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
+                    OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
+                 THEN 0
+               ELSE usage_quota.used
+             END < EXCLUDED.limit_amount
+       RETURNING used`,
+      [userId, category, tier, limit, unit, now, periodEnd],
+    );
 
-      const result = await client.query<
-        Pick<
-          UsageQuotaRow,
-          "used" | "period_end" | "limit_amount" | "plan_tier" | "unit"
-        >
-      >(
-        `SELECT used, period_end, limit_amount, plan_tier, unit
-         FROM usage_quota
-         WHERE user_id = $1 AND category = $2
-         FOR UPDATE`,
-        [userId, category],
-      );
-
-      if (result.rows.length === 0) {
-        await client.query(
-          `INSERT INTO usage_quota (user_id, category, plan_tier, limit_amount, unit, used, period_start, period_end)
-           VALUES ($1, $2, $3, $4, $5, 1, $6, $7)`,
-          [userId, category, tier, limit, unit, now, periodEnd],
-        );
-        await client.query("COMMIT");
-        return {
-          allowed: true,
-          remaining: Math.max(limit - 1, 0),
-          reserved: true,
-          unit,
-        };
-      }
-
-      const currentRow = result.rows[0];
-      const needsReset = shouldResetUsageRow(currentRow, now, tier, unit);
-      const currentUsed = needsReset ? 0 : currentRow.used;
-
-      if (currentUsed >= limit) {
-        await client.query("ROLLBACK");
-        return { allowed: false, remaining: 0, reserved: false, unit };
-      }
-
-      await client.query(
-        `UPDATE usage_quota
-         SET used = $3,
-             plan_tier = $4,
-             limit_amount = $5,
-             unit = $6,
-             period_start = CASE WHEN $7 THEN $8 ELSE period_start END,
-             period_end = CASE WHEN $7 THEN $9 ELSE period_end END
-         WHERE user_id = $1 AND category = $2`,
-        [
-          userId,
-          category,
-          currentUsed + 1,
-          tier,
-          limit,
-          unit,
-          needsReset,
-          now,
-          periodEnd,
-        ],
-      );
-      await client.query("COMMIT");
-      return {
-        allowed: true,
-        remaining: Math.max(limit - (currentUsed + 1), 0),
-        reserved: true,
-        unit,
-      };
-    } catch (error) {
-      await client.query("ROLLBACK").catch(() => {});
-      throw error;
-    } finally {
-      client.release();
+    const used = result.rows[0]?.used;
+    if (used === undefined) {
+      return { allowed: false, remaining: 0, reserved: false, unit };
     }
+
+    return {
+      allowed: true,
+      remaining: Math.max(limit - used, 0),
+      reserved: true,
+      unit,
+    };
   } catch (error) {
     console.error(
       `[Usage] Failed to reserve usage for user=${userId} category=${category}:`,
@@ -500,52 +505,39 @@ export async function recordUsageQuota(
   const unit = getUsageUnitForTier(tier);
 
   try {
-    // Single atomic statement: the period/tier/unit reset condition is
-    // evaluated in SQL, so no transaction or row lock round-trips are needed
-    // and concurrent increments cannot lose updates.
-    const updateResult = await pool.query(
-      `UPDATE usage_quota
+    // One atomic upsert handles first-use creation, period resets, and
+    // concurrent increments without a preliminary UPDATE/INSERT race.
+    await pool.query(
+      `INSERT INTO usage_quota
+         (user_id, category, plan_tier, limit_amount, unit, used, period_start, period_end)
+       VALUES ($1, $2, $3, $4, $5, $6::bigint, $7, $8)
+       ON CONFLICT (user_id, category) DO UPDATE
        SET used = CASE
-             WHEN (period_end IS NOT NULL AND period_end <= $7) OR plan_tier IS DISTINCT FROM $3 OR unit IS DISTINCT FROM $5
-               THEN $6::bigint
-             ELSE used + $6::bigint
+             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
+                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
+                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
+               THEN EXCLUDED.used
+             ELSE usage_quota.used + EXCLUDED.used
            END,
            period_start = CASE
-             WHEN (period_end IS NOT NULL AND period_end <= $7) OR plan_tier IS DISTINCT FROM $3 OR unit IS DISTINCT FROM $5
-               THEN $7
-             ELSE period_start
+             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
+                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
+                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
+               THEN EXCLUDED.period_start
+             ELSE usage_quota.period_start
            END,
            period_end = CASE
-             WHEN (period_end IS NOT NULL AND period_end <= $7) OR plan_tier IS DISTINCT FROM $3 OR unit IS DISTINCT FROM $5
-               THEN $8
-             ELSE period_end
+             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
+                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
+                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
+               THEN EXCLUDED.period_end
+             ELSE usage_quota.period_end
            END,
-           plan_tier = $3,
-           limit_amount = $4,
-           unit = $5
-       WHERE user_id = $1 AND category = $2`,
+           plan_tier = EXCLUDED.plan_tier,
+           limit_amount = EXCLUDED.limit_amount,
+           unit = EXCLUDED.unit`,
       [userId, category, tier, limit, unit, amount, now, periodEnd],
     );
-
-    if (updateResult.rowCount === 0) {
-      try {
-        await pool.query(
-          `INSERT INTO usage_quota (user_id, category, plan_tier, limit_amount, unit, used, period_start, period_end)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-          [userId, category, tier, limit, unit, amount, now, periodEnd],
-        );
-      } catch (insertError) {
-        // Unique-violation race with a concurrent first request: fall back to
-        // a plain increment.
-        if ((insertError as { code?: string }).code !== "23505") {
-          throw insertError;
-        }
-        await pool.query(
-          `UPDATE usage_quota SET used = used + $3::bigint WHERE user_id = $1 AND category = $2`,
-          [userId, category, amount],
-        );
-      }
-    }
   } catch (error) {
     console.error(
       `[Usage] Failed to record usage for user=${userId} category=${category}:`,

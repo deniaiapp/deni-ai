@@ -39,8 +39,10 @@ async function ensureBanTable(): Promise<void> {
 }
 
 const banStatusCache = new Map<string, { banned: boolean; expiresAt: number }>();
+const banStatusInFlight = new Map<string, Promise<boolean>>();
 const BAN_CACHE_TTL_MS = 30_000;
 const BAN_CACHE_MAX_ENTRIES = 10_000;
+let banCacheGeneration = 0;
 
 function getCachedBanStatus(userId: string): boolean | null {
   const entry = banStatusCache.get(userId);
@@ -63,11 +65,14 @@ function setCachedBanStatus(userId: string, banned: boolean): void {
 }
 
 export function invalidateBanCache(userId?: string): void {
+  banCacheGeneration += 1;
   if (userId) {
     banStatusCache.delete(userId);
+    banStatusInFlight.delete(userId);
     return;
   }
   banStatusCache.clear();
+  banStatusInFlight.clear();
 }
 
 /**
@@ -79,22 +84,47 @@ export async function isUserBannedFromFlixa(userId: string): Promise<boolean> {
     return cached;
   }
 
-  try {
-    await ensureBanTable();
-    const pool = getDeniPool();
-    const result = await pool.query<{ user_id: string }>(
-      `SELECT user_id FROM flixa_ban WHERE user_id = $1 LIMIT 1`,
-      [userId],
-    );
-    const banned = result.rows.length > 0;
-    setCachedBanStatus(userId, banned);
-    return banned;
-  } catch (error) {
-    console.error("[Ban] Failed to check ban status:", error);
-    // Fail closed for ban checks only after a positive cache miss is dangerous;
-    // prefer fail-open on DB errors so a flixa_ban outage does not lock everyone out.
-    return false;
-  }
+  const existing = banStatusInFlight.get(userId);
+  if (existing) return existing;
+
+  const generation = banCacheGeneration;
+  const pending = (async () => {
+    try {
+      await ensureBanTable();
+      const pool = getDeniPool();
+      const result = await pool.query<{ user_id: string }>(
+        `SELECT user_id FROM flixa_ban WHERE user_id = $1 LIMIT 1`,
+        [userId],
+      );
+      const banned = result.rows.length > 0;
+      // An admin ban/unban can invalidate the cache while this query is in
+      // flight. Do not let the older result overwrite the newer state.
+      if (generation === banCacheGeneration) {
+        setCachedBanStatus(userId, banned);
+      }
+      return banned;
+    } catch (error) {
+      console.error("[Ban] Failed to check ban status:", error);
+      // Fail open on DB errors so a flixa_ban outage does not lock everyone out.
+      return false;
+    }
+  })();
+
+  banStatusInFlight.set(userId, pending);
+  void pending.then(
+    () => {
+      if (banStatusInFlight.get(userId) === pending) {
+        banStatusInFlight.delete(userId);
+      }
+    },
+    () => {
+      if (banStatusInFlight.get(userId) === pending) {
+        banStatusInFlight.delete(userId);
+      }
+    },
+  );
+
+  return pending;
 }
 
 /**

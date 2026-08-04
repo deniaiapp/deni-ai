@@ -44,6 +44,10 @@ import {
 } from "../../utils/agent";
 import { computeMeteredTokens } from "../../utils/agent/usageMetering";
 import { getLongContextUsageMultiplier } from "../../utils/agent/models";
+import {
+  createUpstreamTimeout,
+  type UpstreamTimeout,
+} from "../../utils/agent/upstream";
 
 const router = new Hono<{
   Variables: {
@@ -973,16 +977,24 @@ async function proxyResponsesUpstream(options: {
     reasoning: upstreamBody.reasoning,
   }));
 
-  const abortController = new AbortController();
-  const response = await fetch(url, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(upstreamBody),
-    signal: abortController.signal,
-  });
+  const upstreamTimeout = createUpstreamTimeout();
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(upstreamBody),
+      signal: upstreamTimeout.signal,
+    });
+    upstreamTimeout.refresh();
+  } catch (error) {
+    upstreamTimeout.dispose();
+    throw error;
+  }
 
   if (!response.ok) {
     const errorBody = await response.text();
+    upstreamTimeout.dispose();
     agentDebugLog("responses.upstream_error", {
       requestId,
       provider: providerName,
@@ -1007,18 +1019,23 @@ async function proxyResponsesUpstream(options: {
         providerName,
         model,
         response,
-        abortController,
+        upstreamTimeout,
       );
     }
 
     return createResponsesPassthroughStream(
       auth,
       response,
-      abortController,
+      upstreamTimeout,
     );
   }
 
-  const responseBody = await response.text();
+  let responseBody: string;
+  try {
+    responseBody = await response.text();
+  } finally {
+    upstreamTimeout.dispose();
+  }
   let parsedResponse: Record<string, unknown> | null = null;
   try {
     parsedResponse = JSON.parse(responseBody) as Record<string, unknown>;
@@ -1064,7 +1081,7 @@ async function proxyResponsesUpstream(options: {
 function createResponsesPassthroughStream(
   auth: AgentAuthContext,
   response: Response,
-  abortController: AbortController,
+  upstreamTimeout: UpstreamTimeout,
 ): Response {
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
@@ -1082,6 +1099,7 @@ function createResponsesPassthroughStream(
           const { done, value } = await reader.read();
           if (cancelled) return;
           if (done) break;
+          upstreamTimeout.refresh();
 
           buffer += decoder.decode(value, { stream: true });
           const eventBlocks = buffer.split(/\r?\n\r?\n/);
@@ -1114,9 +1132,11 @@ function createResponsesPassthroughStream(
 
         usageSettled = true;
         await finalizeUsage(auth, usageSnapshot);
+        upstreamTimeout.dispose();
         controller.close();
       } catch (error) {
         if (cancelled) return;
+        upstreamTimeout.dispose();
         if (!usageSettled) {
           usageSettled = true;
           await releaseReservedUsage(auth);
@@ -1126,7 +1146,8 @@ function createResponsesPassthroughStream(
     },
     cancel() {
       cancelled = true;
-      abortController.abort();
+      upstreamTimeout.abort();
+      upstreamTimeout.dispose();
       reader.cancel().catch(() => {});
       if (!usageSettled) {
         usageSettled = true;
@@ -1154,7 +1175,7 @@ function createChatStreamFromResponsesUpstream(
   providerName: string,
   model: string,
   response: Response,
-  abortController: AbortController,
+  upstreamTimeout: UpstreamTimeout,
 ): Response {
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
@@ -1175,6 +1196,7 @@ function createChatStreamFromResponsesUpstream(
           const { done, value } = await reader.read();
           if (cancelled) return;
           if (done) break;
+          upstreamTimeout.refresh();
 
           buffer += decoder.decode(value, { stream: true });
           const eventBlocks = buffer.split(/\r?\n\r?\n/);
@@ -1266,6 +1288,7 @@ function createChatStreamFromResponsesUpstream(
           auth,
           streamState.usage ?? usageSnapshot,
         );
+        upstreamTimeout.dispose();
         agentDebugLog("chat.stream_complete_via_responses", {
           requestId,
           provider: providerName,
@@ -1276,6 +1299,7 @@ function createChatStreamFromResponsesUpstream(
         controller.close();
       } catch (error) {
         if (cancelled) return;
+        upstreamTimeout.dispose();
         agentDebugLog("chat.stream_error_via_responses", {
           requestId,
           provider: providerName,
@@ -1290,7 +1314,8 @@ function createChatStreamFromResponsesUpstream(
     },
     cancel() {
       cancelled = true;
-      abortController.abort();
+      upstreamTimeout.abort();
+      upstreamTimeout.dispose();
       reader.cancel().catch(() => {});
       if (!usageSettled) {
         usageSettled = true;
@@ -1537,19 +1562,40 @@ async function finalizeUsage(
     const meteredTokens = Math.ceil(
       weightedTokens * auth.tokenUsageMultiplier * longContextMultiplier,
     );
-    await recordUsageQuota(
+    const recordPromise = recordUsageQuota(
       auth.userId,
       auth.modelCategory,
       auth.tier,
       meteredTokens,
       auth.hasVerifiedPaymentMethod,
     );
+
+    if (isAsyncUsageFinalizationEnabled()) {
+      // This is opt-in because quota visibility briefly lags the response.
+      // The atomic upsert in recordUsageQuota keeps concurrent increments safe;
+      // operators that require strict per-request quota accounting should keep
+      // this disabled.
+      void recordPromise.catch((error) => {
+        console.error(
+          `[Usage] Async token finalization failed for user=${auth.userId} category=${auth.modelCategory}:`,
+          error,
+        );
+      });
+      return;
+    }
+
+    await recordPromise;
   } catch (error) {
     console.error(
       `[Usage] Failed to finalize token usage for user=${auth.userId} category=${auth.modelCategory}:`,
       error,
     );
   }
+}
+
+function isAsyncUsageFinalizationEnabled(): boolean {
+  const raw = Bun.env.FLIXA_USAGE_FINALIZE_ASYNC?.trim().toLowerCase();
+  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
 }
 
 async function releaseReservedUsage(
@@ -1611,14 +1657,21 @@ async function createAnthropicChatFailoverResponse(
   }));
 
   if (stream) {
-    const abortController = new AbortController();
-    const streamResponse = await anthropicFailoverClient.messages.create(
-      {
-        ...requestParams,
-        stream: true,
-      },
-      { signal: abortController.signal },
-    );
+    const upstreamTimeout = createUpstreamTimeout();
+    let streamResponse: AsyncIterable<Anthropic.MessageStreamEvent>;
+    try {
+      streamResponse = await anthropicFailoverClient.messages.create(
+        {
+          ...requestParams,
+          stream: true,
+        },
+        { signal: upstreamTimeout.signal },
+      );
+      upstreamTimeout.refresh();
+    } catch (error) {
+      upstreamTimeout.dispose();
+      throw error;
+    }
 
     const encoder = new TextEncoder();
     let usageSnapshot: Record<string, number> = {};
@@ -1632,6 +1685,7 @@ async function createAnthropicChatFailoverResponse(
         try {
           for await (const event of streamResponse) {
             if (cancelled) return;
+            upstreamTimeout.refresh();
             if (event.type === "message_start") {
               messageId = event.message.id;
               usageSnapshot = mergeUsageSnapshot(
@@ -1661,6 +1715,7 @@ async function createAnthropicChatFailoverResponse(
           if (cancelled) return;
           usageSettled = true;
           await finalizeUsage(auth, usageSnapshot);
+          upstreamTimeout.dispose();
           agentDebugLog("chat.failover_stream_complete", {
             requestId,
             provider: "anthropic",
@@ -1671,6 +1726,7 @@ async function createAnthropicChatFailoverResponse(
           controller.close();
         } catch (error) {
           if (cancelled) return;
+          upstreamTimeout.dispose();
           agentDebugLog("chat.failover_stream_error", {
             requestId,
             provider: "anthropic",
@@ -1686,7 +1742,8 @@ async function createAnthropicChatFailoverResponse(
       },
       cancel() {
         cancelled = true;
-        abortController.abort();
+        upstreamTimeout.abort();
+        upstreamTimeout.dispose();
         // The client disconnected mid-stream; upstream tokens were still
         // consumed, so meter what we have observed so far.
         if (!usageSettled) {
@@ -1709,10 +1766,22 @@ async function createAnthropicChatFailoverResponse(
     });
   }
 
-  const response = await anthropicFailoverClient.messages.create({
-    ...requestParams,
-    stream: false,
-  });
+  const upstreamTimeout = createUpstreamTimeout();
+  let response: Anthropic.Message;
+  try {
+    response = await anthropicFailoverClient.messages.create(
+      {
+        ...requestParams,
+        stream: false,
+      },
+      { signal: upstreamTimeout.signal },
+    );
+    upstreamTimeout.refresh();
+  } catch (error) {
+    upstreamTimeout.dispose();
+    throw error;
+  }
+  upstreamTimeout.dispose();
   const openAiResponse = convertAnthropicResponseToOpenAI(response, model);
 
   await finalizeUsage(auth, response.usage);
@@ -1742,16 +1811,24 @@ async function createAnthropicMessagesFailoverResponse(
     tool_choice: normalizeAnthropicToolChoiceAfterToolResult(body),
   });
 
-  const abortController = new AbortController();
-  const response = await fetch("https://api.anthropic.com/v1/messages", {
-    method: "POST",
-    headers: getAnthropicHeaders(requestHeaders),
-    body: JSON.stringify(anthropicBody),
-    signal: abortController.signal,
-  });
+  const upstreamTimeout = createUpstreamTimeout();
+  let response: Response;
+  try {
+    response = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: getAnthropicHeaders(requestHeaders),
+      body: JSON.stringify(anthropicBody),
+      signal: upstreamTimeout.signal,
+    });
+    upstreamTimeout.refresh();
+  } catch (error) {
+    upstreamTimeout.dispose();
+    throw error;
+  }
 
   if (!response.ok) {
     const errorBody = await response.text();
+    upstreamTimeout.dispose();
     console.error(
       "[Anthropic messages failover error]:",
       response.status,
@@ -1782,6 +1859,7 @@ async function createAnthropicMessagesFailoverResponse(
             const { done, value } = await reader.read();
             if (cancelled) return;
             if (done) break;
+            upstreamTimeout.refresh();
 
             buffer += decoder.decode(value, { stream: true });
             const eventBlocks = buffer.split(/\r?\n\r?\n/);
@@ -1806,9 +1884,11 @@ async function createAnthropicMessagesFailoverResponse(
 
           usageSettled = true;
           await finalizeUsage(auth, usageSnapshot);
+          upstreamTimeout.dispose();
           controller.close();
         } catch (error) {
           if (cancelled) return;
+          upstreamTimeout.dispose();
           console.error(
             "[Stream Error] provider=anthropic failover (messages):",
             error,
@@ -1822,7 +1902,8 @@ async function createAnthropicMessagesFailoverResponse(
       },
       cancel() {
         cancelled = true;
-        abortController.abort();
+        upstreamTimeout.abort();
+        upstreamTimeout.dispose();
         reader.cancel().catch(() => {});
         // The client disconnected mid-stream; upstream tokens were still
         // consumed, so meter what we have observed so far.
@@ -1847,7 +1928,12 @@ async function createAnthropicMessagesFailoverResponse(
     });
   }
 
-  const responseBody = await response.text();
+  let responseBody: string;
+  try {
+    responseBody = await response.text();
+  } finally {
+    upstreamTimeout.dispose();
+  }
   let parsedResponse: { usage?: unknown } | null = null;
 
   try {
@@ -1991,26 +2077,34 @@ router.post(
           messages: summarizeChatMessages(messages),
         }));
 
-        const abortController = new AbortController();
-        const response = await fetch(
-          "https://openrouter.ai/api/v1/chat/completions",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
-              "HTTP-Referer": "https://flixa.deniai.app",
-              "X-OpenRouter-Title": "Deni AI Flixa",
-              "X-OpenRouter-Categories": "cli-agent,ide-extension",
-              "X-OpenRouter-Experimental-Metadata": "enabled",
+        const upstreamTimeout = createUpstreamTimeout();
+        let response: Response;
+        try {
+          response = await fetch(
+            "https://openrouter.ai/api/v1/chat/completions",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
+                "HTTP-Referer": "https://flixa.deniai.app",
+                "X-OpenRouter-Title": "Deni AI Flixa",
+                "X-OpenRouter-Categories": "cli-agent,ide-extension",
+                "X-OpenRouter-Experimental-Metadata": "enabled",
+              },
+              body: JSON.stringify(openrouterBody),
+              signal: upstreamTimeout.signal,
             },
-            body: JSON.stringify(openrouterBody),
-            signal: abortController.signal,
-          },
-        );
+          );
+          upstreamTimeout.refresh();
+        } catch (error) {
+          upstreamTimeout.dispose();
+          throw error;
+        }
 
         if (!response.ok) {
           const errorBody = await response.text();
+          upstreamTimeout.dispose();
           agentDebugLog("chat.upstream_error", {
             requestId,
             provider: providerName,
@@ -2062,6 +2156,7 @@ router.post(
                   const { done, value } = await reader.read();
                   if (cancelled) return;
                   if (done) break;
+                  upstreamTimeout.refresh();
 
                   buffer += decoder.decode(value, { stream: true });
                   const eventBlocks = buffer.split(/\r?\n\r?\n/);
@@ -2102,6 +2197,7 @@ router.post(
 
                 usageSettled = true;
                 await finalizeUsage(auth, usageSnapshot);
+                upstreamTimeout.dispose();
                 agentDebugLog("chat.stream_complete", {
                   requestId,
                   provider: providerName,
@@ -2111,6 +2207,7 @@ router.post(
                 controller.close();
               } catch (error) {
                 if (cancelled) return;
+                upstreamTimeout.dispose();
                 agentDebugLog("chat.stream_error", {
                   requestId,
                   provider: providerName,
@@ -2129,7 +2226,8 @@ router.post(
             },
             cancel() {
               cancelled = true;
-              abortController.abort();
+              upstreamTimeout.abort();
+              upstreamTimeout.dispose();
               reader.cancel().catch(() => {});
               // The client disconnected mid-stream; upstream tokens were
               // still consumed, so meter what we have observed so far.
@@ -2155,7 +2253,12 @@ router.post(
           });
         }
 
-        const responseBody = await response.text();
+        let responseBody: string;
+        try {
+          responseBody = await response.text();
+        } finally {
+          upstreamTimeout.dispose();
+        }
         let parsedResponse: Record<string, unknown> | null = null;
 
         try {
@@ -2232,16 +2335,23 @@ router.post(
       }));
 
       if (stream) {
-        const abortController = new AbortController();
-        const streamResponse = await client.chat.completions.create(
-          {
-            ...requestParams,
-            stream: true,
-          },
-          {
-            signal: abortController.signal,
-          },
-        );
+        const upstreamTimeout = createUpstreamTimeout();
+        let streamResponse: AsyncIterable<OpenAI.Chat.Completions.ChatCompletionChunk>;
+        try {
+          streamResponse = await client.chat.completions.create(
+            {
+              ...requestParams,
+              stream: true,
+            },
+            {
+              signal: upstreamTimeout.signal,
+            },
+          );
+          upstreamTimeout.refresh();
+        } catch (error) {
+          upstreamTimeout.dispose();
+          throw error;
+        }
 
         // Convert OpenAI stream to SSE Response
         const encoder = new TextEncoder();
@@ -2255,6 +2365,7 @@ router.post(
             try {
               for await (const chunk of streamResponse) {
                 if (cancelled) return;
+                upstreamTimeout.refresh();
                 const clientFacingChunk = rewriteCollaborationNamesInChatPayload(
                   chunk,
                 ) as typeof chunk;
@@ -2271,6 +2382,7 @@ router.post(
               if (cancelled) return;
               usageSettled = true;
               await finalizeUsage(auth, usageSnapshot);
+              upstreamTimeout.dispose();
               agentDebugLog("chat.stream_complete", {
                 requestId,
                 provider: providerName,
@@ -2281,6 +2393,7 @@ router.post(
               controller.close();
             } catch (error) {
               if (cancelled) return;
+              upstreamTimeout.dispose();
               agentDebugLog("chat.stream_error", {
                 requestId,
                 provider: providerName,
@@ -2296,7 +2409,8 @@ router.post(
           },
           cancel() {
             cancelled = true;
-            abortController.abort();
+            upstreamTimeout.abort();
+            upstreamTimeout.dispose();
             // The client disconnected mid-stream; upstream tokens were still
             // consumed, so meter what we have observed so far.
             if (!usageSettled) {
@@ -2319,10 +2433,22 @@ router.post(
       }
 
       // Non-streaming request
-      const response = await client.chat.completions.create({
-        ...requestParams,
-        stream: false,
-      });
+      const upstreamTimeout = createUpstreamTimeout();
+      let response: OpenAI.Chat.Completions.ChatCompletion;
+      try {
+        response = await client.chat.completions.create(
+          {
+            ...requestParams,
+            stream: false,
+          },
+          { signal: upstreamTimeout.signal },
+        );
+        upstreamTimeout.refresh();
+      } catch (error) {
+        upstreamTimeout.dispose();
+        throw error;
+      }
+      upstreamTimeout.dispose();
       const clientFacingResponse = rewriteCollaborationNamesInChatPayload(
         response,
       ) as typeof response;
@@ -2560,14 +2686,24 @@ router.post(
       const compactUrl = `${getResponsesBaseUrl(clientResult)}/compact`;
       const headers = getResponsesHeaders(clientResult);
 
-      const response = await fetch(compactUrl, {
-        method: "POST",
-        headers,
-        body: JSON.stringify(compactBody),
-      });
+      const upstreamTimeout = createUpstreamTimeout();
+      let response: Response;
+      try {
+        response = await fetch(compactUrl, {
+          method: "POST",
+          headers,
+          body: JSON.stringify(compactBody),
+          signal: upstreamTimeout.signal,
+        });
+        upstreamTimeout.refresh();
+      } catch (error) {
+        upstreamTimeout.dispose();
+        throw error;
+      }
 
       if (!response.ok) {
         const errorBody = await response.text();
+        upstreamTimeout.dispose();
         await releaseReservedUsage(auth);
         return new Response(errorBody, {
           status: response.status,
@@ -2578,7 +2714,12 @@ router.post(
         });
       }
 
-      const responseBody = await response.text();
+      let responseBody: string;
+      try {
+        responseBody = await response.text();
+      } finally {
+        upstreamTimeout.dispose();
+      }
       let parsedResponse: Record<string, unknown> | null = null;
       try {
         parsedResponse = JSON.parse(responseBody) as Record<string, unknown>;
@@ -2698,23 +2839,31 @@ router.post(
         tool_choice: normalizeAnthropicToolChoiceAfterToolResult(body),
       }, openRouterModel);
 
-      const abortController = new AbortController();
-      const response = await fetch("https://openrouter.ai/api/v1/messages", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
-          "HTTP-Referer": "https://flixa.deniai.app",
-          "X-OpenRouter-Title": "Deni AI Flixa",
-          "X-OpenRouter-Categories": "cli-agent,ide-extension",
-          "X-OpenRouter-Experimental-Metadata": "enabled",
-        },
-        body: JSON.stringify(openRouterBody),
-        signal: abortController.signal,
-      });
+      const upstreamTimeout = createUpstreamTimeout();
+      let response: Response;
+      try {
+        response = await fetch("https://openrouter.ai/api/v1/messages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://flixa.deniai.app",
+            "X-OpenRouter-Title": "Deni AI Flixa",
+            "X-OpenRouter-Categories": "cli-agent,ide-extension",
+            "X-OpenRouter-Experimental-Metadata": "enabled",
+          },
+          body: JSON.stringify(openRouterBody),
+          signal: upstreamTimeout.signal,
+        });
+        upstreamTimeout.refresh();
+      } catch (error) {
+        upstreamTimeout.dispose();
+        throw error;
+      }
 
       if (!response.ok) {
         const errorBody = await response.text();
+        upstreamTimeout.dispose();
         console.error(
           "[OpenRouter messages error]:",
           response.status,
@@ -2764,6 +2913,7 @@ router.post(
                 const { done, value } = await reader.read();
                 if (cancelled) return;
                 if (done) break;
+                upstreamTimeout.refresh();
 
                 buffer += decoder.decode(value, { stream: true });
                 const eventBlocks = buffer.split(/\r?\n\r?\n/);
@@ -2789,9 +2939,11 @@ router.post(
 
               usageSettled = true;
               await finalizeUsage(auth, usageSnapshot);
+              upstreamTimeout.dispose();
               controller.close();
             } catch (error) {
               if (cancelled) return;
+              upstreamTimeout.dispose();
               console.error(
                 "[Stream Error] provider=openrouter (messages):",
                 error,
@@ -2805,7 +2957,8 @@ router.post(
           },
           cancel() {
             cancelled = true;
-            abortController.abort();
+            upstreamTimeout.abort();
+            upstreamTimeout.dispose();
             reader.cancel().catch(() => {});
             // The client disconnected mid-stream; upstream tokens were still
             // consumed, so meter what we have observed so far.
@@ -2830,7 +2983,12 @@ router.post(
       }
 
       // Non-streaming: pass through the response directly
-      const responseBody = await response.text();
+      let responseBody: string;
+      try {
+        responseBody = await response.text();
+      } finally {
+        upstreamTimeout.dispose();
+      }
       let parsedResponse: { usage?: unknown } | null = null;
 
       try {

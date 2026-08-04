@@ -2,7 +2,9 @@
  * Process-local fixed-window rate limiter.
  *
  * Suitable for single-instance / sticky routing. Multi-instance deployments
- * share no state (each process enforces its own window).
+ * share no state (each process enforces its own window); distributed
+ * coordination is intentionally out of scope and should be measured at the
+ * deployment layer if needed.
  */
 
 export type RateLimitResult = {
@@ -21,12 +23,28 @@ type Bucket = {
   windowStart: number;
 };
 
-const buckets = new Map<string, Bucket>();
+let buckets = new Map<string, Bucket>();
 
 /** Max keys retained; oldest-ish entries are cleared when exceeded. */
 const MAX_BUCKETS = 50_000;
 const CLEANUP_EVERY = 2_000;
+const BUCKET_IDLE_TTL_MS = 15 * 60_000;
 let opsSinceCleanup = 0;
+
+/**
+ * Indexed min-heap with at most one expiry entry per live bucket. A key that
+ * rolls into a new window updates its existing heap node, so the index itself
+ * cannot grow from stale entries. Cleanup is proportional to expired buckets
+ * instead of scanning every live bucket.
+ */
+type BucketExpiry = {
+  mapKey: string;
+  windowStart: number;
+  expiresAt: number;
+};
+
+const bucketExpiryHeap: BucketExpiry[] = [];
+const bucketExpiryIndices = new Map<string, number>();
 
 function parsePositiveInt(raw: string | undefined, fallback: number): number {
   if (!raw) return fallback;
@@ -73,6 +91,131 @@ export function getAdminLoginRateLimitConfig(): {
   };
 }
 
+function swapBucketExpiry(leftIndex: number, rightIndex: number): void {
+  const left = bucketExpiryHeap[leftIndex]!;
+  const right = bucketExpiryHeap[rightIndex]!;
+  bucketExpiryHeap[leftIndex] = right;
+  bucketExpiryHeap[rightIndex] = left;
+  bucketExpiryIndices.set(right.mapKey, leftIndex);
+  bucketExpiryIndices.set(left.mapKey, rightIndex);
+}
+
+function bubbleBucketExpiryUp(index: number): void {
+  while (index > 0) {
+    const parentIndex = Math.floor((index - 1) / 2);
+    if (
+      bucketExpiryHeap[parentIndex]!.expiresAt <=
+      bucketExpiryHeap[index]!.expiresAt
+    ) {
+      break;
+    }
+    swapBucketExpiry(parentIndex, index);
+    index = parentIndex;
+  }
+}
+
+function bubbleBucketExpiryDown(index: number): void {
+  while (true) {
+    const leftIndex = index * 2 + 1;
+    if (leftIndex >= bucketExpiryHeap.length) {
+      break;
+    }
+
+    const rightIndex = leftIndex + 1;
+    let childIndex = leftIndex;
+    if (
+      rightIndex < bucketExpiryHeap.length &&
+      bucketExpiryHeap[rightIndex]!.expiresAt <
+        bucketExpiryHeap[leftIndex]!.expiresAt
+    ) {
+      childIndex = rightIndex;
+    }
+
+    if (
+      bucketExpiryHeap[index]!.expiresAt <=
+      bucketExpiryHeap[childIndex]!.expiresAt
+    ) {
+      break;
+    }
+
+    swapBucketExpiry(index, childIndex);
+    index = childIndex;
+  }
+}
+
+function scheduleBucketExpiry(mapKey: string, bucket: Bucket): void {
+  const expiry: BucketExpiry = {
+    mapKey,
+    windowStart: bucket.windowStart,
+    expiresAt: bucket.windowStart + BUCKET_IDLE_TTL_MS,
+  };
+  const existingIndex = bucketExpiryIndices.get(mapKey);
+
+  if (existingIndex === undefined) {
+    const index = bucketExpiryHeap.length;
+    bucketExpiryHeap.push(expiry);
+    bucketExpiryIndices.set(mapKey, index);
+    bubbleBucketExpiryUp(index);
+    return;
+  }
+
+  const previous = bucketExpiryHeap[existingIndex]!;
+  bucketExpiryHeap[existingIndex] = expiry;
+  bucketExpiryIndices.set(mapKey, existingIndex);
+  if (expiry.expiresAt < previous.expiresAt) {
+    bubbleBucketExpiryUp(existingIndex);
+  } else if (expiry.expiresAt > previous.expiresAt) {
+    bubbleBucketExpiryDown(existingIndex);
+  }
+}
+
+function dequeueBucketExpiry(): BucketExpiry | undefined {
+  const first = bucketExpiryHeap[0];
+  if (!first) {
+    return undefined;
+  }
+
+  const last = bucketExpiryHeap.pop()!;
+  bucketExpiryIndices.delete(first.mapKey);
+  if (bucketExpiryHeap.length > 0) {
+    bucketExpiryHeap[0] = last;
+    bucketExpiryIndices.set(last.mapKey, 0);
+    bubbleBucketExpiryDown(0);
+  }
+
+  return first;
+}
+
+function cleanupExpiredBuckets(now: number): void {
+  // The old implementation used the same strict `>` idle check. Do not
+  // expire a bucket exactly at the TTL boundary.
+  while (
+    bucketExpiryHeap.length > 0 &&
+    bucketExpiryHeap[0]!.expiresAt < now
+  ) {
+    const expiry = dequeueBucketExpiry()!;
+    const bucket = buckets.get(expiry.mapKey);
+
+    // The indexed heap normally guarantees this match. Reschedule defensively
+    // if a future bucket representation changes independently.
+    if (!bucket) {
+      continue;
+    }
+    if (bucket.windowStart === expiry.windowStart) {
+      buckets.delete(expiry.mapKey);
+    } else {
+      scheduleBucketExpiry(expiry.mapKey, bucket);
+    }
+  }
+}
+
+function resetBuckets(): void {
+  // Replacing the Map avoids making the hard-cap path walk the old Map.
+  buckets = new Map<string, Bucket>();
+  bucketExpiryHeap.length = 0;
+  bucketExpiryIndices.clear();
+}
+
 function maybeCleanup(now: number): void {
   opsSinceCleanup += 1;
   if (opsSinceCleanup < CLEANUP_EVERY && buckets.size < MAX_BUCKETS) {
@@ -81,15 +224,12 @@ function maybeCleanup(now: number): void {
   opsSinceCleanup = 0;
 
   // Drop idle buckets (no hits in 15m). Window sizes are shorter than this.
-  for (const [key, bucket] of buckets) {
-    if (now - bucket.windowStart > 15 * 60_000) {
-      buckets.delete(key);
-    }
-  }
+  // The heap visits only due expiry entries, never the full live Map.
+  cleanupExpiredBuckets(now);
 
   if (buckets.size >= MAX_BUCKETS) {
     // Hard cap: clear everything rather than O(n log n) eviction.
-    buckets.clear();
+    resetBuckets();
   }
 }
 
@@ -122,6 +262,7 @@ export function consumeRateLimit(
   if (!bucket || now - bucket.windowStart >= windowMs) {
     bucket = { count: 0, windowStart: now };
     buckets.set(mapKey, bucket);
+    scheduleBucketExpiry(mapKey, bucket);
   }
 
   const resetAtMs = bucket.windowStart + windowMs;
@@ -150,7 +291,7 @@ export function consumeRateLimit(
 
 /** Test helper. */
 export function clearRateLimitBuckets(): void {
-  buckets.clear();
+  resetBuckets();
   opsSinceCleanup = 0;
 }
 

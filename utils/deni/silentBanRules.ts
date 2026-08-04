@@ -173,9 +173,13 @@ async function ensureSilentBanTables(): Promise<void> {
 // ── Rules cache ──────────────────────────────────────────────────────────────
 
 let rulesCache: { rules: SilentBanRule[]; expiresAt: number } | null = null;
+let rulesCacheInFlight: Promise<SilentBanRule[]> | null = null;
+let rulesCacheGeneration = 0;
 
 export function invalidateSilentBanRulesCache(): void {
+  rulesCacheGeneration += 1;
   rulesCache = null;
+  rulesCacheInFlight = null;
 }
 
 // ── Validation / mapping ─────────────────────────────────────────────────────
@@ -425,12 +429,31 @@ async function getEnabledRulesCached(): Promise<SilentBanRule[]> {
     return rulesCache.rules;
   }
 
-  const rules = await listSilentBanRules({ enabledOnly: true });
-  rulesCache = {
-    rules,
-    expiresAt: Date.now() + RULES_CACHE_TTL_MS,
-  };
-  return rules;
+  if (rulesCacheInFlight) return rulesCacheInFlight;
+
+  const generation = rulesCacheGeneration;
+  const pending = listSilentBanRules({ enabledOnly: true }).then((rules) => {
+    // A CRUD operation may invalidate the cache while the query is in flight.
+    if (generation === rulesCacheGeneration) {
+      rulesCache = {
+        rules,
+        expiresAt: Date.now() + RULES_CACHE_TTL_MS,
+      };
+    }
+    return rules;
+  });
+
+  rulesCacheInFlight = pending;
+  void pending.then(
+    () => {
+      if (rulesCacheInFlight === pending) rulesCacheInFlight = null;
+    },
+    () => {
+      if (rulesCacheInFlight === pending) rulesCacheInFlight = null;
+    },
+  );
+
+  return pending;
 }
 
 export async function getSilentBanRule(

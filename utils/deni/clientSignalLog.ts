@@ -41,6 +41,24 @@ const MAX_QUERY_LIMIT = 1_000;
 let seq = 0;
 const entries: ClientSignalLogEntry[] = [];
 
+/**
+ * Allowed requests can be very frequent. Set
+ * CLIENT_SIGNAL_ALLOWED_LOG_ENABLED=false to keep recording every decision in
+ * the ring buffer while suppressing only the noisy non-blocking console logs.
+ * Error/blocking outcomes continue to be logged.
+ */
+function isAllowedConsoleLogEnabled(): boolean {
+  const raw = Bun.env.CLIENT_SIGNAL_ALLOWED_LOG_ENABLED?.trim().toLowerCase();
+  return !(raw === "0" || raw === "false" || raw === "no" || raw === "off");
+}
+
+function shouldConsoleLog(entry: ClientSignalLogEntry): boolean {
+  if (entry.outcome === "allowed" || entry.outcome === "enforcement_disabled") {
+    return isAllowedConsoleLogEnabled();
+  }
+  return true;
+}
+
 function maxEntries(): number {
   const raw = Bun.env.CLIENT_SIGNAL_LOG_MAX;
   if (!raw) return DEFAULT_MAX_ENTRIES;
@@ -57,7 +75,9 @@ function clampLimit(limit: number | undefined): number {
 }
 
 /**
- * Record a client-signal decision: always console-log and keep in the ring buffer.
+ * Record a client-signal decision: keep every entry in the ring buffer and
+ * console-log it unless the allowed-log switch suppresses this non-blocking
+ * outcome.
  */
 export function recordClientSignalLog(
   input: Omit<ClientSignalLogEntry, "id" | "at"> & { at?: string },
@@ -80,10 +100,12 @@ export function recordClientSignalLog(
     entries.splice(0, entries.length - cap);
   }
 
-  console.log(
-    `[ClientSignal] ${entry.outcome} client=${entry.client ?? "none"} user=${entry.userId} ${entry.method} ${entry.path}`,
-    entry.headers,
-  );
+  if (shouldConsoleLog(entry)) {
+    console.log(
+      `[ClientSignal] ${entry.outcome} client=${entry.client ?? "none"} user=${entry.userId} ${entry.method} ${entry.path}`,
+      entry.headers,
+    );
+  }
 
   return entry;
 }

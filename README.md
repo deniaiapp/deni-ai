@@ -109,10 +109,24 @@ OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_COMPAT_BASE_URL=https://capi.voids.top/v2
 OPENAI_COMPAT_API_KEY=a
 ANTHROPIC_API_KEY=your_anthropic_api_key_here
+# Optional performance safeguards
+FLIXA_UPSTREAM_TIMEOUT_MS=120000
+FLIXA_USAGE_FINALIZE_ASYNC=false
+ACCESS_LOG_ENABLED=false
+CLIENT_SIGNAL_ALLOWED_LOG_ENABLED=false
 ```
 
 Get your OpenRouter API key from [OpenRouter](https://openrouter.ai/keys).
 `OPENROUTER_API_KEY` is required when `model` includes `/` (OpenRouter format). If you use an OpenAI-compatible model name without `/`, requests go to `OPENAI_COMPAT_BASE_URL`.
+
+`FLIXA_UPSTREAM_TIMEOUT_MS` is an upstream connect/idle timeout. Streaming
+requests refresh it whenever a chunk arrives, so a healthy long-running stream
+is not cut off by total duration. Set it to `0` to disable it. Access logs and
+allowed client-signal console logs can be disabled independently in production;
+the in-memory client-signal lookup ring buffer remains available.
+`FLIXA_USAGE_FINALIZE_ASYNC=true` returns token-metered responses without waiting
+for the usage upsert; use it only when a short quota visibility delay is
+acceptable.
 
 ## Supported Models
 

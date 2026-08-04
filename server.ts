@@ -20,8 +20,20 @@ warnAdminConfigAtStartup();
 
 const app = new Hono();
 
+/**
+ * Access logs are useful during development, but can be noisy on busy
+ * production instances. Keep the existing default and allow operators to
+ * disable only the request logger with ACCESS_LOG_ENABLED=false.
+ */
+function isAccessLogEnabled(): boolean {
+  const raw = Bun.env.ACCESS_LOG_ENABLED?.trim().toLowerCase();
+  return !(raw === "0" || raw === "false" || raw === "no" || raw === "off");
+}
+
 // Middleware
-app.use("*", logger());
+if (isAccessLogEnabled()) {
+  app.use("*", logger());
+}
 app.use("*", cors());
 app.use("*", logErrorResponses);
 
