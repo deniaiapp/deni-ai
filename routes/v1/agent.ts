@@ -35,6 +35,11 @@ import {
   applyResponsesBestPractices,
   isChatViaResponsesEnabled,
   isOpenAIFamilyModel,
+  assertNoReservedCollaborationToolsInUpstreamBody,
+  rewriteCollaborationNamesInChatPayload,
+  rewriteCollaborationNamesInResponsesPayload,
+  rewriteCollaborationNamesInSseEventBlock,
+  sanitizeReservedCollaborationInResponsesRequest,
   type ResponsesProviderKind,
 } from "../../utils/agent";
 import { computeMeteredTokens } from "../../utils/agent/usageMetering";
@@ -793,7 +798,12 @@ function normalizeResponsesRequest(
     normalized.context_management = body.context_management;
   }
 
-  return applyResponsesBestPractices(normalized, provider);
+  const withBestPractices = applyResponsesBestPractices(normalized, provider);
+  sanitizeReservedCollaborationInResponsesRequest(
+    withBestPractices,
+    body.model,
+  );
+  return withBestPractices;
 }
 
 /**
@@ -844,7 +854,12 @@ function buildResponsesRequestFromChat(
     normalized.tool_choice = toolChoice;
   }
 
-  return applyResponsesBestPractices(normalized, provider);
+  const withBestPractices = applyResponsesBestPractices(normalized, provider);
+  sanitizeReservedCollaborationInResponsesRequest(
+    withBestPractices,
+    body.model,
+  );
+  return withBestPractices;
 }
 
 function shouldRouteChatViaResponses(model: string): boolean {
@@ -891,6 +906,7 @@ function normalizeCompactRequest(
     delete normalized.previous_response_id;
   }
 
+  sanitizeReservedCollaborationInResponsesRequest(normalized, body.model);
   return normalized;
 }
 
@@ -930,6 +946,10 @@ async function proxyResponsesUpstream(options: {
           model,
         )
       : providerRequest;
+
+  // Last-mile guard: the body sent below must never contain a client-defined
+  // collaboration.* function schema reserved by the upstream model.
+  assertNoReservedCollaborationToolsInUpstreamBody(upstreamBody, model);
 
   agentDebugLog("responses.upstream_request", () => ({
     requestId,
@@ -997,10 +1017,9 @@ async function proxyResponsesUpstream(options: {
   }
 
   if (asChatCompletion) {
-    const chatCompletion = convertResponsesToChatCompletion(
-      parsedResponse ?? {},
-      model,
-    );
+    const chatCompletion = rewriteCollaborationNamesInChatPayload(
+      convertResponsesToChatCompletion(parsedResponse ?? {}, model),
+    ) as Record<string, unknown>;
     await finalizeUsage(auth, chatCompletion.usage);
     agentDebugLog("chat.response_via_responses", () => ({
       requestId,
@@ -1013,14 +1032,23 @@ async function proxyResponsesUpstream(options: {
     });
   }
 
-  await finalizeUsage(auth, parsedResponse?.usage);
-  return new Response(responseBody, {
-    status: response.status,
-    headers: {
-      "Content-Type":
-        response.headers.get("content-type") || "application/json",
+  const clientFacing =
+    parsedResponse !== null
+      ? (rewriteCollaborationNamesInResponsesPayload(
+          parsedResponse,
+        ) as Record<string, unknown>)
+      : null;
+  await finalizeUsage(auth, clientFacing?.usage ?? parsedResponse?.usage);
+  return new Response(
+    clientFacing !== null ? JSON.stringify(clientFacing) : responseBody,
+    {
+      status: response.status,
+      headers: {
+        "Content-Type":
+          response.headers.get("content-type") || "application/json",
+      },
     },
-  });
+  );
 }
 
 function createResponsesPassthroughStream(
@@ -1030,6 +1058,7 @@ function createResponsesPassthroughStream(
 ): Response {
   const reader = response.body!.getReader();
   const decoder = new TextDecoder();
+  const encoder = new TextEncoder();
   let usageSnapshot: Record<string, number> = {};
   let usageSettled = false;
   let cancelled = false;
@@ -1053,9 +1082,11 @@ function createResponsesPassthroughStream(
               eventBlock,
               usageSnapshot,
             );
+            const clientFacingEvent = rewriteCollaborationNamesInSseEventBlock(
+              eventBlock,
+            );
+            controller.enqueue(encoder.encode(`${clientFacingEvent}\n\n`));
           }
-
-          controller.enqueue(value);
         }
 
         if (cancelled) return;
@@ -1065,6 +1096,10 @@ function createResponsesPassthroughStream(
             buffer,
             usageSnapshot,
           );
+          const clientFacingEvent = rewriteCollaborationNamesInSseEventBlock(
+            buffer,
+          );
+          controller.enqueue(encoder.encode(clientFacingEvent));
         }
 
         usageSettled = true;
@@ -1162,7 +1197,10 @@ function createChatStreamFromResponsesUpstream(
               event,
               streamState,
             );
-            for (const chunk of chunks) {
+            for (const rawChunk of chunks) {
+              const chunk = rewriteCollaborationNamesInChatPayload(
+                rawChunk,
+              ) as Record<string, unknown>;
               const data = JSON.stringify(chunk);
               collectChatDebugFromSseEvent(`data: ${data}\n\n`, streamDebug);
               if (chunk.usage) {
@@ -1928,6 +1966,10 @@ router.post(
           tools: convertToolsToOpenRouter(tools),
           tool_choice: normalizedToolChoice,
         }, model);
+        assertNoReservedCollaborationToolsInUpstreamBody(
+          openrouterBody as unknown as Record<string, unknown>,
+          model,
+        );
 
         agentDebugLog("chat.upstream_request", () => ({
           requestId,
@@ -1995,6 +2037,7 @@ router.post(
         if (stream && response.body) {
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
+          const encoder = new TextEncoder();
           const streamDebug = createChatStreamDebugSummary();
           let usageSnapshot: Record<string, number> = {};
           let usageSettled = false;
@@ -2015,24 +2058,36 @@ router.post(
                   buffer = eventBlocks.pop() ?? "";
 
                   for (const eventBlock of eventBlocks) {
+                    const clientFacingEvent =
+                      rewriteCollaborationNamesInSseEventBlock(eventBlock);
                     usageSnapshot = collectChatUsageFromSseEvent(
-                      eventBlock,
+                      clientFacingEvent,
                       usageSnapshot,
                     );
-                    collectChatDebugFromSseEvent(eventBlock, streamDebug);
+                    collectChatDebugFromSseEvent(
+                      clientFacingEvent,
+                      streamDebug,
+                    );
+                    controller.enqueue(
+                      encoder.encode(`${clientFacingEvent}\n\n`),
+                    );
                   }
-
-                  controller.enqueue(value);
                 }
 
                 if (cancelled) return;
                 buffer += decoder.decode();
                 if (buffer.trim()) {
+                  const clientFacingEvent =
+                    rewriteCollaborationNamesInSseEventBlock(buffer);
                   usageSnapshot = collectChatUsageFromSseEvent(
-                    buffer,
+                    clientFacingEvent,
                     usageSnapshot,
                   );
-                  collectChatDebugFromSseEvent(buffer, streamDebug);
+                  collectChatDebugFromSseEvent(
+                    clientFacingEvent,
+                    streamDebug,
+                  );
+                  controller.enqueue(encoder.encode(clientFacingEvent));
                 }
 
                 usageSettled = true;
@@ -2091,28 +2146,37 @@ router.post(
         }
 
         const responseBody = await response.text();
-        let parsedResponse: { usage?: unknown } | null = null;
+        let parsedResponse: Record<string, unknown> | null = null;
 
         try {
-          parsedResponse = JSON.parse(responseBody) as { usage?: unknown };
+          parsedResponse = JSON.parse(responseBody) as Record<string, unknown>;
         } catch {
           parsedResponse = null;
         }
 
-        await finalizeUsage(auth, parsedResponse?.usage);
+        const clientFacing =
+          parsedResponse !== null
+            ? (rewriteCollaborationNamesInChatPayload(
+                parsedResponse,
+              ) as Record<string, unknown>)
+            : null;
+        await finalizeUsage(auth, clientFacing?.usage ?? parsedResponse?.usage);
         agentDebugLog("chat.response", () => ({
           requestId,
           provider: providerName,
           status: response.status,
-          response: summarizeChatCompletionResponse(parsedResponse),
+          response: summarizeChatCompletionResponse(clientFacing ?? parsedResponse),
         }));
-        return new Response(responseBody, {
-          status: response.status,
-          headers: {
-            "Content-Type":
-              response.headers.get("content-type") || "application/json",
+        return new Response(
+          clientFacing !== null ? JSON.stringify(clientFacing) : responseBody,
+          {
+            status: response.status,
+            headers: {
+              "Content-Type":
+                response.headers.get("content-type") || "application/json",
+            },
           },
-        });
+        );
       }
 
       // Use OpenAI SDK for voids.top (fallback)
@@ -2141,6 +2205,11 @@ router.post(
         tools: tools && tools.length > 0 ? tools : undefined,
         tool_choice: normalizedToolChoice,
       };
+
+      assertNoReservedCollaborationToolsInUpstreamBody(
+        requestParams as unknown as Record<string, unknown>,
+        model,
+      );
 
       agentDebugLog("chat.upstream_request", () => ({
         requestId,
@@ -2176,13 +2245,16 @@ router.post(
             try {
               for await (const chunk of streamResponse) {
                 if (cancelled) return;
-                if (chunk.usage) {
+                const clientFacingChunk = rewriteCollaborationNamesInChatPayload(
+                  chunk,
+                ) as typeof chunk;
+                if (clientFacingChunk.usage) {
                   usageSnapshot = mergeUsageSnapshot(
                     usageSnapshot,
-                    chunk.usage,
+                    clientFacingChunk.usage,
                   );
                 }
-                const data = JSON.stringify(chunk);
+                const data = JSON.stringify(clientFacingChunk);
                 collectChatDebugFromSseEvent(`data: ${data}\n\n`, streamDebug);
                 controller.enqueue(encoder.encode(`data: ${data}\n\n`));
               }
@@ -2241,14 +2313,17 @@ router.post(
         ...requestParams,
         stream: false,
       });
+      const clientFacingResponse = rewriteCollaborationNamesInChatPayload(
+        response,
+      ) as typeof response;
 
-      await finalizeUsage(auth, response.usage);
+      await finalizeUsage(auth, clientFacingResponse.usage);
       agentDebugLog("chat.response", () => ({
         requestId,
         provider: providerName,
-        response: summarizeChatCompletionResponse(response),
+        response: summarizeChatCompletionResponse(clientFacingResponse),
       }));
-      return c.json(response, 200);
+      return c.json(clientFacingResponse, 200);
     } catch (error) {
       await releaseReservedUsage(auth);
       agentDebugLog("chat.error", {
@@ -2494,21 +2569,30 @@ router.post(
       }
 
       const responseBody = await response.text();
-      let parsedResponse: { usage?: unknown } | null = null;
+      let parsedResponse: Record<string, unknown> | null = null;
       try {
-        parsedResponse = JSON.parse(responseBody) as { usage?: unknown };
+        parsedResponse = JSON.parse(responseBody) as Record<string, unknown>;
       } catch {
         parsedResponse = null;
       }
 
-      await finalizeUsage(auth, parsedResponse?.usage);
-      return new Response(responseBody, {
-        status: response.status,
-        headers: {
-          "Content-Type":
-            response.headers.get("content-type") || "application/json",
+      const clientFacing =
+        parsedResponse !== null
+          ? (rewriteCollaborationNamesInResponsesPayload(
+              parsedResponse,
+            ) as Record<string, unknown>)
+          : null;
+      await finalizeUsage(auth, clientFacing?.usage ?? parsedResponse?.usage);
+      return new Response(
+        clientFacing !== null ? JSON.stringify(clientFacing) : responseBody,
+        {
+          status: response.status,
+          headers: {
+            "Content-Type":
+              response.headers.get("content-type") || "application/json",
+          },
         },
-      });
+      );
     } catch (error) {
       await releaseReservedUsage(auth);
       console.error("Agent responses compact error:", error);
