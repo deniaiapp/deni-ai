@@ -2,7 +2,7 @@
  * Detect allowed coding-agent / Flixa client signals.
  *
  * Abuse prevention: Deni AI API keys must only be used from known clients
- * (Codex, Claude Code, OpenCode, Flixa VS Code / SDK, Flixa CLI).
+ * (Codex, Claude Code, OpenCode, Zed, Flixa VS Code / SDK, Flixa CLI).
  * Requests without a matching signal are treated as unauthorized automation
  * and trigger a Flixa ban.
  */
@@ -11,6 +11,7 @@ export type KnownClient =
   | "codex"
   | "claude_code"
   | "opencode"
+  | "zed"
   | "flixa"
   | "flixa_cli";
 
@@ -164,6 +165,21 @@ export function detectClientSignal(headers: Headers): ClientSignalResult {
     headerValue(headers, "x-opencode").length > 0
   ) {
     return { allowed: true, client: "opencode" };
+  }
+
+  // ── Zed (Zed editor AI / agent) ──────────────────────────────────────────
+  // Observed traffic:
+  //   originator: zed
+  //   User-Agent: zed/<version> (Windows …; x86_64) unknown (zed; …)
+  if (
+    originator === "zed" ||
+    originator.startsWith("zed/") ||
+    originator.startsWith("zed_") ||
+    userAgent.startsWith("zed/") ||
+    /\bzed\//i.test(userAgent) ||
+    /\(zed[;)\s]/i.test(userAgent)
+  ) {
+    return { allowed: true, client: "zed" };
   }
 
   return { allowed: false, client: null };

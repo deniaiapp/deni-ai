@@ -128,7 +128,7 @@ function forbiddenAuthResponse(
 
 /**
  * After a key is valid, reject banned users and ban accounts that call the
- * agent API without an allowed client signal (Codex / Claude Code / OpenCode / Flixa).
+ * agent API without an allowed client signal (Codex / Claude Code / OpenCode / Zed / Flixa).
  *
  * Every request records a client-signal log (console + in-memory ring buffer
  * for /admin/lookup). Legacy AI SDK User-Agents (`ai/…`, `ai-sdk…`) get a soft

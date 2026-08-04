@@ -18,6 +18,7 @@ const CLIENTS = [
   "codex",
   "claude_code",
   "opencode",
+  "zed",
   "flixa",
   "flixa_cli",
   "none",

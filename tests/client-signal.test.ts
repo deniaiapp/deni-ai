@@ -84,6 +84,34 @@ describe("detectClientSignal", () => {
     ).toEqual({ allowed: true, client: "opencode" });
   });
 
+  test("detects Zed via originator and user-agent", () => {
+    expect(
+      detectClientSignal(
+        headers({
+          originator: "zed",
+          "user-agent":
+            "zed/0.145.0 (Windows 10.0.29639; x86_64) unknown (zed; 1.13.2+stable.335.5cdb7ab9d9546db683132cfa78e68acec3064cac)",
+        }),
+      ),
+    ).toEqual({ allowed: true, client: "zed" });
+
+    expect(
+      detectClientSignal(
+        headers({
+          "user-agent": "zed/0.145.0 (macOS 15.0; arm64) unknown (zed; 1.0.0)",
+        }),
+      ),
+    ).toEqual({ allowed: true, client: "zed" });
+
+    expect(
+      detectClientSignal(
+        headers({
+          originator: "zed",
+        }),
+      ),
+    ).toEqual({ allowed: true, client: "zed" });
+  });
+
   test("detects Flixa CLI via user-agent, x-client, and x-flixa-client", () => {
     expect(
       detectClientSignal(
