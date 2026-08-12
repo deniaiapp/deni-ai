@@ -25,20 +25,20 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.115.0",
-    "@openrouter/sdk": "^1.2.7",
-    "hono": "^4.13.0",
+    "@anthropic-ai/sdk": "^0.116.0",
+    "@openrouter/sdk": "^1.2.29",
+    "hono": "^4.13.1",
     "openai": "^7.4.0",
-    "pg": "^8.22.0"
+    "pg": "^8.23.0"
   },
   "engines": {
     "node": "22.22.0"
   },
   "devDependencies": {
     "@types/bun": "^1.3.14",
-    "@types/pg": "^8.20.3",
-    "oxfmt": "^0.62.0",
-    "oxlint": "^1.77.0",
+    "@types/pg": "^8.21.0",
+    "oxfmt": "^0.63.0",
+    "oxlint": "^1.78.0",
     "typescript": "^7.0.2"
   },
   "trustedDependencies": [
