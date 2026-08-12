@@ -13,10 +13,48 @@ import {
 } from "../utils/agent/reservedTools";
 
 describe("reserved collaboration tools", () => {
-  test("detects GPT-5.6 model aliases", () => {
+  test("detects GPT-5 family models that reserve collaboration tools", () => {
     expect(modelReservesCollaborationTools("openai/gpt-5.6-sol")).toBe(true);
+    expect(modelReservesCollaborationTools("openai/gpt-5.6-terra")).toBe(true);
+    expect(modelReservesCollaborationTools("openai/gpt-5.6-luna")).toBe(true);
     expect(modelReservesCollaborationTools("gpt-5-6-terra")).toBe(true);
-    expect(modelReservesCollaborationTools("openai/gpt-5.5")).toBe(false);
+    expect(modelReservesCollaborationTools("openai/gpt-5.5")).toBe(true);
+    expect(modelReservesCollaborationTools("openai/gpt-5.4")).toBe(true);
+    expect(modelReservesCollaborationTools("openai/gpt-5.3-codex")).toBe(true);
+    expect(modelReservesCollaborationTools("gpt-5.2")).toBe(true);
+    expect(modelReservesCollaborationTools("anthropic/claude-sonnet-4.6")).toBe(false);
+    expect(modelReservesCollaborationTools("openai/gpt-4.1")).toBe(false);
+  });
+
+  test("rewrites reserved tools for Terra, Luna, and GPT-5.5", () => {
+    for (const model of [
+      "openai/gpt-5.6-terra",
+      "openai/gpt-5.6-luna",
+      "openai/gpt-5.5",
+    ]) {
+      const request: Record<string, unknown> = {
+        model,
+        tools: [
+          {
+            type: "namespace",
+            name: "collaboration",
+            tools: [
+              {
+                type: "function",
+                name: "spawn_agent",
+                parameters: { type: "object" },
+              },
+            ],
+          },
+        ],
+      };
+
+      sanitizeReservedCollaborationInResponsesRequest(request);
+      expect(getFunctionToolName((request.tools as unknown[])[0])).toBe(
+        `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
+      );
+      expect(JSON.stringify(request)).not.toContain("collaboration.spawn_agent");
+    }
   });
 
   test("rewrites Responses and Chat tool definitions without dropping them", () => {
@@ -129,5 +167,126 @@ describe("reserved collaboration tools", () => {
     const outbound = rewriteCollaborationNameOutbound("collaboration.spawn_agent");
     expect(rewriteCollaborationNameOutbound(outbound)).toBe(outbound);
     expect(rewriteCollaborationNameInbound(outbound)).toBe("collaboration.spawn_agent");
+  });
+
+  test("flattens Codex collaboration namespace tools into safe functions", () => {
+    const request: Record<string, unknown> = {
+      model: "openai/gpt-5.6-sol",
+      tools: [
+        {
+          type: "namespace",
+          name: "collaboration",
+          tools: [
+            {
+              type: "function",
+              name: "spawn_agent",
+              parameters: {
+                type: "object",
+                properties: {
+                  task_name: { type: "string" },
+                  message: { type: "string" },
+                  agent_type: { type: "string" },
+                },
+              },
+            },
+            {
+              type: "function",
+              name: "wait_agent",
+              parameters: { type: "object" },
+            },
+          ],
+        },
+        { type: "function", name: "read_file" },
+      ],
+    };
+
+    const stats = sanitizeReservedCollaborationInResponsesRequest(request);
+
+    expect(stats.toolsRewritten).toBe(2);
+    expect(request.tools).toEqual([
+      {
+        type: "function",
+        name: `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
+        parameters: {
+          type: "object",
+          properties: {
+            task_name: { type: "string" },
+            message: { type: "string" },
+            agent_type: { type: "string" },
+          },
+        },
+      },
+      {
+        type: "function",
+        name: `${SAFE_COLLABORATION_PREFIX}wait_agent`,
+        parameters: { type: "object" },
+      },
+      { type: "function", name: "read_file" },
+    ]);
+    expect(JSON.stringify(request)).not.toContain("collaboration.spawn_agent");
+    expect(JSON.stringify(request.tools)).not.toContain('"collaboration"');
+  });
+
+  test("rewrites both top-level and nested function names", () => {
+    const request: Record<string, unknown> = {
+      tools: [
+        {
+          type: "function",
+          name: "collaboration.spawn_agent",
+          function: {
+            name: "collaboration.spawn_agent",
+            parameters: { type: "object" },
+          },
+        },
+      ],
+    };
+
+    sanitizeReservedCollaborationInResponsesRequest(request);
+
+    const tool = (request.tools as Array<Record<string, unknown>>)[0];
+    expect(tool.name).toBe(`${SAFE_COLLABORATION_PREFIX}spawn_agent`);
+    expect((tool.function as { name: string }).name).toBe(
+      `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
+    );
+  });
+
+  test("converts hosted reserved type tools into safe functions", () => {
+    const request: Record<string, unknown> = {
+      tools: [
+        {
+          type: "collaboration.spawn_agent",
+          parameters: {
+            type: "object",
+            properties: { agent_type: { type: "string" } },
+          },
+        },
+      ],
+    };
+
+    sanitizeReservedCollaborationInResponsesRequest(request);
+
+    expect(request.tools).toEqual([
+      {
+        type: "function",
+        name: `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
+        parameters: {
+          type: "object",
+          properties: { agent_type: { type: "string" } },
+        },
+      },
+    ]);
+  });
+
+  test("reverses dotted safe namespace names in responses", () => {
+    const response = rewriteCollaborationNamesInResponsesPayload({
+      output: [
+        {
+          type: "function_call",
+          name: "flixa_collab.spawn_agent",
+        },
+      ],
+    }) as { output: Array<{ name: string }> };
+
+    expect(response.output[0].name).toBe("collaboration.spawn_agent");
   });
 });
