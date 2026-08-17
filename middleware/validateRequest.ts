@@ -22,6 +22,10 @@ interface ResponsesRequestBody {
   max_output_tokens?: unknown;
   max_tokens?: unknown;
   stream?: unknown;
+  truncation?: unknown;
+  service_tier?: unknown;
+  prompt_cache_key?: unknown;
+  prompt_cache_retention?: unknown;
   tools?: unknown;
   tool_choice?: unknown;
   reasoning?: unknown;
@@ -60,6 +64,14 @@ const VALID_REASONING_SUMMARY = ["auto", "concise", "detailed"] as const;
 const VALID_REASONING_CONTEXT = ["auto", "current_turn", "all_turns"] as const;
 const VALID_REASONING_MODE = ["standard", "pro"] as const;
 const VALID_TOOL_CHOICE = ["none", "auto", "required"] as const;
+const VALID_RESPONSES_TRUNCATION = ["auto", "disabled"] as const;
+const VALID_RESPONSES_SERVICE_TIERS = [
+  "auto",
+  "default",
+  "flex",
+  "priority",
+] as const;
+const VALID_PROMPT_CACHE_RETENTION = ["in-memory", "24h"] as const;
 
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === "number" && Number.isFinite(value);
@@ -646,6 +658,10 @@ export async function validateResponsesRequest(c: Context, next: Next) {
       max_output_tokens,
       max_tokens,
       stream,
+      truncation,
+      service_tier,
+      prompt_cache_key,
+      prompt_cache_retention,
       tools,
       tool_choice,
       reasoning,
@@ -707,6 +723,63 @@ export async function validateResponsesRequest(c: Context, next: Next) {
         c,
         "stream must be a boolean",
         "stream",
+        "invalid_parameter",
+      );
+    }
+
+    if (
+      truncation !== undefined &&
+      (typeof truncation !== "string" ||
+        !VALID_RESPONSES_TRUNCATION.includes(
+          truncation as (typeof VALID_RESPONSES_TRUNCATION)[number],
+        ))
+    ) {
+      return invalidRequest(
+        c,
+        `truncation must be one of: ${VALID_RESPONSES_TRUNCATION.join(", ")}`,
+        "truncation",
+        "invalid_parameter",
+      );
+    }
+
+    if (
+      service_tier !== undefined &&
+      (typeof service_tier !== "string" ||
+        !VALID_RESPONSES_SERVICE_TIERS.includes(
+          service_tier as (typeof VALID_RESPONSES_SERVICE_TIERS)[number],
+        ))
+    ) {
+      return invalidRequest(
+        c,
+        `service_tier must be one of: ${VALID_RESPONSES_SERVICE_TIERS.join(", ")}`,
+        "service_tier",
+        "invalid_parameter",
+      );
+    }
+
+    if (
+      prompt_cache_key !== undefined &&
+      (typeof prompt_cache_key !== "string" || prompt_cache_key.length === 0)
+    ) {
+      return invalidRequest(
+        c,
+        "prompt_cache_key must be a non-empty string",
+        "prompt_cache_key",
+        "invalid_parameter",
+      );
+    }
+
+    if (
+      prompt_cache_retention !== undefined &&
+      (typeof prompt_cache_retention !== "string" ||
+        !VALID_PROMPT_CACHE_RETENTION.includes(
+          prompt_cache_retention as (typeof VALID_PROMPT_CACHE_RETENTION)[number],
+        ))
+    ) {
+      return invalidRequest(
+        c,
+        `prompt_cache_retention must be one of: ${VALID_PROMPT_CACHE_RETENTION.join(", ")}`,
+        "prompt_cache_retention",
         "invalid_parameter",
       );
     }

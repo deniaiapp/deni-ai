@@ -71,6 +71,10 @@ export interface ResponsesRequest {
   instructions?: string;
   previous_response_id?: string;
   stream?: boolean;
+  truncation?: "auto" | "disabled";
+  service_tier?: "auto" | "default" | "flex" | "priority";
+  prompt_cache_key?: string;
+  prompt_cache_retention?: "in-memory" | "24h";
   temperature?: number;
   max_output_tokens?: number;
   max_tokens?: number;

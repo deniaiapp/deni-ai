@@ -3,6 +3,10 @@ export interface ModelDefinition {
   label: string;
   description: string;
   tags: string[];
+  /** Maximum number of tokens available in one model request. */
+  contextWindow?: number;
+  /** Maximum number of tokens the model can generate in one request. */
+  maxOutputTokens?: number;
   premium?: boolean;
   tokenUsageMultiplier?: number;
   /**
@@ -19,6 +23,12 @@ export interface ModelDefinition {
 const OPENAI_1M_LONG_CONTEXT = {
   longContextThreshold: 200_000,
   longContextUsageMultiplier: 2,
+} as const;
+
+/** Current GPT-5.6 context/output limits from the OpenAI model catalog. */
+const GPT_5_6_CONTEXT = {
+  contextWindow: 1_050_000,
+  maxOutputTokens: 128_000,
 } as const;
 
 interface AnthropicCapabilityFlag {
@@ -67,7 +77,8 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     label: "GPT-5.6 Sol",
     description:
       "GPT-5.6 flagship: frontier reasoning, coding, agentic & long-context work.",
-    tags: ["general", "reasoning", "agentic", "long-context"],
+    tags: ["general", "reasoning", "agentic", "codex", "long-context"],
+    ...GPT_5_6_CONTEXT,
     tokenUsageMultiplier: 2,
     ...OPENAI_1M_LONG_CONTEXT,
     tier: "free",
@@ -77,7 +88,8 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     label: "GPT-5.6 Terra",
     description:
       "GPT-5.6 balanced tier: GPT-5.5-competitive performance at lower cost.",
-    tags: ["general", "reasoning", "balanced", "long-context"],
+    tags: ["general", "reasoning", "balanced", "codex", "long-context"],
+    ...GPT_5_6_CONTEXT,
     tokenUsageMultiplier: 1.5,
     ...OPENAI_1M_LONG_CONTEXT,
     tier: "free",
@@ -87,7 +99,8 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     label: "GPT-5.6 Luna",
     description:
       "GPT-5.6 fast & affordable tier for high-volume and lighter tasks.",
-    tags: ["fast", "lightweight", "long-context"],
+    tags: ["fast", "lightweight", "codex", "long-context"],
+    ...GPT_5_6_CONTEXT,
     ...OPENAI_1M_LONG_CONTEXT,
     tier: "free",
   },
@@ -248,6 +261,16 @@ export const DEFAULT_MODEL = "openai/gpt-5.5";
 export const AVAILABLE_MODELS = MODEL_DEFINITIONS.map((model) => model.id);
 export const DEFAULT_TOKEN_USAGE_MULTIPLIER = 1;
 
+/**
+ * OpenAI's unsuffixed `gpt-5.6` alias is the Sol tier. Resolve it before the
+ * provider check so Codex requests get the registered 1M-context metadata and
+ * the OpenRouter model id remains deterministic.
+ */
+const MODEL_ALIASES: ReadonlyMap<string, string> = new Map([
+  ["gpt-5.6", "openai/gpt-5.6-sol"],
+  ["openai/gpt-5.6", "openai/gpt-5.6-sol"],
+]);
+
 function stripModelProvider(modelId: string): string {
   const slashIndex = modelId.indexOf("/");
   return slashIndex === -1 ? modelId : modelId.slice(slashIndex + 1);
@@ -256,6 +279,11 @@ function stripModelProvider(modelId: string): string {
 export function resolveAvailableModelId(modelId: string): string {
   if (!modelId) {
     return modelId;
+  }
+
+  const alias = MODEL_ALIASES.get(modelId.toLowerCase());
+  if (alias) {
+    return alias;
   }
 
   const exactMatch = MODEL_DEFINITIONS.find((model) => model.id === modelId);
@@ -388,6 +416,10 @@ export function getModelDefinition(
 ): ModelDefinition | undefined {
   const resolvedModelId = resolveAvailableModelId(modelId);
   return MODEL_DEFINITIONS.find((m) => m.id === resolvedModelId);
+}
+
+export function getModelContextWindow(modelId: string): number | undefined {
+  return getModelDefinition(modelId)?.contextWindow;
 }
 
 function numField(

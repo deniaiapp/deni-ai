@@ -756,6 +756,28 @@ function normalizeResponsesRequest(
     normalized.stream = body.stream;
   }
 
+  // Codex uses these standard Responses fields to keep large histories
+  // within the selected model's context window and to control prompt cache
+  // behavior. Preserve them instead of silently dropping them at the proxy.
+  if (body.truncation !== undefined) {
+    normalized.truncation = body.truncation;
+  }
+
+  // These controls are OpenAI Responses options. Do not send them to
+  // OpenRouter, whose Responses compatibility layer does not guarantee the
+  // same provider-specific fields.
+  if (provider === "openai") {
+    if (body.service_tier !== undefined) {
+      normalized.service_tier = body.service_tier;
+    }
+    if (body.prompt_cache_key !== undefined) {
+      normalized.prompt_cache_key = body.prompt_cache_key;
+    }
+    if (body.prompt_cache_retention !== undefined) {
+      normalized.prompt_cache_retention = body.prompt_cache_retention;
+    }
+  }
+
   if (body.temperature !== undefined) {
     normalized.temperature = body.temperature;
   }

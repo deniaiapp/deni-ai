@@ -4,6 +4,25 @@ Long-running agent sessions accumulate messages, tool results, and retained reas
 
 Flixa does **not** auto-compact on every `/responses` call. The client decides when to compact.
 
+## Codex 1M context
+
+GPT-5.6 Sol, Terra, and Luna expose a `1,050,000`-token context window. When
+Codex uses this backend with the Responses wire API, set the local Codex
+context budget explicitly and leave room for automatic compaction:
+
+```toml
+model = "gpt-5.6-luna"
+model_context_window = 1000000
+model_auto_compact_token_limit = 900000
+
+[model_providers.flixa]
+wire_api = "responses"
+```
+
+The backend preserves Codex's Responses input, compaction settings, truncation
+mode, and retained reasoning items. Use `gpt-5.6` to select the Sol alias, or
+select `gpt-5.6-sol`, `gpt-5.6-terra`, or `gpt-5.6-luna` directly.
+
 ## Endpoints
 
 | Method | Path | Purpose |
