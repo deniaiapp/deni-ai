@@ -65,6 +65,10 @@ describe("logErrorResponses", () => {
         Boolean(item) && typeof item === "object",
     );
     expect(payload?.apiKey).toBe("deni_abc…2345");
+    expect(payload?.auth).toMatchObject({
+      hasAuthorization: false,
+      hasXApiKey: true,
+    });
     expect(JSON.stringify(payload)).not.toContain(rawKey);
   });
 });

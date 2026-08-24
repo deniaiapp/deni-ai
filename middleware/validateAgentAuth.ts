@@ -2,7 +2,7 @@ import { Context, Next } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {
   GUEST_ACCOUNT_ERROR_MESSAGE,
-  extractApiKey,
+  extractApiKeyFromHeaders,
   redactApiKey,
   validateDeniApiKey,
   getDeniBillingProfile,
@@ -42,6 +42,27 @@ export interface AgentAuthContext {
   tokenUsageMultiplier: number;
   /** False when FLIXA_AUTH_DISABLED bypasses billing and quota accounting. */
   usageMeteringEnabled: boolean;
+}
+
+function missingApiKeyMessage(c: Context): string {
+  const signal = detectClientSignal(c.req.raw.headers);
+  if (signal.client === 'codex') {
+    return (
+      'Authentication required. Codex did not send an API key. In ~/.codex/config.toml ' +
+      'set env_key on the Flixa provider (for example env_key = "FLIXA_API_KEY"), export ' +
+      'that variable, and set requires_openai_auth = false. Codex omits Authorization ' +
+      'when both env_key and requires_openai_auth are unset.'
+    );
+  }
+
+  if (signal.client === 'flixa' || signal.client === 'flixa_cli') {
+    return 'Authentication required. Please update the Flixa extension to the latest version.';
+  }
+
+  return (
+    'Authentication required. Provide an API key in the Authorization: Bearer header ' +
+    'or x-api-key.'
+  );
 }
 
 function authErrorMessage(code: string | null, fallback: string): string {
@@ -221,16 +242,14 @@ async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string }
     return { userId: getAuthDisabledUserId() };
   }
 
-  const authHeader = c.req.header('Authorization');
-  const apiKeyHeader = c.req.header('x-api-key');
-  const apiKey = extractApiKey(authHeader, apiKeyHeader);
+  const apiKey = extractApiKeyFromHeaders(c.req.raw.headers);
   const apiKeyRedacted = redactApiKey(apiKey);
 
   if (!apiKey) {
     return c.json(
       {
         error: {
-          message: 'Authentication required. Please update the Flixa extension to the latest version.',
+          message: missingApiKeyMessage(c),
           type: 'authentication_error',
           param: null,
           code: 'missing_api_key',

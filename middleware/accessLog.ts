@@ -1,5 +1,5 @@
 import { Context, Next } from "hono";
-import { redactApiKeyFromHeaders } from "../utils/deni/auth";
+import { redactApiKeyFromRequestHeaders } from "../utils/deni/auth";
 
 function requestPath(c: Context): string {
   const url = c.req.url;
@@ -30,10 +30,7 @@ export async function accessLog(c: Context, next: Next): Promise<void> {
   const userId = requestUserId(c);
   if (userId) extras.push(`user=${userId}`);
 
-  const apiKey = redactApiKeyFromHeaders(
-    c.req.header("Authorization"),
-    c.req.header("x-api-key"),
-  );
+  const apiKey = redactApiKeyFromRequestHeaders(c.req.raw.headers);
   if (apiKey) extras.push(`key=${apiKey}`);
 
   const extra = extras.length > 0 ? ` ${extras.join(" ")}` : "";

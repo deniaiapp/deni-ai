@@ -2,13 +2,16 @@ export { getDeniPool, closeDeniPool } from './db';
 export {
   GUEST_ACCOUNT_ERROR_MESSAGE,
   extractApiKey,
+  extractApiKeyFromHeaders,
   hashApiKey,
   invalidateUserAuthCache,
   redactApiKey,
   redactApiKeyFromHeaders,
+  redactApiKeyFromRequestHeaders,
+  summarizeRequestAuth,
   validateDeniApiKey,
 } from './auth';
-export type { ApiKeyValidationResult } from './auth';
+export type { ApiKeyValidationResult, RequestAuthSummary } from './auth';
 export { getDeniBillingProfile, getDeniUsageInfo, getUpgradeUrl, getUsageUnitForTier, getVerifyUrl, reserveUsageQuota, recordUsageQuota, releaseUsageQuota } from './usage';
 export type { UsageTier, UsageUnit } from './usage';
 export type { DeniUsageInfo, BillingRow, UsageQuotaRow } from './types';

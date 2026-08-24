@@ -133,6 +133,32 @@ full secret is never written. Admin lookup can filter on that fingerprint.
 for the usage upsert; use it only when a short quota visibility delay is
 acceptable.
 
+### Codex custom provider
+
+Codex only sends `Authorization: Bearer` when the provider has `env_key` or
+`requires_openai_auth = true`. If both are unset, Codex assumes the provider
+needs no auth and POSTs `/v1/agent/responses` with no key — this backend
+returns `401 missing_api_key`.
+
+```toml
+model = "gpt-5.6-luna"
+model_provider = "flixa"
+
+[model_providers.flixa]
+name = "Flixa"
+base_url = "https://YOUR_FLIXA_HOST/v1/agent"
+wire_api = "responses"
+env_key = "FLIXA_API_KEY"
+requires_openai_auth = false
+```
+
+```bash
+export FLIXA_API_KEY="deni_..."
+```
+
+Do not point the built-in `openai` provider at Flixa via `openai_base_url`
+unless you also send a Deni API key. ChatGPT login tokens are not Flixa keys.
+
 Set `FLIXA_AUTH_DISABLED=true` only for local development when you need to test
 upstream requests without a Deni API key or database-backed account. It
 bypasses Flixa API-key authentication, client-signal and ban enforcement,

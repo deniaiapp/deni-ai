@@ -91,9 +91,19 @@ function touchLastUsedAt(keyHash: string): void {
     .catch(err => console.error('Failed to update last_used_at:', err));
 }
 
+function firstNonEmpty(...values: Array<string | null | undefined>): string | null {
+  for (const value of values) {
+    const trimmed = value?.trim();
+    if (trimmed) return trimmed;
+  }
+  return null;
+}
+
 /**
  * Extract API key from Authorization Bearer or x-api-key.
  * HTTP Basic credentials are not treated as an API key.
+ * Bearer matching is case-insensitive. A raw `deni_…` Authorization value
+ * (no scheme) is also accepted.
  */
 export function extractApiKey(
   authHeader: string | undefined,
@@ -105,12 +115,66 @@ export function extractApiKey(
 
   if (!authHeader) return null;
 
-  if (authHeader.startsWith('Bearer ')) {
-    const key = authHeader.slice(7).trim();
+  const trimmed = authHeader.trim();
+  if (!trimmed) return null;
+
+  if (/^basic\s+/i.test(trimmed)) return null;
+
+  if (/^bearer\s+/i.test(trimmed)) {
+    const key = trimmed.replace(/^bearer\s+/i, '').trim();
     return key.length > 0 ? key : null;
   }
 
+  if (trimmed.startsWith('deni_')) {
+    return trimmed;
+  }
+
   return null;
+}
+
+/**
+ * Dedicated key headers Codex / OpenAI-compatible clients sometimes use
+ * instead of (or in addition to) Authorization.
+ */
+export function extractApiKeyFromHeaders(headers: Headers): string | null {
+  return extractApiKey(
+    headers.get('authorization') ?? undefined,
+    firstNonEmpty(
+      headers.get('x-api-key'),
+      headers.get('api-key'),
+      headers.get('x-openai-api-key'),
+    ) ?? undefined,
+  );
+}
+
+export type RequestAuthSummary = {
+  hasAuthorization: boolean;
+  authorizationScheme: string | null;
+  hasXApiKey: boolean;
+  hasApiKey: boolean;
+  hasOpenaiApiKey: boolean;
+};
+
+/**
+ * Presence-only auth header summary for logs. Never includes secret values.
+ */
+export function summarizeRequestAuth(headers: Headers): RequestAuthSummary {
+  const authorization = (headers.get('authorization') || '').trim();
+  let authorizationScheme: string | null = null;
+  if (authorization) {
+    const scheme = authorization.split(/\s+/, 1)[0] || authorization;
+    authorizationScheme = scheme.toLowerCase().startsWith('deni_')
+      ? 'deni_'
+      : scheme;
+  }
+
+  return {
+    hasAuthorization: authorization.length > 0,
+    authorizationScheme,
+    hasXApiKey: Boolean(headers.get('x-api-key')?.trim()),
+    hasApiKey: Boolean(headers.get('api-key')?.trim()),
+    hasOpenaiApiKey: Boolean(headers.get('x-openai-api-key')?.trim()),
+  };
 }
 
 /**
@@ -132,6 +196,10 @@ export function redactApiKeyFromHeaders(
   apiKeyHeader: string | undefined,
 ): string | null {
   return redactApiKey(extractApiKey(authHeader, apiKeyHeader));
+}
+
+export function redactApiKeyFromRequestHeaders(headers: Headers): string | null {
+  return redactApiKey(extractApiKeyFromHeaders(headers));
 }
 
 /**
