@@ -1,8 +1,41 @@
 import { Hono } from 'hono';
 import type { Context } from 'hono';
-import { validateDeniApiKey, getDeniUsageInfo } from '../../utils/deni';
+import {
+  getDeniUsageInfo,
+  getUpgradeUrl,
+  getVerifyUrl,
+  validateDeniApiKey,
+} from '../../utils/deni';
+import { isAuthDisabledMode } from '../../utils/authMode';
 
 const router = new Hono();
+
+function getAuthDisabledUsageInfo() {
+  const now = new Date().toISOString();
+  return {
+    tier: 'max' as const,
+    hasVerifiedPaymentMethod: true,
+    cardVerifiedAt: null,
+    cardFunding: null,
+    verifyUrl: getVerifyUrl(),
+    upgradeUrl: getUpgradeUrl(),
+    isTeam: false,
+    planId: null,
+    status: 'auth_disabled',
+    periodEnd: null,
+    maxModeEnabled: true,
+    maxModeEligible: true,
+    usage: (['basic', 'premium'] as const).map((category) => ({
+      category,
+      unit: 'tokens' as const,
+      limit: null,
+      used: 0,
+      remaining: null,
+      periodStart: now,
+      periodEnd: null,
+    })),
+  };
+}
 
 /**
  * Get Deni AI user's billing status, usage, and remaining quota
@@ -10,6 +43,11 @@ const router = new Hono();
  * Authentication: Bearer token with deni_ prefixed API key
  */
 async function handleBillingStatus(c: Context) {
+  if (isAuthDisabledMode()) {
+    // Keep the response shape stable while avoiding any auth/DB dependency.
+    return c.json(getAuthDisabledUsageInfo(), 200);
+  }
+
   // Extract API key from Authorization header
   const authHeader = c.req.header('Authorization');
   if (!authHeader) {

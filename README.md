@@ -114,6 +114,8 @@ FLIXA_UPSTREAM_TIMEOUT_MS=120000
 FLIXA_USAGE_FINALIZE_ASYNC=false
 ACCESS_LOG_ENABLED=false
 CLIENT_SIGNAL_ALLOWED_LOG_ENABLED=false
+# Local development only: bypass Flixa API/admin auth and related limits
+# FLIXA_AUTH_DISABLED=true
 ```
 
 Get your OpenRouter API key from [OpenRouter](https://openrouter.ai/keys).
@@ -124,9 +126,21 @@ requests refresh it whenever a chunk arrives, so a healthy long-running stream
 is not cut off by total duration. Set it to `0` to disable it. Access logs and
 allowed client-signal console logs can be disabled independently in production;
 the in-memory client-signal lookup ring buffer remains available.
+Access logs, HTTP error logs, and client-signal logs include a redacted API key
+fingerprint (`deni_xxxx…yyyy`) from `Authorization: Bearer` or `x-api-key`; the
+full secret is never written. Admin lookup can filter on that fingerprint.
 `FLIXA_USAGE_FINALIZE_ASYNC=true` returns token-metered responses without waiting
 for the usage upsert; use it only when a short quota visibility delay is
 acceptable.
+
+Set `FLIXA_AUTH_DISABLED=true` only for local development when you need to test
+upstream requests without a Deni API key or database-backed account. It
+bypasses Flixa API-key authentication, client-signal and ban enforcement,
+billing/tier/quota checks, rate limits, and `/admin` authentication. Request
+shape validation and upstream provider credentials are still required. The
+server logs a prominent warning when this mode is enabled; never enable it on
+an internet-facing or production instance. Optionally set
+`FLIXA_AUTH_DISABLED_USER_ID` to choose the synthetic user id used internally.
 
 ## Supported Models
 
@@ -147,6 +161,21 @@ See the full list at [OpenRouter Models](https://openrouter.ai/models).
 ```bash
 bun start
 ```
+
+For automatic restart after a Bun crash:
+
+```bash
+bun run start:supervised
+```
+
+Pass server arguments after `--` when needed:
+
+```bash
+bun run start:supervised -- --port 3000
+```
+
+The supervisor restarts only non-zero exits, uses a bounded backoff, and stops
+without restarting when you press Ctrl+C.
 
 For development with auto-reload:
 

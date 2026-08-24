@@ -8,6 +8,7 @@ import {
   logAdminAudit,
   verifyAdminCredentialsSecure,
 } from "../utils/adminSecurity";
+import { isAuthDisabledMode } from "../utils/authMode";
 
 /**
  * Admin auth for /admin/*.
@@ -276,6 +277,11 @@ function ipDeniedResponse(c: Context, ip: string): Response {
  */
 export const adminAuth: MiddlewareHandler = async (c: Context, next: Next) => {
   applyAdminSecurityHeaders(c);
+
+  if (isAuthDisabledMode()) {
+    await next();
+    return;
+  }
 
   const password = adminPassword();
   if (!password) {

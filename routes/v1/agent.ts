@@ -1560,7 +1560,7 @@ async function finalizeUsage(
   auth: AgentAuthContext | undefined,
   usage: unknown,
 ): Promise<void> {
-  if (!auth) return;
+  if (!auth || auth.usageMeteringEnabled === false) return;
 
   auth.usageReserved = false;
 
@@ -1623,7 +1623,9 @@ function isAsyncUsageFinalizationEnabled(): boolean {
 async function releaseReservedUsage(
   auth: AgentAuthContext | undefined,
 ): Promise<void> {
-  if (!auth?.usageReserved) return;
+  if (!auth || auth.usageMeteringEnabled === false || !auth.usageReserved) {
+    return;
+  }
   auth.usageReserved = false;
   await releaseUsageQuota(auth.userId, auth.modelCategory, auth.tier);
 }

@@ -28,6 +28,7 @@ export const adminLookupRouter = new Hono();
 
 adminLookupRouter.get("/lookup/api", (c) => {
   const userId = c.req.query("userId") || undefined;
+  const apiKey = c.req.query("apiKey") || undefined;
   const client = c.req.query("client") || undefined;
   const outcome = c.req.query("outcome") || undefined;
   const path = c.req.query("path") || undefined;
@@ -43,6 +44,7 @@ adminLookupRouter.get("/lookup/api", (c) => {
   const stats = getClientSignalLogStats();
   const entries = queryClientSignalLogs({
     userId,
+    apiKey,
     client,
     outcome,
     path,
@@ -242,7 +244,7 @@ function renderLookupPage(): string {
       color: var(--muted);
     }
     .error { color: var(--bad); }
-    .user { max-width: 180px; word-break: break-all; }
+    .user, .key { max-width: 180px; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -261,6 +263,9 @@ function renderLookupPage(): string {
     <form class="filters" id="filters">
       <label>User ID
         <input name="userId" type="search" placeholder="substring" autocomplete="off" />
+      </label>
+      <label>API key
+        <input name="apiKey" type="search" placeholder="deni_xxxx…" autocomplete="off" />
       </label>
       <label>Client
         <select name="client">
@@ -301,12 +306,13 @@ function renderLookupPage(): string {
             <th>Outcome</th>
             <th>Client</th>
             <th>User</th>
+            <th>API key</th>
             <th>Request</th>
             <th>Headers</th>
           </tr>
         </thead>
         <tbody id="rows">
-          <tr><td colspan="6" class="empty">Loading…</td></tr>
+          <tr><td colspan="7" class="empty">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -360,7 +366,7 @@ function renderLookupPage(): string {
             return;
           }
           const text = await res.text();
-          rows.innerHTML = '<tr><td colspan="6" class="error">' + esc(res.status + ' ' + text) + '</td></tr>';
+          rows.innerHTML = '<tr><td colspan="7" class="error">' + esc(res.status + ' ' + text) + '</td></tr>';
           return;
         }
         const data = await res.json();
@@ -373,7 +379,7 @@ function renderLookupPage(): string {
 
         const entries = data.entries || [];
         if (!entries.length) {
-          rows.innerHTML = '<tr><td colspan="6" class="empty">No matching client signal logs.</td></tr>';
+          rows.innerHTML = '<tr><td colspan="7" class="empty">No matching client signal logs.</td></tr>';
           return;
         }
 
@@ -386,13 +392,14 @@ function renderLookupPage(): string {
               '<td><span class="badge ' + outcome + '">' + outcome + '</span></td>' +
               '<td class="mono">' + client + '</td>' +
               '<td class="mono user">' + esc(e.userId) + '</td>' +
+              '<td class="mono key">' + esc(e.apiKey || '') + '</td>' +
               '<td class="mono">' + esc(e.method) + ' ' + esc(e.path) + '</td>' +
               '<td class="headers mono">' + esc(formatHeaders(e.headers)) + '</td>' +
             '</tr>'
           );
         }).join('');
       } catch (err) {
-        rows.innerHTML = '<tr><td colspan="6" class="error">' + esc(err && err.message ? err.message : err) + '</td></tr>';
+        rows.innerHTML = '<tr><td colspan="7" class="error">' + esc(err && err.message ? err.message : err) + '</td></tr>';
       }
     }
 

@@ -92,6 +92,49 @@ function touchLastUsedAt(keyHash: string): void {
 }
 
 /**
+ * Extract API key from Authorization Bearer or x-api-key.
+ * HTTP Basic credentials are not treated as an API key.
+ */
+export function extractApiKey(
+  authHeader: string | undefined,
+  apiKeyHeader: string | undefined,
+): string | null {
+  if (apiKeyHeader && apiKeyHeader.trim().length > 0) {
+    return apiKeyHeader.trim();
+  }
+
+  if (!authHeader) return null;
+
+  if (authHeader.startsWith('Bearer ')) {
+    const key = authHeader.slice(7).trim();
+    return key.length > 0 ? key : null;
+  }
+
+  return null;
+}
+
+/**
+ * Fingerprint for logs and admin lookup. Never log the full secret.
+ * Example: `deni_abc1…wxyz`
+ */
+export function redactApiKey(rawKey: string | null | undefined): string | null {
+  if (!rawKey) return null;
+  const key = rawKey.trim();
+  if (!key) return null;
+  if (key.length <= 12) {
+    return `${key.slice(0, Math.min(4, key.length))}…`;
+  }
+  return `${key.slice(0, 8)}…${key.slice(-4)}`;
+}
+
+export function redactApiKeyFromHeaders(
+  authHeader: string | undefined,
+  apiKeyHeader: string | undefined,
+): string | null {
+  return redactApiKey(extractApiKey(authHeader, apiKeyHeader));
+}
+
+/**
  * Hash an API key using SHA-256
  */
 export function hashApiKey(rawKey: string): string {

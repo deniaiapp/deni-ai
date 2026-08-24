@@ -1,4 +1,5 @@
 import { Context, Next } from "hono";
+import { redactApiKeyFromHeaders } from "../utils/deni/auth";
 
 const MAX_LOGGED_BODY_LENGTH = 2_000;
 
@@ -49,6 +50,9 @@ export async function logErrorResponses(c: Context, next: Next): Promise<void> {
   }
 
   const responseBody = await getResponseBodyPreview(c);
+  const auth = c.get("agentAuth") as { userId?: string } | undefined;
+  const userId =
+    (c.get("agentUserId") as string | undefined) || auth?.userId || null;
 
   console.error("[http_error_response]", {
     method: c.req.method,
@@ -56,6 +60,11 @@ export async function logErrorResponses(c: Context, next: Next): Promise<void> {
     status: c.res.status,
     durationMs: Date.now() - startedAt,
     contentType: c.res.headers.get("content-type"),
+    userId,
+    apiKey: redactApiKeyFromHeaders(
+      c.req.header("Authorization"),
+      c.req.header("x-api-key"),
+    ),
     responseBody,
   });
 }

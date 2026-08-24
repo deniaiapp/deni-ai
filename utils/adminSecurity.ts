@@ -3,6 +3,7 @@
  */
 
 import { getClientIp } from "./rateLimit";
+import { isAuthDisabledMode } from "./authMode";
 
 const WEAK_PASSWORDS = new Set(
   [
@@ -123,6 +124,13 @@ export function assessAdminPassword(password: string | undefined): AdminPassword
 }
 
 export function warnAdminConfigAtStartup(): void {
+  if (isAuthDisabledMode()) {
+    console.warn(
+      "[Security] FLIXA_AUTH_DISABLED=true — API, admin auth, billing/quota, bans, and rate limits are bypassed.",
+    );
+    return;
+  }
+
   const password = Bun.env.ADMIN_PASSWORD;
   if (!password) {
     console.warn(

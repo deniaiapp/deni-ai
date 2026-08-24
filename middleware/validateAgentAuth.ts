@@ -2,6 +2,8 @@ import { Context, Next } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {
   GUEST_ACCOUNT_ERROR_MESSAGE,
+  extractApiKey,
+  redactApiKey,
   validateDeniApiKey,
   getDeniBillingProfile,
   getUpgradeUrl,
@@ -23,6 +25,10 @@ import {
 import { recordClientSignalLog } from '../utils/deni/clientSignalLog';
 import { getModelTokenUsageMultiplier } from '../utils/agent/models';
 import { checkUserRateLimit } from './rateLimit';
+import {
+  getAuthDisabledUserId,
+  isAuthDisabledMode,
+} from '../utils/authMode';
 
 export interface AgentAuthContext {
   userId: string;
@@ -34,24 +40,8 @@ export interface AgentAuthContext {
   hasVerifiedPaymentMethod: boolean;
   /** Base model multiplier; long-context surcharge is applied at finalize. */
   tokenUsageMultiplier: number;
-}
-
-/**
- * Extract API key from Authorization or x-api-key headers.
- */
-function extractApiKey(authHeader: string | undefined, apiKeyHeader: string | undefined): string | null {
-  if (apiKeyHeader && apiKeyHeader.trim().length > 0) {
-    return apiKeyHeader.trim();
-  }
-
-  if (!authHeader) return null;
-
-  // Support "Bearer <key>" format
-  if (authHeader.startsWith('Bearer ')) {
-    return authHeader.slice(7);
-  }
-
-  return null;
+  /** False when FLIXA_AUTH_DISABLED bypasses billing and quota accounting. */
+  usageMeteringEnabled: boolean;
 }
 
 function authErrorMessage(code: string | null, fallback: string): string {
@@ -137,12 +127,14 @@ function forbiddenAuthResponse(
 async function enforceFlixaAccessPolicy(
   c: Context,
   userId: string,
+  apiKey: string | null,
 ): Promise<Response | null> {
   const headers = c.req.raw.headers;
   const signal = detectClientSignal(headers);
   const clientHeaders = summarizeClientHeaders(headers);
   const logBase = {
     userId,
+    apiKey,
     path: c.req.path,
     method: c.req.method,
     client: signal.client,
@@ -225,9 +217,14 @@ async function enforceFlixaAccessPolicy(
 }
 
 async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string } | Response> {
+  if (isAuthDisabledMode()) {
+    return { userId: getAuthDisabledUserId() };
+  }
+
   const authHeader = c.req.header('Authorization');
   const apiKeyHeader = c.req.header('x-api-key');
   const apiKey = extractApiKey(authHeader, apiKeyHeader);
+  const apiKeyRedacted = redactApiKey(apiKey);
 
   if (!apiKey) {
     return c.json(
@@ -260,7 +257,11 @@ async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string }
     );
   }
 
-  const policyBlock = await enforceFlixaAccessPolicy(c, keyResult.userId);
+  const policyBlock = await enforceFlixaAccessPolicy(
+    c,
+    keyResult.userId,
+    apiKeyRedacted,
+  );
   if (policyBlock) {
     return policyBlock;
   }
@@ -298,10 +299,6 @@ export async function validateAgentAuth(c: Context, next: Next) {
     return keyValidation;
   }
 
-  // Get user's billing tier (cached, no usage rows — reserveUsageQuota reads
-  // the quota row itself, so fetching it here would be a redundant query)
-  const billingProfile = await getDeniBillingProfile(keyValidation.userId);
-
   // Get model from validated body
   const body = c.get('validatedBody') as { model?: string } | undefined;
   const model = body?.model;
@@ -320,9 +317,31 @@ export async function validateAgentAuth(c: Context, next: Next) {
     );
   }
 
-  // Check model category and reserve quota when needed
   const modelCategory = getModelCategory(model);
   const tokenUsageMultiplier = getModelTokenUsageMultiplier(model);
+
+  if (isAuthDisabledMode()) {
+    c.set('agentAuth', {
+      userId: keyValidation.userId,
+      modelId: model,
+      tier: 'max',
+      modelCategory,
+      usageUnit: 'tokens',
+      usageReserved: false,
+      hasVerifiedPaymentMethod: true,
+      tokenUsageMultiplier,
+      usageMeteringEnabled: false,
+    } satisfies AgentAuthContext);
+
+    await next();
+    return;
+  }
+
+  // Get user's billing tier (cached, no usage rows — reserveUsageQuota reads
+  // the quota row itself, so fetching it here would be a redundant query)
+  const billingProfile = await getDeniBillingProfile(keyValidation.userId);
+
+  // Check model category and reserve quota when needed
   const requiredTier = getRequiredTierForModel(model);
   const tier = billingProfile.tier;
 
@@ -376,6 +395,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
     usageReserved: quotaReservation.reserved,
     hasVerifiedPaymentMethod: billingProfile.hasVerifiedPaymentMethod,
     tokenUsageMultiplier,
+    usageMeteringEnabled: true,
   } satisfies AgentAuthContext);
 
   await next();

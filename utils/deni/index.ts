@@ -1,8 +1,11 @@
 export { getDeniPool, closeDeniPool } from './db';
 export {
   GUEST_ACCOUNT_ERROR_MESSAGE,
+  extractApiKey,
   hashApiKey,
   invalidateUserAuthCache,
+  redactApiKey,
+  redactApiKeyFromHeaders,
   validateDeniApiKey,
 } from './auth';
 export type { ApiKeyValidationResult } from './auth';

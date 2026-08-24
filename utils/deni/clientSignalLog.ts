@@ -17,6 +17,8 @@ export type ClientSignalLogEntry = {
   id: string;
   at: string;
   userId: string;
+  /** Redacted fingerprint only (never the full secret). */
+  apiKey: string | null;
   path: string;
   method: string;
   client: KnownClient | null;
@@ -27,6 +29,7 @@ export type ClientSignalLogEntry = {
 
 export type ClientSignalLogQuery = {
   userId?: string;
+  apiKey?: string;
   client?: string;
   outcome?: string;
   path?: string;
@@ -80,12 +83,16 @@ function clampLimit(limit: number | undefined): number {
  * outcome.
  */
 export function recordClientSignalLog(
-  input: Omit<ClientSignalLogEntry, "id" | "at"> & { at?: string },
+  input: Omit<ClientSignalLogEntry, "id" | "at" | "apiKey"> & {
+    at?: string;
+    apiKey?: string | null;
+  },
 ): ClientSignalLogEntry {
   const entry: ClientSignalLogEntry = {
     id: `${Date.now()}-${++seq}`,
     at: input.at ?? new Date().toISOString(),
     userId: input.userId,
+    apiKey: input.apiKey ?? null,
     path: input.path,
     method: input.method,
     client: input.client,
@@ -101,8 +108,9 @@ export function recordClientSignalLog(
   }
 
   if (shouldConsoleLog(entry)) {
+    const keyPart = entry.apiKey ? ` key=${entry.apiKey}` : "";
     console.log(
-      `[ClientSignal] ${entry.outcome} client=${entry.client ?? "none"} user=${entry.userId} ${entry.method} ${entry.path}`,
+      `[ClientSignal] ${entry.outcome} client=${entry.client ?? "none"} user=${entry.userId}${keyPart} ${entry.method} ${entry.path}`,
       entry.headers,
     );
   }
@@ -113,12 +121,14 @@ export function recordClientSignalLog(
 /**
  * Query recent logs (newest first). All filters are case-insensitive substring
  * matches except `allowed` / exact `outcome` / exact `client` when provided.
+ * `apiKey` matches the redacted fingerprint, not the raw secret.
  */
 export function queryClientSignalLogs(
   query: ClientSignalLogQuery = {},
 ): ClientSignalLogEntry[] {
   const limit = clampLimit(query.limit);
   const userId = query.userId?.trim().toLowerCase();
+  const apiKey = query.apiKey?.trim().toLowerCase();
   const client = query.client?.trim().toLowerCase();
   const outcome = query.outcome?.trim().toLowerCase();
   const path = query.path?.trim().toLowerCase();
@@ -130,6 +140,9 @@ export function queryClientSignalLogs(
     const entry = entries[i]!;
 
     if (userId && !entry.userId.toLowerCase().includes(userId)) {
+      continue;
+    }
+    if (apiKey && !(entry.apiKey ?? "").toLowerCase().includes(apiKey)) {
       continue;
     }
     if (client && (entry.client ?? "none") !== client) {

@@ -5,6 +5,7 @@
   "main": "server.ts",
   "scripts": {
     "start": "bun run server.ts",
+    "start:supervised": "bun run tools/supervise-server.ts",
     "dev": "bun --watch server.ts",
     "dev:prod-env": "bun --env-file=.env.production --watch server.ts",
     "build": "bun build server.ts --outdir ./dist --target bun",

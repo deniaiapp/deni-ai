@@ -13,6 +13,7 @@ import {
   failedLoginDelay,
   logAdminAudit,
 } from "../../utils/adminSecurity";
+import { isAuthDisabledMode } from "../../utils/authMode";
 
 export const adminAuthRouter = new Hono();
 
@@ -36,6 +37,10 @@ function safeNextPath(raw: string | undefined): string {
 }
 
 adminAuthRouter.get("/login", async (c) => {
+  if (isAuthDisabledMode()) {
+    return c.redirect(safeNextPath(c.req.query("next")), 302);
+  }
+
   const password = Bun.env.ADMIN_PASSWORD;
   if (!password) {
     return c.text(
@@ -56,6 +61,14 @@ adminAuthRouter.get("/login", async (c) => {
 });
 
 adminAuthRouter.post("/login", async (c) => {
+  if (isAuthDisabledMode()) {
+    const contentType = (c.req.header("content-type") || "").toLowerCase();
+    if (contentType.includes("application/json")) {
+      return c.json({ ok: true, next: "/admin/lookup" });
+    }
+    return c.redirect("/admin/lookup", 302);
+  }
+
   const password = Bun.env.ADMIN_PASSWORD;
   if (!password) {
     return c.text(

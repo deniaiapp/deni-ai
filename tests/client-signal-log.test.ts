@@ -75,4 +75,31 @@ describe("clientSignalLog", () => {
     );
     expect(queryClientSignalLogs({ allowed: false })).toHaveLength(1);
   });
+
+  test("filters by redacted apiKey substring", () => {
+    recordClientSignalLog({
+      userId: "user-a",
+      apiKey: "deni_abc1…wxyz",
+      path: "/v1/a",
+      method: "POST",
+      client: "codex",
+      allowed: true,
+      outcome: "allowed",
+      headers: {},
+    });
+    recordClientSignalLog({
+      userId: "user-b",
+      apiKey: "deni_zzzz…0000",
+      path: "/v1/b",
+      method: "POST",
+      client: "zed",
+      allowed: true,
+      outcome: "allowed",
+      headers: {},
+    });
+
+    expect(queryClientSignalLogs({ apiKey: "abc1" })).toHaveLength(1);
+    expect(queryClientSignalLogs({ apiKey: "abc1" })[0]!.userId).toBe("user-a");
+    expect(queryClientSignalLogs({ apiKey: "deni_" })).toHaveLength(2);
+  });
 });

@@ -10,6 +10,7 @@ describe("consumeRateLimit", () => {
   beforeEach(() => {
     clearRateLimitBuckets();
     delete Bun.env.RATE_LIMIT_ENABLED;
+    delete Bun.env.FLIXA_AUTH_DISABLED;
   });
 
   test("allows up to max requests in a window then blocks", () => {
@@ -65,6 +66,16 @@ describe("consumeRateLimit", () => {
       expect(consumeRateLimit("t", "spam", 1, 60_000, now + i).allowed).toBe(
         true,
       );
+    }
+  });
+
+  test("is bypassed by auth-disabled mode", () => {
+    Bun.env.FLIXA_AUTH_DISABLED = "true";
+    const now = 5_000_000;
+    for (let i = 0; i < 20; i++) {
+      expect(
+        consumeRateLimit("t", "auth-disabled", 1, 60_000, now + i).allowed,
+      ).toBe(true);
     }
   });
 });

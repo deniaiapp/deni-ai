@@ -7,6 +7,8 @@
  * deployment layer if needed.
  */
 
+import { isAuthDisabledMode } from "./authMode";
+
 export type RateLimitResult = {
   allowed: boolean;
   limit: number;
@@ -54,6 +56,10 @@ function parsePositiveInt(raw: string | undefined, fallback: number): number {
 }
 
 export function isRateLimitEnabled(): boolean {
+  if (isAuthDisabledMode()) {
+    return false;
+  }
+
   const raw = Bun.env.RATE_LIMIT_ENABLED?.toLowerCase();
   if (raw === "0" || raw === "false" || raw === "no" || raw === "off") {
     return false;
