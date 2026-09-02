@@ -48,10 +48,13 @@ function missingApiKeyMessage(c: Context): string {
   const signal = detectClientSignal(c.req.raw.headers);
   if (signal.client === 'codex') {
     return (
-      'Authentication required. Codex did not send an API key. In ~/.codex/config.toml ' +
-      'set env_key on the Flixa provider (for example env_key = "FLIXA_API_KEY"), export ' +
-      'that variable, and set requires_openai_auth = false. Codex omits Authorization ' +
-      'when both env_key and requires_openai_auth are unset.'
+      'Authentication required. Codex did not send an API key. In %USERPROFILE%\\.codex\\config.toml ' +
+      '(or ~/.codex/config.toml) set requires_openai_auth = false and either env_key = "FLIXA_API_KEY" ' +
+      'with that variable defined for the Codex process, or pin the key with ' +
+      '[model_providers.<id>.http_headers] Authorization = "Bearer deni_...". ' +
+      'Windows Codex TUI launched from the Start menu / a shortcut often cannot see a PowerShell $env: ' +
+      'set in another window. Restart Codex after saving. Codex omits Authorization when env_key is ' +
+      'unset or the env var is empty.'
     );
   }
 

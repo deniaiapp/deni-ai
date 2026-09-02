@@ -60,6 +60,12 @@ export async function logErrorResponses(c: Context, next: Next): Promise<void> {
   const headers = c.req.raw.headers;
   const signal = detectClientSignal(headers);
 
+  const headerNames: string[] = [];
+  headers.forEach((_, name) => {
+    headerNames.push(name.toLowerCase());
+  });
+  headerNames.sort();
+
   console.error("[http_error_response]", {
     method: c.req.method,
     path: c.req.path,
@@ -72,6 +78,7 @@ export async function logErrorResponses(c: Context, next: Next): Promise<void> {
     originator: headers.get("originator"),
     apiKey: redactApiKeyFromRequestHeaders(headers),
     auth: summarizeRequestAuth(headers),
+    headerNames,
     responseBody,
   });
 }

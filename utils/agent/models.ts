@@ -159,6 +159,15 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tier: "plus",
   },
   {
+    id: "anthropic/claude-fable-5.1",
+    label: "Claude Fable 5.1",
+    description: "The world's most advanced model for coding, knowledge work, and long-running problem solving.",
+    tags: ["coding", "agentic", "long-context"],
+    premium: true,
+    tokenUsageMultiplier: 5,
+    tier: "plus",
+  },
+  {
     id: "anthropic/claude-fable-5",
     label: "Claude Fable 5",
     description:
@@ -166,6 +175,15 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tags: ["powerful", "agentic", "long-context"],
     premium: true,
     tokenUsageMultiplier: 5,
+    tier: "plus",
+  },
+  {
+    id: "anthropic/claude-opus-5",
+    label: "Claude Opus 5",
+    description: "Latest Opus model: most capable, hybrid reasoning & long-horizon tasks.",
+    tags: ["powerful", "agentic"],
+    premium: true,
+    tokenUsageMultiplier: 3,
     tier: "plus",
   },
   {

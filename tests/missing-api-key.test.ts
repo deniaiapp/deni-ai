@@ -30,6 +30,22 @@ describe("missing_api_key", () => {
     expect(body.error.code).toBe("missing_api_key");
     expect(body.error.message).toContain("env_key");
     expect(body.error.message).toContain("requires_openai_auth = false");
+    expect(body.error.message).toContain("http_headers");
+  });
+
+  test("tells Windows Codex TUI to pin Authorization in config.toml", async () => {
+    const res = await app().request("/v1/agent/responses", {
+      method: "POST",
+      headers: {
+        "user-agent":
+          "codex-tui/0.149.1 (Windows 10.0.29639; x86_64) unknown (codex-tui; 0.149.1)",
+        originator: "codex-tui",
+      },
+    });
+    expect(res.status).toBe(401);
+    const body = (await res.json()) as { error: { message: string } };
+    expect(body.error.message).toContain("http_headers");
+    expect(body.error.message).toContain("Codex TUI");
   });
 
   test("keeps the Flixa extension message for first-party clients", async () => {

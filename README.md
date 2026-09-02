@@ -150,11 +150,20 @@ base_url = "https://YOUR_FLIXA_HOST/v1/agent"
 wire_api = "responses"
 env_key = "FLIXA_API_KEY"
 requires_openai_auth = false
+
+# Windows Codex TUI (Start menu / shortcut) often cannot see a PowerShell $env:.
+# http_headers is sent on every request without an environment variable.
+[model_providers.flixa.http_headers]
+Authorization = "Bearer deni_..."
 ```
 
 ```bash
 export FLIXA_API_KEY="deni_..."
 ```
+
+On Windows the file is `%USERPROFILE%\.codex\config.toml`. Restart Codex TUI
+after saving. A `codex-tui` 401 with `hasAuthorization: false` means this
+provider block is missing or the process has an empty `FLIXA_API_KEY`.
 
 Do not point the built-in `openai` provider at Flixa via `openai_base_url`
 unless you also send a Deni API key. ChatGPT login tokens are not Flixa keys.

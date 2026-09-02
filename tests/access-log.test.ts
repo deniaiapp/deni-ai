@@ -69,6 +69,7 @@ describe("logErrorResponses", () => {
       hasAuthorization: false,
       hasXApiKey: true,
     });
+    expect(payload?.headerNames).toEqual(expect.arrayContaining(["x-api-key"]));
     expect(JSON.stringify(payload)).not.toContain(rawKey);
   });
 });
