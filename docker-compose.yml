@@ -16,8 +16,6 @@ services:
       DENI_SCHEDULER: ${DENI_SCHEDULER:-true}
     expose:
       - "3000"
-    ports:
-      - "3000:3000"
     volumes:
       - deni-data:/app/.deni
     restart: unless-stopped

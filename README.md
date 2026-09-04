@@ -45,9 +45,9 @@ cp .env.example .env
 docker compose up --build
 ```
 
-http://localhost:3000
+Compose does not bind host port 3000 (Dokploy routes through Traefik). For a local bind, add `ports: ["3000:3000"]` under `app` temporarily.
 
-On Dokploy, create a **Compose** service from this repo (`docker-compose.yml`). Put the same variables in the Environment tab (Dokploy writes `.env` next to the compose file). Point `DATABASE_URL` at your Postgres instance. Point the domain at service `app`, port `3000`. The container runs migrations on start and enables the routine scheduler (`DENI_SCHEDULER=true`). Keep a single app replica, or set `DENI_SCHEDULER=false` on extras.
+On Dokploy, create a **Compose** service from this repo (`docker-compose.yml`). Put the same variables in the Environment tab (Dokploy writes `.env` next to the compose file). Point `DATABASE_URL` at your Postgres instance. Point the domain at service `app`, container port `3000`. The container runs migrations on start and enables the routine scheduler (`DENI_SCHEDULER=true`). Keep a single app replica, or set `DENI_SCHEDULER=false` on extras.
 
 Dockerfile-only deploys: build type **Dockerfile**, port `3000`, health check `/api/health`. Pass `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_APP_URL`, and `NEXT_PUBLIC_SUPPORT_EMAIL` as build arguments.
 
