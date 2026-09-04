@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FadeIn } from "@/components/motion";
 import { supportEmail, supportMailto } from "@/lib/site";
 
 export default function PrivacyPage() {
@@ -6,6 +7,7 @@ export default function PrivacyPage() {
   const mail = supportMailto();
   return (
     <main className="h-full overflow-y-auto bg-[#050505] px-6 py-12 text-[#f0f0f0]">
+      <FadeIn>
       <article className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-[#c8c8c8]">
         <Link href="/" className="text-xs text-[#8f8f8f] hover:text-[#f0f0f0]">
           Back
@@ -13,7 +15,8 @@ export default function PrivacyPage() {
         <h1 className="text-2xl font-semibold text-[#f0f0f0]">Privacy</h1>
         <p>
           Account authentication is handled on this service with Better Auth. You sign in with
-          Google or GitHub. Sessions are stored in Postgres. Conversation
+          Google or GitHub, then an authenticator app. Sessions and two-factor secrets are stored
+          in Postgres. Conversation
           history, teammates, routines, skills, and computer state are stored in Postgres keyed by
           your user ID. Workspace files and screenshots are stored in your tenant namespace on
           object storage (S3-compatible, typically Cloudflare R2).
@@ -48,6 +51,7 @@ export default function PrivacyPage() {
           .
         </p>
       </article>
+      </FadeIn>
     </main>
   );
 }

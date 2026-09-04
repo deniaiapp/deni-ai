@@ -1,8 +1,31 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { REGEXP_ONLY_DIGITS } from "input-otp";
+import { Check, Copy, Download } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
+import QRCode from "react-qr-code";
+import { FadeIn } from "@/components/motion";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import {
+  InputOTP,
+  InputOTPGroup,
+  InputOTPSeparator,
+  InputOTPSlot,
+} from "@/components/ui/input-otp";
+import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 
 function GoogleIcon() {
@@ -36,12 +59,205 @@ function GitHubIcon() {
   );
 }
 
+function OneTimeCode({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <InputOTP
+      id={id}
+      maxLength={6}
+      pattern={REGEXP_ONLY_DIGITS}
+      value={value}
+      onChange={onChange}
+      autoComplete="one-time-code"
+    >
+      <InputOTPGroup>
+        <InputOTPSlot index={0} />
+        <InputOTPSlot index={1} />
+        <InputOTPSlot index={2} />
+      </InputOTPGroup>
+      <InputOTPSeparator />
+      <InputOTPGroup>
+        <InputOTPSlot index={3} />
+        <InputOTPSlot index={4} />
+        <InputOTPSlot index={5} />
+      </InputOTPGroup>
+    </InputOTP>
+  );
+}
+
+function backupCodesFile(codes: string[]) {
+  return [
+    "Deni Run backup codes",
+    `Saved ${new Date().toISOString()}`,
+    "",
+    "Each code can be used once if you lose your authenticator app.",
+    "",
+    ...codes,
+    "",
+  ].join("\n");
+}
+
+function ActionFeedback({
+  done,
+  idleIcon,
+  doneIcon,
+  idleLabel,
+  doneLabel,
+}: {
+  done: boolean;
+  idleIcon: ReactNode;
+  doneIcon: ReactNode;
+  idleLabel: string;
+  doneLabel: string;
+}) {
+  return (
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.span
+        key={done ? doneLabel : idleLabel}
+        initial={{ y: 8, opacity: 0, filter: "blur(4px)" }}
+        animate={{ y: 0, opacity: 1, filter: "blur(0px)" }}
+        exit={{ y: -8, opacity: 0, filter: "blur(4px)" }}
+        transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+        className="inline-flex items-center gap-2"
+      >
+        <motion.span
+          key={done ? "done-icon" : "idle-icon"}
+          initial={{ scale: 0.6, rotate: -20 }}
+          animate={{ scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 520, damping: 22 }}
+          className="inline-flex"
+        >
+          {done ? doneIcon : idleIcon}
+        </motion.span>
+        {done ? doneLabel : idleLabel}
+      </motion.span>
+    </AnimatePresence>
+  );
+}
+
+export function BackupCodesPanel({ codes }: { codes: string[] }) {
+  const [copied, setCopied] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timer = window.setTimeout(() => setCopied(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [copied]);
+
+  useEffect(() => {
+    if (!saved) return;
+    const timer = window.setTimeout(() => setSaved(false), 1600);
+    return () => window.clearTimeout(timer);
+  }, [saved]);
+
+  async function copy() {
+    await navigator.clipboard.writeText(backupCodesFile(codes));
+    setCopied(true);
+  }
+
+  function download() {
+    const blob = new Blob([backupCodesFile(codes)], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "deni-run-backup-codes.txt";
+    link.click();
+    URL.revokeObjectURL(url);
+    setSaved(true);
+  }
+
+  if (!codes.length) return null;
+
+  return (
+    <div className="rounded-lg border border-white/10 bg-black/30 p-3">
+      <p className="mb-2 text-xs text-[#8f8f8f]">Save these backup codes. They are shown once.</p>
+      <div className="grid grid-cols-2 gap-1 font-mono text-xs">
+        {codes.map((item) => (
+          <span key={item}>{item}</span>
+        ))}
+      </div>
+      <div className="mt-3 flex gap-2">
+        <motion.div className="flex-1" animate={{ scale: copied ? 1.03 : 1 }} transition={{ type: "spring", stiffness: 400, damping: 18 }}>
+          <Button type="button" variant="secondary" size="sm" className="w-full" onClick={() => void copy()}>
+            <ActionFeedback
+              done={copied}
+              idleIcon={<Copy />}
+              doneIcon={<Check />}
+              idleLabel="Copy"
+              doneLabel="Copied"
+            />
+          </Button>
+        </motion.div>
+        <motion.div className="flex-1" animate={{ scale: saved ? 1.03 : 1 }} transition={{ type: "spring", stiffness: 400, damping: 18 }}>
+          <Button type="button" variant="secondary" size="sm" className="w-full" onClick={download}>
+            <ActionFeedback
+              done={saved}
+              idleIcon={<Download />}
+              doneIcon={<Check />}
+              idleLabel="Download"
+              doneLabel="Saved"
+            />
+          </Button>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
+function totpSecret(uri: string) {
+  try {
+    return new URL(uri).searchParams.get("secret") ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function AuthCard({
+  title,
+  description,
+  children,
+  footer,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+  footer?: ReactNode;
+}) {
+  return (
+    <main className="flex min-h-full items-center justify-center bg-[#050505] p-6">
+      <FadeIn className="flex w-full max-w-sm flex-col gap-6">
+        <Link href="/" className="text-center text-sm font-medium text-[#f0f0f0]">
+          Deni Run
+        </Link>
+        <Card className="gap-6 p-6">
+          <CardHeader className="items-center text-center">
+            <CardTitle className="text-lg">{title}</CardTitle>
+            <CardDescription>{description}</CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">{children}</CardContent>
+          {footer ? <CardFooter className="justify-center">{footer}</CardFooter> : null}
+        </Card>
+      </FadeIn>
+    </main>
+  );
+}
+
 export function SocialAuth({
   title,
   error,
+  mode,
 }: {
   title: string;
   error?: string;
+  mode: "sign-in" | "sign-up";
 }) {
   const [busy, setBusy] = useState<"google" | "github" | null>(null);
   const [localError, setLocalError] = useState("");
@@ -65,50 +281,238 @@ export function SocialAuth({
     (error === "auth" ? "Sign-in was cancelled or failed. Try again." : error);
 
   return (
-    <main className="flex min-h-full items-center justify-center bg-[#050505] p-6">
-      <div className="w-full max-w-sm rounded-xl border border-white/10 bg-[#111111] p-6">
-        <Link href="/" className="text-xs text-[#8f8f8f] hover:text-[#f0f0f0]">
-          Deni Run
-        </Link>
-        <h1 className="mt-4 text-xl font-semibold text-[#f0f0f0]">{title}</h1>
-        <p className="mt-2 text-sm text-[#8f8f8f]">Continue with Google or GitHub.</p>
-        <div className="mt-5 flex flex-col gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="md"
-            loading={busy === "google"}
-            disabled={busy !== null}
-            onClick={() => void signIn("google")}
-          >
-            {busy === "google" ? null : <GoogleIcon />}
-            Continue with Google
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="md"
-            loading={busy === "github"}
-            disabled={busy !== null}
-            onClick={() => void signIn("github")}
-          >
-            {busy === "github" ? null : <GitHubIcon />}
-            Continue with GitHub
-          </Button>
-        </div>
-        {message ? <p className="mt-4 text-sm text-red-300">{message}</p> : null}
-        <p className="mt-4 text-xs text-[#8f8f8f]">
-          By continuing you agree to the{" "}
-          <Link href="/terms" className="text-[#c8c8c8] hover:text-[#f0f0f0]">
-            Terms
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="text-[#c8c8c8] hover:text-[#f0f0f0]">
-            Privacy
-          </Link>{" "}
-          pages.
+    <AuthCard
+      title={title}
+      description="Continue with Google or GitHub, then set up an authenticator app."
+      footer={
+        <p className="text-center text-xs text-[#8f8f8f]">
+          {mode === "sign-in" ? (
+            <>
+              New here?{" "}
+              <Link href="/sign-up" className="text-[#f0f0f0] hover:underline">
+                Create an account
+              </Link>
+            </>
+          ) : (
+            <>
+              Already have an account?{" "}
+              <Link href="/sign-in" className="text-[#f0f0f0] hover:underline">
+                Sign in
+              </Link>
+            </>
+          )}
         </p>
+      }
+    >
+      <Button
+        type="button"
+        variant="outline"
+        size="md"
+        className="w-full"
+        loading={busy === "google"}
+        disabled={busy !== null}
+        onClick={() => void signIn("google")}
+      >
+        {busy === "google" ? null : <GoogleIcon />}
+        Continue with Google
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="md"
+        className="w-full"
+        loading={busy === "github"}
+        disabled={busy !== null}
+        onClick={() => void signIn("github")}
+      >
+        {busy === "github" ? null : <GitHubIcon />}
+        Continue with GitHub
+      </Button>
+      {message ? <p className="text-center text-sm text-red-300">{message}</p> : null}
+      <p className="text-center text-xs text-[#8f8f8f]">
+        By continuing you agree to the{" "}
+        <Link href="/terms" className="text-[#c8c8c8] hover:text-[#f0f0f0]">
+          Terms
+        </Link>{" "}
+        and{" "}
+        <Link href="/privacy" className="text-[#c8c8c8] hover:text-[#f0f0f0]">
+          Privacy
+        </Link>{" "}
+        pages.
+      </p>
+    </AuthCard>
+  );
+}
+
+export function TwoFactorForm() {
+  const router = useRouter();
+  const [code, setCode] = useState("");
+  const [trustDevice, setTrustDevice] = useState(true);
+  const [useBackup, setUseBackup] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const result = useBackup
+      ? await authClient.twoFactor.verifyBackupCode({ code, trustDevice })
+      : await authClient.twoFactor.verifyTotp({ code, trustDevice });
+    if (result.error) {
+      setError(result.error.message || "Invalid code");
+      setBusy(false);
+      return;
+    }
+    router.push("/");
+    router.refresh();
+  }
+
+  return (
+    <AuthCard
+      title="Two-factor authentication"
+      description={
+        useBackup
+          ? "Enter a backup code from when you enabled two-factor authentication."
+          : "Enter the 6-digit code from your authenticator app."
+      }
+    >
+      <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)}>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="code">{useBackup ? "Backup code" : "One-time code"}</Label>
+          {useBackup ? (
+            <Input
+              id="code"
+              autoComplete="one-time-code"
+              required
+              maxLength={16}
+              value={code}
+              onChange={(event) => setCode(event.currentTarget.value)}
+            />
+          ) : (
+            <OneTimeCode id="code" value={code} onChange={setCode} />
+          )}
+        </div>
+        <label className="flex items-center gap-2 text-sm text-[#c8c8c8]">
+          <Checkbox
+            checked={trustDevice}
+            onCheckedChange={(value) => setTrustDevice(value === true)}
+          />
+          Trust this device for 30 days
+        </label>
+        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        <Button type="submit" size="md" className="w-full" loading={busy} disabled={!useBackup && code.length < 6}>
+          Verify
+        </Button>
+      </form>
+      <button
+        type="button"
+        className="text-center text-sm text-[#8f8f8f] hover:text-[#f0f0f0]"
+        onClick={() => {
+          setUseBackup((current) => !current);
+          setCode("");
+          setError("");
+        }}
+      >
+        {useBackup ? "Use authenticator app" : "Use a backup code"}
+      </button>
+    </AuthCard>
+  );
+}
+
+export function TwoFactorSetupForm() {
+  const router = useRouter();
+  const [totpUri, setTotpUri] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [code, setCode] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState<"enable" | "verify" | null>(null);
+
+  async function enable() {
+    setBusy("enable");
+    setError("");
+    const { data, error: nextError } = await authClient.twoFactor.enable({
+      method: "totp",
+    });
+    if (nextError) {
+      setError(nextError.message || "Could not start two-factor setup");
+      setBusy(null);
+      return;
+    }
+    if (data && "totpURI" in data) {
+      setTotpUri(data.totpURI);
+      setBackupCodes(data.backupCodes ?? []);
+    }
+    setBusy(null);
+  }
+
+  async function verify(event: FormEvent) {
+    event.preventDefault();
+    setBusy("verify");
+    setError("");
+    const { error: nextError } = await authClient.twoFactor.verifyTotp({ code });
+    if (nextError) {
+      setError(nextError.message || "Invalid authenticator code");
+      setBusy(null);
+      return;
+    }
+    router.push("/");
+    router.refresh();
+  }
+
+  if (!totpUri) {
+    return (
+      <AuthCard
+        title="Set up two-factor authentication"
+        description="An authenticator app is required after Google or GitHub sign-in."
+      >
+        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        <Button type="button" size="md" className="w-full" loading={busy === "enable"} onClick={() => void enable()}>
+          Enable authenticator app
+        </Button>
+        <button
+          type="button"
+          className="text-center text-sm text-[#8f8f8f] hover:text-[#f0f0f0]"
+          onClick={() =>
+            void authClient.signOut({
+              fetchOptions: {
+                onSuccess: () => {
+                  window.location.href = "/";
+                },
+              },
+            })
+          }
+        >
+          Sign out
+        </button>
+      </AuthCard>
+    );
+  }
+
+  const secret = totpSecret(totpUri);
+
+  return (
+    <AuthCard
+      title="Scan the QR code"
+      description="Add Deni Run in your authenticator app, save the backup codes, then enter a 6-digit code."
+    >
+      <div className="mx-auto rounded-xl bg-white p-3">
+        <QRCode value={totpUri} size={168} />
       </div>
-    </main>
+      {secret ? (
+        <p className="break-all text-center font-mono text-xs text-[#8f8f8f]">{secret}</p>
+      ) : null}
+      <BackupCodesPanel codes={backupCodes} />
+      <form className="flex flex-col gap-3" onSubmit={(event) => void verify(event)}>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="setup-code">One-time code</Label>
+          <OneTimeCode id="setup-code" value={code} onChange={setCode} />
+        </div>
+        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        <Button type="submit" size="md" className="w-full" loading={busy === "verify"} disabled={code.length < 6}>
+          Verify and continue
+        </Button>
+      </form>
+    </AuthCard>
   );
 }

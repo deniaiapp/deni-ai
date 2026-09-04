@@ -16,6 +16,17 @@ html {
   color-scheme: dark;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-allow-motion]) *,
+  html:not([data-allow-motion]) *::before,
+  html:not([data-allow-motion]) *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 body {
   font-family: var(--font-inter), "Hiragino Sans", "Noto Sans JP", sans-serif;
 }

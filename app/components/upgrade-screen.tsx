@@ -3,7 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Check } from "lucide-react";
+import { motion } from "motion/react";
+import { FadeIn, Stagger, StaggerItem } from "@/components/motion";
 import { Button } from "@/components/ui/button";
+import { easeOut } from "@/lib/motion";
 import { formatTokenCount, PLANS, type UsageMetric, type UsageSnapshot } from "@/lib/plans";
 
 const PERKS = [
@@ -85,35 +88,50 @@ export function UpgradeScreen({
 
   return (
     <main className="h-full overflow-y-auto bg-[#050505] text-[#f0f0f0]">
-      <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-        <Link href="/" className="text-[0.925rem] font-semibold hover:text-white">
-          Deni Run
-        </Link>
-        <Link href="/" className="text-sm text-[#8f8f8f] hover:text-[#f0f0f0]">
-          {signedIn ? "Back to workspace" : "Back"}
-        </Link>
-      </header>
+      <FadeIn>
+        <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
+          <Link href="/" className="text-[0.925rem] font-semibold hover:text-white">
+            Deni Run
+          </Link>
+          <Link href="/" className="text-sm text-[#8f8f8f] hover:text-[#f0f0f0]">
+            {signedIn ? "Back to workspace" : "Back"}
+          </Link>
+        </header>
+      </FadeIn>
 
-      <section className="mx-auto max-w-5xl px-6 pt-8 pb-12 md:pt-14">
-        <p className="text-sm text-[#8f8f8f]">Pro · ${pro.priceUsd}/month</p>
-        <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">
-          {onPro ? "You're on Pro" : copy.title}
-        </h1>
-        <p className="mt-5 max-w-2xl text-[0.925rem] leading-relaxed text-[#8f8f8f]">
-          {onPro
-            ? "Your account already has the higher monthly ceiling. Manage billing if you need invoices or cancellation."
-            : copy.body}
-        </p>
-      </section>
+      <Stagger className="mx-auto max-w-5xl px-6 pt-8 pb-12 md:pt-14">
+        <StaggerItem>
+          <p className="text-sm text-[#8f8f8f]">Pro · ${pro.priceUsd}/month</p>
+        </StaggerItem>
+        <StaggerItem>
+          <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">
+            {onPro ? "You're on Pro" : copy.title}
+          </h1>
+        </StaggerItem>
+        <StaggerItem>
+          <p className="mt-5 max-w-2xl text-[0.925rem] leading-relaxed text-[#8f8f8f]">
+            {onPro
+              ? "Your account already has the higher monthly ceiling. Manage billing if you need invoices or cancellation."
+              : copy.body}
+          </p>
+        </StaggerItem>
+      </Stagger>
 
       <section className="mx-auto grid max-w-5xl items-start gap-8 px-6 pb-24 lg:grid-cols-[1fr_22rem]">
         <div>
-          <h2 className="text-lg font-semibold">What Pro includes</h2>
+          <FadeIn>
+            <h2 className="text-lg font-semibold">What Pro includes</h2>
+          </FadeIn>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-            {PERKS.map((perk) => (
-              <li
+            {PERKS.map((perk, index) => (
+              <motion.li
                 key={perk.title}
                 className="rounded-xl border border-white/10 bg-[#111111] p-5"
+                initial={{ opacity: 0, y: 14 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, amount: 0.3 }}
+                transition={{ duration: 0.4, delay: index * 0.06, ease: easeOut }}
+                whileHover={{ y: -4 }}
               >
                 <div className="flex items-start gap-2">
                   <Check className="mt-0.5 size-4 shrink-0 text-[#c8c8c8]" aria-hidden="true" />
@@ -122,12 +140,18 @@ export function UpgradeScreen({
                     <p className="mt-2 text-sm leading-relaxed text-[#8f8f8f]">{perk.body}</p>
                   </div>
                 </div>
-              </li>
+              </motion.li>
             ))}
           </ul>
         </div>
 
-        <aside className="rounded-xl border border-white/20 bg-[#171717] p-6 lg:sticky lg:top-6">
+        <motion.aside
+          className="rounded-xl border border-white/20 bg-[#171717] p-6 lg:sticky lg:top-6"
+          initial={{ opacity: 0, x: 16 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true, amount: 0.25 }}
+          transition={{ duration: 0.45, ease: easeOut }}
+        >
           <p className="text-sm text-[#8f8f8f]">{onPro ? "Current plan" : "Upgrade"}</p>
           <h2 className="mt-1 text-lg font-semibold">Pro</h2>
           <p className="mt-1 text-3xl font-semibold">
@@ -167,7 +191,7 @@ export function UpgradeScreen({
           <p className="mt-4 text-xs leading-relaxed text-[#8f8f8f]">
             Monthly limits reset at the start of each UTC month. Cancel anytime.
           </p>
-        </aside>
+        </motion.aside>
       </section>
     </main>
   );
@@ -217,7 +241,7 @@ function UpgradeActions({
     return (
       <Link
         href="/sign-up"
-        className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#f0f0f0] px-4 text-sm font-medium text-[#0a0a0a] hover:bg-white"
+        className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#f0f0f0] px-4 text-sm font-medium text-[#0a0a0a] transition-transform hover:bg-white active:scale-[0.98]"
       >
         Start Pro · ${pro.priceUsd}/mo
       </Link>

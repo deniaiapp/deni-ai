@@ -64,7 +64,7 @@ Local development browser profile: `.deni/users/<user-hash>/browser-profile`
 
 ## SaaS architecture
 
-Better Auth provides authentication in-process. Sign-in is Google or GitHub only. Users, sessions, and linked OAuth accounts live in Postgres. All bots, threads, routines, skills, computer state, and encrypted user configuration are stored in Postgres with that user ID as the tenant key.
+Better Auth provides authentication in-process. Sign-in is Google or GitHub, then TOTP two-factor. Users, sessions, linked OAuth accounts, and authenticator secrets live in Postgres. All bots, threads, routines, skills, computer state, and encrypted user configuration are stored in Postgres with that user ID as the tenant key.
 
 Workspace files and screenshots use the configured S3-compatible bucket (Cloudflare R2), namespaced by user. Browser automation uses a persistent Steel profile per user. Terminal commands run inside a per-user E2B sandbox.
 

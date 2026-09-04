@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { easeOut } from "@/lib/motion";
 import {
   ArrowLeftIcon,
   ArrowsOutIcon,
@@ -351,6 +353,14 @@ export function ComputerPanel({
       </div>
 
       <div className="scroll-thin min-h-0 flex-1 overflow-auto">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={visibleTab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: easeOut }}
+          >
         {visibleTab === "screen" ? (
           <div className="space-y-4 p-3">
             <div className="flex items-start justify-between gap-2">
@@ -602,6 +612,8 @@ export function ComputerPanel({
             )}
           </div>
         ) : null}
+          </motion.div>
+        </AnimatePresence>
       </div>
 
       <Dialog
@@ -635,13 +647,18 @@ export function ComputerPanel({
         </DialogContent>
       </Dialog>
 
+      <AnimatePresence>
       {showScreen && screenExpanded && !computer.steelDebugUrl ? (
-        <div
+        <motion.div
           className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
           aria-label="Enlarged computer screen"
           onClick={() => setScreenExpanded(false)}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: easeOut }}
         >
           <div
             className="relative flex max-h-full max-w-full items-center justify-center"
@@ -674,8 +691,9 @@ export function ComputerPanel({
               }`}
             />
           </div>
-        </div>
+        </motion.div>
       ) : null}
+      </AnimatePresence>
     </aside>
   );
 }
@@ -704,9 +722,12 @@ function LiveBrowserView({
 
   if (expanded) {
     return (
-      <div
+      <motion.div
         className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
         role="dialog"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.2, ease: easeOut }}
         aria-modal="true"
         aria-label="Expanded live remote browser"
         onClick={onClose}
@@ -726,7 +747,7 @@ function LiveBrowserView({
           />
           {frame}
         </div>
-      </div>
+      </motion.div>
     );
   }
 

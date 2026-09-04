@@ -1,6 +1,8 @@
 "use client";
 
+import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { easeOut } from "@/lib/motion";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { UsageSnapshot } from "@/lib/plans";
 import { formatTokenCount, PLANS } from "@/lib/plans";
@@ -26,9 +28,11 @@ function Meter({
         </span>
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-        <div
+        <motion.div
           className={`h-full rounded-full ${pct >= 100 ? "bg-red-400" : "bg-[#f0f0f0]"}`}
-          style={{ width: `${pct}%` }}
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 0.5, ease: easeOut }}
         />
       </div>
     </div>

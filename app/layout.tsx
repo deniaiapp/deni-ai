@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
+import { MotionProvider } from "@/components/motion";
 import "./globals.css";
 
 const inter = Inter({
@@ -26,7 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="h-full overflow-hidden bg-[#050505] text-[#f0f0f0] tracking-tight">
-        {children}
+        <MotionProvider>{children}</MotionProvider>
       </body>
     </html>
   );

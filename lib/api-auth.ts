@@ -1,10 +1,10 @@
 import "server-only";
 
 import { NextResponse } from "next/server";
-import { getAuthenticatedUserId } from "./auth";
+import { getWorkspaceUserId } from "./auth";
 
 export async function getApiUserId() {
-  return getAuthenticatedUserId();
+  return getWorkspaceUserId();
 }
 
 export function unauthorizedResponse() {

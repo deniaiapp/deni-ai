@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FadeIn } from "@/components/motion";
 import { supportEmail, supportMailto } from "@/lib/site";
 
 export default function TermsPage() {
@@ -6,6 +7,7 @@ export default function TermsPage() {
   const mail = supportMailto();
   return (
     <main className="h-full overflow-y-auto bg-[#050505] px-6 py-12 text-[#f0f0f0]">
+      <FadeIn>
       <article className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-[#c8c8c8]">
         <Link href="/" className="text-xs text-[#8f8f8f] hover:text-[#f0f0f0]">
           Back
@@ -50,6 +52,7 @@ export default function TermsPage() {
           .
         </p>
       </article>
+      </FadeIn>
     </main>
   );
 }

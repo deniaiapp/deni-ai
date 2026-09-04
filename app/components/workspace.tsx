@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { easeOut } from "@/lib/motion";
 import type { UIMessage } from "ai";
 import { useRouter } from "next/navigation";
 import { MonitorIcon } from "@phosphor-icons/react";
@@ -317,10 +319,15 @@ export function Workspace() {
 
   if (boot === "loading") {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 bg-[#050505]">
+      <motion.div
+        className="flex h-full flex-col items-center justify-center gap-3 bg-[#050505]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.35, ease: easeOut }}
+      >
         <Spinner size="lg" />
         <span className="text-[0.925rem] font-semibold text-[#f0f0f0]">Deni Run</span>
-      </div>
+      </motion.div>
     );
   }
 
@@ -366,7 +373,12 @@ export function Workspace() {
         />
       </SidebarAside>
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#050505]">
+      <motion.div
+        className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#050505]"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.4, delay: 0.05, ease: easeOut }}
+      >
         <div className="flex items-center justify-between border-b border-white/10 bg-[#050505] px-3 py-2 md:hidden">
           <SidebarTrigger />
           <span className="text-[0.925rem] text-[#f0f0f0]">{activeBot?.name ?? "Deni Run"}</span>
@@ -393,19 +405,34 @@ export function Workspace() {
             onBusyChange={handleChatBusyChange}
           />
         ) : activeThreadId ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-3 bg-[#050505]">
+          <motion.div
+            className="flex flex-1 flex-col items-center justify-center gap-3 bg-[#050505]"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, ease: easeOut }}
+          >
             <Spinner size="md" />
             <span className="text-sm text-[#8f8f8f]">Loading teammate...</span>
-          </div>
+          </motion.div>
         ) : (
-          <div className="flex flex-1 items-center justify-center">
+          <motion.div
+            className="flex flex-1 items-center justify-center"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, ease: easeOut }}
+          >
             <Empty size="sm" title="Select a teammate" />
-          </div>
+          </motion.div>
         )}
-      </div>
+      </motion.div>
 
       {computer ? (
-        <div className="hidden h-full border-l border-white/10 xl:flex">
+        <motion.div
+          className="hidden h-full border-l border-white/10 xl:flex"
+          initial={{ opacity: 0, x: 16 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.4, delay: 0.08, ease: easeOut }}
+        >
           <ComputerPanel
             computer={computer}
             files={files}
@@ -415,7 +442,7 @@ export function Workspace() {
             botName={activeBot?.name}
             onRefresh={refreshComputer}
           />
-        </div>
+        </motion.div>
       ) : null}
 
       {computer ? (
@@ -431,25 +458,41 @@ export function Workspace() {
         </Button>
       ) : null}
 
-      {mobileComputer && computer ? (
-        <div className="fixed inset-0 z-30 flex bg-black/80 xl:hidden">
-          <button
-            type="button"
-            className="flex-1"
-            aria-label="Close computer"
-            onClick={() => setMobileComputer(false)}
-          />
-          <ComputerPanel
-            computer={computer}
-            files={files}
-            shells={shells}
-            routines={routines}
-            botId={activeBot?.id}
-            botName={activeBot?.name}
-            onRefresh={refreshComputer}
-          />
-        </div>
-      ) : null}
+      <AnimatePresence>
+        {mobileComputer && computer ? (
+          <motion.div
+            className="fixed inset-0 z-30 flex bg-black/80 xl:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2, ease: easeOut }}
+          >
+            <button
+              type="button"
+              className="flex-1"
+              aria-label="Close computer"
+              onClick={() => setMobileComputer(false)}
+            />
+            <motion.div
+              className="h-full"
+              initial={{ x: 28 }}
+              animate={{ x: 0 }}
+              exit={{ x: 28 }}
+              transition={{ duration: 0.28, ease: easeOut }}
+            >
+              <ComputerPanel
+                computer={computer}
+                files={files}
+                shells={shells}
+                routines={routines}
+                botId={activeBot?.id}
+                botName={activeBot?.name}
+                onRefresh={refreshComputer}
+              />
+            </motion.div>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
       <BotDialog
         key={editBot ? `bot-${editBot.id}` : modal === "bot" ? "bot-new" : "bot-closed"}

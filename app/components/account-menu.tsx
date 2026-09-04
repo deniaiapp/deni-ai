@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { CreditCard, Download, LogOut, Sparkles, Trash2, UserRound } from "lucide-react";
+import { CreditCard, Download, Loader2, LogOut, Sparkles, Trash2, UserRound } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -30,10 +30,12 @@ export function AccountMenu({
   const router = useRouter();
   const [confirm, setConfirm] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState<"export" | "delete" | null>(null);
   const [error, setError] = useState("");
   const name = user?.name || user?.email || "Account";
   const onPro = usage?.plan === "pro";
+  const exporting = busy === "export";
 
   async function downloadExport() {
     setBusy("export");
@@ -48,6 +50,7 @@ export function AccountMenu({
       link.download = "deni-run-export.json";
       link.click();
       URL.revokeObjectURL(url);
+      setMenuOpen(false);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not export data");
     } finally {
@@ -72,7 +75,13 @@ export function AccountMenu({
 
   return (
     <>
-      <DropdownMenu>
+      <DropdownMenu
+        open={menuOpen}
+        onOpenChange={(next) => {
+          if (exporting) return;
+          setMenuOpen(next);
+        }}
+      >
         <DropdownMenuTrigger asChild>
           <button
             type="button"
@@ -107,6 +116,7 @@ export function AccountMenu({
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem
+            disabled={exporting}
             onSelect={() => {
               onOpenBilling();
             }}
@@ -115,22 +125,31 @@ export function AccountMenu({
             Plan and usage
           </DropdownMenuItem>
           {onPro ? null : (
-            <DropdownMenuItem onSelect={() => router.push("/upgrade")}>
+            <DropdownMenuItem disabled={exporting} onSelect={() => router.push("/upgrade")}>
               <Sparkles />
               Upgrade to Pro
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onSelect={() => router.push("/account")}>
+          <DropdownMenuItem disabled={exporting} onSelect={() => router.push("/account")}>
             <UserRound />
             Manage profile
           </DropdownMenuItem>
-          <DropdownMenuItem disabled={busy === "export"} onSelect={() => void downloadExport()}>
-            <Download />
-            Export data
+          <DropdownMenuItem
+            aria-busy={exporting}
+            onSelect={(event) => {
+              event.preventDefault();
+              if (busy) return;
+              void downloadExport();
+            }}
+          >
+            {exporting ? <Loader2 className="animate-spin" /> : <Download />}
+            {exporting ? "Exporting…" : "Export data"}
           </DropdownMenuItem>
+          {error && !deleteOpen ? <p className="px-2 py-1 text-xs text-red-300">{error}</p> : null}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
+            disabled={exporting}
             onSelect={() => {
               setConfirm("");
               setError("");
@@ -141,6 +160,7 @@ export function AccountMenu({
             Delete account
           </DropdownMenuItem>
           <DropdownMenuItem
+            disabled={exporting}
             onSelect={() => {
               void authClient.signOut({
                 fetchOptions: {

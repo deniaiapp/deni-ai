@@ -7,6 +7,8 @@ import {
   type UIMessage,
 } from "ai";
 import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { motion } from "motion/react";
+import { easeOut } from "@/lib/motion";
 import { RobotIcon, StopIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import {
   BookOpenIcon,
@@ -147,7 +149,12 @@ export function ChatThread({
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#050505] text-[#f0f0f0]">
-      <header className="hidden items-center gap-3 border-b border-white/10 bg-[#050505] px-5 py-3 md:flex">
+      <motion.header
+        className="hidden items-center gap-3 border-b border-white/10 bg-[#050505] px-5 py-3 md:flex"
+        initial={{ opacity: 0, y: -6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, ease: easeOut }}
+      >
         <Avatar name={bot.name} accent={bot.accent} />
         <div className="min-w-0 flex-1 flex gap-1 items-center">
           <span className="min-w-0 truncate text-[0.925rem] font-semibold text-[#f0f0f0]">
@@ -175,7 +182,7 @@ export function ChatThread({
         ) : (
           <span className="text-xs tracking-tighter text-[#8f8f8f]">{DENI_MODEL_LABEL}</span>
         )}
-      </header>
+      </motion.header>
 
       <Conversation className="min-h-0 flex-1">
         <ConversationContent>
@@ -315,11 +322,17 @@ function collectHandoffIds(messages: UIMessage[]) {
 
 function EmptyState({ bot }: { bot: Bot }) {
   return (
-    <Empty
-      icon={<RobotIcon size={48} className="text-[#6d6d6d]" />}
-      title={bot.name}
-      description={`${bot.job}. No workflow is required. Write as if you were asking a colleague. I will research on the computer, leave artifacts in files, and ask for approval only when needed.`}
-    />
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4, ease: easeOut }}
+    >
+      <Empty
+        icon={<RobotIcon size={48} className="text-[#6d6d6d]" />}
+        title={bot.name}
+        description={`${bot.job}. No workflow is required. Write as if you were asking a colleague. I will research on the computer, leave artifacts in files, and ask for approval only when needed.`}
+      />
+    </motion.div>
   );
 }
 
@@ -345,6 +358,11 @@ const MessageBlock = memo(function MessageBlock({
   const workedMs = useWorkedDuration(workKey, cotWorking);
 
   return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.28, ease: easeOut }}
+    >
     <Message from={message.role} data-message="">
       {cotSteps.length > 0 ? (
         <ChainOfThought defaultOpen={cotWorking}>
@@ -397,6 +415,7 @@ const MessageBlock = memo(function MessageBlock({
         ))}
       </div>
     </Message>
+    </motion.div>
   );
 });
 

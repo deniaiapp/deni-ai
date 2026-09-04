@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { Stagger, StaggerItem } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BackupCodesPanel } from "./auth-form";
 import { authClient } from "@/lib/auth-client";
 import { supportEmail, supportMailto } from "@/lib/site";
 
@@ -13,6 +15,7 @@ export function AccountScreen() {
   const user = session?.user;
   const [name, setName] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -72,17 +75,22 @@ export function AccountScreen() {
 
   return (
     <main className="h-full overflow-y-auto bg-[#050505] px-6 py-12 text-[#f0f0f0]">
-      <article className="mx-auto flex max-w-2xl flex-col gap-6">
+      <Stagger className="mx-auto flex max-w-2xl flex-col gap-6">
+        <StaggerItem>
         <Link href="/" className="text-xs text-[#8f8f8f] hover:text-[#f0f0f0]">
           Back to workspace
         </Link>
+        </StaggerItem>
+        <StaggerItem>
         <div>
           <h1 className="text-2xl font-semibold">Account</h1>
           <p className="mt-2 text-sm text-[#8f8f8f]">
             {user?.email ?? "Signed in"} · signed in with Google or GitHub.
           </p>
         </div>
+        </StaggerItem>
 
+        <StaggerItem hover>
         <section className="rounded-xl border border-white/10 bg-[#111111] p-5">
           <h2 className="text-[0.925rem] font-semibold">Profile</h2>
           <div className="mt-4 flex flex-col gap-1.5">
@@ -104,7 +112,72 @@ export function AccountScreen() {
             Save name
           </Button>
         </section>
+        </StaggerItem>
 
+        <StaggerItem hover>
+        <section className="rounded-xl border border-white/10 bg-[#111111] p-5">
+          <h2 className="text-[0.925rem] font-semibold">Two-factor authentication</h2>
+          <p className="mt-2 text-sm text-[#8f8f8f]">
+            {user?.twoFactorEnabled
+              ? "An authenticator app is required after Google or GitHub sign-in."
+              : "Finish setup so this account can open the workspace."}
+          </p>
+          {user?.twoFactorEnabled ? (
+            <div className="mt-4 flex flex-col gap-3">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  loading={busy === "2fa-codes"}
+                  onClick={() => {
+                    setBusy("2fa-codes");
+                    setError("");
+                    setNotice("");
+                    void authClient.twoFactor.generateBackupCodes({}).then(({ data, error: nextError }) => {
+                      if (nextError) setError(nextError.message || "Could not generate backup codes");
+                      else {
+                        setBackupCodes(data?.backupCodes ?? []);
+                        setNotice("New backup codes replace any previous set.");
+                      }
+                      setBusy(null);
+                    });
+                  }}
+                >
+                  Generate backup codes
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  loading={busy === "2fa-disable"}
+                  onClick={() => {
+                    setBusy("2fa-disable");
+                    setError("");
+                    void authClient.twoFactor.disable({}).then(async ({ error: nextError }) => {
+                      if (nextError) setError(nextError.message || "Could not disable two-factor");
+                      else {
+                        setNotice("Two-factor authentication is off.");
+                        setBackupCodes([]);
+                        await refetch();
+                        window.location.href = "/two-factor/setup";
+                      }
+                      setBusy(null);
+                    });
+                  }}
+                >
+                  Disable two-factor
+                </Button>
+              </div>
+              <BackupCodesPanel codes={backupCodes} />
+            </div>
+          ) : (
+            <Button type="button" variant="secondary" className="mt-4" onClick={() => (window.location.href = "/two-factor/setup")}>
+              Set up authenticator app
+            </Button>
+          )}
+        </section>
+        </StaggerItem>
+
+        <StaggerItem hover>
         <section className="rounded-xl border border-white/10 bg-[#111111] p-5">
           <h2 className="text-[0.925rem] font-semibold">Export</h2>
           <p className="mt-2 text-sm text-[#8f8f8f]">
@@ -120,6 +193,8 @@ export function AccountScreen() {
             Download JSON
           </Button>
         </section>
+        </StaggerItem>
+        <StaggerItem hover>
         <section className="rounded-xl border border-red-500/20 bg-[#111111] p-5">
           <h2 className="text-[0.925rem] font-semibold text-red-300">Delete account</h2>
           <p className="mt-2 text-sm text-[#8f8f8f]">
@@ -144,8 +219,10 @@ export function AccountScreen() {
             Delete my account
           </Button>
         </section>
-        {notice ? <p className="text-sm text-[#c8c8c8]">{notice}</p> : null}
-        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        </StaggerItem>
+        {notice ? <StaggerItem><p className="text-sm text-[#c8c8c8]">{notice}</p></StaggerItem> : null}
+        {error ? <StaggerItem><p className="text-sm text-red-300">{error}</p></StaggerItem> : null}
+        <StaggerItem>
         <p className="text-sm text-[#8f8f8f]">
           Support:{" "}
           {mail ? (
@@ -156,7 +233,8 @@ export function AccountScreen() {
             "set NEXT_PUBLIC_SUPPORT_EMAIL on this deployment."
           )}
         </p>
-      </article>
+        </StaggerItem>
+      </Stagger>
     </main>
   );
 }

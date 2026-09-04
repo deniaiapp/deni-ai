@@ -4,8 +4,10 @@ import { headers } from "next/headers";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { twoFactor } from "better-auth/plugins";
 import { db } from "@/db";
 import * as authSchema from "@/db/auth-schema";
+import { oauthTwoFactorAfter } from "./oauth-two-factor";
 
 const appUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL;
 
@@ -25,6 +27,7 @@ export const auth = betterAuth({
       session: authSchema.session,
       account: authSchema.account,
       verification: authSchema.verification,
+      twoFactor: authSchema.twoFactor,
       authRateLimit: authSchema.authRateLimit,
     },
   }),
@@ -68,7 +71,16 @@ export const auth = betterAuth({
     storage: "database",
     modelName: "authRateLimit",
   },
-  plugins: [nextCookies()],
+  hooks: {
+    after: oauthTwoFactorAfter,
+  },
+  plugins: [
+    twoFactor({
+      issuer: "Deni Run",
+      allowPasswordless: true,
+    }),
+    nextCookies(),
+  ],
 });
 
 export async function getAuthSession() {
@@ -80,4 +92,10 @@ export async function getAuthSession() {
 export async function getAuthenticatedUserId() {
   const session = await getAuthSession();
   return session?.user.id ?? null;
+}
+
+export async function getWorkspaceUserId() {
+  const session = await getAuthSession();
+  if (!session?.user.id || !session.user.twoFactorEnabled) return null;
+  return session.user.id;
 }

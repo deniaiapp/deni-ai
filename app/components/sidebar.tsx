@@ -19,6 +19,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { motion } from "motion/react";
+import { easeOut } from "@/lib/motion";
 import {
   ContextMenu,
   ContextMenuContent,
@@ -170,10 +172,13 @@ export function Sidebar({
               {visibleGroups.map((thread) => {
                 const active = activeThreadId === thread.id;
                 return (
-                  <button
+                  <motion.button
                     key={thread.id}
                     type="button"
                     onClick={() => onSelectThread(thread.id)}
+                    initial={{ opacity: 0, x: -8 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.28, ease: easeOut }}
                     className={cn(
                       "flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left whitespace-normal",
                       active ? "bg-[#2d2d2d]" : "hover:bg-white/5",
@@ -190,7 +195,7 @@ export function Sidebar({
                         {thread.lastPreview}
                       </span>
                     </span>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>
@@ -283,6 +288,11 @@ function TeammateRow({
   onAction: (action: TeammateMenuAction) => void;
 }) {
   return (
+    <motion.div
+      initial={{ opacity: 0, x: -8 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.28, ease: easeOut }}
+    >
     <ContextMenu>
       <ContextMenuTrigger asChild>
         <button
@@ -351,6 +361,7 @@ function TeammateRow({
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>
+    </motion.div>
   );
 }
 

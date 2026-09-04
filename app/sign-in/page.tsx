@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import { SocialAuth } from "../components/auth-form";
-import { getAuthenticatedUserId } from "@/lib/auth";
+import { getAuthSession } from "@/lib/auth";
 
 export default async function SignInPage({
   searchParams,
 }: {
   searchParams: Promise<{ error?: string }>;
 }) {
-  const userId = await getAuthenticatedUserId();
-  if (userId) redirect("/");
+  const session = await getAuthSession();
+  if (session?.user.twoFactorEnabled) redirect("/");
+  if (session?.user.id) redirect("/two-factor/setup");
   const { error } = await searchParams;
-  return <SocialAuth title="Sign in" error={error} />;
+  return <SocialAuth title="Sign in" mode="sign-in" error={error} />;
 }

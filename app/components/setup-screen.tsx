@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { FadeIn } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -34,7 +35,8 @@ export function SetupScreen({ onReady }: { onReady: () => void }) {
 
   return (
     <main className="flex min-h-full items-center justify-center bg-[#050505] px-6 py-16">
-      <Card className="w-full max-w-lg p-6">
+      <FadeIn className="w-full max-w-lg">
+      <Card className="w-full p-6">
         <span className="text-sm text-[#8f8f8f]">Deni Run</span>
         <div className="mt-2">
           <h1 className="text-lg font-semibold text-[#f0f0f0]">
@@ -78,6 +80,7 @@ export function SetupScreen({ onReady }: { onReady: () => void }) {
           {busy ? "Connecting…" : "Open workspace"}
         </Button>
       </Card>
+      </FadeIn>
     </main>
   );
 }
