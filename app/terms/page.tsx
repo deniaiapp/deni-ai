@@ -32,7 +32,7 @@ export default function TermsPage() {
           <Link href="/account" className="text-[#f0f0f0] hover:underline">
             Account
           </Link>
-          . Sign-in is provided by Clerk and is separate from workspace deletion.
+          . Deleting your account also removes the login stored for this service.
         </p>
         <p>
           The service is provided as-is. We do not warrant uninterrupted availability. These terms

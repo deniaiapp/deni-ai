@@ -1,9 +1,9 @@
 "use client";
 
-import { useClerk, useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CreditCard, Download, LogOut, Sparkles, Trash2, UserRound } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -25,14 +25,14 @@ export function AccountMenu({
   usage: UsageSnapshot | null;
   onOpenBilling: () => void;
 }) {
-  const { user } = useUser();
-  const { signOut, openUserProfile } = useClerk();
+  const { data: session } = authClient.useSession();
+  const user = session?.user;
   const router = useRouter();
   const [confirm, setConfirm] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [busy, setBusy] = useState<"export" | "delete" | null>(null);
   const [error, setError] = useState("");
-  const name = user?.fullName || user?.primaryEmailAddress?.emailAddress || "Account";
+  const name = user?.name || user?.email || "Account";
   const onPro = usage?.plan === "pro";
 
   async function downloadExport() {
@@ -62,7 +62,7 @@ export function AccountMenu({
     try {
       const res = await fetch("/api/account", { method: "DELETE" });
       if (!res.ok) throw new Error("Could not delete account data");
-      await signOut();
+      await authClient.signOut();
       window.location.href = "/";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not delete account data");
@@ -79,10 +79,10 @@ export function AccountMenu({
             aria-label="Account menu"
             className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-white/5"
           >
-            {user?.imageUrl ? (
+            {user?.image ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={user.imageUrl}
+                src={user.image}
                 alt=""
                 className="size-8 shrink-0 rounded-full object-cover"
               />
@@ -103,7 +103,7 @@ export function AccountMenu({
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" className="w-56">
           <DropdownMenuLabel>
-            {user?.primaryEmailAddress?.emailAddress ?? "Signed in"}
+            {user?.email ?? "Signed in"}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -120,7 +120,7 @@ export function AccountMenu({
               Upgrade to Pro
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem onSelect={() => openUserProfile()}>
+          <DropdownMenuItem onSelect={() => router.push("/account")}>
             <UserRound />
             Manage profile
           </DropdownMenuItem>
@@ -138,9 +138,19 @@ export function AccountMenu({
             }}
           >
             <Trash2 />
-            Delete data
+            Delete account
           </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => void signOut({ redirectUrl: "/" })}>
+          <DropdownMenuItem
+            onSelect={() => {
+              void authClient.signOut({
+                fetchOptions: {
+                  onSuccess: () => {
+                    window.location.href = "/";
+                  },
+                },
+              });
+            }}
+          >
             <LogOut />
             Sign out
           </DropdownMenuItem>
@@ -153,10 +163,10 @@ export function AccountMenu({
         }}
       >
         <DialogContent className="p-6">
-          <DialogTitle className="text-lg font-semibold">Delete account data</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">Delete account</DialogTitle>
           <p className="mt-2 text-sm text-[#8f8f8f]">
-            This removes workspace files, conversations, teammates, and billing records we store.
-            Type DELETE to confirm. Your sign-in account is separate.
+            This deletes your login, workspace files, conversations, teammates, and billing
+            records. Type DELETE to confirm.
           </p>
           <Input
             className="mt-4"

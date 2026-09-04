@@ -42,7 +42,7 @@ Use one allowed scope, or several in the order they matter: `chore(web,api,db)`.
 | `web` | Pages, UI, client components |
 | `api` | Route handlers |
 | `db` | Schema and migrations |
-| `auth` | Clerk and session gates |
+| `auth` | Better Auth and session gates |
 | `billing` | Stripe, plans, usage limits |
 | `agent` | Model, tools, scheduler, handoffs |
 | `computer` | Browser, sandbox, workspace files |

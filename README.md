@@ -20,7 +20,7 @@ pnpm install
 pnpm exec playwright install chromium
 ```
 
-Copy `.env.example` to `.env.local` and configure Clerk, Postgres, and an encryption key:
+Copy `.env.example` to `.env.local` and configure Better Auth, Postgres, and an encryption key:
 
 ```bash
 cp .env.example .env.local
@@ -41,15 +41,16 @@ Production uses Steel for the browser and E2B for the terminal, so the image doe
 
 ```bash
 cp .env.example .env
-# fill Clerk, DATABASE_URL, APP_ENCRYPTION_KEY, and the keys above
+# fill BETTER_AUTH_SECRET, DATABASE_URL, APP_ENCRYPTION_KEY, and the keys above
+pnpm db:migrate
 docker compose up --build
 ```
 
 Compose does not bind host port 3000 (Dokploy routes through Traefik). For a local bind, add `ports: ["3000:3000"]` under `app` temporarily.
 
-On Dokploy, create a **Compose** service from this repo (`docker-compose.yml`). Put the same variables in the Environment tab (Dokploy writes `.env` next to the compose file). Point `DATABASE_URL` at your Postgres instance. Point the domain at service `app`, container port `3000`. The container runs migrations on start and enables the routine scheduler (`DENI_SCHEDULER=true`). Keep a single app replica, or set `DENI_SCHEDULER=false` on extras.
+On Dokploy, create a **Compose** service from this repo (`docker-compose.yml`). Put the same variables in the Environment tab (Dokploy writes `.env` next to the compose file). Point `DATABASE_URL` at your Postgres instance. Point the domain at service `app`, container port `3000`. Run `pnpm db:migrate` (`drizzle-kit migrate`) against that database before rolling out a schema change. The app container does not migrate on start. The routine scheduler is on by default (`DENI_SCHEDULER=true`). Keep a single app replica, or set `DENI_SCHEDULER=false` on extras.
 
-Dockerfile-only deploys: build type **Dockerfile**, port `3000`, health check `/api/health`. Pass `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_APP_URL`, and `NEXT_PUBLIC_SUPPORT_EMAIL` as build arguments.
+Dockerfile-only deploys: build type **Dockerfile**, port `3000`, health check `/api/health`. Pass `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_SUPPORT_EMAIL` as build arguments.
 
 ## Usage
 
@@ -63,7 +64,7 @@ Local development browser profile: `.deni/users/<user-hash>/browser-profile`
 
 ## SaaS architecture
 
-Clerk provides authentication. All bots, threads, routines, skills, computer state, and encrypted user configuration are stored in Postgres with the Clerk user ID as the tenant key.
+Better Auth provides authentication in-process. Users, sessions, password hashes, and optional TOTP secrets live in Postgres. All bots, threads, routines, skills, computer state, and encrypted user configuration are stored in Postgres with that user ID as the tenant key.
 
 Workspace files and screenshots use the configured S3-compatible bucket (Cloudflare R2), namespaced by user. Browser automation uses a persistent Steel profile per user. Terminal commands run inside a per-user E2B sandbox.
 

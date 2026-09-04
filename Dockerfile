@@ -19,11 +19,11 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV NODE_ENV=production
 # Imported at build time; not used to connect.
 ENV DATABASE_URL=postgres://build:build@127.0.0.1:5432/build
+ENV BETTER_AUTH_SECRET=build-placeholder-secret-not-used-at-runtime
+ENV BETTER_AUTH_URL=http://localhost:3000
 
-ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=""
 ARG NEXT_PUBLIC_APP_URL=""
 ARG NEXT_PUBLIC_SUPPORT_EMAIL=""
-ENV NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_SUPPORT_EMAIL=$NEXT_PUBLIC_SUPPORT_EMAIL
 
@@ -41,14 +41,12 @@ ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
-RUN mkdir -p .next .deni db/migrations scripts \
-  && chown node:node .next .deni db db/migrations scripts
+RUN mkdir -p .next .deni scripts \
+  && chown node:node .next .deni scripts
 
 COPY --from=builder --chown=node:node /app/public ./public
 COPY --from=builder --chown=node:node /app/.next/standalone ./
 COPY --from=builder --chown=node:node /app/.next/static ./.next/static
-COPY --from=builder --chown=node:node /app/db/migrations ./db/migrations
-COPY --from=builder --chown=node:node /app/scripts/db-migrate.mjs ./scripts/db-migrate.mjs
 COPY --from=builder --chown=node:node /app/scripts/docker-entrypoint.sh ./entrypoint.sh
 
 RUN sed -i 's/\r$//' ./entrypoint.sh && chmod +x ./entrypoint.sh

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { auth } from "@clerk/nextjs/server";
 import { UpgradeScreen } from "../components/upgrade-screen";
+import { getAuthenticatedUserId } from "@/lib/auth";
 import { syncBilling } from "@/lib/billing";
 import type { UsageMetric } from "@/lib/plans";
 import { getUsageSnapshot } from "@/lib/usage";
@@ -19,7 +19,7 @@ export default async function UpgradePage({
 }) {
   const params = await searchParams;
   const reason = params.reason && REASONS.has(params.reason) ? (params.reason as UsageMetric) : undefined;
-  const { userId } = await auth();
+  const userId = await getAuthenticatedUserId();
   if (userId) {
     const sessionId = typeof params.session_id === "string" ? params.session_id : undefined;
     await syncBilling(userId, sessionId).catch(() => undefined);

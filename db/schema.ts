@@ -1,13 +1,24 @@
 import type { UIMessage } from "ai";
-import { jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
+import { index, integer, jsonb, pgTable, primaryKey, text, timestamp } from "drizzle-orm/pg-core";
 import type { Store } from "@/lib/types";
 
-export const userStores = pgTable("user_stores", {
-  userId: text("user_id").primaryKey(),
-  data: jsonb("data").$type<Store>().notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export * from "./auth-schema";
+
+export const userStores = pgTable(
+  "user_stores",
+  {
+    userId: text("user_id").primaryKey(),
+    data: jsonb("data").$type<Store>().notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("user_stores_stripe_customer_idx").on(
+      sql`(${table.data} -> 'billing' ->> 'stripeCustomerId')`,
+    ),
+  ],
+);
 
 export const threadMessages = pgTable(
   "thread_messages",
@@ -17,7 +28,11 @@ export const threadMessages = pgTable(
     messages: jsonb("messages").$type<UIMessage[]>().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => ({
-    primaryKey: primaryKey({ columns: [table.userId, table.threadId] }),
-  }),
+  (table) => [primaryKey({ columns: [table.userId, table.threadId] })],
 );
+
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  windowStart: timestamp("window_start", { withTimezone: true }).notNull(),
+  count: integer("count").notNull(),
+});

@@ -1,6 +1,6 @@
-import { currentUser } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
+import { unauthorizedResponse } from "@/lib/api-auth";
+import { getAuthSession } from "@/lib/auth";
 import { limitOrResponse } from "@/lib/rate-limit";
 import { appUrl, getStripe, proPriceId, stripeConfigured } from "@/lib/stripe";
 import { readStore } from "@/lib/store";
@@ -8,16 +8,16 @@ import { readStore } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
-  const userId = await getApiUserId();
-  if (!userId) return unauthorizedResponse();
+  const sessionUser = await getAuthSession();
+  if (!sessionUser) return unauthorizedResponse();
+  const userId = sessionUser.user.id;
   const limited = await limitOrResponse(userId, "checkout", 8);
   if (limited) return limited;
   if (!stripeConfigured()) {
     return NextResponse.json({ error: "Billing is not configured yet" }, { status: 501 });
   }
 
-  const user = await currentUser();
-  const email = user?.primaryEmailAddress?.emailAddress;
+  const email = sessionUser.user.email;
   const store = await readStore(userId);
   const storeCustomer = store.billing?.stripeCustomerId ?? null;
 

@@ -1,20 +1,37 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getSessionCookie } from "better-auth/cookies";
 
-const isPublicRoute = createRouteMatcher([
+const publicExact = new Set([
   "/",
   "/upgrade",
   "/terms",
   "/privacy",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/billing/webhook",
-  "/api/health",
+  "/sign-in",
+  "/sign-up",
+  "/two-factor",
   "/robots.txt",
 ]);
 
-export default clerkMiddleware(async (auth, request) => {
-  if (!isPublicRoute(request)) await auth.protect();
-});
+function isPublicPath(pathname: string) {
+  if (publicExact.has(pathname)) return true;
+  if (pathname.startsWith("/api/auth")) return true;
+  if (pathname === "/api/billing/webhook") return true;
+  if (pathname === "/api/health") return true;
+  return false;
+}
+
+export function proxy(request: NextRequest) {
+  if (isPublicPath(request.nextUrl.pathname)) return NextResponse.next();
+
+  const sessionCookie = getSessionCookie(request);
+  if (sessionCookie) return NextResponse.next();
+
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  return NextResponse.redirect(new URL("/sign-in", request.url));
+}
 
 export const config = {
   matcher: ["/((?!_next|.*\\..*).*)"],
