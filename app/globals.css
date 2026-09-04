@@ -1,26 +1,72 @@
 @import "tailwindcss";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@import "tw-animate-css";
+@import "streamdown/styles.css";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  height: 100%;
+}
+
+html {
+  color-scheme: dark;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), "Hiragino Sans", "Noto Sans JP", sans-serif;
+}
+
+@keyframes deni-dot-pulse {
+  0%,
+  20% {
+    opacity: 0.25;
+  }
+  50%,
+  100% {
+    opacity: 1;
+  }
+}
+
+.animated-dots {
+  display: inline-flex;
+  width: 1.1em;
+  overflow: hidden;
+  vertical-align: baseline;
+}
+
+.animated-dots > span {
+  animation: deni-dot-pulse 1.2s infinite ease-in-out;
+}
+
+.animated-dots > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.animated-dots > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* Keep code and other explicitly monospaced content at its normal spacing. */
+.font-mono,
+code,
+kbd,
+samp,
+pre {
+  letter-spacing: normal;
+}
+
+.scroll-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
 }

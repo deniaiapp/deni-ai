@@ -1,0 +1,15 @@
+allowBuilds:
+  esbuild: true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@ai-sdk/gateway@4.0.68'
+  - '@ai-sdk/mcp@2.0.40'
+  - '@ai-sdk/provider-utils@5.0.33'
+  - '@ai-sdk/react@4.0.87'
+  - ai@7.0.84
+  - zod@4.5.2
+  - '@aws-sdk/client-s3@3.1121.0'
+  - '@clerk/backend@3.16.13'
+  - '@clerk/nextjs@7.8.3'
+  - '@clerk/react@6.14.8'
+  - '@clerk/shared@4.30.2'

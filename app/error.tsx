@@ -1,0 +1,31 @@
+"use client";
+
+import { useEffect } from "react";
+import { Button } from "@/components/ui/button";
+
+export default function ErrorPage({
+  error,
+  retry,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  retry?: () => void;
+  reset?: () => void;
+}) {
+  useEffect(() => {
+    console.error(error);
+  }, [error]);
+  const recover = retry ?? reset ?? (() => window.location.reload());
+
+  return (
+    <main className="flex h-full flex-col items-center justify-center gap-3 bg-[#050505] px-6 text-center">
+      <h1 className="text-lg font-semibold text-[#f0f0f0]">Something went wrong</h1>
+      <p className="max-w-md text-sm text-[#8f8f8f]">
+        Reload this page. If it keeps happening, wait a moment and try again.
+      </p>
+      <Button type="button" variant="primary" onClick={() => recover()}>
+        Try again
+      </Button>
+    </main>
+  );
+}
