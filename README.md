@@ -2,7 +2,7 @@
 
 An AI teammate workspace inspired by Grok Bot. Hand work to named AI teammates and let them finish it on an isolated computer (browser, files, and terminal). The model is `openai/gpt-5.6-luna` through OpenRouter with `max` reasoning effort.
 
-While Grok Bot provides a cloud VM, Deni gives each account an isolated computer. Sessions, files, and memory stay scoped to that account.
+While Grok Bot provides a cloud VM, Deni Run gives each account an isolated computer. Sessions, files, and memory stay scoped to that account.
 
 ## Features
 
@@ -66,7 +66,7 @@ Run the scheduler on exactly one dedicated worker instance with `DENI_SCHEDULER=
 
 ## Grok Bot mapping
 
-| Grok Bot | Deni |
+| Grok Bot | Deni Run |
 | --- | --- |
 | Named bots | Teammates |
 | Account-shared cloud VM | Shared computer in `.deni` |
