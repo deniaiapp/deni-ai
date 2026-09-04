@@ -64,8 +64,8 @@ export function SetupScreen({ onReady }: { onReady: () => void }) {
             aria-invalid={error ? true : undefined}
           />
           <p className="text-xs text-[#8f8f8f]">
-            Get a key at openrouter.ai. Uses openai/gpt-5.6-luna with max reasoning effort. This
-            screen is skipped when an environment variable is set.
+            Get a key at openrouter.ai. Uses openai/gpt-5.6-luna. Pick Default, High, xhigh, or Max
+            in the workspace. This screen is skipped when an environment variable is set.
           </p>
           {error ? <p className="text-xs text-red-400">{error}</p> : null}
         </div>

@@ -36,6 +36,7 @@ import { SetupScreen } from "./setup-screen";
 import { BillingDialog } from "./billing-dialog";
 import { Sidebar, type TeammateMenuAction } from "./sidebar";
 import type { UsageSnapshot } from "@/lib/plans";
+import { parseRunMode, type RunMode } from "@/lib/model";
 
 type StatePayload = {
   ready: boolean;
@@ -46,6 +47,7 @@ type StatePayload = {
   computer: ComputerState;
   shells: ShellRecord[];
   usage?: UsageSnapshot;
+  runMode?: RunMode;
 };
 
 type Modal = "bot" | "group" | "skills" | "routines" | null;
@@ -68,6 +70,7 @@ export function Workspace() {
   const [editBot, setEditBot] = useState<Bot | null>(null);
   const [sectionThread, setSectionThread] = useState<Thread | null>(null);
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
+  const [runMode, setRunMode] = useState<RunMode>("max");
   const [billingOpen, setBillingOpen] = useState(false);
   const [billingBusy, setBillingBusy] = useState(false);
   const teammateLimitReached = Boolean(usage && bots.length >= usage.teammates.limit);
@@ -84,6 +87,7 @@ export function Workspace() {
     setComputer(json.computer);
     setShells(json.shells ?? []);
     if (json.usage) setUsage(json.usage);
+    if (json.runMode) setRunMode(parseRunMode(json.runMode));
     if (!json.ready) {
       setBoot("setup");
       return json;
@@ -402,6 +406,15 @@ export function Workspace() {
             bot={activeBot}
             bots={bots}
             initialMessages={messages}
+            runMode={runMode}
+            onRunModeChange={(mode) => {
+              setRunMode(mode);
+              void fetch("/api/state", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ runMode: mode }),
+              });
+            }}
             onBusyChange={handleChatBusyChange}
           />
         ) : activeThreadId ? (

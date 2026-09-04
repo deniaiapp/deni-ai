@@ -98,7 +98,7 @@ async function runRoutine(userId: string, routineId: string) {
   });
 
   try {
-    const { model, providerOptions } = await getDeniModel(userId);
+    const { model, providerOptions, tokenMultiplier } = await getDeniModel(userId);
     const result = await generateText({
       model,
       instructions: buildInstructions(
@@ -116,7 +116,7 @@ async function runRoutine(userId: string, routineId: string) {
       stopWhen: isLoopFinished(),
       providerOptions,
     });
-    await recordTokenUsage(userId, result.usage);
+    await recordTokenUsage(userId, result.usage, { multiplier: tokenMultiplier });
     const assistant: UIMessage = {
       id: createId("msg"),
       role: "assistant",

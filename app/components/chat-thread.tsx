@@ -55,27 +55,37 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/empty";
 import { Avatar } from "./sidebar";
-import { DENI_MODEL_LABEL } from "@/lib/model";
+import { RUN_MODES, type RunMode } from "@/lib/model";
 import type { Bot, HandoffSnapshot, Thread } from "@/lib/types";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export function ChatThread({
   thread,
   bot,
   bots,
   initialMessages,
+  runMode,
+  onRunModeChange,
   onBusyChange,
 }: {
   thread: Thread;
   bot: Bot;
   bots: Bot[];
   initialMessages: UIMessage[];
+  runMode: RunMode;
+  onRunModeChange: (mode: RunMode) => void;
   onBusyChange: (busy: boolean) => void;
 }) {
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
-        body: () => ({ threadId: thread.id, botId: bot.id }),
+        body: () => ({ threadId: thread.id, botId: bot.id, runMode }),
         prepareSendMessagesRequest: ({ messages: pending, body, trigger }) => ({
           body: {
             ...body,
@@ -84,7 +94,7 @@ export function ChatThread({
           },
         }),
       }),
-    [thread.id, bot.id],
+    [thread.id, bot.id, runMode],
   );
 
   const { messages, sendMessage, status, addToolApprovalResponse, stop, error, clearError } =
@@ -180,7 +190,7 @@ export function ChatThread({
             Stop
           </Button>
         ) : (
-          <span className="text-xs tracking-tighter text-[#8f8f8f]">{DENI_MODEL_LABEL}</span>
+          <span className="text-xs tracking-tighter text-[#8f8f8f]">{RUN_MODES[runMode].hint}</span>
         )}
       </motion.header>
 
@@ -200,6 +210,7 @@ export function ChatThread({
                 isStreaming={busy}
                 onApprove={onApprove}
                 handoffs={handoffs}
+                bots={bots}
               />
             ))
           )}
@@ -246,9 +257,12 @@ export function ChatThread({
             aria-label={`Hand work to ${bot.name}`}
           />
           <PromptInputToolbar>
-            <span className="text-xs text-[#777777]">
-              Enter to send · Shift+Enter for a new line
-            </span>
+            <div className="flex min-w-0 items-center gap-2">
+              <RunModePicker value={runMode} onChange={onRunModeChange} />
+              <span className="hidden text-xs text-[#777777] sm:inline">
+                Enter to send · Shift+Enter for a new line
+              </span>
+            </div>
             <PromptInputSubmit
               status={status}
               onStop={stop}
@@ -343,6 +357,7 @@ const MessageBlock = memo(function MessageBlock({
   isStreaming,
   onApprove,
   handoffs,
+  bots,
 }: {
   workKey: string;
   message: UIMessage;
@@ -350,10 +365,11 @@ const MessageBlock = memo(function MessageBlock({
   isStreaming: boolean;
   onApprove: (id: string, approved: boolean) => void;
   handoffs: Record<string, HandoffSnapshot>;
+  bots: Bot[];
 }) {
   const lastPart = message.parts.at(-1);
   const reasoningIsStreaming = isLastMessage && isStreaming && lastPart?.type === "reasoning";
-  const cotSteps = buildCotSteps(message.parts, reasoningIsStreaming);
+  const cotSteps = buildCotSteps(message.parts, reasoningIsStreaming, handoffs, bots);
   const cotWorking = cotSteps.length > 0 && isLastMessage && isStreaming;
   const workedMs = useWorkedDuration(workKey, cotWorking);
 
@@ -410,7 +426,6 @@ const MessageBlock = memo(function MessageBlock({
             part={part}
             onApprove={onApprove}
             isAnimating={isLastMessage && isStreaming}
-            handoffs={handoffs}
           />
         ))}
       </div>
@@ -441,7 +456,12 @@ type CotStep = {
   status: "complete" | "active" | "pending";
 };
 
-function buildCotSteps(parts: UIMessage["parts"], reasoningIsStreaming: boolean): CotStep[] {
+function buildCotSteps(
+  parts: UIMessage["parts"],
+  reasoningIsStreaming: boolean,
+  handoffs?: Record<string, HandoffSnapshot>,
+  bots?: Bot[],
+): CotStep[] {
   const steps: CotStep[] = [];
 
   parts.forEach((part, index) => {
@@ -470,22 +490,44 @@ function buildCotSteps(parts: UIMessage["parts"], reasoningIsStreaming: boolean)
     const failed = state === "output-error";
 
     if (name === "requestTakeover") return;
-    if (toolPart.approval && !toolPart.approval.isAutomatic) return;
+    if (name === "handoffStatus") return;
+    if (toolPart.approval && !toolPart.approval.isAutomatic && state === "approval-requested") {
+      return;
+    }
 
+    const liveHandoff = name === "messageBot" ? liveHandoffFor(toolPart, handoffs) : undefined;
     steps.push({
       key: toolPart.toolCallId ?? `tool-${index}`,
       icon: toolStepIcon(name),
-      label: toolDisplayLabel(name, input, state),
-      description: failed && errorText ? errorText : undefined,
+      label: toolDisplayLabel(name, input, state, liveHandoff, bots),
+      description:
+        failed && errorText
+          ? errorText
+          : liveHandoff?.status === "running" && liveHandoff.currentLabel
+            ? liveHandoff.currentLabel
+            : toolApprovalDetail(name, input),
       hostname:
         !failed && (name === "browser" || name.toLowerCase().includes("browser"))
           ? browserResultHostname(toolPart.output, input)
           : undefined,
-      status: isToolRunning(state) ? "active" : state ? "complete" : "pending",
+      status:
+        liveHandoff?.status === "running" || isToolRunning(state) ? "active" : state ? "complete" : "pending",
     });
   });
 
   return steps;
+}
+
+function liveHandoffFor(
+  toolPart: ToolPart,
+  handoffs?: Record<string, HandoffSnapshot>,
+) {
+  const output =
+    toolPart.output && typeof toolPart.output === "object"
+      ? (toolPart.output as Record<string, unknown>)
+      : null;
+  const id = typeof output?.handoffId === "string" ? output.handoffId : "";
+  return id ? handoffs?.[id] : undefined;
 }
 
 function splitReasoningTitle(text: string): { title?: string; body?: string } {
@@ -541,12 +583,10 @@ function PartView({
   part,
   onApprove,
   isAnimating = false,
-  handoffs,
 }: {
   part: UIMessage["parts"][number];
   onApprove: (id: string, approved: boolean) => void;
   isAnimating?: boolean;
-  handoffs?: Record<string, HandoffSnapshot>;
 }) {
   if (part.type === "text" && part.text.trim()) {
     return (
@@ -568,10 +608,12 @@ function PartView({
     const displayLabel = toolDisplayLabel(name, input, state);
     if (toolPart.approval && !toolPart.approval.isAutomatic) {
       const approval = toolPart.approval;
+      const detail = toolApprovalDetail(name, input);
       return (
         <Confirmation approval={approval} state={state}>
           <ConfirmationRequest>
             <ConfirmationTitle>{displayLabel}</ConfirmationTitle>
+            {detail ? <p className="font-mono text-xs text-[#c8c8c8]">{detail}</p> : null}
             <ConfirmationActions>
               <ConfirmationAction variant="primary" onClick={() => onApprove(approval.id, true)}>
                 Approve
@@ -583,70 +625,16 @@ function PartView({
           </ConfirmationRequest>
           <ConfirmationAccepted>
             <ConfirmationTitle>Approved · {displayLabel}</ConfirmationTitle>
+            {detail ? <p className="font-mono text-xs text-[#8f8f8f]">{detail}</p> : null}
           </ConfirmationAccepted>
           <ConfirmationRejected>
             <ConfirmationTitle>Declined · {displayLabel}</ConfirmationTitle>
+            {detail ? <p className="font-mono text-xs text-[#8f8f8f]">{detail}</p> : null}
           </ConfirmationRejected>
         </Confirmation>
       );
     }
-    if (name === "messageBot") {
-      const output =
-        toolPart.output && typeof toolPart.output === "object"
-          ? (toolPart.output as Record<string, unknown>)
-          : null;
-      const live =
-        typeof output?.handoffId === "string" ? handoffs?.[output.handoffId] : undefined;
-      const deliveredTo =
-        live?.targetName ||
-        (typeof output?.deliveredTo === "string" ? output.deliveredTo : "teammate");
-      const reply = live?.reply || (typeof output?.reply === "string" ? output.reply : "");
-      const failed =
-        state === "output-error" ||
-        Boolean(output?.error) ||
-        live?.status === "error";
-      const pending = !failed && live?.status !== "done" && !reply;
-      return (
-        <MessageContent>
-          <div className="w-full rounded-lg bg-white/5 px-3 py-2 ring-1 ring-white/10">
-            <p className="text-xs text-[#8f8f8f]">
-              {failed
-                ? `Handoff to ${deliveredTo} failed`
-                : pending
-                  ? `${deliveredTo} is working${live?.currentLabel ? ` · ${live.currentLabel}` : ""}`
-                  : `Report from ${deliveredTo}`}
-            </p>
-            {live?.steps.length ? (
-              <div className="mt-2 space-y-1">
-                {live.steps.map((step, index) => (
-                  <p
-                    key={`${step.kind}-${index}`}
-                    className="text-xs text-[#c8c8c8]"
-                  >
-                    {step.status === "active" ? "… " : ""}
-                    {step.label}
-                    {step.detail ? ` · ${step.detail}` : ""}
-                  </p>
-                ))}
-              </div>
-            ) : null}
-            {failed ? (
-              <p className="mt-1 text-sm text-red-300">
-                {live?.error ||
-                  errorText ||
-                  String(output?.error || "The teammate could not complete the handoff.")}
-              </p>
-            ) : reply ? (
-              <div className="mt-2">
-                <MessageResponse isAnimating={false}>{reply}</MessageResponse>
-              </div>
-            ) : pending ? (
-              <p className="mt-1 text-sm text-[#8f8f8f]">Working in the background…</p>
-            ) : null}
-          </div>
-        </MessageContent>
-      );
-    }
+    if (name === "messageBot" || name === "handoffStatus") return null;
     if (name === "requestTakeover") {
       const reason = inputValue(input, "reason");
       const failed = state === "output-error";
@@ -678,11 +666,28 @@ function formatDetail(value: unknown) {
   }
 }
 
-function toolDisplayLabel(name: string, input: unknown, state: string) {
+function toolDisplayLabel(
+  name: string,
+  input: unknown,
+  state: string,
+  liveHandoff?: HandoffSnapshot,
+  bots?: Bot[],
+) {
   const completed = state === "output-available";
   const failed = state === "output-error";
   const denied = state === "output-denied";
   const action = inputValue(input, "action");
+
+  if (name === "messageBot") {
+    const botId = inputValue(input, "botId");
+    const teammate =
+      liveHandoff?.targetName ||
+      bots?.find((item) => item.id === botId)?.name ||
+      "a teammate";
+    if (failed || liveHandoff?.status === "error") return `Couldn't reach ${teammate}`;
+    if (liveHandoff?.status === "running") return `${teammate} is working`;
+    return completed ? `Asked ${teammate}` : `Asking ${teammate}`;
+  }
 
   if (denied) return "Action was declined";
 
@@ -731,7 +736,7 @@ function toolDisplayLabel(name: string, input: unknown, state: string) {
     scheduleRoutine: ["Scheduling a routine", "Scheduled a routine"],
     listRoutines: ["Checking routines", "Checked routines"],
     pauseRoutine: ["Updating a routine", "Updated a routine"],
-    messageBot: ["Starting a teammate", "Started a teammate"],
+    messageBot: ["Asking a teammate", "Asked a teammate"],
     handoffStatus: ["Checking a teammate", "Checked a teammate"],
     requestTakeover: ["Waiting for your help", "Requested your help"],
   };
@@ -741,6 +746,58 @@ function toolDisplayLabel(name: string, input: unknown, state: string) {
   ];
   if (failed) return `Couldn't ${present.charAt(0).toLowerCase()}${present.slice(1)}`;
   return completed ? past : present;
+}
+
+function toolApprovalDetail(name: string, input: unknown) {
+  if (name === "runCommand") return snippet(inputValue(input, "command"));
+  if (name === "workspace") {
+    const path = inputValue(input, "path");
+    return path ? snippet(path) : undefined;
+  }
+  return undefined;
+}
+
+function snippet(value?: string, max = 72) {
+  if (!value) return undefined;
+  const text = value.replace(/\s+/g, " ").trim();
+  if (!text) return undefined;
+  return text.length > max ? `${text.slice(0, max - 1)}…` : text;
+}
+
+function RunModePicker({
+  value,
+  onChange,
+}: {
+  value: RunMode;
+  onChange: (mode: RunMode) => void;
+}) {
+  const current = RUN_MODES[value];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="rounded-md px-1.5 py-1 text-left text-xs text-[#8f8f8f] hover:bg-white/5 hover:text-[#f0f0f0]"
+        >
+          {current.label}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="w-56">
+        {(Object.values(RUN_MODES) as (typeof RUN_MODES)[RunMode][]).map((mode) => (
+          <DropdownMenuItem
+            key={mode.id}
+            onSelect={() => onChange(mode.id)}
+            className={mode.id === value ? "bg-[#2d2d2d]" : undefined}
+          >
+            <span className="flex min-w-0 flex-col">
+              <span>{mode.label}</span>
+              <span className="text-[11px] text-[#8f8f8f]">{mode.hint}</span>
+            </span>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 function inputValue(input: unknown, key: string) {

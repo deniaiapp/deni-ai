@@ -4,7 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import type { UIMessage } from "ai";
 import { db, sqlClient } from "@/db";
 import { threadMessages, userStores } from "@/db/schema";
-import { DENI_MODEL_ID } from "./model";
+import { DENI_MODEL_ID, parseRunMode } from "./model";
 import { emptyStore } from "./seed";
 import { nowIso } from "./ids";
 import type { Store, Thread } from "./types";
@@ -84,6 +84,7 @@ export async function findUserIdByStripeCustomer(customerId: string) {
 
 function normalizeStore(store: Store) {
   store.config.model = DENI_MODEL_ID;
+  store.config.runMode = parseRunMode(store.config.runMode);
   store.shells ??= [];
   store.handoffs ??= [];
   store.computer.e2bSandboxId ??= null;

@@ -150,9 +150,12 @@ export async function recordTokenUsage(
     outputTokens?: number | undefined;
     totalTokens?: number | undefined;
   },
+  opts?: { multiplier?: number },
 ) {
-  const tokens = tokensFromUsage(usage);
-  if (tokens <= 0) return;
+  const raw = tokensFromUsage(usage);
+  if (raw <= 0) return;
+  const multiplier = opts?.multiplier ?? 1;
+  const tokens = Math.max(1, Math.round(raw * multiplier));
   await consumeUsage(userId, { tokens }, { allowOver: true });
 }
 

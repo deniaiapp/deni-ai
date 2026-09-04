@@ -161,7 +161,7 @@ async function executeHandoff(run: HandoffRun, messages: UIMessage[]) {
     return;
   }
 
-  const { model, providerOptions } = await getDeniModel(run.userId);
+  const { model, providerOptions, tokenMultiplier } = await getDeniModel(run.userId);
   const result = streamText({
     model,
     instructions: `${buildInstructions(
@@ -191,7 +191,9 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
       addStep(run, { kind: "thinking", label: "Thinking", status: "active" });
     },
     onStepEnd: async (step) => {
-      await recordTokenUsage(run.userId, step.usage).catch(() => undefined);
+      await recordTokenUsage(run.userId, step.usage, { multiplier: tokenMultiplier }).catch(
+        () => undefined,
+      );
       if (step.reasoningText?.trim()) {
         addStep(run, {
           kind: "thinking",

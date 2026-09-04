@@ -33,8 +33,10 @@ export type ConfirmationProps = ComponentProps<typeof Alert> & {
 
 export const Confirmation = ({ className, approval, state, ...props }: ConfirmationProps) => {
   const contextValue = { approval, state };
+  const decided = approval?.approved !== undefined;
 
-  if (!approval || state === "input-streaming" || state === "input-available") return null;
+  if (!approval) return null;
+  if (!decided && (state === "input-streaming" || state === "input-available")) return null;
 
   return (
     <ConfirmationContext.Provider value={contextValue}>
@@ -61,23 +63,13 @@ export const ConfirmationRequest = ({ children }: { children?: ReactNode }) => {
 
 export const ConfirmationAccepted = ({ children }: { children?: ReactNode }) => {
   const { approval, state } = useConfirmation();
-  if (
-    !approval?.approved ||
-    (state !== "approval-responded" && state !== "output-denied" && state !== "output-available")
-  ) {
-    return null;
-  }
+  if (!approval?.approved || state === "approval-requested") return null;
   return children;
 };
 
 export const ConfirmationRejected = ({ children }: { children?: ReactNode }) => {
   const { approval, state } = useConfirmation();
-  if (
-    approval?.approved !== false ||
-    (state !== "approval-responded" && state !== "output-denied" && state !== "output-available")
-  ) {
-    return null;
-  }
+  if (approval?.approved !== false || state === "approval-requested") return null;
   return children;
 };
 

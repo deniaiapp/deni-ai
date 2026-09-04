@@ -1,3 +1,5 @@
+import type { RunMode } from "./model";
+
 export type BotStatus = "idle" | "working" | "waiting";
 
 export type Bot = {
@@ -86,6 +88,7 @@ export type AppConfig = {
   apiKey: string;
   timezone: string;
   model: string;
+  runMode?: RunMode;
 };
 
 export type PlanId = "free" | "pro";

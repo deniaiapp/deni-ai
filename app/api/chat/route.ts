@@ -13,7 +13,8 @@ import { buildInstructions, createDeniTools, deniToolApproval } from "@/lib/agen
 import { getApiKey } from "@/lib/config";
 import { setComputer } from "@/lib/computer";
 import { getDeniModel } from "@/lib/llm";
-import { loadMessages, readStore, saveMessages } from "@/lib/store";
+import { parseRunMode } from "@/lib/model";
+import { loadMessages, mutateStore, readStore, saveMessages } from "@/lib/store";
 import { assertCanUseTokens, isUsageLimitError, recordTokenUsage } from "@/lib/usage";
 import { compactMessagesForModel, mergeThreadMessages } from "@/lib/messages";
 
@@ -30,6 +31,7 @@ export async function POST(req: Request) {
     botId?: string;
     threadId?: string;
     id?: string;
+    runMode?: string;
   };
 
   const threadId = body.threadId || body.id;
@@ -62,8 +64,14 @@ export async function POST(req: Request) {
   const incoming = body.messages ?? [];
   const persisted = await loadMessages(userId, thread.id);
   const messages = mergeThreadMessages(persisted, incoming);
+  const runMode = parseRunMode(body.runMode ?? store.config.runMode);
+  if (body.runMode && runMode !== store.config.runMode) {
+    await mutateStore(userId, (next) => {
+      next.config.runMode = runMode;
+    });
+  }
 
-  const { model, providerOptions } = await getDeniModel(userId);
+  const { model, providerOptions, tokenMultiplier } = await getDeniModel(userId, runMode);
   const tools = createDeniTools({ userId, bot, threadId: thread.id });
 
   const result = streamText({
@@ -83,7 +91,7 @@ export async function POST(req: Request) {
     stopWhen: isLoopFinished(),
     providerOptions,
     onStepEnd: async (step) => {
-      await recordTokenUsage(userId, step.usage).catch((error) => {
+      await recordTokenUsage(userId, step.usage, { multiplier: tokenMultiplier }).catch((error) => {
         console.error("record tokens", error);
       });
     },
