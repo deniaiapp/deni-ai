@@ -20,9 +20,6 @@ services:
       - "3000:3000"
     volumes:
       - deni-data:/app/.deni
-    depends_on:
-      postgres:
-        condition: service_healthy
     restart: unless-stopped
     stop_grace_period: 30s
     healthcheck:
@@ -38,21 +35,5 @@ services:
       retries: 5
       start_period: 60s
 
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: deni
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: deni
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U deni -d deni"]
-      interval: 5s
-      timeout: 5s
-      retries: 20
-    restart: unless-stopped
-
 volumes:
   deni-data:
-  postgres-data:
