@@ -35,6 +35,24 @@ pnpm dev
 
 http://localhost:3000
 
+## Docker / Dokploy
+
+Production uses Steel for the browser and E2B for the terminal, so the image does not install Chromium. Set `STEEL_API_KEY`, `E2B_API_KEY`, and S3/R2 credentials. `NEXT_PUBLIC_*` values are inlined at image build time — change them and rebuild.
+
+```bash
+cp .env.example .env
+# fill Clerk, POSTGRES_PASSWORD, APP_ENCRYPTION_KEY, and the keys above
+docker compose up --build
+```
+
+http://localhost:3000
+
+On Dokploy, create a **Compose** service from this repo (`docker-compose.yml`). Put the same variables in the Environment tab (Dokploy writes `.env` next to the compose file). For the bundled Postgres, set `DATABASE_URL=postgres://deni:<POSTGRES_PASSWORD>@postgres:5432/deni`. Point the domain at service `app`, port `3000`. The container runs migrations on start and enables the routine scheduler (`DENI_SCHEDULER=true`). Keep a single app replica, or set `DENI_SCHEDULER=false` on extras.
+
+If Postgres is already provided by Dokploy, remove the `postgres` service and set `DATABASE_URL` to that instance.
+
+Dockerfile-only deploys: build type **Dockerfile**, port `3000`, health check `/api/health`. Pass `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_APP_URL`, and `NEXT_PUBLIC_SUPPORT_EMAIL` as build arguments.
+
 ## Usage
 
 1. Give a task to Chief, Research, or Operations
