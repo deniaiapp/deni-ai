@@ -20,7 +20,7 @@ pnpm install
 pnpm exec playwright install chromium
 ```
 
-Copy `.env.example` to `.env.local` and configure Better Auth, Postgres, and an encryption key:
+Copy `.env.example` to `.env.local` and configure Better Auth, Google/GitHub OAuth, Postgres, and an encryption key. Set the OAuth redirect URIs to `{BETTER_AUTH_URL}/api/auth/callback/google` and `{BETTER_AUTH_URL}/api/auth/callback/github`.
 
 ```bash
 cp .env.example .env.local
@@ -41,7 +41,7 @@ Production uses Steel for the browser and E2B for the terminal, so the image doe
 
 ```bash
 cp .env.example .env
-# fill BETTER_AUTH_SECRET, DATABASE_URL, APP_ENCRYPTION_KEY, and the keys above
+# fill BETTER_AUTH_SECRET, Google/GitHub OAuth, DATABASE_URL, APP_ENCRYPTION_KEY, and the keys above
 pnpm db:migrate
 docker compose up --build
 ```
@@ -64,7 +64,7 @@ Local development browser profile: `.deni/users/<user-hash>/browser-profile`
 
 ## SaaS architecture
 
-Better Auth provides authentication in-process. Users, sessions, password hashes, and optional TOTP secrets live in Postgres. All bots, threads, routines, skills, computer state, and encrypted user configuration are stored in Postgres with that user ID as the tenant key.
+Better Auth provides authentication in-process. Sign-in is Google or GitHub only. Users, sessions, and linked OAuth accounts live in Postgres. All bots, threads, routines, skills, computer state, and encrypted user configuration are stored in Postgres with that user ID as the tenant key.
 
 Workspace files and screenshots use the configured S3-compatible bucket (Cloudflare R2), namespaced by user. Browser automation uses a persistent Steel profile per user. Terminal commands run inside a per-user E2B sandbox.
 

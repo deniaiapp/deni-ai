@@ -12,8 +12,8 @@ export default function PrivacyPage() {
         </Link>
         <h1 className="text-2xl font-semibold text-[#f0f0f0]">Privacy</h1>
         <p>
-          Account authentication is handled on this service with Better Auth. Email, password
-          hashes, sessions, and optional two-factor secrets are stored in Postgres. Conversation
+          Account authentication is handled on this service with Better Auth. You sign in with
+          Google or GitHub. Sessions are stored in Postgres. Conversation
           history, teammates, routines, skills, and computer state are stored in Postgres keyed by
           your user ID. Workspace files and screenshots are stored in your tenant namespace on
           object storage (S3-compatible, typically Cloudflare R2).
@@ -32,9 +32,9 @@ export default function PrivacyPage() {
           . Deleting the account removes the login and stored workspace data.
         </p>
         <p>
-          Processors that may receive data needed to run the product: Stripe (billing), OpenRouter
-          (model inference), Steel (browser), E2B (sandbox), and the configured object-storage
-          provider.
+          Processors that may receive data needed to run the product: Google and GitHub (sign-in),
+          Stripe (billing), OpenRouter (model inference), Steel (browser), E2B (sandbox), and the
+          configured object-storage provider.
         </p>
         <p>
           Contact:{" "}

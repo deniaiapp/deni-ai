@@ -9,7 +9,6 @@ const publicExact = new Set([
   "/privacy",
   "/sign-in",
   "/sign-up",
-  "/two-factor",
   "/robots.txt",
 ]);
 

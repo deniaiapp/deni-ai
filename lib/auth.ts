@@ -4,7 +4,6 @@ import { headers } from "next/headers";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { haveIBeenPwned, twoFactor } from "better-auth/plugins";
 import { db } from "@/db";
 import * as authSchema from "@/db/auth-schema";
 
@@ -26,13 +25,36 @@ export const auth = betterAuth({
       session: authSchema.session,
       account: authSchema.account,
       verification: authSchema.verification,
-      twoFactor: authSchema.twoFactor,
       authRateLimit: authSchema.authRateLimit,
     },
   }),
   emailAndPassword: {
-    enabled: true,
-    minPasswordLength: 8,
+    enabled: false,
+  },
+  socialProviders: {
+    ...(process.env.GOOGLE_CLIENT_ID?.trim() && process.env.GOOGLE_CLIENT_SECRET?.trim()
+      ? {
+          google: {
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+            prompt: "select_account" as const,
+          },
+        }
+      : {}),
+    ...(process.env.GITHUB_CLIENT_ID?.trim() && process.env.GITHUB_CLIENT_SECRET?.trim()
+      ? {
+          github: {
+            clientId: process.env.GITHUB_CLIENT_ID,
+            clientSecret: process.env.GITHUB_CLIENT_SECRET,
+          },
+        }
+      : {}),
+  },
+  account: {
+    accountLinking: {
+      enabled: true,
+      trustedProviders: ["google", "github"],
+    },
   },
   user: {
     deleteUser: {
@@ -46,13 +68,7 @@ export const auth = betterAuth({
     storage: "database",
     modelName: "authRateLimit",
   },
-  plugins: [
-    twoFactor({
-      issuer: "Deni Run",
-    }),
-    haveIBeenPwned(),
-    nextCookies(),
-  ],
+  plugins: [nextCookies()],
 });
 
 export async function getAuthSession() {
