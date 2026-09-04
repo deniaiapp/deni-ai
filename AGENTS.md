@@ -20,7 +20,8 @@ type(scope): short imperative summary
 Body that explains why, not only what. Required. At least 20 characters.
 ```
 
-- Scope is required. Allowed: `web`, `api`, `db`, `auth`, `billing`, `agent`, `computer`, `docker`, `ci`, `docs`, `deps`, `config`.
+- Scope is required. Combine several with commas and no spaces: `chore(web,api,db)`.
+- Allowed scopes: `web`, `api`, `db`, `auth`, `billing`, `agent`, `computer`, `docker`, `ci`, `docs`, `deps`, `config`.
 - Header (including type, scope, and subject) is at most 72 characters. No trailing period. No Title Case or ALL CAPS. Wrap body lines at 100 characters.
 - Example: `feat(web): show usage meters on the upgrade page`
 

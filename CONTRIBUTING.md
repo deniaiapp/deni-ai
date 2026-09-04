@@ -10,13 +10,20 @@ type(scope): short imperative summary
 Explain why the change exists and what it does. The title is not enough.
 ```
 
-Example:
+One scope, or several joined with commas (no spaces):
 
 ```
 feat(web): show usage meters on the upgrade page
 
 Surface remaining tokens and computer minutes so people can decide
 whether to upgrade before they hit a limit.
+```
+
+```
+chore(web,api,db): align tenant queries with schema
+
+Keep store reads, API handlers, and migrations on the same user-scoped
+keys so account data does not leak across tenants.
 ```
 
 ### Title
@@ -27,6 +34,8 @@ whether to upgrade before they hit a limit.
 - Do not shout in Title Case or ALL CAPS
 
 ### Scope (required)
+
+Use one allowed scope, or several in the order they matter: `chore(web,api,db)`. Do not put spaces after commas.
 
 | Scope | Use for |
 | --- | --- |
