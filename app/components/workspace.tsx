@@ -174,12 +174,13 @@ export function Workspace() {
     let disposed = false;
     let generation = 0;
     let timer: ReturnType<typeof setTimeout> | undefined;
+    const isPageHidden = (): boolean => document.visibilityState === "hidden";
     const refreshIfVisible = async () => {
       const cycle = ++generation;
       clearTimeout(timer);
-      if (disposed || document.visibilityState === "hidden") return;
+      if (disposed || isPageHidden()) return;
       try { await refreshJobs(); } catch { /* Retry at the next polling interval. */ }
-      if (disposed || cycle !== generation || document.visibilityState === "hidden") return;
+      if (disposed || cycle !== generation || isPageHidden()) return;
       const running = chatBusy || Object.values(jobsByThreadRef.current).some((jobs) => jobs.some((job) => ["queued", "running", "finalizing"].includes(job.status)));
       timer = setTimeout(() => void refreshIfVisible(), running ? 2_000 : 15_000);
     };
