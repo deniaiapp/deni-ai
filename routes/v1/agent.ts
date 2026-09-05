@@ -989,6 +989,12 @@ async function proxyResponsesUpstream(options: {
         )
       : providerRequest;
 
+  // Last-mile guard: Responses input items must be flat even when a provider
+  // request was assembled by a compatibility path after normalization.
+  if (upstreamBody.input !== undefined) {
+    upstreamBody.input = flattenResponsesInputItems(upstreamBody.input);
+  }
+
   // Last-mile guard: the body sent below must never contain a client-defined
   // collaboration.* function schema reserved by the upstream model.
   assertNoReservedCollaborationToolsInUpstreamBody(upstreamBody, model);
