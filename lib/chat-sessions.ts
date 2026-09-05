@@ -86,7 +86,8 @@ export function getChatSession(options: {
   if (current) {
     current.config.botId = options.botId;
     current.config.runMode = options.runMode;
-    active(current.config, options.jobId);
+    // A polling snapshot may lag behind the live stream's waiting job ID.
+    if (options.jobId || !["working", "waiting", "finalizing"].includes(current.runStatus)) active(current.config, options.jobId);
     current.hasPendingJob = options.hasPendingJob ?? current.hasPendingJob;
     current.lastUsedAt = Date.now();
     evictIdleSessions();
@@ -133,6 +134,9 @@ export function getChatSession(options: {
         status === "completed" ||
         status === "failed"
       ) {
+        const jobId = (value as Record<string, unknown>).jobId;
+        if (status === "completed" || status === "failed") config.jobId = undefined;
+        else if (typeof jobId === "string") config.jobId = jobId;
         publishRunStatus(options.threadId, status);
       }
     },

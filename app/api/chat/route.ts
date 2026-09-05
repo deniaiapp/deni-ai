@@ -32,9 +32,30 @@ import {
 import { createNotification } from "@/lib/notifications";
 import { hasPendingWorkflowWait, lastAssistantText } from "@/lib/chat-run-state";
 import { messagesWithReplyContext, resolveReplyReferences } from "@/lib/message-actions";
+import { releaseBrowserTakeover } from "@/lib/browser-workspaces";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 800;
+
+function jobConflict(job: { id: string; status: string }) {
+  const message = job.status === "waiting_approval" ? "Please approve or deny the pending action before continuing."
+    : job.status === "waiting_takeover" ? "Finish the step on the computer, then send a new message to continue."
+    : job.status === "uncertain" ? "Review the previous run before retrying it."
+    : "This task is already running or this message has already been submitted.";
+  return new Response(message, { status: 409, headers: { "Content-Type": "text/plain; charset=utf-8", "X-Deni-Job-Id": job.id, "X-Deni-Job-Status": job.status } });
+}
+
+function includesApprovalResponse(incoming: UIMessage[], persisted: UIMessage[]) {
+  const pending = new Set<string>();
+  for (const message of persisted) for (const part of message.parts) {
+    const value = part as { state?: string; approval?: { id?: string } };
+    if (value.state === "approval-requested" && value.approval?.id) pending.add(value.approval.id);
+  }
+  return incoming.some((message) => message.role === "assistant" && message.parts.some((part) => {
+    const value = part as { state?: string; approval?: { id?: string; approved?: boolean } };
+    return value.state === "approval-responded" && value.approval?.id && pending.has(value.approval.id) && typeof value.approval.approved === "boolean";
+  }));
+}
 
 export async function POST(req: Request) {
   const userId = await getApiUserId();
@@ -93,19 +114,27 @@ export async function POST(req: Request) {
   const { model, providerOptions, tokenMultiplier } = await getDeniModel(userId, runMode);
   const idempotencyKey =
     body.idempotencyKey?.trim() ||
-    body.jobId?.trim() ||
     `chat:${thread.id}:${incoming.at(-1)?.id || Date.now()}`;
   const resumeCandidate = body.jobId ? await getJob(userId, body.jobId) : null;
   let job = resumeCandidate && resumeCandidate.threadId === thread.id && resumeCandidate.botId === bot.id
     ? resumeCandidate
     : null;
-  if (job && job.status !== "queued") {
-    return Response.json({ jobId: job.id, status: job.status, reconnected: true }, { status: 409 });
+  const input = incoming.at(-1);
+  const previousMessages = job?.payload.messages;
+  const previousInputs = Array.isArray(previousMessages) ? previousMessages as UIMessage[] : [];
+  const previousInput = previousInputs.findLast((message) => message.role === "user");
+  const hasNewInput = input?.role === "user" && Boolean(input.id) && input.id !== previousInput?.id && input.parts.some((part) => part.type === "text" && part.text.trim());
+  // A just-completed job can remain in a client's polling snapshot briefly.
+  if (job && ["completed", "failed", "cancelled"].includes(job.status) && hasNewInput) job = null;
+  const continuationFrom = job?.status === "waiting_takeover" && hasNewInput ? "waiting_takeover"
+    : job?.status === "waiting_approval" && includesApprovalResponse(incoming, persisted) ? "waiting_approval" : undefined;
+  if (job && job.status !== "queued" && !continuationFrom) {
+    return jobConflict(job);
   }
   if (!job) {
     const existing = await getJobByIdempotencyKey(userId, idempotencyKey);
     if (existing && existing.status !== "failed" && existing.status !== "cancelled") {
-      return Response.json({ jobId: existing.id, status: existing.status, reconnected: true }, { status: 409 });
+      return jobConflict(existing);
     }
     job = await createJob({
       userId,
@@ -116,16 +145,32 @@ export async function POST(req: Request) {
       payload: { messages, runMode },
     });
   }
-  if (resumeCandidate && job) {
+  if (resumeCandidate && job && !continuationFrom) {
     job = (await updateJob(userId, job.id, { payload: { ...job.payload, messages, runMode } })) ?? job;
   }
-  // Persist the user message before opening the stream so a thread can be left and
-  // reopened while the model is still running without losing its context.
-  await saveMessages(userId, thread.id, messages);
-  const claimed = await claimJob(userId, job.id);
+  // Claim a waiting continuation with its updated input atomically. It is never
+  // exposed as queued with old input for the background worker to pick up.
+  if (!continuationFrom) await saveMessages(userId, thread.id, messages);
+  const claimed = await claimJob(userId, job.id, continuationFrom ? {
+    from: continuationFrom, threadId: thread.id, botId: bot.id, key: idempotencyKey, payload: { messages, runMode },
+  } : undefined);
   if (!claimed || !claimed.claimed || claimed.job.status !== "running") {
-    return Response.json({ jobId: job.id, status: claimed?.job.status ?? "queued" }, { status: 409 });
+    return jobConflict(claimed?.job ?? job);
   }
+  if (continuationFrom) {
+    try {
+      if (continuationFrom === "waiting_takeover") {
+        await releaseBrowserTakeover(userId, job.id);
+        await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId: job.id });
+      }
+      await saveMessages(userId, thread.id, messages);
+    } catch (error) {
+      await transitionJob(userId, job.id, "running", { status: continuationFrom, payload: job.payload, lockedAt: null, heartbeatAt: null });
+      reportError(error, "resume chat");
+      return new Response("Could not resume the task. Please send your message again.", { status: 503 });
+    }
+  }
+  job = claimed.job;
   const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id });
   let writeRunStatus: ((status: "working" | "finalizing" | "waiting" | "completed" | "failed") => void) | undefined;
   let finalizationPromise: Promise<boolean> | undefined;
@@ -303,6 +348,7 @@ export async function POST(req: Request) {
           data: { jobId: job.id, status },
         } as never);
       };
+      writeRunStatus("working");
       writer.merge(
         toUIMessageStream({
           stream: result.stream,

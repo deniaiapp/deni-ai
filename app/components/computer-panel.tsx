@@ -66,6 +66,9 @@ export function ComputerPanel({
 }) {
   const [tab, setTab] = useState<Tab>("screen");
   const [takeover, setTakeover] = useState(false);
+  useEffect(() => {
+    if (computer.status !== "takeover") setTakeover(false);
+  }, [computer.status]);
   const [screenExpanded, setScreenExpanded] = useState(false);
   const inputQueue = useRef(Promise.resolve());
   const [fileView, setFileView] = useState<{ path: string; content: string } | null>(null);

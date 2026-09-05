@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
-import { cancelJob, getJob, listJobEvents, retryJob, updateJob } from "@/lib/jobs";
+import { cancelJob, getJob, listJobEvents, retryJob } from "@/lib/jobs";
 import { runBackgroundJob } from "@/lib/job-runner";
 
 export const dynamic = "force-dynamic";
@@ -47,9 +47,9 @@ export async function POST(req: Request, context: Context) {
     if (current.status !== "waiting_approval" && current.status !== "waiting_takeover") {
       return NextResponse.json({ job: current }, { status: 409 });
     }
-    // Queue the continuation so the next chat request can atomically claim the lease.
-    const job = await updateJob(userId, id, { status: "queued", error: null });
-    return NextResponse.json({ job });
+    // Only a chat request carrying new input or an approval response can resume
+    // this job. Exposing it as queued here lets the worker replay old input.
+    return NextResponse.json({ job: current, resumeVia: "chat" });
   }
   return NextResponse.json({ error: "unsupported action" }, { status: 400 });
 }

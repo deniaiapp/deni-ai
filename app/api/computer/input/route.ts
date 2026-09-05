@@ -70,7 +70,8 @@ export async function POST(req: Request) {
   if (body.type === "release") {
     if (body.jobId) {
       await releaseBrowserTakeover(userId, body.jobId).catch(() => undefined);
-      await updateJob(userId, body.jobId, { status: "running" }).catch(() => undefined);
+      // Releasing human control does not start an executor. Keep the job waiting
+      // until the next chat message atomically claims its continuation.
     }
     await setComputer(userId, {
       status: "idle",

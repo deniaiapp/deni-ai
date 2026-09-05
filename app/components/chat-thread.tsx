@@ -225,17 +225,11 @@ export function ChatThread({
   const onApprove = useCallback(
     async (id: string, approved: boolean) => {
       setChatSessionRunStatus(thread.id, "working");
-      const active = displayedJobs.find((item) => item.status === "waiting_approval");
-      if (active) {
-        await fetch(`/api/jobs/${active.id}`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "resume" }),
-        });
-      }
+      // The chat request resumes the job together with the approval response.
+      // Do not queue old input for the background worker before approval is sent.
       addToolApprovalResponse({ id, approved });
     },
-    [addToolApprovalResponse, displayedJobs, thread.id],
+    [addToolApprovalResponse, thread.id],
   );
 
   const busy = status === "submitted" || status === "streaming";

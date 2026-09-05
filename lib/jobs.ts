@@ -157,7 +157,13 @@ export async function createJob(options: {
   return mapJob(rows[0]);
 }
 
-export async function claimJob(userId: string, jobId: string) {
+export async function claimJob(userId: string, jobId: string, continuation?: {
+  from: "waiting_takeover" | "waiting_approval";
+  threadId: string;
+  botId: string;
+  key: string;
+  payload: Record<string, unknown>;
+}) {
   return db.transaction(async (tx) => {
     const rows = await tx
       .select()
@@ -166,10 +172,13 @@ export async function claimJob(userId: string, jobId: string) {
       .for("update");
     const row = rows[0];
     if (!row) return null;
+    if (continuation && (row.threadId !== continuation.threadId || row.botId !== continuation.botId || row.status !== continuation.from || row.payload.continuationKey === continuation.key)) {
+      return { job: mapJob(row), claimed: false };
+    }
     const staleBefore = new Date(Date.now() - LEASE_MS);
     const stale = row.status === "running" && (!row.heartbeatAt || row.heartbeatAt < staleBefore);
-    if (row.status !== "queued" && !stale) return { job: mapJob(row), claimed: false };
-    if (row.attempt >= row.maxAttempts && !stale) {
+    if (!continuation && row.status !== "queued" && !stale) return { job: mapJob(row), claimed: false };
+    if (!continuation && row.attempt >= row.maxAttempts && !stale) {
       return { job: mapJob(row), claimed: false };
     }
     const now = new Date();
@@ -177,7 +186,8 @@ export async function claimJob(userId: string, jobId: string) {
       .update(agentJobs)
       .set({
         status: "running",
-        attempt: row.attempt + 1,
+        attempt: continuation ? row.attempt : row.attempt + 1,
+        ...(continuation ? { payload: { ...row.payload, ...continuation.payload, continuationKey: continuation.key } } : {}),
         lockedAt: now,
         heartbeatAt: now,
         startedAt: row.startedAt ?? now,
@@ -218,6 +228,7 @@ export async function transitionJob(
   jobId: string,
   from: JobStatus | JobStatus[],
   patch: Partial<{
+    payload: Record<string, unknown>;
     status: JobStatus;
     result: Record<string, unknown> | null;
     checkpoint: Record<string, unknown> | null;
