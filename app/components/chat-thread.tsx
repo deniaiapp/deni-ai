@@ -505,7 +505,7 @@ function buildCotSteps(
           ? errorText
           : liveHandoff?.status === "running" && liveHandoff.currentLabel
             ? liveHandoff.currentLabel
-            : toolApprovalDetail(name, input),
+            : undefined,
       hostname:
         !failed && (name === "browser" || name.toLowerCase().includes("browser"))
           ? browserResultHostname(toolPart.output, input)

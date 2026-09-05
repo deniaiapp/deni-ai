@@ -122,10 +122,10 @@ export function createDeniTools(ctx: AgentContext) {
         await setComputer(ctx.userId, {
           status: "working",
           workingBotId: ctx.bot.id,
-          workingLabel: command,
+          workingLabel: "Running a command",
           lastCommand: command,
           activityKind: "shell",
-          activityTitle: command,
+          activityTitle: "Ran a command",
           botId: ctx.bot.id,
         });
         const result = await runCommand(ctx.userId, command);
