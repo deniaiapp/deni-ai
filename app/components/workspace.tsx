@@ -30,13 +30,24 @@ import type {
   WorkspaceNode,
   ShellRecord,
 } from "@/lib/types";
+import dynamic from "next/dynamic";
 import { ChatThread } from "./chat-thread";
-import { ComputerPanel } from "./computer-panel";
 import { SetupScreen } from "./setup-screen";
 import { BillingDialog } from "./billing-dialog";
 import { Sidebar, type TeammateMenuAction } from "./sidebar";
 import type { UsageSnapshot } from "@/lib/plans";
 import { parseRunMode, type RunMode } from "@/lib/model";
+
+const ComputerPanel = dynamic(
+  () => import("./computer-panel").then((mod) => ({ default: mod.ComputerPanel })),
+  {
+    loading: () => (
+      <div className="hidden h-full w-[320px] items-center justify-center border-l border-white/10 bg-[#111111] xl:flex">
+        <LoadingFallback label="Loading computer…" />
+      </div>
+    ),
+  },
+);
 
 type StatePayload = {
   ready: boolean;

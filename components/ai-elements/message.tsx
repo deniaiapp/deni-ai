@@ -2,11 +2,9 @@
 
 import { cjk } from "@streamdown/cjk";
 import { code } from "@streamdown/code";
-import { math } from "@streamdown/math";
-import { mermaid } from "@streamdown/mermaid";
 import type { UIMessage } from "ai";
 import type { ComponentProps, HTMLAttributes } from "react";
-import { memo } from "react";
+import { memo, useEffect, useState } from "react";
 import { Streamdown } from "streamdown";
 
 import { cn } from "@/lib/utils";
@@ -45,26 +43,39 @@ export const MessageContent = ({ children, className, ...props }: MessageContent
 export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const basePlugins = { cjk, code };
-const mathPlugins = { cjk, code, math };
-const mermaidPlugins = { cjk, code, mermaid };
-const allPlugins = { cjk, code, math, mermaid };
-
-function pluginsFor(text: string) {
-  const mermaidNeeded = text.includes("```mermaid");
-  const mathNeeded = text.includes("$") || text.includes("\\(");
-  if (mermaidNeeded && mathNeeded) return allPlugins;
-  if (mermaidNeeded) return mermaidPlugins;
-  if (mathNeeded) return mathPlugins;
-  return basePlugins;
-}
 
 export const MessageResponse = memo(
   ({ className, children, ...props }: MessageResponseProps) => {
     const text = typeof children === "string" ? children : "";
+    const mermaidNeeded = text.includes("```mermaid");
+    const mathNeeded = text.includes("$") || text.includes("\\(");
+    const [extra, setExtra] = useState<Record<string, unknown>>({});
+
+    useEffect(() => {
+      if (!mermaidNeeded && !mathNeeded) {
+        setExtra({});
+        return;
+      }
+      let cancelled = false;
+      void Promise.all([
+        mathNeeded ? import("@streamdown/math") : null,
+        mermaidNeeded ? import("@streamdown/mermaid") : null,
+      ]).then(([mathMod, mermaidMod]) => {
+        if (cancelled) return;
+        setExtra({
+          ...(mathMod ? { math: mathMod.math } : {}),
+          ...(mermaidMod ? { mermaid: mermaidMod.mermaid } : {}),
+        });
+      });
+      return () => {
+        cancelled = true;
+      };
+    }, [mathNeeded, mermaidNeeded]);
+
     return (
       <Streamdown
         className={cn("max-w-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}
-        plugins={pluginsFor(text)}
+        plugins={{ ...basePlugins, ...extra }}
         {...props}
       >
         {children}
