@@ -23,6 +23,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Empty } from "@/components/ui/empty";
+import { LoadingFallback } from "@/components/ui/loading";
+import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ComputerState, Routine, ShellRecord, WorkspaceNode } from "@/lib/types";
 
@@ -64,6 +66,10 @@ export function ComputerPanel({
   const [fileView, setFileView] = useState<{ path: string; content: string } | null>(null);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [filesBusy, setFilesBusy] = useState(false);
+  const [tabBusy, setTabBusy] = useState<Tab | null>(null);
+  const [openingPath, setOpeningPath] = useState<string | null>(null);
+  const [screenBusy, setScreenBusy] = useState<"takeover" | "close" | null>(null);
+  const [shotReady, setShotReady] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ all?: boolean; paths: string[] } | null>(
     null,
   );
@@ -184,31 +190,46 @@ export function ComputerPanel({
   async function toggleTakeover() {
     const next = !takeover;
     debugComputer("toggle takeover", { enabled: next });
-    setTakeover(next);
-    const res = await fetch("/api/computer/input", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: next ? "takeover" : "release" }),
-    });
-    debugComputer("toggle takeover response", { enabled: next, status: res.status });
-    await onRefresh(next, false);
+    setScreenBusy("takeover");
+    try {
+      setTakeover(next);
+      const res = await fetch("/api/computer/input", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: next ? "takeover" : "release" }),
+      });
+      debugComputer("toggle takeover response", { enabled: next, status: res.status });
+      await onRefresh(next, false);
+    } finally {
+      setScreenBusy(null);
+    }
   }
 
   async function closeBrowser() {
-    await fetch("/api/computer", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "release" }),
-    });
-    setTakeover(false);
-    setScreenExpanded(false);
-    await onRefresh(false, true);
+    setScreenBusy("close");
+    try {
+      await fetch("/api/computer", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "release" }),
+      });
+      setTakeover(false);
+      setScreenExpanded(false);
+      await onRefresh(false, true);
+    } finally {
+      setScreenBusy(null);
+    }
   }
 
   async function openFile(path: string) {
-    const res = await fetch(`/api/computer/files?mode=read&path=${encodeURIComponent(path)}`);
-    const json = await res.json();
-    if (json.content != null) setFileView({ path: json.path, content: json.content });
+    setOpeningPath(path);
+    try {
+      const res = await fetch(`/api/computer/files?mode=read&path=${encodeURIComponent(path)}`);
+      const json = await res.json();
+      if (json.content != null) setFileView({ path: json.path, content: json.content });
+    } finally {
+      setOpeningPath(null);
+    }
   }
 
   const fileNodes = flattenWorkspace(files);
@@ -325,6 +346,24 @@ export function ComputerPanel({
   );
   const visibleTab = !showScreen && tab === "screen" ? "files" : tab;
 
+  useEffect(() => {
+    if (visibleTab !== "files" && visibleTab !== "terminal") return;
+    let cancelled = false;
+    setTabBusy(visibleTab);
+    void onRefresh(false, visibleTab === "files")
+      .catch(() => undefined)
+      .finally(() => {
+        if (!cancelled) setTabBusy(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [visibleTab, onRefresh]);
+
+  useEffect(() => {
+    setShotReady(false);
+  }, [stamp]);
+
   return (
     <aside className="flex h-full w-[320px] max-w-[calc(100vw-2.5rem)] shrink-0 flex-col border-l border-white/10 bg-[#111111] text-[#f0f0f0]">
       <header className="flex items-center justify-between border-b border-white/10 px-3 py-3">
@@ -345,8 +384,14 @@ export function ComputerPanel({
         <Tabs value={visibleTab} onValueChange={(value) => setTab(value as Tab)}>
           <TabsList className="w-full">
             {showScreen ? <TabsTrigger value="screen">Screen</TabsTrigger> : null}
-            <TabsTrigger value="files">Files</TabsTrigger>
-            <TabsTrigger value="terminal">Terminal</TabsTrigger>
+            <TabsTrigger value="files">
+              {tabBusy === "files" ? <Spinner size="sm" className="size-3.5" /> : null}
+              Files
+            </TabsTrigger>
+            <TabsTrigger value="terminal">
+              {tabBusy === "terminal" ? <Spinner size="sm" className="size-3.5" /> : null}
+              Terminal
+            </TabsTrigger>
             <TabsTrigger value="log">Log</TabsTrigger>
           </TabsList>
         </Tabs>
@@ -385,7 +430,8 @@ export function ComputerPanel({
                     type="button"
                     size="xs"
                     variant={takeover ? "primary" : "outline"}
-                    onClick={toggleTakeover}
+                    loading={screenBusy === "takeover"}
+                    onClick={() => void toggleTakeover()}
                   >
                     {takeover ? "In control" : "Take control"}
                   </Button>
@@ -394,7 +440,8 @@ export function ComputerPanel({
                   type="button"
                   size="xs"
                   variant="secondary-destructive"
-                  onClick={closeBrowser}
+                  loading={screenBusy === "close"}
+                  onClick={() => void closeBrowser()}
                 >
                   Close
                 </Button>
@@ -411,7 +458,7 @@ export function ComputerPanel({
               <div className="relative">
                 <button
                   type="button"
-                  className={`block w-full overflow-hidden rounded-lg bg-[#090909] text-left ring-1 ring-white/10 ${
+                  className={`relative block w-full overflow-hidden rounded-lg bg-[#090909] text-left ring-1 ring-white/10 ${
                     takeover ? "" : "cursor-zoom-in"
                   }`}
                   onClick={clickScreen}
@@ -419,12 +466,23 @@ export function ComputerPanel({
                   aria-label={takeover ? "Control computer screen" : "Enlarge computer screen"}
                   data-computer-screen="true"
                 >
+                  {!shotReady ? (
+                    <span className="absolute inset-0 z-10 flex items-center justify-center bg-[#090909]">
+                      <Spinner size="md" />
+                    </span>
+                  ) : null}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={`/api/computer/screenshot?t=${encodeURIComponent(stamp)}`}
                     alt="Deni Run"
-                    onLoad={handleScreenshotLoad}
-                    onError={handleScreenshotError}
+                    onLoad={(event) => {
+                      setShotReady(true);
+                      handleScreenshotLoad(event);
+                    }}
+                    onError={(event) => {
+                      setShotReady(true);
+                      handleScreenshotError(event);
+                    }}
                     className={`block min-h-40 w-full object-contain bg-[#090909] ${
                       takeover ? "cursor-crosshair" : ""
                     }`}
@@ -466,7 +524,11 @@ export function ComputerPanel({
 
         {visibleTab === "files" ? (
           <div className="p-3">
-            {fileView ? (
+            {tabBusy === "files" && !fileView ? (
+              <LoadingFallback label="Loading files…" />
+            ) : openingPath && !fileView ? (
+              <LoadingFallback label="Opening file…" />
+            ) : fileView ? (
               <div>
                 <div className="flex items-center gap-1">
                   <Button
@@ -551,8 +613,10 @@ export function ComputerPanel({
                   <FileTree
                     nodes={files}
                     selected={selectedPaths}
+                    openingPath={openingPath}
+                    busy={filesBusy}
                     onToggle={togglePath}
-                    onOpen={openFile}
+                    onOpen={(path) => void openFile(path)}
                     onDownload={(path) => void downloadWorkspace([path])}
                     onDelete={(path) => setDeleteConfirm({ paths: [path] })}
                   />
@@ -564,7 +628,9 @@ export function ComputerPanel({
 
         {visibleTab === "terminal" ? (
           <div className="space-y-3 p-3">
-            {shells.length === 0 ? (
+            {tabBusy === "terminal" ? (
+              <LoadingFallback label="Loading terminal…" />
+            ) : shells.length === 0 ? (
               <Empty
                 size="sm"
                 icon={<TerminalIcon size={32} className="text-[#6d6d6d]" />}
@@ -820,6 +886,8 @@ function AnimatedDots() {
 function FileTree({
   nodes,
   selected,
+  openingPath,
+  busy,
   onToggle,
   onOpen,
   onDownload,
@@ -828,6 +896,8 @@ function FileTree({
 }: {
   nodes: WorkspaceNode[];
   selected: Set<string>;
+  openingPath: string | null;
+  busy: boolean;
   onToggle: (path: string, checked: boolean) => void;
   onOpen: (path: string) => void;
   onDownload: (path: string) => void;
@@ -853,8 +923,10 @@ function FileTree({
               <button
                 type="button"
                 onClick={() => onOpen(node.path)}
-                className="min-w-0 flex-1 truncate text-left font-mono text-[0.9em] text-[#f0f0f0] hover:text-blue-400"
+                disabled={Boolean(openingPath)}
+                className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-left font-mono text-[0.9em] text-[#f0f0f0] hover:text-blue-400 disabled:opacity-60"
               >
+                {openingPath === node.path ? <Spinner size="sm" className="size-3.5" /> : null}
                 {node.name}
               </button>
             )}
@@ -865,6 +937,7 @@ function FileTree({
               shape="square"
               icon={DownloadSimpleIcon}
               aria-label={`Download ${node.name}`}
+              disabled={busy}
               className="opacity-0 group-hover:opacity-100"
               onClick={() => onDownload(node.path)}
             />
@@ -875,6 +948,7 @@ function FileTree({
               shape="square"
               icon={TrashIcon}
               aria-label={`Delete ${node.name}`}
+              disabled={busy}
               className="opacity-0 group-hover:opacity-100"
               onClick={() => onDelete(node.path)}
             />
@@ -883,6 +957,8 @@ function FileTree({
             <FileTree
               nodes={node.children}
               selected={selected}
+              openingPath={openingPath}
+              busy={busy}
               onToggle={onToggle}
               onOpen={onOpen}
               onDownload={onDownload}

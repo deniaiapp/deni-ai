@@ -54,6 +54,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/empty";
+import { Spinner } from "@/components/ui/spinner";
 import { Avatar } from "./sidebar";
 import { RUN_MODES, type RunMode } from "@/lib/model";
 import type { Bot, HandoffSnapshot, Thread } from "@/lib/types";
@@ -78,7 +79,7 @@ export function ChatThread({
   bots: Bot[];
   initialMessages: UIMessage[];
   runMode: RunMode;
-  onRunModeChange: (mode: RunMode) => void;
+  onRunModeChange: (mode: RunMode) => void | Promise<void>;
   onBusyChange: (busy: boolean) => void;
 }) {
   const transport = useMemo(
@@ -614,14 +615,10 @@ function PartView({
           <ConfirmationRequest>
             <ConfirmationTitle>{displayLabel}</ConfirmationTitle>
             {detail ? <p className="font-mono text-xs text-[#c8c8c8]">{detail}</p> : null}
-            <ConfirmationActions>
-              <ConfirmationAction variant="primary" onClick={() => onApprove(approval.id, true)}>
-                Approve
-              </ConfirmationAction>
-              <ConfirmationAction variant="outline" onClick={() => onApprove(approval.id, false)}>
-                Deny
-              </ConfirmationAction>
-            </ConfirmationActions>
+            <ApprovalActions
+              onApprove={() => onApprove(approval.id, true)}
+              onDeny={() => onApprove(approval.id, false)}
+            />
           </ConfirmationRequest>
           <ConfirmationAccepted>
             <ConfirmationTitle>Approved · {displayLabel}</ConfirmationTitle>
@@ -764,21 +761,60 @@ function snippet(value?: string, max = 72) {
   return text.length > max ? `${text.slice(0, max - 1)}…` : text;
 }
 
+function ApprovalActions({
+  onApprove,
+  onDeny,
+}: {
+  onApprove: () => void;
+  onDeny: () => void;
+}) {
+  const [busy, setBusy] = useState<"approve" | "deny" | null>(null);
+  return (
+    <ConfirmationActions>
+      <ConfirmationAction
+        variant="primary"
+        loading={busy === "approve"}
+        disabled={busy !== null}
+        onClick={() => {
+          setBusy("approve");
+          onApprove();
+        }}
+      >
+        Approve
+      </ConfirmationAction>
+      <ConfirmationAction
+        variant="outline"
+        loading={busy === "deny"}
+        disabled={busy !== null}
+        onClick={() => {
+          setBusy("deny");
+          onDeny();
+        }}
+      >
+        Deny
+      </ConfirmationAction>
+    </ConfirmationActions>
+  );
+}
+
 function RunModePicker({
   value,
   onChange,
 }: {
   value: RunMode;
-  onChange: (mode: RunMode) => void;
+  onChange: (mode: RunMode) => void | Promise<void>;
 }) {
   const current = RUN_MODES[value];
+  const [busy, setBusy] = useState(false);
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="rounded-md px-1.5 py-1 text-left text-xs text-[#8f8f8f] hover:bg-white/5 hover:text-[#f0f0f0]"
+          disabled={busy}
+          className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs text-[#8f8f8f] hover:bg-white/5 hover:text-[#f0f0f0] disabled:opacity-60"
         >
+          {busy ? <Spinner size="sm" className="size-3" /> : null}
           {current.label}
         </button>
       </DropdownMenuTrigger>
@@ -786,7 +822,11 @@ function RunModePicker({
         {(Object.values(RUN_MODES) as (typeof RUN_MODES)[RunMode][]).map((mode) => (
           <DropdownMenuItem
             key={mode.id}
-            onSelect={() => onChange(mode.id)}
+            disabled={busy}
+            onSelect={() => {
+              setBusy(true);
+              void Promise.resolve(onChange(mode.id)).finally(() => setBusy(false));
+            }}
             className={mode.id === value ? "bg-[#2d2d2d]" : undefined}
           >
             <span className="flex min-w-0 flex-col">

@@ -17,6 +17,7 @@ import {
   Pencil,
   Pin,
   Trash2,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
 import { motion } from "motion/react";
@@ -71,6 +72,8 @@ export function Sidebar({
   onTeammateAction,
   usage,
   onOpenBilling,
+  loadingThreadId = null,
+  actionBusyId = null,
 }: {
   bots: Bot[];
   threads: Thread[];
@@ -85,6 +88,8 @@ export function Sidebar({
   onTeammateAction: (thread: Thread, bot: Bot, action: TeammateMenuAction) => void;
   usage: UsageSnapshot | null;
   onOpenBilling: () => void;
+  loadingThreadId?: string | null;
+  actionBusyId?: string | null;
 }) {
   const dms = threads.filter((item) => item.kind === "dm");
   const groups = threads.filter((item) => item.kind === "group");
@@ -138,6 +143,8 @@ export function Sidebar({
             threads={unsectioned}
             bots={bots}
             activeThreadId={activeThreadId}
+            loadingThreadId={loadingThreadId}
+            actionBusyId={actionBusyId}
             onSelectThread={onSelectThread}
             onTeammateAction={onTeammateAction}
           />
@@ -150,6 +157,8 @@ export function Sidebar({
             threads={shownDms.filter((thread) => thread.section === name)}
             bots={bots}
             activeThreadId={activeThreadId}
+            loadingThreadId={loadingThreadId}
+            actionBusyId={actionBusyId}
             onSelectThread={onSelectThread}
             onTeammateAction={onTeammateAction}
           />
@@ -160,6 +169,8 @@ export function Sidebar({
             threads={hiddenDms}
             bots={bots}
             activeThreadId={activeThreadId}
+            loadingThreadId={loadingThreadId}
+            actionBusyId={actionBusyId}
             onSelectThread={onSelectThread}
             onTeammateAction={onTeammateAction}
           />
@@ -238,6 +249,8 @@ function TeammateGroup({
   threads,
   bots,
   activeThreadId,
+  loadingThreadId,
+  actionBusyId,
   onSelectThread,
   onTeammateAction,
 }: {
@@ -246,6 +259,8 @@ function TeammateGroup({
   threads: Thread[];
   bots: Bot[];
   activeThreadId: string | null;
+  loadingThreadId?: string | null;
+  actionBusyId?: string | null;
   onSelectThread: (id: string) => void;
   onTeammateAction: (thread: Thread, bot: Bot, action: TeammateMenuAction) => void;
 }) {
@@ -264,6 +279,7 @@ function TeammateGroup({
               thread={thread}
               bot={bot}
               active={activeThreadId === thread.id}
+              loading={loadingThreadId === thread.id || actionBusyId === bot.id}
               onSelect={() => onSelectThread(thread.id)}
               onAction={(action) => onTeammateAction(thread, bot, action)}
             />
@@ -278,12 +294,14 @@ function TeammateRow({
   thread,
   bot,
   active,
+  loading,
   onSelect,
   onAction,
 }: {
   thread: Thread;
   bot: Bot;
   active: boolean;
+  loading?: boolean;
   onSelect: () => void;
   onAction: (action: TeammateMenuAction) => void;
 }) {
@@ -310,7 +328,9 @@ function TeammateRow({
               {thread.lastPreview || bot.job}
             </span>
           </span>
-          {thread.pinned ? (
+          {loading ? (
+            <Loader2 className="mt-1.5 size-3.5 shrink-0 animate-spin text-[#8f8f8f]" />
+          ) : thread.pinned ? (
             <Pin className="mt-1.5 size-3 shrink-0 text-[#8f8f8f]" aria-label="Pinned" />
           ) : null}
           {thread.unread ? (

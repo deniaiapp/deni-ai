@@ -2,6 +2,7 @@
 
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
+import { LoadingFallback } from "@/components/ui/loading";
 import { easeOut } from "@/lib/motion";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { UsageSnapshot } from "@/lib/plans";
@@ -93,7 +94,7 @@ export function BillingDialog({
             <Meter label="Teammates" used={usage.teammates.used} limit={usage.teammates.limit} />
           </div>
         ) : (
-          <p className="text-sm text-[#8f8f8f]">Loading usage…</p>
+          <LoadingFallback label="Loading usage…" className="py-8" />
         )}
         <div className="mt-6 flex justify-end gap-2">
           <DialogClose asChild>

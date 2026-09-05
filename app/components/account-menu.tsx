@@ -31,11 +31,12 @@ export function AccountMenu({
   const [confirm, setConfirm] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [busy, setBusy] = useState<"export" | "delete" | null>(null);
+  const [busy, setBusy] = useState<"export" | "delete" | "signout" | null>(null);
   const [error, setError] = useState("");
   const name = user?.name || user?.email || "Account";
   const onPro = usage?.plan === "pro";
   const exporting = busy === "export";
+  const signingOut = busy === "signout";
 
   async function downloadExport() {
     setBusy("export");
@@ -78,7 +79,7 @@ export function AccountMenu({
       <DropdownMenu
         open={menuOpen}
         onOpenChange={(next) => {
-          if (exporting) return;
+          if (exporting || signingOut) return;
           setMenuOpen(next);
         }}
       >
@@ -116,7 +117,7 @@ export function AccountMenu({
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem
-            disabled={exporting}
+            disabled={exporting || signingOut}
             onSelect={() => {
               onOpenBilling();
             }}
@@ -125,12 +126,12 @@ export function AccountMenu({
             Plan and usage
           </DropdownMenuItem>
           {onPro ? null : (
-            <DropdownMenuItem disabled={exporting} onSelect={() => router.push("/upgrade")}>
+            <DropdownMenuItem disabled={exporting || signingOut} onSelect={() => router.push("/upgrade")}>
               <Sparkles />
               Upgrade to Pro
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem disabled={exporting} onSelect={() => router.push("/account")}>
+          <DropdownMenuItem disabled={exporting || signingOut} onSelect={() => router.push("/account")}>
             <UserRound />
             Manage profile
           </DropdownMenuItem>
@@ -149,7 +150,7 @@ export function AccountMenu({
           <DropdownMenuSeparator />
           <DropdownMenuItem
             variant="destructive"
-            disabled={exporting}
+            disabled={exporting || signingOut}
             onSelect={() => {
               setConfirm("");
               setError("");
@@ -160,8 +161,11 @@ export function AccountMenu({
             Delete account
           </DropdownMenuItem>
           <DropdownMenuItem
-            disabled={exporting}
-            onSelect={() => {
+            disabled={exporting || signingOut}
+            onSelect={(event) => {
+              event.preventDefault();
+              if (busy) return;
+              setBusy("signout");
               void authClient.signOut({
                 fetchOptions: {
                   onSuccess: () => {
@@ -171,8 +175,8 @@ export function AccountMenu({
               });
             }}
           >
-            <LogOut />
-            Sign out
+            {signingOut ? <Loader2 className="animate-spin" /> : <LogOut />}
+            {signingOut ? "Signing out…" : "Sign out"}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>

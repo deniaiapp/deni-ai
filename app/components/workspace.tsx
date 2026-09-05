@@ -19,7 +19,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
-import { Spinner } from "@/components/ui/spinner";
+import { LoadingFallback } from "@/components/ui/loading";
 import { Textarea } from "@/components/ui/textarea";
 import type {
   Bot,
@@ -71,6 +71,7 @@ export function Workspace() {
   const [sectionThread, setSectionThread] = useState<Thread | null>(null);
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [runMode, setRunMode] = useState<RunMode>("max");
+  const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [billingOpen, setBillingOpen] = useState(false);
   const [billingBusy, setBillingBusy] = useState(false);
   const teammateLimitReached = Boolean(usage && bots.length >= usage.teammates.limit);
@@ -243,27 +244,32 @@ export function Workspace() {
           openTeammatePaywall();
           return;
         }
-        const res = await fetch("/api/bots", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            name: `${bot.name} copy`,
-            job: bot.job,
-            instructions: bot.instructions,
-          }),
-        });
-        if (res.status === 402) {
-          openTeammatePaywall();
-          return;
+        setActionBusyId(bot.id);
+        try {
+          const res = await fetch("/api/bots", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: `${bot.name} copy`,
+              job: bot.job,
+              instructions: bot.instructions,
+            }),
+          });
+          if (res.status === 402) {
+            openTeammatePaywall();
+            return;
+          }
+          if (!res.ok) return;
+          const json = (await res.json()) as { bot?: Bot; thread?: Thread };
+          const createdBot = json.bot;
+          const createdThread = json.thread;
+          if (!createdBot || !createdThread) return;
+          setBots((list) => [...list, createdBot]);
+          setThreads((list) => [...list, createdThread]);
+          setActiveThreadId(createdThread.id);
+        } finally {
+          setActionBusyId(null);
         }
-        if (!res.ok) return;
-        const json = (await res.json()) as { bot?: Bot; thread?: Thread };
-        const createdBot = json.bot;
-        const createdThread = json.thread;
-        if (!createdBot || !createdThread) return;
-        setBots((list) => [...list, createdBot]);
-        setThreads((list) => [...list, createdThread]);
-        setActiveThreadId(createdThread.id);
         return;
       }
       if (action === "hide") {
@@ -329,8 +335,7 @@ export function Workspace() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.35, ease: easeOut }}
       >
-        <Spinner size="lg" />
-        <span className="text-[0.925rem] font-semibold text-[#f0f0f0]">Deni Run</span>
+        <LoadingFallback label="Deni Run" />
       </motion.div>
     );
   }
@@ -370,6 +375,8 @@ export function Workspace() {
           onOpenRoutines={() => setModal("routines")}
           onTeammateAction={handleTeammateAction}
           usage={usage}
+          loadingThreadId={activeThreadId && !threadReady ? activeThreadId : null}
+          actionBusyId={actionBusyId}
           onOpenBilling={() => {
             setBillingOpen(true);
             void loadState();
@@ -407,9 +414,9 @@ export function Workspace() {
             bots={bots}
             initialMessages={messages}
             runMode={runMode}
-            onRunModeChange={(mode) => {
+            onRunModeChange={async (mode) => {
               setRunMode(mode);
-              void fetch("/api/state", {
+              await fetch("/api/state", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ runMode: mode }),
@@ -419,13 +426,12 @@ export function Workspace() {
           />
         ) : activeThreadId ? (
           <motion.div
-            className="flex flex-1 flex-col items-center justify-center gap-3 bg-[#050505]"
+            className="flex flex-1 flex-col items-center justify-center bg-[#050505]"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, ease: easeOut }}
           >
-            <Spinner size="md" />
-            <span className="text-sm text-[#8f8f8f]">Loading teammate...</span>
+            <LoadingFallback label="Loading teammate…" />
           </motion.div>
         ) : (
           <motion.div

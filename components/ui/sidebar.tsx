@@ -1,6 +1,6 @@
 "use client";
 
-import { PanelLeftIcon, XIcon } from "lucide-react";
+import { Loader2Icon, PanelLeftIcon, XIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
@@ -167,20 +167,33 @@ function SidebarMenu({ className, ...props }: ComponentProps<"div">) {
 
 type SidebarMenuButtonProps = ComponentProps<"button"> & {
   icon?: React.ComponentType<{ size?: number | string; className?: string }>;
+  loading?: boolean;
 };
 
-function SidebarMenuButton({ className, icon: Icon, children, ...props }: SidebarMenuButtonProps) {
+function SidebarMenuButton({
+  className,
+  icon: Icon,
+  loading = false,
+  disabled,
+  children,
+  ...props
+}: SidebarMenuButtonProps) {
   return (
     <button
       type="button"
       data-slot="sidebar-menu-button"
+      disabled={disabled || loading}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-[#c8c8c8] transition-colors hover:bg-white/5 hover:text-[#f0f0f0]",
+        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-[#c8c8c8] transition-colors hover:bg-white/5 hover:text-[#f0f0f0] disabled:opacity-60",
         className,
       )}
       {...props}
     >
-      {Icon ? <Icon size={16} className="shrink-0" /> : null}
+      {loading ? (
+        <Loader2Icon className="size-4 shrink-0 animate-spin" />
+      ) : Icon ? (
+        <Icon size={16} className="shrink-0" />
+      ) : null}
       {children}
     </button>
   );

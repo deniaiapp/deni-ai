@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { FadeIn } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 
@@ -17,6 +17,7 @@ export default function ErrorPage({
     console.error(error);
   }, [error]);
   const recover = retry ?? reset ?? (() => window.location.reload());
+  const [busy, setBusy] = useState(false);
 
   return (
     <main className="flex h-full flex-col items-center justify-center bg-[#050505] px-6 text-center">
@@ -25,7 +26,15 @@ export default function ErrorPage({
         <p className="max-w-md text-sm text-[#8f8f8f]">
           Reload this page. If it keeps happening, wait a moment and try again.
         </p>
-        <Button type="button" variant="primary" onClick={() => recover()}>
+        <Button
+          type="button"
+          variant="primary"
+          loading={busy}
+          onClick={() => {
+            setBusy(true);
+            recover();
+          }}
+        >
           Try again
         </Button>
       </FadeIn>
