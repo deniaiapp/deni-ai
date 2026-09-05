@@ -22,6 +22,7 @@ describe("reserved collaboration tools", () => {
     expect(modelReservesCollaborationTools("openai/gpt-5.4")).toBe(true);
     expect(modelReservesCollaborationTools("openai/gpt-5.3-codex")).toBe(true);
     expect(modelReservesCollaborationTools("gpt-5.2")).toBe(true);
+    expect(modelReservesCollaborationTools("openai/gpt-6-astra")).toBe(true);
     expect(modelReservesCollaborationTools("anthropic/claude-sonnet-4.6")).toBe(false);
     expect(modelReservesCollaborationTools("openai/gpt-4.1")).toBe(false);
   });

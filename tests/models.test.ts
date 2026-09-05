@@ -1,12 +1,23 @@
 import { describe, expect, test } from "bun:test";
+import { getModelCategory } from "../utils/deni/models";
 import {
   getLongContextUsageMultiplier,
   getModelContextWindow,
   getModelDefinition,
+  getModelTokenUsageMultiplier,
   resolveAvailableModelId,
 } from "../utils/agent/models";
 
 describe("Codex long-context model support", () => {
+  test("registers GPT-6 Astra as a Fable-priced premium model", () => {
+    const definition = getModelDefinition("gpt-6-astra");
+
+    expect(definition?.id).toBe("openai/gpt-6-astra");
+    expect(definition?.premium).toBe(true);
+    expect(getModelCategory("gpt-6-astra")).toBe("premium");
+    expect(getModelTokenUsageMultiplier("gpt-6-astra")).toBe(5);
+  });
+
   test("exposes the GPT-5.6 1M context limits", () => {
     for (const model of [
       "openai/gpt-5.6-sol",

@@ -73,6 +73,16 @@ export interface AnthropicModelDefinition {
 
 export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
+    id: "openai/gpt-6-astra",
+    label: "GPT-6 Astra",
+    description:
+      "GPT-6 frontier model for advanced reasoning, coding, and agentic work.",
+    tags: ["general", "reasoning", "agentic"],
+    premium: true,
+    tokenUsageMultiplier: 5,
+    tier: "plus",
+  },
+  {
     id: "openai/gpt-5.6-sol",
     label: "GPT-5.6 Sol",
     description:

@@ -31,8 +31,9 @@ export function modelReservesCollaborationTools(model: string): boolean {
     ? normalized.slice(normalized.lastIndexOf("/") + 1)
     : normalized;
 
-  // GPT-5 and later OpenAI models (5, 5.2, 5.3-codex, 5.4, 5.5, 5.6-sol/terra/luna).
-  return slug.startsWith("gpt-5");
+  // GPT-5 and later OpenAI models (5, 5.2, 5.3-codex, 5.4, 5.5, 5.6,
+  // GPT-6 Astra, …).
+  return /^gpt-[5-9](?:[.-]|$)/.test(slug);
 }
 
 export function isReservedCollaborationToolName(name: string): boolean {
