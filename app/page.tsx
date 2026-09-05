@@ -10,7 +10,7 @@ export default async function Page({
   searchParams: Promise<{ billing?: string; session_id?: string }>;
 }) {
   const session = await getAuthSession();
-  if (!session?.user.id) return <Landing />;
+  if (!session?.user.id) return <Landing signedIn={false} />;
   if (!session.user.twoFactorEnabled) redirect("/two-factor/setup");
   const userId = session.user.id;
   const params = await searchParams;

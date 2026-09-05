@@ -4,6 +4,7 @@ import { getSessionCookie } from "better-auth/cookies";
 
 const publicExact = new Set([
   "/",
+  "/home",
   "/upgrade",
   "/terms",
   "/privacy",

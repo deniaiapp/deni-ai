@@ -5,9 +5,10 @@ import { motion } from "motion/react";
 import { FadeIn, FadeInView, Stagger, StaggerItem } from "@/components/motion";
 import { formatTokenCount, PLANS } from "@/lib/plans";
 
-export function Landing() {
+export function Landing({ signedIn = false }: { signedIn?: boolean }) {
   const free = PLANS.free;
   const pro = PLANS.pro;
+  const startHref = signedIn ? "/" : "/sign-up";
 
   return (
     <main className="h-full overflow-y-auto bg-[#050505] text-[#f0f0f0]">
@@ -21,15 +22,26 @@ export function Landing() {
           <Link href="/upgrade" className="text-[#8f8f8f] hover:text-[#f0f0f0]">
             Pro
           </Link>
-          <Link href="/sign-in" className="text-[#8f8f8f] hover:text-[#f0f0f0]">
-            Sign in
-          </Link>
-          <Link
-            href="/sign-up"
-            className="rounded-lg bg-[#f0f0f0] px-3 py-1.5 text-sm font-medium text-[#0a0a0a] transition-transform hover:bg-white active:scale-[0.98]"
-          >
-            Get started
-          </Link>
+          {signedIn ? (
+            <Link
+              href="/"
+              className="rounded-lg bg-[#f0f0f0] px-3 py-1.5 text-sm font-medium text-[#0a0a0a] transition-transform hover:bg-white active:scale-[0.98]"
+            >
+              Open workspace
+            </Link>
+          ) : (
+            <>
+              <Link href="/sign-in" className="text-[#8f8f8f] hover:text-[#f0f0f0]">
+                Sign in
+              </Link>
+              <Link
+                href="/sign-up"
+                className="rounded-lg bg-[#f0f0f0] px-3 py-1.5 text-sm font-medium text-[#0a0a0a] transition-transform hover:bg-white active:scale-[0.98]"
+              >
+                Get started
+              </Link>
+            </>
+          )}
         </div>
       </header>
       </FadeIn>
@@ -52,10 +64,10 @@ export function Landing() {
         <StaggerItem>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
-            href="/sign-up"
+            href={startHref}
             className="rounded-lg bg-[#f0f0f0] px-4 py-2 text-sm font-medium text-[#0a0a0a] transition-transform hover:bg-white active:scale-[0.98]"
           >
-            Start free
+            {signedIn ? "Open workspace" : "Start free"}
           </Link>
           <a
             href="#pricing"
@@ -123,10 +135,10 @@ export function Landing() {
               <li>Isolated files, browser, and terminal</li>
             </ul>
             <Link
-              href="/sign-up"
+              href={startHref}
               className="mt-6 inline-flex rounded-lg bg-white/10 px-4 py-2 text-sm transition-transform hover:bg-white/15 active:scale-[0.98]"
             >
-              Create account
+              {signedIn ? "Open workspace" : "Create account"}
             </Link>
           </motion.article>
           <motion.article
