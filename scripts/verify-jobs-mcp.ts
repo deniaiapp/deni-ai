@@ -1,0 +1,141 @@
+import dotenv from "dotenv";
+import { readFile } from "node:fs/promises";
+import Module from "node:module";
+import { createServer } from "node:http";
+import postgres from "postgres";
+
+dotenv.config({ path: ".env" });
+dotenv.config({ path: ".env.local", override: true });
+
+type NodeLoader = (request: string, parent: NodeModule | null, isMain: boolean) => unknown;
+const moduleRuntime = Module as unknown as { _load: NodeLoader };
+const originalLoad = moduleRuntime._load;
+moduleRuntime._load = function load(request: string, parent: NodeModule | null, isMain: boolean) {
+  if (request === "server-only") return {};
+  return originalLoad.call(this, request, parent, isMain);
+};
+
+function assert(condition: boolean, message: string) {
+  if (!condition) throw new Error(message);
+}
+
+const baseUrl = process.env.DATABASE_URL;
+if (!baseUrl) throw new Error("DATABASE_URL is required");
+const admin = postgres(baseUrl, { prepare: false });
+const schema = `deni_job_test_${Date.now().toString(36)}`;
+const quoteIdentifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
+
+async function applyMigration(path: string) {
+  const sql = await readFile(path, "utf8");
+  for (const statement of sql.split(/--> statement-breakpoint/)) {
+    if (statement.trim()) await admin.unsafe(statement);
+  }
+}
+
+async function main() {
+  await admin.unsafe(`create schema ${quoteIdentifier(schema)}`);
+  await admin.unsafe(`set search_path to ${quoteIdentifier(schema)}`);
+  await applyMigration("db/migrations/0000_init.sql");
+  await applyMigration("db/migrations/0001_wakeful_king_cobra.sql");
+
+  // Neon rejects search_path as a startup parameter. Keep the test pool at one
+  // connection and set the temporary schema explicitly after it connects.
+  process.env.DATABASE_POOL_MAX = "1";
+  const jobs = await import("../lib/jobs");
+  const mcp = await import("../lib/mcp");
+  const agent = await import("../lib/agent");
+  const dbModule = await import("../db");
+  await dbModule.sqlClient.unsafe(`set search_path to ${quoteIdentifier(schema)}`);
+
+  const first = await jobs.createJob({
+    userId: "tenant-a",
+    threadId: "thread-a",
+    botId: "bot-a",
+    kind: "chat",
+    idempotencyKey: "same-request",
+    payload: { message: "hello" },
+  });
+  const duplicate = await jobs.createJob({
+    userId: "tenant-a",
+    threadId: "thread-a",
+    botId: "bot-a",
+    kind: "chat",
+    idempotencyKey: "same-request",
+    payload: { message: "should not duplicate" },
+  });
+  assert(first.id === duplicate.id, "idempotency created two jobs");
+
+  const claims = await Promise.all([
+    jobs.claimJob("tenant-a", first.id),
+    jobs.claimJob("tenant-a", first.id),
+  ]);
+  assert(claims.filter((item) => item?.claimed).length === 1, "concurrent claim was not exclusive");
+  await jobs.checkpointJob("tenant-a", first.id, { step: 1, tool: "read" });
+  assert((await jobs.getJob("tenant-a", first.id))?.checkpoint?.step === 1, "checkpoint was not saved");
+  assert((await jobs.getJob("tenant-b", first.id)) == null, "tenant could read another tenant job");
+  await jobs.cancelJob("tenant-a", first.id);
+  assert((await jobs.getJob("tenant-a", first.id))?.status === "cancelled", "cancel did not persist");
+
+  const stale = await jobs.createJob({
+    userId: "tenant-a",
+    threadId: "thread-a",
+    botId: "bot-a",
+    kind: "chat",
+    idempotencyKey: "stale-job",
+    payload: {},
+  });
+  const staleClaim = await jobs.claimJob("tenant-a", stale.id);
+  assert(Boolean(staleClaim?.claimed), "stale test job was not claimed");
+  await jobs.recoverStaleJobs(new Date(Date.now() + jobs.JOB_LEASE_MS + 1));
+  assert((await jobs.getJob("tenant-a", stale.id))?.status === "uncertain", "stale job was replayed instead of marked uncertain");
+  assert((await jobs.listJobs("tenant-b")).length === 0, "tenant list was not isolated");
+
+  const server = createServer((request, response) => {
+    const chunks: Buffer[] = [];
+    request.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+    request.on("end", () => {
+      const body = JSON.parse(Buffer.concat(chunks).toString("utf8")) as { method?: string };
+      const result = body.method === "initialize"
+        ? { protocolVersion: "2025-11-25", capabilities: { tools: {} }, serverInfo: { name: "fake", version: "1" } }
+        : body.method === "tools/list"
+          ? { tools: [{ name: "echo", description: "untrusted test tool", inputSchema: { type: "object" } }] }
+          : { content: [{ type: "text", text: "echoed" }] };
+      response.setHeader("content-type", "application/json");
+      response.end(JSON.stringify({ jsonrpc: "2.0", id: 1, result }));
+    });
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("mock MCP server did not start");
+  const connection = await mcp.saveMcpConnection({
+    userId: "tenant-a",
+    name: "mock",
+    url: `http://127.0.0.1:${address.port}/mcp`,
+    secret: "test-secret",
+    headers: { "X-Test": "header-secret" },
+  });
+  assert(Boolean(connection?.hasSecret), "MCP secret was not saved");
+  const listed = await mcp.listMcpConnections("tenant-a");
+  assert(!JSON.stringify(listed).includes("test-secret"), "MCP secret leaked from public listing");
+  assert(!JSON.stringify(listed).includes("header-secret"), "MCP header secret leaked from public listing");
+  const discovery = await mcp.testMcpConnection("tenant-a", connection!.id);
+  assert(discovery.tools.length === 1, "MCP discovery did not return tools");
+  const call = await mcp.callMcpTool("tenant-a", connection!.id, "echo", { value: "x" });
+  assert(JSON.stringify(call).includes("echoed"), "MCP tool call did not return result");
+  const approval = agent.deniToolApproval({ userId: "tenant-a", jobId: stale.id });
+  assert(approval.mcp({ action: "call" }) === "user-approval", "MCP call did not require approval");
+  server.close();
+  await dbModule.sqlClient.end({ timeout: 1 });
+  console.log(`verified durable job claims, checkpoints, cancel, uncertain recovery, tenant isolation, and MCP discovery/call in ${schema}`);
+}
+
+async function run() {
+  try {
+    await main();
+  } finally {
+    await admin.unsafe(`drop schema if exists ${quoteIdentifier(schema)} cascade`).catch(() => undefined);
+    await admin.end();
+  }
+}
+
+void run();

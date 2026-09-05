@@ -36,6 +36,19 @@ function slimJson(value: unknown, max: number): unknown {
   for (const key of ["url", "title", "path", "error", "ok", "exitCode", "name", "action"]) {
     if (key in rec) keep[key] = rec[key];
   }
+  if (Array.isArray(rec.results)) {
+    keep.results = rec.results.slice(0, 10).flatMap((item) => {
+      if (!item || typeof item !== "object") return [];
+      const entry = item as Record<string, unknown>;
+      if (typeof entry.url !== "string") return [];
+      return [
+        {
+          url: truncateString(entry.url, 300),
+          ...(typeof entry.title === "string" ? { title: truncateString(entry.title, 120) } : {}),
+        },
+      ];
+    });
+  }
   return keep;
 }
 
@@ -99,15 +112,41 @@ export function compactMessagesForModel(messages: UIMessage[]): UIMessage[] {
 
 export function mergeThreadMessages(persisted: UIMessage[], incoming: UIMessage[]): UIMessage[] {
   if (incoming.length === 0) return persisted;
-  if (incoming.length >= persisted.length) return incoming;
   const byId = new Map(persisted.map((item) => [item.id, item]));
   const extra: UIMessage[] = [];
   for (const item of incoming) {
-    if (item.id && byId.has(item.id)) {
-      byId.set(item.id, item);
+    const previous = item.id ? byId.get(item.id) : undefined;
+    if (previous) {
+      byId.set(item.id, restoreToolParts(previous, item));
     } else {
       extra.push(item);
     }
   }
   return [...byId.values(), ...extra];
+}
+
+// The client only ever holds slimmed tool parts (see slimMessagesForClient), so when it echoes a
+// message back we keep its state and approval but take input/output from the persisted copy.
+function restoreToolParts(persisted: UIMessage, incoming: UIMessage): UIMessage {
+  const byCallId = new Map<string, Record<string, unknown>>();
+  for (const part of persisted.parts) {
+    if (!isToolPart(part)) continue;
+    const rec = part as Record<string, unknown>;
+    if (typeof rec.toolCallId === "string") byCallId.set(rec.toolCallId, rec);
+  }
+  if (byCallId.size === 0) return incoming;
+  return {
+    ...incoming,
+    parts: incoming.parts.map((part) => {
+      if (!isToolPart(part)) return part;
+      const rec = part as Record<string, unknown>;
+      const previous = typeof rec.toolCallId === "string" ? byCallId.get(rec.toolCallId) : undefined;
+      if (!previous) return part;
+      const next: Record<string, unknown> = { ...rec };
+      if ("input" in previous) next.input = previous.input;
+      if ("rawInput" in previous) next.rawInput = previous.rawInput;
+      if ("output" in previous) next.output = previous.output;
+      return next as UIMessage["parts"][number];
+    }),
+  };
 }

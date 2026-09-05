@@ -38,12 +38,18 @@ importers:
       '@radix-ui/react-label':
         specifier: ^2.1.15
         version: 2.1.15(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-popover':
+        specifier: ^1.1.23
+        version: 1.1.23(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@radix-ui/react-slot':
         specifier: ^1.3.3
         version: 1.3.3(@types/react@19.2.18)(react@19.2.8)
       '@radix-ui/react-tabs':
         specifier: ^1.1.21
         version: 1.1.21(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-tooltip':
+        specifier: ^1.2.16
+        version: 1.2.16(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@streamdown/cjk':
         specifier: ^1.0.3
         version: 1.0.3(@types/mdast@4.0.4)(micromark-util-types@2.0.2)(micromark@4.0.2)(react@19.2.8)(unified@11.0.5)
@@ -61,7 +67,7 @@ importers:
         version: 7.0.84(zod@4.5.2)
       better-auth:
         specifier: ^1.7.2
-        version: 1.7.2(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(kysely@0.29.5)(postgres@3.4.9))(next@16.3.3(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 1.7.2(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(kysely@0.29.5)(pg@8.23.0)(postgres@3.4.9))(next@16.3.3(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -70,10 +76,16 @@ importers:
         version: 2.1.1
       drizzle-orm:
         specifier: ^0.45.2
-        version: 0.45.2(kysely@0.29.5)(postgres@3.4.9)
+        version: 0.45.2(kysely@0.29.5)(pg@8.23.0)(postgres@3.4.9)
       e2b:
         specifier: ^2.46.1
         version: 2.46.1
+      emoji-picker-react:
+        specifier: ^4.20.1
+        version: 4.20.1(react@19.2.8)
+      emoji-regex:
+        specifier: ^10.6.0
+        version: 10.6.0
       input-otp:
         specifier: ^1.5.0
         version: 1.5.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -101,6 +113,9 @@ importers:
       react-qr-code:
         specifier: ^2.2.0
         version: 2.2.0(react@19.2.8)
+      server-only:
+        specifier: 0.0.1
+        version: 0.0.1
       steel-sdk:
         specifier: ^0.18.0
         version: 0.18.0
@@ -147,6 +162,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.8
         version: 0.31.10
+      embedded-postgres:
+        specifier: 17.10.0-beta.17
+        version: 17.10.0-beta.17
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -472,6 +490,54 @@ packages:
 
   '@drizzle-team/brocli@0.10.2':
     resolution: {integrity: sha512-z33Il7l5dKjUgGULTqBsQBQwckHh5AbIuxhdsIxDDiZAzBOrZO6q9ogcWC65kU382AfynTfgNumVcNIjuIua6w==}
+
+  '@embedded-postgres/darwin-arm64@17.10.0-beta.17':
+    resolution: {integrity: sha512-E2dxhSllrcyAJBHuvgTrBTx2BaPlX2vvjXClPKHxfwBezk+nTZ01uAEraKiRJMpzHSCyN8J1dTjKh4q/uTsBLQ==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@embedded-postgres/darwin-x64@17.10.0-beta.17':
+    resolution: {integrity: sha512-gXk65MIyttD/PWo6NDSmu/n4vzPcqZQmxVWjEKuecwlyGmWO984AZ3Ljb7F0bwPvXhqcovH4FGN4ydr0fGeJxg==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@embedded-postgres/linux-arm64@17.10.0-beta.17':
+    resolution: {integrity: sha512-mC+bQvaBEf0WDD0nPWW3eGUXDUVzoyCzMtgl+Fw6Jy9DkQFK+jcPtzkzqhhrS/fGzn5telNpKInl8xPqDh71Ig==}
+    engines: {node: '>=16'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@embedded-postgres/linux-arm@17.10.0-beta.17':
+    resolution: {integrity: sha512-XQrRydqjgPrvvCKF1PrLvMljMbeXXT4GbB70+z7viqUWg3bgq31nGMkupa2TXHLqRnfmEhz1u3gn3xgQIphLZQ==}
+    engines: {node: '>=16'}
+    cpu: [arm]
+    os: [linux]
+
+  '@embedded-postgres/linux-ia32@17.10.0-beta.17':
+    resolution: {integrity: sha512-ck2QlYCPmmNRJotXp0cJnnB5Yn/bk89qT3cjVCxUfkS1b/56Odu9ID6zvAYFebvYeHU69UwOEbplikV4saRYWw==}
+    engines: {node: '>=16'}
+    cpu: [ia32]
+    os: [linux]
+
+  '@embedded-postgres/linux-ppc64@17.10.0-beta.17':
+    resolution: {integrity: sha512-+Mb0E41rvlwBhAV11eZf51rlxSHA8ancPHPFxhyljg+ZJ62QB1YryBf+rIkphpG2bnt4aJwxd1JOUk3PonlrLA==}
+    engines: {node: '>=16'}
+    cpu: [ppc64]
+    os: [linux]
+
+  '@embedded-postgres/linux-x64@17.10.0-beta.17':
+    resolution: {integrity: sha512-hU4Sgna19ixDP/l3P/zkHhQ9B0JDV39qA97RNz55QcngeRjFC5/1G36LZjODVJ84kVJHUTQMmly7nzWO8js8kg==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [linux]
+
+  '@embedded-postgres/windows-x64@17.10.0-beta.17':
+    resolution: {integrity: sha512-q6xIETTkv67i1QlTWz1LAKb3Z+vG2V3qrp+BjLEWhCQ9jE4hbbsQ/J/3wiOPFLJbuwak7CfHC9EUJG7txAbGKw==}
+    engines: {node: '>=16'}
+    cpu: [x64]
+    os: [win32]
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
@@ -1650,6 +1716,19 @@ packages:
       '@types/react-dom':
         optional: true
 
+  '@radix-ui/react-popover@1.1.23':
+    resolution: {integrity: sha512-mw58MrBlyHWFisTOYignD0vf/3gdcgAR+9of1s9G/38CbFiUwH1nCDkc0AUM9IrXFgN5Ue8n45j9WCgyM1sbiQ==}
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
+
   '@radix-ui/react-popper@1.3.7':
     resolution: {integrity: sha512-UsJrrd7w4wuKKTdvd/DNERVlwSlUcyXzjhyDwBk+3aPOsCjOY6ZSbxuw8E6lZTjjfP8Cpd0J8VVkrYUWyGYXyg==}
     peerDependencies:
@@ -1737,6 +1816,19 @@ packages:
       '@types/react-dom':
         optional: true
 
+  '@radix-ui/react-tooltip@1.2.16':
+    resolution: {integrity: sha512-6EamKFRRnlpdadndbZ6LMwycfwkwPte1B42hs6QA0gYhjaOKqW4PZ4pjaW9UrlDX5eVt/OjncE7BFTPL5nmZhg==}
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
+
   '@radix-ui/react-use-callback-ref@1.1.4':
     resolution: {integrity: sha512-R6OUY2e2fA6Yn6s+VSx5KBV6Nx8LQEhu+cz7LCej18rQ1HLyg9PSC9jP/ZNx0o6FAIK9c0F1kHylzSxKsdlkrQ==}
     peerDependencies:
@@ -1798,6 +1890,19 @@ packages:
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
     peerDependenciesMeta:
       '@types/react':
+        optional: true
+
+  '@radix-ui/react-visually-hidden@1.2.11':
+    resolution: {integrity: sha512-NFS86RYYZb4/exihaESBGOpMJFz8MGLAfu3mOBSGByVnVPC9JPASfYubxd/8KbkQK0sYAv8lVQDEQukDX/qXvQ==}
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
         optional: true
 
   '@radix-ui/rect@1.1.3':
@@ -2285,6 +2390,10 @@ packages:
   aria-hidden@1.2.6:
     resolution: {integrity: sha512-ik3ZgC9dY/lYVVM++OISsaYDeg1tb0VtP5uL3ouh1koGOaUMDPpbFIei4JkFimWUFPn90sbMNMXQAIVOlnYKJA==}
     engines: {node: '>=10'}
+
+  async-exit-hook@2.0.1:
+    resolution: {integrity: sha512-NW2cX8m1Q7KPA7a5M2ULQeZ2wR5qI5PAbw5L0UOMxdioVk9PMZ0h1TmyZEkPYrCvYjDlFICusOu1dlEKAAeXBw==}
+    engines: {node: '>=0.12.0'}
 
   asynckit@0.4.0:
     resolution: {integrity: sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==}
@@ -2799,6 +2908,16 @@ packages:
     resolution: {integrity: sha512-OqYovS2oFrt4mk737CgfW/RoMadBYK84l5qjKpvbEoOB9KKxaZIXm7YUwOKSRTlijrrwDRX7oZlyPoVXiCpyTw==}
     engines: {node: '>=20.18.1 <21 || >=22'}
 
+  embedded-postgres@17.10.0-beta.17:
+    resolution: {integrity: sha512-s9ITJA41OTIQmn91RLqQ5X2MVP2BCZ8pb4tQX3MY8VOd8xNCzzlgfHGcXuitDzK800FhbG/3YufFk21KTTvpzA==}
+    engines: {node: '>=16'}
+
+  emoji-picker-react@4.20.1:
+    resolution: {integrity: sha512-vsgsdNOf0zFahv7+Pj5u3WNz9ennqUAkSZw1ZvUEAh8Kfel292AjmKbCLI7t9Hq2DN3lFGVMb1G7Iqa2Jl4HWg==}
+    engines: {node: '>=10'}
+    peerDependencies:
+      react: '>=16'
+
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
 
@@ -2881,6 +3000,10 @@ packages:
 
   fastdom@1.0.12:
     resolution: {integrity: sha512-LB+xjSTEbjHE1cWsxu+tN2Xqr1kpi+V9aADI7sVM5ZMaXyYGPHULQMzpJMYqOTULK/73pUkWVzzObFRBkPr+hg==}
+
+  flairup@1.1.1:
+    resolution: {integrity: sha512-NRdjAYpQLEOmvLebVCfL2D88M6CZOz3LCK06arH1HKSHbrJgEDbqzgJjur2yuRtbb1YAtElacR57tf5GBAHaqg==}
+    engines: {node: ^20.19.0 || >=22.12.0}
 
   form-data-encoder@1.7.2:
     resolution: {integrity: sha512-qfqtYan3rxrnCk1VYaA4H+Ms9xdpPqvLZa6xmMgFvhO32x7/3J/ExcTd6qpxM0vH2GdMI+poehyBZvqfMTto8A==}
@@ -3578,6 +3701,40 @@ packages:
     resolution: {integrity: sha512-3O/iVVsJAPsOnpwWIeD+d6z/7PmqApyQePUtCndjatj/9I5LylHvt5qluFaBT3I5h3r1ejfR056c+FCv+NnNXg==}
     engines: {node: 18 || 20 || >=22}
 
+  pg-cloudflare@1.4.0:
+    resolution: {integrity: sha512-Vo7z/6rrQYxpNRylp4Tlob2elzbh+N/MOQbxFVWCxS7oEx6jF53GTJFxK2WWpKuBRkmiin4Mt+xofFDjx09R0A==}
+
+  pg-connection-string@2.14.0:
+    resolution: {integrity: sha512-XwWDGcLRGCXAR8F/AM5bG7Q+A3Wm2s6QeEjlOKZLlH3UYcguiqCWKyWXVag5TLTIjR7oOJUY8kcADaZgWPyLeg==}
+
+  pg-int8@1.0.1:
+    resolution: {integrity: sha512-WCtabS6t3c8SkpDBUlb1kjOs7l66xsGdKpIPZsg4wR+B3+u9UAum2odSsF9tnvxg80h4ZxLWMy4pRjOsFIqQpw==}
+    engines: {node: '>=4.0.0'}
+
+  pg-pool@3.14.0:
+    resolution: {integrity: sha512-gKtPkFdQPU3DksooVLi9LsjZxrsBUZIpa+7aVx+LV5pNh0KzP4Zleud2po+ConrxbuXGBJ6Hfer6hdgpIBpBaw==}
+    peerDependencies:
+      pg: '>=8.0'
+
+  pg-protocol@1.16.0:
+    resolution: {integrity: sha512-sILXutLVjCLjcDuOmvhX5e2Z4cS5qG/6Bu3VkpFwdf/633ElGLpEh9bgmuI5I4sqKqkifQiGyiCcx1HdtrK7tg==}
+
+  pg-types@2.2.0:
+    resolution: {integrity: sha512-qTAAlrEsl8s4OiEQY69wDvcMIdQN6wdz5ojQiOy6YRMuynxenON0O5oCpJI6lshc6scgAY8qvJ2On/p+CXY0GA==}
+    engines: {node: '>=4'}
+
+  pg@8.23.0:
+    resolution: {integrity: sha512-Ip2EQCngowJLGOfCwkFhPXU7/ljlhn6Rxlmy4XYfL2Y+vyRM59+8uR2xqRWKdYmbXmxCFOAmKxBuSUCdF34qLg==}
+    engines: {node: '>= 16.0.0'}
+    peerDependencies:
+      pg-native: '>=3.0.1'
+    peerDependenciesMeta:
+      pg-native:
+        optional: true
+
+  pgpass@1.0.5:
+    resolution: {integrity: sha512-FdW9r/jQZhSeohs1Z3sI1yxFQNFvMcnmfuj4WBMUTxOrAyLMaTcE1aAMBiTlbMNaXvBCQuVi0R7hd8udDSP7ug==}
+
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -3611,6 +3768,22 @@ packages:
   postcss@8.5.26:
     resolution: {integrity: sha512-u82N74LFzG8ca+dD8puPnplTXoGH4fTPpVGuIbt36G3qvNlkvfD0lEAZSxaly3KX8TS/L1A1gsCEmvKmBcVbkQ==}
     engines: {node: ^10 || ^12 || >=14}
+
+  postgres-array@2.0.0:
+    resolution: {integrity: sha512-VpZrUqU5A69eQyW2c5CA1jtLecCsN2U/bD6VilrFDWq5+5UIEVO7nazS3TEcHf1zuPYO/sqGvUvW62g86RXZuA==}
+    engines: {node: '>=4'}
+
+  postgres-bytea@1.0.1:
+    resolution: {integrity: sha512-5+5HqXnsZPE65IJZSMkZtURARZelel2oXUEO8rH83VS/hxH5vv1uHquPg5wZs8yMAfdv971IU+kcPUczi7NVBQ==}
+    engines: {node: '>=0.10.0'}
+
+  postgres-date@1.0.7:
+    resolution: {integrity: sha512-suDmjLVQg78nMK2UZ454hAG+OAW+HQPZ6n++TNDUX+L0+uUlLywnoxJKDou51Zm+zTCjrCl0Nq6J9C5hP9vK/Q==}
+    engines: {node: '>=0.10.0'}
+
+  postgres-interval@1.2.0:
+    resolution: {integrity: sha512-9ZhXKM/rw350N1ovuWHbGxnGh/SNJ4cnxHiM0rxE4VN41wsg8P8zWn9hv/buK00RP4WvlOyr/RBDiptyxVbkZQ==}
+    engines: {node: '>=0.10.0'}
 
   postgres@3.4.9:
     resolution: {integrity: sha512-GD3qdB0x1z9xgFI6cdRD6xu2Sp2WCOEoe3mtnyB5Ee0XrrL5Pe+e4CCnJrRMnL1zYtRDZmQQVbvOttLnKDLnaw==}
@@ -3769,6 +3942,9 @@ packages:
     engines: {node: '>=10'}
     hasBin: true
 
+  server-only@0.0.1:
+    resolution: {integrity: sha512-qepMx2JxAa5jjfzxG79yPPq+8BuFToHd1hm7kI+Z4zAq1ftQiP7HcxMhDDItrbtwVeLg/cY2JnKnrcFkmiswNA==}
+
   set-cookie-parser@3.1.2:
     resolution: {integrity: sha512-5/r/lTwbJ3zQ+qwdUFZYeRNqda7P5HD8zQKqlSjdGt1/S0cjLAphHusj4Y58ahDtWn/g32xrIS58/ikOvwl0Lw==}
 
@@ -3805,6 +3981,10 @@ packages:
 
   space-separated-tokens@2.0.2:
     resolution: {integrity: sha512-PEGlAwrG8yXGXRjW32fGbg66JAlOAwbObuqVoJpv/mRgoWDQfgH1wDPvtzWyUSNAXBGSk8h755YDbbcEy3SH2Q==}
+
+  split2@4.2.0:
+    resolution: {integrity: sha512-UcjcJOWknrNkF6PLX83qcHM6KHgVKNkV62Y8a5uYDVv9ydGQVwAHMKqHdJje1VTWpljG0WYpCDhrCdAOYH4TWg==}
+    engines: {node: '>= 10.x'}
 
   steel-sdk@0.18.0:
     resolution: {integrity: sha512-OdW4OIakOooeqgLdn+BRf3yyfeFx4HJ713/7pSa3g82t8NmlURs9xPg4oBLWUttRzaY6oMGNTQtq0DEYg2nOJA==}
@@ -4032,6 +4212,10 @@ packages:
   wrap-ansi@9.0.2:
     resolution: {integrity: sha512-42AtmgqjV+X1VpdOfyTGOYRi0/zsoLqtXQckTmqTeybT+BDIbM/Guxo7x3pE2vtpr1ok6xRqM9OpBe+Jyoqyww==}
     engines: {node: '>=18'}
+
+  xtend@4.0.2:
+    resolution: {integrity: sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ==}
+    engines: {node: '>=0.4'}
 
   y18n@5.0.8:
     resolution: {integrity: sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA==}
@@ -4289,12 +4473,12 @@ snapshots:
       nanostores: 1.5.3
       zod: 4.5.2
 
-  '@better-auth/drizzle-adapter@1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.5.2))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.3))(@better-auth/utils@0.4.2)(drizzle-orm@0.45.2(kysely@0.29.5)(postgres@3.4.9))':
+  '@better-auth/drizzle-adapter@1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.5.2))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.3))(@better-auth/utils@0.4.2)(drizzle-orm@0.45.2(kysely@0.29.5)(pg@8.23.0)(postgres@3.4.9))':
     dependencies:
       '@better-auth/core': 1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.5.2))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.3)
       '@better-auth/utils': 0.4.2
     optionalDependencies:
-      drizzle-orm: 0.45.2(kysely@0.29.5)(postgres@3.4.9)
+      drizzle-orm: 0.45.2(kysely@0.29.5)(pg@8.23.0)(postgres@3.4.9)
 
   '@better-auth/kysely-adapter@1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.5.2))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.3))(@better-auth/utils@0.4.2)(kysely@0.29.5)':
     dependencies:
@@ -4469,6 +4653,30 @@ snapshots:
   '@conventional-changelog/template@1.4.0': {}
 
   '@drizzle-team/brocli@0.10.2': {}
+
+  '@embedded-postgres/darwin-arm64@17.10.0-beta.17':
+    optional: true
+
+  '@embedded-postgres/darwin-x64@17.10.0-beta.17':
+    optional: true
+
+  '@embedded-postgres/linux-arm64@17.10.0-beta.17':
+    optional: true
+
+  '@embedded-postgres/linux-arm@17.10.0-beta.17':
+    optional: true
+
+  '@embedded-postgres/linux-ia32@17.10.0-beta.17':
+    optional: true
+
+  '@embedded-postgres/linux-ppc64@17.10.0-beta.17':
+    optional: true
+
+  '@embedded-postgres/linux-x64@17.10.0-beta.17':
+    optional: true
+
+  '@embedded-postgres/windows-x64@17.10.0-beta.17':
+    optional: true
 
   '@emnapi/runtime@1.11.3':
     dependencies:
@@ -5217,6 +5425,29 @@ snapshots:
       '@types/react': 19.2.18
       '@types/react-dom': 19.2.5(@types/react@19.2.18)
 
+  '@radix-ui/react-popover@1.1.23(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@radix-ui/primitive': 1.1.7
+      '@radix-ui/react-compose-refs': 1.1.5(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-context': 1.2.2(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-dismissable-layer': 1.1.19(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-focus-guards': 1.1.6(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-focus-scope': 1.1.16(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-id': 1.1.4(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-popper': 1.3.7(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-portal': 1.1.17(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-presence': 1.1.10(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-primitive': 2.1.10(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-slot': 1.3.3(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-use-controllable-state': 1.2.6(@types/react@19.2.18)(react@19.2.8)
+      aria-hidden: 1.2.6
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+      react-remove-scroll: 2.7.2(@types/react@19.2.18)(react@19.2.8)
+    optionalDependencies:
+      '@types/react': 19.2.18
+      '@types/react-dom': 19.2.5(@types/react@19.2.18)
+
   '@radix-ui/react-popper@1.3.7(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
       '@floating-ui/react-dom': 2.1.9(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -5305,6 +5536,27 @@ snapshots:
       '@types/react': 19.2.18
       '@types/react-dom': 19.2.5(@types/react@19.2.18)
 
+  '@radix-ui/react-tooltip@1.2.16(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@radix-ui/primitive': 1.1.7
+      '@radix-ui/react-compose-refs': 1.1.5(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-context': 1.2.2(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-dismissable-layer': 1.1.19(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-id': 1.1.4(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-popper': 1.3.7(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-portal': 1.1.17(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-presence': 1.1.10(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-primitive': 2.1.10(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@radix-ui/react-slot': 1.3.3(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-use-controllable-state': 1.2.6(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-use-layout-effect': 1.1.4(@types/react@19.2.18)(react@19.2.8)
+      '@radix-ui/react-visually-hidden': 1.2.11(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+    optionalDependencies:
+      '@types/react': 19.2.18
+      '@types/react-dom': 19.2.5(@types/react@19.2.18)
+
   '@radix-ui/react-use-callback-ref@1.1.4(@types/react@19.2.18)(react@19.2.8)':
     dependencies:
       react: 19.2.8
@@ -5352,6 +5604,15 @@ snapshots:
       react: 19.2.8
     optionalDependencies:
       '@types/react': 19.2.18
+
+  '@radix-ui/react-visually-hidden@1.2.11(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@radix-ui/react-primitive': 2.1.10(@types/react-dom@19.2.5(@types/react@19.2.18))(@types/react@19.2.18)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react: 19.2.8
+      react-dom: 19.2.8(react@19.2.8)
+    optionalDependencies:
+      '@types/react': 19.2.18
+      '@types/react-dom': 19.2.5(@types/react@19.2.18)
 
   '@radix-ui/rect@1.1.3': {}
 
@@ -5808,6 +6069,8 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  async-exit-hook@2.0.1: {}
+
   asynckit@0.4.0: {}
 
   bail@2.0.2: {}
@@ -5816,10 +6079,10 @@ snapshots:
 
   baseline-browser-mapping@2.11.20: {}
 
-  better-auth@1.7.2(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(kysely@0.29.5)(postgres@3.4.9))(next@16.3.3(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
+  better-auth@1.7.2(drizzle-kit@0.31.10)(drizzle-orm@0.45.2(kysely@0.29.5)(pg@8.23.0)(postgres@3.4.9))(next@16.3.3(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(pg@8.23.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8):
     dependencies:
       '@better-auth/core': 1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.5.2))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.3)
-      '@better-auth/drizzle-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.5.2))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.3))(@better-auth/utils@0.4.2)(drizzle-orm@0.45.2(kysely@0.29.5)(postgres@3.4.9))
+      '@better-auth/drizzle-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.5.2))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.3))(@better-auth/utils@0.4.2)(drizzle-orm@0.45.2(kysely@0.29.5)(pg@8.23.0)(postgres@3.4.9))
       '@better-auth/kysely-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.5.2))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.3))(@better-auth/utils@0.4.2)(kysely@0.29.5)
       '@better-auth/memory-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.5.2))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.3))(@better-auth/utils@0.4.2)
       '@better-auth/mongo-adapter': 1.7.2(@better-auth/core@1.7.2(@better-auth/utils@0.4.2)(@better-fetch/fetch@1.3.1)(better-call@1.4.0(zod@4.5.2))(jose@6.2.10)(kysely@0.29.5)(nanostores@1.5.3))(@better-auth/utils@0.4.2)
@@ -5837,8 +6100,9 @@ snapshots:
       zod: 4.5.2
     optionalDependencies:
       drizzle-kit: 0.31.10
-      drizzle-orm: 0.45.2(kysely@0.29.5)(postgres@3.4.9)
+      drizzle-orm: 0.45.2(kysely@0.29.5)(pg@8.23.0)(postgres@3.4.9)
       next: 16.3.3(@types/node@24.13.3)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      pg: 8.23.0
       react: 19.2.8
       react-dom: 19.2.8(react@19.2.8)
     transitivePeerDependencies:
@@ -6186,9 +6450,10 @@ snapshots:
       esbuild: 0.25.12
       tsx: 4.23.12
 
-  drizzle-orm@0.45.2(kysely@0.29.5)(postgres@3.4.9):
+  drizzle-orm@0.45.2(kysely@0.29.5)(pg@8.23.0)(postgres@3.4.9):
     optionalDependencies:
       kysely: 0.29.5
+      pg: 8.23.0
       postgres: 3.4.9
 
   dunder-proto@1.0.1:
@@ -6212,6 +6477,27 @@ snapshots:
       undici: 7.29.0
     optionalDependencies:
       undici8: undici@8.10.0
+
+  embedded-postgres@17.10.0-beta.17:
+    dependencies:
+      async-exit-hook: 2.0.1
+      pg: 8.23.0
+    optionalDependencies:
+      '@embedded-postgres/darwin-arm64': 17.10.0-beta.17
+      '@embedded-postgres/darwin-x64': 17.10.0-beta.17
+      '@embedded-postgres/linux-arm': 17.10.0-beta.17
+      '@embedded-postgres/linux-arm64': 17.10.0-beta.17
+      '@embedded-postgres/linux-ia32': 17.10.0-beta.17
+      '@embedded-postgres/linux-ppc64': 17.10.0-beta.17
+      '@embedded-postgres/linux-x64': 17.10.0-beta.17
+      '@embedded-postgres/windows-x64': 17.10.0-beta.17
+    transitivePeerDependencies:
+      - pg-native
+
+  emoji-picker-react@4.20.1(react@19.2.8):
+    dependencies:
+      flairup: 1.1.1
+      react: 19.2.8
 
   emoji-regex@10.6.0: {}
 
@@ -6347,6 +6633,8 @@ snapshots:
   fastdom@1.0.12:
     dependencies:
       strictdom: 1.0.1
+
+  flairup@1.1.1: {}
 
   form-data-encoder@1.7.2: {}
 
@@ -7328,6 +7616,41 @@ snapshots:
       lru-cache: 11.5.2
       minipass: 7.1.3
 
+  pg-cloudflare@1.4.0:
+    optional: true
+
+  pg-connection-string@2.14.0: {}
+
+  pg-int8@1.0.1: {}
+
+  pg-pool@3.14.0(pg@8.23.0):
+    dependencies:
+      pg: 8.23.0
+
+  pg-protocol@1.16.0: {}
+
+  pg-types@2.2.0:
+    dependencies:
+      pg-int8: 1.0.1
+      postgres-array: 2.0.0
+      postgres-bytea: 1.0.1
+      postgres-date: 1.0.7
+      postgres-interval: 1.2.0
+
+  pg@8.23.0:
+    dependencies:
+      pg-connection-string: 2.14.0
+      pg-pool: 3.14.0(pg@8.23.0)
+      pg-protocol: 1.16.0
+      pg-types: 2.2.0
+      pgpass: 1.0.5
+    optionalDependencies:
+      pg-cloudflare: 1.4.0
+
+  pgpass@1.0.5:
+    dependencies:
+      split2: 4.2.0
+
   picocolors@1.1.1: {}
 
   pkce-challenge@5.0.1: {}
@@ -7360,6 +7683,16 @@ snapshots:
       nanoid: 3.3.18
       picocolors: 1.1.1
       source-map-js: 1.2.1
+
+  postgres-array@2.0.0: {}
+
+  postgres-bytea@1.0.1: {}
+
+  postgres-date@1.0.7: {}
+
+  postgres-interval@1.2.0:
+    dependencies:
+      xtend: 4.0.2
 
   postgres@3.4.9: {}
 
@@ -7545,6 +7878,8 @@ snapshots:
 
   semver@7.8.5: {}
 
+  server-only@0.0.1: {}
+
   set-cookie-parser@3.1.2: {}
 
   sharp@0.35.4(@types/node@24.13.3):
@@ -7608,6 +7943,8 @@ snapshots:
   source-map@0.6.1: {}
 
   space-separated-tokens@2.0.2: {}
+
+  split2@4.2.0: {}
 
   steel-sdk@0.18.0:
     dependencies:
@@ -7867,6 +8204,8 @@ snapshots:
       ansi-styles: 6.2.3
       string-width: 7.2.0
       strip-ansi: 7.2.0
+
+  xtend@4.0.2: {}
 
   y18n@5.0.8: {}
 

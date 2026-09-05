@@ -9,10 +9,20 @@ import { releaseBrowser, stopSandbox } from "./computer";
 import { userDataDir } from "./paths";
 import { deleteUserRecords, loadAllMessages, readStore } from "./store";
 import { deleteAllUserStorage } from "./storage";
+import { listArtifacts } from "./artifacts";
+import { listJobs } from "./jobs";
+import { listMcpConnections } from "./mcp";
+import { listNotifications } from "./notifications";
 
 export async function exportAccount(userId: string) {
   const store = await readStore(userId);
   const threads = await loadAllMessages(userId);
+  const [jobs, artifacts, notifications, mcpConnections] = await Promise.all([
+    listJobs(userId),
+    listArtifacts(userId),
+    listNotifications(userId),
+    listMcpConnections(userId),
+  ]);
   return {
     exportedAt: new Date().toISOString(),
     store: {
@@ -20,12 +30,16 @@ export async function exportAccount(userId: string) {
       config: { ...store.config, apiKey: store.config.apiKey ? "[redacted]" : "" },
     },
     messages: threads,
+    jobs,
+    artifacts,
+    notifications,
+    mcpConnections,
   };
 }
 
 export async function deleteAccount(userId: string) {
   await stopSandbox(userId).catch(() => undefined);
-  await releaseBrowser(userId).catch(() => undefined);
+  await releaseBrowser(userId, undefined, { all: true }).catch(() => undefined);
   await cancelUserSubscription(userId).catch(() => undefined);
   await deleteAllUserStorage(userId).catch(() => undefined);
   await rm(userDataDir(userId), { recursive: true, force: true }).catch(() => undefined);

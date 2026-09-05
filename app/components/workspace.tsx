@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { easeOut } from "@/lib/motion";
 import type { UIMessage } from "ai";
@@ -29,6 +29,8 @@ import type {
   Thread,
   WorkspaceNode,
   ShellRecord,
+  AppNotification,
+  AgentJob,
 } from "@/lib/types";
 import dynamic from "next/dynamic";
 import { ChatThread } from "./chat-thread";
@@ -37,6 +39,12 @@ import { BillingDialog } from "./billing-dialog";
 import { Sidebar, type TeammateMenuAction } from "./sidebar";
 import type { UsageSnapshot } from "@/lib/plans";
 import { parseRunMode, type RunMode } from "@/lib/model";
+import { canCommitThreadResponse, groupJobsByThread, isActiveJob, jobVisualState, mergeJobSnapshots, shouldMarkThreadUnread } from "@/lib/job-view";
+import { cacheThreadMessages } from "@/lib/thread-state";
+import { getChatSession, syncChatSessionMessages, updateChatSessionJobState } from "@/lib/chat-sessions";
+import { McpSettings } from "./mcp-settings";
+import { NotificationInbox } from "./notification-inbox";
+import { RoutinesDialog } from "./routines-dialog";
 
 const ComputerPanel = dynamic(
   () => import("./computer-panel").then((mod) => ({ default: mod.ComputerPanel })),
@@ -61,7 +69,7 @@ type StatePayload = {
   runMode?: RunMode;
 };
 
-type Modal = "bot" | "group" | "skills" | "routines" | null;
+type Modal = "bot" | "group" | "skills" | "routines" | "mcp" | null;
 
 export function Workspace() {
   const [boot, setBoot] = useState<"loading" | "setup" | "app">("loading");
@@ -74,20 +82,133 @@ export function Workspace() {
   const [shells, setShells] = useState<ShellRecord[]>([]);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<UIMessage[]>([]);
-  const [threadReady, setThreadReady] = useState(false);
+  const [messagesByThread, setMessagesByThread] = useState<Record<string, UIMessage[]>>({});
+  const messagesByThreadRef = useRef<Record<string, UIMessage[]>>({});
+  const [loadedThreadId, setLoadedThreadId] = useState<string | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(null);
+  const [jobsByThread, setJobsByThread] = useState<Record<string, AgentJob[]>>({});
+  const jobsByThreadRef = useRef<Record<string, AgentJob[]>>({});
+  const jobStatusRef = useRef<Record<string, string>>({});
+  const jobsRefreshSequence = useRef(0);
+  const jobsRequestPending = useRef(false);
+  const activeThreadRef = useRef<string | null>(null);
+  const threadReady = loadedThreadId != null && loadedThreadId === activeThreadId;
   const [modal, setModal] = useState<Modal>(null);
+  const [routineEditorId, setRoutineEditorId] = useState<string | null>(null);
+  const openRoutines = useCallback((id?: string) => { setRoutineEditorId(id ?? null); setModal("routines"); }, []);
   const [mobileComputer, setMobileComputer] = useState(false);
   const [chatBusy, setChatBusy] = useState(false);
   const [editBot, setEditBot] = useState<Bot | null>(null);
   const [sectionThread, setSectionThread] = useState<Thread | null>(null);
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [runMode, setRunMode] = useState<RunMode>("max");
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const markNotificationRead = useCallback(async (id?: string) => {
+    await fetch("/api/notifications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(id ? { id } : { all: true }),
+    });
+    setNotifications((current) =>
+      id
+        ? current.map((item) => (item.id === id ? { ...item, readAt: new Date().toISOString() } : item))
+        : current.map((item) => ({ ...item, readAt: item.readAt ?? new Date().toISOString() })),
+    );
+  }, []);
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [billingOpen, setBillingOpen] = useState(false);
   const [billingBusy, setBillingBusy] = useState(false);
   const teammateLimitReached = Boolean(usage && bots.length >= usage.teammates.limit);
   const canUpgrade = usage?.plan !== "pro";
   const router = useRouter();
+
+  const refreshJobs = useCallback(async () => {
+    if (jobsRequestPending.current) return;
+    jobsRequestPending.current = true;
+    try {
+    const sequence = ++jobsRefreshSequence.current;
+    const response = await fetch("/api/jobs?overview=1&limit=200&notifications=1", { cache: "no-store" });
+    if (!response.ok || sequence !== jobsRefreshSequence.current) return;
+    const json = (await response.json()) as { jobs?: AgentJob[]; notifications?: AppNotification[] };
+    const mergedJobs = mergeJobSnapshots(Object.values(jobsByThreadRef.current).flat(), json.jobs ?? []);
+    const grouped = groupJobsByThread(mergedJobs);
+    jobsByThreadRef.current = grouped;
+    setJobsByThread(grouped);
+    for (const [threadId, jobs] of Object.entries(grouped)) {
+      updateChatSessionJobState(threadId, jobs.some(isActiveJob));
+    }
+    if (json.notifications) setNotifications(json.notifications);
+    const nextStatuses: Record<string, string> = {};
+    const completedInactive = new Set<string>();
+    for (const job of mergedJobs) {
+      const previous = jobStatusRef.current[job.id];
+      nextStatuses[job.id] = job.status;
+      if (shouldMarkThreadUnread(previous as AgentJob["status"] | undefined, job.status, job.threadId, activeThreadRef.current)) {
+        completedInactive.add(job.threadId);
+      }
+    }
+    jobStatusRef.current = nextStatuses;
+    if (completedInactive.size > 0) {
+      setThreads((current) => current.map((thread) => completedInactive.has(thread.id) ? { ...thread, unread: true } : thread));
+      for (const threadId of completedInactive) {
+        void fetch(`/api/threads/${threadId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ unread: true }),
+        }).catch(() => undefined);
+      }
+    }
+    } finally { jobsRequestPending.current = false; }
+  }, []);
+
+  useEffect(() => {
+    activeThreadRef.current = activeThreadId;
+  }, [activeThreadId]);
+
+  useEffect(() => {
+    messagesByThreadRef.current = messagesByThread;
+  }, [messagesByThread]);
+
+  useEffect(() => {
+    if (boot !== "app") return;
+    let disposed = false;
+    let generation = 0;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const refreshIfVisible = async () => {
+      const cycle = ++generation;
+      clearTimeout(timer);
+      if (disposed || document.visibilityState === "hidden") return;
+      try { await refreshJobs(); } catch { /* Retry at the next polling interval. */ }
+      if (disposed || cycle !== generation || document.visibilityState === "hidden") return;
+      const running = chatBusy || Object.values(jobsByThreadRef.current).some((jobs) => jobs.some((job) => ["queued", "running", "finalizing"].includes(job.status)));
+      timer = setTimeout(() => void refreshIfVisible(), running ? 2_000 : 15_000);
+    };
+    // eslint-disable-next-line react/set-state-in-effect
+    void refreshIfVisible();
+    document.addEventListener("visibilitychange", refreshIfVisible);
+    return () => {
+      disposed = true;
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
+  }, [boot, refreshJobs, chatBusy]);
+
+  const jobStateByThread = useMemo(() => {
+    const states: Record<string, "running" | "waiting" | "attention"> = {};
+    for (const [threadId, jobs] of Object.entries(jobsByThread)) {
+      const state = jobVisualState(jobs);
+      if (state) states[threadId] = state;
+    }
+    return states;
+  }, [jobsByThread]);
+  const updateThreadJobs = useCallback((threadId: string, jobs: AgentJob[]) => {
+    setJobsByThread((current) => {
+      const merged = mergeJobSnapshots(current[threadId] ?? [], jobs);
+      const next = { ...current, [threadId]: merged };
+      jobsByThreadRef.current = next;
+      return next;
+    });
+  }, []);
 
   const loadState = useCallback(async () => {
     const res = await fetch("/api/state");
@@ -100,12 +221,17 @@ export function Workspace() {
     setShells(json.shells ?? []);
     if (json.usage) setUsage(json.usage);
     if (json.runMode) setRunMode(parseRunMode(json.runMode));
-    if (!json.ready) {
+    const notificationResponse = await fetch("/api/notifications?unread=1", { cache: "no-store" });
+    if (notificationResponse.ok) {
+      const notificationJson = (await notificationResponse.json()) as { notifications?: AppNotification[] };
+      setNotifications(notificationJson.notifications ?? []);
+    }
+      if (!json.ready) {
       setBoot("setup");
       return json;
     }
-    setBoot("app");
-    return json;
+      setBoot("app");
+      return json;
   }, []);
 
   const openTeammatePaywall = useCallback(() => {
@@ -120,32 +246,51 @@ export function Workspace() {
   }, [canUpgrade, loadState, router]);
 
   useEffect(() => {
-    loadState().then((json) => {
-      if (!json || !json.ready) return;
+    let cancelled = false;
+    const boot = async () => {
+      const json = await loadState();
+      if (cancelled || !json.ready) return;
       setActiveThreadId((current) => current ?? json.threads[0]?.id ?? null);
-    });
+    };
+    void boot();
+    return () => {
+      cancelled = true;
+    };
   }, [loadState]);
 
   useEffect(() => {
     if (!activeThreadId) return;
     let cancelled = false;
-    setThreadReady(false);
-    fetch(`/api/threads/${activeThreadId}`)
+    const controller = new AbortController();
+    const cached = messagesByThreadRef.current[activeThreadId];
+    if (cached) {
+      setMessages(cached);
+      setLoadedThreadId(activeThreadId);
+    }
+    fetch(`/api/threads/${activeThreadId}`, { signal: controller.signal })
       .then((res) => res.json())
       .then((json) => {
-        if (cancelled) return;
-        setMessages(json.messages ?? []);
-        setThreadReady(true);
-      });
-    return () => {
-      cancelled = true;
-    };
+        if (cancelled || !canCommitThreadResponse(activeThreadRef.current, activeThreadId)) return;
+        const nextMessages = json.messages ?? [];
+        setMessagesByThread((current) => {
+          return cacheThreadMessages(current, activeThreadId, nextMessages);
+        });
+        setMessages(nextMessages);
+        syncChatSessionMessages(activeThreadId, nextMessages);
+        setLoadedThreadId(activeThreadId);
+      })
+      .catch(() => undefined);
+      return () => {
+        cancelled = true;
+        controller.abort();
+      };
   }, [activeThreadId]);
 
   const refreshComputer = useCallback(async (capture = false, includeFiles = !capture) => {
     const params = new URLSearchParams();
     if (capture) params.set("refresh", "1");
     if (includeFiles) params.set("files", "1");
+    if (activeJobId) params.set("jobId", activeJobId);
     const query = params.toString();
     const res = await fetch(`/api/computer${query ? `?${query}` : ""}`, {
       cache: "no-store",
@@ -155,7 +300,7 @@ export function Workspace() {
     if (includeFiles) setFiles(json.files ?? []);
     setShells(json.shells ?? []);
     if (json.usage) setUsage(json.usage);
-  }, []);
+  }, [activeJobId]);
 
   const computerStatus = computer?.status;
   const computerDebugUrl = computer?.steelDebugUrl;
@@ -167,10 +312,11 @@ export function Workspace() {
     const computerActive = computerStatus === "working" || computerStatus === "takeover";
     if (!chatBusy && !computerActive && !browserLive && !sandboxLive) return;
     const capture = browserLive && !computerDebugUrl;
-    const includeFiles = !chatBusy && !capture;
+    // File listings are loaded when the Files tab is opened, not on every heartbeat.
+    const includeFiles = false;
     let inFlight = false;
     const refresh = () => {
-      if (inFlight) return;
+      if (inFlight || document.visibilityState === "hidden") return;
       inFlight = true;
       void refreshComputer(capture, includeFiles)
         .catch(() => undefined)
@@ -223,6 +369,7 @@ export function Workspace() {
     (id: string) => {
       const thread = threads.find((item) => item.id === id);
       setActiveThreadId(id);
+      setActiveJobId(null);
       if (thread?.unread) patchThread(id, { unread: false });
     },
     [threads, patchThread],
@@ -337,6 +484,17 @@ export function Workspace() {
   const activeBot = activeThread
     ? (bots.find((item) => item.id === activeThread.botIds[0]) ?? bots[0])
     : null;
+  const activeChat =
+    activeThread && activeBot && threadReady
+      ? getChatSession({
+          threadId: activeThread.id,
+          botId: activeBot.id,
+          runMode,
+          jobId: jobsByThread[activeThread.id]?.find(isActiveJob)?.id,
+          initialMessages: messages,
+          hasPendingJob: jobsByThread[activeThread.id]?.some(isActiveJob),
+        })
+      : null;
 
   if (boot === "loading") {
     return (
@@ -368,6 +526,7 @@ export function Workspace() {
       <SidebarReopenButton />
       <SidebarAside className="border-r border-white/10 bg-[#111111]">
         <Sidebar
+          notifications={<NotificationInbox notifications={notifications} onRead={markNotificationRead} />}
           bots={bots}
           threads={threads}
           skills={skills}
@@ -383,11 +542,13 @@ export function Workspace() {
           }}
           onNewGroup={() => setModal("group")}
           onOpenSkills={() => setModal("skills")}
-          onOpenRoutines={() => setModal("routines")}
+           onOpenRoutines={() => openRoutines()}
+           onOpenMcp={() => setModal("mcp")}
           onTeammateAction={handleTeammateAction}
           usage={usage}
           loadingThreadId={activeThreadId && !threadReady ? activeThreadId : null}
-          actionBusyId={actionBusyId}
+           actionBusyId={actionBusyId}
+           jobStateByThread={jobStateByThread}
           onOpenBilling={() => {
             setBillingOpen(true);
             void loadState();
@@ -423,7 +584,6 @@ export function Workspace() {
             thread={activeThread}
             bot={activeBot}
             bots={bots}
-            initialMessages={messages}
             runMode={runMode}
             onRunModeChange={async (mode) => {
               setRunMode(mode);
@@ -434,6 +594,10 @@ export function Workspace() {
               });
             }}
             onBusyChange={handleChatBusyChange}
+            onActiveJobChange={setActiveJobId}
+            chat={activeChat!}
+            backgroundJobs={jobsByThread[activeThread.id] ?? []}
+            onJobsChange={(nextJobs) => updateThreadJobs(activeThread.id, nextJobs)}
           />
         ) : activeThreadId ? (
           <motion.div
@@ -458,22 +622,26 @@ export function Workspace() {
 
       {computer ? (
         <motion.div
-          className="hidden h-full border-l border-white/10 xl:flex"
+          className="hidden h-full shrink-0 xl:flex"
           initial={{ opacity: 0, x: 16 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.4, delay: 0.08, ease: easeOut }}
         >
           <ComputerPanel
+            onOpenRoutines={openRoutines}
             computer={computer}
             files={files}
             shells={shells}
             routines={routines}
             botId={activeBot?.id}
             botName={activeBot?.name}
+            jobId={activeJobId ?? undefined}
             onRefresh={refreshComputer}
           />
         </motion.div>
       ) : null}
+
+      <McpSettings open={modal === "mcp"} onOpenChange={(open) => setModal(open ? "mcp" : null)} />
 
       {computer ? (
         <Button
@@ -511,12 +679,14 @@ export function Workspace() {
               transition={{ duration: 0.28, ease: easeOut }}
             >
               <ComputerPanel
+                onOpenRoutines={(id) => { setMobileComputer(false); openRoutines(id); }}
                 computer={computer}
                 files={files}
                 shells={shells}
                 routines={routines}
                 botId={activeBot?.id}
                 botName={activeBot?.name}
+                jobId={activeJobId ?? undefined}
                 onRefresh={refreshComputer}
               />
             </motion.div>
@@ -589,25 +759,15 @@ export function Workspace() {
           ))
         )}
       </ListDialog>
-      <ListDialog open={modal === "routines"} title="Routines" onClose={() => setModal(null)}>
-        {routines.length === 0 ? (
-          <Empty
-            size="sm"
-            title="No routines yet"
-            description='Ask a bot to "Summarize the inbox every weekday at 9:00" to create a routine.'
-          />
-        ) : (
-          routines.map((item) => (
-            <Card key={item.id} className="mb-3 p-3">
-              <span className="text-[0.925rem] text-[#f0f0f0]">{item.name}</span>
-              <span className="text-xs text-[#8f8f8f]">
-                {item.cron} · {item.enabled ? "Active" : "Paused"} · next {item.nextRunAt ?? "—"}
-              </span>
-              <span className="text-sm text-[#8f8f8f]">{item.instructions}</span>
-            </Card>
-          ))
-        )}
-      </ListDialog>
+      {modal === "routines" ? <RoutinesDialog
+        key={routineEditorId ?? "list"}
+        routines={routines} bots={bots} threads={threads}
+        initialRoutineId={routineEditorId}
+        defaultBotId={activeBot?.id} defaultThreadId={activeThread?.id}
+        onClose={() => setModal(null)} onSync={setRoutines}
+        onSaved={(routine) => setRoutines((current) => current.some((item) => item.id === routine.id) ? current.map((item) => item.id === routine.id ? routine : item) : [...current, routine])}
+        onDeleted={(id) => setRoutines((current) => current.filter((item) => item.id !== id))}
+      /> : null}
       <BillingDialog
         open={billingOpen}
         usage={usage}

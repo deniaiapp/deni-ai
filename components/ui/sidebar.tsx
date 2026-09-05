@@ -58,14 +58,14 @@ function Sidebar({ className, children, ...props }: ComponentProps<"aside">) {
         data-slot="sidebar"
         data-state={open ? "open" : "closed"}
         className={cn(
-          "fixed inset-y-0 left-0 z-40 h-full w-72 shrink-0 -translate-x-full overflow-hidden transition-transform duration-200 ease-out",
+          "fixed inset-y-0 left-0 z-40 h-full w-[280px] shrink-0 -translate-x-full overflow-hidden transition-transform duration-200 ease-out",
           "data-[state=open]:translate-x-0",
-          "md:static md:z-auto md:w-0 md:translate-x-0 md:data-[state=open]:w-72",
+          "md:static md:z-auto md:w-0 md:translate-x-0 md:data-[state=open]:w-[280px]",
           className,
         )}
         {...props}
       >
-        <div className="flex h-full w-72 flex-col">{children}</div>
+        <div className="flex h-full w-[280px] flex-col">{children}</div>
       </aside>
     </>
   );

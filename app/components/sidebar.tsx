@@ -18,8 +18,9 @@ import {
   Pin,
   Trash2,
   Loader2,
+  Plug,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { easeOut } from "@/lib/motion";
 import {
@@ -69,11 +70,14 @@ export function Sidebar({
   onNewGroup,
   onOpenSkills,
   onOpenRoutines,
+  onOpenMcp,
   onTeammateAction,
   usage,
   onOpenBilling,
   loadingThreadId = null,
   actionBusyId = null,
+  jobStateByThread,
+  notifications,
 }: {
   bots: Bot[];
   threads: Thread[];
@@ -85,11 +89,14 @@ export function Sidebar({
   onNewGroup: () => void;
   onOpenSkills: () => void;
   onOpenRoutines: () => void;
+  onOpenMcp: () => void;
   onTeammateAction: (thread: Thread, bot: Bot, action: TeammateMenuAction) => void;
   usage: UsageSnapshot | null;
   onOpenBilling: () => void;
   loadingThreadId?: string | null;
   actionBusyId?: string | null;
+  jobStateByThread?: Record<string, "running" | "waiting" | "attention">;
+  notifications?: ReactNode;
 }) {
   const dms = threads.filter((item) => item.kind === "dm");
   const groups = threads.filter((item) => item.kind === "group");
@@ -117,16 +124,19 @@ export function Sidebar({
 
   return (
     <>
-      <SidebarHeader className="gap-3 border-b border-white/10 bg-[#111111]">
+      <SidebarHeader className="h-[54px] shrink-0 gap-2 bg-[#111111]">
         <div className="min-w-0 flex-1 whitespace-normal">
-          <h1 className="text-[0.925rem] font-semibold text-[#f0f0f0]">Deni Run</h1>
+          <h1 className="text-sm font-semibold text-[#bdbdbd]">Deni Run</h1>
         </div>
+        <button type="button" onClick={onNewBot} aria-label="New teammate" title="New teammate" className="flex size-8 items-center justify-center rounded-lg text-[#999999] hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-white/50">
+          <PlusIcon size={18} />
+        </button>
         <SidebarClose className="md:hidden" />
       </SidebarHeader>
 
       <SidebarContent>
-        <div className="px-3 pt-3 pb-2">
-          <label className="flex items-center gap-2 rounded-lg bg-[#242424] px-3 py-2 text-sm text-[#a5a5a5] ring-1 ring-white/5 focus-within:ring-white/20">
+        <div className="px-3 pb-1">
+          <label className="flex items-center gap-2 rounded-lg bg-[#242424] px-2.5 py-1.5 text-sm text-[#a5a5a5] ring-1 ring-white/5 focus-within:ring-white/20">
             <MagnifyingGlassIcon size={16} aria-hidden="true" />
             <input
               value={query}
@@ -145,6 +155,7 @@ export function Sidebar({
             activeThreadId={activeThreadId}
             loadingThreadId={loadingThreadId}
             actionBusyId={actionBusyId}
+            jobStateByThread={jobStateByThread}
             onSelectThread={onSelectThread}
             onTeammateAction={onTeammateAction}
           />
@@ -159,6 +170,7 @@ export function Sidebar({
             activeThreadId={activeThreadId}
             loadingThreadId={loadingThreadId}
             actionBusyId={actionBusyId}
+            jobStateByThread={jobStateByThread}
             onSelectThread={onSelectThread}
             onTeammateAction={onTeammateAction}
           />
@@ -171,6 +183,7 @@ export function Sidebar({
             activeThreadId={activeThreadId}
             loadingThreadId={loadingThreadId}
             actionBusyId={actionBusyId}
+            jobStateByThread={jobStateByThread}
             onSelectThread={onSelectThread}
             onTeammateAction={onTeammateAction}
           />
@@ -206,6 +219,13 @@ export function Sidebar({
                         {thread.lastPreview}
                       </span>
                     </span>
+                    {jobStateByThread?.[thread.id] === "running" ? (
+                      <Loader2 className="mt-1.5 size-3.5 shrink-0 animate-spin text-[#8f8f8f]" aria-label="Task running" />
+                    ) : jobStateByThread?.[thread.id] === "waiting" ? (
+                      <span className="mt-1.5 text-xs text-amber-300" aria-label="Task waiting">⏸</span>
+                    ) : jobStateByThread?.[thread.id] === "attention" ? (
+                      <span className="mt-1.5 text-xs text-amber-300" aria-label="Task needs attention">⚠</span>
+                    ) : null}
                   </motion.button>
                 );
               })}
@@ -213,13 +233,13 @@ export function Sidebar({
           </SidebarGroup>
         ) : null}
 
-        <SidebarGroup>
+        <SidebarGroup className="mt-auto pt-6">
           <SidebarMenu>
             <SidebarMenuButton icon={PlusIcon} onClick={onNewBot}>
-              Teammates
+              New teammate
             </SidebarMenuButton>
             <SidebarMenuButton icon={UsersThreeIcon} onClick={onNewGroup}>
-              Groups
+              New group
             </SidebarMenuButton>
             <SidebarMenuButton icon={LightningIcon} onClick={onOpenSkills}>
               Skills
@@ -229,14 +249,19 @@ export function Sidebar({
               Routines
               <SidebarMenuBadge>{routines.length}</SidebarMenuBadge>
             </SidebarMenuButton>
+            <SidebarMenuButton icon={Plug} onClick={onOpenMcp}>
+              Plugins
+            </SidebarMenuButton>
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="flex flex-col gap-2 border-t border-white/10">
-        <div className="flex items-center justify-between gap-2">
+      <SidebarFooter className="flex flex-col gap-2 pt-1">
+        <div className="flex w-full items-center justify-between gap-2">
           <AccountMenu usage={usage} onOpenBilling={onOpenBilling} />
+          <div className="ml-auto flex items-center gap-1">{notifications}
           <SidebarTrigger className="hidden md:inline-flex" />
+          </div>
         </div>
       </SidebarFooter>
     </>
@@ -251,6 +276,7 @@ function TeammateGroup({
   activeThreadId,
   loadingThreadId,
   actionBusyId,
+  jobStateByThread,
   onSelectThread,
   onTeammateAction,
 }: {
@@ -261,6 +287,7 @@ function TeammateGroup({
   activeThreadId: string | null;
   loadingThreadId?: string | null;
   actionBusyId?: string | null;
+  jobStateByThread?: Record<string, "running" | "waiting" | "attention">;
   onSelectThread: (id: string) => void;
   onTeammateAction: (thread: Thread, bot: Bot, action: TeammateMenuAction) => void;
 }) {
@@ -268,7 +295,7 @@ function TeammateGroup({
 
   return (
     <SidebarGroup>
-      <SidebarGroupLabel className={labelClassName}>{label}</SidebarGroupLabel>
+      {label !== "Teammates" ? <SidebarGroupLabel className={labelClassName}>{label}</SidebarGroupLabel> : null}
       <div className="flex flex-col gap-0.5">
         {sorted.map((thread) => {
           const bot = bots.find((item) => item.id === thread.botIds[0]);
@@ -279,7 +306,8 @@ function TeammateGroup({
               thread={thread}
               bot={bot}
               active={activeThreadId === thread.id}
-              loading={loadingThreadId === thread.id || actionBusyId === bot.id}
+              loading={loadingThreadId === thread.id || actionBusyId === bot.id || jobStateByThread?.[thread.id] === "running"}
+              jobState={jobStateByThread?.[thread.id]}
               onSelect={() => onSelectThread(thread.id)}
               onAction={(action) => onTeammateAction(thread, bot, action)}
             />
@@ -295,6 +323,7 @@ function TeammateRow({
   bot,
   active,
   loading,
+  jobState,
   onSelect,
   onAction,
 }: {
@@ -302,6 +331,7 @@ function TeammateRow({
   bot: Bot;
   active: boolean;
   loading?: boolean;
+  jobState?: "running" | "waiting" | "attention";
   onSelect: () => void;
   onAction: (action: TeammateMenuAction) => void;
 }) {
@@ -317,19 +347,26 @@ function TeammateRow({
           type="button"
           onClick={onSelect}
           className={cn(
-            "flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left whitespace-normal",
+            "flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-left whitespace-normal",
             active ? "bg-[#2d2d2d]" : "hover:bg-white/5",
           )}
         >
           <Avatar name={bot.name} accent={bot.accent} />
           <span className="flex min-w-0 flex-1 flex-col">
-            <span className="min-w-0 truncate text-[0.925rem] text-[#f0f0f0]">{bot.name}</span>
+            <span className="flex min-w-0 items-baseline justify-between gap-2">
+              <span className="truncate text-[13px] font-semibold text-[#f0f0f0]">{bot.name}</span>
+              <time dateTime={thread.updatedAt} className="shrink-0 text-[10px] text-[#8f8f8f]">{thread.updatedAt.slice(5, 10).replace("-", "/")}</time>
+            </span>
             <span className="min-w-0 truncate text-xs text-[#8f8f8f]">
               {thread.lastPreview || bot.job}
             </span>
           </span>
           {loading ? (
             <Loader2 className="mt-1.5 size-3.5 shrink-0 animate-spin text-[#8f8f8f]" />
+          ) : jobState === "waiting" ? (
+            <span className="mt-1.5 text-xs text-amber-300" aria-label="Task waiting">⏸</span>
+          ) : jobState === "attention" ? (
+            <span className="mt-1.5 text-xs text-amber-300" aria-label="Task needs attention">⚠</span>
           ) : thread.pinned ? (
             <Pin className="mt-1.5 size-3 shrink-0 text-[#8f8f8f]" aria-label="Pinned" />
           ) : null}

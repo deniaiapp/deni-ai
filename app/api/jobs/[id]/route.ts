@@ -1,0 +1,55 @@
+import { NextResponse } from "next/server";
+import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
+import { cancelJob, getJob, listJobEvents, retryJob, updateJob } from "@/lib/jobs";
+import { runBackgroundJob } from "@/lib/job-runner";
+
+export const dynamic = "force-dynamic";
+
+type Context = { params: Promise<{ id: string }> };
+
+export async function GET(req: Request, context: Context) {
+  const userId = await getApiUserId();
+  if (!userId) return unauthorizedResponse();
+  const { id } = await context.params;
+  const job = await getJob(userId, id);
+  if (!job) return NextResponse.json({ error: "job not found" }, { status: 404 });
+  const after = Number(new URL(req.url).searchParams.get("after") ?? 0);
+  return NextResponse.json(
+    { job, events: await listJobEvents(userId, id, Number.isFinite(after) ? after : 0) },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+export async function POST(req: Request, context: Context) {
+  const userId = await getApiUserId();
+  if (!userId) return unauthorizedResponse();
+  const { id } = await context.params;
+  const body = (await req.json().catch(() => ({}))) as { action?: string; reviewed?: boolean };
+  if (body.action === "cancel") {
+    const job = await cancelJob(userId, id);
+    if (!job) return NextResponse.json({ error: "job cannot be cancelled" }, { status: 409 });
+    return NextResponse.json({ job });
+  }
+  if (body.action === "retry") {
+    const job = await retryJob(userId, id, { reviewed: body.reviewed === true });
+    if (!job) return NextResponse.json({ error: "job not found" }, { status: 404 });
+    if (job.status !== "queued") {
+      return NextResponse.json({ error: "job is not retryable", job }, { status: 409 });
+    }
+    void runBackgroundJob(userId, job.id).catch((error) => {
+      console.error("[jobs] retry failed", error);
+    });
+    return NextResponse.json({ job }, { status: 202 });
+  }
+  if (body.action === "resume") {
+    const current = await getJob(userId, id);
+    if (!current) return NextResponse.json({ error: "job not found" }, { status: 404 });
+    if (current.status !== "waiting_approval" && current.status !== "waiting_takeover") {
+      return NextResponse.json({ job: current }, { status: 409 });
+    }
+    // Queue the continuation so the next chat request can atomically claim the lease.
+    const job = await updateJob(userId, id, { status: "queued", error: null });
+    return NextResponse.json({ job });
+  }
+  return NextResponse.json({ error: "unsupported action" }, { status: 400 });
+}

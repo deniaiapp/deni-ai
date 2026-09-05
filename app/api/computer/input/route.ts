@@ -8,6 +8,8 @@ import {
   browserType,
   setComputer,
 } from "@/lib/computer";
+import { claimBrowserTakeover, releaseBrowserTakeover } from "@/lib/browser-workspaces";
+import { updateJob } from "@/lib/jobs";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,7 @@ type ComputerInput = {
   text?: string;
   key?: string;
   dy?: number;
+  jobId?: string;
 };
 
 function inputSummary(input: ComputerInput) {
@@ -44,9 +47,17 @@ export async function POST(req: Request) {
   }
 
   if (body.type === "takeover") {
+    if (body.jobId) {
+      const claimed = await claimBrowserTakeover(userId, body.jobId).catch(() => false);
+      if (!claimed) {
+        return NextResponse.json({ error: "Another task currently owns the computer" }, { status: 409 });
+      }
+      await updateJob(userId, body.jobId, { status: "waiting_takeover" }).catch(() => undefined);
+    }
     await setComputer(userId, {
       status: "takeover",
       workingLabel: "You are in control",
+      ...(body.jobId ? { jobId: body.jobId } : {}),
     });
     if (process.env.NODE_ENV !== "production") {
       console.info("[computer-api] input completed", {
@@ -57,7 +68,15 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true });
   }
   if (body.type === "release") {
-    await setComputer(userId, { status: "idle", workingLabel: "" });
+    if (body.jobId) {
+      await releaseBrowserTakeover(userId, body.jobId).catch(() => undefined);
+      await updateJob(userId, body.jobId, { status: "running" }).catch(() => undefined);
+    }
+    await setComputer(userId, {
+      status: "idle",
+      workingLabel: "",
+      ...(body.jobId ? { jobId: body.jobId } : {}),
+    });
     if (process.env.NODE_ENV !== "production") {
       console.info("[computer-api] input completed", {
         ...summary,
@@ -73,13 +92,13 @@ export async function POST(req: Request) {
         x: body.x,
         y: body.y,
         normalized: true,
-      });
+      }, body.jobId);
     } else if (body.type === "type" && body.text) {
-      await browserType(userId, { text: body.text });
+      await browserType(userId, { text: body.text }, body.jobId);
     } else if (body.type === "key" && body.key) {
-      await browserPress(userId, body.key);
+      await browserPress(userId, body.key, body.jobId);
     } else if (body.type === "scroll" && body.dy != null) {
-      await browserScroll(userId, body.dy);
+      await browserScroll(userId, body.dy, body.jobId);
     } else {
       return NextResponse.json({ error: "bad input" }, { status: 400 });
     }

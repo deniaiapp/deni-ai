@@ -22,6 +22,7 @@ export type MemoryEntry = {
 export type ThreadKind = "dm" | "group";
 
 export type Thread = {
+  reactions?: Record<string, string[]>;
   id: string;
   kind: ThreadKind;
   title: string;
@@ -44,6 +45,7 @@ export type Skill = {
 };
 
 export type Routine = {
+  revision?: number;
   id: string;
   botId: string;
   threadId: string;
@@ -69,6 +71,8 @@ export type ComputerActivity = {
 export type ComputerState = {
   status: "idle" | "working" | "takeover" | "error";
   workingBotId: string | null;
+  /** Job that currently owns the account-level computer indicator, if any. */
+  activeJobId?: string | null;
   workingLabel: string;
   url: string | null;
   title: string | null;
@@ -81,7 +85,20 @@ export type ComputerState = {
   steelDebugUrl: string | null;
   browserLive?: boolean;
   sandboxLive?: boolean;
+  /** Per-job browser/workspace state. The account still owns the underlying profile and files. */
+  workspaces?: Record<string, ComputerWorkspaceState>;
   activity: ComputerActivity[];
+};
+
+export type ComputerWorkspaceState = {
+  jobId: string;
+  botId: string | null;
+  status: "idle" | "working" | "takeover" | "error";
+  workingLabel: string;
+  url: string | null;
+  title: string | null;
+  lastError: string | null;
+  updatedAt: string;
 };
 
 export type AppConfig = {
@@ -132,6 +149,88 @@ export type HandoffSnapshot = {
   finishedAt: number | null;
 };
 
+export type JobStatus =
+  | "queued"
+  | "running"
+  | "finalizing"
+  | "waiting_approval"
+  | "waiting_takeover"
+  | "paused"
+  | "uncertain"
+  | "completed"
+  | "failed"
+  | "cancelled";
+
+export type AgentJob = {
+  id: string;
+  userId?: string;
+  threadId: string;
+  botId: string;
+  kind: "chat" | "routine" | "handoff" | "retry";
+  status: JobStatus;
+  payload: Record<string, unknown>;
+  result: Record<string, unknown> | null;
+  checkpoint: Record<string, unknown> | null;
+  attempt: number;
+  maxAttempts: number;
+  idempotencyKey: string;
+  error: string | null;
+  lockedAt: string | null;
+  heartbeatAt: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type JobEvent = {
+  id: string;
+  jobId: string;
+  kind: string;
+  payload: Record<string, unknown>;
+  sequence: number;
+  createdAt: string;
+};
+
+export type Artifact = {
+  id: string;
+  jobId: string | null;
+  threadId: string;
+  botId: string | null;
+  path: string;
+  title: string;
+  mimeType: string;
+  description: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type NotificationKind = "completed" | "failed" | "approval" | "takeover" | "info";
+
+export type AppNotification = {
+  id: string;
+  jobId: string | null;
+  kind: NotificationKind;
+  title: string;
+  body: string;
+  readAt: string | null;
+  createdAt: string;
+};
+
+export type McpConnection = {
+  id: string;
+  name: string;
+  url: string;
+  transport: "streamable-http" | "sse";
+  enabled: boolean;
+  hasSecret: boolean;
+  headerNames: string[];
+  lastTestAt: string | null;
+  lastError: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type Store = {
   version: 1;
   config: AppConfig;
@@ -144,6 +243,11 @@ export type Store = {
   handoffs?: HandoffSnapshot[];
   billing?: Billing;
   usage?: UsagePeriod;
+  /** Runtime state is persisted separately; these optional fields preserve old callers. */
+  jobs?: AgentJob[];
+  artifacts?: Artifact[];
+  notifications?: AppNotification[];
+  mcpConnections?: McpConnection[];
 };
 
 export type WorkspaceNode = {

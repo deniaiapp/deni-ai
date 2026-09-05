@@ -7,6 +7,8 @@ import path from "node:path";
 import { promisify } from "node:util";
 import type { Browser, BrowserContext, Page } from "playwright";
 import { mutateStore, readStore } from "./store";
+import { db } from "@/db";
+import { browserWorkspaces } from "@/db/schema";
 import { emitComputer, lastComputer, listShells, pushShell } from "./events";
 import { userBrowserDir, userScreenPath } from "./paths";
 import { getUserObject, hasObjectStorage, putUserObject } from "./storage";
@@ -93,10 +95,14 @@ type BrowserSession = {
   closed?: boolean;
   startedAt: number;
   lastBilledAt: number;
+  scopeKey: string;
+  ownsContext?: boolean;
+  accountKey?: string;
 };
 
 const g = globalThis as typeof globalThis & {
   __deniBrowsers?: Map<string, Promise<BrowserSession>>;
+  __deniBrowserBases?: Map<string, Promise<BrowserSession>>;
   __deniBrowserBilledAt?: Map<string, number>;
   __deniScreenshots?: Map<string, Buffer>;
   __deniScreenshotWrites?: Map<string, Promise<void>>;
@@ -107,16 +113,27 @@ function browserSessions() {
   return g.__deniBrowsers;
 }
 
+function browserBases() {
+  if (!g.__deniBrowserBases) g.__deniBrowserBases = new Map();
+  return g.__deniBrowserBases;
+}
+
+function browserScopeKey(userId: string, jobId?: string) {
+  return `${userId}:${jobId?.trim() || "default"}`;
+}
+
 function browserBilledAt() {
   if (!g.__deniBrowserBilledAt) g.__deniBrowserBilledAt = new Map();
   return g.__deniBrowserBilledAt;
 }
 
 export function pendingBrowserMs(userId: string) {
-  if (!browserSessions().has(userId)) return 0;
-  const at = browserBilledAt().get(userId);
-  if (at == null) return 0;
-  return Math.max(0, Date.now() - at);
+  let pending = 0;
+  for (const key of [...browserSessions().keys()].filter((item) => item.startsWith(`${userId}:`))) {
+    const at = browserBilledAt().get(key);
+    if (at != null) pending = Math.max(pending, Date.now() - at);
+  }
+  return pending;
 }
 
 function screenshotCache() {
@@ -143,17 +160,25 @@ async function withTimeout<T>(promise: Promise<T>, milliseconds: number) {
   }
 }
 
-function persistScreenshot(userId: string, image: Buffer, remoteStorage: boolean) {
+function persistScreenshot(userId: string, image: Buffer, remoteStorage: boolean, jobId?: string) {
   const writes = screenshotWrites();
   const previous = writes.get(userId) ?? Promise.resolve();
   const current = previous
     .catch(() => undefined)
     .then(async () => {
       if (remoteStorage) {
-        await withTimeout(putUserObject(userId, "computer/screen.png", image, "image/png"), 4_000);
+        await withTimeout(
+          putUserObject(
+            userId,
+            jobId ? `computer/jobs/${encodeURIComponent(jobId)}/screen.png` : "computer/screen.png",
+            image,
+            "image/png",
+          ),
+          4_000,
+        );
         return;
       }
-      const target = userScreenPath(userId);
+      const target = userScreenPath(userId, jobId);
       await mkdir(path.dirname(target), { recursive: true });
       await writeFile(target, image);
     });
@@ -174,6 +199,7 @@ export function computerSnapshot(partial?: Partial<ComputerState>): ComputerStat
   return {
     status: "idle",
     workingBotId: null,
+    activeJobId: null,
     workingLabel: "",
     url: null,
     title: null,
@@ -184,6 +210,7 @@ export function computerSnapshot(partial?: Partial<ComputerState>): ComputerStat
     steelSessionId: null,
     steelProfileId: null,
     steelDebugUrl: null,
+    workspaces: {},
     activity: [],
     ...partial,
   };
@@ -196,8 +223,10 @@ export async function setComputer(
     activityDetail?: string;
     activityKind?: ComputerState["activity"][number]["kind"];
     botId?: string | null;
+    jobId?: string | null;
   },
 ) {
+  const scopedJobId = patch.jobId ?? undefined;
   const state = await mutateStore(userId, (store) => {
     if (patch.activityTitle) {
       store.computer.activity.unshift({
@@ -208,24 +237,120 @@ export async function setComputer(
         detail: patch.activityDetail ?? "",
       });
     }
-    const { activityTitle: _title, activityDetail: _detail, activityKind: _kind, botId, ...rest } =
-      patch;
-    Object.assign(store.computer, rest);
-    if (botId !== undefined && rest.workingBotId === undefined) {
-      store.computer.workingBotId = botId;
+    const {
+      activityTitle: _title,
+      activityDetail: _detail,
+      activityKind: _kind,
+      botId,
+      jobId,
+      activeJobId: _activeJobId,
+      workspaces: _workspaces,
+      ...rest
+    } = patch;
+    const explicitStatus = rest.status;
+
+    const applyGlobalPatch = () => {
+      Object.assign(store.computer, rest);
+      if (botId !== undefined && rest.workingBotId === undefined) {
+        store.computer.workingBotId = botId;
+      }
+    };
+
+    if (jobId) {
+      store.computer.workspaces ??= {};
+      const previous = store.computer.workspaces[jobId];
+      const next = {
+        jobId,
+        botId: botId ?? previous?.botId ?? store.computer.workingBotId,
+        status: (rest.status ?? previous?.status ?? "idle") as
+          | "idle"
+          | "working"
+          | "takeover"
+          | "error",
+        workingLabel: rest.workingLabel ?? previous?.workingLabel ?? "",
+        url: rest.url !== undefined ? rest.url : previous?.url ?? null,
+        title: rest.title !== undefined ? rest.title : previous?.title ?? null,
+        lastError: rest.lastError !== undefined ? rest.lastError : previous?.lastError ?? null,
+        updatedAt: nowIso(),
+      };
+      store.computer.workspaces[jobId] = next;
+
+      const currentOwner = store.computer.activeJobId ?? null;
+      const currentWorkspace = currentOwner ? store.computer.workspaces[currentOwner] : undefined;
+      const currentOwnerBusy = Boolean(
+        currentWorkspace && currentWorkspace.status !== "idle",
+      );
+
+      // A job-scoped update must never clear another job's account-level indicator. A
+      // new job can take ownership after the previous owner is idle; otherwise its
+      // state remains available in workspaces without stealing the visible indicator.
+      if (explicitStatus === "idle" && currentOwner === jobId) {
+        const fallback = Object.values(store.computer.workspaces)
+          .filter((workspace) => workspace.jobId !== jobId && workspace.status !== "idle")
+          .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+        if (fallback) {
+          store.computer.status = fallback.status;
+          store.computer.workingBotId = fallback.botId;
+          store.computer.workingLabel = fallback.workingLabel;
+          store.computer.url = fallback.url;
+          store.computer.title = fallback.title;
+          store.computer.lastError = fallback.lastError;
+          store.computer.activeJobId = fallback.jobId;
+        } else {
+          applyGlobalPatch();
+          store.computer.activeJobId = null;
+        }
+      } else if (!currentOwner || currentOwner === jobId || !currentOwnerBusy) {
+        applyGlobalPatch();
+        store.computer.activeJobId = next.status === "idle" ? null : jobId;
+      }
+    } else {
+      applyGlobalPatch();
+      if (explicitStatus === "idle") store.computer.activeJobId = null;
     }
     return store.computer;
   });
+  if (scopedJobId) {
+    const workspace = state.workspaces?.[scopedJobId];
+    if (workspace) {
+      await db
+        .insert(browserWorkspaces)
+        .values({
+          id: `bw_${userId.slice(0, 8)}_${scopedJobId.slice(0, 40)}`,
+          userId,
+          jobId: scopedJobId,
+          botId: workspace.botId,
+          pageKey: scopedJobId,
+          status: workspace.status,
+          url: workspace.url,
+          title: workspace.title,
+          takeoverJobId: workspace.status === "takeover" ? scopedJobId : null,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [browserWorkspaces.userId, browserWorkspaces.jobId],
+          set: {
+            botId: workspace.botId,
+            status: workspace.status,
+            url: workspace.url,
+            title: workspace.title,
+            takeoverJobId: workspace.status === "takeover" ? scopedJobId : null,
+            updatedAt: new Date(),
+          },
+        })
+        .catch((error) => console.error("[computer] workspace state", error));
+    }
+  }
   emitComputer(userId, state);
   return state;
 }
 
 export function hasBrowserSession(userId: string) {
-  return browserSessions().has(userId);
+  return [...browserSessions().keys()].some((key) => key.startsWith(`${userId}:`));
 }
 
-export async function billLiveBrowser(userId: string) {
-  await getExistingBrowserSession(userId);
+export async function billLiveBrowser(userId: string, jobId?: string) {
+  await getExistingBrowserSession(userId, jobId);
 }
 
 export function withBrowserLive(userId: string, computer: ComputerState): ComputerState {
@@ -233,6 +358,23 @@ export function withBrowserLive(userId: string, computer: ComputerState): Comput
     ...computer,
     browserLive: hasBrowserSession(userId) || Boolean(computer.steelSessionId),
     sandboxLive: hasUserSandbox(userId) || Boolean(computer.e2bSandboxId),
+  };
+}
+
+/** Overlay a job's workspace indicator when the client is viewing a specific job. */
+export function computerForJob(computer: ComputerState, jobId?: string) {
+  if (!jobId) return computer;
+  const workspace = computer.workspaces?.[jobId];
+  if (!workspace) return computer;
+  return {
+    ...computer,
+    activeJobId: jobId,
+    status: workspace.status,
+    workingBotId: workspace.botId,
+    workingLabel: workspace.workingLabel,
+    url: workspace.url,
+    title: workspace.title,
+    lastError: workspace.lastError,
   };
 }
 
@@ -256,11 +398,12 @@ function steelWebsocketUrl(session: { id: string; websocketUrl?: string }, apiKe
   return `${session.websocketUrl}${join}apiKey=${encodeURIComponent(apiKey)}`;
 }
 
-async function reconnectSteelSession(userId: string): Promise<BrowserSession | null> {
+async function reconnectSteelSession(userId: string, jobId?: string): Promise<BrowserSession | null> {
   const client = steelClient();
   if (!client) return null;
   const existing = await readStore(userId);
   const sessionId = existing.computer.steelSessionId;
+  if (jobId) return null;
   if (!sessionId) return null;
   try {
     const remote = await client.steel.sessions.retrieve(sessionId);
@@ -288,15 +431,18 @@ async function reconnectSteelSession(userId: string): Promise<BrowserSession | n
       steelSessionId: remote.id,
       startedAt: now,
       lastBilledAt: now,
+      scopeKey: browserScopeKey(userId, jobId),
+      ownsContext: true,
     };
-    browserSessions().set(userId, Promise.resolve(session));
-    browserBilledAt().set(userId, now);
+    browserSessions().set(browserScopeKey(userId, jobId), Promise.resolve(session));
+    browserBilledAt().set(browserScopeKey(userId, jobId), now);
     await setComputer(userId, {
       steelSessionId: remote.id,
       steelDebugUrl: remote.debugUrl ?? existing.computer.steelDebugUrl,
       url: page.url() || "about:blank",
       lastError: null,
       browserLive: true,
+      ...(jobId ? { jobId } : {}),
     }).catch(() => undefined);
     touchSteelSession(userId, session);
     return session;
@@ -305,27 +451,28 @@ async function reconnectSteelSession(userId: string): Promise<BrowserSession | n
   }
 }
 
-async function getExistingBrowserSession(userId: string): Promise<BrowserSession | null> {
-  const existing = browserSessions().get(userId);
-  if (!existing) return reconnectSteelSession(userId);
+async function getExistingBrowserSession(userId: string, jobId?: string): Promise<BrowserSession | null> {
+  const key = browserScopeKey(userId, jobId);
+  const existing = browserSessions().get(key);
+  if (!existing) return reconnectSteelSession(userId, jobId);
   try {
     const session = await existing;
     if (!(await isBrowserSessionUsable(session))) {
       await invalidateBrowserSession(userId, session);
-      return reconnectSteelSession(userId);
+      return reconnectSteelSession(userId, jobId);
     }
     touchSteelSession(userId, session);
     await billBrowserTime(userId, session, { allowOver: true, minDeltaMs: 5_000 }).catch(
       () => undefined,
     );
     if (await isBrowserLimitReached(userId, pendingBrowserMs(userId))) {
-      await releaseBrowser(userId);
+      await releaseBrowser(userId, jobId);
       return null;
     }
     return session;
   } catch {
-    browserSessions().delete(userId);
-    browserBilledAt().delete(userId);
+    browserSessions().delete(key);
+    browserBilledAt().delete(key);
     return null;
   }
 }
@@ -341,12 +488,13 @@ async function billBrowserTime(
   if (delta <= 0) return;
   if (opts?.minDeltaMs && delta < opts.minDeltaMs) return;
   session.lastBilledAt = now;
-  browserBilledAt().set(userId, now);
+  browserBilledAt().set(session.scopeKey, now);
   await consumeUsage(userId, { browserMs: delta }, { allowOver: opts?.allowOver });
 }
 
-async function ensureBrowser(userId: string): Promise<BrowserSession> {
-  const current = await getExistingBrowserSession(userId);
+async function ensureBrowser(userId: string, jobId?: string): Promise<BrowserSession> {
+  const key = browserScopeKey(userId, jobId);
+  const current = await getExistingBrowserSession(userId, jobId);
   if (current) {
     await billBrowserTime(userId, current);
     await assertCanStartBrowser(userId);
@@ -354,19 +502,20 @@ async function ensureBrowser(userId: string): Promise<BrowserSession> {
   }
 
   await assertCanStartBrowser(userId);
-  const promise = createBrowser(userId);
-  browserSessions().set(userId, promise);
+  const promise = createBrowser(userId, jobId);
+  browserSessions().set(key, promise);
+  if (!jobId) browserBases().set(userId, promise);
   try {
     const session = await promise;
     const now = Date.now();
     session.startedAt = now;
     session.lastBilledAt = now;
-    browserBilledAt().set(userId, now);
+    browserBilledAt().set(key, now);
     touchSteelSession(userId, session);
     return session;
   } catch (error) {
-    browserSessions().delete(userId);
-    browserBilledAt().delete(userId);
+    browserSessions().delete(key);
+    browserBilledAt().delete(key);
     throw error;
   }
 }
@@ -388,27 +537,45 @@ function touchSteelSession(userId: string, session: BrowserSession) {
   if (session.idleTimer) clearTimeout(session.idleTimer);
   const idleMs = Number(process.env.STEEL_SESSION_IDLE_MS ?? 600_000);
   session.idleTimer = setTimeout(() => {
-    releaseBrowser(userId).catch(() => undefined);
+    releaseBrowser(userId, session.scopeKey.split(":").at(-1) === "default" ? undefined : session.scopeKey.split(":").at(-1)).catch(() => undefined);
   }, idleMs);
 }
 
-export async function releaseBrowser(userId: string) {
-  const promise = browserSessions().get(userId);
-  if (!promise) return;
-  const session = await promise.catch(() => null);
-  browserSessions().delete(userId);
-  if (!session) {
-    browserBilledAt().delete(userId);
-    return;
+export async function releaseBrowser(userId: string, jobId?: string, options?: { all?: boolean }) {
+  const keys = jobId
+    ? [browserScopeKey(userId, jobId)]
+    : options?.all
+      ? [
+          ...[...browserSessions().keys()].filter(
+            (key) => key.startsWith(`${userId}:`) && !key.endsWith(":default"),
+          ),
+          browserScopeKey(userId),
+        ]
+      : [browserScopeKey(userId)];
+  for (const key of keys) {
+    const promise = browserSessions().get(key);
+    if (!promise) continue;
+    const session = await promise.catch(() => null);
+    browserSessions().delete(key);
+    if (!session) {
+      browserBilledAt().delete(key);
+      continue;
+    }
+    await closeBrowserSession(userId, session);
   }
-  await closeBrowserSession(userId, session);
+  if (!jobId && options?.all) {
+    const base = browserBases().get(userId);
+    const session = await base?.catch(() => null);
+    browserBases().delete(userId);
+    if (session && !session.closed) await closeBrowserSession(userId, session);
+  }
 }
 
 async function invalidateBrowserSession(userId: string, session: BrowserSession) {
-  const current = browserSessions().get(userId);
+  const current = browserSessions().get(session.scopeKey);
   if (current) {
     const resolved = await current.catch(() => null);
-    if (resolved === session) browserSessions().delete(userId);
+    if (resolved === session) browserSessions().delete(session.scopeKey);
   }
   await closeBrowserSession(userId, session);
 }
@@ -417,7 +584,7 @@ async function closeBrowserSession(userId: string, session: BrowserSession) {
   session.closed = true;
   if (session.idleTimer) clearTimeout(session.idleTimer);
   await billBrowserTime(userId, session, { allowOver: true }).catch(() => undefined);
-  browserBilledAt().delete(userId);
+  browserBilledAt().delete(session.scopeKey);
   if (session.steel && session.steelSessionId) {
     await session.steel.sessions.release(session.steelSessionId).catch(() => undefined);
     await mutateStore(userId, (store) => {
@@ -427,24 +594,40 @@ async function closeBrowserSession(userId: string, session: BrowserSession) {
       }
     });
   }
-  await session.browser?.close().catch(() => undefined);
-  await session.context.close().catch(() => undefined);
+  const scopedPagesRemain = [...browserSessions().keys()].some(
+    (key) => key.startsWith(`${userId}:`) && !key.endsWith(":default"),
+  );
+  const preserveSharedContext = session.scopeKey.endsWith(":default") && !session.browser && scopedPagesRemain;
+  if (session.ownsContext !== false || preserveSharedContext) {
+    await session.browser?.close().catch(() => undefined);
+    if (!preserveSharedContext) await session.context.close().catch(() => undefined);
+    else await session.page.close().catch(() => undefined);
+  } else {
+    await session.page.close().catch(() => undefined);
+  }
   await setComputer(userId, {
-    steelSessionId: null,
-    steelDebugUrl: null,
-    url: null,
-    title: null,
-    screenshotAt: null,
-    browserLive: false,
+    ...(session.ownsContext === false || preserveSharedContext
+      ? { url: null, title: null, browserLive: true }
+      : {
+          steelSessionId: null,
+          steelDebugUrl: null,
+          url: null,
+          title: null,
+          screenshotAt: null,
+          browserLive: false,
+        }),
+    ...(session.scopeKey.endsWith(":default")
+      ? {}
+      : { jobId: session.scopeKey.split(":").at(-1) }),
   }).catch(() => undefined);
 }
 
-async function createBrowser(userId: string): Promise<BrowserSession> {
+async function createBrowser(userId: string, jobId?: string): Promise<BrowserSession> {
   const { chromium } = await import("playwright");
   const steelApiKey = process.env.STEEL_API_KEY;
 
   if (steelApiKey) {
-    const reconnected = await reconnectSteelSession(userId);
+    const reconnected = await reconnectSteelSession(userId, jobId);
     if (reconnected) return reconnected;
     const steel = new Steel({
       steelAPIKey: steelApiKey,
@@ -476,9 +659,10 @@ async function createBrowser(userId: string): Promise<BrowserSession> {
         url: page.url() || "about:blank",
         lastError: null,
         browserLive: true,
+        ...(jobId ? { jobId } : {}),
       });
       const now = Date.now();
-      browserBilledAt().set(userId, now);
+      browserBilledAt().set(browserScopeKey(userId, jobId), now);
       return {
         browser,
         context,
@@ -487,6 +671,8 @@ async function createBrowser(userId: string): Promise<BrowserSession> {
         steelSessionId: session.id,
         startedAt: now,
         lastBilledAt: now,
+        scopeKey: browserScopeKey(userId, jobId),
+        ownsContext: true,
       };
     } catch (error) {
       if (session) await steel.sessions.release(session.id).catch(() => undefined);
@@ -496,6 +682,33 @@ async function createBrowser(userId: string): Promise<BrowserSession> {
 
   if (process.env.NODE_ENV === "production") {
     throw new Error("STEEL_API_KEY is required in production");
+  }
+
+  if (jobId) {
+    let basePromise = browserBases().get(userId);
+    if (!basePromise) {
+      basePromise = createBrowser(userId);
+      browserBases().set(userId, basePromise);
+    }
+    const base = await basePromise;
+    const page = await base.context.newPage();
+    await page.setViewportSize(VIEWPORT);
+    const now = Date.now();
+    await setComputer(userId, {
+      url: page.url() || "about:blank",
+      lastError: null,
+      browserLive: true,
+      jobId,
+    });
+    return {
+      context: base.context,
+      page,
+      startedAt: now,
+      lastBilledAt: now,
+      scopeKey: browserScopeKey(userId, jobId),
+      ownsContext: false,
+      accountKey: userId,
+    };
   }
 
   const context = await chromium.launchPersistentContext(userBrowserDir(userId), {
@@ -511,8 +724,16 @@ async function createBrowser(userId: string): Promise<BrowserSession> {
     browserLive: true,
   });
   const now = Date.now();
-  browserBilledAt().set(userId, now);
-  return { context, page, startedAt: now, lastBilledAt: now };
+  browserBilledAt().set(browserScopeKey(userId), now);
+  return {
+    context,
+    page,
+    startedAt: now,
+    lastBilledAt: now,
+    scopeKey: browserScopeKey(userId),
+    ownsContext: true,
+    accountKey: userId,
+  };
 }
 
 async function recordShell(userId: string, record: ShellRecord) {
@@ -610,21 +831,32 @@ function isClosedBrowserError(error: unknown) {
 async function withBrowserSession<T>(
   userId: string,
   action: (session: BrowserSession) => Promise<T>,
+  jobId?: string,
 ) {
-  let session = await ensureBrowser(userId);
+  let session = await ensureBrowser(userId, jobId);
   try {
     return await action(session);
   } catch (error) {
     if (!isClosedBrowserError(error)) throw error;
     await invalidateBrowserSession(userId, session);
-    session = await ensureBrowser(userId);
+    session = await ensureBrowser(userId, jobId);
     return action(session);
   }
 }
 
-export async function stopSandbox(userId: string) {
-  const browserWasLive = hasBrowserSession(userId);
-  await releaseBrowser(userId);
+export async function stopSandbox(userId: string, jobId?: string) {
+  const browserWasLive = jobId
+    ? Boolean(await getExistingBrowserSession(userId, jobId))
+    : hasBrowserSession(userId);
+  await releaseBrowser(userId, jobId, { all: !jobId });
+  if (jobId) {
+    return {
+      stopped: browserWasLive,
+      browserClosed: browserWasLive,
+      sandboxStopped: false as const,
+      sharedResourcePreserved: true,
+    };
+  }
   const sandbox = hasE2B()
     ? await stopUserSandbox(userId)
     : { stopped: false as const, reason: "already stopped" };
@@ -694,38 +926,42 @@ function clip(text: string, max = 12_000) {
   return `${text.slice(0, max)}\n… (${text.length - max} more chars)`;
 }
 
-export async function screenshot(userId: string): Promise<string | null> {
+export async function screenshot(userId: string, jobId?: string): Promise<string | null> {
   try {
-    const session = await getExistingBrowserSession(userId);
+    const session = await getExistingBrowserSession(userId, jobId);
     if (!session) return null;
     const image = Buffer.from(await session.page.screenshot({ type: "png" }));
     const at = nowIso();
     const url = session.page.url();
     const title = await session.page.title();
-    screenshotCache().set(userId, image);
+    const cacheKey = `${userId}:${jobId ?? "default"}`;
+    screenshotCache().set(cacheKey, image);
     await setComputer(userId, {
       screenshotAt: at,
       url,
       title,
       lastError: null,
       browserLive: true,
+      ...(jobId ? { jobId } : {}),
     });
     const remoteStorage = hasObjectStorage();
     if (process.env.NODE_ENV === "production" && !remoteStorage) {
       throw new Error("S3-compatible screenshot storage is required in production");
     }
-    persistScreenshot(userId, image, remoteStorage);
+    persistScreenshot(userId, image, remoteStorage, jobId);
     return at;
   } catch (error) {
     await setComputer(userId, {
       lastError: error instanceof Error ? error.message : "The browser could not be started",
+      ...(jobId ? { jobId } : {}),
     });
     return null;
   }
 }
 
-export async function getScreenshot(userId: string) {
-  const cached = screenshotCache().get(userId);
+export async function getScreenshot(userId: string, jobId?: string) {
+  const cacheKey = `${userId}:${jobId ?? "default"}`;
+  const cached = screenshotCache().get(cacheKey);
   if (cached) return cached;
   const remoteStorage = hasObjectStorage();
   if (process.env.NODE_ENV === "production" && !remoteStorage) {
@@ -733,16 +969,19 @@ export async function getScreenshot(userId: string) {
   }
   if (remoteStorage) {
     try {
-      const image = await getUserObject(userId, "computer/screen.png");
-      if (image) screenshotCache().set(userId, image);
+      const image = await getUserObject(
+        userId,
+        jobId ? `computer/jobs/${encodeURIComponent(jobId)}/screen.png` : "computer/screen.png",
+      );
+      if (image) screenshotCache().set(cacheKey, image);
       return image;
     } catch {
       return null;
     }
   }
   try {
-    const image = await readFile(userScreenPath(userId));
-    screenshotCache().set(userId, image);
+    const image = await readFile(userScreenPath(userId, jobId));
+    screenshotCache().set(cacheKey, image);
     return image;
   } catch {
     return null;
@@ -767,33 +1006,34 @@ async function pageSnapshot(page: Page) {
   }
 }
 
-export async function browserNavigate(userId: string, url: string) {
+export async function browserNavigate(userId: string, url: string, jobId?: string) {
   return withBrowserSession(userId, async (session) => {
     const target = assertBrowserUrl(url);
     await session.page.goto(target, { waitUntil: "domcontentloaded", timeout: 45_000 });
-    await screenshot(userId);
+    await screenshot(userId, jobId);
     return {
       url: session.page.url(),
       title: await session.page.title(),
       snapshot: await pageSnapshot(session.page),
     };
-  });
+  }, jobId);
 }
 
-export async function browserSnapshot(userId: string) {
+export async function browserSnapshot(userId: string, jobId?: string) {
   return withBrowserSession(userId, async (session) => {
-    await screenshot(userId);
+    await screenshot(userId, jobId);
     return {
       url: session.page.url(),
       title: await session.page.title(),
       snapshot: await pageSnapshot(session.page),
     };
-  });
+  }, jobId);
 }
 
 export async function browserClick(
   userId: string,
   input: { selector?: string; x?: number; y?: number; normalized?: boolean },
+  jobId?: string,
 ) {
   return withBrowserSession(userId, async (session) => {
     if (input.selector) {
@@ -815,42 +1055,42 @@ export async function browserClick(
       throw new Error("A selector or x,y coordinates are required");
     }
     await session.page.waitForTimeout(400);
-    await screenshot(userId);
+    await screenshot(userId, jobId);
     return {
       url: session.page.url(),
       title: await session.page.title(),
       snapshot: await pageSnapshot(session.page),
     };
-  });
+  }, jobId);
 }
 
-export async function browserType(userId: string, input: { selector?: string; text: string }) {
+export async function browserType(userId: string, input: { selector?: string; text: string }, jobId?: string) {
   return withBrowserSession(userId, async (session) => {
     if (input.selector) {
       await session.page.locator(input.selector).first().fill(input.text);
     } else {
       await session.page.keyboard.type(input.text, { delay: 20 });
     }
-    await screenshot(userId);
+    await screenshot(userId, jobId);
     return { url: session.page.url(), title: await session.page.title() };
-  });
+  }, jobId);
 }
 
-export async function browserPress(userId: string, key: string) {
+export async function browserPress(userId: string, key: string, jobId?: string) {
   return withBrowserSession(userId, async (session) => {
     await session.page.keyboard.press(key);
     await session.page.waitForTimeout(300);
-    await screenshot(userId);
+    await screenshot(userId, jobId);
     return { url: session.page.url(), title: await session.page.title() };
-  });
+  }, jobId);
 }
 
-export async function browserScroll(userId: string, dy: number) {
+export async function browserScroll(userId: string, dy: number, jobId?: string) {
   return withBrowserSession(userId, async (session) => {
     await session.page.mouse.wheel(0, dy);
-    await screenshot(userId);
+    await screenshot(userId, jobId);
     return { url: session.page.url(), title: await session.page.title() };
-  });
+  }, jobId);
 }
 
 export {

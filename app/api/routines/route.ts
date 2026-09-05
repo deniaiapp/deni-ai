@@ -1,66 +1,98 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
-import { nextCron } from "@/lib/agent";
+import { nextCron } from "@/lib/cron";
 import { createId, nowIso } from "@/lib/ids";
 import { mutateStore, readStore } from "@/lib/store";
 
 export const dynamic = "force-dynamic";
+const id = z.string().trim().min(1).max(200);
+const fields = z.object({
+  name: z.string().trim().min(1, "Name is required.").max(120),
+  instructions: z.string().trim().min(1, "Instruction is required.").max(20000),
+  cron: z.string().trim().min(1, "When to run is required.").max(160),
+  timezone: z.string().trim().min(1).max(100).optional(),
+  enabled: z.boolean().optional(),
+});
+const createSchema = fields.extend({ botId: id, threadId: id });
+const updateSchema = fields.partial().extend({ id });
 
 export async function GET() {
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const store = await readStore(userId);
-  return NextResponse.json({ routines: store.routines });
+  return NextResponse.json({ routines: store.routines, timezone: store.config.timezone });
 }
 
-export async function POST(req: Request) {
+async function updateRoutine(userId: string, body: unknown) {
+  const parsed = updateSchema.safeParse(body);
+  if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid routine." }, { status: 400 });
+  const data = parsed.data;
+  const routine = await mutateStore(userId, (store) => {
+    const item = store.routines.find((entry) => entry.id === data.id);
+    if (!item) return null;
+    const cron = data.cron ?? item.cron;
+    const timezone = data.timezone ?? item.timezone ?? store.config.timezone;
+    const enabled = data.enabled ?? item.enabled;
+    const scheduleChanged = cron !== item.cron || timezone !== item.timezone || enabled !== item.enabled;
+    // Validate edits even when disabled, but allow an invalid legacy routine to be switched off.
+    const nextRunAt = data.cron !== undefined || data.timezone !== undefined || (enabled && scheduleChanged) ? nextCron(cron, timezone) : item.nextRunAt;
+    const changed = scheduleChanged || (data.name !== undefined && data.name !== item.name) || (data.instructions !== undefined && data.instructions !== item.instructions);
+    item.name = data.name ?? item.name;
+    item.instructions = data.instructions ?? item.instructions;
+    item.cron = cron;
+    item.timezone = timezone;
+    item.enabled = enabled;
+    item.nextRunAt = enabled ? (scheduleChanged || !item.nextRunAt ? nextRunAt ?? nextCron(cron, timezone) : item.nextRunAt) : null;
+    if (changed) { item.revision = (item.revision ?? 0) + 1; item.lastError = null; }
+    return item;
+  });
+  return routine ? NextResponse.json({ routine }) : NextResponse.json({ error: "Routine not found." }, { status: 404 });
+}
+
+export async function POST(request: Request) {
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
-  const body = (await req.json()) as {
-    botId?: string;
-    threadId?: string;
-    name?: string;
-    instructions?: string;
-    cron?: string;
-    enabled?: boolean;
-    id?: string;
-  };
-
-  if (body.id) {
+  const body = await request.json().catch(() => null);
+  try {
+    // Preserve the existing POST-with-id interface for existing clients.
+    if (body?.id) return await updateRoutine(userId, body);
+    const parsed = createSchema.safeParse(body);
+    if (!parsed.success) return NextResponse.json({ error: parsed.error.issues[0]?.message ?? "Invalid routine." }, { status: 400 });
+    const data = parsed.data;
     const routine = await mutateStore(userId, (store) => {
-      const item = store.routines.find((entry) => entry.id === body.id);
-      if (!item) return null;
-      if (typeof body.enabled === "boolean") item.enabled = body.enabled;
-      if (body.cron) item.cron = body.cron;
-      if (body.instructions) item.instructions = body.instructions;
-      if (item.enabled) item.nextRunAt = nextCron(item.cron, store.config.timezone);
+      const thread = store.threads.find((entry) => entry.id === data.threadId);
+      if (!store.bots.some((bot) => bot.id === data.botId) || !thread?.botIds.includes(data.botId)) return null;
+      const timezone = data.timezone ?? store.config.timezone;
+      const nextRunAt = nextCron(data.cron, timezone);
+      const enabled = data.enabled ?? true;
+      const item = { id: createId("rtn"), botId: data.botId, threadId: data.threadId, name: data.name, instructions: data.instructions, cron: data.cron, timezone, enabled, revision: 0, lastRunAt: null, nextRunAt: enabled ? nextRunAt : null, lastError: null, createdAt: nowIso() };
+      store.routines.push(item);
       return item;
     });
-    if (!routine) return NextResponse.json({ error: "not found" }, { status: 404 });
-    return NextResponse.json({ routine });
+    return routine ? NextResponse.json({ routine }, { status: 201 }) : NextResponse.json({ error: "Teammate or conversation not found." }, { status: 404 });
+  } catch (error) {
+    return NextResponse.json({ error: error instanceof Error ? error.message : "Could not save routine." }, { status: 400 });
   }
+}
 
-  if (!body.botId || !body.threadId || !body.name || !body.cron || !body.instructions) {
-    return NextResponse.json({ error: "missing fields" }, { status: 400 });
-  }
-  const store = await readStore(userId);
-  const routine = await mutateStore(userId, (s) => {
-    const created = {
-      id: createId("rtn"),
-      botId: body.botId!,
-      threadId: body.threadId!,
-      name: body.name!,
-      instructions: body.instructions!,
-      cron: body.cron!,
-      timezone: s.config.timezone,
-      enabled: true,
-      lastRunAt: null,
-      nextRunAt: nextCron(body.cron!, store.config.timezone),
-      lastError: null,
-      createdAt: nowIso(),
-    };
-    s.routines.push(created);
-    return created;
+export async function PATCH(request: Request) {
+  const userId = await getApiUserId();
+  if (!userId) return unauthorizedResponse();
+  try { return await updateRoutine(userId, await request.json().catch(() => null)); }
+  catch (error) { return NextResponse.json({ error: error instanceof Error ? error.message : "Could not update routine." }, { status: 400 }); }
+}
+
+export async function DELETE(request: Request) {
+  const userId = await getApiUserId();
+  if (!userId) return unauthorizedResponse();
+  const parsed = z.object({ id }).safeParse(await request.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "Routine ID is required." }, { status: 400 });
+  const deleted = await mutateStore(userId, (store) => {
+    const index = store.routines.findIndex((item) => item.id === parsed.data.id);
+    if (index < 0) return false;
+    store.routines.splice(index, 1);
+    return true;
   });
-  return NextResponse.json({ routine });
+  return deleted ? NextResponse.json({ deleted: parsed.data.id }) : NextResponse.json({ error: "Routine not found." }, { status: 404 });
 }

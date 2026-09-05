@@ -3,10 +3,11 @@ import { getScreenshot } from "@/lib/computer";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: Request) {
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
-  const image = await getScreenshot(userId);
+  const jobId = new URL(req.url).searchParams.get("jobId") || undefined;
+  const image = await getScreenshot(userId, jobId);
   if (image) {
     return new Response(new Uint8Array(image), {
       headers: {

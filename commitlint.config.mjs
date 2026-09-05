@@ -1,4 +1,4 @@
-export default {
+const config = {
   extends: ["@commitlint/config-conventional"],
   rules: {
     "type-enum": [
@@ -50,3 +50,5 @@ export default {
     "body-min-length": [2, "always", 20],
   },
 };
+
+export default config;

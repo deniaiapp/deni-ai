@@ -30,13 +30,13 @@ export const MessageContent = ({ children, className, ...props }: MessageContent
   <div
     className={cn(
       "flex max-w-full flex-col gap-2 text-sm",
-      "group-[.is-user]:w-max group-[.is-user]:rounded-2xl group-[.is-user]:bg-[#272727] group-[.is-user]:text-[#f0f0f0]",
-      "group-[.is-assistant]:min-w-0 group-[.is-assistant]:w-full group-[.is-assistant]:text-[#e7e7e7]",
+      "group-[.is-user]:w-max group-[.is-user]:rounded-3xl group-[.is-user]:bg-[#505050] group-[.is-user]:text-[#f0f0f0]",
+      "group-[.is-assistant]:min-w-0 group-[.is-assistant]:w-fit group-[.is-assistant]:rounded-2xl group-[.is-assistant]:bg-[#252525] group-[.is-assistant]:text-[#e7e7e7]",
       className,
     )}
     {...props}
   >
-    <div className="group-[.is-user]:px-4 group-[.is-user]:py-3">{children}</div>
+    <div className="px-3.5 py-2.5">{children}</div>
   </div>
 );
 
@@ -44,33 +44,41 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const basePlugins = { cjk, code };
 
+type MathPlugin = typeof import("@streamdown/math").math;
+type MermaidPlugin = typeof import("@streamdown/mermaid").mermaid;
+
 export const MessageResponse = memo(
   ({ className, children, ...props }: MessageResponseProps) => {
     const text = typeof children === "string" ? children : "";
     const mermaidNeeded = text.includes("```mermaid");
     const mathNeeded = text.includes("$") || text.includes("\\(");
-    const [extra, setExtra] = useState<Record<string, unknown>>({});
+    const [loaded, setLoaded] = useState<{ math?: MathPlugin; mermaid?: MermaidPlugin }>({});
 
     useEffect(() => {
-      if (!mermaidNeeded && !mathNeeded) {
-        setExtra({});
-        return;
-      }
+      const wantMath = mathNeeded && !loaded.math;
+      const wantMermaid = mermaidNeeded && !loaded.mermaid;
+      if (!wantMath && !wantMermaid) return;
       let cancelled = false;
       void Promise.all([
-        mathNeeded ? import("@streamdown/math") : null,
-        mermaidNeeded ? import("@streamdown/mermaid") : null,
+        wantMath ? import("@streamdown/math") : null,
+        wantMermaid ? import("@streamdown/mermaid") : null,
       ]).then(([mathMod, mermaidMod]) => {
         if (cancelled) return;
-        setExtra({
+        setLoaded((current) => ({
+          ...current,
           ...(mathMod ? { math: mathMod.math } : {}),
           ...(mermaidMod ? { mermaid: mermaidMod.mermaid } : {}),
-        });
+        }));
       });
       return () => {
         cancelled = true;
       };
-    }, [mathNeeded, mermaidNeeded]);
+    }, [mathNeeded, mermaidNeeded, loaded.math, loaded.mermaid]);
+
+    const extra = {
+      ...(mathNeeded && loaded.math ? { math: loaded.math } : {}),
+      ...(mermaidNeeded && loaded.mermaid ? { mermaid: loaded.mermaid } : {}),
+    };
 
     return (
       <Streamdown

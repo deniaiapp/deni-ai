@@ -12,6 +12,11 @@ While Grok Bot provides a cloud VM, Deni Run gives each account an isolated comp
 - Skills for reusable procedures and cron-based routines
 - Approval gates for destructive commands and file deletion
 - Handoffs between bots and group threads
+- Durable background jobs with checkpoints, reconnect, cancellation, retries, and restart recovery
+- Per-task browser pages with the account login profile and workspace files shared safely
+- Generic streamable HTTP/SSE MCP connections with encrypted credentials and approval-gated calls
+- Deliverable cards with safe text preview, download, and revision requests
+- Persistent in-app notifications for completed, failed, approval, and takeover states
 
 ## Setup
 
@@ -27,6 +32,22 @@ cp .env.example .env.local
 pnpm db:migrate
 ```
 
+If the database already contains the original tables but `drizzle.__drizzle_migrations` has no
+baseline row, do not drop or reset it. Compare the live schema with `db/migrations/0000_init.sql`
+and have the database owner record that known baseline with the team's migration tooling before
+applying `0001_wakeful_king_cobra.sql`. `pnpm test:core` validates both migrations in a temporary
+schema without touching application data.
+
+For long-running work, run the dedicated worker in a separate process (and set `DENI_SCHEDULER=true`):
+
+```bash
+pnpm worker
+```
+
+The worker claims queued jobs with a database lease. If a worker stops while a tool call is in
+flight, the job is marked **needs review** instead of replaying an uncertain external side effect.
+Use the task's explicit review-and-retry action after checking the external service.
+
 Create an API key at [openrouter.ai/keys](https://openrouter.ai/keys) and set `OPENROUTER_API_KEY` for a platform-managed key. If it is omitted, each signed-in user can provide their own key in the setup screen; it is encrypted before being stored.
 
 ```bash
@@ -37,7 +58,53 @@ http://localhost:3000
 
 ## Docker / Dokploy
 
-Production uses Steel for the browser and E2B for the terminal, so the image does not install Chromium. Set `STEEL_API_KEY`, `E2B_API_KEY`, and S3/R2 credentials. `NEXT_PUBLIC_*` values are inlined at image build time — change them and rebuild.
+### Local PostgreSQL
+
+No Docker or system-wide PostgreSQL installation is needed. After installing the
+project dependencies with Bun or pnpm (Node.js is required):
+
+```bash
+bun db:start
+```
+
+This uses the platform's native PostgreSQL 17 binaries supplied by `embedded-postgres`.
+It initializes `.deni/postgres/data` once, creates the `deni` database, and starts the
+server in the background using `pg_ctl`. Repeated starts reuse the running server.
+Supported platforms include Windows x64, macOS x64/ARM64, and Linux x64/ARM64.
+For the local app and migrations, set this in `.env.local`:
+
+```dotenv
+DATABASE_URL=postgres://deni:deni@127.0.0.1:5432/deni
+```
+
+Then run `bun db:migrate` and `bun dev`. The local database starts empty; this command
+does not migrate existing Neon data or rewrite your current connection settings.
+Use `bun db:stop` for a clean shutdown without deleting data, `bun db:status` to
+check whether it is running, and `bun db:logs` to follow its logs (Ctrl+C exits the
+log viewer without stopping PostgreSQL).
+If port 5432 is occupied, set `LOCAL_POSTGRES_PORT` in `.env.local` and use that same
+port in `DATABASE_URL`. Local credentials are `deni` / `deni`, and the port is bound
+only to `127.0.0.1`. Native database files are separate from any previous Docker
+volume. Native binary installation hooks are allowed in the package-manager config;
+if installing with lifecycle scripts disabled, allow the `@embedded-postgres/*`
+package for your platform before starting the database.
+
+### Dokploy PostgreSQL
+
+Compose includes a PostgreSQL 17 service named `postgres`, with persistent storage in
+the `postgres-data` volume and a readiness health check. It has no published host port.
+Set `POSTGRES_PASSWORD` in Dokploy's Environment tab before deploying; `POSTGRES_DB`
+and `POSTGRES_USER` default to `deni`. A hex password from `openssl rand -hex 32` can
+be used directly in the connection URL.
+
+The app continues to use the existing `DATABASE_URL`. When ready to switch to the
+included database, set it to `postgres://deni:<password>@postgres:5432/deni` (adjust
+the username and database if changed). This is a new, empty database: existing Neon
+data is not copied automatically, and application schema migrations are still required.
+Keep the `postgres-data` volume when redeploying. Changing the initialization variables
+does not change the credentials or database in an already initialized volume.
+
+Production uses Steel for the browser and E2B for the terminal, so the image does not install Chromium. Set `STEEL_API_KEY`, `E2B_API_KEY`, and S3/R2 credentials. Set `EXA_API_KEY` to give teammates a `webSearch` tool backed by Exa; without it the tool is not offered. `NEXT_PUBLIC_*` values are inlined at image build time — change them and rebuild.
 
 ```bash
 cp .env.example .env
@@ -58,6 +125,10 @@ Dockerfile-only deploys: build type **Dockerfile**, port `3000`, health check `/
 2. Watch clicks and file changes in Computer on the right
 3. Select "Take control" when a login is required
 4. Ask "Summarize the inbox every Monday at 9:00" to create a routine
+5. Open **MCP connections** to add a streamable HTTP or SSE server, test discovery, and then ask a teammate to use it
+
+Routine cron expressions are evaluated in the account timezone, including day-of-month/day-of-week
+rules, daylight-saving transitions, and monthly schedules. Invalid expressions are rejected when saved.
 
 Local development workspace mirror: `.deni/users/<user-hash>/workspace`  
 Local development browser profile: `.deni/users/<user-hash>/browser-profile`

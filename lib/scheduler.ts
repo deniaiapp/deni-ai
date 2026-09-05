@@ -1,9 +1,15 @@
-import { convertToModelMessages, generateText, isLoopFinished, type UIMessage } from "ai";
-import { buildInstructions, createDeniTools, deniToolApproval, nextCron } from "./agent";
-import { getApiKey } from "./config";
-import { setComputer } from "./computer";
-import { createId, nowIso } from "./ids";
-import { getDeniModel } from "./llm";
+import "server-only";
+
+import { type UIMessage } from "ai";
+import { nextCron } from "./agent";
+import { createId } from "./ids";
+import {
+  createJob,
+  getJobByIdempotencyKey,
+  listQueuedJobs,
+  recoverStaleJobs,
+} from "./jobs";
+import { runBackgroundJob } from "./job-runner";
 import {
   listDueRoutineUserIds,
   listUserStores,
@@ -12,7 +18,6 @@ import {
   readStore,
   saveMessages,
 } from "./store";
-import { assertCanUseTokens, isUsageLimitError, recordTokenUsage } from "./usage";
 
 const g = globalThis as typeof globalThis & { __deniScheduler?: boolean };
 
@@ -28,40 +33,46 @@ export function startScheduler() {
   tick().catch(() => undefined);
 }
 
-async function tick() {
-  const now = Date.now();
+/** Run stale recovery before claiming work so a process restart cannot strand a task. */
+export async function tick() {
+  await recoverStaleJobs().catch((error) => {
+    console.error("[deni scheduler] stale job recovery", error);
+  });
   let userIds: string[];
   try {
-    userIds = await listDueRoutineUserIds(new Date(now));
+    userIds = await listDueRoutineUserIds(new Date());
   } catch {
     userIds = (await listUserStores()).map((row) => row.userId);
   }
   for (const userId of userIds) {
     const store = await readStore(userId);
+    const now = Date.now();
     const due = (store.routines ?? []).filter(
       (item) => item.enabled && item.nextRunAt && new Date(item.nextRunAt).getTime() <= now,
     );
-    for (const routine of due) {
-      await runRoutine(userId, routine.id);
-    }
+    for (const routine of due) await enqueueRoutine(userId, routine.id);
+  }
+
+  // Jobs are claimed one at a time in runBackgroundJob; another scheduler process can
+  // safely observe the same queue because the claim is protected by a row lock.
+  for (const job of await listQueuedJobs()) {
+    void runBackgroundJob(job.userId ?? "", job.id).catch((error) => {
+      console.error("[deni scheduler] job", job.id, error);
+    });
   }
 }
 
-async function runRoutine(userId: string, routineId: string) {
+async function enqueueRoutine(userId: string, routineId: string) {
   const store = await readStore(userId);
   const routine = store.routines.find((item) => item.id === routineId);
-  if (!routine) return;
+  if (!routine || !routine.enabled || !routine.nextRunAt || new Date(routine.nextRunAt).getTime() > Date.now()) return null;
   const bot = store.bots.find((item) => item.id === routine.botId);
-  if (!bot) return;
-  const apiKey = await getApiKey(userId);
-  if (!apiKey) {
-    await mutateStore(userId, (s) => {
-      const item = s.routines.find((entry) => entry.id === routineId);
-      if (item) item.lastError = "API key missing";
-    });
-    return;
-  }
-
+  if (!bot) return null;
+  const scheduledFor = routine.nextRunAt;
+  const routineRevision = routine.revision ?? 0;
+  const idempotencyKey = `routine:${routine.id}:${scheduledFor}:v${routineRevision}`;
+  const existing = await getJobByIdempotencyKey(userId, idempotencyKey);
+  if (existing) return existing;
   const kickoff: UIMessage = {
     id: createId("msg"),
     role: "user",
@@ -72,72 +83,24 @@ async function runRoutine(userId: string, routineId: string) {
       },
     ],
   };
-
   const previous = await loadMessages(userId, routine.threadId);
   const messages = [...previous, kickoff];
   await saveMessages(userId, routine.threadId, messages);
-  try {
-    await assertCanUseTokens(userId);
-  } catch (error) {
-    if (isUsageLimitError(error)) {
-      await mutateStore(userId, (s) => {
-        const item = s.routines.find((entry) => entry.id === routineId);
-        if (!item) return;
-        item.lastError = error.message;
-        item.nextRunAt = nextCron(item.cron, s.config.timezone);
-      });
-      return;
-    }
-    throw error;
-  }
-  await setComputer(userId, {
-    status: "working",
-    workingBotId: bot.id,
-    workingLabel: `routine:${routine.name}`,
+  const job = await createJob({
+    userId,
+    threadId: routine.threadId,
     botId: bot.id,
+    kind: "routine",
+    idempotencyKey,
+    payload: { messages, routineId: routine.id, routineRevision, runMode: store.config.runMode },
+    maxAttempts: 2,
   });
-
-  try {
-    const { model, providerOptions, tokenMultiplier } = await getDeniModel(userId);
-    const result = await generateText({
-      model,
-      instructions: buildInstructions(
-        bot,
-        store.skills,
-        store.bots.map((item) => ({
-          id: item.id,
-          name: item.name,
-          job: item.job,
-        })),
-      ),
-      messages: await convertToModelMessages(messages),
-      tools: createDeniTools({ userId, bot, threadId: routine.threadId }),
-      toolApproval: deniToolApproval(),
-      stopWhen: isLoopFinished(),
-      providerOptions,
-    });
-    await recordTokenUsage(userId, result.usage, { multiplier: tokenMultiplier });
-    const assistant: UIMessage = {
-      id: createId("msg"),
-      role: "assistant",
-      parts: [{ type: "text", text: result.text || "Routine completed." }],
-    };
-    await saveMessages(userId, routine.threadId, [...messages, assistant]);
-    await mutateStore(userId, (s) => {
-      const item = s.routines.find((entry) => entry.id === routineId);
-      if (!item) return;
-      item.lastRunAt = nowIso();
-      item.lastError = null;
-      item.nextRunAt = nextCron(item.cron, s.config.timezone);
-    });
-  } catch (error) {
-    await mutateStore(userId, (s) => {
-      const item = s.routines.find((entry) => entry.id === routineId);
-      if (!item) return;
-      item.lastError = error instanceof Error ? error.message : String(error);
-      item.nextRunAt = nextCron(item.cron, s.config.timezone);
-    });
-  } finally {
-    await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null });
-  }
+  // Advance the schedule at enqueue time. This prevents duplicate kickoff messages while
+  // a long task is running; the run history is finalized by the worker.
+  await mutateStore(userId, (next) => {
+    const item = next.routines.find((entry) => entry.id === routine.id);
+    if (!item || !item.enabled || item.nextRunAt !== scheduledFor || (item.revision ?? 0) !== routineRevision) return;
+    item.nextRunAt = nextCron(item.cron, item.timezone || next.config.timezone, new Date(scheduledFor));
+  });
+  return job;
 }

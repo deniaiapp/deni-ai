@@ -10,11 +10,13 @@ import { mutateStore, readStore } from "@/lib/store";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
+  const startedAt = performance.now();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
+  const authenticatedAt = performance.now();
   const store = await readStore(userId);
   return NextResponse.json({
-    ready: await hasApiKey(userId),
+    ready: await hasApiKey(userId, store),
     timezone: store.config.timezone,
     model: store.config.model,
     runMode: parseRunMode(store.config.runMode),
@@ -25,7 +27,7 @@ export async function GET() {
     computer: withBrowserLive(userId, store.computer),
     shells: store.shells ?? listShells(userId),
     usage: liveUsageSnapshot(store, userId),
-  });
+  }, { headers: { "Cache-Control": "no-store", "Server-Timing": `auth;dur=${(authenticatedAt - startedAt).toFixed(1)}, data;dur=${(performance.now() - authenticatedAt).toFixed(1)}` } });
 }
 
 export async function PATCH(req: Request) {

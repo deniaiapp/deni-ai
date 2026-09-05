@@ -27,6 +27,7 @@ import { LoadingFallback } from "@/components/ui/loading";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ComputerState, Routine, ShellRecord, WorkspaceNode } from "@/lib/types";
+import { describeRoutineSchedule, formatRoutineTime } from "@/lib/routine-schedule";
 
 type Tab = "screen" | "files" | "terminal" | "log";
 
@@ -49,7 +50,9 @@ export function ComputerPanel({
   routines,
   botId,
   botName,
+  jobId,
   onRefresh,
+  onOpenRoutines,
 }: {
   computer: ComputerState;
   files: WorkspaceNode[];
@@ -57,7 +60,9 @@ export function ComputerPanel({
   routines: Routine[];
   botId?: string;
   botName?: string;
+  jobId?: string;
   onRefresh: (capture?: boolean, includeFiles?: boolean) => Promise<void>;
+  onOpenRoutines?: (id?: string) => void;
 }) {
   const [tab, setTab] = useState<Tab>("screen");
   const [takeover, setTakeover] = useState(false);
@@ -66,10 +71,10 @@ export function ComputerPanel({
   const [fileView, setFileView] = useState<{ path: string; content: string } | null>(null);
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [filesBusy, setFilesBusy] = useState(false);
-  const [tabBusy, setTabBusy] = useState<Tab | null>(null);
+  const [refreshedTab, setRefreshedTab] = useState<Tab | null>(null);
   const [openingPath, setOpeningPath] = useState<string | null>(null);
   const [screenBusy, setScreenBusy] = useState<"takeover" | "close" | null>(null);
-  const [shotReady, setShotReady] = useState(false);
+  const [readyStamp, setReadyStamp] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<{ all?: boolean; paths: string[] } | null>(
     null,
   );
@@ -93,7 +98,7 @@ export function ComputerPanel({
         const res = await fetch("/api/computer/input", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(input),
+          body: JSON.stringify({ ...input, ...(jobId ? { jobId } : {}) }),
         });
         const response = await res.json().catch(() => null);
         if (!res.ok) {
@@ -115,7 +120,7 @@ export function ComputerPanel({
       inputQueue.current = run.catch(() => undefined);
       return run;
     },
-    [onRefresh],
+    [jobId, onRefresh],
   );
 
   async function clickScreen(e: React.MouseEvent<HTMLElement>) {
@@ -196,9 +201,14 @@ export function ComputerPanel({
       const res = await fetch("/api/computer/input", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ type: next ? "takeover" : "release" }),
+        body: JSON.stringify({ type: next ? "takeover" : "release", ...(jobId ? { jobId } : {}) }),
       });
       debugComputer("toggle takeover response", { enabled: next, status: res.status });
+      if (!res.ok) {
+        setTakeover(!next);
+        const json = await res.json().catch(() => null);
+        throw new Error(json?.error || "The computer is currently owned by another task");
+      }
       await onRefresh(next, false);
     } finally {
       setScreenBusy(null);
@@ -211,7 +221,7 @@ export function ComputerPanel({
       await fetch("/api/computer", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "release" }),
+        body: JSON.stringify({ action: "release", ...(jobId ? { jobId } : {}) }),
       });
       setTakeover(false);
       setScreenExpanded(false);
@@ -324,6 +334,7 @@ export function ComputerPanel({
   }
 
   const stamp = computer.screenshotAt ?? "none";
+  const screenshotQuery = `${jobId ? `&jobId=${encodeURIComponent(jobId)}` : ""}`;
   const statusLabel =
     computer.status === "working"
       ? computer.workingLabel || "Working"
@@ -344,35 +355,31 @@ export function ComputerPanel({
   const showScreen = Boolean(
     computer.browserLive || computer.steelDebugUrl || computer.steelSessionId,
   );
-  const visibleTab = !showScreen && tab === "screen" ? "files" : tab;
+  const visibleTab = tab;
+  const tabBusy: Tab | null =
+    (visibleTab === "files" || visibleTab === "terminal") && refreshedTab !== visibleTab
+      ? visibleTab
+      : null;
+  const shotReady = readyStamp === stamp;
 
   useEffect(() => {
     if (visibleTab !== "files" && visibleTab !== "terminal") return;
     let cancelled = false;
-    setTabBusy(visibleTab);
     void onRefresh(false, visibleTab === "files")
       .catch(() => undefined)
       .finally(() => {
-        if (!cancelled) setTabBusy(null);
+        if (!cancelled) setRefreshedTab(visibleTab);
       });
     return () => {
       cancelled = true;
     };
   }, [visibleTab, onRefresh]);
 
-  useEffect(() => {
-    setShotReady(false);
-  }, [stamp]);
-
   return (
-    <aside className="flex h-full w-[320px] max-w-[calc(100vw-2.5rem)] shrink-0 flex-col border-l border-white/10 bg-[#111111] text-[#f0f0f0]">
-      <header className="flex items-center justify-between border-b border-white/10 px-3 py-3">
+    <aside aria-label="Computer and routines" className="flex h-full w-[304px] max-w-[calc(100vw-2.5rem)] shrink-0 flex-col border-l border-white/10 bg-[#080808] text-[#f0f0f0] 2xl:w-[320px]">
+      <header className="flex h-[54px] shrink-0 items-center justify-between border-b border-white/10 px-4">
         <div className="min-w-0">
           <span className="text-sm font-semibold text-[#f0f0f0]">Computer</span>
-          <span className="flex min-w-0 flex-col truncate text-xs tracking-tighter text-[#8f8f8f]">
-            {botName ? `${botName}'s workspace` : "Personal workspace"}
-            {computer.status === "working" ? <AnimatedDots /> : null}
-          </span>
         </div>
         <Badge variant={statusVariant} appearance="dot">
           {statusLabel}
@@ -380,10 +387,10 @@ export function ComputerPanel({
         </Badge>
       </header>
 
-      <div className="border-b border-white/10 px-3 py-2">
+      <div className="px-3 py-2">
         <Tabs value={visibleTab} onValueChange={(value) => setTab(value as Tab)}>
           <TabsList className="w-full">
-            {showScreen ? <TabsTrigger value="screen">Screen</TabsTrigger> : null}
+            <TabsTrigger value="screen">Screen</TabsTrigger>
             <TabsTrigger value="files">
               {tabBusy === "files" ? <Spinner size="sm" className="size-3.5" /> : null}
               Files
@@ -406,7 +413,18 @@ export function ComputerPanel({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2, ease: easeOut }}
           >
-        {visibleTab === "screen" ? (
+        {visibleTab === "screen" && !showScreen ? (
+          <div className="space-y-3 p-4">
+            <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-lg border border-white/5 bg-[#191919] px-5 text-center">
+              {computer.status === "working" ? <Spinner size="sm" /> : <TerminalIcon size={24} className="text-[#656565]" />}
+              <span className="text-xs text-[#a0a0a0]">{computer.status === "working" ? computer.workingLabel || "Working on your task" : "No browser open"}</span>
+            </div>
+            <p className="text-center text-xs text-[#8f8f8f]">{botName ? `${botName}'s screen` : "Computer screen"}</p>
+            <p className="px-2 text-center text-xs leading-relaxed text-[#6f6f6f]">The screen appears here when your teammate opens the browser.</p>
+            {computer.lastError ? <Alert variant="destructive"><AlertTitle>Computer error</AlertTitle><AlertDescription>{computer.lastError}</AlertDescription></Alert> : null}
+          </div>
+        ) : null}
+        {visibleTab === "screen" && showScreen ? (
           <div className="space-y-4 p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex flex-col">
@@ -473,14 +491,14 @@ export function ComputerPanel({
                   ) : null}
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={`/api/computer/screenshot?t=${encodeURIComponent(stamp)}`}
+                    src={`/api/computer/screenshot?t=${encodeURIComponent(stamp)}${screenshotQuery}`}
                     alt="Deni Run"
                     onLoad={(event) => {
-                      setShotReady(true);
+                      setReadyStamp(stamp);
                       handleScreenshotLoad(event);
                     }}
                     onError={(event) => {
-                      setShotReady(true);
+                      setReadyStamp(stamp);
                       handleScreenshotError(event);
                     }}
                     className={`block min-h-40 w-full object-contain bg-[#090909] ${
@@ -512,7 +530,6 @@ export function ComputerPanel({
                     : "The bot's clicks and input appear here. Click the preview to enlarge it."}
               </span>
             </div>
-            <RoutineList routines={activeRoutines} />
             {computer.lastError ? (
               <Alert variant="destructive">
                 <AlertTitle>Computer error</AlertTitle>
@@ -682,6 +699,10 @@ export function ComputerPanel({
         </AnimatePresence>
       </div>
 
+      <div className="scroll-thin h-[42%] max-h-[440px] shrink-0 overflow-y-auto px-4 py-6">
+        <RoutineList routines={activeRoutines} onOpen={onOpenRoutines} />
+      </div>
+
       <Dialog
         open={Boolean(deleteConfirm)}
         onOpenChange={(open) => {
@@ -747,7 +768,7 @@ export function ComputerPanel({
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={`/api/computer/screenshot?t=${encodeURIComponent(stamp)}`}
+              src={`/api/computer/screenshot?t=${encodeURIComponent(stamp)}${screenshotQuery}`}
               alt="Enlarged Deni Run screen"
               onLoad={handleScreenshotLoad}
               onError={handleScreenshotError}
@@ -834,25 +855,28 @@ function LiveBrowserView({
   );
 }
 
-function RoutineList({ routines }: { routines: Routine[] }) {
+function RoutineList({ routines, onOpen }: { routines: Routine[]; onOpen?: (id?: string) => void }) {
   return (
-    <section className="border-t border-white/10 pt-3">
+    <section aria-label="Teammate routines" className="space-y-3">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-sm font-semibold text-[#f0f0f0]">Routines</span>
-        <span className="text-xs tracking-tighter text-[#8f8f8f]">
-          {routines.length} bot routine{routines.length === 1 ? "" : "s"}
-        </span>
+        {onOpen ? <Button type="button" variant="ghost" size="xs" onClick={() => onOpen()}>Manage</Button> : null}
       </div>
       {routines.length === 0 ? (
-        <span className="text-xs tracking-tighter text-[#777777]">
-          No routines for this teammate yet.
-        </span>
+        <div className="flex flex-col items-center gap-3 py-8 text-center">
+          <p className="max-w-60 text-xs leading-relaxed text-[#8f8f8f]">Routines are recurring tasks this teammate runs on a schedule.</p>
+          {onOpen ? <Button type="button" variant="outline" size="sm" onClick={() => onOpen("new")}>Create routine</Button> : null}
+        </div>
       ) : (
         <div className="space-y-2">
           {routines.map((routine) => (
-            <div
+            <button
               key={routine.id}
-              className="rounded-lg bg-[#1b1b1b] px-2.5 py-2 ring-1 ring-white/10"
+              type="button"
+              aria-label={`Edit ${routine.name}`}
+              onClick={() => onOpen?.(routine.id)}
+              disabled={!onOpen}
+              className="block w-full rounded-lg bg-[#1b1b1b] px-2.5 py-2 text-left ring-1 ring-white/10 hover:bg-[#252525] focus-visible:outline-2 focus-visible:outline-white/40"
             >
               <div className="flex items-start justify-between gap-2">
                 <span className="min-w-0 truncate text-xs font-semibold text-[#f0f0f0]">
@@ -862,11 +886,11 @@ function RoutineList({ routines }: { routines: Routine[] }) {
                   {routine.enabled ? "Active" : "Paused"}
                 </span>
               </div>
-              <span className="mt-1 font-mono text-xs tracking-tighter text-[#8f8f8f]">
-                {routine.cron} · next {routine.nextRunAt ?? "—"}
-              </span>
-            </div>
+              <span className="mt-1 block text-xs text-[#8f8f8f]">{describeRoutineSchedule(routine.cron)}</span>
+              <span className="mt-1 block text-[11px] text-[#777777]">{routine.timezone} · {routine.enabled ? `Next ${formatRoutineTime(routine.nextRunAt, routine.timezone)}` : "Off"}</span>
+            </button>
           ))}
+          {onOpen ? <Button type="button" variant="ghost" size="xs" onClick={() => onOpen("new")}>+ New routine</Button> : null}
         </div>
       )}
     </section>

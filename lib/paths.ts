@@ -20,8 +20,10 @@ export function userBrowserDir(userId: string) {
   return path.join(userDataDir(userId), "browser-profile");
 }
 
-export function userScreenPath(userId: string) {
-  return path.join(userDataDir(userId), "computer", "screen.png");
+export function userScreenPath(userId: string, jobId?: string) {
+  return jobId
+    ? path.join(userDataDir(userId), "computer", "jobs", userStorageKey(jobId), "screen.png")
+    : path.join(userDataDir(userId), "computer", "screen.png");
 }
 
 export function userWorkspacePrefix(userId: string) {

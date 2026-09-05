@@ -111,6 +111,7 @@ export function emptyStore(): Store {
     computer: {
       status: "idle",
       workingBotId: null,
+      activeJobId: null,
       workingLabel: "",
       url: null,
       title: null,
@@ -121,6 +122,7 @@ export function emptyStore(): Store {
       steelSessionId: null,
       steelProfileId: null,
       steelDebugUrl: null,
+      workspaces: {},
       activity: [],
     },
     shells: [],

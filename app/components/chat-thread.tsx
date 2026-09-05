@@ -2,24 +2,37 @@
 
 import { useChat } from "@ai-sdk/react";
 import {
-  DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  memo,
+  useCallback,
+  useMemo,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { motion } from "motion/react";
+import type { StickToBottomContext } from "use-stick-to-bottom";
 import { easeOut } from "@/lib/motion";
 import { RobotIcon, StopIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import {
   BookOpenIcon,
   BrainIcon,
   ClockIcon,
+  DownloadIcon,
   FolderIcon,
   GlobeIcon,
+  SearchIcon,
   SendIcon,
   SparklesIcon,
   TerminalIcon,
+  RotateCcwIcon,
   WrenchIcon,
+  CornerUpLeftIcon,
+  XIcon,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -56,8 +69,19 @@ import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
 import { Avatar } from "./sidebar";
+import { MessageActions } from "./message-actions";
+import { messageActionKey, messageBubbleTargets, replyReference, type MessageBubble, type MessageReference, type MessageReaction } from "@/lib/message-actions";
+import { createReactionState, type ReactionMap } from "@/lib/reaction-state";
 import { RUN_MODES, type RunMode } from "@/lib/model";
-import type { Bot, HandoffSnapshot, Thread } from "@/lib/types";
+import type { AgentJob, Artifact, Bot, HandoffSnapshot, Thread } from "@/lib/types";
+import { isActiveJob, latestJob, mergeJobSnapshots } from "@/lib/job-view";
+import { clearThreadDraft, getThreadDraft, setThreadDraft } from "@/lib/thread-state";
+import type { Chat } from "@ai-sdk/react";
+import {
+  getChatSessionRunStatus,
+  setChatSessionRunStatus,
+  subscribeChatSessionRunStatus,
+} from "@/lib/chat-sessions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,57 +89,240 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const draftCache = new Map<string, string>();
+const scrollCache = new Map<string, number>();
+const replyCache = new Map<string, MessageReference>();
+const reactionStates = new Map<string, ReturnType<typeof createReactionState>>();
+
+function getReactionState(threadId: string, initial: ReactionMap = {}) {
+  const existing = reactionStates.get(threadId);
+  if (existing) return existing;
+  const state = createReactionState(async (messageId, emoji, selected) => {
+    const response = await fetch(`/api/threads/${encodeURIComponent(threadId)}/reactions`, {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messageId, emoji, selected }),
+    });
+    if (!response.ok) throw new Error("Reaction could not be saved");
+    return (await response.json() as { reactions: ReactionMap }).reactions;
+  }, initial);
+  reactionStates.set(threadId, state);
+  for (const [key, entry] of reactionStates) {
+    if (reactionStates.size <= 100) break;
+    if (key !== threadId && !entry.hasPending()) reactionStates.delete(key);
+  }
+  return state;
+}
+
+function rememberScroll(threadId: string, scrollTop: number) {
+  scrollCache.delete(threadId);
+  scrollCache.set(threadId, scrollTop);
+  while (scrollCache.size > 100) scrollCache.delete(scrollCache.keys().next().value as string);
+}
+
 export function ChatThread({
   thread,
   bot,
   bots,
-  initialMessages,
   runMode,
   onRunModeChange,
   onBusyChange,
+  onActiveJobChange,
+  backgroundJobs,
+  onJobsChange,
+  chat,
 }: {
   thread: Thread;
   bot: Bot;
   bots: Bot[];
-  initialMessages: UIMessage[];
   runMode: RunMode;
   onRunModeChange: (mode: RunMode) => void | Promise<void>;
   onBusyChange: (busy: boolean) => void;
+  onActiveJobChange?: (jobId: string | null) => void;
+  backgroundJobs?: AgentJob[];
+  onJobsChange?: (jobs: AgentJob[]) => void;
+  chat: Chat<UIMessage>;
 }) {
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/chat",
-        body: () => ({ threadId: thread.id, botId: bot.id, runMode }),
-        prepareSendMessagesRequest: ({ messages: pending, body, trigger }) => ({
-          body: {
-            ...body,
-            trigger,
-            messages: trigger === "submit-message" ? pending.slice(-2) : [],
-          },
-        }),
-      }),
-    [thread.id, bot.id, runMode],
-  );
+  const conversationContextRef = useRef<StickToBottomContext | null>(null);
+  const { messages, sendMessage, status, addToolApprovalResponse, setMessages, stop, error, clearError } = useChat({ chat });
 
-  const { messages, sendMessage, status, addToolApprovalResponse, stop, error, clearError } =
-    useChat({
-      id: thread.id,
-      messages: initialMessages,
-      transport,
-      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+  const [input, setInput] = useState(() => getThreadDraft(draftCache, thread.id));
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const [replyTarget, setReplyTarget] = useState<MessageReference | null>(() => replyCache.get(thread.id) ?? null);
+  const reactionState = useMemo(() => getReactionState(thread.id, thread.reactions), [thread.id, thread.reactions]);
+  const reactions = useSyncExternalStore(reactionState.subscribe, reactionState.getSnapshot, reactionState.getSnapshot);
+  const [handoffs, setHandoffs] = useState<Record<string, HandoffSnapshot>>({});
+  const [jobs, setJobs] = useState<AgentJob[]>(backgroundJobs ?? []);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const syncedCompletion = useRef<string | null>(null);
+  const mountedRef = useRef(true);
+  const taskRefreshSequence = useRef(0);
+  const jobsChangeRef = useRef(onJobsChange);
+  const displayedJobs = backgroundJobs ?? jobs;
+  const usesSharedJobs = backgroundJobs !== undefined;
+  const sharedJobSignal = backgroundJobs?.map((job) => `${job.id}:${job.status}:${job.attempt}`).join("|");
+  const displayedJobsRef = useRef(displayedJobs);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const revision = reactionState.getRevision();
+    void fetch(`/api/threads/${encodeURIComponent(thread.id)}/reactions`, { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = await response.json() as { reactions: Record<string, string[]> };
+        if (!controller.signal.aborted) reactionState.hydrate(data.reactions, revision);
+      }).catch(() => undefined);
+    return () => controller.abort();
+  }, [thread.id, reactionState]);
+
+  const replyToMessage = useCallback((reference: MessageReference) => {
+    setReplyTarget(reference);
+    replyCache.delete(thread.id);
+    replyCache.set(thread.id, reference);
+    while (replyCache.size > 100) replyCache.delete(replyCache.keys().next().value as string);
+    requestAnimationFrame(() => {
+      const textarea = inputRef.current;
+      if (!textarea) return;
+      textarea.focus();
+      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     });
+  }, [thread.id]);
+
+  const reactToMessage = useCallback((messageId: string, emoji: MessageReaction, selected: boolean) => reactionState.toggle(messageId, emoji, selected), [reactionState]);
+
+  const locateMessage = useCallback((key: string) => {
+    const element = conversationContextRef.current?.scrollRef.current?.querySelector<HTMLElement>(`[data-message-key="${CSS.escape(key)}"]`);
+    if (!element) return;
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    element.scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "center" });
+    element.focus({ preventScroll: true });
+    if (!reduced) element.animate([{ backgroundColor: "#ffffff18" }, { backgroundColor: "transparent" }], { duration: 1100 });
+  }, []);
+
+  useEffect(() => {
+    jobsChangeRef.current = onJobsChange;
+  }, [onJobsChange]);
+
+  useEffect(() => {
+    displayedJobsRef.current = displayedJobs;
+  }, [displayedJobs]);
+
+  useEffect(() => {
+    const scrollElement = conversationContextRef.current?.scrollRef.current;
+    const savedScrollTop = scrollCache.get(thread.id);
+    let frame: number | undefined;
+    if (savedScrollTop != null) {
+      frame = requestAnimationFrame(() => {
+        const element = conversationContextRef.current?.scrollRef.current;
+        if (element) element.scrollTop = savedScrollTop;
+      });
+    }
+    return () => {
+      if (frame != null) cancelAnimationFrame(frame);
+      if (scrollElement) rememberScroll(thread.id, scrollElement.scrollTop);
+    };
+  }, [thread.id]);
 
   const onApprove = useCallback(
-    (id: string, approved: boolean) => {
+    async (id: string, approved: boolean) => {
+      setChatSessionRunStatus(thread.id, "working");
+      const active = displayedJobs.find((item) => item.status === "waiting_approval");
+      if (active) {
+        await fetch(`/api/jobs/${active.id}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "resume" }),
+        });
+      }
       addToolApprovalResponse({ id, approved });
     },
-    [addToolApprovalResponse],
+    [addToolApprovalResponse, displayedJobs, thread.id],
   );
 
-  const [input, setInput] = useState("");
-  const [handoffs, setHandoffs] = useState<Record<string, HandoffSnapshot>>({});
   const busy = status === "submitted" || status === "streaming";
+  const subscribeRunStatus = useCallback(
+    (listener: () => void) => subscribeChatSessionRunStatus(thread.id, listener),
+    [thread.id],
+  );
+  const chatRunStatus = useSyncExternalStore(
+    subscribeRunStatus,
+    () => getChatSessionRunStatus(thread.id),
+    () => "idle",
+  );
+  const activeJob = latestJob(displayedJobs.filter(isActiveJob));
+  const savingResult = activeJob?.status === "finalizing" || chatRunStatus === "finalizing";
+  const waitingForUser = chatRunStatus === "waiting";
+  const showBusyIndicator = busy && chatRunStatus !== "completed" && chatRunStatus !== "failed";
+
+  const refreshTaskData = useCallback(async (signal?: AbortSignal, forceJobs = false) => {
+    const sequence = ++taskRefreshSequence.current;
+    const [jobsResponse, artifactsResponse] = await Promise.all([
+      !usesSharedJobs || forceJobs ? fetch(`/api/jobs?threadId=${encodeURIComponent(thread.id)}`, { cache: "no-store", signal }) : Promise.resolve(null),
+      fetch(`/api/artifacts?threadId=${encodeURIComponent(thread.id)}`, { cache: "no-store", signal }),
+    ]);
+    if (!mountedRef.current || sequence !== taskRefreshSequence.current) return;
+    let nextJobs = displayedJobsRef.current;
+    if (jobsResponse?.ok) {
+      const json = (await jobsResponse.json()) as { jobs?: AgentJob[] };
+      nextJobs = mergeJobSnapshots(displayedJobsRef.current, json.jobs ?? []);
+      setJobs(nextJobs);
+      jobsChangeRef.current?.(nextJobs);
+    }
+      const active = latestJob(nextJobs.filter(isActiveJob));
+      onActiveJobChange?.(active?.id ?? null);
+      const current = latestJob(nextJobs);
+      if (!busy && !active && current?.status === "completed" && syncedCompletion.current !== current.id) {
+        syncedCompletion.current = current.id;
+        void fetch(`/api/threads/${thread.id}`, { cache: "no-store", signal })
+          .then((response) => { if (!response.ok) throw new Error("Could not load completed messages"); return response.json(); })
+          .then((json) => {
+            if (mountedRef.current && !signal?.aborted && chat.status !== "streaming" && chat.status !== "submitted" && !displayedJobsRef.current.some(isActiveJob)) setMessages(json.messages ?? []);
+          })
+          .catch(() => { if (syncedCompletion.current === current.id) syncedCompletion.current = null; });
+      }
+    if (artifactsResponse.ok) {
+      const json = (await artifactsResponse.json()) as { artifacts?: Artifact[] };
+      setArtifacts(json.artifacts ?? []);
+    }
+  }, [busy, chat, onActiveJobChange, setMessages, thread.id, usesSharedJobs]);
+
+  useEffect(() => {
+    // Polling rehydrates durable jobs after a disconnected chat request.
+    const controller = new AbortController();
+    let inFlight = true;
+    // eslint-disable-next-line react/set-state-in-effect
+    void refreshTaskData(controller.signal).catch(() => undefined).finally(() => { inFlight = false; });
+    const timer = usesSharedJobs ? undefined : setInterval(() => {
+      if (inFlight || document.visibilityState === "hidden") return;
+      inFlight = true;
+      void refreshTaskData(controller.signal).catch(() => undefined).finally(() => { inFlight = false; });
+    }, 5_000);
+    return () => {
+      controller.abort();
+      clearInterval(timer);
+    };
+  }, [refreshTaskData, sharedJobSignal, usesSharedJobs]);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
+
+  const stopTask = useCallback(() => {
+    stop();
+    for (const job of displayedJobs.filter((item) => ["queued", "running", "waiting_approval", "waiting_takeover"].includes(item.status))) {
+      void fetch(`/api/jobs/${job.id}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "cancel" }),
+      }).then(() => refreshTaskData());
+    }
+  }, [displayedJobs, refreshTaskData, stop]);
+
+  const requestRevision = useCallback((artifact: Artifact) => {
+    const next = `Revise the artifact "${artifact.title}" at ${artifact.path} and register the updated file.`;
+    setInput(next);
+    draftCache.set(thread.id, next);
+  }, [thread.id]);
 
   useEffect(() => {
     const ids = collectHandoffIds(messages);
@@ -154,24 +361,28 @@ export function ChatThread({
   function submit() {
     const text = input.trim();
     if (!text || busy) return;
+    setChatSessionRunStatus(thread.id, "working");
     setInput("");
-    sendMessage({ text });
+    clearThreadDraft(draftCache, thread.id);
+    sendMessage({ text, ...(replyTarget ? { metadata: { replyTo: replyTarget } } : {}) });
+    setReplyTarget(null);
+    replyCache.delete(thread.id);
   }
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#050505] text-[#f0f0f0]">
       <motion.header
-        className="hidden items-center gap-3 border-b border-white/10 bg-[#050505] px-5 py-3 md:flex"
+        className="hidden h-[54px] shrink-0 items-center gap-2.5 border-b border-white/10 bg-[#080808] px-4 md:flex"
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: easeOut }}
       >
         <Avatar name={bot.name} accent={bot.accent} />
-        <div className="min-w-0 flex-1 flex gap-1 items-center">
+        <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="min-w-0 truncate text-[0.925rem] font-semibold text-[#f0f0f0]">
             {thread.kind === "group" ? thread.title : bot.name}
           </span>
-          <span className="min-w-0 truncate text-xs tracking-tighter text-[#8f8f8f]">
+          <span className="hidden min-w-0 truncate text-xs text-[#777777] 2xl:inline">
             {thread.kind === "group"
               ? bots
                   .filter((item) => thread.botIds.includes(item.id))
@@ -180,23 +391,32 @@ export function ChatThread({
               : bot.job}
           </span>
         </div>
-        {busy ? (
+        {showBusyIndicator && !savingResult && !waitingForUser ? (
           <Button
             type="button"
             variant="secondary-destructive"
             size="xs"
             icon={StopIcon}
-            onClick={() => stop()}
+             onClick={stopTask}
           >
             Stop
           </Button>
+        ) : showBusyIndicator && savingResult ? (
+          <span className="text-xs tracking-tighter text-[#8f8f8f]">Saving result…</span>
+        ) : showBusyIndicator && waitingForUser ? (
+          <span className="text-xs tracking-tighter text-amber-300">Waiting for your help…</span>
         ) : (
           <span className="text-xs tracking-tighter text-[#8f8f8f]">{RUN_MODES[runMode].hint}</span>
         )}
       </motion.header>
 
-      <Conversation className="min-h-0 flex-1">
-        <ConversationContent>
+      <Conversation
+        contextRef={conversationContextRef}
+        className="min-h-0 flex-1"
+        onScroll={(event) => rememberScroll(thread.id, event.currentTarget.scrollTop)}
+      >
+        <ConversationContent className="max-w-none gap-5 px-4 py-6 md:px-4 lg:px-5">
+          {displayedJobs.length > 0 ? <JobStatusList jobs={displayedJobs} onRefresh={() => refreshTaskData(undefined, true)} /> : null}
           {messages.length === 0 ? (
             <ConversationEmptyState>
               <EmptyState bot={bot} />
@@ -208,18 +428,28 @@ export function ChatThread({
                 workKey={`${thread.id}:${index}`}
                 message={message}
                 isLastMessage={index === messages.length - 1}
-                isStreaming={busy}
+                isStreaming={showBusyIndicator && !savingResult && !waitingForUser}
                 onApprove={onApprove}
                 handoffs={handoffs}
                 bots={bots}
+                actionKey={messageActionKey(message, index)}
+                bubbles={messageBubbleTargets(message, index)}
+                onLocate={locateMessage}
+                reactions={reactions}
+                onReply={replyToMessage}
+                onReact={reactToMessage}
+                actionsDisabled={busy && index === messages.length - 1}
               />
             ))
           )}
-          {busy ? (
+          {showBusyIndicator ? (
             <span className="text-xs text-[#8f8f8f]">
-              Working on the computer
+              {waitingForUser ? "Waiting for your help" : savingResult ? "Saving result" : "Working on the computer"}
               <AnimatedDots />
             </span>
+          ) : null}
+          {artifacts.length > 0 ? (
+            <ArtifactList artifacts={artifacts} onRevision={requestRevision} />
           ) : null}
           {error ? (
             <Alert variant="destructive">
@@ -242,33 +472,43 @@ export function ChatThread({
         </ConversationContent>
       </Conversation>
 
-      <div className="border-t border-white/10 bg-[#050505] px-4 py-3 md:px-8 md:pb-8 xl:pb-3">
+      <div className="shrink-0 bg-[#050505] px-3 pb-4 pt-2 md:px-4">
+        {replyTarget ? <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-[#202020] px-3 py-2">
+          <MessageReferenceCard reference={replyTarget} botName={bot.name} onLocate={locateMessage} />
+          <button type="button" aria-label="Cancel reply" onClick={() => { setReplyTarget(null); replyCache.delete(thread.id); }} className="ml-auto rounded-md p-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"><XIcon size={15} /></button>
+        </div> : null}
         <PromptInput
-          className="mx-auto w-full max-w-3xl"
+          className="mx-auto w-full flex-row items-end gap-1 rounded-3xl border border-white/15 bg-[#2b2b2b] p-1.5 shadow-[0_2px_12px_#0003] focus-within:border-white/30"
           onSubmit={(e) => {
             e.preventDefault();
             submit();
           }}
         >
+          <div className="shrink-0 pb-1.5 pl-1"><RunModePicker value={runMode} onChange={onRunModeChange} /></div>
           <PromptInputTextarea
+            ref={inputRef}
+            className="min-h-9 min-w-0 flex-1 rounded-2xl border-0 bg-transparent px-2 py-2 focus-visible:border-transparent"
+            title="Enter to send · Shift+Enter for a new line"
             value={input}
-            onChange={(e) => setInput(e.currentTarget.value)}
+            onChange={(e) => {
+              const next = e.currentTarget.value;
+              setInput(next);
+              setThreadDraft(draftCache, thread.id, next);
+            }}
             onSubmit={submit}
-            placeholder={`Hand work to ${bot.name}`}
-            aria-label={`Hand work to ${bot.name}`}
+            placeholder={`Message ${bot.name}`}
+            aria-label={`Message ${bot.name}`}
           />
-          <PromptInputToolbar>
-            <div className="flex min-w-0 items-center gap-2">
-              <RunModePicker value={runMode} onChange={onRunModeChange} />
-              <span className="hidden text-xs text-[#777777] sm:inline">
-                Enter to send · Shift+Enter for a new line
-              </span>
-            </div>
+          <PromptInputToolbar className="shrink-0 pb-0.5 pr-0.5">
             <PromptInputSubmit
+              className="size-8 rounded-full p-0"
+              aria-label={status === "streaming" || status === "submitted" ? "Stop response" : "Send message"}
               status={status}
-              onStop={stop}
+               onStop={stopTask}
               disabled={status === "ready" && !input.trim()}
-            />
+            >
+              {status === "submitted" ? <Spinner size="sm" /> : status === "streaming" ? <StopIcon size={16} /> : <SendIcon size={16} />}
+            </PromptInputSubmit>
           </PromptInputToolbar>
         </PromptInput>
       </div>
@@ -276,35 +516,95 @@ export function ChatThread({
   );
 }
 
-const workTimers = new Map<string, { start: number; end?: number }>();
+function JobStatusList({ jobs, onRefresh }: { jobs: AgentJob[]; onRefresh: () => Promise<void> }) {
+  const visible = jobs.slice(0, 6);
+  return (
+    <details className="mb-1 rounded-xl border border-white/10 px-3 py-2 text-[#a5a5a5]" aria-label="Task progress">
+      <summary className="cursor-pointer text-xs">Task activity · {visible.length} recent {visible.length === 1 ? "run" : "runs"}</summary>
+      <div className="mt-3 space-y-2">
+      {visible.map((job) => {
+        const active = ["queued", "running", "finalizing"].includes(job.status);
+        const uncertain = job.status === "uncertain";
+        const label = job.status === "waiting_takeover" ? "Waiting for your help" : job.status === "waiting_approval" ? "Waiting for approval" : job.status === "finalizing" ? "Saving result" : job.status === "uncertain" ? "Needs review before retry" : job.status[0]!.toUpperCase() + job.status.slice(1);
+        return (
+          <div key={job.id} className={`rounded-lg p-3 ring-1 ${uncertain ? "bg-amber-500/10 ring-amber-400/30" : "bg-white/5 ring-white/10"}`}>
+            <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">Task {job.kind}</span><span className="text-xs text-[#a5a5a5]">{job.status === "waiting_approval" || job.status === "waiting_takeover" ? "⏸ " : uncertain ? "⚠ " : ""}{label}{active ? <AnimatedDots /> : null}</span></div>
+            {typeof job.checkpoint?.text === "string" && job.checkpoint.text ? <p className="mt-1 line-clamp-2 text-xs text-[#c8c8c8]">{job.checkpoint.text}</p> : null}
+            {job.checkpoint ? <p className="mt-1 text-xs text-[#8f8f8f]">Checkpoint saved · attempt {job.attempt}/{job.maxAttempts}</p> : null}
+            {job.error ? <p className="mt-1 text-xs text-amber-200">{job.error}</p> : null}
+            {uncertain ? <div className="mt-2 flex items-center gap-2"><Button type="button" size="xs" variant="outline" icon={RotateCcwIcon} onClick={() => { if (!window.confirm("Review the external side effects first. Retry this task?")) return; void fetch(`/api/jobs/${job.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "retry", reviewed: true }) }).then(() => onRefresh()); }}>Review and retry</Button><span className="text-xs text-[#8f8f8f]">Check external side effects first.</span></div> : null}
+          </div>
+        );
+      })}
+      </div>
+    </details>
+  );
+}
+
+function ArtifactList({ artifacts, onRevision }: { artifacts: Artifact[]; onRevision: (artifact: Artifact) => void }) {
+  return (
+    <div className="mt-4 space-y-2" aria-label="Artifacts">
+      <p className="text-xs font-medium uppercase tracking-wide text-[#8f8f8f]">Deliverables</p>
+      {artifacts.slice(0, 12).map((artifact) => <ArtifactCard key={artifact.id} artifact={artifact} onRevision={onRevision} />)}
+    </div>
+  );
+}
+
+function ArtifactCard({ artifact, onRevision }: { artifact: Artifact; onRevision: (artifact: Artifact) => void }) {
+  const [preview, setPreview] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  async function showPreview() {
+    if (preview != null) { setPreview(null); return; }
+    setBusy(true);
+    try {
+      const response = await fetch(`/api/artifacts/${artifact.id}?mode=preview`, { cache: "no-store" });
+      const json = (await response.json()) as { content?: string };
+      setPreview(json.content ?? "Unable to preview this file.");
+    } finally { setBusy(false); }
+  }
+  return (
+    <div className="rounded-lg bg-[#1b1b1b] p-3 ring-1 ring-white/10">
+      <div className="flex items-start gap-2"><FolderIcon className="mt-0.5 size-4 shrink-0 text-[#8f8f8f]" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{artifact.title}</p><p className="truncate font-mono text-xs text-[#8f8f8f]">{artifact.path}</p>{artifact.description ? <p className="mt-1 text-xs text-[#a5a5a5]">{artifact.description}</p> : null}</div></div>
+      <div className="mt-2 flex gap-2"><Button type="button" size="xs" variant="ghost" loading={busy} onClick={() => void showPreview()}>{preview == null ? "Preview" : "Hide preview"}</Button><Button type="button" size="xs" variant="ghost" icon={DownloadIcon} onClick={() => { window.location.href = `/api/artifacts/${artifact.id}?mode=download`; }}>Download</Button><Button type="button" size="xs" variant="outline" onClick={() => onRevision(artifact)}>Request revision</Button></div>
+      {preview != null ? <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded bg-black/30 p-2 font-mono text-xs text-[#d4d4d4]">{preview}</pre> : null}
+    </div>
+  );
+}
+
+type WorkTimer = { start: number; end?: number };
+const workTimers = new Map<string, WorkTimer>();
+const workTimerListeners = new Set<() => void>();
+
+function subscribeWorkTimers(listener: () => void) {
+  workTimerListeners.add(listener);
+  return () => {
+    workTimerListeners.delete(listener);
+  };
+}
+
+function setWorkTimer(key: string, rec: WorkTimer) {
+  workTimers.set(key, rec);
+  for (const listener of workTimerListeners) listener();
+}
 
 function useWorkedDuration(key: string, active: boolean) {
-  const [, bump] = useState(0);
-
   useEffect(() => {
-    let rec = workTimers.get(key);
+    const rec = workTimers.get(key);
     if (active) {
-      if (!rec) {
-        rec = { start: Date.now() };
-        workTimers.set(key, rec);
-        bump((value) => value + 1);
-      }
+      if (!rec) setWorkTimer(key, { start: Date.now() });
       return () => {
         const current = workTimers.get(key);
-        if (current && current.end == null) {
-          current.end = Date.now();
-          workTimers.set(key, current);
-        }
+        if (current && current.end == null) setWorkTimer(key, { ...current, end: Date.now() });
       };
     }
-    if (rec && rec.end == null) {
-      rec.end = Date.now();
-      workTimers.set(key, rec);
-      bump((value) => value + 1);
-    }
+    if (rec && rec.end == null) setWorkTimer(key, { ...rec, end: Date.now() });
   }, [key, active]);
 
-  const rec = workTimers.get(key);
+  const rec = useSyncExternalStore(
+    subscribeWorkTimers,
+    () => workTimers.get(key),
+    () => workTimers.get(key),
+  );
   if (!rec?.end) return null;
   return rec.end - rec.start;
 }
@@ -359,6 +659,13 @@ const MessageBlock = memo(function MessageBlock({
   onApprove,
   handoffs,
   bots,
+  reactions,
+  onReply,
+  onReact,
+  actionsDisabled,
+  actionKey,
+  bubbles,
+  onLocate,
 }: {
   workKey: string;
   message: UIMessage;
@@ -367,12 +674,21 @@ const MessageBlock = memo(function MessageBlock({
   onApprove: (id: string, approved: boolean) => void;
   handoffs: Record<string, HandoffSnapshot>;
   bots: Bot[];
+  reactions: ReactionMap;
+  onReply: (reference: MessageReference) => void;
+  onReact: (messageId: string, emoji: MessageReaction, selected: boolean) => Promise<void>;
+  actionsDisabled: boolean;
+  actionKey: string;
+  bubbles: MessageBubble[];
+  onLocate: (key: string) => void;
 }) {
   const lastPart = message.parts.at(-1);
   const reasoningIsStreaming = isLastMessage && isStreaming && lastPart?.type === "reasoning";
   const cotSteps = buildCotSteps(message.parts, reasoningIsStreaming, handoffs, bots);
   const cotWorking = cotSteps.length > 0 && isLastMessage && isStreaming;
   const workedMs = useWorkedDuration(workKey, cotWorking);
+  const replyTo = replyReference(message);
+  const canAct = !actionsDisabled && (message.role === "user" || message.role === "assistant");
 
   return (
     <motion.div
@@ -380,7 +696,7 @@ const MessageBlock = memo(function MessageBlock({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: easeOut }}
     >
-    <Message from={message.role} data-message="">
+    <Message from={message.role} data-message="" data-message-key={bubbles.length ? undefined : actionKey} tabIndex={-1} className="scroll-mt-4 rounded-xl outline-none">
       {cotSteps.length > 0 ? (
         <ChainOfThought defaultOpen={cotWorking}>
           <ChainOfThoughtHeader>
@@ -404,9 +720,26 @@ const MessageBlock = memo(function MessageBlock({
                 description={step.description}
                 status={step.status}
               >
-                {step.hostname ? (
+                {step.sites && step.sites.length > 0 ? (
                   <ChainOfThoughtSearchResults>
-                    <ChainOfThoughtSearchResult>{step.hostname}</ChainOfThoughtSearchResult>
+                    {step.sites.map((site) =>
+                      site.href ? (
+                        <a
+                          key={site.href}
+                          href={site.href}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={site.title ?? site.href}
+                          className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+                        >
+                          <ChainOfThoughtSearchResult className="cursor-pointer hover:bg-white/15">
+                            {site.host}
+                          </ChainOfThoughtSearchResult>
+                        </a>
+                      ) : (
+                        <ChainOfThoughtSearchResult key={site.host}>{site.host}</ChainOfThoughtSearchResult>
+                      ),
+                    )}
                   </ChainOfThoughtSearchResults>
                 ) : null}
               </ChainOfThoughtStep>
@@ -417,23 +750,36 @@ const MessageBlock = memo(function MessageBlock({
       <div
         className={
           message.role === "user"
-            ? "flex max-w-[min(620px,90%)] flex-col items-end gap-2"
-            : "flex min-w-0 w-full max-w-[min(620px,90%)] flex-col gap-2"
+            ? "flex max-w-[min(640px,90%)] flex-col items-end gap-1"
+            : "flex min-w-0 w-full max-w-[min(640px,92%)] flex-col gap-1"
         }
       >
-        {message.parts.map((part, index) => (
-          <PartView
-            key={`${message.id}-${index}`}
-            part={part}
-            onApprove={onApprove}
-            isAnimating={isLastMessage && isStreaming}
-          />
-        ))}
+        {replyTo ? <MessageReferenceCard reference={replyTo} botName="Teammate" onLocate={onLocate} /> : null}
+        {message.parts.map((part, index) => {
+          const partBubbles = bubbles.filter((bubble) => bubble.partIndex === index);
+          if (part.type === "text" && partBubbles.length) {
+            return partBubbles.map((bubble) => <div key={bubble.key} data-message-key={bubble.key} tabIndex={-1} className={`group/message flex min-w-0 max-w-full scroll-mt-4 flex-col gap-1 rounded-xl outline-none ${message.role === "user" ? "items-end" : "items-start"}`}>
+              <MessageActions text={bubble.text} reactions={reactions[bubble.key] ?? []} disabled={!canAct} onReply={() => onReply({ key: bubble.key, role: bubble.role, text: bubble.text.slice(0, 4000) })} onReact={(emoji, selected) => onReact(bubble.key, emoji, selected)}>
+                <MessageContent>
+                  <MessageResponse isAnimating={isLastMessage && isStreaming && bubble.key === bubbles.at(-1)?.key}>{bubble.text}</MessageResponse>
+                </MessageContent>
+              </MessageActions>
+            </div>);
+          }
+          return <PartView key={`${message.id}-${index}`} part={part} onApprove={onApprove} isAnimating={isLastMessage && isStreaming} />;
+        })}
       </div>
     </Message>
     </motion.div>
   );
 });
+
+function MessageReferenceCard({ reference, botName, onLocate }: { reference: MessageReference; botName: string; onLocate: (key: string) => void }) {
+  return <button type="button" onClick={() => onLocate(reference.key)} aria-label="Go to referenced message" className="flex min-w-0 max-w-full items-start gap-2 rounded-lg border-l-2 border-[#9ca3af] bg-white/5 px-3 py-2 text-left hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white/40">
+    <CornerUpLeftIcon size={14} className="mt-0.5 shrink-0 text-neutral-400" />
+    <span className="min-w-0"><span className="block text-[11px] font-medium text-neutral-300">Replying to {reference.role === "user" ? "you" : botName}</span><span className="block max-w-full truncate text-xs text-neutral-400">{reference.text.slice(0, 180) || "Message"}</span></span>
+  </button>;
+}
 
 type ToolPart = {
   type: string;
@@ -453,7 +799,7 @@ type CotStep = {
   icon: LucideIcon;
   label: string;
   description?: ReactNode;
-  hostname?: string;
+  sites?: StepSite[];
   status: "complete" | "active" | "pending";
 };
 
@@ -507,10 +853,7 @@ function buildCotSteps(
           : liveHandoff?.status === "running" && liveHandoff.currentLabel
             ? liveHandoff.currentLabel
             : undefined,
-      hostname:
-        !failed && (name === "browser" || name.toLowerCase().includes("browser"))
-          ? browserResultHostname(toolPart.output, input)
-          : undefined,
+      sites: failed ? undefined : stepSites(name, toolPart.output, input),
       status:
         liveHandoff?.status === "running" || isToolRunning(state) ? "active" : state ? "complete" : "pending",
     });
@@ -547,6 +890,11 @@ function toolStepIcon(name: string): LucideIcon {
     case "runCommand":
     case "stopSandbox":
       return TerminalIcon;
+    case "webSearch":
+      return SearchIcon;
+    case "mcp":
+    case "listMcpConnections":
+      return WrenchIcon;
     case "remember":
       return BookOpenIcon;
     case "saveSkill":
@@ -563,6 +911,48 @@ function toolStepIcon(name: string): LucideIcon {
     default:
       return WrenchIcon;
   }
+}
+
+type StepSite = { host: string; href?: string; title?: string };
+
+function stepSites(name: string, output: unknown, input: unknown): StepSite[] | undefined {
+  if (name === "webSearch") return webSearchResultSites(output);
+  if (name === "browser" || name.toLowerCase().includes("browser")) {
+    const hostname = browserResultHostname(output, input);
+    return hostname ? [{ host: hostname }] : undefined;
+  }
+  return undefined;
+}
+
+function webSearchResultSites(output: unknown): StepSite[] | undefined {
+  if (!output || typeof output !== "object") return undefined;
+  const results = (output as Record<string, unknown>).results;
+  if (!Array.isArray(results)) return undefined;
+  const sites: StepSite[] = [];
+  const seen = new Set<string>();
+  for (const item of results) {
+    if (!item || typeof item !== "object") continue;
+    const entry = item as Record<string, unknown>;
+    if (typeof entry.url !== "string") continue;
+    let href: string;
+    let host: string;
+    try {
+      const parsed = new URL(entry.url);
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") continue;
+      href = parsed.toString();
+      host = parsed.hostname.replace(/^www\./, "");
+    } catch {
+      continue;
+    }
+    if (seen.has(href)) continue;
+    seen.add(href);
+    sites.push({
+      host,
+      href,
+      ...(typeof entry.title === "string" && entry.title ? { title: entry.title } : {}),
+    });
+  }
+  return sites.length > 0 ? sites : undefined;
 }
 
 function browserResultHostname(output: unknown, input: unknown) {
@@ -726,6 +1116,7 @@ function toolDisplayLabel(
     workspace: ["Updating files", "Updated files"],
     runCommand: ["Running a command", "Ran a command"],
     stopSandbox: ["Stopping the computer", "Stopped the computer"],
+    webSearch: ["Searching the web", "Searched the web"],
     remember: ["Saving a memory", "Saved a memory"],
     saveSkill: ["Saving a skill", "Saved a skill"],
     listSkills: ["Checking saved skills", "Checked saved skills"],
@@ -850,16 +1241,6 @@ function inputNumber(input: unknown, key: string) {
   if (!input || typeof input !== "object") return undefined;
   const value = (input as Record<string, unknown>)[key];
   return typeof value === "number" ? value : undefined;
-}
-
-function browserPageName(input: unknown) {
-  const url = inputValue(input, "url");
-  if (!url) return "the page";
-  try {
-    return new URL(url.startsWith("http") ? url : `https://${url}`).hostname;
-  } catch {
-    return "the page";
-  }
 }
 
 function humanizeToolName(name: string) {
