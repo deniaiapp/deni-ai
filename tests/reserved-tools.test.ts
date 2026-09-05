@@ -297,6 +297,9 @@ describe("reserved collaboration tools", () => {
     expect(rewriteCollaborationNameInbound(legacyName)).toBe(
       "collaboration.spawn_agent",
     );
+    expect(rewriteCollaborationNameOutbound(legacyName)).toBe(
+      `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
+    );
 
     const response = rewriteCollaborationNamesInResponsesPayload({
       output: [{ type: "function_call", name: legacyName }],

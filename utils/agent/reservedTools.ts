@@ -22,6 +22,20 @@ export const SAFE_COLLABORATION_DOT_PREFIX = "flixa_collab.";
  */
 const LEGACY_SAFE_COLLABORATION_PREFIX = "flixa_collab";
 
+function getLegacySafeCollaborationSuffix(name: string): string | null {
+  if (
+    !name.startsWith(LEGACY_SAFE_COLLABORATION_PREFIX) ||
+    name === SAFE_COLLABORATION_NAMESPACE ||
+    name.startsWith(SAFE_COLLABORATION_PREFIX) ||
+    name.startsWith(SAFE_COLLABORATION_DOT_PREFIX)
+  ) {
+    return null;
+  }
+
+  const suffix = name.slice(LEGACY_SAFE_COLLABORATION_PREFIX.length);
+  return suffix.length > 0 ? suffix : null;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -56,13 +70,17 @@ export function isSafeCollaborationProxyName(name: string): boolean {
     name === SAFE_COLLABORATION_NAMESPACE ||
     name.startsWith(SAFE_COLLABORATION_PREFIX) ||
     name.startsWith(SAFE_COLLABORATION_DOT_PREFIX) ||
-    (name.startsWith(LEGACY_SAFE_COLLABORATION_PREFIX) &&
-      name.length > LEGACY_SAFE_COLLABORATION_PREFIX.length)
+    getLegacySafeCollaborationSuffix(name) !== null
   );
 }
 
 /** Convert a client-visible collaboration name into a valid private name. */
 export function rewriteCollaborationNameOutbound(name: string): string {
+  const legacySuffix = getLegacySafeCollaborationSuffix(name);
+  if (legacySuffix !== null) {
+    return SAFE_COLLABORATION_PREFIX + legacySuffix;
+  }
+
   if (isSafeCollaborationProxyName(name)) {
     return name;
   }
@@ -94,12 +112,9 @@ export function rewriteCollaborationNameInbound(name: string): string {
   }
 
   if (!name.startsWith(SAFE_COLLABORATION_PREFIX)) {
-    if (
-      name.startsWith(LEGACY_SAFE_COLLABORATION_PREFIX) &&
-      name.length > LEGACY_SAFE_COLLABORATION_PREFIX.length
-    ) {
-      return RESERVED_COLLABORATION_PREFIX +
-        name.slice(LEGACY_SAFE_COLLABORATION_PREFIX.length);
+    const legacySuffix = getLegacySafeCollaborationSuffix(name);
+    if (legacySuffix !== null) {
+      return RESERVED_COLLABORATION_PREFIX + legacySuffix;
     }
 
     return name;
