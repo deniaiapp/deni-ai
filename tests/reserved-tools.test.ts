@@ -290,4 +290,24 @@ describe("reserved collaboration tools", () => {
 
     expect(response.output[0].name).toBe("collaboration.spawn_agent");
   });
+
+  test("restores separatorless names from older proxy deployments", () => {
+    const legacyName = "flixa_collabspawn_agent";
+
+    expect(rewriteCollaborationNameInbound(legacyName)).toBe(
+      "collaboration.spawn_agent",
+    );
+
+    const response = rewriteCollaborationNamesInResponsesPayload({
+      output: [{ type: "function_call", name: legacyName }],
+    }) as { output: Array<{ name: string }> };
+    expect(response.output[0].name).toBe("collaboration.spawn_agent");
+
+    const event = `data: ${JSON.stringify({
+      item: { type: "function_call", name: legacyName },
+    })}`;
+    expect(rewriteCollaborationNamesInSseEventBlock(event)).toContain(
+      "collaboration.spawn_agent",
+    );
+  });
 });

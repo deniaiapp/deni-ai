@@ -15,6 +15,12 @@ export const RESERVED_COLLABORATION_NAMESPACE = "collaboration";
 export const SAFE_COLLABORATION_NAMESPACE = "flixa_collab";
 export const SAFE_COLLABORATION_PREFIX = "flixa_collab_";
 export const SAFE_COLLABORATION_DOT_PREFIX = "flixa_collab.";
+/**
+ * Older deployments used the namespace without a separator, e.g.
+ * `flixa_collabspawn_agent`. Keep accepting that form so a streamed or
+ * persisted tool call cannot leak an internal name to the client.
+ */
+const LEGACY_SAFE_COLLABORATION_PREFIX = "flixa_collab";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -49,7 +55,9 @@ export function isSafeCollaborationProxyName(name: string): boolean {
   return (
     name === SAFE_COLLABORATION_NAMESPACE ||
     name.startsWith(SAFE_COLLABORATION_PREFIX) ||
-    name.startsWith(SAFE_COLLABORATION_DOT_PREFIX)
+    name.startsWith(SAFE_COLLABORATION_DOT_PREFIX) ||
+    (name.startsWith(LEGACY_SAFE_COLLABORATION_PREFIX) &&
+      name.length > LEGACY_SAFE_COLLABORATION_PREFIX.length)
   );
 }
 
@@ -86,6 +94,14 @@ export function rewriteCollaborationNameInbound(name: string): string {
   }
 
   if (!name.startsWith(SAFE_COLLABORATION_PREFIX)) {
+    if (
+      name.startsWith(LEGACY_SAFE_COLLABORATION_PREFIX) &&
+      name.length > LEGACY_SAFE_COLLABORATION_PREFIX.length
+    ) {
+      return RESERVED_COLLABORATION_PREFIX +
+        name.slice(LEGACY_SAFE_COLLABORATION_PREFIX.length);
+    }
+
     return name;
   }
 
@@ -573,7 +589,8 @@ export function rewriteCollaborationNamesInChatPayload(payload: unknown): unknow
 export function rewriteCollaborationNamesInSseEventBlock(eventBlock: string): string {
   if (
     !eventBlock.includes(SAFE_COLLABORATION_PREFIX) &&
-    !eventBlock.includes(SAFE_COLLABORATION_DOT_PREFIX)
+    !eventBlock.includes(SAFE_COLLABORATION_DOT_PREFIX) &&
+    !eventBlock.includes(LEGACY_SAFE_COLLABORATION_PREFIX)
   ) {
     return eventBlock;
   }
