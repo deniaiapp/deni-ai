@@ -9,6 +9,7 @@ import {
   rewriteCollaborationNameInbound,
   rewriteCollaborationNameOutbound,
   sanitizeReservedCollaborationInResponsesRequest,
+  SAFE_COLLABORATION_NAMESPACE,
   SAFE_COLLABORATION_PREFIX,
 } from "../utils/agent/reservedTools";
 
@@ -312,5 +313,40 @@ describe("reserved collaboration tools", () => {
     expect(rewriteCollaborationNamesInSseEventBlock(event)).toContain(
       "collaboration.spawn_agent",
     );
+  });
+
+  test("restores namespaced function calls for Codex clients", () => {
+    const response = rewriteCollaborationNamesInResponsesPayload({
+      output: [
+        {
+          type: "function_call",
+          namespace: SAFE_COLLABORATION_NAMESPACE,
+          name: "spawn_agent",
+        },
+      ],
+    }) as {
+      output: Array<{ type: string; namespace: string; name: string }>;
+    };
+
+    expect(response.output[0]).toEqual({
+      type: "function_call",
+      namespace: "collaboration",
+      name: "spawn_agent",
+    });
+
+    const request = rewriteCollaborationNamesInInput([
+      {
+        type: "function_call",
+        namespace: "collaboration",
+        name: "spawn_agent",
+      },
+    ]);
+    expect(request.input).toEqual([
+      {
+        type: "function_call",
+        namespace: SAFE_COLLABORATION_NAMESPACE,
+        name: "spawn_agent",
+      },
+    ]);
   });
 });

@@ -74,6 +74,13 @@ export function isSafeCollaborationProxyName(name: string): boolean {
   );
 }
 
+function isCollaborationNamespaceValue(value: string): boolean {
+  return (
+    value === RESERVED_COLLABORATION_NAMESPACE ||
+    value === SAFE_COLLABORATION_NAMESPACE
+  );
+}
+
 /** Convert a client-visible collaboration name into a valid private name. */
 export function rewriteCollaborationNameOutbound(name: string): string {
   const legacySuffix = getLegacySafeCollaborationSuffix(name);
@@ -458,6 +465,20 @@ function rewriteToolNameFields(
     const next: Record<string, unknown> = { ...node };
 
     for (const [key, child] of Object.entries(node)) {
+      if (
+        key === "namespace" &&
+        typeof child === "string" &&
+        isCollaborationNamespaceValue(child)
+      ) {
+        const rewrittenNamespace = rewriteName(child);
+        if (rewrittenNamespace !== child) {
+          next[key] = rewrittenNamespace;
+          count += 1;
+          changed = true;
+        }
+        continue;
+      }
+
       if (key === "type" && typeof child === "string" && isReservedCollaborationToolName(child)) {
         const rewrittenType = rewriteName(child);
         if (rewrittenType !== child) {
