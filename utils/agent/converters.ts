@@ -98,6 +98,69 @@ export function flattenResponsesInputItems(input: unknown): unknown {
   return current;
 }
 
+function stringifyResponsesToolOutput(output: unknown): string {
+  if (typeof output === "string") {
+    return output;
+  }
+
+  if (output === undefined) {
+    return "";
+  }
+
+  try {
+    return JSON.stringify(output);
+  } catch {
+    return String(output);
+  }
+}
+
+/**
+ * Normalize Codex-local tool transcript items before sending them upstream.
+ * Codex app tools can emit `function_call_output` items without a call_id;
+ * those are not valid Responses items, but their textual result is still
+ * useful context for the next model turn.
+ */
+export function normalizeResponsesInputItems(input: unknown): unknown {
+  const flattened = flattenResponsesInputItems(input);
+  if (!Array.isArray(flattened)) {
+    return flattened;
+  }
+
+  return flattened.flatMap((item) => {
+    if (!isRecord(item)) {
+      return [item];
+    }
+
+    const type = item.type;
+    const isFunctionCallOutput =
+      type === "function_call_output" ||
+      type === "functionCallOutput" ||
+      type === "FunctionCallOutput";
+    if (!isFunctionCallOutput) {
+      return [item];
+    }
+
+    const output = stringifyResponsesToolOutput(item.output);
+    if (typeof item.call_id !== "string" || item.call_id.length === 0) {
+      return [
+        {
+          type: "message",
+          role: "user",
+          content: output,
+        },
+      ];
+    }
+
+    return [
+      {
+        type: "function_call_output",
+        call_id: item.call_id,
+        output,
+      },
+    ];
+  });
+}
+
 function chatContentToResponsesInputContent(content: unknown): unknown {
   if (typeof content === 'string') {
     return content;

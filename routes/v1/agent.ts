@@ -31,7 +31,7 @@ import {
   convertResponsesToChatCompletion,
   convertResponsesStreamEventToChatChunks,
   convertResponsesUsageToChatUsage,
-  flattenResponsesInputItems,
+  normalizeResponsesInputItems,
   createResponsesToChatStreamState,
   applyResponsesBestPractices,
   isChatViaResponsesEnabled,
@@ -719,7 +719,7 @@ function hasChatToolTranscript(input: unknown[]): boolean {
 
 function normalizeResponsesInput(body: ResponsesRequest): unknown {
   if (body.input !== undefined) {
-    const input = flattenResponsesInputItems(body.input);
+    const input = normalizeResponsesInputItems(body.input);
     if (Array.isArray(input) && hasChatToolTranscript(input)) {
       return convertMessagesToResponsesInput(
         input as AgentRequest["messages"],
@@ -917,7 +917,7 @@ function normalizeCompactRequest(
   const input =
     body.input !== undefined
       ? (() => {
-          const normalizedInput = flattenResponsesInputItems(body.input);
+          const normalizedInput = normalizeResponsesInputItems(body.input);
           return Array.isArray(normalizedInput) &&
             hasChatToolTranscript(normalizedInput)
             ? convertMessagesToResponsesInput(
@@ -992,7 +992,7 @@ async function proxyResponsesUpstream(options: {
   // Last-mile guard: Responses input items must be flat even when a provider
   // request was assembled by a compatibility path after normalization.
   if (upstreamBody.input !== undefined) {
-    upstreamBody.input = flattenResponsesInputItems(upstreamBody.input);
+    upstreamBody.input = normalizeResponsesInputItems(upstreamBody.input);
   }
 
   // Last-mile guard: the body sent below must never contain a client-defined
