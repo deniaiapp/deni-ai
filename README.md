@@ -92,7 +92,11 @@ package for your platform before starting the database.
 ### Dokploy PostgreSQL
 
 Compose includes a PostgreSQL 17 service named `postgres`, with persistent storage in
-the `postgres-data` volume and a readiness health check. It has no published host port.
+the `postgres-data` volume and a readiness health check. PostgreSQL is published only
+on the server's loopback address at `127.0.0.1:15433`. In Tabby, configure a local SSH
+forward from local `127.0.0.1:15432` to remote `127.0.0.1:15433` on this server.
+The local database URL then uses port `15432`; the app container still uses
+`postgres:5432` internally.
 Set `POSTGRES_PASSWORD` in Dokploy's Environment tab before deploying; `POSTGRES_DB`
 and `POSTGRES_USER` default to `deni`. A hex password from `openssl rand -hex 32` can
 be used directly in the connection URL.
