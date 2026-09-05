@@ -31,6 +31,7 @@ import {
   convertResponsesToChatCompletion,
   convertResponsesStreamEventToChatChunks,
   convertResponsesUsageToChatUsage,
+  flattenResponsesInputItems,
   createResponsesToChatStreamState,
   applyResponsesBestPractices,
   isChatViaResponsesEnabled,
@@ -718,13 +719,14 @@ function hasChatToolTranscript(input: unknown[]): boolean {
 
 function normalizeResponsesInput(body: ResponsesRequest): unknown {
   if (body.input !== undefined) {
-    if (Array.isArray(body.input) && hasChatToolTranscript(body.input)) {
+    const input = flattenResponsesInputItems(body.input);
+    if (Array.isArray(input) && hasChatToolTranscript(input)) {
       return convertMessagesToResponsesInput(
-        body.input as AgentRequest["messages"],
+        input as AgentRequest["messages"],
       );
     }
 
-    return body.input;
+    return input;
   }
 
   if (body.messages !== undefined) {
@@ -914,11 +916,15 @@ function normalizeCompactRequest(
 ): Record<string, unknown> {
   const input =
     body.input !== undefined
-      ? Array.isArray(body.input) && hasChatToolTranscript(body.input)
-        ? convertMessagesToResponsesInput(
-            body.input as AgentRequest["messages"],
-          )
-        : body.input
+      ? (() => {
+          const normalizedInput = flattenResponsesInputItems(body.input);
+          return Array.isArray(normalizedInput) &&
+            hasChatToolTranscript(normalizedInput)
+            ? convertMessagesToResponsesInput(
+                normalizedInput as AgentRequest["messages"],
+              )
+            : normalizedInput;
+        })()
       : body.messages !== undefined
         ? convertMessagesToResponsesInput(body.messages)
         : undefined;

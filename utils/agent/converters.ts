@@ -79,6 +79,25 @@ function normalizeOpenRouterToolCall(toolCall: unknown): unknown {
   return { ...toolCall };
 }
 
+/**
+ * Responses `input` accepts a string or a flat array of input items. Some
+ * Codex turns can leave a batch of items nested as an array element while a
+ * long tool transcript is being replayed. Flatten only the input-item
+ * container; content arrays inside individual items must remain untouched.
+ */
+export function flattenResponsesInputItems(input: unknown): unknown {
+  if (!Array.isArray(input)) {
+    return input;
+  }
+
+  let current = input;
+  while (current.some(Array.isArray)) {
+    current = current.flatMap((item) => (Array.isArray(item) ? item : [item]));
+  }
+
+  return current;
+}
+
 function chatContentToResponsesInputContent(content: unknown): unknown {
   if (typeof content === 'string') {
     return content;
