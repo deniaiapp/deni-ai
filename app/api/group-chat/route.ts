@@ -11,7 +11,17 @@ export const maxDuration = 800;
 
 function messageChunks(body: ReadableStream<Uint8Array>, onStatus: (data: Record<string, unknown>) => void) {
   let buffer = "";
-  return body.pipeThrough(new TextDecoderStream()).pipeThrough(new TransformStream<string, UIMessageChunk>({
+  const decoder = new TextDecoder();
+  const decoded = body.pipeThrough(new TransformStream<Uint8Array, string>({
+    transform(chunk, controller) {
+      controller.enqueue(decoder.decode(new Uint8Array(chunk), { stream: true }));
+    },
+    flush(controller) {
+      const tail = decoder.decode();
+      if (tail) controller.enqueue(tail);
+    },
+  }));
+  return decoded.pipeThrough(new TransformStream<string, UIMessageChunk>({
     transform(chunk, controller) {
       buffer += chunk;
       let separator: RegExpMatchArray | null;

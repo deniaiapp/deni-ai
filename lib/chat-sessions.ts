@@ -172,7 +172,7 @@ export function getChatSession(options: {
           const author = message && messageAuthor(message);
           if (message?.id && message.role === "assistant" && Array.isArray(message.parts) && author) {
             if (current.groupStatuses[author.id]?.messageId !== message.id) {
-              current.groupStatuses = { ...current.groupStatuses, [author.id]: { status: "working", ...current.groupStatuses[author.id], author, messageId: message.id } };
+              current.groupStatuses = { ...current.groupStatuses, [author.id]: { ...current.groupStatuses[author.id], status: current.groupStatuses[author.id]?.status ?? "working", author, messageId: message.id } };
               current.groupListeners.forEach((listener) => listener());
             }
             current.chat.messages = mergeStoredMessages(current.chat.messages, [message]);
