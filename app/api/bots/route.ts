@@ -5,6 +5,7 @@ import { mutateStore } from "@/lib/store";
 import type { Bot, Thread } from "@/lib/types";
 import { limitOrResponse } from "@/lib/rate-limit";
 import { assertCanCreateTeammate, isUsageLimitError, usageLimitPayload } from "@/lib/usage";
+import { validAvatarIcon } from "@/lib/avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -19,8 +20,10 @@ export async function POST(req: Request) {
     name?: string;
     job?: string;
     instructions?: string;
+    icon?: string | null;
   };
   const name = body.name?.trim();
+  if (body.icon !== undefined && !validAvatarIcon(body.icon)) return NextResponse.json({ error: "Invalid icon" }, { status: 400 });
   if (!name) {
     return NextResponse.json({ error: "name required" }, { status: 400 });
   }
@@ -36,6 +39,7 @@ export async function POST(req: Request) {
   const bot: Bot = {
     id: createId("bot"),
     name,
+    icon: body.icon || null,
     job: body.job?.trim() || "Teammate",
     instructions:
       body.instructions?.trim() ||

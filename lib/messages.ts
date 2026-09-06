@@ -111,18 +111,75 @@ export function compactMessagesForModel(messages: UIMessage[]): UIMessage[] {
 }
 
 export function mergeThreadMessages(persisted: UIMessage[], incoming: UIMessage[]): UIMessage[] {
-  if (incoming.length === 0) return persisted;
-  const byId = new Map(persisted.map((item) => [item.id, item]));
-  const extra: UIMessage[] = [];
+  const messages = normalizeMessageIds(persisted);
+  const byId = new Map(messages.map((item, index) => [item.id, index]));
   for (const item of incoming) {
-    const previous = item.id ? byId.get(item.id) : undefined;
-    if (previous) {
-      byId.set(item.id, restoreToolParts(previous, item));
-    } else {
-      extra.push(item);
+    const index = item.id ? byId.get(item.id) : findLegacyEcho(messages, item);
+    if (index !== undefined) messages[index] = restoreToolParts(messages[index], { ...item, id: messages[index].id });
+    // Clients may append user input, but cannot invent new assistant messages.
+    else if (item.role === "user") {
+      const next = withMessageId(item, messages.length);
+      byId.set(next.id, messages.length);
+      messages.push(next);
     }
   }
-  return [...byId.values(), ...extra];
+  return messages;
+}
+
+function plainText(message: UIMessage) {
+  return message.parts.filter((part) => part.type === "text").map((part) => part.text).join("\n\n").trim();
+}
+
+function withMessageId(message: UIMessage, index: number): UIMessage {
+  if (message.id) return message;
+  const value = JSON.stringify([message.role, message.parts]);
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) hash = Math.imul(hash ^ value.charCodeAt(i), 16777619);
+  const metadata = message.metadata && typeof message.metadata === "object" ? message.metadata : {};
+  return { ...message, id: `legacy-message:${index}:${(hash >>> 0).toString(16)}`, metadata: { ...metadata, legacyActionKey: `legacy:${index}` } };
+}
+
+function findLegacyEcho(messages: UIMessage[], message: UIMessage): number | undefined {
+  if (message.id) return undefined;
+  const text = plainText(message);
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const existing = messages[index];
+    if (existing.role === message.role && plainText(existing) === text && existing.id.startsWith("legacy-message:")) return index;
+  }
+  return undefined;
+}
+
+export function normalizeMessageIds(messages: UIMessage[]): UIMessage[] {
+  const normalized = messages.map(withMessageId);
+  // Older chat completion code stored a second, text-only job answer before the
+  // actual streamed message. Remove only a matching duplicate in the same turn.
+  const filtered = normalized.filter((message, index) => {
+    if (message.role !== "assistant" || (message.metadata as { author?: unknown } | undefined)?.author || !/^job_[a-z0-9]+_assistant$/.test(message.id)) return true;
+    const text = plainText(message);
+    if (!text) return true;
+    let start = index;
+    while (start > 0 && normalized[start - 1].role !== "user") start--;
+    let end = index + 1;
+    while (end < normalized.length && normalized[end].role !== "user") end++;
+    return !normalized.slice(start, end).some((other) => other.id !== message.id && other.role === "assistant" && other.parts.filter((part) => part.type === "text").at(-1)?.text.trim() === text);
+  });
+  const unique = new Map<string, UIMessage>();
+  for (const message of filtered) unique.set(message.id, message);
+  return [...unique.values()];
+}
+
+/** Server/live-stream upsert. Existing positions stay stable while new replies append. */
+export function mergeStoredMessages(persisted: UIMessage[], incoming: UIMessage[]): UIMessage[] {
+  const messages = normalizeMessageIds(persisted);
+  const positions = new Map(messages.map((message, index) => [message.id, index]));
+  for (const value of incoming) {
+    const legacyIndex = findLegacyEcho(messages, value);
+    const next = legacyIndex !== undefined ? { ...value, id: messages[legacyIndex].id, metadata: messages[legacyIndex].metadata } : withMessageId(value, messages.length);
+    const index = positions.get(next.id);
+    if (index === undefined) { positions.set(next.id, messages.length); messages.push(next); }
+    else messages[index] = next;
+  }
+  return normalizeMessageIds(messages);
 }
 
 // The client only ever holds slimmed tool parts (see slimMessagesForClient), so when it echoes a

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { nowIso } from "@/lib/ids";
 import { mutateStore } from "@/lib/store";
+import { validAvatarIcon } from "@/lib/avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -16,13 +17,16 @@ export async function PATCH(
     name?: string;
     job?: string;
     instructions?: string;
+    icon?: string | null;
   };
+  if (body.icon !== undefined && !validAvatarIcon(body.icon)) return NextResponse.json({ error: "Invalid icon" }, { status: 400 });
   const bot = await mutateStore(userId, (store) => {
     const item = store.bots.find((entry) => entry.id === id);
     if (!item) return null;
     if (body.name) item.name = body.name.trim();
     if (body.job) item.job = body.job.trim();
     if (body.instructions) item.instructions = body.instructions;
+    if (body.icon !== undefined) item.icon = body.icon || null;
     item.updatedAt = nowIso();
     const dm = store.threads.find(
       (thread) => thread.kind === "dm" && thread.botIds[0] === id,

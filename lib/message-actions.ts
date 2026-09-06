@@ -73,6 +73,8 @@ export function messagesWithReplyContext(messages: UIMessage[]): UIMessage[] {
 // Older saved conversations can contain empty SDK message IDs. Namespace their
 // position separately from real IDs so those messages can still be reacted to.
 export function messageActionKey(message: UIMessage, index: number): string {
+  const legacyKey = (message.metadata as { legacyActionKey?: unknown } | undefined)?.legacyActionKey;
+  if (message.id?.startsWith("legacy-message:") && typeof legacyKey === "string") return legacyKey;
   return message.id ? `id:${message.id}` : `legacy:${index}`;
 }
 

@@ -3,6 +3,7 @@ import type { RunMode } from "./model";
 export type BotStatus = "idle" | "working" | "waiting";
 
 export type Bot = {
+  icon?: string | null;
   id: string;
   name: string;
   job: string;
@@ -22,6 +23,7 @@ export type MemoryEntry = {
 export type ThreadKind = "dm" | "group";
 
 export type Thread = {
+  icon?: string | null;
   reactions?: Record<string, string[]>;
   id: string;
   kind: ThreadKind;

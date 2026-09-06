@@ -46,6 +46,8 @@ import { cn } from "@/lib/utils";
 import type { Bot, Routine, Skill, Thread } from "@/lib/types";
 import type { UsageSnapshot } from "@/lib/plans";
 import { AccountMenu } from "./account-menu";
+import { Avatar } from "@/components/ui/avatar";
+export { Avatar } from "@/components/ui/avatar";
 
 const DEFAULT_BOT_IDS = new Set(["chief", "research", "ops"]);
 
@@ -111,6 +113,12 @@ export function Sidebar({
     );
   });
   const visibleGroups = groups.filter((thread) => matches(`${thread.title} ${thread.lastPreview}`));
+  const groupSections = [...new Set(visibleGroups.filter((thread) => !thread.hidden && thread.section).map((thread) => thread.section!))];
+  const groupBuckets = [
+    { label: "Groups", threads: visibleGroups.filter((thread) => !thread.hidden && !thread.section) },
+    ...groupSections.map((section) => ({ label: `${section} · Groups`, threads: visibleGroups.filter((thread) => !thread.hidden && thread.section === section) })),
+    { label: "Hidden groups", threads: visibleGroups.filter((thread) => thread.hidden) },
+  ];
   const hiddenDms = visibleDms.filter((thread) => thread.hidden);
   const shownDms = visibleDms.filter((thread) => !thread.hidden);
   const sectionNames: string[] = [];
@@ -189,49 +197,13 @@ export function Sidebar({
           />
         ) : null}
 
-        {groups.length > 0 ? (
-          <SidebarGroup>
-            <SidebarGroupLabel>Groups</SidebarGroupLabel>
-            <div className="flex flex-col gap-0.5">
-              {visibleGroups.map((thread) => {
-                const active = activeThreadId === thread.id;
-                return (
-                  <motion.button
-                    key={thread.id}
-                    type="button"
-                    onClick={() => onSelectThread(thread.id)}
-                    initial={{ opacity: 0, x: -8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ duration: 0.28, ease: easeOut }}
-                    className={cn(
-                      "flex w-full items-start gap-2.5 rounded-lg px-2 py-1.5 text-left whitespace-normal",
-                      active ? "bg-[#2d2d2d]" : "hover:bg-white/5",
-                    )}
-                  >
-                    <span className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-xs text-[#8f8f8f]">
-                      {thread.botIds.length}
-                    </span>
-                    <span className="flex min-w-0 flex-1 flex-col">
-                      <span className="min-w-0 truncate text-[0.925rem] text-[#f0f0f0]">
-                        {thread.title}
-                      </span>
-                      <span className="min-w-0 truncate text-xs text-[#8f8f8f]">
-                        {thread.lastPreview}
-                      </span>
-                    </span>
-                    {jobStateByThread?.[thread.id] === "running" ? (
-                      <Loader2 className="mt-1.5 size-3.5 shrink-0 animate-spin text-[#8f8f8f]" aria-label="Task running" />
-                    ) : jobStateByThread?.[thread.id] === "waiting" ? (
-                      <span className="mt-1.5 text-xs text-amber-300" aria-label="Task waiting">⏸</span>
-                    ) : jobStateByThread?.[thread.id] === "attention" ? (
-                      <span className="mt-1.5 text-xs text-amber-300" aria-label="Task needs attention">⚠</span>
-                    ) : null}
-                  </motion.button>
-                );
-              })}
-            </div>
-          </SidebarGroup>
-        ) : null}
+        {groupBuckets.filter((bucket) => bucket.threads.length).map((bucket) => <SidebarGroup key={bucket.label}>
+          <SidebarGroupLabel>{bucket.label}</SidebarGroupLabel>
+          <div className="flex flex-col gap-0.5">{[...bucket.threads].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned))).map((thread) => {
+            const group: Bot = { id: thread.id, name: thread.title, job: "Group", icon: thread.icon || "👥", accent: "#454545", instructions: "", memory: [], createdAt: thread.createdAt, updatedAt: thread.updatedAt };
+            return <TeammateRow key={thread.id} thread={thread} bot={group} active={activeThreadId === thread.id} loading={loadingThreadId === thread.id || actionBusyId === thread.id || jobStateByThread?.[thread.id] === "running"} jobState={jobStateByThread?.[thread.id]} onSelect={() => onSelectThread(thread.id)} onAction={(action) => onTeammateAction(thread, group, action)} />;
+          })}</div>
+        </SidebarGroup>)}
 
         <SidebarGroup className="mt-auto pt-6">
           <SidebarMenu>
@@ -351,7 +323,7 @@ function TeammateRow({
             active ? "bg-[#2d2d2d]" : "hover:bg-white/5",
           )}
         >
-          <Avatar name={bot.name} accent={bot.accent} />
+          <Avatar name={bot.name} accent={bot.accent} icon={bot.icon} />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="flex min-w-0 items-baseline justify-between gap-2">
               <span className="truncate text-[13px] font-semibold text-[#f0f0f0]">{bot.name}</span>
@@ -396,7 +368,7 @@ function TeammateRow({
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => onAction("edit")}>
           <Pencil />
-          Edit Profile
+          {thread.kind === "group" ? "Edit group" : "Edit profile"}
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => onAction("duplicate")}>
           <Copy />
@@ -410,7 +382,7 @@ function TeammateRow({
         <ContextMenuSeparator />
         <ContextMenuItem
           variant="destructive"
-          disabled={DEFAULT_BOT_IDS.has(bot.id)}
+          disabled={thread.kind === "dm" && DEFAULT_BOT_IDS.has(bot.id)}
           onSelect={() => onAction("delete")}
         >
           <Trash2 />
@@ -419,16 +391,5 @@ function TeammateRow({
       </ContextMenuContent>
     </ContextMenu>
     </motion.div>
-  );
-}
-
-export function Avatar({ name, accent }: { name: string; accent: string }) {
-  return (
-    <span
-      className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs text-white"
-      style={{ background: accent }}
-    >
-      {name.slice(0, 1)}
-    </span>
   );
 }

@@ -5,7 +5,7 @@ import { buildInstructions, createDeniTools, deniHandoffToolApproval, deniToolAp
 import { getApiKey } from "./config";
 import { finishJob, checkpointJob, claimJob, heartbeatJob, getJob } from "./jobs";
 import { getDeniModel } from "./llm";
-import { createId, nowIso } from "./ids";
+import { nowIso } from "./ids";
 import { loadMessages, mutateStore, readStore, saveMessages } from "./store";
 import { createNotification } from "./notifications";
 import { setComputer } from "./computer";
@@ -14,6 +14,7 @@ import { compactMessagesForModel } from "./messages";
 import { parseRunMode } from "./model";
 import type { AgentJob } from "./types";
 import { messagesWithReplyContext } from "./message-actions";
+import { groupContext } from "./group-chat";
 
 function payloadMessages(job: AgentJob): UIMessage[] {
   const value = job.payload.messages;
@@ -34,6 +35,10 @@ export async function runBackgroundJob(userId: string, jobId: string) {
   if (!claimed || !claimed.claimed || claimed.job.status !== "running") return claimed?.job ?? null;
   const job = claimed.job;
   const store = await readStore(userId);
+  if (!store.threads.some((thread) => thread.id === job.threadId)) {
+    await finishJob(userId, job.id, "cancelled", { error: "Conversation was deleted" });
+    return getJob(userId, job.id);
+  }
   if (job.kind === "routine") {
     const routine = store.routines.find((item) => item.id === job.payload.routineId);
     if (!routine?.enabled || (routine.revision ?? 0) !== (job.payload.routineRevision ?? 0)) {
@@ -60,12 +65,13 @@ export async function runBackgroundJob(userId: string, jobId: string) {
   }
 
   const messages = payloadMessages(job);
+  const isGroup = store.threads.find((thread) => thread.id === job.threadId)?.kind === "group";
   try {
     await assertCanUseTokens(userId);
     const currentMessages = await loadMessages(userId, job.threadId);
     const latestInput = messages.at(-1);
     if (latestInput && !currentMessages.some((item) => item.id === latestInput.id)) {
-      await saveMessages(userId, job.threadId, [...currentMessages, ...messages]);
+      await saveMessages(userId, job.threadId, [latestInput]);
     }
     await setComputer(userId, {
       status: "working",
@@ -85,8 +91,8 @@ export async function runBackgroundJob(userId: string, jobId: string) {
         store.skills,
         store.bots.map((item) => ({ id: item.id, name: item.name, job: item.job })),
       ),
-      messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(messages))),
-      tools: createDeniTools({ userId, bot, threadId: job.threadId, jobId: job.id }),
+      messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(isGroup ? groupContext(messages, bot.id) : messages))),
+      tools: createDeniTools({ userId, bot, threadId: job.threadId, jobId: job.id, allowHandoff: !isGroup }),
       toolApproval:
         job.kind === "routine"
           ? deniHandoffToolApproval()
@@ -101,20 +107,19 @@ export async function runBackgroundJob(userId: string, jobId: string) {
           updatedAt: nowIso(),
         }).catch(() => undefined);
         const current = await getJob(userId, job.id);
-        if (current?.status === "cancelled") throw new Error("Job cancelled by user");
+        if (!current || current.status === "cancelled") throw new Error("Job cancelled or conversation deleted");
       },
     });
     await recordTokenUsage(userId, result.usage, { multiplier: tokenMultiplier });
     const current = await getJob(userId, job.id);
     if (current?.status === "cancelled") return current;
     const assistant: UIMessage = {
-      id: createId("msg"),
+      id: `${job.id}_assistant`,
       role: "assistant",
+      metadata: { author: { id: bot.id, name: bot.name, accent: bot.accent }, jobId: job.id },
       parts: [{ type: "text", text: result.text || "Task completed." }],
     };
-    const previous = await loadMessages(userId, job.threadId);
-    const hasSame = previous.some((item) => item.id === assistant.id);
-    if (!hasSame) await saveMessages(userId, job.threadId, [...previous, assistant]);
+    await saveMessages(userId, job.threadId, [assistant]);
     if (typeof job.payload.routineId === "string") {
       await mutateStore(userId, (next) => {
         const routine = next.routines.find((item) => item.id === job.payload.routineId);

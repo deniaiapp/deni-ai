@@ -98,7 +98,7 @@ export async function startHandoff(opts: {
     ],
   };
   const messages = [...existing, note];
-  await saveMessages(opts.userId, thread.id, messages);
+  await saveMessages(opts.userId, thread.id, [note]);
   await mutateStore(opts.userId, (next) => {
     const item = next.threads.find((entry) => entry.id === thread.id);
     if (!item) return;
@@ -218,12 +218,12 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
   const text = await result.text;
   const reply = text.trim() || "Finished without a written report.";
   const assistant: UIMessage = {
-    id: createId("msg"),
+    id: `${run.id}_assistant`,
     role: "assistant",
+    metadata: { author: { id: target.id, name: target.name, accent: target.accent } },
     parts: [{ type: "text", text: reply }],
   };
-  const latest = await loadMessages(run.userId, run.threadId);
-  await saveMessages(run.userId, run.threadId, [...latest, assistant]);
+  await saveMessages(run.userId, run.threadId, [assistant]);
   publish(run, {
     status: "done",
     reply,

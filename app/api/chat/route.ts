@@ -30,9 +30,11 @@ import {
   updateJob,
 } from "@/lib/jobs";
 import { createNotification } from "@/lib/notifications";
-import { hasPendingWorkflowWait, lastAssistantText } from "@/lib/chat-run-state";
+import { hasPendingWorkflowWait } from "@/lib/chat-run-state";
 import { messagesWithReplyContext, resolveReplyReferences } from "@/lib/message-actions";
 import { releaseBrowserTakeover } from "@/lib/browser-workspaces";
+import { createHash } from "node:crypto";
+import { groupContext } from "@/lib/group-chat";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 800;
@@ -81,7 +83,7 @@ export async function POST(req: Request) {
 
   const botId = body.botId || thread.botIds[0];
   const bot = store.bots.find((item) => item.id === botId);
-  if (!bot) {
+  if (!bot || !thread.botIds.includes(bot.id)) {
     return new Response("bot not found", { status: 404 });
   }
 
@@ -150,7 +152,7 @@ export async function POST(req: Request) {
   }
   // Claim a waiting continuation with its updated input atomically. It is never
   // exposed as queued with old input for the background worker to pick up.
-  if (!continuationFrom) await saveMessages(userId, thread.id, messages);
+  if (!continuationFrom) await saveMessages(userId, thread.id, incoming);
   const claimed = await claimJob(userId, job.id, continuationFrom ? {
     from: continuationFrom, threadId: thread.id, botId: bot.id, key: idempotencyKey, payload: { messages, runMode },
   } : undefined);
@@ -163,7 +165,7 @@ export async function POST(req: Request) {
         await releaseBrowserTakeover(userId, job.id);
         await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId: job.id });
       }
-      await saveMessages(userId, thread.id, messages);
+      await saveMessages(userId, thread.id, incoming);
     } catch (error) {
       await transitionJob(userId, job.id, "running", { status: continuationFrom, payload: job.payload, lockedAt: null, heartbeatAt: null });
       reportError(error, "resume chat");
@@ -171,10 +173,17 @@ export async function POST(req: Request) {
     }
   }
   job = claimed.job;
-  const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id });
+  const approvalMessage = continuationFrom === "waiting_approval" ? incoming.findLast((message) => message.role === "assistant") : undefined;
+  const assistantId = approvalMessage?.id || `${job.id}_assistant_${createHash("sha256").update(idempotencyKey).digest("hex").slice(0, 12)}`;
+  const author = { id: bot.id, name: bot.name, accent: bot.accent };
+  const requestMessage = approvalMessage ?? incoming.findLast((message) => message.role === "user");
+  // Concurrent group replies may already follow this input in stored history.
+  // The UI stream must still create this bot's own answer, not continue theirs.
+  const streamHistory = requestMessage ? [...messages.filter((message) => message.id !== requestMessage.id), requestMessage] : messages;
+  const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: thread.kind !== "group" });
   let writeRunStatus: ((status: "working" | "finalizing" | "waiting" | "completed" | "failed") => void) | undefined;
   let finalizationPromise: Promise<boolean> | undefined;
-  const finalizeChatJob = (text?: string) => {
+  const finalizeChatJob = () => {
     if (finalizationPromise) return finalizationPromise;
     // Notify the subscribed Chat before any durable finalization awaits. The event is
     // only emitted for turns that did not end in an approval/takeover wait.
@@ -202,16 +211,6 @@ export async function POST(req: Request) {
           workingBotId: bot.id,
           jobId: job.id,
         });
-        if (text?.trim()) {
-          const persistedNow = await loadMessages(userId, thread.id);
-          const assistantId = `${job.id}_assistant`;
-          if (!persistedNow.some((item) => item.id === assistantId)) {
-            await saveMessages(userId, thread.id, [
-              ...persistedNow,
-              { id: assistantId, role: "assistant", parts: [{ type: "text", text }] },
-            ]);
-          }
-        }
         await setComputer(userId, {
           status: "idle",
           workingLabel: "",
@@ -265,8 +264,8 @@ export async function POST(req: Request) {
         name: item.name,
         job: item.job,
       })),
-    ),
-    messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(messages))),
+    ) + (thread.kind === "group" ? `\nYou are speaking as ${bot.name} in a group chat. Respond only as yourself, from your role. Other teammates may answer in parallel; do not impersonate them or start extra handoffs for this group message.` : ""),
+    messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(thread.kind === "group" ? groupContext(messages, bot.id) : messages))),
     tools,
     toolApproval: deniToolApproval({ userId, jobId: job.id }),
     stopWhen: isLoopFinished(),
@@ -333,9 +332,8 @@ export async function POST(req: Request) {
         writeRunStatus?.("waiting");
         return;
       }
-      await finalizeChatJob(event.text).catch((error) => {
-        console.error("finalize chat job", error);
-      });
+      // Persist the one canonical streamed answer in onEnd before completing the job.
+      writeRunStatus?.("finalizing");
     },
   });
 
@@ -352,16 +350,20 @@ export async function POST(req: Request) {
       writer.merge(
         toUIMessageStream({
           stream: result.stream,
-          originalMessages: messages,
-          onEnd: async ({ messages: next }) => {
-            if (finalizationPromise) await finalizationPromise.catch(() => undefined);
-            await saveMessages(userId, thread.id, next).catch((error) => {
-              console.error("save messages", error);
-            });
-            if (!finalizationPromise && !hasPendingWorkflowWait(next)) {
-              await finalizeChatJob(lastAssistantText(next)).catch((error) => {
-                console.error("finalize chat job from message stream", error);
-              });
+          originalMessages: streamHistory,
+          generateMessageId: () => assistantId,
+          messageMetadata: () => ({ author, jobId: job.id }),
+          onEnd: async ({ messages: next, isAborted }) => {
+            const response = next.find((message) => message.id === assistantId);
+            try {
+              if (response) await saveMessages(userId, thread.id, [{ ...response, metadata: { ...(response.metadata as object ?? {}), author, jobId: job.id } }]);
+              if (isAborted) { await finishJob(userId, job.id, "cancelled"); writeRunStatus?.("failed"); return; }
+              if (response && hasPendingWorkflowWait(response)) { writeRunStatus?.("waiting"); return; }
+              await finalizeChatJob();
+            } catch (error) {
+              reportError(error, "save chat response");
+              await finishJob(userId, job.id, "failed", { error: "Could not save the response" }).catch(() => undefined);
+              writeRunStatus?.("failed");
             }
           },
         }),

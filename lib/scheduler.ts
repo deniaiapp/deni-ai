@@ -2,7 +2,7 @@ import "server-only";
 
 import { type UIMessage } from "ai";
 import { nextCron } from "./agent";
-import { createId } from "./ids";
+import { createHash } from "node:crypto";
 import {
   createJob,
   getJobByIdempotencyKey,
@@ -74,7 +74,7 @@ async function enqueueRoutine(userId: string, routineId: string) {
   const existing = await getJobByIdempotencyKey(userId, idempotencyKey);
   if (existing) return existing;
   const kickoff: UIMessage = {
-    id: createId("msg"),
+    id: `routine_${createHash("sha256").update(idempotencyKey).digest("hex").slice(0, 24)}`,
     role: "user",
     parts: [
       {
@@ -85,7 +85,7 @@ async function enqueueRoutine(userId: string, routineId: string) {
   };
   const previous = await loadMessages(userId, routine.threadId);
   const messages = [...previous, kickoff];
-  await saveMessages(userId, routine.threadId, messages);
+  await saveMessages(userId, routine.threadId, [kickoff]);
   const job = await createJob({
     userId,
     threadId: routine.threadId,

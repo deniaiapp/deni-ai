@@ -104,7 +104,7 @@ export function createDeniTools(ctx: AgentContext) {
       });
     }
     return getJob(ctx.userId, ctx.jobId).then((job) => {
-      if (job?.status === "cancelled") throw new Error("Job cancelled by user");
+      if (!job || job.status === "cancelled") throw new Error("Job cancelled or conversation deleted");
       return setComputer(ctx.userId, {
         ...patch,
         botId: patch.botId ?? ctx.bot.id,

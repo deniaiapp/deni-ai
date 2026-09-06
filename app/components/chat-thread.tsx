@@ -33,6 +33,8 @@ import {
   WrenchIcon,
   CornerUpLeftIcon,
   XIcon,
+  Loader2Icon,
+  UsersIcon,
   type LucideIcon,
 } from "lucide-react";
 import {
@@ -72,6 +74,7 @@ import { Avatar } from "./sidebar";
 import { MessageActions } from "./message-actions";
 import { messageActionKey, messageBubbleTargets, replyReference, type MessageBubble, type MessageReference, type MessageReaction } from "@/lib/message-actions";
 import { createReactionState, type ReactionMap } from "@/lib/reaction-state";
+import { messageAuthor, type MessageAuthor } from "@/lib/group-chat";
 import { RUN_MODES, type RunMode } from "@/lib/model";
 import type { AgentJob, Artifact, Bot, HandoffSnapshot, Thread } from "@/lib/types";
 import { isActiveJob, latestJob, mergeJobSnapshots } from "@/lib/job-view";
@@ -81,6 +84,9 @@ import {
   getChatSessionRunStatus,
   setChatSessionRunStatus,
   subscribeChatSessionRunStatus,
+  getGroupReplyStatuses,
+  subscribeGroupReplyStatuses,
+  approveGroupTool,
 } from "@/lib/chat-sessions";
 import {
   DropdownMenu,
@@ -93,6 +99,10 @@ const draftCache = new Map<string, string>();
 const scrollCache = new Map<string, number>();
 const replyCache = new Map<string, MessageReference>();
 const reactionStates = new Map<string, ReturnType<typeof createReactionState>>();
+
+export function forgetChatThread(threadId: string) {
+  draftCache.delete(threadId); scrollCache.delete(threadId); replyCache.delete(threadId); reactionStates.delete(threadId);
+}
 
 function getReactionState(threadId: string, initial: ReactionMap = {}) {
   const existing = reactionStates.get(threadId);
@@ -146,6 +156,15 @@ export function ChatThread({
   const { messages, sendMessage, status, addToolApprovalResponse, setMessages, stop, error, clearError } = useChat({ chat });
 
   const [input, setInput] = useState(() => getThreadDraft(draftCache, thread.id));
+  const [mentionCursor, setMentionCursor] = useState(-1);
+  const [mentionIndex, setMentionIndex] = useState(0);
+  const [approvalError, setApprovalError] = useState<string | null>(null);
+  const groupMembers = bots.filter((member) => thread.botIds.includes(member.id));
+  const mentionPrefix = mentionCursor >= 0 ? input.slice(0, mentionCursor) : "";
+  const mention = thread.kind === "group" ? mentionPrefix.match(/(?:^|\s)@([^@\n]{0,48})$/) : null;
+  const mentionOptions = mention ? [
+    { id: "everyone", name: "everyone", accent: "#525252" }, ...groupMembers,
+  ].filter((member) => member.name.toLowerCase().startsWith(mention[1].toLowerCase())) : [];
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const [replyTarget, setReplyTarget] = useState<MessageReference | null>(() => replyCache.get(thread.id) ?? null);
   const reactionState = useMemo(() => getReactionState(thread.id, thread.reactions), [thread.id, thread.reactions]);
@@ -224,12 +243,18 @@ export function ChatThread({
 
   const onApprove = useCallback(
     async (id: string, approved: boolean) => {
+      setApprovalError(null);
+      if (thread.kind === "group") {
+        try { await approveGroupTool(thread.id, id, approved); }
+        catch (error) { setApprovalError(error instanceof Error ? error.message : "Could not submit approval."); }
+        return;
+      }
       setChatSessionRunStatus(thread.id, "working");
       // The chat request resumes the job together with the approval response.
       // Do not queue old input for the background worker before approval is sent.
       addToolApprovalResponse({ id, approved });
     },
-    [addToolApprovalResponse, thread.id],
+    [addToolApprovalResponse, thread.id, thread.kind],
   );
 
   const busy = status === "submitted" || status === "streaming";
@@ -242,8 +267,12 @@ export function ChatThread({
     () => getChatSessionRunStatus(thread.id),
     () => "idle",
   );
+  const subscribeGroupStatuses = useCallback((listener: () => void) => subscribeGroupReplyStatuses(thread.id, listener), [thread.id]);
+  const groupStatuses = useSyncExternalStore(subscribeGroupStatuses, () => getGroupReplyStatuses(thread.id), () => getGroupReplyStatuses(thread.id));
   const activeJob = latestJob(displayedJobs.filter(isActiveJob));
-  const savingResult = activeJob?.status === "finalizing" || chatRunStatus === "finalizing";
+  const savingResult = thread.kind === "group"
+    ? Object.values(groupStatuses).some((item) => item.status === "finalizing") && !Object.values(groupStatuses).some((item) => item.status === "working")
+    : activeJob?.status === "finalizing" || chatRunStatus === "finalizing";
   const waitingForUser = chatRunStatus === "waiting";
   const showBusyIndicator = busy && chatRunStatus !== "completed" && chatRunStatus !== "failed";
 
@@ -303,14 +332,16 @@ export function ChatThread({
 
   const stopTask = useCallback(() => {
     stop();
-    for (const job of displayedJobs.filter((item) => ["queued", "running", "waiting_approval", "waiting_takeover"].includes(item.status))) {
-      void fetch(`/api/jobs/${job.id}`, {
+    const ids = new Set(displayedJobs.filter((item) => ["queued", "running", "waiting_approval", "waiting_takeover"].includes(item.status)).map((job) => job.id));
+    for (const item of Object.values(groupStatuses)) if (item.jobId && ["working", "waiting"].includes(item.status)) ids.add(item.jobId);
+    for (const id of ids) {
+      void fetch(`/api/jobs/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "cancel" }),
       }).then(() => refreshTaskData());
     }
-  }, [displayedJobs, refreshTaskData, stop]);
+  }, [displayedJobs, groupStatuses, refreshTaskData, stop]);
 
   const requestRevision = useCallback((artifact: Artifact) => {
     const next = `Revise the artifact "${artifact.title}" at ${artifact.path} and register the updated file.`;
@@ -358,9 +389,19 @@ export function ChatThread({
     setChatSessionRunStatus(thread.id, "working");
     setInput("");
     clearThreadDraft(draftCache, thread.id);
+    setMentionCursor(-1);
     sendMessage({ text, ...(replyTarget ? { metadata: { replyTo: replyTarget } } : {}) });
     setReplyTarget(null);
     replyCache.delete(thread.id);
+  }
+
+  function insertMention(name: string) {
+    const start = mentionPrefix.lastIndexOf("@");
+    if (start < 0) return;
+    const next = `${input.slice(0, start)}@${name} ${input.slice(mentionCursor)}`;
+    const cursor = start + name.length + 2;
+    setInput(next); setThreadDraft(draftCache, thread.id, next); setMentionCursor(-1); setMentionIndex(0);
+    requestAnimationFrame(() => { inputRef.current?.focus(); inputRef.current?.setSelectionRange(cursor, cursor); });
   }
 
   return (
@@ -371,7 +412,7 @@ export function ChatThread({
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: easeOut }}
       >
-        <Avatar name={bot.name} accent={bot.accent} />
+        <Avatar name={thread.kind === "group" ? thread.title : bot.name} accent={thread.kind === "group" ? "#454545" : bot.accent} icon={thread.kind === "group" ? thread.icon || "👥" : bot.icon} />
         <div className="flex min-w-0 flex-1 items-center gap-3">
           <span className="min-w-0 truncate text-[0.925rem] font-semibold text-[#f0f0f0]">
             {thread.kind === "group" ? thread.title : bot.name}
@@ -404,6 +445,18 @@ export function ChatThread({
         )}
       </motion.header>
 
+      {thread.kind === "group" ? <div className="shrink-0 border-b border-white/5 px-4 py-2">
+        <p className="text-[11px] text-neutral-500">@everyone to ask everyone · @name to ask a teammate</p>
+        {Object.values(groupStatuses).length ? <div className="mt-2 flex flex-wrap gap-2" role="status" aria-label="Teammate responses">
+          {Object.values(groupStatuses).map((item) => <div key={item.author.id} title={item.error} className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] ${item.status === "failed" ? "border-red-400/20 text-red-300" : "border-white/10 text-neutral-400"}`}>
+            <span className="[&>span]:size-5"><Avatar name={item.author.name} accent={item.author.accent} icon={bots.find((bot) => bot.id === item.author.id)?.icon} /></span>
+            <span>{item.author.name}</span>
+            {["working", "finalizing"].includes(item.status) ? <Loader2Icon size={11} className="animate-spin" /> : <span>{item.status === "waiting" ? "Needs your help" : item.status === "failed" ? "Failed" : "Done"}</span>}
+          </div>)}
+        </div> : null}
+        {Object.values(groupStatuses).filter((item) => item.error).map((item) => <p key={item.author.id} className="mt-1 text-xs text-red-300">{item.author.name}: {item.error}</p>)}
+      </div> : null}
+
       <Conversation
         contextRef={conversationContextRef}
         className="min-h-0 flex-1"
@@ -416,25 +469,33 @@ export function ChatThread({
               <EmptyState bot={bot} />
             </ConversationEmptyState>
           ) : (
-            messages.map((message, index) => (
+            messages.map((message, index) => {
+              const author = messageAuthor(message);
+              const memberState = author ? groupStatuses[author.id] : undefined;
+              const groupReplyActive = memberState?.messageId === message.id && ["working", "finalizing"].includes(memberState?.status ?? "");
+              return (
               <MessageBlock
                 key={message.id || `message-${index}`}
                 workKey={`${thread.id}:${index}`}
                 message={message}
-                isLastMessage={index === messages.length - 1}
-                isStreaming={showBusyIndicator && !savingResult && !waitingForUser}
+                isLastMessage={thread.kind === "group" ? groupReplyActive : index === messages.length - 1}
+                isStreaming={thread.kind === "group" ? groupReplyActive && memberState?.status === "working" : showBusyIndicator && !savingResult && !waitingForUser}
                 onApprove={onApprove}
                 handoffs={handoffs}
                 bots={bots}
                 actionKey={messageActionKey(message, index)}
                 bubbles={messageBubbleTargets(message, index)}
                 onLocate={locateMessage}
+                author={author}
+                showAuthor={thread.kind === "group"}
+                authorIcon={bots.find((bot) => bot.id === author?.id)?.icon}
                 reactions={reactions}
                 onReply={replyToMessage}
                 onReact={reactToMessage}
-                actionsDisabled={busy && index === messages.length - 1}
+                actionsDisabled={thread.kind === "group" ? groupReplyActive : busy && index === messages.length - 1}
               />
-            ))
+              );
+            })
           )}
           {showBusyIndicator ? (
             <span className="text-xs text-[#8f8f8f]">
@@ -445,17 +506,17 @@ export function ChatThread({
           {artifacts.length > 0 ? (
             <ArtifactList artifacts={artifacts} onRevision={requestRevision} />
           ) : null}
-          {error ? (
+          {error || approvalError ? (
             <Alert variant="destructive">
               <WarningCircleIcon weight="fill" />
               <AlertTitle>Failed to send</AlertTitle>
               <AlertDescription>
-                <p>{error.message}</p>
+                <p>{error?.message ?? approvalError}</p>
                 <Button
                   type="button"
                   variant="ghost"
                   size="xs"
-                  onClick={() => clearError()}
+                  onClick={() => { clearError(); setApprovalError(null); }}
                   className="-ml-2"
                 >
                   Dismiss
@@ -466,7 +527,13 @@ export function ChatThread({
         </ConversationContent>
       </Conversation>
 
-      <div className="shrink-0 bg-[#050505] px-3 pb-4 pt-2 md:px-4">
+      <div className="relative shrink-0 bg-[#050505] px-3 pb-4 pt-2 md:px-4">
+        {mentionOptions.length ? <div id={`mentions-${thread.id}`} role="listbox" aria-label="Mention a teammate" className="absolute bottom-full left-4 z-20 mb-1 max-h-64 w-72 max-w-[calc(100%_-_2rem)] overflow-y-auto rounded-xl border border-white/10 bg-[#202020] p-1.5 shadow-xl">
+          {mentionOptions.map((member, index) => <button key={member.id} id={`mention-${thread.id}-${index}`} type="button" role="option" aria-selected={index === mentionIndex} onMouseDown={(event) => event.preventDefault()} onClick={() => insertMention(member.name)} className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${index === mentionIndex ? "bg-white/10" : "hover:bg-white/5"}`}>
+            {member.id === "everyone" ? <span className="flex size-8 items-center justify-center rounded-full bg-white/10"><UsersIcon size={16} /></span> : <Avatar name={member.name} accent={member.accent} icon={bots.find((bot) => bot.id === member.id)?.icon} />}
+            <span>@{member.name}</span>{member.id === "everyone" ? <span className="ml-auto text-xs text-neutral-500">All teammates</span> : null}
+          </button>)}
+        </div> : null}
         {replyTarget ? <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-[#202020] px-3 py-2">
           <MessageReferenceCard reference={replyTarget} botName={bot.name} onLocate={locateMessage} />
           <button type="button" aria-label="Cancel reply" onClick={() => { setReplyTarget(null); replyCache.delete(thread.id); }} className="ml-auto rounded-md p-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"><XIcon size={15} /></button>
@@ -488,10 +555,21 @@ export function ChatThread({
               const next = e.currentTarget.value;
               setInput(next);
               setThreadDraft(draftCache, thread.id, next);
+              setMentionCursor(e.currentTarget.selectionStart);
+              setMentionIndex(0);
             }}
+            onClick={(event) => { setMentionCursor(event.currentTarget.selectionStart); setMentionIndex(0); }}
+            onKeyDown={(event) => {
+              if (!mentionOptions.length || event.nativeEvent.isComposing) return;
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setMentionIndex((value) => (value + (event.key === "ArrowDown" ? 1 : -1) + mentionOptions.length) % mentionOptions.length); }
+              else if (event.key === "Enter" || event.key === "Tab") { event.preventDefault(); insertMention(mentionOptions[Math.min(mentionIndex, mentionOptions.length - 1)].name); }
+              else if (event.key === "Escape") { event.preventDefault(); setMentionCursor(-1); }
+            }}
+            aria-controls={mentionOptions.length ? `mentions-${thread.id}` : undefined}
+            aria-activedescendant={mentionOptions.length ? `mention-${thread.id}-${mentionIndex}` : undefined}
             onSubmit={submit}
-            placeholder={`Message ${bot.name}`}
-            aria-label={`Message ${bot.name}`}
+            placeholder={thread.kind === "group" ? `Message ${thread.title} · @everyone` : `Message ${bot.name}`}
+            aria-label={`Message ${thread.kind === "group" ? thread.title : bot.name}`}
           />
           <PromptInputToolbar className="shrink-0 pb-0.5 pr-0.5">
             <PromptInputSubmit
@@ -660,6 +738,9 @@ const MessageBlock = memo(function MessageBlock({
   actionKey,
   bubbles,
   onLocate,
+  author,
+  showAuthor,
+  authorIcon,
 }: {
   workKey: string;
   message: UIMessage;
@@ -675,6 +756,9 @@ const MessageBlock = memo(function MessageBlock({
   actionKey: string;
   bubbles: MessageBubble[];
   onLocate: (key: string) => void;
+  author: MessageAuthor | null;
+  showAuthor: boolean;
+  authorIcon?: string | null;
 }) {
   const lastPart = message.parts.at(-1);
   const reasoningIsStreaming = isLastMessage && isStreaming && lastPart?.type === "reasoning";
@@ -691,6 +775,10 @@ const MessageBlock = memo(function MessageBlock({
       transition={{ duration: 0.28, ease: easeOut }}
     >
     <Message from={message.role} data-message="" data-message-key={bubbles.length ? undefined : actionKey} tabIndex={-1} className="scroll-mt-4 rounded-xl outline-none">
+      {showAuthor && message.role === "assistant" ? <div className="mb-1 flex items-center gap-2">
+        <span className="[&>span]:size-6"><Avatar name={author?.name ?? "Teammate"} accent={author?.accent ?? "#555555"} icon={authorIcon} /></span>
+        <span className="text-xs font-semibold text-neutral-300">{author?.name ?? "Teammate"}</span>
+      </div> : null}
       {cotSteps.length > 0 ? (
         <ChainOfThought defaultOpen={cotWorking}>
           <ChainOfThoughtHeader>

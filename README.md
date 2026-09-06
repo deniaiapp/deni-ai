@@ -12,6 +12,7 @@ While Grok Bot provides a cloud VM, Deni Run gives each account an isolated comp
 - Skills for reusable procedures and cron-based routines
 - Approval gates for destructive commands and file deletion
 - Handoffs between bots and group threads
+- Group mentions (`@everyone` or `@name`) with parallel, individually attributed replies
 - Durable background jobs with checkpoints, reconnect, cancellation, retries, and restart recovery
 - Per-task browser pages with the account login profile and workspace files shared safely
 - Generic streamable HTTP/SSE MCP connections with encrypted credentials and approval-gated calls
@@ -130,6 +131,14 @@ Dockerfile-only deploys: build type **Dockerfile**, port `3000`, health check `/
 3. Select "Take control" when a login is required
 4. Ask "Summarize the inbox every Monday at 9:00" to create a routine
 5. Open **MCP connections** to add a streamable HTTP or SSE server, test discovery, and then ask a teammate to use it
+
+In a group conversation, type `@` to pick a teammate. `@everyone` calls every member;
+`@Research` calls only that teammate. Messages without a mention go to all group
+members in parallel. Each response shows its author's avatar and name.
+Right-click a DM or group to pin it, mark it unread, hide it, or edit its profile.
+Profiles support emoji icons and uploaded images. Groups can also be duplicated
+or deleted without deleting their teammates. Open **Skills** to edit a skill's
+name and Markdown instructions, or create a new one.
 
 Routine cron expressions are evaluated in the account timezone, including day-of-month/day-of-week
 rules, daylight-saving transitions, and monthly schedules. Invalid expressions are rejected when saved.

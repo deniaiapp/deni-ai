@@ -7,7 +7,6 @@ import type { UIMessage } from "ai";
 import { useRouter } from "next/navigation";
 import { MonitorIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Empty } from "@/components/ui/empty";
@@ -33,7 +32,7 @@ import type {
   AgentJob,
 } from "@/lib/types";
 import dynamic from "next/dynamic";
-import { ChatThread } from "./chat-thread";
+import { ChatThread, forgetChatThread } from "./chat-thread";
 import { SetupScreen } from "./setup-screen";
 import { BillingDialog } from "./billing-dialog";
 import { Sidebar, type TeammateMenuAction } from "./sidebar";
@@ -41,10 +40,12 @@ import type { UsageSnapshot } from "@/lib/plans";
 import { parseRunMode, type RunMode } from "@/lib/model";
 import { canCommitThreadResponse, groupJobsByThread, isActiveJob, jobVisualState, mergeJobSnapshots, shouldMarkThreadUnread } from "@/lib/job-view";
 import { cacheThreadMessages } from "@/lib/thread-state";
-import { getChatSession, syncChatSessionMessages, updateChatSessionJobState } from "@/lib/chat-sessions";
+import { discardChatSession, getChatSession, syncChatSessionMessages, updateChatSessionJobState } from "@/lib/chat-sessions";
 import { McpSettings } from "./mcp-settings";
 import { NotificationInbox } from "./notification-inbox";
 import { RoutinesDialog } from "./routines-dialog";
+import { SkillsDialog } from "./skills-dialog";
+import { AvatarField } from "./avatar-field";
 
 const ComputerPanel = dynamic(
   () => import("./computer-panel").then((mod) => ({ default: mod.ComputerPanel })),
@@ -99,6 +100,8 @@ export function Workspace() {
   const [mobileComputer, setMobileComputer] = useState(false);
   const [chatBusy, setChatBusy] = useState(false);
   const [editBot, setEditBot] = useState<Bot | null>(null);
+  const [editGroup, setEditGroup] = useState<Thread | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [sectionThread, setSectionThread] = useState<Thread | null>(null);
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [runMode, setRunMode] = useState<RunMode>("max");
@@ -394,6 +397,32 @@ export function Workspace() {
         patchThread(thread.id, { unread: !thread.unread });
         return;
       }
+      if (thread.kind === "group") {
+        setActionError(null);
+        if (action === "edit") { setEditGroup(thread); return; }
+        if (action === "hide") { patchThread(thread.id, { hidden: !thread.hidden }); return; }
+        if (action === "delete" && !window.confirm(`Delete ${thread.title}? The group conversation and its routines will be removed. Teammates and shared files will remain.`)) return;
+        setActionBusyId(thread.id);
+        try {
+          if (action === "duplicate") {
+            const response = await fetch("/api/threads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: `${thread.title.slice(0, 115)} copy`, botIds: thread.botIds, icon: thread.icon ?? null }) });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || "Could not duplicate group.");
+            setThreads((current) => [...current, data.thread]); setActiveThreadId(data.thread.id);
+          } else if (action === "delete") {
+            const response = await fetch(`/api/threads/${thread.id}`, { method: "DELETE" });
+            if (!response.ok && response.status !== 404) throw new Error("Could not delete group.");
+            discardChatSession(thread.id); forgetChatThread(thread.id);
+            setThreads((current) => current.filter((item) => item.id !== thread.id));
+            setRoutines((current) => current.filter((item) => item.threadId !== thread.id));
+            setMessagesByThread((current) => { const next = { ...current }; delete next[thread.id]; messagesByThreadRef.current = next; return next; });
+            setJobsByThread((current) => { const next = { ...current }; delete next[thread.id]; jobsByThreadRef.current = next; return next; });
+            if (activeThreadId === thread.id) { setActiveThreadId(threads.find((item) => item.id !== thread.id && !item.hidden)?.id ?? null); setActiveJobId(null); }
+          }
+        } catch (error) { setActionError(error instanceof Error ? error.message : "Could not update group."); }
+        finally { setActionBusyId(null); }
+        return;
+      }
       if (action === "edit") {
         setEditBot(bot);
         return;
@@ -412,6 +441,7 @@ export function Workspace() {
               name: `${bot.name} copy`,
               job: bot.job,
               instructions: bot.instructions,
+              icon: bot.icon ?? null,
             }),
           });
           if (res.status === 402) {
@@ -487,7 +517,8 @@ export function Workspace() {
     : null;
   const activeChat =
     activeThread && activeBot && threadReady
-      ? getChatSession({
+        ? getChatSession({
+            kind: activeThread.kind,
           threadId: activeThread.id,
           botId: activeBot.id,
           runMode,
@@ -578,6 +609,8 @@ export function Workspace() {
             </Button>
           ) : null}
         </div>
+
+        {actionError ? <div role="alert" className="flex items-center justify-between gap-3 bg-red-500/10 px-4 py-2 text-sm text-red-300"><span>{actionError}</span><button type="button" onClick={() => setActionError(null)} className="text-xs underline">Dismiss</button></div> : null}
 
         {activeThread && activeBot && threadReady ? (
           <ChatThread
@@ -737,29 +770,19 @@ export function Workspace() {
         }}
       />
       <GroupDialog
-        open={modal === "group"}
+        key={editGroup?.id ?? (modal === "group" ? "new-group" : "group-closed")}
+        open={modal === "group" || Boolean(editGroup)}
+        thread={editGroup}
         bots={bots}
-        onClose={() => setModal(null)}
+        onClose={() => { setModal(null); setEditGroup(null); }}
+        onUpdated={(thread) => { setThreads((current) => current.map((item) => item.id === thread.id ? thread : item)); setEditGroup(null); void loadState(); }}
         onCreated={(thread) => {
           setThreads((list) => [...list, thread]);
           setActiveThreadId(thread.id);
           setModal(null);
         }}
       />
-      <ListDialog open={modal === "skills"} title="Skills" onClose={() => setModal(null)}>
-        {skills.length === 0 ? (
-          <Empty size="sm" title="No skills yet" />
-        ) : (
-          skills.map((item) => (
-            <Card key={item.id} className="mb-3 p-3">
-              <span className="text-[0.925rem] text-[#f0f0f0]">{item.name}</span>
-              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap font-mono text-[0.9em] text-[#8f8f8f]">
-                {item.body}
-              </pre>
-            </Card>
-          ))
-        )}
-      </ListDialog>
+      <SkillsDialog open={modal === "skills"} skills={skills} onSync={setSkills} onClose={() => setModal(null)} onDeleted={(id) => setSkills((current) => current.filter((skill) => skill.id !== id))} onSaved={(skill) => setSkills((current) => current.some((item) => item.id === skill.id) ? current.map((item) => item.id === skill.id ? skill : item) : [...current, skill])} />
       {modal === "routines" ? <RoutinesDialog
         key={routineEditorId ?? "list"}
         routines={routines} bots={bots} threads={threads}
@@ -829,36 +852,46 @@ function BotDialog({
   const [name, setName] = useState(bot?.name ?? "");
   const [job, setJob] = useState(bot?.job ?? "");
   const [instructions, setInstructions] = useState(bot?.instructions ?? "");
+  const [icon, setIcon] = useState<string | null>(bot?.icon ?? null);
+  const [iconBusy, setIconBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const isEdit = Boolean(bot);
 
   async function save() {
+    if (iconBusy) return;
+    setError(null);
     setBusy(true);
     try {
       if (bot) {
         const res = await fetch(`/api/bots/${bot.id}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name, job, instructions }),
+          body: JSON.stringify({ name, job, instructions, icon }),
         });
-        const json = (await res.json()) as { bot?: Bot };
+        const json = (await res.json()) as { bot?: Bot; error?: string };
+        if (!res.ok || !json.bot) throw new Error(json.error || "Could not save profile.");
         if (json.bot) onUpdated(json.bot);
         return;
       }
       const res = await fetch("/api/bots", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, job, instructions }),
+        body: JSON.stringify({ name, job, instructions, icon }),
       });
       if (res.status === 402) {
         onLimitReached();
         return;
       }
       const json = await res.json();
+      if (!res.ok || !json.bot || !json.thread) throw new Error(json.error || "Could not create teammate.");
       setName("");
       setJob("");
       setInstructions("");
+      setIcon(null);
       onCreated(json.bot, json.thread);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not save profile.");
     } finally {
       setBusy(false);
     }
@@ -868,12 +901,14 @@ function BotDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) onClose();
+        if (!next && !busy && !iconBusy) onClose();
       }}
     >
       <DialogContent className="p-6">
         <DialogHeader title={isEdit ? "Edit profile" : "New teammate"} />
         <div className="flex flex-col gap-3">
+          <AvatarField name={name} accent={bot?.accent} value={icon} onChange={setIcon} disabled={busy} onBusyChange={setIconBusy} />
+          {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="bot-name">Name</Label>
             <Input id="bot-name" value={name} onChange={(e) => setName(e.currentTarget.value)} />
@@ -894,12 +929,12 @@ function BotDialog({
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <DialogClose asChild>
-            <Button variant="secondary">Close</Button>
+            <Button variant="secondary" disabled={busy || iconBusy}>Close</Button>
           </DialogClose>
           <Button
             type="button"
             variant="primary"
-            disabled={!name.trim()}
+            disabled={!name.trim() || iconBusy}
             loading={busy}
             onClick={save}
           >
@@ -987,37 +1022,50 @@ function SectionDialog({
 function GroupDialog({
   open,
   bots,
+  thread,
   onClose,
   onCreated,
+  onUpdated,
 }: {
   open: boolean;
   bots: Bot[];
+  thread?: Thread | null;
   onClose: () => void;
   onCreated: (thread: Thread) => void;
+  onUpdated: (thread: Thread) => void;
 }) {
-  const [picked, setPicked] = useState<string[]>([]);
-  const [title, setTitle] = useState("");
+  const [picked, setPicked] = useState<string[]>(thread?.botIds ?? []);
+  const [title, setTitle] = useState(thread?.title ?? "");
+  const [icon, setIcon] = useState<string | null>(thread?.icon ?? null);
+  const [iconBusy, setIconBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   function toggleBot(botId: string, checked: boolean) {
-    setPicked((current) => (checked ? [...current, botId] : current.filter((id) => id !== botId)));
+    setPicked((current) => (checked ? [...new Set([...current, botId])] : current.filter((id) => id !== botId)));
   }
 
   async function create() {
+    if (iconBusy) return;
+    setError(null);
     setBusy(true);
     try {
-      const res = await fetch("/api/threads", {
-        method: "POST",
+      const res = await fetch(thread ? `/api/threads/${thread.id}` : "/api/threads", {
+        method: thread ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, botIds: picked }),
+        body: JSON.stringify({ title, botIds: picked, icon }),
       });
       const json = await res.json();
+      if (!res.ok || !json.thread) throw new Error(json.error || "Could not save group.");
+      if (thread) { onUpdated(json.thread); return; }
       if (json.thread) {
         setPicked([]);
         setTitle("");
+        setIcon(null);
         onCreated(json.thread);
       }
-    } finally {
+    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save group."); }
+    finally {
       setBusy(false);
     }
   }
@@ -1026,17 +1074,21 @@ function GroupDialog({
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) onClose();
+        if (!next && !busy && !iconBusy) onClose();
       }}
     >
       <DialogContent className="p-6">
-        <DialogHeader title="Group" />
+        <DialogHeader title={thread ? "Edit group" : "New group"} />
         <div className="flex flex-col gap-3">
+          <AvatarField name={title || "Group"} value={icon} onChange={setIcon} disabled={busy} onBusyChange={setIconBusy} />
+          {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="group-title">Title</Label>
+            <Label htmlFor="group-title">Name</Label>
             <Input
               id="group-title"
               value={title}
+              maxLength={120}
+              disabled={busy}
               onChange={(e) => setTitle(e.currentTarget.value)}
             />
           </div>
@@ -1046,6 +1098,7 @@ function GroupDialog({
               <Label key={bot.id} className="cursor-pointer font-normal">
                 <Checkbox
                   checked={picked.includes(bot.id)}
+                  disabled={busy}
                   onCheckedChange={(checked) => toggleBot(bot.id, checked === true)}
                 />
                 {bot.name}
@@ -1057,39 +1110,13 @@ function GroupDialog({
           <Button
             type="button"
             variant="primary"
-            disabled={picked.length < 2}
+            disabled={picked.length < 2 || iconBusy || (Boolean(thread) && !title.trim())}
             loading={busy}
             onClick={create}
           >
-            Create
+            {thread ? "Save changes" : "Create"}
           </Button>
         </div>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function ListDialog({
-  open,
-  title,
-  onClose,
-  children,
-}: {
-  open: boolean;
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) onClose();
-      }}
-    >
-      <DialogContent className="p-6" size="lg">
-        <DialogHeader title={title} />
-        <div className="scroll-thin max-h-[60vh] overflow-auto">{children}</div>
       </DialogContent>
     </Dialog>
   );

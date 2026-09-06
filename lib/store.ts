@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import type { UIMessage } from "ai";
 import { db, sqlClient } from "@/db";
 import {
@@ -17,6 +17,8 @@ import { DENI_MODEL_ID, parseRunMode } from "./model";
 import { emptyStore } from "./seed";
 import { nowIso } from "./ids";
 import type { Store, Thread } from "./types";
+import { mergeStoredMessages, normalizeMessageIds } from "./messages";
+import { emitComputer } from "./events";
 
 const g = globalThis as typeof globalThis & {
   __deniStoreLocks?: Map<string, Promise<unknown>>;
@@ -180,20 +182,22 @@ export async function loadMessages(
     .from(threadMessages)
     .where(and(eq(threadMessages.userId, userId), eq(threadMessages.threadId, threadId)))
     .limit(1);
-  const messages = rows[0]?.messages ?? [];
+  const messages = normalizeMessageIds(rows[0]?.messages ?? []);
   return options?.clone === false ? messages : structuredClone(messages);
 }
 
 export async function saveMessages(userId: string, threadId: string, messages: UIMessage[]) {
   validateThreadId(threadId);
-  await db
-    .insert(threadMessages)
-    .values({ userId, threadId, messages, updatedAt: new Date() })
-    .onConflictDoUpdate({
-      target: [threadMessages.userId, threadMessages.threadId],
-      set: { messages, updatedAt: new Date() },
-    });
-  await touchThreadPreview(userId, threadId, lastText(messages));
+  const merged = await db.transaction(async (tx) => {
+    const [owner] = await tx.select({ data: userStores.data }).from(userStores).where(eq(userStores.userId, userId)).for("share");
+    if (!owner?.data.threads.some((thread) => thread.id === threadId)) throw new Error("Conversation no longer exists");
+    await tx.insert(threadMessages).values({ userId, threadId, messages: [], updatedAt: new Date() }).onConflictDoNothing();
+    const [row] = await tx.select().from(threadMessages).where(and(eq(threadMessages.userId, userId), eq(threadMessages.threadId, threadId))).for("update");
+    const next = mergeStoredMessages(row?.messages ?? [], messages);
+    await tx.update(threadMessages).set({ messages: next, updatedAt: new Date() }).where(and(eq(threadMessages.userId, userId), eq(threadMessages.threadId, threadId)));
+    return next;
+  });
+  await touchThreadPreview(userId, threadId, lastText(merged));
 }
 
 function lastText(messages: UIMessage[]): string {
@@ -212,6 +216,34 @@ export async function ensureThread(userId: string, threadId: string): Promise<Th
   const existing = store.threads.find((item) => item.id === threadId);
   if (existing) return existing;
   throw new Error("thread not found");
+}
+
+export async function deleteGroupThread(userId: string, threadId: string): Promise<boolean> {
+  const computer = await withUserLock(userId, () => db.transaction(async (tx) => {
+    const [row] = await tx.select().from(userStores).where(eq(userStores.userId, userId)).for("update");
+    if (!row?.data.threads.some((thread) => thread.id === threadId && thread.kind === "group")) return null;
+    const store = structuredClone(row.data);
+    const jobs = await tx.select({ id: agentJobs.id }).from(agentJobs).where(and(eq(agentJobs.userId, userId), eq(agentJobs.threadId, threadId)));
+    const jobIds = jobs.map((job) => job.id);
+    if (jobIds.length) {
+      await tx.delete(jobEvents).where(and(eq(jobEvents.userId, userId), inArray(jobEvents.jobId, jobIds)));
+      await tx.delete(appNotifications).where(and(eq(appNotifications.userId, userId), inArray(appNotifications.jobId, jobIds)));
+      await tx.delete(browserWorkspaces).where(and(eq(browserWorkspaces.userId, userId), inArray(browserWorkspaces.jobId, jobIds)));
+    }
+    await tx.delete(jobArtifacts).where(and(eq(jobArtifacts.userId, userId), eq(jobArtifacts.threadId, threadId)));
+    await tx.delete(agentJobs).where(and(eq(agentJobs.userId, userId), eq(agentJobs.threadId, threadId)));
+    await tx.delete(threadMessages).where(and(eq(threadMessages.userId, userId), eq(threadMessages.threadId, threadId)));
+    store.threads = store.threads.filter((thread) => thread.id !== threadId);
+    store.routines = store.routines.filter((routine) => routine.threadId !== threadId);
+    for (const id of jobIds) if (store.computer.workspaces) delete store.computer.workspaces[id];
+    if (store.computer.activeJobId && jobIds.includes(store.computer.activeJobId)) {
+      store.computer.status = "idle"; store.computer.activeJobId = null; store.computer.workingBotId = null; store.computer.workingLabel = "";
+    }
+    await tx.update(userStores).set({ data: store, updatedAt: new Date() }).where(eq(userStores.userId, userId));
+    return store.computer;
+  }));
+  if (computer) emitComputer(userId, computer);
+  return Boolean(computer);
 }
 
 export async function deleteUserRecords(userId: string) {
