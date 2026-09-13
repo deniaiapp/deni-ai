@@ -20,7 +20,7 @@
     "start": "next start",
     "worker": "tsx worker/index.ts",
     "test:core": "tsx scripts/verify-cron.ts && tsx scripts/verify-job-ui.ts && tsx scripts/verify-chat-sessions.ts && tsx scripts/verify-migrations.ts && tsx scripts/verify-jobs-mcp.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "lint": "oxlint",
     "format": "oxfmt",
     "db:generate": "drizzle-kit generate",
