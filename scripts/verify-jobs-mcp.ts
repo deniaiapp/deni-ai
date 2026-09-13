@@ -21,7 +21,7 @@ function assert(condition: boolean, message: string) {
 
 const baseUrl = process.env.DATABASE_URL;
 if (!baseUrl) throw new Error("DATABASE_URL is required");
-const admin = postgres(baseUrl, { prepare: false });
+const admin = postgres(baseUrl, { prepare: false, max: 1 });
 const schema = `deni_job_test_${Date.now().toString(36)}`;
 const quoteIdentifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
 

@@ -7,7 +7,7 @@ dotenv.config({ path: ".env.local", override: true });
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) throw new Error("DATABASE_URL is required");
-const client = postgres(databaseUrl, { prepare: false });
+const client = postgres(databaseUrl, { prepare: false, max: 1 });
 const schema = `deni_migration_test_${Date.now().toString(36)}`;
 const quoteIdentifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
 
