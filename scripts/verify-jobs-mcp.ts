@@ -26,7 +26,12 @@ const schema = `deni_job_test_${Date.now().toString(36)}`;
 const quoteIdentifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
 
 async function applyMigration(path: string) {
-  const sql = await readFile(path, "utf8");
+  // The baseline migration names public.user explicitly; point that reference at
+  // the isolated test schema so this also works against an empty database.
+  const sql = (await readFile(path, "utf8")).replaceAll(
+    '"public"."user"',
+    `${quoteIdentifier(schema)}."user"`,
+  );
   for (const statement of sql.split(/--> statement-breakpoint/)) {
     if (statement.trim()) await admin.unsafe(statement);
   }
