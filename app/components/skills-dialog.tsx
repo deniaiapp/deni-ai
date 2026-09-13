@@ -20,7 +20,6 @@ export function SkillsDialog({ open, skills, onClose, onSaved, onDeleted, onSync
   const revision = useRef(0);
   useEffect(() => {
     if (!open) return;
-    setEditing(null); setDeleting(null); setFormOpen(false); setError(null);
     const controller = new AbortController();
     const startedAt = revision.current;
     void fetch("/api/skills", { cache: "no-store", signal: controller.signal }).then(async (response) => {

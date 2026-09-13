@@ -15,6 +15,13 @@
       "when": 1788605342894,
       "tag": "0001_wakeful_king_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1789276504499,
+      "tag": "0002_funny_thundra",
+      "breakpoints": true
     }
   ]
 }

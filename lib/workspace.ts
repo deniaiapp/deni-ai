@@ -1,9 +1,16 @@
 import "server-only";
 
-import { mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { WorkspaceNode } from "./types";
-import { jailPath, toWorkspacePath, userWorkspaceDir, userWorkspacePrefix } from "./paths";
+import {
+  jailPath,
+  toWorkspacePath,
+  userDataDir,
+  userWorkspaceDir,
+  userWorkspacePrefix,
+} from "./paths";
 import {
   deleteUserObjects,
   deleteUserObject,
@@ -17,6 +24,18 @@ import { WORKSPACE_README } from "./seed";
 
 const MAX_FILE_SIZE = 1_000_000;
 const MAX_DOWNLOAD_FILE_SIZE = 10_000_000;
+
+type WorkspaceSnapshot = {
+  userId: string;
+  files: Map<string, { hash: string; size: number }>;
+  temporaryRoot: boolean;
+};
+
+const commandWorkspaceSnapshots = new Map<string, WorkspaceSnapshot>();
+
+function hashBytes(data: Uint8Array) {
+  return createHash("sha256").update(data).digest("hex");
+}
 
 function normalizePath(relativePath: string) {
   const cleaned = relativePath.replace(/\\/g, "/").replace(/^\/+/, "");
@@ -306,48 +325,136 @@ export async function deleteWorkspacePath(userId: string, rel: string) {
 }
 
 export async function prepareCommandWorkspace(userId: string) {
-  const root = await ensureLocalWorkspace(userId);
-  if (!hasObjectStorage()) return root;
-  const prefix = userWorkspacePrefix(userId);
-  const objects = await listUserObjects(userId, "workspace/");
-  await rm(root, { recursive: true, force: true });
-  await mkdir(root, { recursive: true });
-  for (const object of objects) {
-    if (!object.key.startsWith(prefix) || object.key.endsWith("/.keep")) continue;
-    const rel = object.key.slice(prefix.length);
-    const body = await getUserObject(userId, `workspace/${rel}`);
-    if (!body) continue;
-    const destination = jailPath(rel, root);
-    await mkdir(path.dirname(destination), { recursive: true });
-    await writeFile(destination, body);
+  const localRoot = await ensureLocalWorkspace(userId);
+  if (!hasObjectStorage()) return localRoot;
+  const root = await mkdtemp(path.join(userDataDir(userId), "workspace-command-"));
+  try {
+    const prefix = userWorkspacePrefix(userId);
+    const objects = await listUserObjects(userId, "workspace/");
+    const snapshot = new Map<string, { hash: string; size: number }>();
+    for (const object of objects) {
+      if (!object.key.startsWith(prefix) || object.key.endsWith("/.keep")) continue;
+      const rel = object.key.slice(prefix.length);
+      const body = await getUserObject(userId, `workspace/${rel}`);
+      if (!body) continue;
+      snapshot.set(rel, { hash: hashBytes(body), size: body.byteLength });
+      const destination = jailPath(rel, root);
+      await mkdir(path.dirname(destination), { recursive: true });
+      await writeFile(destination, body);
+    }
+    commandWorkspaceSnapshots.set(root, { userId, files: snapshot, temporaryRoot: true });
+    return root;
+  } catch (error) {
+    await rm(root, { recursive: true, force: true }).catch(() => undefined);
+    throw error;
   }
-  return root;
 }
 
 export async function syncCommandWorkspace(userId: string, root: string) {
   if (!hasObjectStorage()) return;
-  const existing = await listUserObjects(userId, "workspace/");
-  const oldSuffixes = existing
-    .map((item) => objectSuffixFromKey(userId, item.key))
-    .filter((suffix): suffix is string => Boolean(suffix));
-  await deleteUserObjects(userId, oldSuffixes);
-  const files: string[] = [];
+  const snapshot = commandWorkspaceSnapshots.get(root);
+  if (!snapshot || snapshot.userId !== userId) {
+    throw new Error("Workspace sync snapshot is missing; refusing to overwrite remote files");
+  }
+  const files = new Map<string, { abs: string; hash: string; size: number }>();
   async function collect(dir: string) {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
       if (entry.name.startsWith(".")) continue;
       const abs = path.join(dir, entry.name);
       if (entry.isDirectory()) await collect(abs);
-      else files.push(abs);
+      else {
+        const data = await readFile(abs);
+        files.set(path.relative(root, abs).replace(/\\/g, "/"), {
+          abs,
+          hash: hashBytes(data),
+          size: data.byteLength,
+        });
+      }
     }
   }
-  await collect(root);
-  for (const file of files) {
-    const rel = path.relative(root, file).replace(/\\/g, "/");
-    await putUserObject(
-      userId,
-      `workspace/${rel}`,
-      await readFile(file),
-      "application/octet-stream",
-    );
+  let synced = false;
+  try {
+    const existing = await listUserObjects(userId, "workspace/");
+    await collect(root);
+
+    const remote = new Map<string, { hash: string; size: number; etag?: string }>();
+    for (const object of existing) {
+      const rel = objectSuffixFromKey(userId, object.key);
+      if (!rel || rel.endsWith("/.keep") || rel === ".keep") continue;
+      const body = await getUserObject(userId, `workspace/${rel}`);
+      if (body) {
+        remote.set(rel, { hash: hashBytes(body), size: body.byteLength, etag: object.etag });
+      }
+    }
+
+    const uploads: string[] = [];
+    for (const [rel, local] of files) {
+      const original = snapshot.files.get(rel);
+      const current = remote.get(rel);
+      const localUnchanged = original?.hash === local.hash;
+      if (localUnchanged) continue;
+      const remoteUnchanged =
+        original === undefined
+          ? current === undefined
+          : current !== undefined &&
+            current.size === original.size &&
+            current.hash === original.hash;
+      const remoteAlreadyMatches =
+        current !== undefined &&
+        current.size === local.size &&
+        current.hash === local.hash;
+      if (remoteAlreadyMatches) continue;
+      if (!remoteUnchanged) {
+        throw new Error(`Workspace changed while the command was running: /${rel}`);
+      }
+      uploads.push(rel);
+    }
+
+    const deletes: string[] = [];
+    for (const [rel, original] of snapshot.files) {
+      if (files.has(rel)) continue;
+      const current = remote.get(rel);
+      if (!current) continue;
+      if (current.size !== original.size || current.hash !== original.hash) continue;
+      deletes.push(rel);
+    }
+
+    // Update changed files first. A failed upload leaves the old remote files intact;
+    // deletion is only attempted after every upload has completed successfully.
+    for (const rel of uploads) {
+      const local = files.get(rel);
+      if (!local) continue;
+      const data = await readFile(local.abs);
+      if (data.byteLength !== local.size || hashBytes(data) !== local.hash) {
+        throw new Error(`Workspace file changed while it was being synced: /${rel}`);
+      }
+      const current = remote.get(rel);
+      await putUserObject(userId, `workspace/${rel}`, data, "application/octet-stream", {
+        ifMatch: current?.etag,
+        ifNoneMatch: current ? undefined : "*",
+      });
+    }
+    for (const rel of deletes) {
+      const expected = remote.get(rel);
+      // R2 does not expose conditional DeleteObject. Re-list immediately before a
+      // deletion and skip it if the object disappeared or its ETag changed after the
+      // preflight comparison. This keeps a concurrent edit from being removed.
+      if (!expected?.etag) continue;
+      const latest = await listUserObjects(userId, `workspace/${rel}`);
+      const current = latest.find(
+        (item) => objectSuffixFromKey(userId, item.key) === `workspace/${rel}`,
+      );
+      if (!current || current.etag !== expected.etag) continue;
+      await deleteUserObject(userId, `workspace/${rel}`);
+    }
+    synced = true;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`${message}; local command workspace was preserved at ${root}`);
+  } finally {
+    if (synced) {
+      commandWorkspaceSnapshots.delete(root);
+      if (snapshot.temporaryRoot) await rm(root, { recursive: true, force: true });
+    }
   }
 }

@@ -104,6 +104,7 @@ export async function putUserObject(
   suffix: string,
   body: Uint8Array | Buffer | string,
   contentType = "application/octet-stream",
+  options?: { ifMatch?: string; ifNoneMatch?: string },
 ) {
   const config = getS3Config();
   if (!config) return false;
@@ -113,6 +114,8 @@ export async function putUserObject(
       Key: objectKey(userId, suffix),
       Body: body,
       ContentType: contentType,
+      IfMatch: options?.ifMatch,
+      IfNoneMatch: options?.ifNoneMatch,
     }),
   );
   return true;
@@ -155,7 +158,7 @@ export async function listUserObjects(userId: string, suffixPrefix: string) {
   const prefix = suffixPrefix
     ? objectKey(userId, suffixPrefix)
     : `users/${userStorageKey(userId)}/`;
-  const objects: { key: string; size: number }[] = [];
+  const objects: { key: string; size: number; etag?: string }[] = [];
   let continuationToken: string | undefined;
   do {
     const result = await config.client.send(
@@ -166,7 +169,7 @@ export async function listUserObjects(userId: string, suffixPrefix: string) {
       }),
     );
     for (const item of result.Contents ?? []) {
-      if (item.Key) objects.push({ key: item.Key, size: item.Size ?? 0 });
+      if (item.Key) objects.push({ key: item.Key, size: item.Size ?? 0, etag: item.ETag });
     }
     continuationToken = result.IsTruncated ? result.NextContinuationToken : undefined;
   } while (continuationToken);

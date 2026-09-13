@@ -782,7 +782,7 @@ export function Workspace() {
           setModal(null);
         }}
       />
-      <SkillsDialog open={modal === "skills"} skills={skills} onSync={setSkills} onClose={() => setModal(null)} onDeleted={(id) => setSkills((current) => current.filter((skill) => skill.id !== id))} onSaved={(skill) => setSkills((current) => current.some((item) => item.id === skill.id) ? current.map((item) => item.id === skill.id ? skill : item) : [...current, skill])} />
+      <SkillsDialog key={modal === "skills" ? "skills-open" : "skills-closed"} open={modal === "skills"} skills={skills} onSync={setSkills} onClose={() => setModal(null)} onDeleted={(id) => setSkills((current) => current.filter((skill) => skill.id !== id))} onSaved={(skill) => setSkills((current) => current.some((item) => item.id === skill.id) ? current.map((item) => item.id === skill.id ? skill : item) : [...current, skill])} />
       {modal === "routines" ? <RoutinesDialog
         key={routineEditorId ?? "list"}
         routines={routines} bots={bots} threads={threads}

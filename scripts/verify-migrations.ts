@@ -23,6 +23,7 @@ async function main() {
   await client.unsafe(`set search_path to ${quoteIdentifier(schema)}`);
   await applyFile("db/migrations/0000_init.sql");
   await applyFile("db/migrations/0001_wakeful_king_cobra.sql");
+  await applyFile("db/migrations/0002_funny_thundra.sql");
   const rows = (await client.unsafe(
     "select table_name from information_schema.tables where table_schema = $1 order by table_name",
     [schema],
@@ -48,7 +49,7 @@ async function main() {
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error(`Migration schema mismatch: ${actual.join(", ")}`);
   }
-  console.log(`verified 0000 -> 0001 in temporary schema ${schema}`);
+  console.log(`verified 0000 -> 0002 in temporary schema ${schema}`);
 }
 
 async function run() {

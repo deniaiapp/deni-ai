@@ -19,7 +19,23 @@ import {
   saveMessages,
 } from "./store";
 
-const g = globalThis as typeof globalThis & { __deniScheduler?: boolean };
+const DEFAULT_CONCURRENCY = 4;
+const MAX_CONCURRENCY = 16;
+const configuredConcurrency = Number.parseInt(process.env.DENI_SCHEDULER_CONCURRENCY ?? "", 10);
+const SCHEDULER_CONCURRENCY = Number.isFinite(configuredConcurrency)
+  ? Math.min(Math.max(configuredConcurrency, 1), MAX_CONCURRENCY)
+  : DEFAULT_CONCURRENCY;
+
+const g = globalThis as typeof globalThis & {
+  __deniScheduler?: boolean;
+  __deniSchedulerTick?: Promise<void>;
+  __deniSchedulerJobs?: Map<string, Promise<void>>;
+};
+
+function activeJobs() {
+  if (!g.__deniSchedulerJobs) g.__deniSchedulerJobs = new Map();
+  return g.__deniSchedulerJobs;
+}
 
 export function startScheduler() {
   if (g.__deniScheduler || process.env.DENI_SCHEDULER !== "true") return;
@@ -35,6 +51,18 @@ export function startScheduler() {
 
 /** Run stale recovery before claiming work so a process restart cannot strand a task. */
 export async function tick() {
+  const previous = g.__deniSchedulerTick;
+  if (previous) return previous;
+  const current = runTick();
+  g.__deniSchedulerTick = current;
+  try {
+    await current;
+  } finally {
+    if (g.__deniSchedulerTick === current) delete g.__deniSchedulerTick;
+  }
+}
+
+async function runTick() {
   await recoverStaleJobs().catch((error) => {
     console.error("[deni scheduler] stale job recovery", error);
   });
@@ -53,11 +81,22 @@ export async function tick() {
     for (const routine of due) await enqueueRoutine(userId, routine.id);
   }
 
+  const running = activeJobs();
+  const capacity = SCHEDULER_CONCURRENCY - running.size;
+  if (capacity <= 0) return;
   // Jobs are claimed one at a time in runBackgroundJob; another scheduler process can
-  // safely observe the same queue because the claim is protected by a row lock.
-  for (const job of await listQueuedJobs()) {
-    void runBackgroundJob(job.userId ?? "", job.id).catch((error) => {
-      console.error("[deni scheduler] job", job.id, error);
+  // safely observe the same queue because the claim is protected by a row lock. The
+  // in-process limit keeps one worker from starting the entire queue at once.
+  for (const job of await listQueuedJobs(capacity)) {
+    if (running.has(job.id)) continue;
+    const task = runBackgroundJob(job.userId ?? "", job.id)
+      .catch((error) => {
+        console.error("[deni scheduler] job", job.id, error);
+      })
+      .then(() => undefined);
+    running.set(job.id, task);
+    void task.finally(() => {
+      if (running.get(job.id) === task) running.delete(job.id);
     });
   }
 }

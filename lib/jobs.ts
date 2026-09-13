@@ -293,24 +293,30 @@ export async function appendJobEvent(
   kind: string,
   payload: JobPayload = {},
 ) {
-  const latest = await db
-    .select({ sequence: jobEvents.sequence })
-    .from(jobEvents)
-    .where(and(eq(jobEvents.userId, userId), eq(jobEvents.jobId, jobId)))
-    .orderBy(desc(jobEvents.sequence))
-    .limit(1);
-  const [row] = await db
-    .insert(jobEvents)
-    .values({
-      id: createId("evt"),
-      userId,
-      jobId,
-      kind,
-      payload,
-      sequence: (latest[0]?.sequence ?? 0) + 1,
-    })
-    .returning();
-  return row ? mapEvent(row) : null;
+  return db.transaction(async (tx) => {
+    // Serialize event writers for one job on the database connection. A read of the
+    // latest sequence followed by an insert is otherwise vulnerable to two writers
+    // observing the same value at the same time.
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${userId}:${jobId}`}))`);
+    const latest = await tx
+      .select({ sequence: jobEvents.sequence })
+      .from(jobEvents)
+      .where(and(eq(jobEvents.userId, userId), eq(jobEvents.jobId, jobId)))
+      .orderBy(desc(jobEvents.sequence))
+      .limit(1);
+    const [row] = await tx
+      .insert(jobEvents)
+      .values({
+        id: createId("evt"),
+        userId,
+        jobId,
+        kind,
+        payload,
+        sequence: (latest[0]?.sequence ?? 0) + 1,
+      })
+      .returning();
+    return row ? mapEvent(row) : null;
+  });
 }
 
 export async function listJobEvents(userId: string, jobId: string, after = 0) {

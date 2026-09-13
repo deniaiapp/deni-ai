@@ -204,7 +204,7 @@ export function ChatThread({
       textarea.focus();
       textarea.setSelectionRange(textarea.value.length, textarea.value.length);
     });
-  }, [thread.id]);
+  }, [setReplyTarget, thread.id]);
 
   const reactToMessage = useCallback((messageId: string, emoji: MessageReaction, selected: boolean) => reactionState.toggle(messageId, emoji, selected), [reactionState]);
 

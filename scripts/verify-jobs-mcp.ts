@@ -37,6 +37,7 @@ async function main() {
   await admin.unsafe(`set search_path to ${quoteIdentifier(schema)}`);
   await applyMigration("db/migrations/0000_init.sql");
   await applyMigration("db/migrations/0001_wakeful_king_cobra.sql");
+  await applyMigration("db/migrations/0002_funny_thundra.sql");
 
   // Neon rejects search_path as a startup parameter. Keep the test pool at one
   // connection and set the temporary schema explicitly after it connects.
@@ -72,6 +73,24 @@ async function main() {
   assert(claims.filter((item) => item?.claimed).length === 1, "concurrent claim was not exclusive");
   await jobs.checkpointJob("tenant-a", first.id, { step: 1, tool: "read" });
   assert((await jobs.getJob("tenant-a", first.id))?.checkpoint?.step === 1, "checkpoint was not saved");
+  const concurrentEvents = await Promise.all(
+    Array.from({ length: 8 }, (_, index) =>
+      jobs.appendJobEvent("tenant-a", first.id, "test", { index }),
+    ),
+  );
+  const sequences = concurrentEvents
+    .map((event) => event?.sequence)
+    .filter((value): value is number => value != null);
+  assert(sequences.length === 8 && new Set(sequences).size === 8, "event sequences were duplicated");
+  assert(
+    (await jobs.listJobEvents("tenant-a", first.id)).map((event) => event.sequence).join(",") ===
+      [...sequences]
+        .sort((a, b) => a - b)
+        .concat(1)
+        .sort((a, b) => a - b)
+        .join(","),
+    "event sequence history was not persisted in order",
+  );
   assert((await jobs.getJob("tenant-b", first.id)) == null, "tenant could read another tenant job");
   await jobs.cancelJob("tenant-a", first.id);
   assert((await jobs.getJob("tenant-a", first.id))?.status === "cancelled", "cancel did not persist");

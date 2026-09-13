@@ -66,9 +66,7 @@ export function ComputerPanel({
 }) {
   const [tab, setTab] = useState<Tab>("screen");
   const [takeover, setTakeover] = useState(false);
-  useEffect(() => {
-    if (computer.status !== "takeover") setTakeover(false);
-  }, [computer.status]);
+  const takeoverActive = takeover && computer.status === "takeover";
   const [screenExpanded, setScreenExpanded] = useState(false);
   const inputQueue = useRef(Promise.resolve());
   const [fileView, setFileView] = useState<{ path: string; content: string } | null>(null);
@@ -127,7 +125,7 @@ export function ComputerPanel({
   );
 
   async function clickScreen(e: React.MouseEvent<HTMLElement>) {
-    if (!takeover) {
+    if (!takeoverActive) {
       setScreenExpanded(true);
       return;
     }
@@ -150,13 +148,13 @@ export function ComputerPanel({
   }
 
   async function handleScreenWheel(e: React.WheelEvent<HTMLElement>) {
-    if (!takeover) return;
+    if (!takeoverActive) return;
     e.preventDefault();
     await sendTakeoverInput({ type: "scroll", dy: e.deltaY });
   }
 
   useEffect(() => {
-    if (!takeover || computer.steelDebugUrl) return;
+    if (!takeoverActive || computer.steelDebugUrl) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (screenExpanded && event.key === "Escape") return;
@@ -193,10 +191,10 @@ export function ComputerPanel({
       window.removeEventListener("keydown", handleKeyDown, true);
       window.removeEventListener("paste", handlePaste, true);
     };
-  }, [computer.steelDebugUrl, screenExpanded, sendTakeoverInput, takeover]);
+  }, [computer.steelDebugUrl, screenExpanded, sendTakeoverInput, takeoverActive]);
 
   async function toggleTakeover() {
-    const next = !takeover;
+    const next = !takeoverActive;
     debugComputer("toggle takeover", { enabled: next });
     setScreenBusy("takeover");
     try {
@@ -450,11 +448,11 @@ export function ComputerPanel({
                   <Button
                     type="button"
                     size="xs"
-                    variant={takeover ? "primary" : "outline"}
+                    variant={takeoverActive ? "primary" : "outline"}
                     loading={screenBusy === "takeover"}
                     onClick={() => void toggleTakeover()}
                   >
-                    {takeover ? "In control" : "Take control"}
+                    {takeoverActive ? "In control" : "Take control"}
                   </Button>
                 )}
                 <Button
@@ -480,11 +478,11 @@ export function ComputerPanel({
                 <button
                   type="button"
                   className={`relative block w-full overflow-hidden rounded-lg bg-[#090909] text-left ring-1 ring-white/10 ${
-                    takeover ? "" : "cursor-zoom-in"
+                    takeoverActive ? "" : "cursor-zoom-in"
                   }`}
                   onClick={clickScreen}
                   onWheel={handleScreenWheel}
-                  aria-label={takeover ? "Control computer screen" : "Enlarge computer screen"}
+                  aria-label={takeoverActive ? "Control computer screen" : "Enlarge computer screen"}
                   data-computer-screen="true"
                 >
                   {!shotReady ? (
@@ -505,7 +503,7 @@ export function ComputerPanel({
                       handleScreenshotError(event);
                     }}
                     className={`block min-h-40 w-full object-contain bg-[#090909] ${
-                      takeover ? "cursor-crosshair" : ""
+                      takeoverActive ? "cursor-crosshair" : ""
                     }`}
                   />
                 </button>
@@ -528,7 +526,7 @@ export function ComputerPanel({
               <span className="text-xs tracking-tighter text-[#8f8f8f]">
                 {computer.steelDebugUrl
                   ? "Live browser. Click, type, and scroll directly in the remote session."
-                  : takeover
+                  : takeoverActive
                     ? "Click the screen, type, paste, or scroll to control the browser directly."
                     : "The bot's clicks and input appear here. Click the preview to enlarge it."}
               </span>
@@ -753,10 +751,10 @@ export function ComputerPanel({
           <div
             className="relative flex max-h-full max-w-full items-center justify-center"
             data-computer-screen="true"
-            tabIndex={takeover ? 0 : undefined}
+            tabIndex={takeoverActive ? 0 : undefined}
             onWheel={handleScreenWheel}
             onMouseDown={(event) => {
-              if (takeover) event.currentTarget.focus();
+              if (takeoverActive) event.currentTarget.focus();
             }}
             onClick={(event) => event.stopPropagation()}
           >
@@ -775,9 +773,9 @@ export function ComputerPanel({
               alt="Enlarged Deni Run screen"
               onLoad={handleScreenshotLoad}
               onError={handleScreenshotError}
-              onClick={takeover ? clickScreen : undefined}
+              onClick={takeoverActive ? clickScreen : undefined}
               className={`max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] rounded-lg object-contain ring-1 ring-white/20 ${
-                takeover ? "cursor-crosshair" : ""
+                takeoverActive ? "cursor-crosshair" : ""
               }`}
             />
           </div>

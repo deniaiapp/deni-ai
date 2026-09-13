@@ -88,7 +88,14 @@ export const jobEvents = pgTable(
     sequence: integer("sequence").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   },
-  (table) => [index("job_events_user_job_idx").on(table.userId, table.jobId, table.sequence)],
+  (table) => [
+    index("job_events_user_job_idx").on(table.userId, table.jobId, table.sequence),
+    uniqueIndex("job_events_user_job_sequence_uidx").on(
+      table.userId,
+      table.jobId,
+      table.sequence,
+    ),
+  ],
 );
 
 export const browserWorkspaces = pgTable(
