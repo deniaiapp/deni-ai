@@ -15,6 +15,8 @@ const ACTIVE_STATUSES = [
   "paid",
 ];
 
+const MAX_TEAM_PLAN_IDS = ["max_team_monthly", "max_team_yearly"] as const;
+
 const BILLING_PRIORITY_ORDER = `CASE
   WHEN status IN ('active', 'trialing', 'past_due', 'incomplete', 'unpaid', 'paid') THEN 0
   WHEN status = 'canceled' AND current_period_end IS NOT NULL AND current_period_end > NOW() THEN 1
@@ -118,8 +120,12 @@ function determineTier(billing: BillingRow | null, isTeam: boolean): UsageTier {
 
   if (!isActive) return "free";
 
-  // Team billing is always pro
-  if (isTeam) return "pro";
+  // Team billing is pro by default, except for Max Teams plans.
+  if (isTeam) {
+    return MAX_TEAM_PLAN_IDS.some((maxTeamPlanId) => maxTeamPlanId === plan_id)
+      ? "max"
+      : "pro";
+  }
 
   // Personal billing: check plan_id
   if (plan_id?.startsWith("pro")) return "pro";
@@ -171,7 +177,10 @@ async function fetchBillingProfile(userId: string): Promise<BillingProfile> {
        INNER JOIN member m ON b.organization_id = m.organization_id
        WHERE m.user_id = $1
          AND b.organization_id IS NOT NULL
-         AND b.plan_id LIKE 'pro_team%'
+         AND (
+           b.plan_id LIKE 'pro_team%'
+           OR b.plan_id IN ('max_team_monthly', 'max_team_yearly')
+         )
        ORDER BY ${BILLING_PRIORITY_ORDER.replaceAll("status", "b.status").replaceAll("current_period_end", "b.current_period_end")}, b.current_period_end DESC NULLS LAST
        LIMIT 1
      ), personal_billing AS (
