@@ -5,6 +5,7 @@ import {
   getModelContextWindow,
   getModelDefinition,
   getModelTokenUsageMultiplier,
+  MODEL_DEFINITIONS,
   resolveAvailableModelId,
 } from "../utils/agent/models";
 
@@ -51,5 +52,29 @@ describe("Codex long-context model support", () => {
         input_tokens: 200_000,
       }),
     ).toBe(1);
+  });
+
+  test("exposes provider-supported efforts and excludes Voids models", () => {
+    expect(MODEL_DEFINITIONS.every((model) => Array.isArray(model.efforts))).toBe(
+      true,
+    );
+    expect(getModelDefinition("openai/gpt-6-astra")?.efforts).toEqual([
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max",
+    ]);
+    expect(getModelDefinition("anthropic/claude-sonnet-4.6")?.efforts).toEqual([
+      "low",
+      "medium",
+      "high",
+      "max",
+    ]);
+    expect(
+      getModelDefinition("google/gemini-3-pro-preview")?.efforts,
+    ).toEqual(["low", "high"]);
+    expect(getModelDefinition("glm-4.6")).toBeUndefined();
+    expect(getModelDefinition("grok-code-fast-1")).toBeUndefined();
   });
 });
