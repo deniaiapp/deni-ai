@@ -12,7 +12,10 @@ import {
   validateAgentAuth,
   type AgentAuthContext,
 } from "../../middleware/validateAgentAuth";
-import { recordUsageQuota, releaseUsageQuota } from "../../utils/deni";
+import {
+  finalizeUsage,
+  releaseReservedUsage,
+} from "../../utils/agent/usageAccounting";
 import {
   type AgentRequest,
   type ResponsesRequest,
@@ -43,8 +46,6 @@ import {
   sanitizeReservedCollaborationInResponsesRequest,
   type ResponsesProviderKind,
 } from "../../utils/agent";
-import { computeMeteredTokens } from "../../utils/agent/usageMetering";
-import { getLongContextUsageMultiplier } from "../../utils/agent/models";
 import {
   createUpstreamTimeout,
   type UpstreamTimeout,
@@ -281,6 +282,7 @@ function summarizeToolChoice(toolChoice: unknown): unknown {
 function collectAnthropicUsageFromSseEvent(
   eventBlock: string,
   usageSnapshot: Record<string, number>,
+  auth: AgentAuthContext,
 ): Record<string, number> {
   const payload = eventBlock
     .split(/\r?\n/)
@@ -299,6 +301,8 @@ function collectAnthropicUsageFromSseEvent(
       usage?: unknown;
       delta?: { usage?: unknown };
     };
+
+    auth.usageEstimate?.observe(event);
 
     if (event.type === "message_start" && event.message?.usage) {
       return mergeUsageSnapshot(usageSnapshot, event.message.usage);
@@ -1143,6 +1147,7 @@ function createResponsesPassthroughStream(
             usageSnapshot = collectResponsesUsageFromSseEvent(
               eventBlock,
               usageSnapshot,
+              auth,
             );
             const clientFacingEvent = rewriteCollaborationNamesInSseEventBlock(
               eventBlock,
@@ -1157,6 +1162,7 @@ function createResponsesPassthroughStream(
           usageSnapshot = collectResponsesUsageFromSseEvent(
             buffer,
             usageSnapshot,
+            auth,
           );
           const clientFacingEvent = rewriteCollaborationNamesInSseEventBlock(
             buffer,
@@ -1165,7 +1171,7 @@ function createResponsesPassthroughStream(
         }
 
         usageSettled = true;
-        await finalizeUsage(auth, usageSnapshot);
+        await finalizeUsage(auth, usageSnapshot, false);
         upstreamTimeout.dispose();
         controller.close();
       } catch (error) {
@@ -1173,7 +1179,7 @@ function createResponsesPassthroughStream(
         upstreamTimeout.dispose();
         if (!usageSettled) {
           usageSettled = true;
-          await releaseReservedUsage(auth);
+          await finalizeUsage(auth, usageSnapshot, false);
         }
         controller.error(error);
       }
@@ -1185,7 +1191,7 @@ function createResponsesPassthroughStream(
       reader.cancel().catch(() => {});
       if (!usageSettled) {
         usageSettled = true;
-        finalizeUsage(auth, usageSnapshot).catch((error) =>
+        return finalizeUsage(auth, usageSnapshot, false).catch((error) =>
           console.error("[Usage] finalize-on-cancel failed:", error),
         );
       }
@@ -1257,6 +1263,7 @@ function createChatStreamFromResponsesUpstream(
             usageSnapshot = collectResponsesUsageFromSseEvent(
               eventBlock,
               usageSnapshot,
+              auth,
             );
 
             const chunks = convertResponsesStreamEventToChatChunks(
@@ -1292,6 +1299,7 @@ function createChatStreamFromResponsesUpstream(
           usageSnapshot = collectResponsesUsageFromSseEvent(
             buffer,
             usageSnapshot,
+            auth,
           );
         }
 
@@ -1321,6 +1329,7 @@ function createChatStreamFromResponsesUpstream(
         await finalizeUsage(
           auth,
           streamState.usage ?? usageSnapshot,
+          false,
         );
         upstreamTimeout.dispose();
         agentDebugLog("chat.stream_complete_via_responses", {
@@ -1341,7 +1350,7 @@ function createChatStreamFromResponsesUpstream(
         });
         if (!usageSettled) {
           usageSettled = true;
-          await releaseReservedUsage(auth);
+          await finalizeUsage(auth, usageSnapshot, false);
         }
         controller.error(error);
       }
@@ -1353,7 +1362,7 @@ function createChatStreamFromResponsesUpstream(
       reader.cancel().catch(() => {});
       if (!usageSettled) {
         usageSettled = true;
-        finalizeUsage(auth, streamState.usage ?? usageSnapshot).catch(
+        return finalizeUsage(auth, streamState.usage ?? usageSnapshot, false).catch(
           (error) =>
             console.error("[Usage] finalize-on-cancel failed:", error),
         );
@@ -1374,6 +1383,7 @@ function createChatStreamFromResponsesUpstream(
 function collectResponsesUsageFromSseEvent(
   eventBlock: string,
   usageSnapshot: Record<string, number>,
+  auth: AgentAuthContext,
 ): Record<string, number> {
   const payload = eventBlock
     .split(/\r?\n/)
@@ -1392,6 +1402,8 @@ function collectResponsesUsageFromSseEvent(
       usage?: unknown;
       item?: { usage?: unknown };
     };
+
+    auth.usageEstimate?.observe(event);
 
     if (event.response?.usage) {
       return mergeUsageSnapshot(usageSnapshot, event.response.usage);
@@ -1414,6 +1426,7 @@ function collectResponsesUsageFromSseEvent(
 function collectChatUsageFromSseEvent(
   eventBlock: string,
   usageSnapshot: Record<string, number>,
+  auth: AgentAuthContext,
 ): Record<string, number> {
   const payload = eventBlock
     .split(/\r?\n/)
@@ -1427,6 +1440,8 @@ function collectChatUsageFromSseEvent(
 
   try {
     const event = JSON.parse(payload) as { usage?: unknown };
+    auth.usageEstimate?.observe(event);
+
     if (event.usage) {
       return mergeUsageSnapshot(usageSnapshot, event.usage);
     }
@@ -1568,80 +1583,6 @@ function summarizeChatCompletionResponse(response: unknown): Record<string, unkn
   };
 }
 
-async function finalizeUsage(
-  auth: AgentAuthContext | undefined,
-  usage: unknown,
-): Promise<void> {
-  if (!auth || auth.usageMeteringEnabled === false) return;
-
-  auth.usageReserved = false;
-
-  if (auth.usageUnit !== "tokens") {
-    return;
-  }
-
-  // Cost-weighted: cache reads/writes and output tokens are weighted by
-  // their relative upstream price instead of counted 1:1.
-  const weightedTokens = computeMeteredTokens(usage);
-  if (weightedTokens === null || weightedTokens <= 0) {
-    return;
-  }
-
-  try {
-    // OpenAI 1M-context models: 2x usage when prompt tokens exceed 200k.
-    const longContextMultiplier = getLongContextUsageMultiplier(
-      auth.modelId,
-      usage,
-    );
-    const meteredTokens = Math.ceil(
-      weightedTokens * auth.tokenUsageMultiplier * longContextMultiplier,
-    );
-    const recordPromise = recordUsageQuota(
-      auth.userId,
-      auth.modelCategory,
-      auth.tier,
-      meteredTokens,
-      auth.hasVerifiedPaymentMethod,
-    );
-
-    if (isAsyncUsageFinalizationEnabled()) {
-      // This is opt-in because quota visibility briefly lags the response.
-      // The atomic upsert in recordUsageQuota keeps concurrent increments safe;
-      // operators that require strict per-request quota accounting should keep
-      // this disabled.
-      void recordPromise.catch((error) => {
-        console.error(
-          `[Usage] Async token finalization failed for user=${auth.userId} category=${auth.modelCategory}:`,
-          error,
-        );
-      });
-      return;
-    }
-
-    await recordPromise;
-  } catch (error) {
-    console.error(
-      `[Usage] Failed to finalize token usage for user=${auth.userId} category=${auth.modelCategory}:`,
-      error,
-    );
-  }
-}
-
-function isAsyncUsageFinalizationEnabled(): boolean {
-  const raw = Bun.env.FLIXA_USAGE_FINALIZE_ASYNC?.trim().toLowerCase();
-  return raw === "1" || raw === "true" || raw === "yes" || raw === "on";
-}
-
-async function releaseReservedUsage(
-  auth: AgentAuthContext | undefined,
-): Promise<void> {
-  if (!auth || auth.usageMeteringEnabled === false || !auth.usageReserved) {
-    return;
-  }
-  auth.usageReserved = false;
-  await releaseUsageQuota(auth.userId, auth.modelCategory, auth.tier);
-}
-
 async function createAnthropicChatFailoverResponse(
   auth: AgentAuthContext,
   requestId: string,
@@ -1722,6 +1663,7 @@ async function createAnthropicChatFailoverResponse(
           for await (const event of streamResponse) {
             if (cancelled) return;
             upstreamTimeout.refresh();
+            auth.usageEstimate?.observe(event);
             if (event.type === "message_start") {
               messageId = event.message.id;
               usageSnapshot = mergeUsageSnapshot(
@@ -1750,7 +1692,7 @@ async function createAnthropicChatFailoverResponse(
 
           if (cancelled) return;
           usageSettled = true;
-          await finalizeUsage(auth, usageSnapshot);
+          await finalizeUsage(auth, usageSnapshot, false);
           upstreamTimeout.dispose();
           agentDebugLog("chat.failover_stream_complete", {
             requestId,
@@ -1771,7 +1713,7 @@ async function createAnthropicChatFailoverResponse(
           console.error("[Stream Error] provider=anthropic failover:", error);
           if (!usageSettled) {
             usageSettled = true;
-            await releaseReservedUsage(auth);
+            await finalizeUsage(auth, usageSnapshot, false);
           }
           controller.error(error);
         }
@@ -1784,7 +1726,7 @@ async function createAnthropicChatFailoverResponse(
         // consumed, so meter what we have observed so far.
         if (!usageSettled) {
           usageSettled = true;
-          finalizeUsage(auth, usageSnapshot).catch(
+          return finalizeUsage(auth, usageSnapshot, false).catch(
             (error) =>
               console.error("[Usage] finalize-on-cancel failed:", error),
           );
@@ -1904,6 +1846,7 @@ async function createAnthropicMessagesFailoverResponse(
               usageSnapshot = collectAnthropicUsageFromSseEvent(
                 eventBlock,
                 usageSnapshot,
+                auth,
               );
             }
 
@@ -1915,11 +1858,12 @@ async function createAnthropicMessagesFailoverResponse(
             usageSnapshot = collectAnthropicUsageFromSseEvent(
               buffer,
               usageSnapshot,
+              auth,
             );
           }
 
           usageSettled = true;
-          await finalizeUsage(auth, usageSnapshot);
+          await finalizeUsage(auth, usageSnapshot, false);
           upstreamTimeout.dispose();
           controller.close();
         } catch (error) {
@@ -1931,7 +1875,7 @@ async function createAnthropicMessagesFailoverResponse(
           );
           if (!usageSettled) {
             usageSettled = true;
-            await releaseReservedUsage(auth);
+            await finalizeUsage(auth, usageSnapshot, false);
           }
           controller.error(error);
         }
@@ -1945,7 +1889,7 @@ async function createAnthropicMessagesFailoverResponse(
         // consumed, so meter what we have observed so far.
         if (!usageSettled) {
           usageSettled = true;
-          finalizeUsage(auth, usageSnapshot).catch(
+          return finalizeUsage(auth, usageSnapshot, false).catch(
             (error) =>
               console.error("[Usage] finalize-on-cancel failed:", error),
           );
@@ -2204,6 +2148,7 @@ router.post(
                     usageSnapshot = collectChatUsageFromSseEvent(
                       clientFacingEvent,
                       usageSnapshot,
+                      auth,
                     );
                     collectChatDebugFromSseEvent(
                       clientFacingEvent,
@@ -2223,6 +2168,7 @@ router.post(
                   usageSnapshot = collectChatUsageFromSseEvent(
                     clientFacingEvent,
                     usageSnapshot,
+                    auth,
                   );
                   collectChatDebugFromSseEvent(
                     clientFacingEvent,
@@ -2232,7 +2178,7 @@ router.post(
                 }
 
                 usageSettled = true;
-                await finalizeUsage(auth, usageSnapshot);
+                await finalizeUsage(auth, usageSnapshot, false);
                 upstreamTimeout.dispose();
                 agentDebugLog("chat.stream_complete", {
                   requestId,
@@ -2255,7 +2201,7 @@ router.post(
                 );
                 if (!usageSettled) {
                   usageSettled = true;
-                  await releaseReservedUsage(auth);
+                  await finalizeUsage(auth, usageSnapshot, false);
                 }
                 controller.error(error);
               }
@@ -2269,7 +2215,7 @@ router.post(
               // still consumed, so meter what we have observed so far.
               if (!usageSettled) {
                 usageSettled = true;
-                finalizeUsage(auth, usageSnapshot).catch(
+                return finalizeUsage(auth, usageSnapshot, false).catch(
                   (error) =>
                     console.error("[Usage] finalize-on-cancel failed:", error),
                 );
@@ -2402,6 +2348,7 @@ router.post(
               for await (const chunk of streamResponse) {
                 if (cancelled) return;
                 upstreamTimeout.refresh();
+                auth.usageEstimate?.observe(chunk);
                 const clientFacingChunk = rewriteCollaborationNamesInChatPayload(
                   chunk,
                 ) as typeof chunk;
@@ -2417,7 +2364,7 @@ router.post(
               }
               if (cancelled) return;
               usageSettled = true;
-              await finalizeUsage(auth, usageSnapshot);
+              await finalizeUsage(auth, usageSnapshot, false);
               upstreamTimeout.dispose();
               agentDebugLog("chat.stream_complete", {
                 requestId,
@@ -2438,7 +2385,7 @@ router.post(
               console.error(`[Stream Error] provider=${providerName}:`, error);
               if (!usageSettled) {
                 usageSettled = true;
-                await releaseReservedUsage(auth);
+                await finalizeUsage(auth, usageSnapshot, false);
               }
               controller.error(error);
             }
@@ -2451,7 +2398,7 @@ router.post(
             // consumed, so meter what we have observed so far.
             if (!usageSettled) {
               usageSettled = true;
-              finalizeUsage(auth, usageSnapshot).catch((error) =>
+              return finalizeUsage(auth, usageSnapshot, false).catch((error) =>
                 console.error("[Usage] finalize-on-cancel failed:", error),
               );
             }
@@ -2958,6 +2905,7 @@ router.post(
                   usageSnapshot = collectAnthropicUsageFromSseEvent(
                     eventBlock,
                     usageSnapshot,
+                    auth,
                   );
                 }
 
@@ -2970,11 +2918,12 @@ router.post(
                 usageSnapshot = collectAnthropicUsageFromSseEvent(
                   buffer,
                   usageSnapshot,
+                  auth,
                 );
               }
 
               usageSettled = true;
-              await finalizeUsage(auth, usageSnapshot);
+              await finalizeUsage(auth, usageSnapshot, false);
               upstreamTimeout.dispose();
               controller.close();
             } catch (error) {
@@ -2986,7 +2935,7 @@ router.post(
               );
               if (!usageSettled) {
                 usageSettled = true;
-                await releaseReservedUsage(auth);
+                await finalizeUsage(auth, usageSnapshot, false);
               }
               controller.error(error);
             }
@@ -3000,7 +2949,7 @@ router.post(
             // consumed, so meter what we have observed so far.
             if (!usageSettled) {
               usageSettled = true;
-              finalizeUsage(auth, usageSnapshot).catch(
+              return finalizeUsage(auth, usageSnapshot, false).catch(
                 (error) =>
                   console.error("[Usage] finalize-on-cancel failed:", error),
               );

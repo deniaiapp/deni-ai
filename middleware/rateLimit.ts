@@ -1,9 +1,9 @@
+import { getRequestClientIp } from "../utils/clientIp";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import {
   consumeRateLimit,
   getAdminLoginRateLimitConfig,
-  getClientIp,
   getIpRateLimitConfig,
   getUserRateLimitConfig,
   isAgentInferencePath,
@@ -58,7 +58,7 @@ export function ipRateLimitMiddleware(
     }
 
     const { max, windowMs } = getIpRateLimitConfig();
-    const ip = getClientIp(c.req.raw.headers);
+    const ip = getRequestClientIp(c);
     const result = consumeRateLimit(scope, ip, max, windowMs);
 
     applyRateLimitHeaders(c, result);
@@ -114,42 +114,35 @@ export function checkUserRateLimit(
 /**
  * Stricter rate limit for admin login attempts (by IP).
  */
+export function checkAdminLoginRateLimit(c: Context): Response | null {
+  if (!isRateLimitEnabled()) return null;
+  const { max, windowMs } = getAdminLoginRateLimitConfig();
+  const ip = getRequestClientIp(c);
+  const result = consumeRateLimit("admin-login", ip, max, windowMs);
+  if (result.allowed) return null;
+  applyRateLimitHeaders(c, result);
+  const accept = (c.req.header("Accept") || "").toLowerCase();
+  const contentType = (c.req.header("content-type") || "").toLowerCase();
+  if (
+    accept.includes("text/html") ||
+    contentType.includes("application/x-www-form-urlencoded") ||
+    contentType.includes("multipart/form-data")
+  ) {
+    return c.text(`Too many login attempts. Try again in ${result.retryAfterSec}s.`, 429);
+  }
+  return rateLimitExceededResponse(
+    c,
+    result,
+    `Too many login attempts. Try again in ${result.retryAfterSec}s.`,
+  );
+}
+
 export function adminLoginRateLimitMiddleware(): MiddlewareHandler {
-  return async (c: Context, next: Next) => {
-    if (!isRateLimitEnabled() || c.req.method !== "POST") {
-      await next();
-      return;
+  return async (c, next) => {
+    if (c.req.method === "POST") {
+      const limited = checkAdminLoginRateLimit(c);
+      if (limited) return limited;
     }
-
-    const { max, windowMs } = getAdminLoginRateLimitConfig();
-    const ip = getClientIp(c.req.raw.headers);
-    const result = consumeRateLimit("admin-login", ip, max, windowMs);
-
-    if (!result.allowed) {
-      console.warn(
-        `[RateLimit] admin login blocked ip=${ip} limit=${result.limit} reset=${result.resetAt}`,
-      );
-      applyRateLimitHeaders(c, result);
-      // Prefer HTML-friendly response for form posts.
-      const accept = (c.req.header("Accept") || "").toLowerCase();
-      const contentType = (c.req.header("content-type") || "").toLowerCase();
-      if (
-        accept.includes("text/html") ||
-        contentType.includes("application/x-www-form-urlencoded") ||
-        contentType.includes("multipart/form-data")
-      ) {
-        return c.text(
-          `Too many login attempts. Try again in ${result.retryAfterSec}s.`,
-          429,
-        );
-      }
-      return rateLimitExceededResponse(
-        c,
-        result,
-        `Too many login attempts. Try again in ${result.retryAfterSec}s.`,
-      );
-    }
-
     await next();
   };
 }

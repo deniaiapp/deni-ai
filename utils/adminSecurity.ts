@@ -2,7 +2,6 @@
  * Admin security helpers: IP allowlist, password hygiene, audit logs.
  */
 
-import { getClientIp } from "./rateLimit";
 import { isAuthDisabledMode } from "./authMode";
 
 const WEAK_PASSWORDS = new Set(
@@ -88,10 +87,6 @@ export function isAdminIpAllowed(ip: string): boolean {
     if (e.includes("/") && matchIpv4Cidr(v4, e)) return true;
   }
   return false;
-}
-
-export function clientIpFromHeaders(headers: Headers): string {
-  return getClientIp(headers, "unknown");
 }
 
 export type AdminPasswordHealth = {

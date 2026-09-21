@@ -130,8 +130,56 @@ Access logs, HTTP error logs, and client-signal logs include a redacted API key
 fingerprint (`deni_xxxx…yyyy`) from `Authorization: Bearer` or `x-api-key`; the
 full secret is never written. Admin lookup can filter on that fingerprint.
 `FLIXA_USAGE_FINALIZE_ASYNC=true` returns token-metered responses without waiting
-for the usage upsert; use it only when a short quota visibility delay is
-acceptable.
+for settlement. The estimated usage remains reserved until settlement completes.
+
+### Quota reservation and interrupted streams
+
+Requests atomically reserve estimated weighted tokens in `usage_quota.used`
+before contacting a provider. The estimate includes the supplied output limit,
+or the model catalog's maximum output (16,384 tokens when unavailable). Requests
+whose estimate does not fit the remaining allowance receive 429; use a smaller
+output limit or wait for in-flight requests to finish. The usage endpoint includes
+active reservations in `used`.
+
+Successful responses replace the reservation with provider-reported usage.
+Rejected upstream requests refund it. Interrupted streams preserve reported usage
+and estimate missing input/output from request content and received text, reasoning,
+and tool-argument deltas. UTF-8 bytes / 4 is an approximation; cached history,
+media, and hidden reasoning may differ, so this is not an exact provider-token
+cap. Actual usage above an estimate is still recorded and blocks subsequent work.
+
+`flixa_usage_reservation` is created automatically on first use (the DB role needs
+`CREATE TABLE` permission). Its receipts make settlement idempotent and prevent old
+refunds from affecting a newly reset month or tier. On process termination or a DB
+settlement failure, the reserved estimate remains charged; outstanding receipts
+are retained for reconciliation. Do not blindly delete/refund them: provider work
+may already have completed. Receipt IDs are included in settlement failure logs.
+The accounting regression tests use an isolated PostgreSQL/WASM database and never
+connect to `DENI_DATABASE_URL`.
+
+### Client IPs and reverse proxies
+
+IP rate limits, admin audit logs, and `ADMIN_IP_ALLOWLIST` use Bun's actual socket
+peer by default. Forwarded headers are ignored unless that peer matches
+`TRUSTED_PROXY_IPS` (comma-separated exact IPv4/IPv6 addresses or CIDRs).
+
+For a local reverse proxy, for example:
+
+```env
+TRUSTED_PROXY_IPS=127.0.0.1,::1
+CLIENT_IP_HEADER=x-forwarded-for
+```
+
+Use the actual proxy addresses in your deployment. The default `x-forwarded-for`
+chain is walked from right to left through trusted proxies, stopping at the first
+untrusted hop. `CLIENT_IP_HEADER=x-real-ip` or `cf-connecting-ip` is also supported,
+but only configure these when the trusted proxy overwrites that header. If trust
+is not configured behind a proxy, clients share that proxy's IP rate-limit bucket.
+This setting identifies trusted infrastructure; it does not require end users to
+have fixed IPs or enable the optional admin allowlist.
+
+Basic authentication on every protected admin route shares the same IP attempt
+bucket as `POST /admin/login`. Valid cookie sessions do not consume that bucket.
 
 ### Codex custom provider
 

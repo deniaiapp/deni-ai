@@ -366,222 +366,115 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   };
 }
 
-/**
- * Atomically reserve one usage unit for the request before it is sent upstream.
- * This prevents concurrent requests from oversubscribing the same quota.
+export interface UsageReservation {
+  id: string;
+  amount: number;
+  userId: string;
+  category: ModelCategory;
+}
+
+let reservationTableReady: Promise<void> | undefined;
+
+async function ensureReservationTable(): Promise<void> {
+  reservationTableReady ??= getDeniPool().query(`
+    CREATE TABLE IF NOT EXISTS flixa_usage_reservation (
+      id UUID PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      category TEXT NOT NULL,
+      plan_tier TEXT NOT NULL,
+      period_start TEXT NOT NULL,
+      amount BIGINT NOT NULL CHECK (amount > 0),
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `).then(() => {}).catch((error) => {
+    reservationTableReady = undefined;
+    throw error;
+  });
+  await reservationTableReady;
+}
+
+/** Reserve estimated weighted tokens, including concurrent first requests.
+ * The quota update and receipt creation are one atomic PostgreSQL statement.
  */
 export async function reserveUsageQuota(
   userId: string,
   category: ModelCategory,
   tier: UsageTier,
   hasVerifiedPaymentMethod = false,
+  amount = 1,
 ): Promise<{
   allowed: boolean;
   remaining: number;
   reserved: boolean;
   unit: UsageUnit;
+  reservation?: UsageReservation;
 }> {
-  const pool = getDeniPool();
-  const now = new Date();
-  const periodEnd = getNextMonthFirstDay();
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new Error("Usage reservation must be a positive safe integer");
+  }
   const limit = getUsageLimit(category, tier, hasVerifiedPaymentMethod);
   const unit = getUsageUnitForTier(tier);
-
-  try {
-    // Token-metered tiers do not increment anything at reserve time, so a
-    // plain read (no transaction, no row lock) is sufficient. The actual
-    // metering happens in recordUsageQuota after the upstream response.
-    if (unit !== "requests") {
-      const result = await pool.query<
-        Pick<
-          UsageQuotaRow,
-          "used" | "period_end" | "limit_amount" | "plan_tier" | "unit"
-        >
-      >(
-        `SELECT used, period_end, limit_amount, plan_tier, unit
-         FROM usage_quota
-         WHERE user_id = $1 AND category = $2`,
-        [userId, category],
-      );
-
-      if (result.rows.length === 0) {
-        return { allowed: true, remaining: limit, reserved: false, unit };
-      }
-
-      const currentRow = result.rows[0];
-      const needsReset = shouldResetUsageRow(currentRow, now, tier, unit);
-      const currentUsed = needsReset ? 0 : currentRow.used;
-
-      if (currentUsed >= limit) {
-        return { allowed: false, remaining: 0, reserved: false, unit };
-      }
-
-      // The actual reset happens lazily in recordUsageQuota; no write needed
-      // on the request hot path.
-      return {
-        allowed: true,
-        remaining: Math.max(limit - currentUsed, 0),
-        reserved: false,
-        unit,
-      };
-    }
-
-    // Request-metered tiers use one atomic upsert. Besides removing the
-    // BEGIN/SELECT FOR UPDATE/UPDATE/COMMIT round trips, this also handles
-    // concurrent first requests without a unique-violation race.
-    const result = await pool.query<Pick<UsageQuotaRow, "used">>(
-      `INSERT INTO usage_quota
-         (user_id, category, plan_tier, limit_amount, unit, used, period_start, period_end)
-       VALUES ($1, $2, $3, $4, $5, 1, $6, $7)
-       ON CONFLICT (user_id, category) DO UPDATE
-       SET used = CASE
-             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
-                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
-                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
-               THEN 1
-             ELSE usage_quota.used + 1
-           END,
-           plan_tier = EXCLUDED.plan_tier,
-           limit_amount = EXCLUDED.limit_amount,
-           unit = EXCLUDED.unit,
-           period_start = CASE
-             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
-                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
-                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
-               THEN EXCLUDED.period_start
-             ELSE usage_quota.period_start
-           END,
-           period_end = CASE
-             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
-                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
-                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
-               THEN EXCLUDED.period_end
-             ELSE usage_quota.period_end
-           END
-       WHERE CASE
-               WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
-                    OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
-                    OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
-                 THEN 0
-               ELSE usage_quota.used
-             END < EXCLUDED.limit_amount
-       RETURNING used`,
-      [userId, category, tier, limit, unit, now, periodEnd],
-    );
-
-    const used = result.rows[0]?.used;
-    if (used === undefined) {
-      return { allowed: false, remaining: 0, reserved: false, unit };
-    }
-
-    return {
-      allowed: true,
-      remaining: Math.max(limit - used, 0),
-      reserved: true,
-      unit,
-    };
-  } catch (error) {
-    console.error(
-      `[Usage] Failed to reserve usage for user=${userId} category=${category}:`,
-      error,
-    );
-    throw error;
-  }
-}
-
-/**
- * Record usage after an upstream request succeeds. Paid tiers are tracked in tokens.
- */
-export async function recordUsageQuota(
-  userId: string,
-  category: ModelCategory,
-  tier: UsageTier,
-  amount: number,
-  hasVerifiedPaymentMethod = false,
-): Promise<void> {
-  if (
-    getUsageUnitForTier(tier) !== "tokens" ||
-    !Number.isFinite(amount) ||
-    amount <= 0
-  ) {
-    return;
-  }
-
-  const pool = getDeniPool();
+  if (amount > limit) return { allowed: false, remaining: limit, reserved: false, unit };
+  await ensureReservationTable();
+  const id = crypto.randomUUID();
   const now = new Date();
-  const periodEnd = getNextMonthFirstDay();
-  const limit = getUsageLimit(category, tier, hasVerifiedPaymentMethod);
-  const unit = getUsageUnitForTier(tier);
-
-  try {
-    // One atomic upsert handles first-use creation, period resets, and
-    // concurrent increments without a preliminary UPDATE/INSERT race.
-    await pool.query(
-      `INSERT INTO usage_quota
+  const reset = `(usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
+    OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
+    OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit`;
+  const result = await getDeniPool().query<{ used: string | number }>(
+    `WITH reserved AS (
+       INSERT INTO usage_quota
          (user_id, category, plan_tier, limit_amount, unit, used, period_start, period_end)
        VALUES ($1, $2, $3, $4, $5, $6::bigint, $7, $8)
        ON CONFLICT (user_id, category) DO UPDATE
-       SET used = CASE
-             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
-                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
-                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
-               THEN EXCLUDED.used
-             ELSE usage_quota.used + EXCLUDED.used
-           END,
-           period_start = CASE
-             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
-                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
-                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
-               THEN EXCLUDED.period_start
-             ELSE usage_quota.period_start
-           END,
-           period_end = CASE
-             WHEN (usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
-                  OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
-                  OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit
-               THEN EXCLUDED.period_end
-             ELSE usage_quota.period_end
-           END,
+       SET used = CASE WHEN ${reset} THEN EXCLUDED.used ELSE usage_quota.used + EXCLUDED.used END,
+           period_start = CASE WHEN ${reset} THEN EXCLUDED.period_start ELSE usage_quota.period_start END,
+           period_end = CASE WHEN ${reset} THEN EXCLUDED.period_end ELSE usage_quota.period_end END,
            plan_tier = EXCLUDED.plan_tier,
            limit_amount = EXCLUDED.limit_amount,
-           unit = EXCLUDED.unit`,
-      [userId, category, tier, limit, unit, amount, now, periodEnd],
-    );
-  } catch (error) {
-    console.error(
-      `[Usage] Failed to record usage for user=${userId} category=${category}:`,
-      error,
-    );
-    throw error;
-  }
+           unit = EXCLUDED.unit
+       WHERE (CASE WHEN ${reset} THEN 0 ELSE usage_quota.used END) + EXCLUDED.used <= EXCLUDED.limit_amount
+       RETURNING used, period_start
+     ), receipt AS (
+       INSERT INTO flixa_usage_reservation (id, user_id, category, plan_tier, period_start, amount)
+       SELECT $9::uuid, $1::text, $2::text, $3::text, EXTRACT(EPOCH FROM period_start)::text, $6::bigint FROM reserved
+       RETURNING id
+     ) SELECT used FROM reserved, receipt`,
+    [userId, category, tier, limit, unit, amount, now, getNextMonthFirstDay(), id],
+  );
+  if (!result.rows.length) return { allowed: false, remaining: 0, reserved: false, unit };
+  return {
+    allowed: true,
+    remaining: Math.max(0, limit - Number(result.rows[0].used)),
+    reserved: true,
+    unit,
+    reservation: { id, amount, userId, category },
+  };
 }
 
-/**
- * Release one reserved usage unit after an upstream request fails before producing
- * a successful response for the client. Free tier is tracked in requests.
+/** Exactly-once adjustment, even if cancellation and completion race or retry.
+ * Older receipts cannot subtract from a newly reset billing period/tier.
+ * On DB failure the reservation remains charged and available for retry/audit.
  */
-export async function releaseUsageQuota(
-  userId: string,
-  category: ModelCategory,
-  tier: UsageTier,
+export async function settleUsageQuota(
+  reservation: UsageReservation,
+  actualAmount: number,
 ): Promise<void> {
-  if (getUsageUnitForTier(tier) !== "requests") {
-    return;
+  if (!Number.isSafeInteger(actualAmount) || actualAmount < 0) {
+    throw new Error("Actual usage must be a non-negative safe integer");
   }
-
-  const pool = getDeniPool();
-
-  try {
-    await pool.query(
-      `UPDATE usage_quota
-       SET used = GREATEST(used - 1, 0)
-       WHERE user_id = $1 AND category = $2`,
-      [userId, category],
-    );
-  } catch (error) {
-    console.error(
-      `[Usage] Failed to release usage for user=${userId} category=${category}:`,
-      error,
-    );
-  }
+  await getDeniPool().query(
+    `WITH receipt AS (
+       DELETE FROM flixa_usage_reservation WHERE id = $1::uuid
+       RETURNING user_id, category, plan_tier, period_start, amount
+     )
+     UPDATE usage_quota q
+     SET used = GREATEST(0, q.used - receipt.amount + $2::bigint)
+     FROM receipt
+     WHERE q.user_id = $3 AND q.category = $4
+       AND q.user_id::text = receipt.user_id AND q.category::text = receipt.category
+       AND q.plan_tier::text = receipt.plan_tier AND q.unit = 'tokens'
+       AND EXTRACT(EPOCH FROM q.period_start)::text = receipt.period_start`,
+    [reservation.id, actualAmount, reservation.userId, reservation.category],
+  );
 }

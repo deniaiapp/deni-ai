@@ -1,3 +1,5 @@
+import { UsageEstimate } from "../utils/agent/usageEstimation";
+import type { UsageReservation } from "../utils/deni/usage";
 import { Context, Next } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {
@@ -37,6 +39,8 @@ export interface AgentAuthContext {
   modelCategory: 'basic' | 'premium';
   usageUnit: 'requests' | 'tokens';
   usageReserved: boolean;
+  usageReservation?: UsageReservation;
+  usageEstimate?: UsageEstimate;
   hasVerifiedPaymentMethod: boolean;
   /** Base model multiplier; long-context surcharge is applied at finalize. */
   tokenUsageMultiplier: number;
@@ -359,8 +363,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
     return;
   }
 
-  // Get user's billing tier (cached, no usage rows — reserveUsageQuota reads
-  // the quota row itself, so fetching it here would be a redundant query)
+  // Get the cached billing tier before atomically reserving usage.
   const billingProfile = await getDeniBillingProfile(keyValidation.userId);
 
   // Check model category and reserve quota when needed
@@ -381,17 +384,28 @@ export async function validateAgentAuth(c: Context, next: Next) {
     );
   }
 
+  const protocol = c.req.path.endsWith('/responses/compact') ? 'compact'
+    : c.req.path.endsWith('/responses') ? 'responses'
+    : c.req.path.endsWith('/messages') ? 'messages' : 'chat';
+  const usageEstimate = new UsageEstimate(body as Record<string, unknown>, model, protocol);
+  if (!Number.isSafeInteger(usageEstimate.reservationAmount)) {
+    return c.json({ error: {
+      message: 'Requested token budget is too large.',
+      type: 'invalid_request_error', param: null, code: 'invalid_parameter',
+    } }, 400);
+  }
   const quotaReservation = await reserveUsageQuota(
     keyValidation.userId,
     modelCategory,
     tier,
     billingProfile.hasVerifiedPaymentMethod,
+    usageEstimate.reservationAmount,
   );
   if (!quotaReservation.allowed) {
     return c.json(
       {
         error: {
-          message: `You have exceeded your ${modelCategory} model ${quotaReservation.unit} quota. Remaining: ${quotaReservation.remaining}. Please upgrade your plan or wait for quota reset.`,
+          message: `Insufficient ${modelCategory} model ${quotaReservation.unit} quota to reserve this request (${usageEstimate.reservationAmount} estimated tokens). Please upgrade your plan or wait for quota reset.`,
           type: 'quota_exceeded',
           param: null,
           code: 'USAGE_LIMIT_EXCEEDED',
@@ -415,6 +429,8 @@ export async function validateAgentAuth(c: Context, next: Next) {
     modelCategory,
     usageUnit: quotaReservation.unit,
     usageReserved: quotaReservation.reserved,
+    usageReservation: quotaReservation.reservation,
+    usageEstimate,
     hasVerifiedPaymentMethod: billingProfile.hasVerifiedPaymentMethod,
     tokenUsageMultiplier,
     usageMeteringEnabled: true,

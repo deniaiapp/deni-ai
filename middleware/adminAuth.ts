@@ -1,7 +1,8 @@
+import { getRequestClientIp } from "../utils/clientIp";
+import { checkAdminLoginRateLimit } from "./rateLimit";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import { getCookie, setCookie, deleteCookie } from "hono/cookie";
 import {
-  clientIpFromHeaders,
   failedLoginDelay,
   isAdminIpAllowed,
   isAdminIpAllowlistEnabled,
@@ -291,7 +292,7 @@ export const adminAuth: MiddlewareHandler = async (c: Context, next: Next) => {
     );
   }
 
-  const ip = clientIpFromHeaders(c.req.raw.headers);
+  const ip = getRequestClientIp(c);
 
   // Allowlist applies to all admin routes including login (login is public auth-wise
   // but still IP-gated when configured).
@@ -313,6 +314,8 @@ export const adminAuth: MiddlewareHandler = async (c: Context, next: Next) => {
   if (isBasicAuthAllowed()) {
     const basic = parseBasicAuthHeader(c.req.header("Authorization"));
     if (basic) {
+      const limited = checkAdminLoginRateLimit(c);
+      if (limited) return limited;
       const ok = await verifyAdminCredentials(basic.username, basic.password);
       if (ok) {
         const token = await createAdminSessionToken();

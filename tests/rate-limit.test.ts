@@ -1,4 +1,4 @@
-import { describe, expect, test, beforeEach } from "bun:test";
+import { describe, expect, test, beforeEach, afterEach } from "bun:test";
 import {
   clearRateLimitBuckets,
   consumeRateLimit,
@@ -97,30 +97,45 @@ describe("isAgentInferencePath", () => {
 });
 
 describe("getClientIp", () => {
-  test("prefers cf-connecting-ip, then x-real-ip, then first x-forwarded-for", () => {
-    expect(
-      getClientIp(
-        new Headers({
-          "cf-connecting-ip": "10.0.0.1",
-          "x-real-ip": "10.0.0.2",
-          "x-forwarded-for": "10.0.0.3, 10.0.0.4",
-        }),
-      ),
-    ).toBe("10.0.0.1");
+  const originalProxies = Bun.env.TRUSTED_PROXY_IPS;
+  const originalHeader = Bun.env.CLIENT_IP_HEADER;
+  beforeEach(() => {
+    delete Bun.env.TRUSTED_PROXY_IPS;
+    delete Bun.env.CLIENT_IP_HEADER;
+  });
+  afterEach(() => {
+    if (originalProxies === undefined) delete Bun.env.TRUSTED_PROXY_IPS;
+    else Bun.env.TRUSTED_PROXY_IPS = originalProxies;
+    if (originalHeader === undefined) delete Bun.env.CLIENT_IP_HEADER;
+    else Bun.env.CLIENT_IP_HEADER = originalHeader;
+  });
 
-    expect(
-      getClientIp(
-        new Headers({
-          "x-real-ip": "10.0.0.2",
-          "x-forwarded-for": "10.0.0.3, 10.0.0.4",
-        }),
-      ),
-    ).toBe("10.0.0.2");
+  test("ignores spoofed headers on direct connections", () => {
+    const headers = new Headers({ "cf-connecting-ip": "10.0.0.1", "x-real-ip": "10.0.0.2", "x-forwarded-for": "10.0.0.3" });
+    expect(getClientIp(headers, "203.0.113.5")).toBe("203.0.113.5");
+    expect(getClientIp(headers)).toBe("unknown");
+  });
 
-    expect(
-      getClientIp(new Headers({ "x-forwarded-for": "10.0.0.3, 10.0.0.4" })),
-    ).toBe("10.0.0.3");
+  test("uses the nearest untrusted hop, not a forged first XFF entry", () => {
+    Bun.env.TRUSTED_PROXY_IPS = "10.0.0.0/8";
+    expect(getClientIp(new Headers({ "x-forwarded-for": "1.2.3.4, 203.0.113.5, 10.0.0.2" }), "10.0.0.1")).toBe("203.0.113.5");
+    expect(getClientIp(new Headers(), "10.0.0.1")).toBe("10.0.0.1");
+  });
 
-    expect(getClientIp(new Headers(), "fallback")).toBe("fallback");
+  test("single-address headers require a trusted peer and explicit configuration", () => {
+    Bun.env.TRUSTED_PROXY_IPS = "10.0.0.1";
+    const headers = new Headers({ "cf-connecting-ip": "203.0.113.5" });
+    expect(getClientIp(headers, "10.0.0.1")).toBe("10.0.0.1");
+    Bun.env.CLIENT_IP_HEADER = "cf-connecting-ip";
+    expect(getClientIp(headers, "10.0.0.1")).toBe("203.0.113.5");
+    expect(getClientIp(headers, "203.0.113.6")).toBe("203.0.113.6");
+  });
+
+  test("supports IPv6 and IPv4-mapped peers and rejects malformed headers", () => {
+    Bun.env.TRUSTED_PROXY_IPS = "2001:db8::/32,127.0.0.1";
+    const headers = new Headers({ "x-forwarded-for": "203.0.113.5" });
+    expect(getClientIp(headers, "2001:db8::1")).toBe("203.0.113.5");
+    expect(getClientIp(headers, "::ffff:127.0.0.1")).toBe("203.0.113.5");
+    expect(getClientIp(new Headers({ "x-forwarded-for": "garbage,203.0.113.5" }), "127.0.0.1")).toBe("127.0.0.1");
   });
 });

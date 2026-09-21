@@ -1,3 +1,4 @@
+import { getRequestClientIp } from "../../utils/clientIp";
 import { Hono } from "hono";
 import {
   clearAdminSessionCookie,
@@ -9,7 +10,6 @@ import {
 } from "../../middleware/adminAuth";
 import { getCookie } from "hono/cookie";
 import {
-  clientIpFromHeaders,
   failedLoginDelay,
   logAdminAudit,
 } from "../../utils/adminSecurity";
@@ -77,7 +77,7 @@ adminAuthRouter.post("/login", async (c) => {
     );
   }
 
-  const ip = clientIpFromHeaders(c.req.raw.headers);
+  const ip = getRequestClientIp(c);
   const contentType = c.req.header("content-type") || "";
   let username = "";
   let pass = "";
@@ -132,14 +132,14 @@ adminAuthRouter.post("/login", async (c) => {
 });
 
 adminAuthRouter.get("/logout", (c) => {
-  const ip = clientIpFromHeaders(c.req.raw.headers);
+  const ip = getRequestClientIp(c);
   clearAdminSessionCookie(c);
   logAdminAudit("logout", { ip, path: "/admin/logout" });
   return c.redirect("/admin/login", 302);
 });
 
 adminAuthRouter.post("/logout", (c) => {
-  const ip = clientIpFromHeaders(c.req.raw.headers);
+  const ip = getRequestClientIp(c);
   clearAdminSessionCookie(c);
   logAdminAudit("logout", { ip, path: "/admin/logout" });
   if ((c.req.header("Accept") || "").includes("application/json")) {

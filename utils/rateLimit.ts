@@ -320,22 +320,4 @@ export function isAgentInferencePath(path: string): boolean {
   );
 }
 
-/**
- * Best-effort client IP for rate limiting.
- * Prefers proxy headers when present (first X-Forwarded-For hop).
- */
-export function getClientIp(headers: Headers, fallback = "unknown"): string {
-  const cf = headers.get("cf-connecting-ip")?.trim();
-  if (cf) return cf.slice(0, 128);
-
-  const realIp = headers.get("x-real-ip")?.trim();
-  if (realIp) return realIp.slice(0, 128);
-
-  const xff = headers.get("x-forwarded-for")?.trim();
-  if (xff) {
-    const first = xff.split(",")[0]?.trim();
-    if (first) return first.slice(0, 128);
-  }
-
-  return fallback;
-}
+export { getClientIp } from "./clientIp";

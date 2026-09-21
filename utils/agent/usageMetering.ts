@@ -151,5 +151,5 @@ export function computeMeteredTokens(usage: unknown): number | null {
   }
 
   const metered = Math.ceil(weighted);
-  return metered > 0 ? metered : null;
+  return Math.max(0, metered);
 }
