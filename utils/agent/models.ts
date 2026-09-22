@@ -262,9 +262,21 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tier: "plus",
   },
   {
+    id: "anthropic/claude-opus-5.5",
+    label: "Claude Opus 5.5",
+    description: "Claude Opus 5.5 for reasoning, coding, and agentic tasks.",
+    tags: ["powerful", "agentic"],
+    efforts: ANTHROPIC_FABLE_OPUS_EFFORTS,
+    contextWindow: 1_000_000,
+    maxOutputTokens: 128_000,
+    premium: true,
+    tokenUsageMultiplier: 3,
+    tier: "plus",
+  },
+  {
     id: "anthropic/claude-opus-5",
     label: "Claude Opus 5",
-    description: "Latest Opus model: most capable, hybrid reasoning & long-horizon tasks.",
+    description: "Hybrid reasoning & long-horizon tasks.",
     tags: ["powerful", "agentic"],
     efforts: ANTHROPIC_FABLE_OPUS_EFFORTS,
     premium: true,
@@ -367,6 +379,8 @@ export const DEFAULT_TOKEN_USAGE_MULTIPLIER = 1;
 const MODEL_ALIASES: ReadonlyMap<string, string> = new Map([
   ["gpt-5.6", "openai/gpt-5.6-sol"],
   ["openai/gpt-5.6", "openai/gpt-5.6-sol"],
+  ["claude-opus-5-5", "anthropic/claude-opus-5.5"],
+  ["anthropic/claude-opus-5-5", "anthropic/claude-opus-5.5"],
 ]);
 
 function stripModelProvider(modelId: string): string {
