@@ -16,7 +16,7 @@ describe("Codex long-context model support", () => {
     expect(definition?.id).toBe("openai/gpt-6-astra");
     expect(definition?.premium).toBe(true);
     expect(getModelCategory("gpt-6-astra")).toBe("premium");
-    expect(getModelTokenUsageMultiplier("gpt-6-astra")).toBe(5);
+    expect(getModelTokenUsageMultiplier("gpt-6-astra")).toBe(3);
   });
 
   test("registers GPT-6 Sol and Luna with current context limits", () => {
@@ -27,7 +27,9 @@ describe("Codex long-context model support", () => {
       expect(definition?.contextWindow).toBe(1_050_000);
       expect(definition?.maxOutputTokens).toBe(128_000);
       expect(definition?.tags).toContain("long-context");
-      expect(getModelTokenUsageMultiplier(slug)).toBe(1);
+      expect(getModelTokenUsageMultiplier(slug)).toBe(
+        slug === "gpt-6-sol" ? 1.5 : 1,
+      );
     }
   });
 
@@ -74,6 +76,20 @@ describe("Codex long-context model support", () => {
         input_tokens: 900_000,
       }),
     ).toBe(2);
+  });
+
+  test("assigns cost tiers explicitly to every registered model", () => {
+    expect(
+      MODEL_DEFINITIONS.every(
+        (model) => typeof model.tokenUsageMultiplier === "number",
+      ),
+    ).toBe(true);
+    expect(getModelTokenUsageMultiplier("openai/gpt-5.6-sol")).toBe(2);
+    expect(getModelTokenUsageMultiplier("anthropic/claude-opus-5.5")).toBe(2);
+    expect(getModelTokenUsageMultiplier("anthropic/claude-fable-5.1")).toBe(3);
+    expect(
+      getModelTokenUsageMultiplier("google/gemini-3.1-pro-preview"),
+    ).toBe(1.5);
   });
 
   test("exposes provider-supported efforts and excludes Voids models", () => {
