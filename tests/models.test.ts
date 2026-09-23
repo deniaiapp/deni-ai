@@ -19,6 +19,18 @@ describe("Codex long-context model support", () => {
     expect(getModelTokenUsageMultiplier("gpt-6-astra")).toBe(5);
   });
 
+  test("registers GPT-6 Sol and Luna with current context limits", () => {
+    for (const slug of ["gpt-6-sol", "gpt-6-luna"]) {
+      const definition = getModelDefinition(slug);
+
+      expect(definition?.id).toBe(`openai/${slug}`);
+      expect(definition?.contextWindow).toBe(1_050_000);
+      expect(definition?.maxOutputTokens).toBe(128_000);
+      expect(definition?.tags).toContain("long-context");
+      expect(getModelTokenUsageMultiplier(slug)).toBe(1);
+    }
+  });
+
   test("exposes the GPT-5.6 1M context limits", () => {
     for (const model of [
       "openai/gpt-5.6-sol",
@@ -31,6 +43,11 @@ describe("Codex long-context model support", () => {
       expect(definition?.maxOutputTokens).toBe(128_000);
       expect(definition?.tags).toContain("codex");
     }
+  });
+
+  test("resolves GPT-6 slugs without a provider prefix", () => {
+    expect(resolveAvailableModelId("gpt-6-sol")).toBe("openai/gpt-6-sol");
+    expect(resolveAvailableModelId("gpt-6-luna")).toBe("openai/gpt-6-luna");
   });
 
   test("resolves the Codex gpt-5.6 alias to the Sol model", () => {
@@ -52,6 +69,11 @@ describe("Codex long-context model support", () => {
         input_tokens: 200_000,
       }),
     ).toBe(1);
+    expect(
+      getLongContextUsageMultiplier("gpt-6-luna", {
+        input_tokens: 900_000,
+      }),
+    ).toBe(2);
   });
 
   test("exposes provider-supported efforts and excludes Voids models", () => {

@@ -145,6 +145,30 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tier: "plus",
   },
   {
+    id: "openai/gpt-6-sol",
+    label: "GPT-6 Sol",
+    description:
+      "Cost-efficient high-end GPT-6 model for demanding reasoning, coding, and agentic work.",
+    tags: ["general", "reasoning", "coding", "agentic", "codex", "long-context"],
+    efforts: OPENAI_GPT_5_6_EFFORTS,
+    contextWindow: 1_050_000,
+    maxOutputTokens: 128_000,
+    ...OPENAI_1M_LONG_CONTEXT,
+    tier: "free",
+  },
+  {
+    id: "openai/gpt-6-luna",
+    label: "GPT-6 Luna",
+    description:
+      "Fast, cost-efficient GPT-6 model for high-volume and latency-sensitive tasks.",
+    tags: ["general", "reasoning", "fast", "lightweight", "codex", "long-context"],
+    efforts: OPENAI_GPT_5_6_EFFORTS,
+    contextWindow: 1_050_000,
+    maxOutputTokens: 128_000,
+    ...OPENAI_1M_LONG_CONTEXT,
+    tier: "free",
+  },
+  {
     id: "openai/gpt-5.6-sol",
     label: "GPT-5.6 Sol",
     description:
