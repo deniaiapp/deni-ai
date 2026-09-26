@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import type { UsageSnapshot } from "@/lib/plans";
-import { formatTokenCount } from "@/lib/plans";
 
 export function AccountMenu({
   usage,
@@ -35,6 +34,11 @@ export function AccountMenu({
   const [error, setError] = useState("");
   const name = user?.name || user?.email || "Account";
   const onPro = usage?.plan === "pro";
+  const remainingPercent = usage
+    ? usage.tokens.limit > 0
+      ? Math.round(Math.max(0, Math.min(100, (1 - usage.tokens.used / usage.tokens.limit) * 100)))
+      : 0
+    : null;
   const exporting = busy === "export";
   const signingOut = busy === "signout";
 
@@ -105,7 +109,7 @@ export function AccountMenu({
               <span className="min-w-0 truncate text-sm text-foreground">{name}</span>
               <span className="min-w-0 truncate text-xs text-muted-foreground">
                 {usage
-                  ? `${usage.planName} · ${formatTokenCount(usage.tokens.used)}/${formatTokenCount(usage.tokens.limit)} tokens`
+                  ? `${usage.planName} · ${remainingPercent}% remaining`
                   : "Account"}
               </span>
             </span>
