@@ -29,6 +29,7 @@ async function main() {
   let sessions: { id: string; status: string; url: string; mode: string }[] = [];
   let subscriptions: { id: string; status: string }[] = [];
   let created = 0;
+  const checkoutKeys: string[] = [];
   let failCancel = false;
   const cancelled: string[] = [];
   const stripe = {
@@ -53,7 +54,10 @@ async function main() {
               yield* sessions.filter((s) => s.status === "open");
             },
           }),
-        create: async () => {
+        create: async (_params: unknown, options: { idempotencyKey: string }) => {
+          assert.ok(options.idempotencyKey, "Checkout creation must be retry-safe");
+          assert.ok(!checkoutKeys.includes(options.idempotencyKey), "New checkouts need fresh Stripe keys");
+          checkoutKeys.push(options.idempotencyKey);
           created++;
           const session = {
             id: `cs_${created}`,
@@ -132,12 +136,16 @@ async function main() {
     sessions[0].status = "expired";
     await checkoutUrl("test", "test@example.com", req);
     assert.equal(created, 2, "Expired checkout can be replaced");
+    sessions = []; // Stripe can omit the previous session from a later list response.
+    await checkoutUrl("test", "test@example.com", req);
+    assert.equal(created, 3, "A missing previous session must not reuse the initial Stripe key");
+    assert.equal(new Set(checkoutKeys).size, 3);
     subscriptions = [
       { id: "sub_1", status: "active" },
       { id: "sub_2", status: "past_due" },
     ];
     assert.equal(await checkoutUrl("test", "test@example.com", req), "https://test/portal");
-    assert.equal(created, 2);
+    assert.equal(created, 3);
     failCancel = true;
     await assert.rejects(cancelUserSubscription("test"), /Stripe offline/);
     failCancel = false;

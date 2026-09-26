@@ -1,5 +1,6 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import type Stripe from "stripe";
 import { mutateStore } from "./store";
 import { appUrl, getStripe, proPriceId } from "./stripe";
@@ -75,8 +76,11 @@ export async function checkoutUrl(userId: string, email: string, req: Request) {
       subscription_data: { metadata: { userId } },
       allow_promotion_codes: true,
     };
+    // Each new checkout is a distinct Stripe operation. A fixed key based on the
+    // previous session (or "initial") collides when the price/URL changes or an
+    // expired session is no longer returned by Stripe's list endpoint.
     const session = await stripe.checkout.sessions.create(params, {
-      idempotencyKey: `checkout:${key}:${previous?.id ?? "initial"}`,
+      idempotencyKey: `checkout:${key}:${randomUUID()}`,
     });
     if (!session.url) throw new Error("Checkout URL is unavailable");
     return session.url;
