@@ -39,12 +39,12 @@ export function AvatarField({ name, accent = "#555555", value, onChange, disable
       <span className="mr-1 [&>span]:size-12"><Avatar name={name || "?"} accent={accent} icon={value} /></span>
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger asChild><Button type="button" variant="outline" size="xs" icon={Smile} disabled={disabled || busy}>Emoji</Button></Popover.Trigger>
-        <Popover.Portal><Popover.Content side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-[70] overflow-hidden rounded-2xl border border-white/10 bg-[#202020] shadow-xl"><ReactionPicker onBack={() => setOpen(false)} onSelect={(emoji) => { onChange(emoji); setOpen(false); }} /></Popover.Content></Popover.Portal>
+        <Popover.Portal><Popover.Content side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-[70] overflow-hidden rounded-2xl border border-foreground/10 bg-surface-32 shadow-xl"><ReactionPicker onBack={() => setOpen(false)} onSelect={(emoji) => { onChange(emoji); setOpen(false); }} /></Popover.Content></Popover.Portal>
       </Popover.Root>
       <Button type="button" variant="outline" size="xs" icon={ImagePlus} disabled={disabled} loading={busy} onClick={() => fileInput.current?.click()}>Upload</Button>
       {value ? <Button type="button" variant="ghost" size="xs" icon={X} disabled={disabled || busy} onClick={() => onChange(null)}>Reset</Button> : null}
       <input ref={fileInput} type="file" accept="image/png,image/jpeg,image/webp,image/gif" className="hidden" aria-label="Upload icon" onChange={(event) => { void chooseImage(event.target.files?.[0]); event.target.value = ""; }} />
     </div>
-    {error ? <p role="alert" className="text-xs text-red-300">{error}</p> : null}
+    {error ? <p role="alert" className="text-xs text-destructive-300">{error}</p> : null}
   </div>;
 }

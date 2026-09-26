@@ -87,13 +87,13 @@ export function UpgradeScreen({
   const onPro = usage?.plan === "pro";
 
   return (
-    <main className="h-full overflow-y-auto bg-[#050505] text-[#f0f0f0]">
+    <main className="h-full overflow-y-auto bg-background text-foreground">
       <FadeIn>
         <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <Link href="/" className="text-[0.925rem] font-semibold hover:text-white">
+          <Link href="/" className="text-[0.925rem] font-semibold hover:text-foreground">
             Deni Run
           </Link>
-          <Link href="/" className="text-sm text-[#8f8f8f] hover:text-[#f0f0f0]">
+          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
             {signedIn ? "Back to workspace" : "Back"}
           </Link>
         </header>
@@ -101,7 +101,7 @@ export function UpgradeScreen({
 
       <Stagger className="mx-auto max-w-5xl px-6 pt-8 pb-12 md:pt-14">
         <StaggerItem>
-          <p className="text-sm text-[#8f8f8f]">Pro · ${pro.priceUsd}/month</p>
+          <p className="text-sm text-muted-foreground">Pro · ${pro.priceUsd}/month</p>
         </StaggerItem>
         <StaggerItem>
           <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">
@@ -109,7 +109,7 @@ export function UpgradeScreen({
           </h1>
         </StaggerItem>
         <StaggerItem>
-          <p className="mt-5 max-w-2xl text-[0.925rem] leading-relaxed text-[#8f8f8f]">
+          <p className="mt-5 max-w-2xl text-[0.925rem] leading-relaxed text-muted-foreground">
             {onPro
               ? "Your account already has the higher monthly ceiling. Manage billing if you need invoices or cancellation."
               : copy.body}
@@ -126,7 +126,7 @@ export function UpgradeScreen({
             {PERKS.map((perk, index) => (
               <motion.li
                 key={perk.title}
-                className="rounded-xl border border-white/10 bg-[#111111] p-5"
+                className="rounded-xl border border-foreground/10 bg-surface p-5"
                 initial={{ opacity: 0, y: 14 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, amount: 0.3 }}
@@ -134,10 +134,10 @@ export function UpgradeScreen({
                 whileHover={{ y: -4 }}
               >
                 <div className="flex items-start gap-2">
-                  <Check className="mt-0.5 size-4 shrink-0 text-[#c8c8c8]" aria-hidden="true" />
+                  <Check className="mt-0.5 size-4 shrink-0 text-secondary-foreground" aria-hidden="true" />
                   <div>
                     <h3 className="text-[0.925rem] font-semibold">{perk.title}</h3>
-                    <p className="mt-2 text-sm leading-relaxed text-[#8f8f8f]">{perk.body}</p>
+                    <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{perk.body}</p>
                   </div>
                 </div>
               </motion.li>
@@ -146,23 +146,23 @@ export function UpgradeScreen({
         </div>
 
         <motion.aside
-          className="rounded-xl border border-white/20 bg-[#171717] p-6 lg:sticky lg:top-6"
+          className="rounded-xl border border-foreground/20 bg-surface-23 p-6 lg:sticky lg:top-6"
           initial={{ opacity: 0, x: 16 }}
           whileInView={{ opacity: 1, x: 0 }}
           viewport={{ once: true, amount: 0.25 }}
           transition={{ duration: 0.45, ease: easeOut }}
         >
-          <p className="text-sm text-[#8f8f8f]">{onPro ? "Current plan" : "Upgrade"}</p>
+          <p className="text-sm text-muted-foreground">{onPro ? "Current plan" : "Upgrade"}</p>
           <h2 className="mt-1 text-lg font-semibold">Pro</h2>
           <p className="mt-1 text-3xl font-semibold">
             ${pro.priceUsd}
-            <span className="text-sm font-normal text-[#8f8f8f]"> / month</span>
+            <span className="text-sm font-normal text-muted-foreground"> / month</span>
           </p>
           <div className="mt-5">
-            <div className="grid grid-cols-[1fr_auto_auto] gap-3 text-xs text-[#8f8f8f]">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-3 text-xs text-muted-foreground">
               <span />
               <span className="w-20 text-right">Free</span>
-              <span className="w-20 text-right text-[#c8c8c8]">Pro</span>
+              <span className="w-20 text-right text-secondary-foreground">Pro</span>
             </div>
             <CompareRow
               label="Teammates"
@@ -188,7 +188,7 @@ export function UpgradeScreen({
           <div className="mt-6">
             <UpgradeActions signedIn={signedIn} usage={usage} />
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-[#8f8f8f]">
+          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
             Monthly limits reset at the start of each UTC month. Cancel anytime.
           </p>
         </motion.aside>
@@ -199,10 +199,10 @@ export function UpgradeScreen({
 
 function CompareRow({ label, free, pro }: { label: string; free: string; pro: string }) {
   return (
-    <div className="grid grid-cols-[1fr_auto_auto] gap-3 border-t border-white/10 py-2.5 text-sm">
-      <span className="text-[#c8c8c8]">{label}</span>
-      <span className="w-20 text-right text-[#8f8f8f]">{free}</span>
-      <span className="w-20 text-right text-[#f0f0f0]">{pro}</span>
+    <div className="grid grid-cols-[1fr_auto_auto] gap-3 border-t border-foreground/10 py-2.5 text-sm">
+      <span className="text-secondary-foreground">{label}</span>
+      <span className="w-20 text-right text-muted-foreground">{free}</span>
+      <span className="w-20 text-right text-foreground">{pro}</span>
     </div>
   );
 }
@@ -241,7 +241,7 @@ function UpgradeActions({
     return (
       <Link
         href="/sign-up"
-        className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-[#f0f0f0] px-4 text-sm font-medium text-[#0a0a0a] transition-transform hover:bg-white active:scale-[0.98]"
+        className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
       >
         Start Pro · ${pro.priceUsd}/mo
       </Link>
@@ -261,7 +261,7 @@ function UpgradeActions({
         >
           Manage billing
         </Button>
-        {error ? <p className="text-xs text-red-300">{error}</p> : null}
+        {error ? <p className="text-xs text-destructive-300">{error}</p> : null}
       </div>
     );
   }
@@ -280,11 +280,11 @@ function UpgradeActions({
         Upgrade to Pro · ${pro.priceUsd}/mo
       </Button>
       {usage && !usage.stripeConfigured ? (
-        <p className="text-xs text-[#8f8f8f]">
+        <p className="text-xs text-muted-foreground">
           Stripe is not configured on this deployment. Limits still apply to the Free plan.
         </p>
       ) : null}
-      {error ? <p className="text-xs text-red-300">{error}</p> : null}
+      {error ? <p className="text-xs text-destructive-300">{error}</p> : null}
     </div>
   );
 }

@@ -74,24 +74,24 @@ export function AccountScreen() {
   }
 
   return (
-    <main className="h-full overflow-y-auto bg-[#050505] px-6 py-12 text-[#f0f0f0]">
+    <main className="h-full overflow-y-auto bg-background px-6 py-12 text-foreground">
       <Stagger className="mx-auto flex max-w-2xl flex-col gap-6">
         <StaggerItem>
-        <Link href="/" className="text-xs text-[#8f8f8f] hover:text-[#f0f0f0]">
+        <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">
           Back to workspace
         </Link>
         </StaggerItem>
         <StaggerItem>
         <div>
           <h1 className="text-2xl font-semibold">Account</h1>
-          <p className="mt-2 text-sm text-[#8f8f8f]">
+          <p className="mt-2 text-sm text-muted-foreground">
             {user?.email ?? "Signed in"} · signed in with Google or GitHub.
           </p>
         </div>
         </StaggerItem>
 
         <StaggerItem hover>
-        <section className="rounded-xl border border-white/10 bg-[#111111] p-5">
+        <section className="rounded-xl border border-foreground/10 bg-surface p-5">
           <h2 className="text-[0.925rem] font-semibold">Profile</h2>
           <div className="mt-4 flex flex-col gap-1.5">
             <Label htmlFor="display-name">Name</Label>
@@ -115,9 +115,9 @@ export function AccountScreen() {
         </StaggerItem>
 
         <StaggerItem hover>
-        <section className="rounded-xl border border-white/10 bg-[#111111] p-5">
+        <section className="rounded-xl border border-foreground/10 bg-surface p-5">
           <h2 className="text-[0.925rem] font-semibold">Two-factor authentication</h2>
-          <p className="mt-2 text-sm text-[#8f8f8f]">
+          <p className="mt-2 text-sm text-muted-foreground">
             {user?.twoFactorEnabled
               ? "An authenticator app is required after Google or GitHub sign-in."
               : "Finish setup so this account can open the workspace."}
@@ -178,9 +178,9 @@ export function AccountScreen() {
         </StaggerItem>
 
         <StaggerItem hover>
-        <section className="rounded-xl border border-white/10 bg-[#111111] p-5">
+        <section className="rounded-xl border border-foreground/10 bg-surface p-5">
           <h2 className="text-[0.925rem] font-semibold">Export</h2>
-          <p className="mt-2 text-sm text-[#8f8f8f]">
+          <p className="mt-2 text-sm text-muted-foreground">
             Download teammates, conversations, skills, routines, and usage. API keys are redacted.
           </p>
           <Button
@@ -195,9 +195,9 @@ export function AccountScreen() {
         </section>
         </StaggerItem>
         <StaggerItem hover>
-        <section className="rounded-xl border border-red-500/20 bg-[#111111] p-5">
-          <h2 className="text-[0.925rem] font-semibold text-red-300">Delete account</h2>
-          <p className="mt-2 text-sm text-[#8f8f8f]">
+        <section className="rounded-xl border border-destructive-500/20 bg-surface p-5">
+          <h2 className="text-[0.925rem] font-semibold text-destructive-300">Delete account</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
             This deletes your login, workspace files, conversations, teammates, and billing records.
             Type DELETE to confirm.
           </p>
@@ -220,13 +220,13 @@ export function AccountScreen() {
           </Button>
         </section>
         </StaggerItem>
-        {notice ? <StaggerItem><p className="text-sm text-[#c8c8c8]">{notice}</p></StaggerItem> : null}
-        {error ? <StaggerItem><p className="text-sm text-red-300">{error}</p></StaggerItem> : null}
+        {notice ? <StaggerItem><p className="text-sm text-secondary-foreground">{notice}</p></StaggerItem> : null}
+        {error ? <StaggerItem><p className="text-sm text-destructive-300">{error}</p></StaggerItem> : null}
         <StaggerItem>
-        <p className="text-sm text-[#8f8f8f]">
+        <p className="text-sm text-muted-foreground">
           Support:{" "}
           {mail ? (
-            <a href={mail} className="text-[#c8c8c8] hover:text-[#f0f0f0]">
+            <a href={mail} className="text-secondary-foreground hover:text-foreground">
               {email}
             </a>
           ) : (

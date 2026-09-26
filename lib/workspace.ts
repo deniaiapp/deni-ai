@@ -359,7 +359,6 @@ export async function syncCommandWorkspace(userId: string, root: string) {
   const files = new Map<string, { abs: string; hash: string; size: number }>();
   async function collect(dir: string) {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
-      if (entry.name.startsWith(".")) continue;
       const abs = path.join(dir, entry.name);
       if (entry.isDirectory()) await collect(abs);
       else {
@@ -379,7 +378,8 @@ export async function syncCommandWorkspace(userId: string, root: string) {
 
     const remote = new Map<string, { hash: string; size: number; etag?: string }>();
     for (const object of existing) {
-      const rel = objectSuffixFromKey(userId, object.key);
+      const prefix = userWorkspacePrefix(userId);
+      const rel = object.key.startsWith(prefix) ? object.key.slice(prefix.length) : null;
       if (!rel || rel.endsWith("/.keep") || rel === ".keep") continue;
       const body = await getUserObject(userId, `workspace/${rel}`);
       if (body) {

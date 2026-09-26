@@ -38,9 +38,9 @@ export async function exportAccount(userId: string) {
 }
 
 export async function deleteAccount(userId: string) {
+  await cancelUserSubscription(userId);
   await stopSandbox(userId).catch(() => undefined);
   await releaseBrowser(userId, undefined, { all: true }).catch(() => undefined);
-  await cancelUserSubscription(userId).catch(() => undefined);
   await deleteAllUserStorage(userId).catch(() => undefined);
   await rm(userDataDir(userId), { recursive: true, force: true }).catch(() => undefined);
   await deleteUserRecords(userId);

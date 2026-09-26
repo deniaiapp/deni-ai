@@ -9,8 +9,8 @@ const Workspace = dynamic(
   () => import("./components/workspace").then((mod) => ({ default: mod.Workspace })),
   {
     loading: () => (
-      <div className="flex h-full items-center justify-center bg-[#050505]">
-        <LoadingFallback label="Deni Run" />
+      <div className="flex h-full items-center justify-center bg-background">
+        <LoadingFallback label="Loading..." />
       </div>
     ),
   },

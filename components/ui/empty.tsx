@@ -35,9 +35,9 @@ function Empty({
       {icon ? (
         <div className={cn("flex items-center justify-center", styles.icon)}>{icon}</div>
       ) : null}
-      <div className={cn("font-medium text-[#f0f0f0]", styles.title)}>{title}</div>
+      <div className={cn("font-medium text-foreground", styles.title)}>{title}</div>
       {description ? (
-        <div className={cn("max-w-sm text-[#8f8f8f]", styles.description)}>{description}</div>
+        <div className={cn("max-w-sm text-muted-foreground", styles.description)}>{description}</div>
       ) : null}
     </div>
   );

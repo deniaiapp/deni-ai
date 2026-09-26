@@ -146,9 +146,23 @@ export async function syncBilling(userId: string, sessionId?: string | null) {
 }
 
 export async function cancelUserSubscription(userId: string) {
-  if (!stripeConfigured()) return;
   const store = await readStore(userId);
   const subscriptionId = store.billing?.stripeSubscriptionId;
-  if (!subscriptionId) return;
-  await getStripe().subscriptions.cancel(subscriptionId).catch(() => undefined);
+  const customerId = store.billing?.stripeCustomerId;
+  if (!subscriptionId && !customerId) return;
+  const stripe = getStripe();
+  const ids = new Set<string>();
+  if (customerId) {
+    for await (const session of stripe.checkout.sessions.list({ customer: customerId, status: "open", limit: 100 })) {
+      if (session.mode === "subscription") await stripe.checkout.sessions.expire(session.id);
+    }
+    for await (const subscription of stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 })) {
+      if (!["canceled", "incomplete_expired"].includes(subscription.status)) ids.add(subscription.id);
+    }
+  }
+  if (subscriptionId) {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    if (!["canceled", "incomplete_expired"].includes(subscription.status)) ids.add(subscription.id);
+  }
+  for (const id of ids) await stripe.subscriptions.cancel(id);
 }

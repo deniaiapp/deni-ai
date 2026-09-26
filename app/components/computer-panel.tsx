@@ -377,10 +377,10 @@ export function ComputerPanel({
   }, [visibleTab, onRefresh]);
 
   return (
-    <aside aria-label="Computer and routines" className="flex h-full w-[304px] max-w-[calc(100vw-2.5rem)] shrink-0 flex-col border-l border-white/10 bg-[#080808] text-[#f0f0f0] 2xl:w-[320px]">
-      <header className="flex h-[54px] shrink-0 items-center justify-between border-b border-white/10 px-4">
+    <aside aria-label="Computer and routines" className="flex h-full w-[304px] max-w-[calc(100vw-2.5rem)] shrink-0 flex-col border-l border-foreground/10 bg-surface-8 text-foreground 2xl:w-[320px]">
+      <header className="flex h-[54px] shrink-0 items-center justify-between border-b border-foreground/10 px-4">
         <div className="min-w-0">
-          <span className="text-sm font-semibold text-[#f0f0f0]">Computer</span>
+          <span className="text-sm font-semibold text-foreground">Computer</span>
         </div>
         <Badge variant={statusVariant} appearance="dot">
           {statusLabel}
@@ -416,12 +416,12 @@ export function ComputerPanel({
           >
         {visibleTab === "screen" && !showScreen ? (
           <div className="space-y-3 p-4">
-            <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-lg border border-white/5 bg-[#191919] px-5 text-center">
-              {computer.status === "working" ? <Spinner size="sm" /> : <TerminalIcon size={24} className="text-[#656565]" />}
-              <span className="text-xs text-[#a0a0a0]">{computer.status === "working" ? computer.workingLabel || "Working on your task" : "No browser open"}</span>
+            <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-lg border border-foreground/5 bg-surface-25 px-5 text-center">
+              {computer.status === "working" ? <Spinner size="sm" /> : <TerminalIcon size={24} className="text-neutral-101" />}
+              <span className="text-xs text-neutral-160">{computer.status === "working" ? computer.workingLabel || "Working on your task" : "No browser open"}</span>
             </div>
-            <p className="text-center text-xs text-[#8f8f8f]">{botName ? `${botName}'s screen` : "Computer screen"}</p>
-            <p className="px-2 text-center text-xs leading-relaxed text-[#6f6f6f]">The screen appears here when your teammate opens the browser.</p>
+            <p className="text-center text-xs text-muted-foreground">{botName ? `${botName}'s screen` : "Computer screen"}</p>
+            <p className="px-2 text-center text-xs leading-relaxed text-neutral-111">The screen appears here when your teammate opens the browser.</p>
             {computer.lastError ? <Alert variant="destructive"><AlertTitle>Computer error</AlertTitle><AlertDescription>{computer.lastError}</AlertDescription></Alert> : null}
           </div>
         ) : null}
@@ -429,8 +429,8 @@ export function ComputerPanel({
           <div className="space-y-4 p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex flex-col">
-                <span className="text-sm font-semibold text-[#f0f0f0]">Screen</span>
-                <span className="min-w-0 truncate font-mono text-xs text-[#8f8f8f]">
+                <span className="text-sm font-semibold text-foreground">Screen</span>
+                <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
                   {computer.url || "about:blank"}
                 </span>
               </div>
@@ -477,7 +477,7 @@ export function ComputerPanel({
               <div className="relative">
                 <button
                   type="button"
-                  className={`relative block w-full overflow-hidden rounded-lg bg-[#090909] text-left ring-1 ring-white/10 ${
+                  className={`relative block w-full overflow-hidden rounded-lg bg-surface-9 text-left ring-1 ring-foreground/10 ${
                     takeoverActive ? "" : "cursor-zoom-in"
                   }`}
                   onClick={clickScreen}
@@ -486,7 +486,7 @@ export function ComputerPanel({
                   data-computer-screen="true"
                 >
                   {!shotReady ? (
-                    <span className="absolute inset-0 z-10 flex items-center justify-center bg-[#090909]">
+                    <span className="absolute inset-0 z-10 flex items-center justify-center bg-surface-9">
                       <Spinner size="md" />
                     </span>
                   ) : null}
@@ -502,7 +502,7 @@ export function ComputerPanel({
                       setReadyStamp(stamp);
                       handleScreenshotError(event);
                     }}
-                    className={`block min-h-40 w-full object-contain bg-[#090909] ${
+                    className={`block min-h-40 w-full object-contain bg-surface-9 ${
                       takeoverActive ? "cursor-crosshair" : ""
                     }`}
                   />
@@ -515,15 +515,15 @@ export function ComputerPanel({
                   icon={ArrowsOutIcon}
                   aria-label="Enlarge computer screen"
                   onClick={() => setScreenExpanded(true)}
-                  className="absolute top-2 right-2 bg-[#1b1b1b]/90 text-[#f0f0f0] shadow-lg"
+                  className="absolute top-2 right-2 bg-surface-raised/90 text-foreground shadow-lg"
                 />
               </div>
             )}
             <div className="flex flex-col">
-              <span className="text-sm font-semibold text-[#f0f0f0]">
+              <span className="text-sm font-semibold text-foreground">
                 {botName ? `${botName}'s screen` : "Computer screen"}
               </span>
-              <span className="text-xs tracking-tighter text-[#8f8f8f]">
+              <span className="text-xs tracking-tighter text-muted-foreground">
                 {computer.steelDebugUrl
                   ? "Live browser. Click, type, and scroll directly in the remote session."
                   : takeoverActive
@@ -580,9 +580,9 @@ export function ComputerPanel({
                   </Button>
                 </div>
                 <div className="mt-2">
-                  <span className="font-mono text-[0.925rem] text-[#8f8f8f]">{fileView.path}</span>
+                  <span className="font-mono text-[0.925rem] text-muted-foreground">{fileView.path}</span>
                 </div>
-                <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-[#0a0a0a] p-3 font-mono text-[0.9em] leading-5 text-[#f0f0f0] ring ring-white/10">
+                <pre className="mt-2 whitespace-pre-wrap rounded-lg bg-primary-foreground p-3 font-mono text-[0.9em] leading-5 text-foreground ring ring-foreground/10">
                   {fileView.content}
                 </pre>
               </div>
@@ -624,7 +624,7 @@ export function ComputerPanel({
                 {files.length === 0 ? (
                   <Empty
                     size="sm"
-                    icon={<FolderIcon size={32} className="text-[#6d6d6d]" />}
+                    icon={<FolderIcon size={32} className="text-neutral-109" />}
                     title="No files yet"
                   />
                 ) : (
@@ -651,20 +651,20 @@ export function ComputerPanel({
             ) : shells.length === 0 ? (
               <Empty
                 size="sm"
-                icon={<TerminalIcon size={32} className="text-[#6d6d6d]" />}
+                icon={<TerminalIcon size={32} className="text-neutral-109" />}
                 title="No commands yet"
               />
             ) : (
               shells.map((item) => (
-                <div key={item.id} className="rounded-lg bg-[#1b1b1b] p-2 ring-1 ring-white/10">
-                  <span className="font-mono text-[0.925rem] text-[#f0f0f0]">$ {item.command}</span>
+                <div key={item.id} className="rounded-lg bg-surface-raised p-2 ring-1 ring-foreground/10">
+                  <span className="font-mono text-[0.925rem] text-foreground">$ {item.command}</span>
                   {item.stdout ? (
-                    <pre className="mt-1 whitespace-pre-wrap font-mono text-[0.9em] text-[#8f8f8f]">
+                    <pre className="mt-1 whitespace-pre-wrap font-mono text-[0.9em] text-muted-foreground">
                       {item.stdout}
                     </pre>
                   ) : null}
                   {item.stderr ? (
-                    <pre className="mt-1 whitespace-pre-wrap font-mono text-[0.9em] text-red-400">
+                    <pre className="mt-1 whitespace-pre-wrap font-mono text-[0.9em] text-destructive-400">
                       {item.stderr}
                     </pre>
                   ) : null}
@@ -682,14 +682,14 @@ export function ComputerPanel({
               computer.activity.map((item, index) => (
                 <div
                   key={`${item.at}-${index}`}
-                  className="border-b border-white/10 flex flex-col pb-2"
+                  className="border-b border-foreground/10 flex flex-col pb-2"
                 >
-                  <span className="text-xs text-[#8f8f8f]">
+                  <span className="text-xs text-muted-foreground">
                     {item.at.replace("T", " ").slice(0, 19)}
                   </span>
-                  <span className="text-[0.925rem] text-[#f0f0f0]">{item.title}</span>
+                  <span className="text-[0.925rem] text-foreground">{item.title}</span>
                   {item.detail ? (
-                    <span className="text-xs text-[#8f8f8f]">{item.detail}</span>
+                    <span className="text-xs text-muted-foreground">{item.detail}</span>
                   ) : null}
                 </div>
               ))
@@ -712,7 +712,7 @@ export function ComputerPanel({
       >
         <DialogContent className="p-6">
           <DialogTitle className="text-lg font-semibold">Delete files</DialogTitle>
-          <p className="mt-2 text-sm text-[#8f8f8f]">
+          <p className="mt-2 text-sm text-muted-foreground">
             {deleteConfirm?.all
               ? "Delete every file in this workspace? This cannot be undone."
               : `Delete ${deleteConfirm?.paths.length ?? 0} item${
@@ -765,7 +765,7 @@ export function ComputerPanel({
               icon={XIcon}
               aria-label="Close enlarged screen"
               onClick={() => setScreenExpanded(false)}
-              className="absolute top-3 right-3 z-10 bg-[#1b1b1b] text-[#f0f0f0] shadow-lg"
+              className="absolute top-3 right-3 z-10 bg-surface-raised text-foreground shadow-lg"
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -774,7 +774,7 @@ export function ComputerPanel({
               onLoad={handleScreenshotLoad}
               onError={handleScreenshotError}
               onClick={takeoverActive ? clickScreen : undefined}
-              className={`max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] rounded-lg object-contain ring-1 ring-white/20 ${
+              className={`max-h-[calc(100vh-2rem)] max-w-[calc(100vw-2rem)] rounded-lg object-contain ring-1 ring-foreground/20 ${
                 takeoverActive ? "cursor-crosshair" : ""
               }`}
             />
@@ -804,7 +804,7 @@ function LiveBrowserView({
       allow="clipboard-read; clipboard-write; fullscreen"
       allowFullScreen
       onLoad={() => debugComputer("live browser loaded")}
-      className="block h-full w-full border-0 bg-[#090909]"
+      className="block h-full w-full border-0 bg-surface-9"
     />
   );
 
@@ -821,7 +821,7 @@ function LiveBrowserView({
         onClick={onClose}
       >
         <div
-          className="relative h-[90vh] max-h-[800px] w-[90vw] max-w-[1280px] overflow-hidden rounded-lg bg-[#090909] ring-1 ring-white/20"
+          className="relative h-[90vh] max-h-[800px] w-[90vw] max-w-[1280px] overflow-hidden rounded-lg bg-surface-9 ring-1 ring-foreground/20"
           onClick={(event) => event.stopPropagation()}
         >
           <Button
@@ -831,7 +831,7 @@ function LiveBrowserView({
             icon={XIcon}
             aria-label="Close enlarged browser"
             onClick={onClose}
-            className="absolute top-3 right-3 z-10 bg-[#1b1b1b] text-[#f0f0f0] shadow-lg"
+            className="absolute top-3 right-3 z-10 bg-surface-raised text-foreground shadow-lg"
           />
           {frame}
         </div>
@@ -840,7 +840,7 @@ function LiveBrowserView({
   }
 
   return (
-    <div className="relative aspect-[8/5] overflow-hidden rounded-lg bg-[#090909] ring-1 ring-white/10">
+    <div className="relative aspect-[8/5] overflow-hidden rounded-lg bg-surface-9 ring-1 ring-foreground/10">
       {frame}
       <Button
         type="button"
@@ -850,7 +850,7 @@ function LiveBrowserView({
         icon={ArrowsOutIcon}
         aria-label="Enlarge live browser"
         onClick={onExpand}
-        className="absolute top-2 right-2 z-10 bg-[#1b1b1b]/90 text-[#f0f0f0] shadow-lg"
+        className="absolute top-2 right-2 z-10 bg-surface-raised/90 text-foreground shadow-lg"
       />
     </div>
   );
@@ -860,12 +860,12 @@ function RoutineList({ routines, onOpen }: { routines: Routine[]; onOpen?: (id?:
   return (
     <section aria-label="Teammate routines" className="space-y-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold text-[#f0f0f0]">Routines</span>
+        <span className="text-sm font-semibold text-foreground">Routines</span>
         {onOpen ? <Button type="button" variant="ghost" size="xs" onClick={() => onOpen()}>Manage</Button> : null}
       </div>
       {routines.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <p className="max-w-60 text-xs leading-relaxed text-[#8f8f8f]">Routines are recurring tasks this teammate runs on a schedule.</p>
+          <p className="max-w-60 text-xs leading-relaxed text-muted-foreground">Routines are recurring tasks this teammate runs on a schedule.</p>
           {onOpen ? <Button type="button" variant="outline" size="sm" onClick={() => onOpen("new")}>Create routine</Button> : null}
         </div>
       ) : (
@@ -877,18 +877,18 @@ function RoutineList({ routines, onOpen }: { routines: Routine[]; onOpen?: (id?:
               aria-label={`Edit ${routine.name}`}
               onClick={() => onOpen?.(routine.id)}
               disabled={!onOpen}
-              className="block w-full rounded-lg bg-[#1b1b1b] px-2.5 py-2 text-left ring-1 ring-white/10 hover:bg-[#252525] focus-visible:outline-2 focus-visible:outline-white/40"
+              className="block w-full rounded-lg bg-surface-raised px-2.5 py-2 text-left ring-1 ring-foreground/10 hover:bg-surface-37 focus-visible:outline-2 focus-visible:outline-foreground/40"
             >
               <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0 truncate text-xs font-semibold text-[#f0f0f0]">
+                <span className="min-w-0 truncate text-xs font-semibold text-foreground">
                   {routine.name}
                 </span>
-                <span className={routine.enabled ? "text-[#7ee2a8]" : "text-[#8f8f8f]"}>
+                <span className={routine.enabled ? "text-success-soft" : "text-muted-foreground"}>
                   {routine.enabled ? "Active" : "Paused"}
                 </span>
               </div>
-              <span className="mt-1 block text-xs text-[#8f8f8f]">{describeRoutineSchedule(routine.cron)}</span>
-              <span className="mt-1 block text-[11px] text-[#777777]">{routine.timezone} · {routine.enabled ? `Next ${formatRoutineTime(routine.nextRunAt, routine.timezone)}` : "Off"}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">{describeRoutineSchedule(routine.cron)}</span>
+              <span className="mt-1 block text-[11px] text-neutral-119">{routine.timezone} · {routine.enabled ? `Next ${formatRoutineTime(routine.nextRunAt, routine.timezone)}` : "Off"}</span>
             </button>
           ))}
           {onOpen ? <Button type="button" variant="ghost" size="xs" onClick={() => onOpen("new")}>+ New routine</Button> : null}
@@ -934,7 +934,7 @@ function FileTree({
       {nodes.map((node) => (
         <li key={node.path}>
           <div
-            className="group flex items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-white/5"
+            className="group flex items-center gap-1.5 rounded-md px-1 py-0.5 hover:bg-foreground/5"
             style={{ paddingLeft: 4 + depth * 12 }}
           >
             <Checkbox
@@ -943,13 +943,13 @@ function FileTree({
               aria-label={`Select ${node.name}`}
             />
             {node.type === "dir" ? (
-              <span className="min-w-0 flex-1 truncate text-sm text-[#8f8f8f]">{node.name}/</span>
+              <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{node.name}/</span>
             ) : (
               <button
                 type="button"
                 onClick={() => onOpen(node.path)}
                 disabled={Boolean(openingPath)}
-                className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-left font-mono text-[0.9em] text-[#f0f0f0] hover:text-blue-400 disabled:opacity-60"
+                className="inline-flex min-w-0 flex-1 items-center gap-1.5 truncate text-left font-mono text-[0.9em] text-foreground hover:text-info-400 disabled:opacity-60"
               >
                 {openingPath === node.path ? <Spinner size="sm" className="size-3.5" /> : null}
                 {node.name}

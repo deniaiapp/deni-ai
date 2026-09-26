@@ -32,7 +32,7 @@ async function binaries() {
   }
 }
 
-function run(binary, args, log = true) {
+function run(binary, args, log = true, waitForPipes = true) {
   return new Promise((resolve, reject) => {
     const child = spawn(binary, args, { cwd: root, shell: false, windowsHide: true, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, LC_MESSAGES: "C" } });
     let output = "";
@@ -43,12 +43,19 @@ function run(binary, args, log = true) {
     child.stdout.on("data", collect);
     child.stderr.on("data", collect);
     child.once("error", reject);
-    child.once("close", (code) => resolve({ code, output }));
+    // A backgrounded postgres can inherit pg_ctl's pipes on Windows. Its exit
+    // must not leave db:start waiting for those pipes to close indefinitely.
+    if (!waitForPipes) child.once("exit", (code) => {
+      child.stdout.destroy();
+      child.stderr.destroy();
+      resolve({ code, output });
+    });
+    else child.once("close", (code) => resolve({ code, output }));
   });
 }
 
-async function successful(binary, args) {
-  const result = await run(binary, args);
+async function successful(binary, args, log = true, waitForPipes = true) {
+  const result = await run(binary, args, log, waitForPipes);
   if (result.code !== 0) throw new Error(result.output.trim() || `PostgreSQL exited with code ${result.code}. See ${logFile}`);
 }
 
@@ -130,7 +137,9 @@ async function start(bin) {
     }
     // pg_ctl backgrounds the native server and waits until it accepts connections.
     // Bind only to loopback; local development credentials are intentionally fixed.
-    await successful(bin.pg_ctl, ["start", "-D", dataDir, "-l", logFile, "-o", `-h 127.0.0.1 -p ${port}`, "-w", "-t", "60"]);
+    // On Windows pg_ctl/PostgreSQL owns the log file; appending its output there
+    // from Node while it starts can fail with EBUSY. Errors are still captured by run().
+    await successful(bin.pg_ctl, ["start", "-D", dataDir, "-l", logFile, "-o", `-h 127.0.0.1 -p ${port}`, "-w", "-t", "60"], false, false);
     await ensureDatabase(port);
     console.log(`PostgreSQL 17 is running in the background.\n${connectionUrl(port)}\nData: ${dataDir}\nStop: bun db:stop`);
   } finally { await release(); }
@@ -175,7 +184,7 @@ async function main() {
   if (command === "start") return start(bin);
   if (!(await running(bin))) { console.log("Local PostgreSQL is stopped. Data is preserved."); return; }
   if (command === "status") { console.log(`Local PostgreSQL is running.\n${connectionUrl(await activePort())}`); return; }
-  await successful(bin.pg_ctl, ["stop", "-D", dataDir, "-m", "fast", "-w", "-t", "60"]);
+  await successful(bin.pg_ctl, ["stop", "-D", dataDir, "-m", "fast", "-w", "-t", "60"], false);
   console.log("Local PostgreSQL stopped. Data is preserved.");
 }
 

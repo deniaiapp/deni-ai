@@ -20,10 +20,10 @@ export default function ErrorPage({
   const [busy, setBusy] = useState(false);
 
   return (
-    <main className="flex h-full flex-col items-center justify-center bg-[#050505] px-6 text-center">
+    <main className="flex h-full flex-col items-center justify-center bg-background px-6 text-center">
       <FadeIn className="flex flex-col items-center gap-3">
-        <h1 className="text-lg font-semibold text-[#f0f0f0]">Something went wrong</h1>
-        <p className="max-w-md text-sm text-[#8f8f8f]">
+        <h1 className="text-lg font-semibold text-foreground">Something went wrong</h1>
+        <p className="max-w-md text-sm text-muted-foreground">
           Reload this page. If it keeps happening, wait a moment and try again.
         </p>
         <Button

@@ -14,7 +14,7 @@ export function LoadingFallback({
       role="status"
     >
       <Spinner size="md" />
-      {label ? <span className="text-xs text-[#8f8f8f]">{label}</span> : null}
+      {label ? <span className="text-xs text-muted-foreground">{label}</span> : null}
     </div>
   );
 }

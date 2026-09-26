@@ -51,7 +51,7 @@ const ComputerPanel = dynamic(
   () => import("./computer-panel").then((mod) => ({ default: mod.ComputerPanel })),
   {
     loading: () => (
-      <div className="hidden h-full w-[320px] items-center justify-center border-l border-white/10 bg-[#111111] xl:flex">
+      <div className="hidden h-full w-[320px] items-center justify-center border-l border-foreground/10 bg-surface xl:flex">
         <LoadingFallback label="Loading computer…" />
       </div>
     ),
@@ -531,12 +531,12 @@ export function Workspace() {
   if (boot === "loading") {
     return (
       <motion.div
-        className="flex h-full flex-col items-center justify-center gap-3 bg-[#050505]"
+        className="flex h-full flex-col items-center justify-center gap-3 bg-background"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.35, ease: easeOut }}
       >
-        <LoadingFallback label="Deni Run" />
+        <LoadingFallback label="Loading..." />
       </motion.div>
     );
   }
@@ -554,9 +554,9 @@ export function Workspace() {
   }
 
   return (
-    <SidebarProvider defaultOpen className="h-full min-h-0 bg-[#070707]">
+    <SidebarProvider defaultOpen className="h-full min-h-0 bg-surface-7">
       <SidebarReopenButton />
-      <SidebarAside className="border-r border-white/10 bg-[#111111]">
+      <SidebarAside className="border-r border-foreground/10 bg-surface">
         <Sidebar
           notifications={<NotificationInbox notifications={notifications} onRead={markNotificationRead} />}
           bots={bots}
@@ -589,14 +589,14 @@ export function Workspace() {
       </SidebarAside>
 
       <motion.div
-        className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#050505]"
+        className="flex min-h-0 min-w-0 flex-1 flex-col bg-background"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.4, delay: 0.05, ease: easeOut }}
       >
-        <div className="flex items-center justify-between border-b border-white/10 bg-[#050505] px-3 py-2 md:hidden">
+        <div className="flex items-center justify-between border-b border-foreground/10 bg-background px-3 py-2 md:hidden">
           <SidebarTrigger />
-          <span className="text-[0.925rem] text-[#f0f0f0]">{activeBot?.name ?? "Deni Run"}</span>
+          <span className="text-[0.925rem] text-foreground">{activeBot?.name ?? "Deni Run"}</span>
           {computer ? (
             <Button
               type="button"
@@ -610,7 +610,7 @@ export function Workspace() {
           ) : null}
         </div>
 
-        {actionError ? <div role="alert" className="flex items-center justify-between gap-3 bg-red-500/10 px-4 py-2 text-sm text-red-300"><span>{actionError}</span><button type="button" onClick={() => setActionError(null)} className="text-xs underline">Dismiss</button></div> : null}
+        {actionError ? <div role="alert" className="flex items-center justify-between gap-3 bg-destructive-500/10 px-4 py-2 text-sm text-destructive-300"><span>{actionError}</span><button type="button" onClick={() => setActionError(null)} className="text-xs underline">Dismiss</button></div> : null}
 
         {activeThread && activeBot && threadReady ? (
           <ChatThread
@@ -635,12 +635,12 @@ export function Workspace() {
           />
         ) : activeThreadId ? (
           <motion.div
-            className="flex flex-1 flex-col items-center justify-center bg-[#050505]"
+            className="flex flex-1 flex-col items-center justify-center bg-background"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, ease: easeOut }}
           >
-            <LoadingFallback label="Loading teammate…" />
+            <LoadingFallback label="Loading…" />
           </motion.div>
         ) : (
           <motion.div
@@ -822,7 +822,7 @@ function SidebarReopenButton() {
   if (open) return null;
 
   return (
-    <SidebarTrigger className="fixed top-3 left-3 z-50 hidden bg-[#1b1b1b] text-[#d0d0d0] shadow-lg ring-1 ring-white/10 hover:bg-[#242424] md:flex" />
+    <SidebarTrigger className="fixed top-3 left-3 z-50 hidden bg-surface-raised text-neutral-208 shadow-lg ring-1 ring-foreground/10 hover:bg-surface-hover md:flex" />
   );
 }
 
@@ -908,7 +908,7 @@ function BotDialog({
         <DialogHeader title={isEdit ? "Edit profile" : "New teammate"} />
         <div className="flex flex-col gap-3">
           <AvatarField name={name} accent={bot?.accent} value={icon} onChange={setIcon} disabled={busy} onBusyChange={setIconBusy} />
-          {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
+          {error ? <p role="alert" className="text-sm text-destructive-300">{error}</p> : null}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="bot-name">Name</Label>
             <Input id="bot-name" value={name} onChange={(e) => setName(e.currentTarget.value)} />
@@ -1081,7 +1081,7 @@ function GroupDialog({
         <DialogHeader title={thread ? "Edit group" : "New group"} />
         <div className="flex flex-col gap-3">
           <AvatarField name={title || "Group"} value={icon} onChange={setIcon} disabled={busy} onBusyChange={setIconBusy} />
-          {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
+          {error ? <p role="alert" className="text-sm text-destructive-300">{error}</p> : null}
           <div className="flex flex-col gap-1.5">
             <Label htmlFor="group-title">Name</Label>
             <Input
@@ -1093,7 +1093,7 @@ function GroupDialog({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-[#e0e0e0]">Members</span>
+            <span className="text-sm font-medium text-neutral-224">Members</span>
             {bots.map((bot) => (
               <Label key={bot.id} className="cursor-pointer font-normal">
                 <Checkbox

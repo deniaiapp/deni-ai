@@ -80,7 +80,7 @@ function SidebarTrigger({ className, ...props }: ComponentProps<"button">) {
       aria-label="Toggle sidebar"
       onClick={toggle}
       className={cn(
-        "inline-flex size-8 items-center justify-center rounded-lg text-[#c8c8c8] transition-colors hover:bg-white/5 hover:text-[#f0f0f0]",
+        "inline-flex size-8 items-center justify-center rounded-lg text-secondary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground",
         className,
       )}
       {...props}
@@ -99,7 +99,7 @@ function SidebarClose({ className, ...props }: ComponentProps<"button">) {
       aria-label="Close sidebar"
       onClick={() => setOpen(false)}
       className={cn(
-        "inline-flex size-8 items-center justify-center rounded-lg text-[#c8c8c8] transition-colors hover:bg-white/5 hover:text-[#f0f0f0]",
+        "inline-flex size-8 items-center justify-center rounded-lg text-secondary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground",
         className,
       )}
       {...props}
@@ -151,7 +151,7 @@ function SidebarGroupLabel({ className, ...props }: ComponentProps<"div">) {
     <div
       data-slot="sidebar-group-label"
       className={cn(
-        "px-2 pb-1.5 text-xs font-medium tracking-wide text-[#777777] uppercase",
+        "px-2 pb-1.5 text-xs font-medium tracking-wide text-neutral-119 uppercase",
         className,
       )}
       {...props}
@@ -184,7 +184,7 @@ function SidebarMenuButton({
       data-slot="sidebar-menu-button"
       disabled={disabled || loading}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-[#c8c8c8] transition-colors hover:bg-white/5 hover:text-[#f0f0f0] disabled:opacity-60",
+        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-secondary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-60",
         className,
       )}
       {...props}
@@ -204,7 +204,7 @@ function SidebarMenuBadge({ className, ...props }: ComponentProps<"span">) {
     <span
       data-slot="sidebar-menu-badge"
       className={cn(
-        "ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-white/10 px-1.5 text-xs text-[#c8c8c8]",
+        "ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground/10 px-1.5 text-xs text-secondary-foreground",
         className,
       )}
       {...props}

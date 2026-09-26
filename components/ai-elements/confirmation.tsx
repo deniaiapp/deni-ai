@@ -52,7 +52,7 @@ export const Confirmation = ({ className, approval, state, ...props }: Confirmat
 export type ConfirmationTitleProps = ComponentProps<typeof AlertDescription>;
 
 export const ConfirmationTitle = ({ className, ...props }: ConfirmationTitleProps) => (
-  <AlertDescription className={cn("inline text-[#f0f0f0]", className)} {...props} />
+  <AlertDescription className={cn("inline text-foreground", className)} {...props} />
 );
 
 export const ConfirmationRequest = ({ children }: { children?: ReactNode }) => {

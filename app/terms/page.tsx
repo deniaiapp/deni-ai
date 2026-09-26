@@ -6,13 +6,13 @@ export default function TermsPage() {
   const email = supportEmail();
   const mail = supportMailto();
   return (
-    <main className="h-full overflow-y-auto bg-[#050505] px-6 py-12 text-[#f0f0f0]">
+    <main className="h-full overflow-y-auto bg-background px-6 py-12 text-foreground">
       <FadeIn>
-      <article className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-[#c8c8c8]">
-        <Link href="/" className="text-xs text-[#8f8f8f] hover:text-[#f0f0f0]">
+      <article className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-secondary-foreground">
+        <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">
           Back
         </Link>
-        <h1 className="text-2xl font-semibold text-[#f0f0f0]">Terms of Service</h1>
+        <h1 className="text-2xl font-semibold text-foreground">Terms of Service</h1>
         <p>
           Deni Run is an AI teammate service that can operate a private computer (browser, files,
           and terminal) on your behalf. By creating an account you agree to these terms.
@@ -31,7 +31,7 @@ export default function TermsPage() {
         <p>
           Computer sessions, files, and memory stay scoped to your account. You can export or
           delete that data from{" "}
-          <Link href="/account" className="text-[#f0f0f0] hover:underline">
+          <Link href="/account" className="text-foreground hover:underline">
             Account
           </Link>
           . Deleting your account also removes the login stored for this service.
@@ -43,7 +43,7 @@ export default function TermsPage() {
         <p>
           Contact:{" "}
           {mail ? (
-            <a href={mail} className="text-[#f0f0f0] hover:underline">
+            <a href={mail} className="text-foreground hover:underline">
               {email}
             </a>
           ) : (

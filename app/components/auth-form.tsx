@@ -177,8 +177,8 @@ export function BackupCodesPanel({ codes }: { codes: string[] }) {
   if (!codes.length) return null;
 
   return (
-    <div className="rounded-lg border border-white/10 bg-black/30 p-3">
-      <p className="mb-2 text-xs text-[#8f8f8f]">Save these backup codes. They are shown once.</p>
+    <div className="rounded-lg border border-foreground/10 bg-foreground/5 p-3">
+      <p className="mb-2 text-xs text-muted-foreground">Save these backup codes. They are shown once.</p>
       <div className="grid grid-cols-2 gap-1 font-mono text-xs">
         {codes.map((item) => (
           <span key={item}>{item}</span>
@@ -232,9 +232,9 @@ function AuthCard({
   footer?: ReactNode;
 }) {
   return (
-    <main className="flex min-h-full items-center justify-center bg-[#050505] p-6">
+    <main className="flex min-h-full items-center justify-center bg-background p-6">
       <FadeIn className="flex w-full max-w-sm flex-col gap-6">
-        <Link href="/" className="text-center text-sm font-medium text-[#f0f0f0]">
+        <Link href="/" className="text-center text-sm font-medium text-foreground">
           Deni Run
         </Link>
         <Card className="gap-6 p-6">
@@ -285,18 +285,18 @@ export function SocialAuth({
       title={title}
       description="Continue with Google or GitHub, then set up an authenticator app."
       footer={
-        <p className="text-center text-xs text-[#8f8f8f]">
+        <p className="text-center text-xs text-muted-foreground">
           {mode === "sign-in" ? (
             <>
               New here?{" "}
-              <Link href="/sign-up" className="text-[#f0f0f0] hover:underline">
+              <Link href="/sign-up" className="text-foreground hover:underline">
                 Create an account
               </Link>
             </>
           ) : (
             <>
               Already have an account?{" "}
-              <Link href="/sign-in" className="text-[#f0f0f0] hover:underline">
+              <Link href="/sign-in" className="text-foreground hover:underline">
                 Sign in
               </Link>
             </>
@@ -328,14 +328,14 @@ export function SocialAuth({
         {busy === "github" ? null : <GitHubIcon />}
         Continue with GitHub
       </Button>
-      {message ? <p className="text-center text-sm text-red-300">{message}</p> : null}
-      <p className="text-center text-xs text-[#8f8f8f]">
+      {message ? <p className="text-center text-sm text-destructive-300">{message}</p> : null}
+      <p className="text-center text-xs text-muted-foreground">
         By continuing you agree to the{" "}
-        <Link href="/terms" className="text-[#c8c8c8] hover:text-[#f0f0f0]">
+        <Link href="/terms" className="text-secondary-foreground hover:text-foreground">
           Terms
         </Link>{" "}
         and{" "}
-        <Link href="/privacy" className="text-[#c8c8c8] hover:text-[#f0f0f0]">
+        <Link href="/privacy" className="text-secondary-foreground hover:text-foreground">
           Privacy
         </Link>{" "}
         pages.
@@ -393,21 +393,21 @@ export function TwoFactorForm() {
             <OneTimeCode id="code" value={code} onChange={setCode} />
           )}
         </div>
-        <label className="flex items-center gap-2 text-sm text-[#c8c8c8]">
+        <label className="flex items-center gap-2 text-sm text-secondary-foreground">
           <Checkbox
             checked={trustDevice}
             onCheckedChange={(value) => setTrustDevice(value === true)}
           />
           Trust this device for 30 days
         </label>
-        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        {error ? <p className="text-sm text-destructive-300">{error}</p> : null}
         <Button type="submit" size="md" className="w-full" loading={busy} disabled={!useBackup && code.length < 6}>
           Verify
         </Button>
       </form>
       <button
         type="button"
-        className="text-center text-sm text-[#8f8f8f] hover:text-[#f0f0f0]"
+        className="text-center text-sm text-muted-foreground hover:text-foreground"
         onClick={() => {
           setUseBackup((current) => !current);
           setCode("");
@@ -466,13 +466,13 @@ export function TwoFactorSetupForm() {
         title="Set up two-factor authentication"
         description="An authenticator app is required after Google or GitHub sign-in."
       >
-        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        {error ? <p className="text-sm text-destructive-300">{error}</p> : null}
         <Button type="button" size="md" className="w-full" loading={busy === "enable"} onClick={() => void enable()}>
           Enable authenticator app
         </Button>
         <button
           type="button"
-          className="text-center text-sm text-[#8f8f8f] hover:text-[#f0f0f0]"
+          className="text-center text-sm text-muted-foreground hover:text-foreground"
           onClick={() =>
             void authClient.signOut({
               fetchOptions: {
@@ -500,7 +500,7 @@ export function TwoFactorSetupForm() {
         <QRCode value={totpUri} size={168} />
       </div>
       {secret ? (
-        <p className="break-all text-center font-mono text-xs text-[#8f8f8f]">{secret}</p>
+        <p className="break-all text-center font-mono text-xs text-muted-foreground">{secret}</p>
       ) : null}
       <BackupCodesPanel codes={backupCodes} />
       <form className="flex flex-col gap-3" onSubmit={(event) => void verify(event)}>
@@ -508,7 +508,7 @@ export function TwoFactorSetupForm() {
           <Label htmlFor="setup-code">One-time code</Label>
           <OneTimeCode id="setup-code" value={code} onChange={setCode} />
         </div>
-        {error ? <p className="text-sm text-red-300">{error}</p> : null}
+        {error ? <p className="text-sm text-destructive-300">{error}</p> : null}
         <Button type="submit" size="md" className="w-full" loading={busy === "verify"} disabled={code.length < 6}>
           Verify and continue
         </Button>

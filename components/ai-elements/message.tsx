@@ -30,8 +30,8 @@ export const MessageContent = ({ children, className, ...props }: MessageContent
   <div
     className={cn(
       "flex max-w-full flex-col gap-2 text-sm",
-      "group-[.is-user]:w-max group-[.is-user]:rounded-3xl group-[.is-user]:bg-[#505050] group-[.is-user]:text-[#f0f0f0]",
-      "group-[.is-assistant]:min-w-0 group-[.is-assistant]:w-fit group-[.is-assistant]:rounded-2xl group-[.is-assistant]:bg-[#252525] group-[.is-assistant]:text-[#e7e7e7]",
+      "group-[.is-user]:w-max group-[.is-user]:rounded-3xl group-[.is-user]:bg-neutral-80 group-[.is-user]:text-foreground",
+      "group-[.is-assistant]:min-w-0 group-[.is-assistant]:w-fit group-[.is-assistant]:rounded-2xl group-[.is-assistant]:bg-surface-37 group-[.is-assistant]:text-neutral-231",
       className,
     )}
     {...props}

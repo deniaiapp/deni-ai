@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
+import { isLocalAuthBypass } from "./lib/local-auth";
 
 const publicExact = new Set([
   "/",
@@ -23,7 +24,7 @@ function isPublicPath(pathname: string) {
 }
 
 export function proxy(request: NextRequest) {
-  if (isPublicPath(request.nextUrl.pathname)) return NextResponse.next();
+  if (isPublicPath(request.nextUrl.pathname) || isLocalAuthBypass(request.headers.get("host"))) return NextResponse.next();
 
   const sessionCookie = getSessionCookie(request);
   if (sessionCookie) return NextResponse.next();

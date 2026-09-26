@@ -52,7 +52,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-white/10 bg-[#151515] p-4 text-[#f0f0f0] shadow-lg outline-none",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-foreground/10 bg-surface-input p-4 text-foreground shadow-lg outline-none",
           "deni-dialog-content",
           size === "lg" ? "max-w-2xl" : "max-w-lg",
           className,
@@ -61,7 +61,7 @@ function DialogContent({
       >
         {children}
         {showCloseButton ? (
-          <DialogPrimitive.Close className="absolute top-4 right-4 rounded-lg p-1 text-[#8f8f8f] outline-none transition-colors hover:bg-white/5 hover:text-[#f0f0f0]">
+          <DialogPrimitive.Close className="absolute top-4 right-4 rounded-lg p-1 text-muted-foreground outline-none transition-colors hover:bg-foreground/5 hover:text-foreground">
             <XIcon className="size-4" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
@@ -95,7 +95,7 @@ function DialogTitle({ className, ...props }: ComponentProps<typeof DialogPrimit
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-lg font-semibold text-[#f0f0f0]", className)}
+      className={cn("text-lg font-semibold text-foreground", className)}
       {...props}
     />
   );
@@ -108,7 +108,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-sm text-[#8f8f8f]", className)}
+      className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
   );

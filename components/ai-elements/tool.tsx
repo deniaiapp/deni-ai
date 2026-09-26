@@ -20,7 +20,7 @@ export type ToolProps = ComponentProps<typeof Collapsible>;
 
 export const Tool = ({ className, ...props }: ToolProps) => (
   <Collapsible
-    className={cn("group not-prose w-full rounded-xl border border-white/10 bg-[#111111]", className)}
+    className={cn("group not-prose w-full rounded-xl border border-foreground/10 bg-surface", className)}
     {...props}
   />
 );
@@ -46,13 +46,13 @@ const statusLabels: Record<ToolPart["state"], string> = {
 };
 
 const statusIcons: Record<ToolPart["state"], ReactNode> = {
-  "approval-requested": <ClockIcon className="size-3.5 text-amber-400" />,
+  "approval-requested": <ClockIcon className="size-3.5 text-warning-400" />,
   "approval-responded": <CheckCircleIcon className="size-3.5 text-sky-400" />,
-  "input-available": <ClockIcon className="size-3.5 animate-pulse text-amber-400" />,
-  "input-streaming": <CircleIcon className="size-3.5 text-[#8f8f8f]" />,
-  "output-available": <CheckCircleIcon className="size-3.5 text-emerald-400" />,
+  "input-available": <ClockIcon className="size-3.5 animate-pulse text-warning-400" />,
+  "input-streaming": <CircleIcon className="size-3.5 text-muted-foreground" />,
+  "output-available": <CheckCircleIcon className="size-3.5 text-success-400" />,
   "output-denied": <XCircleIcon className="size-3.5 text-orange-400" />,
-  "output-error": <XCircleIcon className="size-3.5 text-red-400" />,
+  "output-error": <XCircleIcon className="size-3.5 text-destructive-400" />,
 };
 
 export const getStatusBadge = (status: ToolPart["state"]) => (
@@ -74,11 +74,11 @@ export const ToolHeader = ({ className, title, type, state, toolName, ...props }
       {...props}
     >
       <div className="flex min-w-0 items-center gap-2">
-        <WrenchIcon className="size-3.5 shrink-0 text-[#8f8f8f]" />
-        <span className="truncate font-medium text-sm text-[#f0f0f0]">{title ?? derivedName}</span>
+        <WrenchIcon className="size-3.5 shrink-0 text-muted-foreground" />
+        <span className="truncate font-medium text-sm text-foreground">{title ?? derivedName}</span>
         {getStatusBadge(state)}
       </div>
-      <ChevronDownIcon className="size-4 shrink-0 text-[#8f8f8f] transition-transform group-data-[state=open]:rotate-180" />
+      <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
     </CollapsibleTrigger>
   );
 };
@@ -88,7 +88,7 @@ export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
 export const ToolContent = ({ className, ...props }: ToolContentProps) => (
   <CollapsibleContent
     className={cn(
-      "space-y-3 border-t border-white/10 px-3 py-3 text-[#e7e7e7] outline-none",
+      "space-y-3 border-t border-foreground/10 px-3 py-3 text-neutral-231 outline-none",
       "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 data-[state=closed]:animate-out data-[state=open]:animate-in",
       className,
     )}
@@ -98,7 +98,7 @@ export const ToolContent = ({ className, ...props }: ToolContentProps) => (
 
 function Pre({ children }: { children: ReactNode }) {
   return (
-    <pre className="scroll-thin max-h-64 overflow-auto rounded-lg bg-[#090909] p-3 text-xs whitespace-pre-wrap text-[#c8c8c8]">
+    <pre className="scroll-thin max-h-64 overflow-auto rounded-lg bg-surface-9 p-3 text-xs whitespace-pre-wrap text-secondary-foreground">
       {children}
     </pre>
   );
@@ -110,7 +110,7 @@ export type ToolInputProps = ComponentProps<"div"> & {
 
 export const ToolInput = ({ className, input, ...props }: ToolInputProps) => (
   <div className={cn("space-y-1.5", className)} {...props}>
-    <h4 className="font-medium text-[#8f8f8f] text-xs uppercase tracking-wide">Parameters</h4>
+    <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">Parameters</h4>
     <Pre>{JSON.stringify(input, null, 2)}</Pre>
   </div>
 );
@@ -134,10 +134,10 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
 
   return (
     <div className={cn("space-y-1.5", className)} {...props}>
-      <h4 className="font-medium text-[#8f8f8f] text-xs uppercase tracking-wide">
+      <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         {errorText ? "Error" : "Result"}
       </h4>
-      <div className={cn(errorText ? "text-red-300" : undefined)}>
+      <div className={cn(errorText ? "text-destructive-300" : undefined)}>
         {errorText ? <Pre>{errorText}</Pre> : body}
       </div>
     </div>

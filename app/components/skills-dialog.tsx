@@ -61,7 +61,7 @@ export function SkillsDialog({ open, skills, onClose, onSaved, onDeleted, onSync
     <div key={deleting ? "delete" : formOpen ? "form" : "list"} className="deni-dialog-view grid gap-4">
     <DialogTitle>{deleting ? "Delete skill?" : formOpen ? editing ? "Edit skill" : "New skill" : "Skills"}</DialogTitle>
     <DialogDescription>{deleting ? `Delete “${deleting.name}”? This cannot be undone.` : "Reusable instructions for your teammates. Saved changes apply when a skill is read again."}</DialogDescription>
-    {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
+    {error ? <p role="alert" className="text-sm text-destructive-300">{error}</p> : null}
     {deleting ? <div className="flex justify-end gap-2">
       <Button type="button" variant="secondary" disabled={busy} onClick={cancelDelete}>Cancel</Button>
       <Button type="button" variant="destructive" icon={Trash2} loading={busy} onClick={() => void remove()}>Delete skill</Button>
@@ -72,11 +72,11 @@ export function SkillsDialog({ open, skills, onClose, onSaved, onDeleted, onSync
       <div className="flex justify-between gap-2"><div>{editing ? <Button type="button" variant="secondary-destructive" icon={Trash2} disabled={busy} onClick={() => { setDeleting(editing); setError(null); }}>Delete skill</Button> : null}</div><Button type="submit" loading={busy} disabled={!name.trim() || !body.trim()}>{editing ? "Save changes" : "Create skill"}</Button></div>
     </form> : <>
       <div className="flex justify-end"><Button type="button" size="sm" icon={Plus} onClick={() => edit(null)}>New skill</Button></div>
-      {!skills.length ? <p className="py-8 text-center text-sm text-neutral-500">No skills yet.</p> : <div className="space-y-2">{skills.map((skill) => <div key={skill.id} className="flex items-start gap-1 rounded-xl border border-white/10 bg-white/[0.025] pr-2">
-        <button type="button" onClick={() => edit(skill)} className="min-w-0 flex-1 rounded-xl p-3 text-left hover:bg-white/5 focus-visible:outline-2 focus-visible:outline-white/40">
+      {!skills.length ? <p className="py-8 text-center text-sm text-neutral-500">No skills yet.</p> : <div className="space-y-2">{skills.map((skill) => <div key={skill.id} className="flex items-start gap-1 rounded-xl border border-foreground/10 bg-foreground/[0.025] pr-2">
+        <button type="button" onClick={() => edit(skill)} className="min-w-0 flex-1 rounded-xl p-3 text-left hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-foreground/40">
         <span className="flex items-center justify-between gap-3"><span className="font-medium">{skill.name}</span><Pencil size={14} className="shrink-0 text-neutral-500" /></span>
         <span className="mt-2 line-clamp-3 block whitespace-pre-wrap text-xs text-neutral-400">{skill.body}</span>
-        </button><Button type="button" variant="ghost" shape="square" icon={Trash2} className="mt-2 text-neutral-500 hover:text-red-300" aria-label={`Delete ${skill.name}`} title="Delete skill" onClick={() => { setDeleting(skill); setError(null); }} />
+        </button><Button type="button" variant="ghost" shape="square" icon={Trash2} className="mt-2 text-neutral-500 hover:text-destructive-300" aria-label={`Delete ${skill.name}`} title="Delete skill" onClick={() => { setDeleting(skill); setError(null); }} />
       </div>)}</div>}
     </>}
     </div>

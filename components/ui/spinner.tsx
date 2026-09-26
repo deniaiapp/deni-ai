@@ -18,7 +18,7 @@ function Spinner({
     <Loader2Icon
       role="status"
       aria-label="Loading"
-      className={cn("animate-spin text-[#8f8f8f]", spinnerSizes[size], className)}
+      className={cn("animate-spin text-muted-foreground", spinnerSizes[size], className)}
       {...props}
     />
   );

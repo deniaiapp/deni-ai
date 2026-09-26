@@ -24,7 +24,7 @@ export function MessageActions({ text, reactions, onReply, onReact, children, di
   const reduceMotion = useReducedMotion();
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(timer.current), []);
-  const buttonClass = "inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-[#929292] transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-white/50 disabled:opacity-50";
+  const buttonClass = "inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-neutral-146 transition-colors hover:bg-foreground/10 hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground/50 disabled:opacity-50";
 
   async function copy() {
     setError(null);
@@ -56,17 +56,17 @@ export function MessageActions({ text, reactions, onReply, onReact, children, di
           <button type="button" className={buttonClass} aria-label="React" disabled={disabled}><Smile size={15} /></button>
         </Popover.Trigger></ActionTooltip>
         <Popover.Portal>
-          <Popover.Content aria-label="Choose a reaction" align="start" side="top" sideOffset={8} collisionPadding={16} className="z-50 overflow-hidden rounded-2xl border border-white/10 bg-[#202020] shadow-[0_8px_32px_#0008] outline-none">
+          <Popover.Content aria-label="Choose a reaction" align="start" side="top" sideOffset={8} collisionPadding={16} className="z-50 overflow-hidden rounded-2xl border border-foreground/10 bg-surface-32 shadow-[0_8px_32px_color-mix(in_srgb,var(--color-black)_53%,transparent)] outline-none">
             {expanded ? <ReactionPicker onSelect={(emoji) => void react(emoji)} onBack={() => setExpanded(false)} /> : <div className="flex items-center gap-0.5 p-1.5" role="group" aria-label="Quick reactions">
-              {QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" aria-label={`React ${emoji}`} aria-pressed={reactions.includes(emoji)} onClick={() => void react(emoji)} className="flex size-9 items-center justify-center rounded-xl text-[22px] transition-colors hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white/40 aria-pressed:bg-white/10">{emoji}</button>)}
-              <button type="button" aria-label="More emoji" title="More emoji" onClick={() => setExpanded(true)} className="ml-1 flex size-9 items-center justify-center rounded-xl border-l border-white/10 text-neutral-400 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-white/40"><MoreHorizontal size={18} /></button>
+              {QUICK_REACTIONS.map((emoji) => <button key={emoji} type="button" aria-label={`React ${emoji}`} aria-pressed={reactions.includes(emoji)} onClick={() => void react(emoji)} className="flex size-9 items-center justify-center rounded-xl text-[22px] transition-colors hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-foreground/40 aria-pressed:bg-foreground/10">{emoji}</button>)}
+              <button type="button" aria-label="More emoji" title="More emoji" onClick={() => setExpanded(true)} className="ml-1 flex size-9 items-center justify-center rounded-xl border-l border-foreground/10 text-neutral-400 hover:bg-foreground/10 hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground/40"><MoreHorizontal size={18} /></button>
             </div>}
           </Popover.Content>
         </Popover.Portal>
       </Popover.Root>
       <ActionTooltip label={copied ? "Copied" : "Copy"}><button type="button" className={buttonClass} disabled={disabled} onClick={() => void copy()} aria-label={copied ? "Copied" : "Copy"}>
         <AnimatePresence mode="wait" initial={false}>
-          <motion.span key={copied ? "copied" : "copy"} className={`inline-flex items-center gap-1.5 ${copied ? "text-emerald-300" : ""}`} initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 4, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -3, scale: 0.9 }} transition={{ duration: reduceMotion ? 0 : 0.16 }}>
+          <motion.span key={copied ? "copied" : "copy"} className={`inline-flex items-center gap-1.5 ${copied ? "text-success-300" : ""}`} initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 4, scale: 0.85 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -3, scale: 0.9 }} transition={{ duration: reduceMotion ? 0 : 0.16 }}>
             {copied ? <Check size={15} /> : <Copy size={15} />}
           </motion.span>
         </AnimatePresence>
@@ -74,8 +74,8 @@ export function MessageActions({ text, reactions, onReply, onReact, children, di
       <span className="sr-only" role="status">{copied ? "Message copied" : ""}</span>
       </div>
     </div>
-    {reactions.length ? <div className="flex flex-wrap gap-1">{reactions.map((emoji) => <motion.button key={emoji} type="button" aria-label={`Remove ${emoji} reaction`} aria-pressed="true" onClick={() => void react(emoji)} initial={{ scale: reduceMotion ? 1 : 0.65 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 450, damping: 24 }} className="rounded-full border border-white/15 bg-white/5 px-2 py-0.5 text-sm hover:bg-white/10">{emoji}</motion.button>)}</div> : null}
-    {error ? <p role="alert" className="max-w-xs text-xs text-amber-300">{error}</p> : null}
+    {reactions.length ? <div className="flex flex-wrap gap-1">{reactions.map((emoji) => <motion.button key={emoji} type="button" aria-label={`Remove ${emoji} reaction`} aria-pressed="true" onClick={() => void react(emoji)} initial={{ scale: reduceMotion ? 1 : 0.65 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 450, damping: 24 }} className="rounded-full border border-foreground/15 bg-foreground/5 px-2 py-0.5 text-sm hover:bg-foreground/10">{emoji}</motion.button>)}</div> : null}
+    {error ? <p role="alert" className="max-w-xs text-xs text-warning-300">{error}</p> : null}
   </div></Tooltip.Provider>;
 }
 
@@ -83,9 +83,9 @@ function ActionTooltip({ label, children }: { label: string; children: ReactElem
   return <Tooltip.Root>
     <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
     <Tooltip.Portal>
-      <Tooltip.Content side="top" sideOffset={6} collisionPadding={8} className="z-[60] rounded-md border border-white/10 bg-[#292929] px-2 py-1 text-[11px] text-[#eeeeee] shadow-lg">
+      <Tooltip.Content side="top" sideOffset={6} collisionPadding={8} className="z-[60] rounded-md border border-foreground/10 bg-surface-41 px-2 py-1 text-[11px] text-neutral-238 shadow-lg">
         {label}
-        <Tooltip.Arrow className="fill-[#292929]" />
+        <Tooltip.Arrow className="fill-surface-41" />
       </Tooltip.Content>
     </Tooltip.Portal>
   </Tooltip.Root>;

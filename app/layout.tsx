@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import { MotionProvider } from "@/components/motion";
+import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeToggle } from "@/components/theme-toggle";
 import "./globals.css";
 
 const inter = Inter({
@@ -22,11 +24,14 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      data-mode="dark"
+      suppressHydrationWarning
       className={`${inter.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="h-full overflow-hidden bg-[#050505] text-[#f0f0f0] tracking-tight">
-        <MotionProvider>{children}</MotionProvider>
+      <body className="h-full overflow-hidden bg-background text-foreground tracking-tight">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+          <MotionProvider>{children}</MotionProvider>
+          <ThemeToggle />
+        </ThemeProvider>
       </body>
     </html>
   );

@@ -28,6 +28,8 @@ pnpm exec playwright install chromium
 
 Copy `.env.example` to `.env.local` and configure Better Auth, Google/GitHub OAuth, Postgres, and an encryption key. Set the OAuth redirect URIs to `{BETTER_AUTH_URL}/api/auth/callback/google` and `{BETTER_AUTH_URL}/api/auth/callback/github`.
 
+For local development without OAuth, set `LOCAL_AUTH_BYPASS=true` in `.env.local` and run `next dev`. Open `http://localhost:3000` (or `127.0.0.1`). The app creates a dedicated `local-dev-user` in Postgres and skips sign-in and 2FA for that user. This only works in development on localhost; do not enable it on a shared server. Better Auth client-side account actions (profile, sign-out, 2FA) still require a real session.
+
 ```bash
 cp .env.example .env.local
 pnpm db:migrate

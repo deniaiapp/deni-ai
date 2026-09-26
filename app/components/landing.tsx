@@ -11,32 +11,32 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
   const startHref = signedIn ? "/" : "/sign-up";
 
   return (
-    <main className="h-full overflow-y-auto bg-[#050505] text-[#f0f0f0]">
+    <main className="h-full overflow-y-auto bg-background text-foreground">
       <FadeIn>
       <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
         <span className="text-[0.925rem] font-semibold">Deni Run</span>
         <div className="flex items-center gap-3 text-sm">
-          <a href="#pricing" className="text-[#8f8f8f] hover:text-[#f0f0f0]">
+          <a href="#pricing" className="text-muted-foreground hover:text-foreground">
             Pricing
           </a>
-          <Link href="/upgrade" className="text-[#8f8f8f] hover:text-[#f0f0f0]">
+          <Link href="/upgrade" className="text-muted-foreground hover:text-foreground">
             Pro
           </Link>
           {signedIn ? (
             <Link
               href="/"
-              className="rounded-lg bg-[#f0f0f0] px-3 py-1.5 text-sm font-medium text-[#0a0a0a] transition-transform hover:bg-white active:scale-[0.98]"
+              className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
             >
               Open workspace
             </Link>
           ) : (
             <>
-              <Link href="/sign-in" className="text-[#8f8f8f] hover:text-[#f0f0f0]">
+              <Link href="/sign-in" className="text-muted-foreground hover:text-foreground">
                 Sign in
               </Link>
               <Link
                 href="/sign-up"
-                className="rounded-lg bg-[#f0f0f0] px-3 py-1.5 text-sm font-medium text-[#0a0a0a] transition-transform hover:bg-white active:scale-[0.98]"
+                className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
               >
                 Get started
               </Link>
@@ -48,7 +48,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
 
       <Stagger className="mx-auto max-w-5xl px-6 py-20">
         <StaggerItem>
-        <p className="text-sm text-[#8f8f8f]">AI teammates with their own computer</p>
+        <p className="text-sm text-muted-foreground">AI teammates with their own computer</p>
         </StaggerItem>
         <StaggerItem>
         <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">
@@ -56,7 +56,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         </h1>
         </StaggerItem>
         <StaggerItem>
-        <p className="mt-5 max-w-2xl text-[0.925rem] leading-relaxed text-[#8f8f8f]">
+        <p className="mt-5 max-w-2xl text-[0.925rem] leading-relaxed text-muted-foreground">
           Browser, files, and terminal stay private to your account. Watch the screen, take control
           for logins, and keep memory, skills, and routines with each teammate.
         </p>
@@ -65,13 +65,13 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             href={startHref}
-            className="rounded-lg bg-[#f0f0f0] px-4 py-2 text-sm font-medium text-[#0a0a0a] transition-transform hover:bg-white active:scale-[0.98]"
+            className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
           >
             {signedIn ? "Open workspace" : "Start free"}
           </Link>
           <a
             href="#pricing"
-            className="rounded-lg bg-white/10 px-4 py-2 text-sm text-[#f0f0f0] transition-transform hover:bg-white/15 active:scale-[0.98]"
+            className="rounded-lg bg-foreground/10 px-4 py-2 text-sm text-foreground transition-transform hover:bg-foreground/15 active:scale-[0.98]"
           >
             See plans
           </a>
@@ -96,7 +96,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         ].map((item, index) => (
           <motion.div
             key={item.title}
-            className="rounded-xl border border-white/10 bg-[#111111] p-5"
+            className="rounded-xl border border-foreground/10 bg-surface p-5"
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
@@ -104,7 +104,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             whileHover={{ y: -4 }}
           >
             <h2 className="text-[0.925rem] font-semibold">{item.title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-[#8f8f8f]">{item.body}</p>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{item.body}</p>
           </motion.div>
         ))}
       </section>
@@ -112,13 +112,13 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
       <section id="pricing" className="mx-auto max-w-5xl px-6 pb-24">
         <FadeInView>
           <h2 className="text-2xl font-semibold">Pricing</h2>
-          <p className="mt-2 text-sm text-[#8f8f8f]">
+          <p className="mt-2 text-sm text-muted-foreground">
             Monthly limits reset at the start of each UTC month.
           </p>
         </FadeInView>
         <div className="mt-8 grid gap-4 md:grid-cols-2">
           <motion.article
-            className="rounded-xl border border-white/10 bg-[#111111] p-6"
+            className="rounded-xl border border-foreground/10 bg-surface p-6"
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
@@ -127,7 +127,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
           >
             <h3 className="text-lg font-semibold">{free.name}</h3>
             <p className="mt-1 text-3xl font-semibold">$0</p>
-            <ul className="mt-5 space-y-2 text-sm text-[#c8c8c8]">
+            <ul className="mt-5 space-y-2 text-sm text-secondary-foreground">
               <li>{formatTokenCount(free.tokens)} tokens / month</li>
               <li>{free.browserMinutes} browser minutes</li>
               <li>{free.computerMinutes} computer minutes</li>
@@ -136,13 +136,13 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             </ul>
             <Link
               href={startHref}
-              className="mt-6 inline-flex rounded-lg bg-white/10 px-4 py-2 text-sm transition-transform hover:bg-white/15 active:scale-[0.98]"
+              className="mt-6 inline-flex rounded-lg bg-foreground/10 px-4 py-2 text-sm transition-transform hover:bg-foreground/15 active:scale-[0.98]"
             >
               {signedIn ? "Open workspace" : "Create account"}
             </Link>
           </motion.article>
           <motion.article
-            className="rounded-xl border border-white/20 bg-[#171717] p-6"
+            className="rounded-xl border border-foreground/20 bg-surface-23 p-6"
             initial={{ opacity: 0, y: 16 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
@@ -152,9 +152,9 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             <h3 className="text-lg font-semibold">{pro.name}</h3>
             <p className="mt-1 text-3xl font-semibold">
               ${pro.priceUsd}
-              <span className="text-sm font-normal text-[#8f8f8f]"> / month</span>
+              <span className="text-sm font-normal text-muted-foreground"> / month</span>
             </p>
-            <ul className="mt-5 space-y-2 text-sm text-[#c8c8c8]">
+            <ul className="mt-5 space-y-2 text-sm text-secondary-foreground">
               <li>{formatTokenCount(pro.tokens)} tokens / month</li>
               <li>{pro.browserMinutes} browser minutes</li>
               <li>{pro.computerMinutes} computer minutes</li>
@@ -163,7 +163,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             </ul>
             <Link
               href="/upgrade"
-              className="mt-6 inline-flex rounded-lg bg-[#f0f0f0] px-4 py-2 text-sm font-medium text-[#0a0a0a] transition-transform hover:bg-white active:scale-[0.98]"
+              className="mt-6 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
             >
               Start Pro
             </Link>
@@ -172,19 +172,19 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
       </section>
 
       <FadeInView>
-      <footer className="border-t border-white/10 px-6 py-8 text-xs text-[#8f8f8f]">
+      <footer className="border-t border-foreground/10 px-6 py-8 text-xs text-muted-foreground">
         <div className="mx-auto flex max-w-5xl flex-wrap gap-4">
           <span>Deni Run</span>
-          <Link href="/terms" className="hover:text-[#f0f0f0]">
+          <Link href="/terms" className="hover:text-foreground">
             Terms
           </Link>
-          <Link href="/privacy" className="hover:text-[#f0f0f0]">
+          <Link href="/privacy" className="hover:text-foreground">
             Privacy
           </Link>
-          <Link href="/upgrade" className="hover:text-[#f0f0f0]">
+          <Link href="/upgrade" className="hover:text-foreground">
             Upgrade
           </Link>
-          <Link href="/account" className="hover:text-[#f0f0f0]">
+          <Link href="/account" className="hover:text-foreground">
             Account
           </Link>
         </div>

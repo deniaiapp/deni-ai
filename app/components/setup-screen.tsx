@@ -34,19 +34,19 @@ export function SetupScreen({ onReady }: { onReady: () => void }) {
   }
 
   return (
-    <main className="flex min-h-full items-center justify-center bg-[#050505] px-6 py-16">
+    <main className="flex min-h-full items-center justify-center bg-background px-6 py-16">
       <FadeIn className="w-full max-w-lg">
       <Card className="w-full p-6">
-        <span className="text-sm text-[#8f8f8f]">Deni Run</span>
+        <span className="text-sm text-muted-foreground">Deni Run</span>
         <div className="mt-2">
-          <h1 className="text-lg font-semibold text-[#f0f0f0]">
+          <h1 className="text-lg font-semibold text-foreground">
             AI teammates.
             <br />
             Their own computer.
           </h1>
         </div>
         <div className="mt-4">
-          <p className="text-[0.925rem] text-[#8f8f8f]">
+          <p className="text-[0.925rem] text-muted-foreground">
             Hand work to named teammates and let them finish it on an isolated computer (browser,
             files, and terminal). Your workspace stays private to your account.
           </p>
@@ -63,11 +63,13 @@ export function SetupScreen({ onReady }: { onReady: () => void }) {
             data-1p-ignore
             aria-invalid={error ? true : undefined}
           />
-          <p className="text-xs text-[#8f8f8f]">
-            Get a key at openrouter.ai. Uses openai/gpt-5.6-luna. Pick Default, High, xhigh, or Max
-            in the workspace. This screen is skipped when an environment variable is set.
+          <p className="text-xs text-muted-foreground">
+            Get a key at openrouter.ai. Run uses openai/gpt-6-luna; Run+ uses
+            openai/gpt-6-sol and consumes 20× the matching Run mode’s tokens.
+            Pick a mode in the workspace.
+            This screen is skipped when an environment variable is set.
           </p>
-          {error ? <p className="text-xs text-red-400">{error}</p> : null}
+          {error ? <p className="text-xs text-destructive-400">{error}</p> : null}
         </div>
         <Button
           type="button"

@@ -23,14 +23,14 @@ const ShimmerComponent = ({ children, className, duration = 2, spread = 2 }: Shi
       animate={{ backgroundPosition: "0% center" }}
       className={cn(
         "relative inline-block bg-[length:250%_100%,auto] bg-clip-text text-transparent",
-        "[--bg:linear-gradient(90deg,#0000_calc(50%-var(--spread)),#f0f0f0,#0000_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]",
+        "[--bg:linear-gradient(90deg,transparent_calc(50%-var(--spread)),var(--foreground),transparent_calc(50%+var(--spread)))] [background-repeat:no-repeat,padding-box]",
         className,
       )}
       initial={{ backgroundPosition: "100% center" }}
       style={
         {
           "--spread": `${dynamicSpread}px`,
-          backgroundImage: "var(--bg), linear-gradient(#8f8f8f, #8f8f8f)",
+          backgroundImage: "var(--bg), linear-gradient(var(--muted-foreground), var(--muted-foreground))",
         } as CSSProperties
       }
       transition={{ duration, ease: "linear", repeat: Number.POSITIVE_INFINITY }}

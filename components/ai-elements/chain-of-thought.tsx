@@ -66,7 +66,7 @@ export const ChainOfThoughtHeader = memo(
       <Collapsible className="block w-full min-w-0" onOpenChange={setIsOpen} open={isOpen}>
         <CollapsibleTrigger
           className={cn(
-            "flex w-full min-w-0 items-center gap-2 text-sm text-[#8f8f8f] transition-colors hover:text-[#f0f0f0]",
+            "flex w-full min-w-0 items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground",
             className,
           )}
           {...props}
@@ -93,9 +93,9 @@ export type ChainOfThoughtStepProps = ComponentProps<"div"> & {
 };
 
 const stepStatusStyles = {
-  active: "text-[#f0f0f0]",
-  complete: "text-[#8f8f8f]",
-  pending: "text-[#8f8f8f]/50",
+  active: "text-foreground",
+  complete: "text-muted-foreground",
+  pending: "text-muted-foreground/50",
 };
 
 export const ChainOfThoughtStep = memo(
@@ -119,11 +119,11 @@ export const ChainOfThoughtStep = memo(
     >
       <div className="relative mt-0.5">
         <Icon className="size-4" />
-        <div className="absolute top-7 bottom-0 left-1/2 -mx-px w-px bg-white/10" />
+        <div className="absolute top-7 bottom-0 left-1/2 -mx-px w-px bg-foreground/10" />
       </div>
       <div className="flex-1 space-y-2 overflow-hidden">
         <div>{label}</div>
-        {description ? <div className="text-xs text-[#8f8f8f]">{description}</div> : null}
+        {description ? <div className="text-xs text-muted-foreground">{description}</div> : null}
         {children}
       </div>
     </div>
@@ -162,7 +162,7 @@ export const ChainOfThoughtContent = memo(
       <Collapsible className="w-full" open={isOpen}>
         <CollapsibleContent
           className={cn(
-            "mt-2 space-y-3 text-[#e7e7e7] outline-none",
+            "mt-2 space-y-3 text-neutral-231 outline-none",
             "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 data-[state=closed]:animate-out data-[state=open]:animate-in",
             className,
           )}
@@ -182,10 +182,10 @@ export type ChainOfThoughtImageProps = ComponentProps<"div"> & {
 export const ChainOfThoughtImage = memo(
   ({ className, children, caption, ...props }: ChainOfThoughtImageProps) => (
     <div className={cn("mt-2 space-y-2", className)} {...props}>
-      <div className="relative flex max-h-88 items-center justify-center overflow-hidden rounded-lg bg-[#090909] p-3">
+      <div className="relative flex max-h-88 items-center justify-center overflow-hidden rounded-lg bg-surface-9 p-3">
         {children}
       </div>
-      {caption ? <p className="text-xs text-[#8f8f8f]">{caption}</p> : null}
+      {caption ? <p className="text-xs text-muted-foreground">{caption}</p> : null}
     </div>
   ),
 );

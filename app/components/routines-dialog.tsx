@@ -11,7 +11,7 @@ import type { Bot, Routine, Thread } from "@/lib/types";
 import { describeRoutineSchedule, formatRoutineTime, readRoutineSchedule, routineCron, WEEKDAYS, type RoutineFrequency } from "@/lib/routine-schedule";
 
 type RoutineInput = { id?: string; botId?: string; threadId?: string; name: string; instructions: string; cron: string; timezone: string; enabled: boolean };
-const selectClass = "h-10 w-full min-w-0 rounded-lg border border-white/15 bg-[#151515] px-3 text-sm text-neutral-200 outline-none focus:border-white/30";
+const selectClass = "h-10 w-full min-w-0 rounded-lg border border-foreground/15 bg-surface-input px-3 text-sm text-neutral-200 outline-none focus:border-foreground/30";
 
 export function RoutinesDialog({ routines, bots, threads, initialRoutineId, defaultBotId, defaultThreadId, onClose, onSaved, onDeleted, onSync }: {
   routines: Routine[]; bots: Bot[]; threads: Thread[];
@@ -68,9 +68,9 @@ export function RoutinesDialog({ routines, bots, threads, initialRoutineId, defa
     <DialogContent className="max-h-[90dvh] max-w-xl overflow-y-auto">
       <DialogTitle>{deleting ? "Delete routine" : view === "form" ? editing ? "Edit routine" : "New routine" : "Routines"}</DialogTitle>
       <DialogDescription>Set up recurring work and manage it here. Changes apply to future runs; a task already running continues.</DialogDescription>
-      {error ? <p role="alert" className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-300">{error}</p> : null}
+      {error ? <p role="alert" className="rounded-lg bg-destructive-500/10 px-3 py-2 text-sm text-destructive-300">{error}</p> : null}
       {deleting ? <div className="space-y-5 py-2">
-        <p className="text-sm text-neutral-300">Delete <strong className="text-white">{deleting.name}</strong>? Its schedule will be removed. Existing conversations and files will remain.</p>
+        <p className="text-sm text-neutral-300">Delete <strong className="text-foreground">{deleting.name}</strong>? Its schedule will be removed. Existing conversations and files will remain.</p>
         <div className="flex justify-end gap-2"><Button type="button" variant="outline" disabled={Boolean(busy)} onClick={() => { setDeleting(null); setError(null); }}>Cancel</Button><Button type="button" variant="secondary-destructive" loading={busy === "delete"} onClick={() => void remove()}>Delete routine</Button></div>
       </div> : view === "form" ? <>
         <Button type="button" variant="ghost" size="xs" icon={ArrowLeft} className="w-fit" disabled={Boolean(busy)} onClick={() => { setEditing(null); setView("list"); setError(null); }}>All routines</Button>
@@ -78,14 +78,14 @@ export function RoutinesDialog({ routines, bots, threads, initialRoutineId, defa
       </> : <>
         <div className="flex items-center justify-between gap-3"><span className="text-xs text-neutral-500">{routines.length} routine{routines.length === 1 ? "" : "s"}</span><Button type="button" size="sm" icon={Plus} disabled={!bots.length || !threads.length || Boolean(busy)} onClick={() => { setEditing(null); setView("form"); setError(null); }}>New routine</Button></div>
         {!routines.length ? <div className="flex flex-col items-center gap-3 py-10 text-center text-neutral-500"><Clock3 size={28} /><p className="text-sm">Create a routine to schedule recurring work.</p></div> : <div className="space-y-3">
-          {routines.map((routine) => <div key={routine.id} className="rounded-xl border border-white/10 bg-white/[0.025] p-3">
+          {routines.map((routine) => <div key={routine.id} className="rounded-xl border border-foreground/10 bg-foreground/[0.025] p-3">
             <div className="flex items-center justify-between gap-3"><button type="button" disabled={Boolean(busy)} onClick={() => { setEditing(routine); setView("form"); setError(null); }} className="min-w-0 truncate text-left text-sm font-medium hover:underline">{routine.name}</button><RoutineSwitch checked={routine.enabled} disabled={Boolean(busy)} label={`${routine.enabled ? "Turn off" : "Turn on"} ${routine.name}`} onChange={() => void toggle(routine)} /></div>
             <p className="mt-1 text-[11px] text-neutral-500">{bots.find((bot) => bot.id === routine.botId)?.name ?? "Teammate"}</p>
             <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-neutral-400">{routine.instructions}</p>
             <p className="mt-3 text-xs text-neutral-300">{describeRoutineSchedule(routine.cron)}</p>
             <p className="mt-1 text-xs text-neutral-500">{routine.timezone} · {routine.enabled ? `Next ${formatRoutineTime(routine.nextRunAt, routine.timezone)}` : "Off"}</p>
-            {routine.lastError ? <p className="mt-2 text-xs text-amber-300">{routine.lastError}</p> : null}
-            <div className="mt-3 flex justify-end gap-1"><Button type="button" variant="ghost" size="xs" icon={Pencil} disabled={Boolean(busy)} onClick={() => { setEditing(routine); setView("form"); setError(null); }}>Edit</Button><Button type="button" variant="ghost" size="xs" icon={Trash2} className="text-red-300" disabled={Boolean(busy)} onClick={() => { setDeleting(routine); setError(null); }}>Delete</Button></div>
+            {routine.lastError ? <p className="mt-2 text-xs text-warning-300">{routine.lastError}</p> : null}
+            <div className="mt-3 flex justify-end gap-1"><Button type="button" variant="ghost" size="xs" icon={Pencil} disabled={Boolean(busy)} onClick={() => { setEditing(routine); setView("form"); setError(null); }}>Edit</Button><Button type="button" variant="ghost" size="xs" icon={Trash2} className="text-destructive-300" disabled={Boolean(busy)} onClick={() => { setDeleting(routine); setError(null); }}>Delete</Button></div>
           </div>)}
         </div>}
       </>}
@@ -94,8 +94,8 @@ export function RoutinesDialog({ routines, bots, threads, initialRoutineId, defa
 }
 
 function RoutineSwitch({ checked, disabled, label, onChange }: { checked: boolean; disabled?: boolean; label: string; onChange: () => void }) {
-  return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={onChange} className="flex shrink-0 items-center gap-2 rounded-md text-xs text-neutral-400 outline-none focus-visible:ring-2 focus-visible:ring-white/40 disabled:opacity-40">
-    <span>{checked ? "On" : "Off"}</span><span className={`flex h-5 w-9 items-center rounded-full px-0.5 transition-colors ${checked ? "bg-emerald-600" : "bg-neutral-700"}`}><span className={`size-4 rounded-full bg-white transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`} /></span>
+  return <button type="button" role="switch" aria-checked={checked} aria-label={label} disabled={disabled} onClick={onChange} className="flex shrink-0 items-center gap-2 rounded-md text-xs text-neutral-400 outline-none focus-visible:ring-2 focus-visible:ring-foreground/40 disabled:opacity-40">
+    <span>{checked ? "On" : "Off"}</span><span className={`flex h-5 w-9 items-center rounded-full px-0.5 transition-colors ${checked ? "bg-success-600" : "bg-neutral-700"}`}><span className={`size-4 rounded-full bg-white transition-transform ${checked ? "translate-x-4" : "translate-x-0"}`} /></span>
   </button>;
 }
 
@@ -131,9 +131,9 @@ function RoutineForm({ routine, bots, threads, defaultBotId, defaultThreadId, de
         {schedule.frequency === "monthly" ? <div className="space-y-1.5"><Label htmlFor="routine-day">Day of month</Label><Input id="routine-day" type="number" min={1} max={31} required value={schedule.day} onChange={(event) => setSchedule((value) => ({ ...value, day: event.target.value }))} /><p className="text-xs text-neutral-500">Months without this day are skipped.</p></div> : null}
       </div>}
       <div className="space-y-1.5"><Label htmlFor="routine-timezone">Timezone</Label><Input id="routine-timezone" value={timezone} onChange={(event) => setTimezone(event.target.value)} required maxLength={100} list="routine-timezones" placeholder="Asia/Tokyo" /><datalist id="routine-timezones">{["Asia/Tokyo", "UTC", "America/New_York", "America/Los_Angeles", "Europe/London", "Europe/Paris", "Asia/Singapore", "Australia/Sydney"].map((zone) => <option key={zone} value={zone} />)}</datalist></div>
-      <div className="flex items-center justify-between rounded-lg border border-white/10 p-3"><span className="text-sm">Enabled</span><RoutineSwitch checked={enabled} label="Enable routine" onChange={() => setEnabled((value) => !value)} /></div>
+      <div className="flex items-center justify-between rounded-lg border border-foreground/10 p-3"><span className="text-sm">Enabled</span><RoutineSwitch checked={enabled} label="Enable routine" onChange={() => setEnabled((value) => !value)} /></div>
     </fieldset>
-    {error ? <p role="alert" className="text-sm text-red-300">{error}</p> : null}
-    <div className="flex items-center justify-between gap-3 border-t border-white/10 pt-4"><div>{onDelete ? <Button type="button" size="sm" variant="ghost" icon={Trash2} className="text-red-300" disabled={busy} onClick={onDelete}>Delete</Button> : null}</div><Button type="submit" loading={busy} disabled={!name.trim() || !instructions.trim() || !botId || !threadId}>{routine ? "Save changes" : "Create routine"}</Button></div>
+    {error ? <p role="alert" className="text-sm text-destructive-300">{error}</p> : null}
+    <div className="flex items-center justify-between gap-3 border-t border-foreground/10 pt-4"><div>{onDelete ? <Button type="button" size="sm" variant="ghost" icon={Trash2} className="text-destructive-300" disabled={busy} onClick={onDelete}>Delete</Button> : null}</div><Button type="submit" loading={busy} disabled={!name.trim() || !instructions.trim() || !botId || !threadId}>{routine ? "Save changes" : "Create routine"}</Button></div>
   </form>;
 }

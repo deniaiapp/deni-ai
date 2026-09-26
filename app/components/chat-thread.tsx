@@ -1,9 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import {
-  type UIMessage,
-} from "ai";
+import { type UIMessage } from "ai";
 import {
   memo,
   useCallback,
@@ -59,7 +57,11 @@ import {
   ConversationContent,
   ConversationEmptyState,
 } from "@/components/ai-elements/conversation";
-import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import {
+  Message,
+  MessageContent,
+  MessageResponse,
+} from "@/components/ai-elements/message";
 import {
   PromptInput,
   PromptInputSubmit,
@@ -72,13 +74,30 @@ import { Empty } from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
 import { Avatar } from "./sidebar";
 import { MessageActions } from "./message-actions";
-import { messageActionKey, messageBubbleTargets, replyReference, type MessageBubble, type MessageReference, type MessageReaction } from "@/lib/message-actions";
+import {
+  messageActionKey,
+  messageBubbleTargets,
+  replyReference,
+  type MessageBubble,
+  type MessageReference,
+  type MessageReaction,
+} from "@/lib/message-actions";
 import { createReactionState, type ReactionMap } from "@/lib/reaction-state";
 import { messageAuthor, type MessageAuthor } from "@/lib/group-chat";
 import { RUN_MODES, type RunMode } from "@/lib/model";
-import type { AgentJob, Artifact, Bot, HandoffSnapshot, Thread } from "@/lib/types";
+import type {
+  AgentJob,
+  Artifact,
+  Bot,
+  HandoffSnapshot,
+  Thread,
+} from "@/lib/types";
 import { isActiveJob, latestJob, mergeJobSnapshots } from "@/lib/job-view";
-import { clearThreadDraft, getThreadDraft, setThreadDraft } from "@/lib/thread-state";
+import {
+  clearThreadDraft,
+  getThreadDraft,
+  setThreadDraft,
+} from "@/lib/thread-state";
 import type { Chat } from "@ai-sdk/react";
 import {
   getChatSessionRunStatus,
@@ -92,28 +111,39 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 const draftCache = new Map<string, string>();
 const scrollCache = new Map<string, number>();
 const replyCache = new Map<string, MessageReference>();
-const reactionStates = new Map<string, ReturnType<typeof createReactionState>>();
+const reactionStates = new Map<
+  string,
+  ReturnType<typeof createReactionState>
+>();
 
 export function forgetChatThread(threadId: string) {
-  draftCache.delete(threadId); scrollCache.delete(threadId); replyCache.delete(threadId); reactionStates.delete(threadId);
+  draftCache.delete(threadId);
+  scrollCache.delete(threadId);
+  replyCache.delete(threadId);
+  reactionStates.delete(threadId);
 }
 
 function getReactionState(threadId: string, initial: ReactionMap = {}) {
   const existing = reactionStates.get(threadId);
   if (existing) return existing;
   const state = createReactionState(async (messageId, emoji, selected) => {
-    const response = await fetch(`/api/threads/${encodeURIComponent(threadId)}/reactions`, {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messageId, emoji, selected }),
-    });
+    const response = await fetch(
+      `/api/threads/${encodeURIComponent(threadId)}/reactions`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messageId, emoji, selected }),
+      },
+    );
     if (!response.ok) throw new Error("Reaction could not be saved");
-    return (await response.json() as { reactions: ReactionMap }).reactions;
+    return ((await response.json()) as { reactions: ReactionMap }).reactions;
   }, initial);
   reactionStates.set(threadId, state);
   for (const [key, entry] of reactionStates) {
@@ -126,7 +156,8 @@ function getReactionState(threadId: string, initial: ReactionMap = {}) {
 function rememberScroll(threadId: string, scrollTop: number) {
   scrollCache.delete(threadId);
   scrollCache.set(threadId, scrollTop);
-  while (scrollCache.size > 100) scrollCache.delete(scrollCache.keys().next().value as string);
+  while (scrollCache.size > 100)
+    scrollCache.delete(scrollCache.keys().next().value as string);
 }
 
 export function ChatThread({
@@ -153,22 +184,52 @@ export function ChatThread({
   chat: Chat<UIMessage>;
 }) {
   const conversationContextRef = useRef<StickToBottomContext | null>(null);
-  const { messages, sendMessage, status, addToolApprovalResponse, setMessages, stop, error, clearError } = useChat({ chat });
+  const {
+    messages,
+    sendMessage,
+    status,
+    addToolApprovalResponse,
+    setMessages,
+    stop,
+    error,
+    clearError,
+  } = useChat({ chat });
 
-  const [input, setInput] = useState(() => getThreadDraft(draftCache, thread.id));
+  const [input, setInput] = useState(() =>
+    getThreadDraft(draftCache, thread.id),
+  );
   const [mentionCursor, setMentionCursor] = useState(-1);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [approvalError, setApprovalError] = useState<string | null>(null);
-  const groupMembers = bots.filter((member) => thread.botIds.includes(member.id));
+  const groupMembers = bots.filter((member) =>
+    thread.botIds.includes(member.id),
+  );
   const mentionPrefix = mentionCursor >= 0 ? input.slice(0, mentionCursor) : "";
-  const mention = thread.kind === "group" ? mentionPrefix.match(/(?:^|\s)@([^@\n]{0,48})$/) : null;
-  const mentionOptions = mention ? [
-    { id: "everyone", name: "everyone", accent: "#525252" }, ...groupMembers,
-  ].filter((member) => member.name.toLowerCase().startsWith(mention[1].toLowerCase())) : [];
+  const mention =
+    thread.kind === "group"
+      ? mentionPrefix.match(/(?:^|\s)@([^@\n]{0,48})$/)
+      : null;
+  const mentionOptions = mention
+    ? [
+        { id: "everyone", name: "everyone", accent: "#525252" },
+        ...groupMembers,
+      ].filter((member) =>
+        member.name.toLowerCase().startsWith(mention[1].toLowerCase()),
+      )
+    : [];
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const [replyTarget, setReplyTarget] = useState<MessageReference | null>(() => replyCache.get(thread.id) ?? null);
-  const reactionState = useMemo(() => getReactionState(thread.id, thread.reactions), [thread.id, thread.reactions]);
-  const reactions = useSyncExternalStore(reactionState.subscribe, reactionState.getSnapshot, reactionState.getSnapshot);
+  const [replyTarget, setReplyTarget] = useState<MessageReference | null>(
+    () => replyCache.get(thread.id) ?? null,
+  );
+  const reactionState = useMemo(
+    () => getReactionState(thread.id, thread.reactions),
+    [thread.id, thread.reactions],
+  );
+  const reactions = useSyncExternalStore(
+    reactionState.subscribe,
+    reactionState.getSnapshot,
+    reactionState.getSnapshot,
+  );
   const [handoffs, setHandoffs] = useState<Record<string, HandoffSnapshot>>({});
   const [jobs, setJobs] = useState<AgentJob[]>(backgroundJobs ?? []);
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
@@ -178,43 +239,74 @@ export function ChatThread({
   const jobsChangeRef = useRef(onJobsChange);
   const displayedJobs = backgroundJobs ?? jobs;
   const usesSharedJobs = backgroundJobs !== undefined;
-  const sharedJobSignal = backgroundJobs?.map((job) => `${job.id}:${job.status}:${job.attempt}`).join("|");
+  const sharedJobSignal = backgroundJobs
+    ?.map((job) => `${job.id}:${job.status}:${job.attempt}`)
+    .join("|");
   const displayedJobsRef = useRef(displayedJobs);
 
   useEffect(() => {
     const controller = new AbortController();
     const revision = reactionState.getRevision();
-    void fetch(`/api/threads/${encodeURIComponent(thread.id)}/reactions`, { signal: controller.signal })
+    void fetch(`/api/threads/${encodeURIComponent(thread.id)}/reactions`, {
+      signal: controller.signal,
+    })
       .then(async (response) => {
         if (!response.ok) return;
-        const data = await response.json() as { reactions: Record<string, string[]> };
-        if (!controller.signal.aborted) reactionState.hydrate(data.reactions, revision);
-      }).catch(() => undefined);
+        const data = (await response.json()) as {
+          reactions: Record<string, string[]>;
+        };
+        if (!controller.signal.aborted)
+          reactionState.hydrate(data.reactions, revision);
+      })
+      .catch(() => undefined);
     return () => controller.abort();
   }, [thread.id, reactionState]);
 
-  const replyToMessage = useCallback((reference: MessageReference) => {
-    setReplyTarget(reference);
-    replyCache.delete(thread.id);
-    replyCache.set(thread.id, reference);
-    while (replyCache.size > 100) replyCache.delete(replyCache.keys().next().value as string);
-    requestAnimationFrame(() => {
-      const textarea = inputRef.current;
-      if (!textarea) return;
-      textarea.focus();
-      textarea.setSelectionRange(textarea.value.length, textarea.value.length);
-    });
-  }, [setReplyTarget, thread.id]);
+  const replyToMessage = useCallback(
+    (reference: MessageReference) => {
+      setReplyTarget(reference);
+      replyCache.delete(thread.id);
+      replyCache.set(thread.id, reference);
+      while (replyCache.size > 100)
+        replyCache.delete(replyCache.keys().next().value as string);
+      requestAnimationFrame(() => {
+        const textarea = inputRef.current;
+        if (!textarea) return;
+        textarea.focus();
+        textarea.setSelectionRange(
+          textarea.value.length,
+          textarea.value.length,
+        );
+      });
+    },
+    [setReplyTarget, thread.id],
+  );
 
-  const reactToMessage = useCallback((messageId: string, emoji: MessageReaction, selected: boolean) => reactionState.toggle(messageId, emoji, selected), [reactionState]);
+  const reactToMessage = useCallback(
+    (messageId: string, emoji: MessageReaction, selected: boolean) =>
+      reactionState.toggle(messageId, emoji, selected),
+    [reactionState],
+  );
 
   const locateMessage = useCallback((key: string) => {
-    const element = conversationContextRef.current?.scrollRef.current?.querySelector<HTMLElement>(`[data-message-key="${CSS.escape(key)}"]`);
+    const element =
+      conversationContextRef.current?.scrollRef.current?.querySelector<HTMLElement>(
+        `[data-message-key="${CSS.escape(key)}"]`,
+      );
     if (!element) return;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    element.scrollIntoView({ behavior: reduced ? "instant" : "smooth", block: "center" });
+    const reduced = window.matchMedia(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    element.scrollIntoView({
+      behavior: reduced ? "instant" : "smooth",
+      block: "center",
+    });
     element.focus({ preventScroll: true });
-    if (!reduced) element.animate([{ backgroundColor: "#ffffff18" }, { backgroundColor: "transparent" }], { duration: 1100 });
+    if (!reduced)
+      element.animate(
+        [{ backgroundColor: "color-mix(in srgb, var(--color-white) 9.4%, transparent)" }, { backgroundColor: "transparent" }],
+        { duration: 1100 },
+      );
   }, []);
 
   useEffect(() => {
@@ -245,8 +337,15 @@ export function ChatThread({
     async (id: string, approved: boolean) => {
       setApprovalError(null);
       if (thread.kind === "group") {
-        try { await approveGroupTool(thread.id, id, approved); }
-        catch (error) { setApprovalError(error instanceof Error ? error.message : "Could not submit approval."); }
+        try {
+          await approveGroupTool(thread.id, id, approved);
+        } catch (error) {
+          setApprovalError(
+            error instanceof Error
+              ? error.message
+              : "Could not submit approval.",
+          );
+        }
         return;
       }
       setChatSessionRunStatus(thread.id, "working");
@@ -259,7 +358,8 @@ export function ChatThread({
 
   const busy = status === "submitted" || status === "streaming";
   const subscribeRunStatus = useCallback(
-    (listener: () => void) => subscribeChatSessionRunStatus(thread.id, listener),
+    (listener: () => void) =>
+      subscribeChatSessionRunStatus(thread.id, listener),
     [thread.id],
   );
   const chatRunStatus = useSyncExternalStore(
@@ -267,58 +367,113 @@ export function ChatThread({
     () => getChatSessionRunStatus(thread.id),
     () => "idle",
   );
-  const subscribeGroupStatuses = useCallback((listener: () => void) => subscribeGroupReplyStatuses(thread.id, listener), [thread.id]);
-  const groupStatuses = useSyncExternalStore(subscribeGroupStatuses, () => getGroupReplyStatuses(thread.id), () => getGroupReplyStatuses(thread.id));
+  const subscribeGroupStatuses = useCallback(
+    (listener: () => void) => subscribeGroupReplyStatuses(thread.id, listener),
+    [thread.id],
+  );
+  const groupStatuses = useSyncExternalStore(
+    subscribeGroupStatuses,
+    () => getGroupReplyStatuses(thread.id),
+    () => getGroupReplyStatuses(thread.id),
+  );
   const activeJob = latestJob(displayedJobs.filter(isActiveJob));
-  const savingResult = thread.kind === "group"
-    ? Object.values(groupStatuses).some((item) => item.status === "finalizing") && !Object.values(groupStatuses).some((item) => item.status === "working")
-    : activeJob?.status === "finalizing" || chatRunStatus === "finalizing";
+  const savingResult =
+    thread.kind === "group"
+      ? Object.values(groupStatuses).some(
+          (item) => item.status === "finalizing",
+        ) &&
+        !Object.values(groupStatuses).some((item) => item.status === "working")
+      : activeJob?.status === "finalizing" || chatRunStatus === "finalizing";
   const waitingForUser = chatRunStatus === "waiting";
-  const showBusyIndicator = busy && chatRunStatus !== "completed" && chatRunStatus !== "failed";
+  const showBusyIndicator =
+    busy && chatRunStatus !== "completed" && chatRunStatus !== "failed";
 
-  const refreshTaskData = useCallback(async (signal?: AbortSignal, forceJobs = false) => {
-    const sequence = ++taskRefreshSequence.current;
-    const [jobsResponse, artifactsResponse] = await Promise.all([
-      !usesSharedJobs || forceJobs ? fetch(`/api/jobs?threadId=${encodeURIComponent(thread.id)}`, { cache: "no-store", signal }) : Promise.resolve(null),
-      fetch(`/api/artifacts?threadId=${encodeURIComponent(thread.id)}`, { cache: "no-store", signal }),
-    ]);
-    if (!mountedRef.current || sequence !== taskRefreshSequence.current) return;
-    let nextJobs = displayedJobsRef.current;
-    if (jobsResponse?.ok) {
-      const json = (await jobsResponse.json()) as { jobs?: AgentJob[] };
-      nextJobs = mergeJobSnapshots(displayedJobsRef.current, json.jobs ?? []);
-      setJobs(nextJobs);
-      jobsChangeRef.current?.(nextJobs);
-    }
+  const refreshTaskData = useCallback(
+    async (signal?: AbortSignal, forceJobs = false) => {
+      const sequence = ++taskRefreshSequence.current;
+      const [jobsResponse, artifactsResponse] = await Promise.all([
+        !usesSharedJobs || forceJobs
+          ? fetch(`/api/jobs?threadId=${encodeURIComponent(thread.id)}`, {
+              cache: "no-store",
+              signal,
+            })
+          : Promise.resolve(null),
+        fetch(`/api/artifacts?threadId=${encodeURIComponent(thread.id)}`, {
+          cache: "no-store",
+          signal,
+        }),
+      ]);
+      if (!mountedRef.current || sequence !== taskRefreshSequence.current)
+        return;
+      let nextJobs = displayedJobsRef.current;
+      if (jobsResponse?.ok) {
+        const json = (await jobsResponse.json()) as { jobs?: AgentJob[] };
+        nextJobs = mergeJobSnapshots(displayedJobsRef.current, json.jobs ?? []);
+        setJobs(nextJobs);
+        jobsChangeRef.current?.(nextJobs);
+      }
       const active = latestJob(nextJobs.filter(isActiveJob));
       onActiveJobChange?.(active?.id ?? null);
       const current = latestJob(nextJobs);
-      if (!busy && !active && current?.status === "completed" && syncedCompletion.current !== current.id) {
+      if (
+        !busy &&
+        !active &&
+        current?.status === "completed" &&
+        syncedCompletion.current !== current.id
+      ) {
         syncedCompletion.current = current.id;
         void fetch(`/api/threads/${thread.id}`, { cache: "no-store", signal })
-          .then((response) => { if (!response.ok) throw new Error("Could not load completed messages"); return response.json(); })
-          .then((json) => {
-            if (mountedRef.current && !signal?.aborted && chat.status !== "streaming" && chat.status !== "submitted" && !displayedJobsRef.current.some(isActiveJob)) setMessages(json.messages ?? []);
+          .then((response) => {
+            if (!response.ok)
+              throw new Error("Could not load completed messages");
+            return response.json();
           })
-          .catch(() => { if (syncedCompletion.current === current.id) syncedCompletion.current = null; });
+          .then((json) => {
+            if (
+              mountedRef.current &&
+              !signal?.aborted &&
+              chat.status !== "streaming" &&
+              chat.status !== "submitted" &&
+              !displayedJobsRef.current.some(isActiveJob)
+            )
+              setMessages(json.messages ?? []);
+          })
+          .catch(() => {
+            if (syncedCompletion.current === current.id)
+              syncedCompletion.current = null;
+          });
       }
-    if (artifactsResponse.ok) {
-      const json = (await artifactsResponse.json()) as { artifacts?: Artifact[] };
-      setArtifacts(json.artifacts ?? []);
-    }
-  }, [busy, chat, onActiveJobChange, setMessages, thread.id, usesSharedJobs]);
+      if (artifactsResponse.ok) {
+        const json = (await artifactsResponse.json()) as {
+          artifacts?: Artifact[];
+        };
+        setArtifacts(json.artifacts ?? []);
+      }
+    },
+    [busy, chat, onActiveJobChange, setMessages, thread.id, usesSharedJobs],
+  );
 
   useEffect(() => {
     // Polling rehydrates durable jobs after a disconnected chat request.
     const controller = new AbortController();
     let inFlight = true;
     // eslint-disable-next-line react/set-state-in-effect
-    void refreshTaskData(controller.signal).catch(() => undefined).finally(() => { inFlight = false; });
-    const timer = usesSharedJobs ? undefined : setInterval(() => {
-      if (inFlight || document.visibilityState === "hidden") return;
-      inFlight = true;
-      void refreshTaskData(controller.signal).catch(() => undefined).finally(() => { inFlight = false; });
-    }, 5_000);
+    void refreshTaskData(controller.signal)
+      .catch(() => undefined)
+      .finally(() => {
+        inFlight = false;
+      });
+    const timer = usesSharedJobs
+      ? undefined
+      : setInterval(() => {
+          if (inFlight || document.visibilityState === "hidden") return;
+          inFlight = true;
+          void refreshTaskData(controller.signal)
+            .catch(() => undefined)
+            .finally(() => {
+              inFlight = false;
+            });
+        }, 5_000);
     return () => {
       controller.abort();
       clearInterval(timer);
@@ -327,13 +482,28 @@ export function ChatThread({
 
   useEffect(() => {
     mountedRef.current = true;
-    return () => { mountedRef.current = false; };
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const stopTask = useCallback(() => {
     stop();
-    const ids = new Set(displayedJobs.filter((item) => ["queued", "running", "waiting_approval", "waiting_takeover"].includes(item.status)).map((job) => job.id));
-    for (const item of Object.values(groupStatuses)) if (item.jobId && ["working", "waiting"].includes(item.status)) ids.add(item.jobId);
+    const ids = new Set(
+      displayedJobs
+        .filter((item) =>
+          [
+            "queued",
+            "running",
+            "waiting_approval",
+            "waiting_takeover",
+          ].includes(item.status),
+        )
+        .map((job) => job.id),
+    );
+    for (const item of Object.values(groupStatuses))
+      if (item.jobId && ["working", "waiting"].includes(item.status))
+        ids.add(item.jobId);
     for (const id of ids) {
       void fetch(`/api/jobs/${id}`, {
         method: "POST",
@@ -343,11 +513,14 @@ export function ChatThread({
     }
   }, [displayedJobs, groupStatuses, refreshTaskData, stop]);
 
-  const requestRevision = useCallback((artifact: Artifact) => {
-    const next = `Revise the artifact "${artifact.title}" at ${artifact.path} and register the updated file.`;
-    setInput(next);
-    draftCache.set(thread.id, next);
-  }, [thread.id]);
+  const requestRevision = useCallback(
+    (artifact: Artifact) => {
+      const next = `Revise the artifact "${artifact.title}" at ${artifact.path} and register the updated file.`;
+      setInput(next);
+      draftCache.set(thread.id, next);
+    },
+    [thread.id],
+  );
 
   useEffect(() => {
     const ids = collectHandoffIds(messages);
@@ -358,14 +531,19 @@ export function ChatThread({
       const res = await fetch("/api/handoffs");
       const json = (await res.json()) as { handoffs?: HandoffSnapshot[] };
       if (cancelled) return;
-      const byId = new Map((json.handoffs ?? []).map((item) => [item.id, item]));
+      const byId = new Map(
+        (json.handoffs ?? []).map((item) => [item.id, item]),
+      );
       const next: Record<string, HandoffSnapshot> = {};
       for (const id of ids) {
         const item = byId.get(id);
         if (item) next[id] = item;
       }
       setHandoffs(next);
-      if (timer && Object.values(next).every((item) => item.status !== "running")) {
+      if (
+        timer &&
+        Object.values(next).every((item) => item.status !== "running")
+      ) {
         clearInterval(timer);
         timer = undefined;
       }
@@ -390,7 +568,10 @@ export function ChatThread({
     setInput("");
     clearThreadDraft(draftCache, thread.id);
     setMentionCursor(-1);
-    sendMessage({ text, ...(replyTarget ? { metadata: { replyTo: replyTarget } } : {}) });
+    sendMessage({
+      text,
+      ...(replyTarget ? { metadata: { replyTo: replyTarget } } : {}),
+    });
     setReplyTarget(null);
     replyCache.delete(thread.id);
   }
@@ -400,31 +581,43 @@ export function ChatThread({
     if (start < 0) return;
     const next = `${input.slice(0, start)}@${name} ${input.slice(mentionCursor)}`;
     const cursor = start + name.length + 2;
-    setInput(next); setThreadDraft(draftCache, thread.id, next); setMentionCursor(-1); setMentionIndex(0);
-    requestAnimationFrame(() => { inputRef.current?.focus(); inputRef.current?.setSelectionRange(cursor, cursor); });
+    setInput(next);
+    setThreadDraft(draftCache, thread.id, next);
+    setMentionCursor(-1);
+    setMentionIndex(0);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+      inputRef.current?.setSelectionRange(cursor, cursor);
+    });
   }
 
   return (
-    <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-[#050505] text-[#f0f0f0]">
+    <section className="flex min-h-0 min-w-0 flex-1 flex-col bg-background text-foreground">
       <motion.header
-        className="hidden h-[54px] shrink-0 items-center gap-2.5 border-b border-white/10 bg-[#080808] px-4 md:flex"
+        className="hidden h-[54px] shrink-0 items-center gap-2.5 border-b border-foreground/10 bg-surface-8 px-4 md:flex"
         initial={{ opacity: 0, y: -6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3, ease: easeOut }}
       >
-        <Avatar name={thread.kind === "group" ? thread.title : bot.name} accent={thread.kind === "group" ? "#454545" : bot.accent} icon={thread.kind === "group" ? thread.icon || "👥" : bot.icon} />
+        <Avatar
+          name={thread.kind === "group" ? thread.title : bot.name}
+          accent={thread.kind === "group" ? "#454545" : bot.accent}
+          icon={thread.kind === "group" ? thread.icon || "👥" : bot.icon}
+        />
         <div className="flex min-w-0 flex-1 items-center gap-3">
-          <span className="min-w-0 truncate text-[0.925rem] font-semibold text-[#f0f0f0]">
-            {thread.kind === "group" ? thread.title : bot.name}
-          </span>
-          <span className="hidden min-w-0 truncate text-xs text-[#777777] 2xl:inline">
-            {thread.kind === "group"
-              ? bots
-                  .filter((item) => thread.botIds.includes(item.id))
-                  .map((item) => item.name)
-                  .join(" · ")
-              : bot.job}
-          </span>
+          <div className="flex flex-col">
+            <span className="min-w-0 truncate font-semibold text-foreground">
+              {thread.kind === "group" ? thread.title : bot.name}
+            </span>
+            <span className="min-w-0 truncate text-xs text-neutral-119">
+              {thread.kind === "group"
+                ? bots
+                    .filter((item) => thread.botIds.includes(item.id))
+                    .map((item) => item.name)
+                    .join(" · ")
+                : bot.job}
+            </span>
+          </div>
         </div>
         {showBusyIndicator && !savingResult && !waitingForUser ? (
           <Button
@@ -432,38 +625,79 @@ export function ChatThread({
             variant="secondary-destructive"
             size="xs"
             icon={StopIcon}
-             onClick={stopTask}
+            onClick={stopTask}
           >
             Stop
           </Button>
         ) : showBusyIndicator && savingResult ? (
-          <span className="text-xs tracking-tighter text-[#8f8f8f]">Saving result…</span>
+          <span className="text-xs tracking-tighter text-muted-foreground">
+            Saving result…
+          </span>
         ) : showBusyIndicator && waitingForUser ? (
-          <span className="text-xs tracking-tighter text-amber-300">Waiting for your help…</span>
-        ) : (
-          <span className="text-xs tracking-tighter text-[#8f8f8f]">{RUN_MODES[runMode].hint}</span>
-        )}
+          <span className="text-xs tracking-tighter text-warning-300">
+            Waiting for your help…
+          </span>
+        ) : null}
       </motion.header>
 
-      {thread.kind === "group" ? <div className="shrink-0 border-b border-white/5 px-4 py-2">
-        <p className="text-[11px] text-neutral-500">@everyone to ask everyone · @name to ask a teammate</p>
-        {Object.values(groupStatuses).length ? <div className="mt-2 flex flex-wrap gap-2" role="status" aria-label="Teammate responses">
-          {Object.values(groupStatuses).map((item) => <div key={item.author.id} title={item.error} className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] ${item.status === "failed" ? "border-red-400/20 text-red-300" : "border-white/10 text-neutral-400"}`}>
-            <span className="[&>span]:size-5"><Avatar name={item.author.name} accent={item.author.accent} icon={bots.find((bot) => bot.id === item.author.id)?.icon} /></span>
-            <span>{item.author.name}</span>
-            {["working", "finalizing"].includes(item.status) ? <Loader2Icon size={11} className="animate-spin" /> : <span>{item.status === "waiting" ? "Needs your help" : item.status === "failed" ? "Failed" : "Done"}</span>}
-          </div>)}
-        </div> : null}
-        {Object.values(groupStatuses).filter((item) => item.error).map((item) => <p key={item.author.id} className="mt-1 text-xs text-red-300">{item.author.name}: {item.error}</p>)}
-      </div> : null}
+      {thread.kind === "group" ? (
+        <div className="shrink-0 border-b border-foreground/5 px-4 py-2">
+          <p className="text-[11px] text-neutral-500">
+            @everyone to ask everyone · @name to ask a teammate
+          </p>
+          {Object.values(groupStatuses).length ? (
+            <div
+              className="mt-2 flex flex-wrap gap-2"
+              role="status"
+              aria-label="Teammate responses"
+            >
+              {Object.values(groupStatuses).map((item) => (
+                <div
+                  key={item.author.id}
+                  title={item.error}
+                  className={`flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] ${item.status === "failed" ? "border-destructive-400/20 text-destructive-300" : "border-foreground/10 text-neutral-400"}`}
+                >
+                  <span className="[&>span]:size-5">
+                    <Avatar
+                      name={item.author.name}
+                      accent={item.author.accent}
+                      icon={bots.find((bot) => bot.id === item.author.id)?.icon}
+                    />
+                  </span>
+                  <span>{item.author.name}</span>
+                  {["working", "finalizing"].includes(item.status) ? (
+                    <Loader2Icon size={11} className="animate-spin" />
+                  ) : (
+                    <span>
+                      {item.status === "waiting"
+                        ? "Needs your help"
+                        : item.status === "failed"
+                          ? "Failed"
+                          : "Done"}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {Object.values(groupStatuses)
+            .filter((item) => item.error)
+            .map((item) => (
+              <p key={item.author.id} className="mt-1 text-xs text-destructive-300">
+                {item.author.name}: {item.error}
+              </p>
+            ))}
+        </div>
+      ) : null}
 
       <Conversation
         contextRef={conversationContextRef}
         className="min-h-0 flex-1"
-        onScroll={(event) => rememberScroll(thread.id, event.currentTarget.scrollTop)}
+        onScroll={(event) =>
+          rememberScroll(thread.id, event.currentTarget.scrollTop)
+        }
       >
         <ConversationContent className="max-w-none gap-5 px-4 py-6 md:px-4 lg:px-5">
-          {displayedJobs.length > 0 ? <JobStatusList jobs={displayedJobs} onRefresh={() => refreshTaskData(undefined, true)} /> : null}
           {messages.length === 0 ? (
             <ConversationEmptyState>
               <EmptyState bot={bot} />
@@ -472,34 +706,52 @@ export function ChatThread({
             messages.map((message, index) => {
               const author = messageAuthor(message);
               const memberState = author ? groupStatuses[author.id] : undefined;
-              const groupReplyActive = memberState?.messageId === message.id && ["working", "finalizing"].includes(memberState?.status ?? "");
+              const groupReplyActive =
+                memberState?.messageId === message.id &&
+                ["working", "finalizing"].includes(memberState?.status ?? "");
               return (
-              <MessageBlock
-                key={message.id || `message-${index}`}
-                workKey={`${thread.id}:${index}`}
-                message={message}
-                isLastMessage={thread.kind === "group" ? groupReplyActive : index === messages.length - 1}
-                isStreaming={thread.kind === "group" ? groupReplyActive && memberState?.status === "working" : showBusyIndicator && !savingResult && !waitingForUser}
-                onApprove={onApprove}
-                handoffs={handoffs}
-                bots={bots}
-                actionKey={messageActionKey(message, index)}
-                bubbles={messageBubbleTargets(message, index)}
-                onLocate={locateMessage}
-                author={author}
-                showAuthor={thread.kind === "group"}
-                authorIcon={bots.find((bot) => bot.id === author?.id)?.icon}
-                reactions={reactions}
-                onReply={replyToMessage}
-                onReact={reactToMessage}
-                actionsDisabled={thread.kind === "group" ? groupReplyActive : busy && index === messages.length - 1}
-              />
+                <MessageBlock
+                  key={message.id || `message-${index}`}
+                  workKey={`${thread.id}:${index}`}
+                  message={message}
+                  isLastMessage={
+                    thread.kind === "group"
+                      ? groupReplyActive
+                      : index === messages.length - 1
+                  }
+                  isStreaming={
+                    thread.kind === "group"
+                      ? groupReplyActive && memberState?.status === "working"
+                      : showBusyIndicator && !savingResult && !waitingForUser
+                  }
+                  onApprove={onApprove}
+                  handoffs={handoffs}
+                  bots={bots}
+                  actionKey={messageActionKey(message, index)}
+                  bubbles={messageBubbleTargets(message, index)}
+                  onLocate={locateMessage}
+                  author={author}
+                  showAuthor={thread.kind === "group"}
+                  authorIcon={bots.find((bot) => bot.id === author?.id)?.icon}
+                  reactions={reactions}
+                  onReply={replyToMessage}
+                  onReact={reactToMessage}
+                  actionsDisabled={
+                    thread.kind === "group"
+                      ? groupReplyActive
+                      : busy && index === messages.length - 1
+                  }
+                />
               );
             })
           )}
           {showBusyIndicator ? (
-            <span className="text-xs text-[#8f8f8f]">
-              {waitingForUser ? "Waiting for your help" : savingResult ? "Saving result" : "Working on the computer"}
+            <span className="text-xs text-muted-foreground">
+              {waitingForUser
+                ? "Waiting for your help"
+                : savingResult
+                  ? "Saving result"
+                  : "Working on the computer"}
               <AnimatedDots />
             </span>
           ) : null}
@@ -516,7 +768,10 @@ export function ChatThread({
                   type="button"
                   variant="ghost"
                   size="xs"
-                  onClick={() => { clearError(); setApprovalError(null); }}
+                  onClick={() => {
+                    clearError();
+                    setApprovalError(null);
+                  }}
                   className="-ml-2"
                 >
                   Dismiss
@@ -527,25 +782,76 @@ export function ChatThread({
         </ConversationContent>
       </Conversation>
 
-      <div className="relative shrink-0 bg-[#050505] px-3 pb-4 pt-2 md:px-4">
-        {mentionOptions.length ? <div id={`mentions-${thread.id}`} role="listbox" aria-label="Mention a teammate" className="absolute bottom-full left-4 z-20 mb-1 max-h-64 w-72 max-w-[calc(100%_-_2rem)] overflow-y-auto rounded-xl border border-white/10 bg-[#202020] p-1.5 shadow-xl">
-          {mentionOptions.map((member, index) => <button key={member.id} id={`mention-${thread.id}-${index}`} type="button" role="option" aria-selected={index === mentionIndex} onMouseDown={(event) => event.preventDefault()} onClick={() => insertMention(member.name)} className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${index === mentionIndex ? "bg-white/10" : "hover:bg-white/5"}`}>
-            {member.id === "everyone" ? <span className="flex size-8 items-center justify-center rounded-full bg-white/10"><UsersIcon size={16} /></span> : <Avatar name={member.name} accent={member.accent} icon={bots.find((bot) => bot.id === member.id)?.icon} />}
-            <span>@{member.name}</span>{member.id === "everyone" ? <span className="ml-auto text-xs text-neutral-500">All teammates</span> : null}
-          </button>)}
-        </div> : null}
-        {replyTarget ? <div className="mb-2 flex items-center gap-2 rounded-xl border border-white/10 bg-[#202020] px-3 py-2">
-          <MessageReferenceCard reference={replyTarget} botName={bot.name} onLocate={locateMessage} />
-          <button type="button" aria-label="Cancel reply" onClick={() => { setReplyTarget(null); replyCache.delete(thread.id); }} className="ml-auto rounded-md p-1.5 text-neutral-400 hover:bg-white/10 hover:text-white"><XIcon size={15} /></button>
-        </div> : null}
+      <div className="relative shrink-0 bg-background px-3 pb-4 pt-2 md:px-4">
+        {mentionOptions.length ? (
+          <div
+            id={`mentions-${thread.id}`}
+            role="listbox"
+            aria-label="Mention a teammate"
+            className="absolute bottom-full left-4 z-20 mb-1 max-h-64 w-72 max-w-[calc(100%_-_2rem)] overflow-y-auto rounded-xl border border-foreground/10 bg-surface-32 p-1.5 shadow-xl"
+          >
+            {mentionOptions.map((member, index) => (
+              <button
+                key={member.id}
+                id={`mention-${thread.id}-${index}`}
+                type="button"
+                role="option"
+                aria-selected={index === mentionIndex}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => insertMention(member.name)}
+                className={`flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm ${index === mentionIndex ? "bg-foreground/10" : "hover:bg-foreground/5"}`}
+              >
+                {member.id === "everyone" ? (
+                  <span className="flex size-8 items-center justify-center rounded-full bg-foreground/10">
+                    <UsersIcon size={16} />
+                  </span>
+                ) : (
+                  <Avatar
+                    name={member.name}
+                    accent={member.accent}
+                    icon={bots.find((bot) => bot.id === member.id)?.icon}
+                  />
+                )}
+                <span>@{member.name}</span>
+                {member.id === "everyone" ? (
+                  <span className="ml-auto text-xs text-neutral-500">
+                    All teammates
+                  </span>
+                ) : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {replyTarget ? (
+          <div className="mb-2 flex items-center gap-2 rounded-xl border border-foreground/10 bg-surface-32 px-3 py-2">
+            <MessageReferenceCard
+              reference={replyTarget}
+              botName={bot.name}
+              onLocate={locateMessage}
+            />
+            <button
+              type="button"
+              aria-label="Cancel reply"
+              onClick={() => {
+                setReplyTarget(null);
+                replyCache.delete(thread.id);
+              }}
+              className="ml-auto rounded-md p-1.5 text-neutral-400 hover:bg-foreground/10 hover:text-foreground"
+            >
+              <XIcon size={15} />
+            </button>
+          </div>
+        ) : null}
         <PromptInput
-          className="mx-auto w-full flex-row items-end gap-1 rounded-3xl border border-white/15 bg-[#2b2b2b] p-1.5 shadow-[0_2px_12px_#0003] focus-within:border-white/30"
+          className="mx-auto w-full flex-row items-end gap-1 rounded-3xl border border-foreground/15 p-1.5 shadow-[0_2px_12px_color-mix(in_srgb,var(--color-black)_20%,transparent)] focus-within:border-foreground/30"
           onSubmit={(e) => {
             e.preventDefault();
             submit();
           }}
         >
-          <div className="shrink-0 pb-1.5 pl-1"><RunModePicker value={runMode} onChange={onRunModeChange} /></div>
+          <div className="shrink-0 pb-1.5 pl-1">
+            <RunModePicker value={runMode} onChange={onRunModeChange} />
+          </div>
           <PromptInputTextarea
             ref={inputRef}
             className="min-h-9 min-w-0 flex-1 rounded-2xl border-0 bg-transparent px-2 py-2 focus-visible:border-transparent"
@@ -558,28 +864,69 @@ export function ChatThread({
               setMentionCursor(e.currentTarget.selectionStart);
               setMentionIndex(0);
             }}
-            onClick={(event) => { setMentionCursor(event.currentTarget.selectionStart); setMentionIndex(0); }}
-            onKeyDown={(event) => {
-              if (!mentionOptions.length || event.nativeEvent.isComposing) return;
-              if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setMentionIndex((value) => (value + (event.key === "ArrowDown" ? 1 : -1) + mentionOptions.length) % mentionOptions.length); }
-              else if (event.key === "Enter" || event.key === "Tab") { event.preventDefault(); insertMention(mentionOptions[Math.min(mentionIndex, mentionOptions.length - 1)].name); }
-              else if (event.key === "Escape") { event.preventDefault(); setMentionCursor(-1); }
+            onClick={(event) => {
+              setMentionCursor(event.currentTarget.selectionStart);
+              setMentionIndex(0);
             }}
-            aria-controls={mentionOptions.length ? `mentions-${thread.id}` : undefined}
-            aria-activedescendant={mentionOptions.length ? `mention-${thread.id}-${mentionIndex}` : undefined}
+            onKeyDown={(event) => {
+              if (!mentionOptions.length || event.nativeEvent.isComposing)
+                return;
+              if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                event.preventDefault();
+                setMentionIndex(
+                  (value) =>
+                    (value +
+                      (event.key === "ArrowDown" ? 1 : -1) +
+                      mentionOptions.length) %
+                    mentionOptions.length,
+                );
+              } else if (event.key === "Enter" || event.key === "Tab") {
+                event.preventDefault();
+                insertMention(
+                  mentionOptions[
+                    Math.min(mentionIndex, mentionOptions.length - 1)
+                  ].name,
+                );
+              } else if (event.key === "Escape") {
+                event.preventDefault();
+                setMentionCursor(-1);
+              }
+            }}
+            aria-controls={
+              mentionOptions.length ? `mentions-${thread.id}` : undefined
+            }
+            aria-activedescendant={
+              mentionOptions.length
+                ? `mention-${thread.id}-${mentionIndex}`
+                : undefined
+            }
             onSubmit={submit}
-            placeholder={thread.kind === "group" ? `Message ${thread.title} · @everyone` : `Message ${bot.name}`}
+            placeholder={
+              thread.kind === "group"
+                ? `Message ${thread.title} · @everyone`
+                : `Message ${bot.name}`
+            }
             aria-label={`Message ${thread.kind === "group" ? thread.title : bot.name}`}
           />
           <PromptInputToolbar className="shrink-0 pb-0.5 pr-0.5">
             <PromptInputSubmit
               className="size-8 rounded-full p-0"
-              aria-label={status === "streaming" || status === "submitted" ? "Stop response" : "Send message"}
+              aria-label={
+                status === "streaming" || status === "submitted"
+                  ? "Stop response"
+                  : "Send message"
+              }
               status={status}
-               onStop={stopTask}
+              onStop={stopTask}
               disabled={status === "ready" && !input.trim()}
             >
-              {status === "submitted" ? <Spinner size="sm" /> : status === "streaming" ? <StopIcon size={16} /> : <SendIcon size={16} />}
+              {status === "submitted" ? (
+                <Spinner size="sm" />
+              ) : status === "streaming" ? (
+                <StopIcon size={16} />
+              ) : (
+                <SendIcon size={16} />
+              )}
             </PromptInputSubmit>
           </PromptInputToolbar>
         </PromptInput>
@@ -588,57 +935,106 @@ export function ChatThread({
   );
 }
 
-function JobStatusList({ jobs, onRefresh }: { jobs: AgentJob[]; onRefresh: () => Promise<void> }) {
-  const visible = jobs.slice(0, 6);
-  return (
-    <details className="mb-1 rounded-xl border border-white/10 px-3 py-2 text-[#a5a5a5]" aria-label="Task progress">
-      <summary className="cursor-pointer text-xs">Task activity · {visible.length} recent {visible.length === 1 ? "run" : "runs"}</summary>
-      <div className="mt-3 space-y-2">
-      {visible.map((job) => {
-        const active = ["queued", "running", "finalizing"].includes(job.status);
-        const uncertain = job.status === "uncertain";
-        const label = job.status === "waiting_takeover" ? "Waiting for your help" : job.status === "waiting_approval" ? "Waiting for approval" : job.status === "finalizing" ? "Saving result" : job.status === "uncertain" ? "Needs review before retry" : job.status[0]!.toUpperCase() + job.status.slice(1);
-        return (
-          <div key={job.id} className={`rounded-lg p-3 ring-1 ${uncertain ? "bg-amber-500/10 ring-amber-400/30" : "bg-white/5 ring-white/10"}`}>
-            <div className="flex items-center justify-between gap-2"><span className="text-sm font-medium">Task {job.kind}</span><span className="text-xs text-[#a5a5a5]">{job.status === "waiting_approval" || job.status === "waiting_takeover" ? "⏸ " : uncertain ? "⚠ " : ""}{label}{active ? <AnimatedDots /> : null}</span></div>
-            {typeof job.checkpoint?.text === "string" && job.checkpoint.text ? <p className="mt-1 line-clamp-2 text-xs text-[#c8c8c8]">{job.checkpoint.text}</p> : null}
-            {job.checkpoint ? <p className="mt-1 text-xs text-[#8f8f8f]">Checkpoint saved · attempt {job.attempt}/{job.maxAttempts}</p> : null}
-            {job.error ? <p className="mt-1 text-xs text-amber-200">{job.error}</p> : null}
-            {uncertain ? <div className="mt-2 flex items-center gap-2"><Button type="button" size="xs" variant="outline" icon={RotateCcwIcon} onClick={() => { if (!window.confirm("Review the external side effects first. Retry this task?")) return; void fetch(`/api/jobs/${job.id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "retry", reviewed: true }) }).then(() => onRefresh()); }}>Review and retry</Button><span className="text-xs text-[#8f8f8f]">Check external side effects first.</span></div> : null}
-          </div>
-        );
-      })}
-      </div>
-    </details>
-  );
-}
-
-function ArtifactList({ artifacts, onRevision }: { artifacts: Artifact[]; onRevision: (artifact: Artifact) => void }) {
+function ArtifactList({
+  artifacts,
+  onRevision,
+}: {
+  artifacts: Artifact[];
+  onRevision: (artifact: Artifact) => void;
+}) {
   return (
     <div className="mt-4 space-y-2" aria-label="Artifacts">
-      <p className="text-xs font-medium uppercase tracking-wide text-[#8f8f8f]">Deliverables</p>
-      {artifacts.slice(0, 12).map((artifact) => <ArtifactCard key={artifact.id} artifact={artifact} onRevision={onRevision} />)}
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Deliverables
+      </p>
+      {artifacts.slice(0, 12).map((artifact) => (
+        <ArtifactCard
+          key={artifact.id}
+          artifact={artifact}
+          onRevision={onRevision}
+        />
+      ))}
     </div>
   );
 }
 
-function ArtifactCard({ artifact, onRevision }: { artifact: Artifact; onRevision: (artifact: Artifact) => void }) {
+function ArtifactCard({
+  artifact,
+  onRevision,
+}: {
+  artifact: Artifact;
+  onRevision: (artifact: Artifact) => void;
+}) {
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   async function showPreview() {
-    if (preview != null) { setPreview(null); return; }
+    if (preview != null) {
+      setPreview(null);
+      return;
+    }
     setBusy(true);
     try {
-      const response = await fetch(`/api/artifacts/${artifact.id}?mode=preview`, { cache: "no-store" });
+      const response = await fetch(
+        `/api/artifacts/${artifact.id}?mode=preview`,
+        { cache: "no-store" },
+      );
       const json = (await response.json()) as { content?: string };
       setPreview(json.content ?? "Unable to preview this file.");
-    } finally { setBusy(false); }
+    } finally {
+      setBusy(false);
+    }
   }
   return (
-    <div className="rounded-lg bg-[#1b1b1b] p-3 ring-1 ring-white/10">
-      <div className="flex items-start gap-2"><FolderIcon className="mt-0.5 size-4 shrink-0 text-[#8f8f8f]" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{artifact.title}</p><p className="truncate font-mono text-xs text-[#8f8f8f]">{artifact.path}</p>{artifact.description ? <p className="mt-1 text-xs text-[#a5a5a5]">{artifact.description}</p> : null}</div></div>
-      <div className="mt-2 flex gap-2"><Button type="button" size="xs" variant="ghost" loading={busy} onClick={() => void showPreview()}>{preview == null ? "Preview" : "Hide preview"}</Button><Button type="button" size="xs" variant="ghost" icon={DownloadIcon} onClick={() => { window.location.href = `/api/artifacts/${artifact.id}?mode=download`; }}>Download</Button><Button type="button" size="xs" variant="outline" onClick={() => onRevision(artifact)}>Request revision</Button></div>
-      {preview != null ? <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded bg-black/30 p-2 font-mono text-xs text-[#d4d4d4]">{preview}</pre> : null}
+    <div className="rounded-lg bg-surface-raised p-3 ring-1 ring-foreground/10">
+      <div className="flex items-start gap-2">
+        <FolderIcon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-sm font-medium">{artifact.title}</p>
+          <p className="truncate font-mono text-xs text-muted-foreground">
+            {artifact.path}
+          </p>
+          {artifact.description ? (
+            <p className="mt-1 text-xs text-neutral-165">
+              {artifact.description}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      <div className="mt-2 flex gap-2">
+        <Button
+          type="button"
+          size="xs"
+          variant="ghost"
+          loading={busy}
+          onClick={() => void showPreview()}
+        >
+          {preview == null ? "Preview" : "Hide preview"}
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="ghost"
+          icon={DownloadIcon}
+          onClick={() => {
+            window.location.href = `/api/artifacts/${artifact.id}?mode=download`;
+          }}
+        >
+          Download
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          onClick={() => onRevision(artifact)}
+        >
+          Request revision
+        </Button>
+      </div>
+      {preview != null ? (
+        <pre className="mt-2 max-h-56 overflow-auto whitespace-pre-wrap rounded bg-foreground/5 p-2 font-mono text-xs text-neutral-212">
+          {preview}
+        </pre>
+      ) : null}
     </div>
   );
 }
@@ -666,7 +1062,8 @@ function useWorkedDuration(key: string, active: boolean) {
       if (!rec) setWorkTimer(key, { start: Date.now() });
       return () => {
         const current = workTimers.get(key);
-        if (current && current.end == null) setWorkTimer(key, { ...current, end: Date.now() });
+        if (current && current.end == null)
+          setWorkTimer(key, { ...current, end: Date.now() });
       };
     }
     if (rec && rec.end == null) setWorkTimer(key, { ...rec, end: Date.now() });
@@ -693,7 +1090,8 @@ function collectHandoffIds(messages: UIMessage[]) {
   const ids: string[] = [];
   for (const message of messages) {
     for (const part of message.parts ?? []) {
-      if (!part.type.startsWith("tool-") && part.type !== "dynamic-tool") continue;
+      if (!part.type.startsWith("tool-") && part.type !== "dynamic-tool")
+        continue;
       const tool = part as ToolPart;
       const name = tool.toolName ?? part.type.replace(/^tool-/, "");
       if (name !== "messageBot") continue;
@@ -715,7 +1113,7 @@ function EmptyState({ bot }: { bot: Bot }) {
       transition={{ duration: 0.4, ease: easeOut }}
     >
       <Empty
-        icon={<RobotIcon size={48} className="text-[#6d6d6d]" />}
+        icon={<RobotIcon size={48} className="text-neutral-109" />}
         title={bot.name}
         description={`${bot.job}. No workflow is required. Write as if you were asking a colleague. I will research on the computer, leave artifacts in files, and ask for approval only when needed.`}
       />
@@ -751,7 +1149,11 @@ const MessageBlock = memo(function MessageBlock({
   bots: Bot[];
   reactions: ReactionMap;
   onReply: (reference: MessageReference) => void;
-  onReact: (messageId: string, emoji: MessageReaction, selected: boolean) => Promise<void>;
+  onReact: (
+    messageId: string,
+    emoji: MessageReaction,
+    selected: boolean,
+  ) => Promise<void>;
   actionsDisabled: boolean;
   actionKey: string;
   bubbles: MessageBubble[];
@@ -761,12 +1163,20 @@ const MessageBlock = memo(function MessageBlock({
   authorIcon?: string | null;
 }) {
   const lastPart = message.parts.at(-1);
-  const reasoningIsStreaming = isLastMessage && isStreaming && lastPart?.type === "reasoning";
-  const cotSteps = buildCotSteps(message.parts, reasoningIsStreaming, handoffs, bots);
+  const reasoningIsStreaming =
+    isLastMessage && isStreaming && lastPart?.type === "reasoning";
+  const cotSteps = buildCotSteps(
+    message.parts,
+    reasoningIsStreaming,
+    handoffs,
+    bots,
+  );
   const cotWorking = cotSteps.length > 0 && isLastMessage && isStreaming;
   const workedMs = useWorkedDuration(workKey, cotWorking);
   const replyTo = replyReference(message);
-  const canAct = !actionsDisabled && (message.role === "user" || message.role === "assistant");
+  const canAct =
+    !actionsDisabled &&
+    (message.role === "user" || message.role === "assistant");
 
   return (
     <motion.div
@@ -774,93 +1184,180 @@ const MessageBlock = memo(function MessageBlock({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.28, ease: easeOut }}
     >
-    <Message from={message.role} data-message="" data-message-key={bubbles.length ? undefined : actionKey} tabIndex={-1} className="scroll-mt-4 rounded-xl outline-none">
-      {showAuthor && message.role === "assistant" ? <div className="mb-1 flex items-center gap-2">
-        <span className="[&>span]:size-6"><Avatar name={author?.name ?? "Teammate"} accent={author?.accent ?? "#555555"} icon={authorIcon} /></span>
-        <span className="text-xs font-semibold text-neutral-300">{author?.name ?? "Teammate"}</span>
-      </div> : null}
-      {cotSteps.length > 0 ? (
-        <ChainOfThought defaultOpen={cotWorking}>
-          <ChainOfThoughtHeader>
-            {cotWorking ? (
-              <>
-                Working
-                <AnimatedDots />
-              </>
-            ) : workedMs != null ? (
-              formatWorkedDuration(workedMs)
-            ) : (
-              "Thinking"
-            )}
-          </ChainOfThoughtHeader>
-          <ChainOfThoughtContent>
-            {cotSteps.map((step) => (
-              <ChainOfThoughtStep
-                key={step.key}
-                icon={step.icon}
-                label={step.label}
-                description={step.description}
-                status={step.status}
-              >
-                {step.sites && step.sites.length > 0 ? (
-                  <ChainOfThoughtSearchResults>
-                    {step.sites.map((site) =>
-                      site.href ? (
-                        <a
-                          key={site.href}
-                          href={site.href}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          title={site.title ?? site.href}
-                          className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-white/40"
-                        >
-                          <ChainOfThoughtSearchResult className="cursor-pointer hover:bg-white/15">
+      <Message
+        from={message.role}
+        data-message=""
+        data-message-key={bubbles.length ? undefined : actionKey}
+        tabIndex={-1}
+        className="scroll-mt-4 rounded-xl outline-none"
+      >
+        {showAuthor && message.role === "assistant" ? (
+          <div className="mb-1 flex items-center gap-2">
+            <span className="[&>span]:size-6">
+              <Avatar
+                name={author?.name ?? "Teammate"}
+                accent={author?.accent ?? "#555555"}
+                icon={authorIcon}
+              />
+            </span>
+            <span className="text-xs font-semibold text-neutral-300">
+              {author?.name ?? "Teammate"}
+            </span>
+          </div>
+        ) : null}
+        {cotSteps.length > 0 ? (
+          <ChainOfThought defaultOpen={cotWorking}>
+            <ChainOfThoughtHeader>
+              {cotWorking ? (
+                <>
+                  Working
+                  <AnimatedDots />
+                </>
+              ) : workedMs != null ? (
+                formatWorkedDuration(workedMs)
+              ) : (
+                "Thinking"
+              )}
+            </ChainOfThoughtHeader>
+            <ChainOfThoughtContent>
+              {cotSteps.map((step) => (
+                <ChainOfThoughtStep
+                  key={step.key}
+                  icon={step.icon}
+                  label={step.label}
+                  description={step.description}
+                  status={step.status}
+                >
+                  {step.sites && step.sites.length > 0 ? (
+                    <ChainOfThoughtSearchResults>
+                      {step.sites.map((site) =>
+                        site.href ? (
+                          <a
+                            key={site.href}
+                            href={site.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            title={site.title ?? site.href}
+                            className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-foreground/40"
+                          >
+                            <ChainOfThoughtSearchResult className="cursor-pointer hover:bg-foreground/15">
+                              {site.host}
+                            </ChainOfThoughtSearchResult>
+                          </a>
+                        ) : (
+                          <ChainOfThoughtSearchResult key={site.host}>
                             {site.host}
                           </ChainOfThoughtSearchResult>
-                        </a>
-                      ) : (
-                        <ChainOfThoughtSearchResult key={site.host}>{site.host}</ChainOfThoughtSearchResult>
-                      ),
-                    )}
-                  </ChainOfThoughtSearchResults>
-                ) : null}
-              </ChainOfThoughtStep>
-            ))}
-          </ChainOfThoughtContent>
-        </ChainOfThought>
-      ) : null}
-      <div
-        className={
-          message.role === "user"
-            ? "flex max-w-[min(640px,90%)] flex-col items-end gap-1"
-            : "flex min-w-0 w-full max-w-[min(640px,92%)] flex-col gap-1"
-        }
-      >
-        {replyTo ? <MessageReferenceCard reference={replyTo} botName="Teammate" onLocate={onLocate} /> : null}
-        {message.parts.map((part, index) => {
-          const partBubbles = bubbles.filter((bubble) => bubble.partIndex === index);
-          if (part.type === "text" && partBubbles.length) {
-            return partBubbles.map((bubble) => <div key={bubble.key} data-message-key={bubble.key} tabIndex={-1} className={`group/message flex min-w-0 max-w-full scroll-mt-4 flex-col gap-1 rounded-xl outline-none ${message.role === "user" ? "items-end" : "items-start"}`}>
-              <MessageActions text={bubble.text} reactions={reactions[bubble.key] ?? []} disabled={!canAct} onReply={() => onReply({ key: bubble.key, role: bubble.role, text: bubble.text.slice(0, 4000) })} onReact={(emoji, selected) => onReact(bubble.key, emoji, selected)}>
-                <MessageContent>
-                  <MessageResponse isAnimating={isLastMessage && isStreaming && bubble.key === bubbles.at(-1)?.key}>{bubble.text}</MessageResponse>
-                </MessageContent>
-              </MessageActions>
-            </div>);
+                        ),
+                      )}
+                    </ChainOfThoughtSearchResults>
+                  ) : null}
+                </ChainOfThoughtStep>
+              ))}
+            </ChainOfThoughtContent>
+          </ChainOfThought>
+        ) : null}
+        <div
+          className={
+            message.role === "user"
+              ? "flex max-w-[min(640px,90%)] flex-col items-end gap-1"
+              : "flex min-w-0 w-full max-w-[min(640px,92%)] flex-col gap-1"
           }
-          return <PartView key={`${message.id}-${index}`} part={part} onApprove={onApprove} isAnimating={isLastMessage && isStreaming} />;
-        })}
-      </div>
-    </Message>
+        >
+          {replyTo ? (
+            <MessageReferenceCard
+              reference={replyTo}
+              botName="Teammate"
+              onLocate={onLocate}
+            />
+          ) : null}
+          {message.parts.map((part, index) => {
+            const partBubbles = bubbles.filter(
+              (bubble) => bubble.partIndex === index,
+            );
+            if (part.type === "text" && partBubbles.length) {
+              return partBubbles.map((bubble) => (
+                <div
+                  key={bubble.key}
+                  data-message-key={bubble.key}
+                  tabIndex={-1}
+                  className={`group/message flex min-w-0 max-w-full scroll-mt-4 flex-col gap-1 rounded-xl outline-none ${message.role === "user" ? "items-end" : "items-start"}`}
+                >
+                  <MessageActions
+                    text={bubble.text}
+                    reactions={reactions[bubble.key] ?? []}
+                    disabled={!canAct}
+                    onReply={() =>
+                      onReply({
+                        key: bubble.key,
+                        role: bubble.role,
+                        text: bubble.text.slice(0, 4000),
+                      })
+                    }
+                    onReact={(emoji, selected) =>
+                      onReact(bubble.key, emoji, selected)
+                    }
+                  >
+                    <MessageContent>
+                      <MessageResponse
+                        isAnimating={
+                          isLastMessage &&
+                          isStreaming &&
+                          bubble.key === bubbles.at(-1)?.key
+                        }
+                      >
+                        {bubble.text}
+                      </MessageResponse>
+                    </MessageContent>
+                  </MessageActions>
+                </div>
+              ));
+            }
+            return (
+              <PartView
+                key={`${message.id}-${index}`}
+                part={part}
+                onApprove={onApprove}
+                isAnimating={isLastMessage && isStreaming}
+              />
+            );
+          })}
+        </div>
+      </Message>
     </motion.div>
   );
 });
 
-function MessageReferenceCard({ reference, botName, onLocate }: { reference: MessageReference; botName: string; onLocate: (key: string) => void }) {
-  return <button type="button" onClick={() => onLocate(reference.key)} aria-label="Go to referenced message" className="flex min-w-0 max-w-full items-start gap-2 rounded-lg border-l-2 border-[#9ca3af] bg-white/5 px-3 py-2 text-left hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-white/40">
-    <CornerUpLeftIcon size={14} className="mt-0.5 shrink-0 text-neutral-400" />
-    <span className="min-w-0"><span className="block text-[11px] font-medium text-neutral-300">Replying to {reference.role === "user" ? "you" : botName}</span><span className="block max-w-full truncate text-xs text-neutral-400">{reference.text.slice(0, 180) || "Message"}</span></span>
-  </button>;
+function MessageReferenceCard({
+  reference,
+  botName,
+  onLocate,
+}: {
+  reference: MessageReference;
+  botName: string;
+  onLocate: (key: string) => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onLocate(reference.key)}
+      aria-label="Go to referenced message"
+      className="flex min-w-0 max-w-full items-start gap-2 rounded-lg border-l-2 border-focus-muted bg-foreground/5 px-3 py-2 text-left hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-foreground/40"
+    >
+      <CornerUpLeftIcon
+        size={14}
+        className="mt-0.5 shrink-0 text-neutral-400"
+      />
+      <span className="min-w-0">
+        <span className="block text-[11px] font-medium text-neutral-300">
+          Replying to {reference.role === "user" ? "you" : botName}
+        </span>
+        <span className="block max-w-full truncate text-xs text-neutral-400">
+          {reference.text.slice(0, 180) || "Message"}
+        </span>
+      </span>
+    </button>
+  );
 }
 
 type ToolPart = {
@@ -903,7 +1400,9 @@ function buildCotSteps(
         key: `reasoning-${index}`,
         icon: BrainIcon,
         label: title ?? "Reasoning",
-        description: body ? <MessageResponse>{body}</MessageResponse> : undefined,
+        description: body ? (
+          <MessageResponse>{body}</MessageResponse>
+        ) : undefined,
         status: reasoningIsStreaming && isLastPart ? "active" : "complete",
       });
       return;
@@ -911,20 +1410,28 @@ function buildCotSteps(
 
     if (!part.type.startsWith("tool-") && part.type !== "dynamic-tool") return;
     const toolPart = part as ToolPart;
-    const name = toolPart.toolName ?? part.type.replace(/^tool-/, "").replace(/^dynamic-/, "");
+    const name =
+      toolPart.toolName ??
+      part.type.replace(/^tool-/, "").replace(/^dynamic-/, "");
     const state = toolPart.state ?? "";
     const input = toolPart.input ?? toolPart.rawInput;
     const errorText =
-      toolPart.errorText ?? (toolPart.error != null ? formatDetail(toolPart.error) : "");
+      toolPart.errorText ??
+      (toolPart.error != null ? formatDetail(toolPart.error) : "");
     const failed = state === "output-error";
 
     if (name === "requestTakeover") return;
     if (name === "handoffStatus") return;
-    if (toolPart.approval && !toolPart.approval.isAutomatic && state === "approval-requested") {
+    if (
+      toolPart.approval &&
+      !toolPart.approval.isAutomatic &&
+      state === "approval-requested"
+    ) {
       return;
     }
 
-    const liveHandoff = name === "messageBot" ? liveHandoffFor(toolPart, handoffs) : undefined;
+    const liveHandoff =
+      name === "messageBot" ? liveHandoffFor(toolPart, handoffs) : undefined;
     steps.push({
       key: toolPart.toolCallId ?? `tool-${index}`,
       icon: toolStepIcon(name),
@@ -937,7 +1444,11 @@ function buildCotSteps(
             : undefined,
       sites: failed ? undefined : stepSites(name, toolPart.output, input),
       status:
-        liveHandoff?.status === "running" || isToolRunning(state) ? "active" : state ? "complete" : "pending",
+        liveHandoff?.status === "running" || isToolRunning(state)
+          ? "active"
+          : state
+            ? "complete"
+            : "pending",
     });
   });
 
@@ -965,7 +1476,8 @@ function splitReasoningTitle(text: string): { title?: string; body?: string } {
 }
 
 function toolStepIcon(name: string): LucideIcon {
-  if (name === "browser" || name.toLowerCase().includes("browser")) return GlobeIcon;
+  if (name === "browser" || name.toLowerCase().includes("browser"))
+    return GlobeIcon;
   switch (name) {
     case "workspace":
       return FolderIcon;
@@ -997,7 +1509,11 @@ function toolStepIcon(name: string): LucideIcon {
 
 type StepSite = { host: string; href?: string; title?: string };
 
-function stepSites(name: string, output: unknown, input: unknown): StepSite[] | undefined {
+function stepSites(
+  name: string,
+  output: unknown,
+  input: unknown,
+): StepSite[] | undefined {
   if (name === "webSearch") return webSearchResultSites(output);
   if (name === "browser" || name.toLowerCase().includes("browser")) {
     const hostname = browserResultHostname(output, input);
@@ -1031,7 +1547,9 @@ function webSearchResultSites(output: unknown): StepSite[] | undefined {
     sites.push({
       host,
       href,
-      ...(typeof entry.title === "string" && entry.title ? { title: entry.title } : {}),
+      ...(typeof entry.title === "string" && entry.title
+        ? { title: entry.title }
+        : {}),
     });
   }
   return sites.length > 0 ? sites : undefined;
@@ -1073,11 +1591,14 @@ function PartView({
 
   if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
     const toolPart = part as ToolPart;
-    const name = toolPart.toolName ?? part.type.replace(/^tool-/, "").replace(/^dynamic-/, "");
+    const name =
+      toolPart.toolName ??
+      part.type.replace(/^tool-/, "").replace(/^dynamic-/, "");
     const state = toolPart.state ?? "";
     const input = toolPart.input ?? toolPart.rawInput;
     const errorText =
-      toolPart.errorText ?? (toolPart.error != null ? formatDetail(toolPart.error) : "");
+      toolPart.errorText ??
+      (toolPart.error != null ? formatDetail(toolPart.error) : "");
     const displayLabel = toolDisplayLabel(name, input, state);
     if (toolPart.approval && !toolPart.approval.isAutomatic) {
       const approval = toolPart.approval;
@@ -1086,7 +1607,9 @@ function PartView({
         <Confirmation approval={approval} state={state}>
           <ConfirmationRequest>
             <ConfirmationTitle>{displayLabel}</ConfirmationTitle>
-            {detail ? <p className="font-mono text-xs text-[#c8c8c8]">{detail}</p> : null}
+            {detail ? (
+              <p className="font-mono text-xs text-secondary-foreground">{detail}</p>
+            ) : null}
             <ApprovalActions
               onApprove={() => onApprove(approval.id, true)}
               onDeny={() => onApprove(approval.id, false)}
@@ -1094,11 +1617,15 @@ function PartView({
           </ConfirmationRequest>
           <ConfirmationAccepted>
             <ConfirmationTitle>Approved · {displayLabel}</ConfirmationTitle>
-            {detail ? <p className="font-mono text-xs text-[#8f8f8f]">{detail}</p> : null}
+            {detail ? (
+              <p className="font-mono text-xs text-muted-foreground">{detail}</p>
+            ) : null}
           </ConfirmationAccepted>
           <ConfirmationRejected>
             <ConfirmationTitle>Declined · {displayLabel}</ConfirmationTitle>
-            {detail ? <p className="font-mono text-xs text-[#8f8f8f]">{detail}</p> : null}
+            {detail ? (
+              <p className="font-mono text-xs text-muted-foreground">{detail}</p>
+            ) : null}
           </ConfirmationRejected>
         </Confirmation>
       );
@@ -1110,7 +1637,9 @@ function PartView({
       return (
         <Alert variant={failed ? "destructive" : "warning"}>
           <WarningCircleIcon weight="fill" />
-          <AlertTitle>{failed ? "Couldn't request your help" : "Requested your help"}</AlertTitle>
+          <AlertTitle>
+            {failed ? "Couldn't request your help" : "Requested your help"}
+          </AlertTitle>
           <AlertDescription>
             {failed
               ? errorText || "The computer could not be handed over."
@@ -1153,7 +1682,8 @@ function toolDisplayLabel(
       liveHandoff?.targetName ||
       bots?.find((item) => item.id === botId)?.name ||
       "a teammate";
-    if (failed || liveHandoff?.status === "error") return `Couldn't reach ${teammate}`;
+    if (failed || liveHandoff?.status === "error")
+      return `Couldn't reach ${teammate}`;
     if (liveHandoff?.status === "running") return `${teammate} is working`;
     return completed ? `Asked ${teammate}` : `Asking ${teammate}`;
   }
@@ -1214,7 +1744,8 @@ function toolDisplayLabel(
     `Working on ${humanizeToolName(name)}`,
     `Finished ${humanizeToolName(name)}`,
   ];
-  if (failed) return `Couldn't ${present.charAt(0).toLowerCase()}${present.slice(1)}`;
+  if (failed)
+    return `Couldn't ${present.charAt(0).toLowerCase()}${present.slice(1)}`;
   return completed ? past : present;
 }
 
@@ -1277,37 +1808,56 @@ function RunModePicker({
   value: RunMode;
   onChange: (mode: RunMode) => void | Promise<void>;
 }) {
-  const current = RUN_MODES[value];
-  const [busy, setBusy] = useState(false);
+  const isPlus = value.startsWith("plus-");
+  const level = (isPlus ? value.slice(5) : value) as "default" | "high" | "xhigh" | "max";
+  const levelLabels = { default: "Default", high: "High", xhigh: "xhigh", max: "Max" };
+  const levels = ["default", "high", "xhigh", "max"] as const;
+  const selectMode = (mode: RunMode) => {
+    void onChange(mode);
+  };
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          disabled={busy}
-          className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs text-[#8f8f8f] hover:bg-white/5 hover:text-[#f0f0f0] disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
         >
-          {busy ? <Spinner size="sm" className="size-3" /> : null}
-          {current.label}
+          {RUN_MODES[value].label}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" className="w-56">
-        {(Object.values(RUN_MODES) as (typeof RUN_MODES)[RunMode][]).map((mode) => (
-          <DropdownMenuItem
-            key={mode.id}
-            disabled={busy}
-            onSelect={() => {
-              setBusy(true);
-              void Promise.resolve(onChange(mode.id)).finally(() => setBusy(false));
-            }}
-            className={mode.id === value ? "bg-[#2d2d2d]" : undefined}
-          >
-            <span className="flex min-w-0 flex-col">
-              <span>{mode.label}</span>
-              <span className="text-[11px] text-[#8f8f8f]">{mode.hint}</span>
-            </span>
-          </DropdownMenuItem>
-        ))}
+        {levels.map((id) => {
+          const mode = RUN_MODES[isPlus ? `plus-${id}` as RunMode : id];
+          return (
+            <DropdownMenuItem
+              key={id}
+              onSelect={() => selectMode(mode.id)}
+              className={mode.id === value ? "bg-surface-active" : undefined}
+            >
+              <span className="flex min-w-0 flex-col">
+                <span>{levelLabels[id]}</span>
+                <span className="text-[11px] text-muted-foreground">{mode.hint}</span>
+              </span>
+            </DropdownMenuItem>
+          );
+        })}
+        <DropdownMenuSeparator />
+        <div className="flex gap-1 p-1">
+          {(["Run", "Run+"] as const).map((family) => (
+            <DropdownMenuItem
+              key={family}
+              onSelect={(event) => {
+                event.preventDefault(); // Keep the menu open to choose a level above.
+                if ((family === "Run+") !== isPlus) {
+                  selectMode(family === "Run+" ? `plus-${level}` : level);
+                }
+              }}
+              className={`flex-1 justify-center ${(family === "Run+") === isPlus ? "bg-surface-active" : ""}`}
+            >
+              {family}
+            </DropdownMenuItem>
+          ))}
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -1334,7 +1884,9 @@ function humanizeToolName(name: string) {
 
 function isToolRunning(state: string) {
   return (
-    state === "input-streaming" || state === "input-available" || state === "approval-responded"
+    state === "input-streaming" ||
+    state === "input-available" ||
+    state === "approval-responded"
   );
 }
 

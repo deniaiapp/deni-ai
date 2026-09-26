@@ -47,8 +47,8 @@ function InputOTPSlot({
       data-slot="input-otp-slot"
       data-active={isActive}
       className={cn(
-        "relative flex size-10 items-center justify-center border-y border-r border-white/15 bg-[#151515] text-sm text-[#f0f0f0] transition-colors first:rounded-l-lg first:border-l last:rounded-r-lg",
-        "data-[active=true]:z-10 data-[active=true]:border-white/40",
+        "relative flex size-10 items-center justify-center border-y border-r border-foreground/15 bg-surface-input text-sm text-foreground transition-colors first:rounded-l-lg first:border-l last:rounded-r-lg",
+        "data-[active=true]:z-10 data-[active=true]:border-foreground/40",
         className,
       )}
       {...props}
@@ -56,7 +56,7 @@ function InputOTPSlot({
       {char}
       {hasFakeCaret ? (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-4 w-px animate-pulse bg-[#f0f0f0]" />
+          <div className="h-4 w-px animate-pulse bg-foreground" />
         </div>
       ) : null}
     </div>
@@ -66,7 +66,7 @@ function InputOTPSlot({
 function InputOTPSeparator({ ...props }: ComponentProps<"div">) {
   return (
     <div data-slot="input-otp-separator" role="separator" {...props}>
-      <MinusIcon className="size-4 text-[#8f8f8f]" />
+      <MinusIcon className="size-4 text-muted-foreground" />
     </div>
   );
 }

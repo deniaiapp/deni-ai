@@ -19,6 +19,13 @@ export async function DELETE() {
   if (!userId) return unauthorizedResponse();
   const limited = await limitOrResponse(userId, "account-delete", 5, 60 * 60_000);
   if (limited) return limited;
-  await deleteAccount(userId);
+  try {
+    await deleteAccount(userId);
+  } catch {
+    return NextResponse.json(
+      { error: "Could not finish deleting your account. Please try again." },
+      { status: 503 },
+    );
+  }
   return NextResponse.json({ ok: true });
 }

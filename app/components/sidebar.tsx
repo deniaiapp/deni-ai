@@ -132,11 +132,11 @@ export function Sidebar({
 
   return (
     <>
-      <SidebarHeader className="h-[54px] shrink-0 gap-2 bg-[#111111]">
+      <SidebarHeader className="h-[54px] shrink-0 gap-2 bg-surface">
         <div className="min-w-0 flex-1 whitespace-normal">
-          <h1 className="text-sm font-semibold text-[#bdbdbd]">Deni Run</h1>
+          <h1 className="text-sm font-semibold text-neutral-189">Deni Run</h1>
         </div>
-        <button type="button" onClick={onNewBot} aria-label="New teammate" title="New teammate" className="flex size-8 items-center justify-center rounded-lg text-[#999999] hover:bg-white/5 hover:text-white focus-visible:outline-2 focus-visible:outline-white/50">
+        <button type="button" onClick={onNewBot} aria-label="New teammate" title="New teammate" className="flex size-8 items-center justify-center rounded-lg text-neutral-153 hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground/50">
           <PlusIcon size={18} />
         </button>
         <SidebarClose className="md:hidden" />
@@ -144,14 +144,14 @@ export function Sidebar({
 
       <SidebarContent>
         <div className="px-3 pb-1">
-          <label className="flex items-center gap-2 rounded-lg bg-[#242424] px-2.5 py-1.5 text-sm text-[#a5a5a5] ring-1 ring-white/5 focus-within:ring-white/20">
+          <label className="flex items-center gap-2 rounded-lg bg-surface-hover px-2.5 py-1.5 text-sm text-neutral-165 ring-1 ring-foreground/5 focus-within:ring-foreground/20">
             <MagnifyingGlassIcon size={16} aria-hidden="true" />
             <input
               value={query}
               onChange={(event) => setQuery(event.currentTarget.value)}
               placeholder="Search"
               aria-label="Search conversations"
-              className="min-w-0 flex-1 bg-transparent text-[#f0f0f0] outline-none placeholder:text-[#8a8a8a]"
+              className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-neutral-138"
             />
           </label>
         </div>
@@ -320,30 +320,30 @@ function TeammateRow({
           onClick={onSelect}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-left whitespace-normal",
-            active ? "bg-[#2d2d2d]" : "hover:bg-white/5",
+            active ? "bg-surface-active" : "hover:bg-foreground/5",
           )}
         >
           <Avatar name={bot.name} accent={bot.accent} icon={bot.icon} />
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="flex min-w-0 items-baseline justify-between gap-2">
-              <span className="truncate text-[13px] font-semibold text-[#f0f0f0]">{bot.name}</span>
-              <time dateTime={thread.updatedAt} className="shrink-0 text-[10px] text-[#8f8f8f]">{thread.updatedAt.slice(5, 10).replace("-", "/")}</time>
+              <span className="truncate text-[13px] font-semibold text-foreground">{bot.name}</span>
+              <time dateTime={thread.updatedAt} className="shrink-0 text-[10px] text-muted-foreground">{thread.updatedAt.slice(5, 10).replace("-", "/")}</time>
             </span>
-            <span className="min-w-0 truncate text-xs text-[#8f8f8f]">
+            <span className="min-w-0 truncate text-xs text-muted-foreground">
               {thread.lastPreview || bot.job}
             </span>
           </span>
           {loading ? (
-            <Loader2 className="mt-1.5 size-3.5 shrink-0 animate-spin text-[#8f8f8f]" />
+            <Loader2 className="mt-1.5 size-3.5 shrink-0 animate-spin text-muted-foreground" />
           ) : jobState === "waiting" ? (
-            <span className="mt-1.5 text-xs text-amber-300" aria-label="Task waiting">⏸</span>
+            <span className="mt-1.5 text-xs text-warning-300" aria-label="Task waiting">⏸</span>
           ) : jobState === "attention" ? (
-            <span className="mt-1.5 text-xs text-amber-300" aria-label="Task needs attention">⚠</span>
+            <span className="mt-1.5 text-xs text-warning-300" aria-label="Task needs attention">⚠</span>
           ) : thread.pinned ? (
-            <Pin className="mt-1.5 size-3 shrink-0 text-[#8f8f8f]" aria-label="Pinned" />
+            <Pin className="mt-1.5 size-3 shrink-0 text-muted-foreground" aria-label="Pinned" />
           ) : null}
           {thread.unread ? (
-            <span className="mt-2 size-2 shrink-0 rounded-full bg-[#6ea8fe]" aria-label="Unread" />
+            <span className="mt-2 size-2 shrink-0 rounded-full bg-info-soft" aria-label="Unread" />
           ) : null}
         </button>
       </ContextMenuTrigger>

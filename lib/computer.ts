@@ -752,7 +752,6 @@ async function uploadWorkspaceToSandbox(
   const files: string[] = [];
   async function collect(dir: string) {
     for (const entry of await readdir(dir, { withFileTypes: true })) {
-      if (entry.name.startsWith(".")) continue;
       const abs = path.join(dir, entry.name);
       const rel = path.relative(root, abs).replace(/\\/g, "/");
       if (entry.isDirectory()) {
@@ -783,7 +782,7 @@ async function downloadWorkspaceFromSandbox(
   for (const entry of entries) {
     if (entry.type !== "file" || !entry.path.startsWith("/workspace/")) continue;
     const rel = entry.path.slice("/workspace/".length);
-    if (!rel || rel.split("/").some((part) => part === ".." || part.startsWith("."))) {
+    if (!rel || rel.split("/").some((part) => part === "..")) {
       continue;
     }
     const destination = path.join(root, ...rel.split("/"));

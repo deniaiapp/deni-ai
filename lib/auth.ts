@@ -7,6 +7,7 @@ import { nextCookies } from "better-auth/next-js";
 import { twoFactor } from "better-auth/plugins";
 import { db } from "@/db";
 import * as authSchema from "@/db/auth-schema";
+import { isLocalAuthBypass, LOCAL_USER_EMAIL, LOCAL_USER_ID } from "./local-auth";
 import { oauthTwoFactorAfter } from "./oauth-two-factor";
 
 const appUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL;
@@ -84,9 +85,19 @@ export const auth = betterAuth({
 });
 
 export async function getAuthSession() {
-  return auth.api.getSession({
-    headers: await headers(),
-  });
+  const requestHeaders = await headers();
+  if (isLocalAuthBypass(requestHeaders.get("host"))) {
+    // Workspace tables reference the auth user; create one stable tenant for local work.
+    await db.insert(authSchema.user).values({
+      id: LOCAL_USER_ID,
+      name: "Local developer",
+      email: LOCAL_USER_EMAIL,
+      emailVerified: true,
+      twoFactorEnabled: true,
+    }).onConflictDoNothing();
+    return { user: { id: LOCAL_USER_ID, name: "Local developer", email: LOCAL_USER_EMAIL, twoFactorEnabled: true } };
+  }
+  return auth.api.getSession({ headers: requestHeaders });
 }
 
 export async function getAuthenticatedUserId() {

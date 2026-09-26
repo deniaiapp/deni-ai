@@ -6,13 +6,13 @@ export default function PrivacyPage() {
   const email = supportEmail();
   const mail = supportMailto();
   return (
-    <main className="h-full overflow-y-auto bg-[#050505] px-6 py-12 text-[#f0f0f0]">
+    <main className="h-full overflow-y-auto bg-background px-6 py-12 text-foreground">
       <FadeIn>
-      <article className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-[#c8c8c8]">
-        <Link href="/" className="text-xs text-[#8f8f8f] hover:text-[#f0f0f0]">
+      <article className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-secondary-foreground">
+        <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">
           Back
         </Link>
-        <h1 className="text-2xl font-semibold text-[#f0f0f0]">Privacy</h1>
+        <h1 className="text-2xl font-semibold text-foreground">Privacy</h1>
         <p>
           Account authentication is handled on this service with Better Auth. You sign in with
           Google or GitHub, then an authenticator app. Sessions and two-factor secrets are stored
@@ -29,7 +29,7 @@ export default function PrivacyPage() {
         <p>
           We do not sell your workspace contents. You can export a copy of stored account data, or
           delete your account, from{" "}
-          <Link href="/account" className="text-[#f0f0f0] hover:underline">
+          <Link href="/account" className="text-foreground hover:underline">
             Account
           </Link>
           . Deleting the account removes the login and stored workspace data.
@@ -42,7 +42,7 @@ export default function PrivacyPage() {
         <p>
           Contact:{" "}
           {mail ? (
-            <a href={mail} className="text-[#f0f0f0] hover:underline">
+            <a href={mail} className="text-foreground hover:underline">
               {email}
             </a>
           ) : (

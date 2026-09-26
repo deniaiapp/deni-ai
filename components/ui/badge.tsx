@@ -8,12 +8,12 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "border-transparent bg-[#272727] text-[#f0f0f0]",
-        secondary: "border-transparent bg-white/10 text-[#c8c8c8]",
-        neutral: "border-transparent bg-white/10 text-[#c8c8c8]",
-        destructive: "border-transparent bg-red-500/20 text-red-300",
-        warning: "border-transparent bg-amber-500/20 text-amber-300",
-        outline: "border-white/20 text-[#e7e7e7]",
+        default: "border-transparent bg-surface-39 text-foreground",
+        secondary: "border-transparent bg-foreground/10 text-secondary-foreground",
+        neutral: "border-transparent bg-foreground/10 text-secondary-foreground",
+        destructive: "border-transparent bg-destructive-500/20 text-destructive-300",
+        warning: "border-transparent bg-warning-500/20 text-warning-300",
+        outline: "border-foreground/20 text-neutral-231",
       },
     },
     defaultVariants: {
@@ -23,21 +23,21 @@ const badgeVariants = cva(
 );
 
 const dotVariants: Record<string, string> = {
-  default: "border-white/15 bg-transparent text-[#c8c8c8]",
-  secondary: "border-white/15 bg-transparent text-[#c8c8c8]",
-  neutral: "border-white/15 bg-transparent text-[#c8c8c8]",
-  destructive: "border-white/15 bg-transparent text-[#c8c8c8]",
-  warning: "border-white/15 bg-transparent text-[#c8c8c8]",
-  outline: "border-white/15 bg-transparent text-[#c8c8c8]",
+  default: "border-foreground/15 bg-transparent text-secondary-foreground",
+  secondary: "border-foreground/15 bg-transparent text-secondary-foreground",
+  neutral: "border-foreground/15 bg-transparent text-secondary-foreground",
+  destructive: "border-foreground/15 bg-transparent text-secondary-foreground",
+  warning: "border-foreground/15 bg-transparent text-secondary-foreground",
+  outline: "border-foreground/15 bg-transparent text-secondary-foreground",
 };
 
 const dotColors: Record<string, string> = {
-  default: "bg-[#8f8f8f]",
-  secondary: "bg-[#8f8f8f]",
-  neutral: "bg-[#8f8f8f]",
-  destructive: "bg-red-400",
-  warning: "bg-amber-400",
-  outline: "bg-[#8f8f8f]",
+  default: "bg-muted-foreground",
+  secondary: "bg-muted-foreground",
+  neutral: "bg-muted-foreground",
+  destructive: "bg-destructive-400",
+  warning: "bg-warning-400",
+  outline: "bg-muted-foreground",
 };
 
 type BadgeVariant = NonNullable<VariantProps<typeof badgeVariants>["variant"]>;

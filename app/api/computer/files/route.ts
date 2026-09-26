@@ -11,6 +11,7 @@ import {
   writeWorkspaceFile,
 } from "@/lib/workspace";
 import { createZip } from "@/lib/zip";
+import { attachmentDisposition } from "@/lib/download";
 
 export const dynamic = "force-dynamic";
 
@@ -36,7 +37,7 @@ export async function GET(req: Request) {
       return new NextResponse(new Uint8Array(file.data), {
         headers: {
           "Content-Type": "application/octet-stream",
-          "Content-Disposition": `attachment; filename="${downloadName(file.path)}"`,
+          "Content-Disposition": attachmentDisposition(downloadName(file.path)),
         },
       });
     }
@@ -111,7 +112,7 @@ export async function POST(req: Request) {
     return new NextResponse(new Uint8Array(zip), {
       headers: {
         "Content-Type": "application/zip",
-        "Content-Disposition": `attachment; filename="${label}.zip"`,
+        "Content-Disposition": attachmentDisposition(`${label}.zip`),
       },
     });
   } catch (error) {

@@ -55,10 +55,10 @@ export const ConversationEmptyState = ({
   >
     {children ?? (
       <>
-        {icon ? <div className="text-[#6d6d6d]">{icon}</div> : null}
+        {icon ? <div className="text-neutral-109">{icon}</div> : null}
         <div className="space-y-1">
-          <h3 className="font-medium text-sm text-[#f0f0f0]">{title}</h3>
-          {description ? <p className="text-sm text-[#8f8f8f]">{description}</p> : null}
+          <h3 className="font-medium text-sm text-foreground">{title}</h3>
+          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
         </div>
       </>
     )}
@@ -85,7 +85,7 @@ export const ConversationScrollButton = ({
       variant="outline"
       shape="square"
       className={cn(
-        "absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-[#151515] shadow-lg",
+        "absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-surface-input shadow-lg",
         className,
       )}
       onClick={handleScrollToBottom}

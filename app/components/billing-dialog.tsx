@@ -23,14 +23,14 @@ function Meter({
   return (
     <div className="flex flex-col gap-1">
       <div className="flex justify-between text-sm">
-        <span className="text-[#c8c8c8]">{label}</span>
-        <span className="text-[#8f8f8f]">
+        <span className="text-secondary-foreground">{label}</span>
+        <span className="text-muted-foreground">
           {format(used)} / {format(limit)}
         </span>
       </div>
-      <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+      <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10">
         <motion.div
-          className={`h-full rounded-full ${pct >= 100 ? "bg-red-400" : "bg-[#f0f0f0]"}`}
+          className={`h-full rounded-full ${pct >= 100 ? "bg-destructive-400" : "bg-foreground"}`}
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.5, ease: easeOut }}
@@ -69,7 +69,7 @@ export function BillingDialog({
         </div>
         {usage ? (
           <div className="flex flex-col gap-4">
-            <p className="text-sm text-[#8f8f8f]">
+            <p className="text-sm text-muted-foreground">
               {usage.planName} plan · {usage.period} UTC
               {usage.currentPeriodEnd
                 ? ` · renews ${new Date(usage.currentPeriodEnd).toLocaleDateString()}`
@@ -117,7 +117,7 @@ export function BillingDialog({
           )}
         </div>
         {usage && usage.plan === "free" && !usage.stripeConfigured ? (
-          <p className="mt-3 text-xs text-[#8f8f8f]">
+          <p className="mt-3 text-xs text-muted-foreground">
             Stripe is not configured on this deployment. Limits still apply to the Free plan.
           </p>
         ) : null}
