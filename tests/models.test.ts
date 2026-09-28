@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
-import { getModelCategory } from "../utils/deni/models";
+import { getModelCategory, getRequiredTierForModel } from "../utils/deni/models";
 import {
+  ANTHROPIC_MODEL_DEFINITIONS,
   getLongContextUsageMultiplier,
   getModelContextWindow,
   getModelDefinition,
@@ -8,6 +9,35 @@ import {
   MODEL_DEFINITIONS,
   resolveAvailableModelId,
 } from "../utils/agent/models";
+
+describe("Claude Sonnet 5.5 model support", () => {
+  test("registers the official model id, limits, pricing tier, and efforts", () => {
+    const model = getModelDefinition("claude-sonnet-5-5");
+    const anthropicModel = ANTHROPIC_MODEL_DEFINITIONS.find(
+      (entry) => entry.id === "claude-sonnet-5-5",
+    );
+
+    expect(model?.id).toBe("anthropic/claude-sonnet-5.5");
+    expect(model?.tier).toBe("plus");
+    expect(getModelCategory("claude-sonnet-5-5")).toBe("premium");
+    expect(getRequiredTierForModel("claude-sonnet-5-5")).toBe("plus");
+    expect(model?.contextWindow).toBe(1_000_000);
+    expect(model?.maxOutputTokens).toBe(128_000);
+    expect(model?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
+    expect(getModelTokenUsageMultiplier("claude-sonnet-5-5")).toBe(1.5);
+    expect(resolveAvailableModelId("anthropic/claude-sonnet-5-5")).toBe(
+      "anthropic/claude-sonnet-5.5",
+    );
+    expect(anthropicModel).toMatchObject({
+      display_name: "Claude Sonnet 5.5",
+      max_input_tokens: 1_000_000,
+      max_tokens: 128_000,
+    });
+    expect(anthropicModel?.capabilities.effort.xhigh).toEqual({
+      supported: true,
+    });
+  });
+});
 
 describe("Codex long-context model support", () => {
   test("registers GPT-6 Astra as a Fable-priced premium model", () => {

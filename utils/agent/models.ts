@@ -77,6 +77,13 @@ const ANTHROPIC_STANDARD_EFFORTS: ReasoningEffort[] = [
   "high",
   "max",
 ];
+const ANTHROPIC_SONNET_5_5_EFFORTS: ReasoningEffort[] = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+];
 const ANTHROPIC_NO_EFFORTS: ReasoningEffort[] = [];
 
 const GOOGLE_GEMINI_PRO_EFFORTS: ReasoningEffort[] = [
@@ -109,6 +116,7 @@ interface AnthropicCapabilities {
     low: AnthropicCapabilityFlag;
     medium: AnthropicCapabilityFlag;
     high: AnthropicCapabilityFlag;
+    xhigh?: AnthropicCapabilityFlag;
     max: AnthropicCapabilityFlag;
   };
   image_input: AnthropicCapabilityFlag;
@@ -270,6 +278,20 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     efforts: ANTHROPIC_NO_EFFORTS,
     tier: "free",
   },
+  // Claude Sonnet 5.5 standard rates verified 2026-09-28:
+  // $2 / 1M input tokens and $10 / 1M output tokens.
+  // https://platform.claude.com/docs/en/models/sonnet-5-5/overview
+  {
+    id: "anthropic/claude-sonnet-5.5",
+    tokenUsageMultiplier: 1.5,
+    label: "Claude Sonnet 5.5",
+    description: "Fast, balanced model for coding, agents, and everyday knowledge work.",
+    tags: ["balanced", "coding", "agentic", "long-context"],
+    efforts: ANTHROPIC_SONNET_5_5_EFFORTS,
+    contextWindow: 1_000_000,
+    maxOutputTokens: 128_000,
+    tier: "plus",
+  },
   {
     id: "anthropic/claude-sonnet-4.6",
     tokenUsageMultiplier: 1.5,
@@ -424,6 +446,8 @@ const MODEL_ALIASES: ReadonlyMap<string, string> = new Map([
   ["openai/gpt-5.6", "openai/gpt-5.6-sol"],
   ["claude-opus-5-5", "anthropic/claude-opus-5.5"],
   ["anthropic/claude-opus-5-5", "anthropic/claude-opus-5.5"],
+  ["claude-sonnet-5-5", "anthropic/claude-sonnet-5.5"],
+  ["anthropic/claude-sonnet-5-5", "anthropic/claude-sonnet-5.5"],
 ]);
 
 function stripModelProvider(modelId: string): string {
@@ -494,6 +518,14 @@ const ANTHROPIC_FULL_CAPABILITIES: AnthropicCapabilities = {
   },
 };
 
+const ANTHROPIC_SONNET_5_5_CAPABILITIES: AnthropicCapabilities = {
+  ...ANTHROPIC_FULL_CAPABILITIES,
+  effort: {
+    ...ANTHROPIC_FULL_CAPABILITIES.effort,
+    xhigh: { supported: true },
+  },
+};
+
 export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
   {
     type: "model",
@@ -503,6 +535,15 @@ export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
     max_input_tokens: 1000000,
     max_tokens: 128000,
     capabilities: ANTHROPIC_FULL_CAPABILITIES,
+  },
+  {
+    type: "model",
+    id: "claude-sonnet-5-5",
+    display_name: "Claude Sonnet 5.5",
+    created_at: "2026-09-28T00:00:00Z",
+    max_input_tokens: 1000000,
+    max_tokens: 128000,
+    capabilities: ANTHROPIC_SONNET_5_5_CAPABILITIES,
   },
   {
     type: "model",
