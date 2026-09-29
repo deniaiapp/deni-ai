@@ -63,6 +63,20 @@ describe("Codex long-context model support", () => {
     }
   });
 
+  test("registers GPT-6.1 Sol with the official limits and supported efforts", () => {
+    const model = getModelDefinition("gpt-6.1-sol");
+
+    expect(model?.id).toBe("openai/gpt-6.1-sol");
+    expect(model?.label).toBe("GPT-6.1 Sol");
+    expect(model?.tokenUsageMultiplier).toBe(1.5);
+    expect(model?.contextWindow).toBe(1_050_000);
+    expect(model?.maxOutputTokens).toBe(128_000);
+    expect(model?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
+    expect(resolveAvailableModelId("gpt-6.1-sol")).toBe("openai/gpt-6.1-sol");
+    expect(getLongContextUsageMultiplier("gpt-6.1-sol", { input_tokens: 272_001 })).toBe(2);
+    expect(getLongContextUsageMultiplier("gpt-6.1-sol", { input_tokens: 272_000 })).toBe(1);
+  });
+
   test("exposes the GPT-5.6 1M context limits", () => {
     for (const model of [
       "openai/gpt-5.6-sol",

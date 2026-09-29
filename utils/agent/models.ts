@@ -173,6 +173,20 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tier: "free",
   },
   {
+    id: "openai/gpt-6.1-sol",
+    tokenUsageMultiplier: 1.5,
+    label: "GPT-6.1 Sol",
+    description:
+      "High-end GPT-6.1 model for demanding reasoning, coding, and agentic work.",
+    tags: ["general", "reasoning", "coding", "agentic", "long-context"],
+    efforts: OPENAI_GPT_6_EFFORTS,
+    contextWindow: 1_050_000,
+    maxOutputTokens: 128_000,
+    longContextThreshold: 272_000,
+    longContextUsageMultiplier: 2,
+    tier: "free",
+  },
+  {
     id: "openai/gpt-6-luna",
     tokenUsageMultiplier: 1,
     label: "GPT-6 Luna",
