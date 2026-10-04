@@ -1,15 +1,31 @@
 "use client";
 
+import { useExtracted } from "next-intl";
 import { useEffect, useState } from "react";
 import { PlugIcon, TrashIcon, WrenchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { authClient } from "@/lib/auth-client";
+
+type BuiltinPlugin = { kind: "gmail" | "drive" | "github"; connected: boolean; writeAccess: boolean; alwaysAllow: string[] };
+const builtinActions: Record<BuiltinPlugin["kind"], string[]> = {
+  gmail: ["send"], drive: ["create", "update"], github: ["createIssue", "createPR", "comment"],
+};
+const pluginLabels = { gmail: "Gmail", drive: "Google Drive", github: "GitHub" };
+const pluginScopes = {
+  gmail: { read: "https://www.googleapis.com/auth/gmail.readonly", write: "https://www.googleapis.com/auth/gmail.send" },
+  drive: { read: "https://www.googleapis.com/auth/drive.readonly", write: "https://www.googleapis.com/auth/drive.file" },
+  github: { read: "repo", write: "repo" },
+};
 import type { McpConnection } from "@/lib/types";
 
 export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const t = useExtracted();
   const [connections, setConnections] = useState<McpConnection[]>([]);
+  const [plugins, setPlugins] = useState<BuiltinPlugin[]>([]);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [secret, setSecret] = useState("");
@@ -17,6 +33,35 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
   const [headers, setHeaders] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  async function loadPlugins() {
+    const res = await fetch("/api/plugins", { cache: "no-store" });
+    if (res.ok) setPlugins(((await res.json()) as { plugins: BuiltinPlugin[] }).plugins);
+  }
+
+  async function connect(kind: BuiltinPlugin["kind"], write: boolean) {
+    const scopes = kind === "github" ? ["repo"] : [
+      ...new Set([
+        ...plugins.filter((plugin) => plugin.kind !== "github" && plugin.connected).flatMap((plugin) => [pluginScopes[plugin.kind].read, ...(plugin.writeAccess ? [pluginScopes[plugin.kind].write] : [])]),
+        pluginScopes[kind].read,
+        ...(write ? [pluginScopes[kind].write] : []),
+      ]),
+    ];
+    const result = await authClient.linkSocial({
+      provider: kind === "github" ? "github" : "google",
+      scopes,
+      callbackURL: `${window.location.origin}/?plugins=1`,
+      ...(kind !== "github" ? { additionalParams: { access_type: "offline", prompt: "consent" } } : {}),
+    });
+    if (result.error) setMessage(result.error.message ?? t("Could not connect plugin."));
+  }
+
+  async function setAlwaysAllow(kind: BuiltinPlugin["kind"], action: string, enabled: boolean) {
+    const res = await fetch("/api/plugins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind, action, enabled }) });
+    const data = await res.json();
+    if (res.ok) setPlugins(data.plugins);
+    else setMessage(data.error ?? t("Could not change permission."));
+  }
 
   async function load() {
     const res = await fetch("/api/mcp", { cache: "no-store" });
@@ -30,6 +75,7 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
       // A dialog opening is the external event that requires refreshing the connection list.
       // eslint-disable-next-line react/set-state-in-effect
       void load();
+      void loadPlugins();
     }
   }, [open]);
 
@@ -45,12 +91,12 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
         body: JSON.stringify({ name, url, transport, secret: secret || undefined, headers: parsedHeaders }),
       });
       const json = (await res.json().catch(() => ({}))) as { error?: string };
-      if (!res.ok) throw new Error(json.error || "Unable to save connection");
+      if (!res.ok) throw new Error(json.error || t("Unable to save connection"));
       setName("");
       setUrl("");
       setSecret("");
       setHeaders("");
-      setMessage("Connection saved. Test it before asking a teammate to call it.");
+      setMessage(t("Connection saved. Test it before asking a teammate to call it."));
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -69,8 +115,8 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
         body: JSON.stringify({ action: "test", id }),
       });
       const json = (await res.json().catch(() => ({}))) as { error?: string; tools?: unknown[] };
-      if (!res.ok) throw new Error(json.error || "MCP test failed");
-      setMessage(`Connected. Discovered ${json.tools?.length ?? 0} tool(s).`);
+      if (!res.ok) throw new Error(json.error || t("MCP test failed"));
+      setMessage(t("Connected. Discovered {count, plural, one {# tool} other {# tools}}.", { count: json.tools?.length ?? 0 }));
       await load();
     } catch (error) {
       setMessage(error instanceof Error ? error.message : String(error));
@@ -97,25 +143,36 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent size="lg" className="max-h-[85vh] overflow-auto">
-        <DialogTitle className="flex items-center gap-2"><PlugIcon className="size-4" /> MCP connections</DialogTitle>
-        <DialogDescription>
-          Connect a streamable HTTP or SSE MCP server. Secrets are encrypted per account and never returned here.
-        </DialogDescription>
+        <DialogTitle className="flex items-center gap-2"><PlugIcon className="size-4" /> {t("Plugins")}</DialogTitle>
+        <DialogDescription>{t("Connect built-in services for search and reading. Writing requires a separate approval unless you enable Always allow for that action.")}</DialogDescription>
+        <div className="grid gap-3">
+          {plugins.map((plugin) => <div key={plugin.kind} className="rounded-xl border border-foreground/10 bg-surface-raised p-4">
+            <div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold">{pluginLabels[plugin.kind]}</h3><p className="text-xs text-muted-foreground">{plugin.connected ? t("Connected · search and read") : t("Not connected")}</p></div>
+              <Button type="button" size="sm" variant={plugin.connected ? "outline" : "primary"} onClick={() => void connect(plugin.kind, false)}>{plugin.connected ? t("Reconnect") : t("Connect")}</Button>
+            </div>
+            {plugin.connected ? <div className="mt-3 border-t border-foreground/10 pt-3">
+              {!plugin.writeAccess && plugin.kind !== "github" ? <Button type="button" size="sm" variant="outline" onClick={() => void connect(plugin.kind, true)}>{t("Enable write access")}</Button> : null}
+              {plugin.writeAccess ? <div className="space-y-2">{builtinActions[plugin.kind].map((action) => <label key={action} className="flex items-center justify-between gap-3 text-sm"><span>{t("{action} · Always allow", { action })}</span><input type="checkbox" checked={plugin.alwaysAllow.includes(action)} onChange={(event) => void setAlwaysAllow(plugin.kind, action, event.target.checked)} className="accent-primary" /></label>)}</div> : null}
+            </div> : null}
+          </div>)}
+        </div>
+        <h3 className="text-sm font-semibold">{t("Custom MCP servers")}</h3>
+        <p className="text-xs text-muted-foreground">{t("Connect a streamable HTTP or SSE MCP server. Secrets are encrypted per account.")}</p>
         <div className="grid gap-3 rounded-lg bg-foreground/5 p-3 ring-1 ring-foreground/10">
-          <div className="grid gap-1.5"><Label htmlFor="mcp-name">Name</Label><Input id="mcp-name" value={name} onChange={(event) => setName(event.currentTarget.value)} placeholder="My tools" /></div>
-          <div className="grid gap-1.5"><Label htmlFor="mcp-url">Server URL</Label><Input id="mcp-url" value={url} onChange={(event) => setUrl(event.currentTarget.value)} placeholder="https://example.com/mcp" /></div>
-          <div className="grid gap-1.5"><Label htmlFor="mcp-transport">Transport</Label><select id="mcp-transport" value={transport} onChange={(event) => setTransport(event.currentTarget.value as "streamable-http" | "sse")} className="h-9 rounded-lg border border-foreground/15 bg-surface-input px-3 text-sm text-foreground"><option value="streamable-http">Streamable HTTP</option><option value="sse">SSE</option></select></div>
-          <div className="grid gap-1.5"><Label htmlFor="mcp-secret">Bearer token (optional)</Label><Input id="mcp-secret" type="password" value={secret} onChange={(event) => setSecret(event.currentTarget.value)} autoComplete="off" /></div>
-          <div className="grid gap-1.5"><Label htmlFor="mcp-headers">Extra headers JSON (optional)</Label><Input id="mcp-headers" value={headers} onChange={(event) => setHeaders(event.currentTarget.value)} placeholder={'{"X-Workspace":"demo"}'} /></div>
-          <Button type="button" onClick={() => void save()} loading={busy} disabled={!name.trim() || !url.trim()} icon={PlugIcon}>Save connection</Button>
+          <div className="grid gap-1.5"><Label htmlFor="mcp-name">{t("Name")}</Label><Input id="mcp-name" value={name} onChange={(event) => setName(event.currentTarget.value)} placeholder={t("My tools")} /></div>
+          <div className="grid gap-1.5"><Label htmlFor="mcp-url">{t("Server URL")}</Label><Input id="mcp-url" value={url} onChange={(event) => setUrl(event.currentTarget.value)} placeholder="https://example.com/mcp" /></div>
+          <div className="grid gap-1.5"><Label htmlFor="mcp-transport">{t("Transport")}</Label><Select id="mcp-transport" value={transport} options={[{ value: "streamable-http", label: "Streamable HTTP" }, { value: "sse", label: "SSE" }]} onValueChange={(value) => setTransport(value as "streamable-http" | "sse")} disabled={busy} /></div>
+          <div className="grid gap-1.5"><Label htmlFor="mcp-secret">{t("Bearer token (optional)")}</Label><Input id="mcp-secret" type="password" value={secret} onChange={(event) => setSecret(event.currentTarget.value)} autoComplete="off" /></div>
+          <div className="grid gap-1.5"><Label htmlFor="mcp-headers">{t("Extra headers JSON (optional)")}</Label><Input id="mcp-headers" value={headers} onChange={(event) => setHeaders(event.currentTarget.value)} placeholder={'{"X-Workspace":"demo"}'} /></div>
+          <Button type="button" onClick={() => void save()} loading={busy} disabled={!name.trim() || !url.trim()} icon={PlugIcon}>{t("Save connection")}</Button>
         </div>
         {message ? <p className="text-sm text-secondary-foreground">{message}</p> : null}
         <div className="space-y-2">
-          {connections.length === 0 ? <p className="text-sm text-muted-foreground">No MCP connections yet.</p> : connections.map((connection) => (
+          {connections.length === 0 ? <p className="text-sm text-muted-foreground">{t("No MCP connections yet.")}</p> : connections.map((connection) => (
             <div key={connection.id} className="flex items-center gap-2 rounded-lg bg-surface-raised p-3 ring-1 ring-foreground/10">
-              <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{connection.name}</p><p className="truncate font-mono text-xs text-muted-foreground">{connection.url}</p><p className="text-xs text-muted-foreground">{connection.hasSecret ? "Secret saved" : "No secret"} · {connection.lastTestAt ? `tested ${connection.lastTestAt}` : "not tested"}</p></div>
-              <Button type="button" size="xs" variant="outline" icon={WrenchIcon} loading={busy} onClick={() => void test(connection.id)}>Test</Button>
-              <Button type="button" size="xs" variant="ghost" icon={TrashIcon} disabled={busy} onClick={() => void remove(connection.id)} aria-label={`Delete ${connection.name}`} />
+              <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{connection.name}</p><p className="truncate font-mono text-xs text-muted-foreground">{connection.url}</p><p className="text-xs text-muted-foreground">{connection.hasSecret ? t("Secret saved") : t("No secret")} · {connection.lastTestAt ? t("tested {time}", { time: connection.lastTestAt }) : t("not tested")}</p></div>
+              <Button type="button" size="xs" variant="outline" icon={WrenchIcon} loading={busy} onClick={() => void test(connection.id)}>{t("Test")}</Button>
+              <Button type="button" size="xs" variant="ghost" icon={TrashIcon} disabled={busy} onClick={() => void remove(connection.id)} aria-label={t("Delete {name}", { name: connection.name })} />
             </div>
           ))}
         </div>

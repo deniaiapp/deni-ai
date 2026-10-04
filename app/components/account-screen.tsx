@@ -1,5 +1,6 @@
 "use client";
 
+import { useExtracted } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 import { Stagger, StaggerItem } from "@/components/motion";
@@ -11,6 +12,7 @@ import { authClient } from "@/lib/auth-client";
 import { supportEmail, supportMailto } from "@/lib/site";
 
 export function AccountScreen() {
+  const t = useExtracted();
   const { data: session, refetch } = authClient.useSession();
   const user = session?.user;
   const [name, setName] = useState("");
@@ -29,9 +31,9 @@ export function AccountScreen() {
     setError("");
     setNotice("");
     const { error: nextError } = await authClient.updateUser({ name: next });
-    if (nextError) setError(nextError.message || "Could not update name");
+    if (nextError) setError(nextError.message || t("Could not update name"));
     else {
-      setNotice("Name updated.");
+      setNotice(t("Name updated."));
       setName("");
       await refetch();
     }
@@ -43,7 +45,7 @@ export function AccountScreen() {
     setError("");
     try {
       const res = await fetch("/api/account");
-      if (!res.ok) throw new Error("Could not export data");
+      if (!res.ok) throw new Error(t("Could not export data"));
       const blob = new Blob([await res.text()], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -52,7 +54,7 @@ export function AccountScreen() {
       link.click();
       URL.revokeObjectURL(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not export data");
+      setError(err instanceof Error ? err.message : t("Could not export data"));
     } finally {
       setBusy(null);
     }
@@ -64,11 +66,11 @@ export function AccountScreen() {
     setError("");
     try {
       const res = await fetch("/api/account", { method: "DELETE" });
-      if (!res.ok) throw new Error("Could not delete account");
+      if (!res.ok) throw new Error(t("Could not delete account"));
       await authClient.signOut();
       window.location.href = "/";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete account");
+      setError(err instanceof Error ? err.message : t("Could not delete account"));
       setBusy(null);
     }
   }
@@ -78,27 +80,27 @@ export function AccountScreen() {
       <Stagger className="mx-auto flex max-w-2xl flex-col gap-6">
         <StaggerItem>
         <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">
-          Back to workspace
+          {t("Back to workspace")}
         </Link>
         </StaggerItem>
         <StaggerItem>
         <div>
-          <h1 className="text-2xl font-semibold">Account</h1>
+          <h1 className="text-2xl font-semibold">{t("Account")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {user?.email ?? "Signed in"} · signed in with Google or GitHub.
+            {t("{email} · signed in with Google or GitHub.", { email: user?.email ?? t("Signed in") })}
           </p>
         </div>
         </StaggerItem>
 
         <StaggerItem hover>
         <section className="rounded-xl border border-foreground/10 bg-surface p-5">
-          <h2 className="text-[0.925rem] font-semibold">Profile</h2>
+          <h2 className="text-[0.925rem] font-semibold">{t("Profile")}</h2>
           <div className="mt-4 flex flex-col gap-1.5">
-            <Label htmlFor="display-name">Name</Label>
+            <Label htmlFor="display-name">{t("Name")}</Label>
             <Input
               id="display-name"
               value={name}
-              placeholder={user?.name || "Name"}
+              placeholder={user?.name || t("Name")}
               onChange={(event) => setName(event.currentTarget.value)}
             />
           </div>
@@ -109,18 +111,18 @@ export function AccountScreen() {
             loading={busy === "name"}
             onClick={() => void saveName()}
           >
-            Save name
+            {t("Save name")}
           </Button>
         </section>
         </StaggerItem>
 
         <StaggerItem hover>
         <section className="rounded-xl border border-foreground/10 bg-surface p-5">
-          <h2 className="text-[0.925rem] font-semibold">Two-factor authentication</h2>
+          <h2 className="text-[0.925rem] font-semibold">{t("Two-factor authentication")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {user?.twoFactorEnabled
-              ? "An authenticator app is required after Google or GitHub sign-in."
-              : "Finish setup so this account can open the workspace."}
+              ? t("An authenticator app is required after Google or GitHub sign-in.")
+              : t("Finish setup so this account can open the workspace.")}
           </p>
           {user?.twoFactorEnabled ? (
             <div className="mt-4 flex flex-col gap-3">
@@ -134,16 +136,16 @@ export function AccountScreen() {
                     setError("");
                     setNotice("");
                     void authClient.twoFactor.generateBackupCodes({}).then(({ data, error: nextError }) => {
-                      if (nextError) setError(nextError.message || "Could not generate backup codes");
+                      if (nextError) setError(nextError.message || t("Could not generate backup codes"));
                       else {
                         setBackupCodes(data?.backupCodes ?? []);
-                        setNotice("New backup codes replace any previous set.");
+                        setNotice(t("New backup codes replace any previous set."));
                       }
                       setBusy(null);
                     });
                   }}
                 >
-                  Generate backup codes
+                  {t("Generate backup codes")}
                 </Button>
                 <Button
                   type="button"
@@ -153,9 +155,9 @@ export function AccountScreen() {
                     setBusy("2fa-disable");
                     setError("");
                     void authClient.twoFactor.disable({}).then(async ({ error: nextError }) => {
-                      if (nextError) setError(nextError.message || "Could not disable two-factor");
+                      if (nextError) setError(nextError.message || t("Could not disable two-factor"));
                       else {
-                        setNotice("Two-factor authentication is off.");
+                        setNotice(t("Two-factor authentication is off."));
                         setBackupCodes([]);
                         await refetch();
                         window.location.href = "/two-factor/setup";
@@ -164,14 +166,14 @@ export function AccountScreen() {
                     });
                   }}
                 >
-                  Disable two-factor
+                  {t("Disable two-factor")}
                 </Button>
               </div>
               <BackupCodesPanel codes={backupCodes} />
             </div>
           ) : (
             <Button type="button" variant="secondary" className="mt-4" onClick={() => (window.location.href = "/two-factor/setup")}>
-              Set up authenticator app
+              {t("Set up authenticator app")}
             </Button>
           )}
         </section>
@@ -179,9 +181,9 @@ export function AccountScreen() {
 
         <StaggerItem hover>
         <section className="rounded-xl border border-foreground/10 bg-surface p-5">
-          <h2 className="text-[0.925rem] font-semibold">Export</h2>
+          <h2 className="text-[0.925rem] font-semibold">{t("Export")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Download teammates, conversations, skills, routines, and usage. API keys are redacted.
+            {t("Download teammates, conversations, skills, routines, and usage. API keys are redacted.")}
           </p>
           <Button
             type="button"
@@ -190,23 +192,22 @@ export function AccountScreen() {
             loading={busy === "export"}
             onClick={() => void downloadExport()}
           >
-            Download JSON
+            {t("Download JSON")}
           </Button>
         </section>
         </StaggerItem>
         <StaggerItem hover>
         <section className="rounded-xl border border-destructive-500/20 bg-surface p-5">
-          <h2 className="text-[0.925rem] font-semibold text-destructive-300">Delete account</h2>
+          <h2 className="text-[0.925rem] font-semibold text-destructive-300">{t("Delete account")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            This deletes your login, workspace files, conversations, teammates, and billing records.
-            Type DELETE to confirm.
+            {t("This deletes your login, workspace files, conversations, teammates, and billing records. Type DELETE to confirm.")}
           </p>
           <Input
             className="mt-4"
             value={confirm}
             onChange={(event) => setConfirm(event.currentTarget.value)}
             placeholder="DELETE"
-            aria-label="Type DELETE to confirm"
+            aria-label={t("Type DELETE to confirm")}
           />
           <Button
             type="button"
@@ -216,7 +217,7 @@ export function AccountScreen() {
             loading={busy === "delete"}
             onClick={() => void destroy()}
           >
-            Delete my account
+            {t("Delete my account")}
           </Button>
         </section>
         </StaggerItem>
@@ -224,13 +225,13 @@ export function AccountScreen() {
         {error ? <StaggerItem><p className="text-sm text-destructive-300">{error}</p></StaggerItem> : null}
         <StaggerItem>
         <p className="text-sm text-muted-foreground">
-          Support:{" "}
+          {t("Support:")}{" "}
           {mail ? (
             <a href={mail} className="text-secondary-foreground hover:text-foreground">
               {email}
             </a>
           ) : (
-            "set NEXT_PUBLIC_SUPPORT_EMAIL on this deployment."
+            t("set NEXT_PUBLIC_SUPPORT_EMAIL on this deployment.")
           )}
         </p>
         </StaggerItem>

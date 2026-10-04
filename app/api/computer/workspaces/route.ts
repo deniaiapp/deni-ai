@@ -3,6 +3,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { db } from "@/db";
 import { browserWorkspaces } from "@/db/schema";
+import { getExtracted } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -31,10 +32,11 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const body = (await req.json().catch(() => ({}))) as { jobId?: string; takeover?: boolean };
-  if (!body.jobId) return NextResponse.json({ error: "jobId required" }, { status: 400 });
+  if (!body.jobId) return NextResponse.json({ error: t("Job ID is required") }, { status: 400 });
   const [row] = await db
     .update(browserWorkspaces)
     .set({
@@ -44,6 +46,6 @@ export async function PATCH(req: Request) {
     })
     .where(and(eq(browserWorkspaces.userId, userId), eq(browserWorkspaces.jobId, body.jobId)))
     .returning();
-  if (!row) return NextResponse.json({ error: "workspace not found" }, { status: 404 });
+  if (!row) return NextResponse.json({ error: t("Workspace not found") }, { status: 404 });
   return NextResponse.json({ workspace: row });
 }

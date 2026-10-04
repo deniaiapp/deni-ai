@@ -1,0 +1,3416 @@
+msgid ""
+msgstr ""
+"Language: ja\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @eloqnt/format-po\n"
+"X-Message-Key: msgctxt\n"
+
+#: app/api/account/route.ts
+msgctxt "5CloRe"
+msgid "Could not finish deleting your account. Please try again."
+msgstr "アカウントの削除を完了できませんでした。もう一度お試しください。"
+
+#: app/api/artifacts/[id]/route.ts
+msgctxt "crm7iz"
+msgid "Artifact not found"
+msgstr "成果物が見つかりません"
+
+#: app/api/artifacts/route.ts
+msgctxt "H6cAuM"
+msgid "threadId, path, and title are required"
+msgstr "threadId、path、title は必須です"
+
+#: app/api/billing/checkout/route.ts
+#: app/api/billing/portal/route.ts
+#: app/api/billing/sync/route.ts
+msgctxt "7o8Vnj"
+msgid "Billing is not configured yet"
+msgstr "請求はまだ設定されていません"
+
+#: app/api/billing/portal/route.ts
+msgctxt "Rqx0bS"
+msgid "No billing account yet"
+msgstr "請求アカウントがまだありません"
+
+#: app/api/bots/[id]/route.ts
+#: app/api/bots/route.ts
+msgctxt "YeQIlr"
+msgid "Invalid icon"
+msgstr "アイコンが正しくありません"
+
+#: app/api/bots/[id]/route.ts
+#: app/api/chat/route.ts
+msgctxt "7BBlLa"
+msgid "Teammate not found"
+msgstr "チームメイトが見つかりません"
+
+#: app/api/bots/[id]/route.ts
+msgctxt "8xZJax"
+msgid "Default teammates cannot be deleted"
+msgstr "デフォルトのチームメイトは削除できません"
+
+#: app/api/bots/route.ts
+#: app/api/routines/route.ts
+msgctxt "_4pQDl"
+msgid "Name is required."
+msgstr "名前は必須です。"
+
+#: app/api/chat/route.ts
+msgctxt "1qOPhr"
+msgid "Please approve or deny the pending action before continuing."
+msgstr "続行する前に、保留中の操作を承認または拒否してください。"
+
+#: app/api/chat/route.ts
+msgctxt "LlIzf6"
+msgid "Finish the step on the computer, then send a new message to continue."
+msgstr "コンピューター上の手順を完了してから、新しいメッセージを送って続行してください。"
+
+#: app/api/chat/route.ts
+msgctxt "c65x3L"
+msgid "Review the previous run before retrying it."
+msgstr "再試行する前に、前回の実行内容を確認してください。"
+
+#: app/api/chat/route.ts
+msgctxt "BCRyYP"
+msgid "This task is already running or this message has already been submitted."
+msgstr "このタスクはすでに実行中か、このメッセージはすでに送信済みです。"
+
+#: app/api/chat/route.ts
+#: app/api/threads/[id]/reactions/route.ts
+#: app/api/threads/[id]/route.ts
+msgctxt "eePQiZ"
+msgid "Conversation not found."
+msgstr "会話が見つかりません。"
+
+#: app/api/chat/route.ts
+msgctxt "xFBzaV"
+msgid "OPENROUTER_API_KEY is missing"
+msgstr "OPENROUTER_API_KEY が設定されていません"
+
+#: app/api/chat/route.ts
+msgctxt "s-buJt"
+msgid "The message you replied to is no longer available."
+msgstr "返信先のメッセージは存在しません。"
+
+#: app/api/chat/route.ts
+msgctxt "4LlISz"
+msgid "Could not resume the task. Please send your message again."
+msgstr "タスクを再開できませんでした。メッセージをもう一度送信してください。"
+
+#: app/api/computer/files/route.ts
+msgctxt "9dhBF3"
+msgid "Path and content are required"
+msgstr "パスと内容は必須です"
+
+#: app/api/computer/files/route.ts
+#: app/api/jobs/[id]/route.ts
+msgctxt "hILI0p"
+msgid "Unsupported action"
+msgstr "サポートされていない操作です"
+
+#: app/api/computer/files/route.ts
+msgctxt "Yhh1t3"
+msgid "No files to download"
+msgstr "ダウンロードするファイルがありません"
+
+#: app/api/computer/files/route.ts
+msgctxt "sRcnfR"
+msgid "Too many files to download (maximum {max})"
+msgstr "ダウンロードするファイルが多すぎます(最大{max}件)"
+
+#: app/api/computer/files/route.ts
+msgctxt "Z3YXLX"
+msgid "Files are too large to download together (maximum {max} bytes)"
+msgstr "まとめてダウンロードするにはファイルが大きすぎます(最大{max}バイト)"
+
+#: app/api/computer/files/route.ts
+msgctxt "dMkFLa"
+msgid "Path is required"
+msgstr "パスは必須です"
+
+#: app/api/computer/input/route.ts
+msgctxt "v9-mKP"
+msgid "Another task currently owns the computer"
+msgstr "別のタスクがコンピューターを使用中です"
+
+#: app/api/computer/input/route.ts
+msgctxt "HP3V8w"
+msgid "Invalid input"
+msgstr "入力が正しくありません"
+
+#: app/api/computer/workspaces/route.ts
+msgctxt "igLZna"
+msgid "Job ID is required"
+msgstr "ジョブIDは必須です"
+
+#: app/api/computer/workspaces/route.ts
+msgctxt "IQgAIB"
+msgid "Workspace not found"
+msgstr "ワークスペースが見つかりません"
+
+#: app/api/group-chat/route.ts
+#: app/api/threads/[id]/route.ts
+msgctxt "fSEJPG"
+msgid "Group not found."
+msgstr "グループが見つかりません。"
+
+#: app/api/group-chat/route.ts
+msgctxt "RDI57C"
+msgid "A message is required"
+msgstr "メッセージは必須です"
+
+#: app/api/group-chat/route.ts
+msgctxt "VyIPiQ"
+msgid "Invalid mention"
+msgstr "メンションが正しくありません"
+
+#: app/api/group-chat/route.ts
+msgctxt "YdfYZs"
+msgid "No matching teammate in this group"
+msgstr "このグループに該当するチームメイトがいません"
+
+#: app/api/group-chat/route.ts
+msgctxt "aDCKS8"
+msgid "This approval is no longer pending."
+msgstr "この承認はすでに保留中ではありません。"
+
+#: app/api/group-chat/route.ts
+msgctxt "HNqXjI"
+msgid "Could not respond ({status})."
+msgstr "応答できませんでした({status})。"
+
+#: app/api/group-chat/route.ts
+msgctxt "6U8g0S"
+msgid "This teammate could not respond."
+msgstr "このチームメイトは応答できませんでした。"
+
+#: app/api/handoffs/route.ts
+msgctxt "WMOB8_"
+msgid "Handoff not found"
+msgstr "引き継ぎが見つかりません"
+
+#: app/api/jobs/[id]/route.ts
+msgctxt "s9ZiB3"
+msgid "Job not found"
+msgstr "ジョブが見つかりません"
+
+#: app/api/jobs/[id]/route.ts
+msgctxt "pHxHMB"
+msgid "This job cannot be cancelled"
+msgstr "このジョブはキャンセルできません"
+
+#: app/api/jobs/[id]/route.ts
+msgctxt "XLzOqk"
+msgid "This job cannot be retried"
+msgstr "このジョブは再試行できません"
+
+#: app/api/mcp/route.ts
+#: app/api/notifications/route.ts
+msgctxt "9W2lsE"
+msgid "ID is required"
+msgstr "IDは必須です"
+
+#: app/api/mcp/route.ts
+msgctxt "ijB2JA"
+msgid "Connection not found"
+msgstr "接続が見つかりません"
+
+#: app/api/mcp/route.ts
+msgctxt "aMeYz5"
+msgid "Name and URL are required"
+msgstr "名前とURLは必須です"
+
+#: app/api/notifications/route.ts
+msgctxt "YNzq0k"
+msgid "Notification not found"
+msgstr "通知が見つかりません"
+
+#: app/api/plugins/route.ts
+msgctxt "CocmeK"
+msgid "Invalid permission"
+msgstr "権限が正しくありません"
+
+#: app/api/plugins/route.ts
+msgctxt "bsJmcP"
+msgid "Unable to change permission"
+msgstr "権限を変更できません"
+
+#: app/api/routines/route.ts
+msgctxt "LbfSKQ"
+msgid "Instruction is required."
+msgstr "指示は必須です。"
+
+#: app/api/routines/route.ts
+msgctxt "w8Ol2I"
+msgid "When to run is required."
+msgstr "実行タイミングは必須です。"
+
+#: app/api/routines/route.ts
+msgctxt "QiZ_c0"
+msgid "Invalid routine."
+msgstr "ルーティンが正しくありません。"
+
+#: app/api/routines/route.ts
+msgctxt "8QFcFD"
+msgid "Routine not found."
+msgstr "ルーティンが見つかりません。"
+
+#: app/api/routines/route.ts
+msgctxt "6TYLcK"
+msgid "Teammate or conversation not found."
+msgstr "チームメイトまたは会話が見つかりません。"
+
+#: app/api/routines/route.ts
+#: app/components/routines-dialog.tsx
+msgctxt "AUygSW"
+msgid "Could not save routine."
+msgstr "ルーティンを保存できませんでした。"
+
+#: app/api/routines/route.ts
+#: app/components/routines-dialog.tsx
+msgctxt "KvfPWt"
+msgid "Could not update routine."
+msgstr "ルーティンを更新できませんでした。"
+
+#: app/api/routines/route.ts
+msgctxt "OgPpjk"
+msgid "Routine ID is required."
+msgstr "ルーティンIDは必須です。"
+
+#: app/api/setup/route.ts
+msgctxt "4ElhnU"
+msgid "API key is required"
+msgstr "APIキーは必須です"
+
+#: app/api/setup/route.ts
+msgctxt "6Cu7HT"
+msgid "Unable to save API key"
+msgstr "APIキーを保存できません"
+
+#: app/api/skills/route.ts
+msgctxt "rDFJbh"
+msgid "Name and instructions are required."
+msgstr "名前と指示は必須です。"
+
+#: app/api/skills/route.ts
+msgctxt "lu5_IO"
+msgid "Skill ID is required."
+msgstr "スキルIDは必須です。"
+
+#: app/api/skills/route.ts
+msgctxt "R5O_G-"
+msgid "A skill with this name already exists."
+msgstr "同じ名前のスキルがすでに存在します。"
+
+#: app/api/skills/route.ts
+msgctxt "KaE7gK"
+msgid "Skill not found."
+msgstr "スキルが見つかりません。"
+
+#: app/api/skills/route.ts
+#: app/components/skills-dialog.tsx
+msgctxt "c5QIy0"
+msgid "Could not save skill."
+msgstr "スキルを保存できませんでした。"
+
+#: app/api/threads/[id]/reactions/route.ts
+msgctxt "H8UP1V"
+msgid "Invalid reaction"
+msgstr "リアクションが正しくありません"
+
+#: app/api/threads/[id]/reactions/route.ts
+msgctxt "UhsO-i"
+msgid "Message not found"
+msgstr "メッセージが見つかりません"
+
+#: app/api/threads/[id]/route.ts
+msgctxt "rDFiEI"
+msgid "Invalid conversation settings."
+msgstr "会話の設定が正しくありません。"
+
+#: app/api/threads/[id]/route.ts
+msgctxt "pzrKQf"
+msgid "Use the teammate profile to edit a DM."
+msgstr "DMを編集するには、チームメイトのプロフィールから行ってください。"
+
+#: app/api/threads/[id]/route.ts
+#: app/api/threads/route.ts
+msgctxt "ybsB88"
+msgid "Choose at least two valid teammates."
+msgstr "有効なチームメイトを2人以上選んでください。"
+
+#: app/api/threads/[id]/route.ts
+msgctxt "F3zqeC"
+msgid "Could not update conversation."
+msgstr "会話を更新できませんでした。"
+
+#: app/api/threads/route.ts
+msgctxt "gGF2lC"
+msgid "Choose at least two teammates and a valid group name/icon."
+msgstr "チームメイトを2人以上と、有効なグループ名・アイコンを選んでください。"
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+#: app/components/landing.tsx
+msgctxt "TwyMau"
+msgid "Account"
+msgstr "アカウント"
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+msgctxt "N6LOG3"
+msgid "Could not export data"
+msgstr "データをエクスポートできませんでした"
+
+#: app/components/account-menu.tsx
+msgctxt "eoHluI"
+msgid "Could not delete account data"
+msgstr "アカウントデータを削除できませんでした"
+
+#: app/components/account-menu.tsx
+msgctxt "yuQ593"
+msgid "Account menu"
+msgstr "アカウントメニュー"
+
+#: app/components/account-menu.tsx
+msgctxt "fz0x1F"
+msgid "{plan} · {percent}% remaining"
+msgstr "{plan} · 残り{percent}%"
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+msgctxt "77MbQy"
+msgid "Signed in"
+msgstr "ログイン中"
+
+#: app/components/account-menu.tsx
+#: app/components/billing-dialog.tsx
+msgctxt "3fnGyl"
+msgid "Plan and usage"
+msgstr "プランと使用量"
+
+#: app/components/account-menu.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "5N04mo"
+msgid "Upgrade to Pro"
+msgstr "Proにアップグレード"
+
+#: app/components/account-menu.tsx
+msgctxt "GAGFKL"
+msgid "Manage profile"
+msgstr "プロフィールを管理"
+
+#: app/components/account-menu.tsx
+msgctxt "LQbQno"
+msgid "Exporting…"
+msgstr "エクスポート中…"
+
+#: app/components/account-menu.tsx
+msgctxt "SX126d"
+msgid "Export data"
+msgstr "データをエクスポート"
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+msgctxt "wyxJrL"
+msgid "Delete account"
+msgstr "アカウントを削除"
+
+#: app/components/account-menu.tsx
+msgctxt "QfaEcB"
+msgid "Signing out…"
+msgstr "ログアウト中…"
+
+#: app/components/account-menu.tsx
+#: app/components/auth-form.tsx
+msgctxt "xXbJso"
+msgid "Sign out"
+msgstr "ログアウト"
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+msgctxt "sizJ6v"
+msgid "This deletes your login, workspace files, conversations, teammates, and billing records. Type DELETE to confirm."
+msgstr "ログイン情報、ワークスペースのファイル、会話、チームメイト、請求記録がすべて削除されます。確認のため DELETE と入力してください。"
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+msgctxt "t4Ybzr"
+msgid "Type DELETE to confirm"
+msgstr "確認のため DELETE と入力"
+
+#: app/components/account-menu.tsx
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+#: app/components/skills-dialog.tsx
+msgctxt "47FYwb"
+msgid "Cancel"
+msgstr "キャンセル"
+
+#: app/components/account-menu.tsx
+msgctxt "5CWeqU"
+msgid "Delete my data"
+msgstr "データを削除する"
+
+#: app/components/account-screen.tsx
+msgctxt "UWeLlR"
+msgid "Could not update name"
+msgstr "名前を更新できませんでした"
+
+#: app/components/account-screen.tsx
+msgctxt "w6sKzl"
+msgid "Name updated."
+msgstr "名前を更新しました。"
+
+#: app/components/account-screen.tsx
+msgctxt "nXjoV3"
+msgid "Could not delete account"
+msgstr "アカウントを削除できませんでした"
+
+#: app/components/account-screen.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "AasydN"
+msgid "Back to workspace"
+msgstr "ワークスペースに戻る"
+
+#: app/components/account-screen.tsx
+msgctxt "Zmcjcz"
+msgid "{email} · signed in with Google or GitHub."
+msgstr "{email} · GoogleまたはGitHubでログイン中"
+
+#: app/components/account-screen.tsx
+msgctxt "itPgxd"
+msgid "Profile"
+msgstr "プロフィール"
+
+#: app/components/account-screen.tsx
+#: app/components/mcp-settings.tsx
+#: app/components/routines-dialog.tsx
+#: app/components/skills-dialog.tsx
+#: app/components/workspace.tsx
+msgctxt "HAlOn1"
+msgid "Name"
+msgstr "名前"
+
+#: app/components/account-screen.tsx
+msgctxt "pO99pv"
+msgid "Save name"
+msgstr "名前を保存"
+
+#: app/components/account-screen.tsx
+#: app/components/auth-form.tsx
+msgctxt "Zmrie7"
+msgid "Two-factor authentication"
+msgstr "二要素認証"
+
+#: app/components/account-screen.tsx
+#: app/components/auth-form.tsx
+msgctxt "P0s1jE"
+msgid "An authenticator app is required after Google or GitHub sign-in."
+msgstr "GoogleまたはGitHubでのログイン後に、認証アプリが必要です。"
+
+#: app/components/account-screen.tsx
+msgctxt "gqj6t6"
+msgid "Finish setup so this account can open the workspace."
+msgstr "このアカウントでワークスペースを開くには、設定を完了してください。"
+
+#: app/components/account-screen.tsx
+msgctxt "SFHRua"
+msgid "Could not generate backup codes"
+msgstr "バックアップコードを生成できませんでした"
+
+#: app/components/account-screen.tsx
+msgctxt "KvVttF"
+msgid "New backup codes replace any previous set."
+msgstr "新しいバックアップコードは、以前のコードに置き換わります。"
+
+#: app/components/account-screen.tsx
+msgctxt "9tQOB1"
+msgid "Generate backup codes"
+msgstr "バックアップコードを生成"
+
+#: app/components/account-screen.tsx
+msgctxt "eH00wg"
+msgid "Could not disable two-factor"
+msgstr "二要素認証を無効にできませんでした"
+
+#: app/components/account-screen.tsx
+msgctxt "Ylx62Q"
+msgid "Two-factor authentication is off."
+msgstr "二要素認証はオフになっています。"
+
+#: app/components/account-screen.tsx
+msgctxt "bfWH4i"
+msgid "Disable two-factor"
+msgstr "二要素認証を無効にする"
+
+#: app/components/account-screen.tsx
+msgctxt "73Eqvi"
+msgid "Set up authenticator app"
+msgstr "認証アプリを設定"
+
+#: app/components/account-screen.tsx
+msgctxt "SVwJTM"
+msgid "Export"
+msgstr "エクスポート"
+
+#: app/components/account-screen.tsx
+msgctxt "83sApy"
+msgid "Download teammates, conversations, skills, routines, and usage. API keys are redacted."
+msgstr "チームメイト、会話、スキル、ルーティン、使用量をダウンロードします。APIキーは伏せ字になります。"
+
+#: app/components/account-screen.tsx
+msgctxt "JudhTj"
+msgid "Download JSON"
+msgstr "JSONをダウンロード"
+
+#: app/components/account-screen.tsx
+msgctxt "Sk9SL5"
+msgid "Delete my account"
+msgstr "アカウントを削除する"
+
+#: app/components/account-screen.tsx
+msgctxt "GGG4u8"
+msgid "Support:"
+msgstr "サポート:"
+
+#: app/components/account-screen.tsx
+msgctxt "LQHT4G"
+msgid "set NEXT_PUBLIC_SUPPORT_EMAIL on this deployment."
+msgstr "このデプロイでは NEXT_PUBLIC_SUPPORT_EMAIL を設定してください。"
+
+#: app/components/auth-form.tsx
+msgctxt "G2XlKG"
+msgid "Save these backup codes. They are shown once."
+msgstr "このバックアップコードを保存してください。表示されるのは一度だけです。"
+
+#: app/components/auth-form.tsx
+#: app/components/message-actions.tsx
+msgctxt "4l6vz1"
+msgid "Copy"
+msgstr "コピー"
+
+#: app/components/auth-form.tsx
+#: app/components/message-actions.tsx
+msgctxt "p556q3"
+msgid "Copied"
+msgstr "コピーしました"
+
+#: app/components/auth-form.tsx
+#: app/components/chat-thread.tsx
+#: app/components/computer-panel.tsx
+msgctxt "5q3qC0"
+msgid "Download"
+msgstr "ダウンロード"
+
+#: app/components/auth-form.tsx
+msgctxt "fsB_4p"
+msgid "Saved"
+msgstr "保存しました"
+
+#: app/components/auth-form.tsx
+msgctxt "R9XGTp"
+msgid "Could not start sign-in"
+msgstr "ログインを開始できませんでした"
+
+#: app/components/auth-form.tsx
+msgctxt "pq85D4"
+msgid "Sign-in was cancelled or failed. Try again."
+msgstr "ログインがキャンセルされたか、失敗しました。もう一度お試しください。"
+
+#: app/components/auth-form.tsx
+msgctxt "wZpyBS"
+msgid "Continue with Google or GitHub, then set up an authenticator app."
+msgstr "GoogleまたはGitHubで続行し、そのあと認証アプリを設定します。"
+
+#: app/components/auth-form.tsx
+msgctxt "mXc8V6"
+msgid "New here? <link>Create an account</link>"
+msgstr "初めての方は <link>アカウントを作成</link>"
+
+#: app/components/auth-form.tsx
+msgctxt "xotCDt"
+msgid "Already have an account? <link>Sign in</link>"
+msgstr "アカウントをお持ちの方は <link>ログイン</link>"
+
+#: app/components/auth-form.tsx
+msgctxt "FJ6r9E"
+msgid "Continue with Google"
+msgstr "Googleで続行"
+
+#: app/components/auth-form.tsx
+msgctxt "8eQ7FM"
+msgid "Continue with GitHub"
+msgstr "GitHubで続行"
+
+#: app/components/auth-form.tsx
+msgctxt "bokqOg"
+msgid "By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy</privacy> pages."
+msgstr "続行すると、<terms>利用規約</terms>と<privacy>プライバシー</privacy>に同意したものとみなされます。"
+
+#: app/components/auth-form.tsx
+msgctxt "x2R8CB"
+msgid "Invalid code"
+msgstr "コードが正しくありません"
+
+#: app/components/auth-form.tsx
+msgctxt "YgJbIQ"
+msgid "Enter a backup code from when you enabled two-factor authentication."
+msgstr "二要素認証を有効にしたときのバックアップコードを入力してください。"
+
+#: app/components/auth-form.tsx
+msgctxt "RKK2dE"
+msgid "Enter the 6-digit code from your authenticator app."
+msgstr "認証アプリに表示される6桁のコードを入力してください。"
+
+#: app/components/auth-form.tsx
+msgctxt "Db6T6A"
+msgid "Backup code"
+msgstr "バックアップコード"
+
+#: app/components/auth-form.tsx
+msgctxt "p7pE5V"
+msgid "One-time code"
+msgstr "ワンタイムコード"
+
+#: app/components/auth-form.tsx
+msgctxt "ABFUjV"
+msgid "Trust this device for 30 days"
+msgstr "このデバイスを30日間信頼する"
+
+#: app/components/auth-form.tsx
+msgctxt "q5Xl0M"
+msgid "Verify"
+msgstr "確認"
+
+#: app/components/auth-form.tsx
+msgctxt "lWZTDG"
+msgid "Use authenticator app"
+msgstr "認証アプリを使う"
+
+#: app/components/auth-form.tsx
+msgctxt "T0bwmY"
+msgid "Use a backup code"
+msgstr "バックアップコードを使う"
+
+#: app/components/auth-form.tsx
+msgctxt "8g7PrW"
+msgid "Could not start two-factor setup"
+msgstr "二要素認証の設定を開始できませんでした"
+
+#: app/components/auth-form.tsx
+msgctxt "Ac2ehz"
+msgid "Invalid authenticator code"
+msgstr "認証コードが正しくありません"
+
+#: app/components/auth-form.tsx
+msgctxt "io-wG_"
+msgid "Set up two-factor authentication"
+msgstr "二要素認証を設定"
+
+#: app/components/auth-form.tsx
+msgctxt "q-x1aG"
+msgid "Enable authenticator app"
+msgstr "認証アプリを有効にする"
+
+#: app/components/auth-form.tsx
+msgctxt "dChb0Y"
+msgid "Scan the QR code"
+msgstr "QRコードをスキャン"
+
+#: app/components/auth-form.tsx
+msgctxt "yiGQqM"
+msgid "Add Deni Run in your authenticator app, save the backup codes, then enter a 6-digit code."
+msgstr "認証アプリに Deni Run を追加し、バックアップコードを保存してから、6桁のコードを入力してください。"
+
+#: app/components/auth-form.tsx
+msgctxt "TV0Ha_"
+msgid "Verify and continue"
+msgstr "確認して続行"
+
+#: app/components/avatar-field.tsx
+msgctxt "MAGAzv"
+msgid "Choose a PNG, JPG, WebP, or GIF image under 5 MB."
+msgstr "5 MB以下のPNG、JPG、WebP、GIF画像を選択してください。"
+
+#: app/components/avatar-field.tsx
+msgctxt "wAQY68"
+msgid "Image processing is unavailable."
+msgstr "画像を処理できません。"
+
+#: app/components/avatar-field.tsx
+msgctxt "lm9RTS"
+msgid "This image is too large. Choose a simpler image."
+msgstr "この画像は大きすぎます。よりシンプルな画像を選んでください。"
+
+#: app/components/avatar-field.tsx
+msgctxt "2Wr9z9"
+msgid "Could not read this image."
+msgstr "この画像を読み込めませんでした。"
+
+#: app/components/avatar-field.tsx
+msgctxt "kk4TVW"
+msgid "Icon"
+msgstr "アイコン"
+
+#: app/components/avatar-field.tsx
+#: app/components/reaction-picker.tsx
+msgctxt "34NuzG"
+msgid "Emoji"
+msgstr "絵文字"
+
+#: app/components/avatar-field.tsx
+msgctxt "p4N05H"
+msgid "Upload"
+msgstr "アップロード"
+
+#: app/components/avatar-field.tsx
+msgctxt "jm_spn"
+msgid "Reset"
+msgstr "リセット"
+
+#: app/components/avatar-field.tsx
+msgctxt "sZTv2D"
+msgid "Upload icon"
+msgstr "アイコンをアップロード"
+
+#: app/components/billing-dialog.tsx
+msgctxt "i43vh-"
+msgid "{plan} plan · {period} UTC"
+msgstr "{plan}プラン · {period} UTC"
+
+#: app/components/billing-dialog.tsx
+msgctxt "q_-b76"
+msgid "renews {date}"
+msgstr "{date}に更新"
+
+#: app/components/billing-dialog.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "P6EE_a"
+msgid "Tokens"
+msgstr "トークン"
+
+#: app/components/billing-dialog.tsx
+msgctxt "fS9BhU"
+msgid "Browser minutes"
+msgstr "ブラウザ時間(分)"
+
+#: app/components/billing-dialog.tsx
+msgctxt "P1IEKh"
+msgid "Computer minutes"
+msgstr "コンピューター時間(分)"
+
+#: app/components/billing-dialog.tsx
+#: app/components/sidebar.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "hDxIJm"
+msgid "Teammates"
+msgstr "チームメイト"
+
+#: app/components/billing-dialog.tsx
+msgctxt "GoRRWr"
+msgid "Loading usage…"
+msgstr "使用量を読み込み中…"
+
+#: app/components/billing-dialog.tsx
+#: app/components/computer-panel.tsx
+#: app/components/workspace.tsx
+#: components/ui/dialog.tsx
+msgctxt "rbrahO"
+msgid "Close"
+msgstr "閉じる"
+
+#: app/components/billing-dialog.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "wLCwU4"
+msgid "Manage billing"
+msgstr "請求を管理"
+
+#: app/components/billing-dialog.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "epeZNJ"
+msgid "Upgrade to Pro · ${price}/mo"
+msgstr "Proにアップグレード · ${price}/月"
+
+#: app/components/billing-dialog.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "ZNYO98"
+msgid "Stripe is not configured on this deployment. Limits still apply to the Free plan."
+msgstr "このデプロイでは Stripe が設定されていません。Freeプランの上限は引き続き適用されます。"
+
+#: app/components/chat-thread.tsx
+msgctxt "frgrwx"
+msgid "Could not submit approval."
+msgstr "承認を送信できませんでした。"
+
+#: app/components/chat-thread.tsx
+msgctxt "q_uwLT"
+msgid "Stop"
+msgstr "停止"
+
+#: app/components/chat-thread.tsx
+msgctxt "N2fEr-"
+msgid "Saving result…"
+msgstr "結果を保存中…"
+
+#: app/components/chat-thread.tsx
+msgctxt "HohM7W"
+msgid "Waiting for your help…"
+msgstr "あなたの操作を待っています…"
+
+#: app/components/chat-thread.tsx
+msgctxt "40zwh7"
+msgid "@everyone to ask everyone · @name to ask a teammate"
+msgstr "@everyone で全員に、@名前 で特定のチームメイトに依頼できます"
+
+#: app/components/chat-thread.tsx
+msgctxt "lkZr3d"
+msgid "Teammate responses"
+msgstr "チームメイトの応答"
+
+#: app/components/chat-thread.tsx
+msgctxt "JqfMd9"
+msgid "Needs your help"
+msgstr "操作が必要です"
+
+#: app/components/chat-thread.tsx
+msgctxt "vXCeIi"
+msgid "Failed"
+msgstr "失敗"
+
+#: app/components/chat-thread.tsx
+msgctxt "JXdbo8"
+msgid "Done"
+msgstr "完了"
+
+#: app/components/chat-thread.tsx
+msgctxt "0E-C4I"
+msgid "Waiting for your help"
+msgstr "あなたの操作を待っています"
+
+#: app/components/chat-thread.tsx
+msgctxt "_LViiD"
+msgid "Saving result"
+msgstr "結果を保存中"
+
+#: app/components/chat-thread.tsx
+msgctxt "xdZNBn"
+msgid "Working on the computer"
+msgstr "コンピューターで作業中"
+
+#: app/components/chat-thread.tsx
+msgctxt "VAdNNz"
+msgid "Failed to send"
+msgstr "送信に失敗しました"
+
+#: app/components/chat-thread.tsx
+#: app/components/workspace.tsx
+msgctxt "TDaF6J"
+msgid "Dismiss"
+msgstr "閉じる"
+
+#: app/components/chat-thread.tsx
+msgctxt "XQG9Ux"
+msgid "Mention a teammate"
+msgstr "チームメイトにメンション"
+
+#: app/components/chat-thread.tsx
+msgctxt "FEVQGc"
+msgid "All teammates"
+msgstr "全チームメイト"
+
+#: app/components/chat-thread.tsx
+msgctxt "v4zwVA"
+msgid "Cancel reply"
+msgstr "返信をキャンセル"
+
+#: app/components/chat-thread.tsx
+msgctxt "Dat5EN"
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr "Enterで送信 · Shift+Enterで改行"
+
+#: app/components/chat-thread.tsx
+msgctxt "j4HzNR"
+msgid "Message {name} · @everyone"
+msgstr "{name}にメッセージ · @everyone"
+
+#: app/components/chat-thread.tsx
+msgctxt "Dij_iT"
+msgid "Message {name}"
+msgstr "{name}にメッセージ"
+
+#: app/components/chat-thread.tsx
+msgctxt "RANC4_"
+msgid "Stop response"
+msgstr "応答を停止"
+
+#: app/components/chat-thread.tsx
+msgctxt "Xx0WZV"
+msgid "Send message"
+msgstr "メッセージを送信"
+
+#: app/components/chat-thread.tsx
+msgctxt "eW5eoW"
+msgid "Artifacts"
+msgstr "成果物"
+
+#: app/components/chat-thread.tsx
+msgctxt "woJXRP"
+msgid "Deliverables"
+msgstr "成果物"
+
+#: app/components/chat-thread.tsx
+msgctxt "oM6JUS"
+msgid "Unable to preview this file."
+msgstr "このファイルはプレビューできません。"
+
+#: app/components/chat-thread.tsx
+msgctxt "TJo5E6"
+msgid "Preview"
+msgstr "プレビュー"
+
+#: app/components/chat-thread.tsx
+msgctxt "pXNgqm"
+msgid "Hide preview"
+msgstr "プレビューを隠す"
+
+#: app/components/chat-thread.tsx
+msgctxt "pM1vUw"
+msgid "Request revision"
+msgstr "修正を依頼"
+
+#: app/components/chat-thread.tsx
+msgctxt "W-q5ue"
+msgid "{job}. No workflow is required. Write as if you were asking a colleague. I will research on the computer, leave artifacts in files, and ask for approval only when needed."
+msgstr "{job}。決まった手順は不要です。同僚に頼むように書いてください。コンピューターで調べ、成果物をファイルに残し、必要なときだけ承認をお願いします。"
+
+#: app/components/chat-thread.tsx
+msgctxt "Ajoqx1"
+msgid "Worked for {count}s"
+msgstr "{count}秒間作業しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "VSp1Sr"
+msgid "Worked for {count}m"
+msgstr "{count}分間作業しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "6Wz8hi"
+msgid "Worked for {count}h"
+msgstr "{count}時間作業しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "Aw3qRf"
+msgid "Reasoning"
+msgstr "推論"
+
+#: app/components/chat-thread.tsx
+#: app/components/routines-dialog.tsx
+msgctxt "aX1b8r"
+msgid "Teammate"
+msgstr "チームメイト"
+
+#: app/components/chat-thread.tsx
+#: app/components/computer-panel.tsx
+msgctxt "gAR0at"
+msgid "Working"
+msgstr "作業中"
+
+#: app/components/chat-thread.tsx
+msgctxt "AHQWDT"
+msgid "Thinking"
+msgstr "考え中"
+
+#: app/components/chat-thread.tsx
+msgctxt "iZJU2H"
+msgid "Go to referenced message"
+msgstr "参照元のメッセージへ移動"
+
+#: app/components/chat-thread.tsx
+msgctxt "fbNp11"
+msgid "Replying to you"
+msgstr "あなたへの返信"
+
+#: app/components/chat-thread.tsx
+msgctxt "3fyB8h"
+msgid "Replying to {name}"
+msgstr "{name}への返信"
+
+#: app/components/chat-thread.tsx
+msgctxt "T7Ry38"
+msgid "Message"
+msgstr "メッセージ"
+
+#: app/components/chat-thread.tsx
+msgctxt "Kiv4kU"
+msgid "Could not save permission."
+msgstr "権限を保存できませんでした。"
+
+#: app/components/chat-thread.tsx
+msgctxt "hlNVnU"
+msgid "Approved · {label}"
+msgstr "承認済み · {label}"
+
+#: app/components/chat-thread.tsx
+msgctxt "a3EMWN"
+msgid "Declined · {label}"
+msgstr "却下 · {label}"
+
+#: app/components/chat-thread.tsx
+msgctxt "ofCpTm"
+msgid "Connected · manage"
+msgstr "接続済み · 管理"
+
+#: app/components/chat-thread.tsx
+#: app/components/mcp-settings.tsx
+msgctxt "-vVZ_G"
+msgid "Connect"
+msgstr "接続"
+
+#: app/components/chat-thread.tsx
+msgctxt "KFXoaa"
+msgid "Couldn't request your help"
+msgstr "操作のお願いを送れませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "uNru86"
+msgid "Requested your help"
+msgstr "操作をお願いしました"
+
+#: app/components/chat-thread.tsx
+msgctxt "xRaksx"
+msgid "The computer could not be handed over."
+msgstr "コンピューターを引き渡せませんでした。"
+
+#: app/components/chat-thread.tsx
+msgctxt "kLVM3X"
+msgid "Take control of the computer to continue."
+msgstr "続行するには、コンピューターの操作を引き継いでください。"
+
+#: app/components/chat-thread.tsx
+msgctxt "2-zQlP"
+msgid "a teammate"
+msgstr "チームメイト"
+
+#: app/components/chat-thread.tsx
+msgctxt "BTagga"
+msgid "Couldn't reach {teammate}"
+msgstr "{teammate}に連絡できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "P87nrX"
+msgid "{teammate} is working"
+msgstr "{teammate}が作業中です"
+
+#: app/components/chat-thread.tsx
+msgctxt "w2A7J0"
+msgid "Asked {teammate}"
+msgstr "{teammate}に依頼しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "1leOUS"
+msgid "Asking {teammate}"
+msgstr "{teammate}に依頼中"
+
+#: app/components/chat-thread.tsx
+msgctxt "2kqa9E"
+msgid "Action was declined"
+msgstr "操作は拒否されました"
+
+#: app/components/chat-thread.tsx
+msgctxt "AY7syN"
+msgid "Couldn't open the page"
+msgstr "ページを開けませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "_OmsSP"
+msgid "Opened page"
+msgstr "ページを開きました"
+
+#: app/components/chat-thread.tsx
+msgctxt "ml6bIZ"
+msgid "Opening page"
+msgstr "ページを開いています"
+
+#: app/components/chat-thread.tsx
+msgctxt "gHAj9d"
+msgid "Couldn't read the page"
+msgstr "ページを読み取れませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "48j2Bn"
+msgid "Read the page"
+msgstr "ページを読み取りました"
+
+#: app/components/chat-thread.tsx
+msgctxt "Fz6nox"
+msgid "Reading the page"
+msgstr "ページを読み取り中"
+
+#: app/components/chat-thread.tsx
+msgctxt "Ckj91Y"
+msgid "Couldn't click the page"
+msgstr "ページをクリックできませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "Z9K0wg"
+msgid "Clicked the page"
+msgstr "ページをクリックしました"
+
+#: app/components/chat-thread.tsx
+msgctxt "ZvoNJ0"
+msgid "Clicking the page"
+msgstr "ページをクリック中"
+
+#: app/components/chat-thread.tsx
+msgctxt "OS0NXQ"
+msgid "Couldn't enter the text"
+msgstr "テキストを入力できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "fwZFBf"
+msgid "Entered text"
+msgstr "テキストを入力しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "Q8ovsh"
+msgid "Entering text"
+msgstr "テキストを入力中"
+
+#: app/components/chat-thread.tsx
+msgctxt "CL5GjO"
+msgid "a key"
+msgstr "キー"
+
+#: app/components/chat-thread.tsx
+msgctxt "8ERrD-"
+msgid "Couldn't press {key}"
+msgstr "{key}を押せませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "m2KEZF"
+msgid "Pressed {key}"
+msgstr "{key}を押しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "S3LNqv"
+msgid "Pressing {key}"
+msgstr "{key}を押しています"
+
+#: app/components/chat-thread.tsx
+msgctxt "Qxdzjn"
+msgid "Couldn't scroll the page"
+msgstr "ページをスクロールできませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "bH5aVB"
+msgid "Scrolled up"
+msgstr "上にスクロールしました"
+
+#: app/components/chat-thread.tsx
+msgctxt "dZdDvw"
+msgid "Scrolled down"
+msgstr "下にスクロールしました"
+
+#: app/components/chat-thread.tsx
+msgctxt "gsZoWr"
+msgid "Scrolling up"
+msgstr "上にスクロール中"
+
+#: app/components/chat-thread.tsx
+msgctxt "SvPr_l"
+msgid "Scrolling down"
+msgstr "下にスクロール中"
+
+#: app/components/chat-thread.tsx
+msgctxt "ojTHkH"
+msgid "Couldn't use the browser"
+msgstr "ブラウザを使用できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "ObRTsD"
+msgid "Used the browser"
+msgstr "ブラウザを使用しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "-mNq_K"
+msgid "Using the browser"
+msgstr "ブラウザを使用中"
+
+#: app/components/chat-thread.tsx
+msgctxt "diMib6"
+msgid "Updating files"
+msgstr "ファイルを更新中"
+
+#: app/components/chat-thread.tsx
+msgctxt "yyFzmA"
+msgid "Updated files"
+msgstr "ファイルを更新しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "W1jkFo"
+msgid "Couldn't update files"
+msgstr "ファイルを更新できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "-B6q99"
+msgid "Running a command"
+msgstr "コマンドを実行中"
+
+#: app/components/chat-thread.tsx
+msgctxt "cv9VNY"
+msgid "Ran a command"
+msgstr "コマンドを実行しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "43JasP"
+msgid "Couldn't run a command"
+msgstr "コマンドを実行できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "_A_8_D"
+msgid "Stopping the computer"
+msgstr "コンピューターを停止中"
+
+#: app/components/chat-thread.tsx
+msgctxt "EGo5k7"
+msgid "Stopped the computer"
+msgstr "コンピューターを停止しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "toIWwV"
+msgid "Couldn't stop the computer"
+msgstr "コンピューターを停止できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "5Kajyz"
+msgid "Searching the web"
+msgstr "ウェブを検索中"
+
+#: app/components/chat-thread.tsx
+msgctxt "4-310B"
+msgid "Searched the web"
+msgstr "ウェブを検索しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "_kh6dX"
+msgid "Couldn't search the web"
+msgstr "ウェブを検索できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "uqElma"
+msgid "Saving a memory"
+msgstr "メモリを保存中"
+
+#: app/components/chat-thread.tsx
+msgctxt "P27R7w"
+msgid "Saved a memory"
+msgstr "メモリを保存しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "OoZnj6"
+msgid "Couldn't save a memory"
+msgstr "メモリを保存できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "nFuHdT"
+msgid "Saving a skill"
+msgstr "スキルを保存中"
+
+#: app/components/chat-thread.tsx
+msgctxt "OCZfYz"
+msgid "Saved a skill"
+msgstr "スキルを保存しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "5wrwRW"
+msgid "Couldn't save a skill"
+msgstr "スキルを保存できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "pWZJnj"
+msgid "Checking saved skills"
+msgstr "保存済みスキルを確認中"
+
+#: app/components/chat-thread.tsx
+msgctxt "pSgP2-"
+msgid "Checked saved skills"
+msgstr "保存済みスキルを確認しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "EP0kSQ"
+msgid "Couldn't check saved skills"
+msgstr "保存済みスキルを確認できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "l0SB4M"
+msgid "Reading a skill"
+msgstr "スキルを読み込み中"
+
+#: app/components/chat-thread.tsx
+msgctxt "98LMUl"
+msgid "Read a skill"
+msgstr "スキルを読み込みました"
+
+#: app/components/chat-thread.tsx
+msgctxt "kWSbtt"
+msgid "Couldn't read a skill"
+msgstr "スキルを読み込めませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "e6oE27"
+msgid "Scheduling a routine"
+msgstr "ルーティンをスケジュール中"
+
+#: app/components/chat-thread.tsx
+msgctxt "B-XoGJ"
+msgid "Scheduled a routine"
+msgstr "ルーティンをスケジュールしました"
+
+#: app/components/chat-thread.tsx
+msgctxt "1nC17M"
+msgid "Couldn't schedule a routine"
+msgstr "ルーティンをスケジュールできませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "NBbGOD"
+msgid "Checking routines"
+msgstr "ルーティンを確認中"
+
+#: app/components/chat-thread.tsx
+msgctxt "OGzYmC"
+msgid "Checked routines"
+msgstr "ルーティンを確認しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "yMyb4d"
+msgid "Couldn't check routines"
+msgstr "ルーティンを確認できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "iH2n13"
+msgid "Showing connected services"
+msgstr "接続済みサービスを表示中"
+
+#: app/components/chat-thread.tsx
+msgctxt "X31EWP"
+msgid "Showed connected services"
+msgstr "接続済みサービスを表示しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "GeR2eE"
+msgid "Couldn't show connected services"
+msgstr "接続済みサービスを表示できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "TRVbaQ"
+msgid "Using a connected service"
+msgstr "接続済みサービスを使用中"
+
+#: app/components/chat-thread.tsx
+msgctxt "KT5Mss"
+msgid "Used a connected service"
+msgstr "接続済みサービスを使用しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "04VF7h"
+msgid "Couldn't use a connected service"
+msgstr "接続済みサービスを使用できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "zQDTkW"
+msgid "Updating a routine"
+msgstr "ルーティンを更新中"
+
+#: app/components/chat-thread.tsx
+msgctxt "OrSVcQ"
+msgid "Updated a routine"
+msgstr "ルーティンを更新しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "_mIlHk"
+msgid "Couldn't update a routine"
+msgstr "ルーティンを更新できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "ZrhVFY"
+msgid "Asking a teammate"
+msgstr "チームメイトに依頼中"
+
+#: app/components/chat-thread.tsx
+msgctxt "GNudob"
+msgid "Asked a teammate"
+msgstr "チームメイトに依頼しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "IAqmHD"
+msgid "Couldn't ask a teammate"
+msgstr "チームメイトに依頼できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "47Km2R"
+msgid "Checking a teammate"
+msgstr "チームメイトを確認中"
+
+#: app/components/chat-thread.tsx
+msgctxt "Bo2eRL"
+msgid "Checked a teammate"
+msgstr "チームメイトを確認しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "Q61-l7"
+msgid "Couldn't check a teammate"
+msgstr "チームメイトを確認できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "2lqdze"
+msgid "Working on {tool}"
+msgstr "{tool}を実行中"
+
+#: app/components/chat-thread.tsx
+msgctxt "d3q1Pu"
+msgid "Finished {tool}"
+msgstr "{tool}を完了しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "k6qg1w"
+msgid "Couldn't finish {tool}"
+msgstr "{tool}を完了できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "WCaf5C"
+msgid "Approve"
+msgstr "承認"
+
+#: app/components/chat-thread.tsx
+msgctxt "lr3QX_"
+msgid "Always allow"
+msgstr "常に許可"
+
+#: app/components/chat-thread.tsx
+msgctxt "htvX-Z"
+msgid "Deny"
+msgstr "拒否"
+
+#: app/components/chat-thread.tsx
+msgctxt "lKv8ex"
+msgid "Default"
+msgstr "デフォルト"
+
+#: app/components/chat-thread.tsx
+msgctxt "AxMhQr"
+msgid "High"
+msgstr "高"
+
+#: app/components/chat-thread.tsx
+msgctxt "x8d3rq"
+msgid "xhigh"
+msgstr "xhigh"
+
+#: app/components/chat-thread.tsx
+msgctxt "kkjl2v"
+msgid "Max"
+msgstr "最大"
+
+#: app/components/chat-thread.tsx
+msgctxt "r_LXBB"
+msgid "{multiplier}× tokens"
+msgstr "トークン{multiplier}倍"
+
+#: app/components/chat-thread.tsx
+#: app/components/computer-panel.tsx
+msgctxt "NhDwgx"
+msgid "in progress"
+msgstr "処理中"
+
+#: app/components/computer-panel.tsx
+msgctxt "Vwhrki"
+msgid "The computer did not accept the input"
+msgstr "コンピューターが入力を受け付けませんでした"
+
+#: app/components/computer-panel.tsx
+msgctxt "1Lvuek"
+msgid "The computer is currently owned by another task"
+msgstr "コンピューターは現在、別のタスクが使用中です"
+
+#: app/components/computer-panel.tsx
+msgctxt "RVhqZ4"
+msgid "Download failed"
+msgstr "ダウンロードに失敗しました"
+
+#: app/components/computer-panel.tsx
+msgctxt "ecjViF"
+msgid "Delete failed"
+msgstr "削除に失敗しました"
+
+#: app/components/computer-panel.tsx
+msgctxt "qkBusW"
+msgid "Your help is needed"
+msgstr "操作が必要です"
+
+#: app/components/computer-panel.tsx
+msgctxt "KN7zKn"
+msgid "Error"
+msgstr "エラー"
+
+#: app/components/computer-panel.tsx
+msgctxt "sNY4nx"
+msgid "Idle"
+msgstr "待機中"
+
+#: app/components/computer-panel.tsx
+msgctxt "gWEDtt"
+msgid "Computer and routines"
+msgstr "コンピューターとルーティン"
+
+#: app/components/computer-panel.tsx
+#: app/components/upgrade-screen.tsx
+#: app/components/workspace.tsx
+msgctxt "GufTjD"
+msgid "Computer"
+msgstr "コンピューター"
+
+#: app/components/computer-panel.tsx
+msgctxt "kzaYlD"
+msgid "Screen"
+msgstr "画面"
+
+#: app/components/computer-panel.tsx
+msgctxt "m4vqJl"
+msgid "Files"
+msgstr "ファイル"
+
+#: app/components/computer-panel.tsx
+msgctxt "GAHVEi"
+msgid "Terminal"
+msgstr "ターミナル"
+
+#: app/components/computer-panel.tsx
+msgctxt "ZjmERS"
+msgid "Log"
+msgstr "ログ"
+
+#: app/components/computer-panel.tsx
+msgctxt "nLdxaG"
+msgid "Working on your task"
+msgstr "タスクを実行中"
+
+#: app/components/computer-panel.tsx
+msgctxt "cA0m7F"
+msgid "No browser open"
+msgstr "ブラウザは開かれていません"
+
+#: app/components/computer-panel.tsx
+msgctxt "HC3YXR"
+msgid "{name}'s screen"
+msgstr "{name}の画面"
+
+#: app/components/computer-panel.tsx
+msgctxt "AwJzsq"
+msgid "Computer screen"
+msgstr "コンピューターの画面"
+
+#: app/components/computer-panel.tsx
+msgctxt "9x8vKu"
+msgid "The screen appears here when your teammate opens the browser."
+msgstr "チームメイトがブラウザを開くと、ここに画面が表示されます。"
+
+#: app/components/computer-panel.tsx
+msgctxt "Wz7SLe"
+msgid "Computer error"
+msgstr "コンピューターのエラー"
+
+#: app/components/computer-panel.tsx
+msgctxt "0oLj_t"
+msgid "Expand"
+msgstr "拡大"
+
+#: app/components/computer-panel.tsx
+msgctxt "Wf8D-B"
+msgid "In control"
+msgstr "操作中"
+
+#: app/components/computer-panel.tsx
+#: app/components/landing.tsx
+msgctxt "snStu0"
+msgid "Take control"
+msgstr "操作を引き継ぐ"
+
+#: app/components/computer-panel.tsx
+msgctxt "WZJpxK"
+msgid "Control computer screen"
+msgstr "コンピューターの画面を操作"
+
+#: app/components/computer-panel.tsx
+msgctxt "a7he5o"
+msgid "Enlarge computer screen"
+msgstr "コンピューターの画面を拡大"
+
+#: app/components/computer-panel.tsx
+msgctxt "bayRPq"
+msgid "Live browser. Click, type, and scroll directly in the remote session."
+msgstr "ライブブラウザです。リモートセッション上で直接クリック、入力、スクロールできます。"
+
+#: app/components/computer-panel.tsx
+msgctxt "KPT6R2"
+msgid "Click the screen, type, paste, or scroll to control the browser directly."
+msgstr "画面をクリックしたり、入力、貼り付け、スクロールをしてブラウザを直接操作できます。"
+
+#: app/components/computer-panel.tsx
+msgctxt "H10fgt"
+msgid "The bot's clicks and input appear here. Click the preview to enlarge it."
+msgstr "ボットのクリックや入力がここに表示されます。プレビューをクリックすると拡大します。"
+
+#: app/components/computer-panel.tsx
+msgctxt "IP_I5A"
+msgid "Loading files…"
+msgstr "ファイルを読み込み中…"
+
+#: app/components/computer-panel.tsx
+msgctxt "kiqUN5"
+msgid "Opening file…"
+msgstr "ファイルを開いています…"
+
+#: app/components/computer-panel.tsx
+#: app/components/upgrade-screen.tsx
+#: app/privacy/page.tsx
+#: app/terms/page.tsx
+msgctxt "cyR7Kh"
+msgid "Back"
+msgstr "戻る"
+
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+#: app/components/sidebar.tsx
+msgctxt "K3r6DQ"
+msgid "Delete"
+msgstr "削除"
+
+#: app/components/computer-panel.tsx
+msgctxt "zbwcPM"
+msgid "Select all files"
+msgstr "すべてのファイルを選択"
+
+#: app/components/computer-panel.tsx
+msgctxt "IhrEx8"
+msgid "Download selected"
+msgstr "選択をダウンロード"
+
+#: app/components/computer-panel.tsx
+msgctxt "V1UrPN"
+msgid "Download all"
+msgstr "すべてダウンロード"
+
+#: app/components/computer-panel.tsx
+msgctxt "ELsv-o"
+msgid "Delete selected"
+msgstr "選択を削除"
+
+#: app/components/computer-panel.tsx
+msgctxt "1L8nF4"
+msgid "Delete all"
+msgstr "すべて削除"
+
+#: app/components/computer-panel.tsx
+msgctxt "WdH4YV"
+msgid "No files yet"
+msgstr "ファイルはまだありません"
+
+#: app/components/computer-panel.tsx
+msgctxt "bKI5Hi"
+msgid "Loading terminal…"
+msgstr "ターミナルを読み込み中…"
+
+#: app/components/computer-panel.tsx
+msgctxt "ZBf_mh"
+msgid "No commands yet"
+msgstr "コマンドはまだありません"
+
+#: app/components/computer-panel.tsx
+msgctxt "aojEGT"
+msgid "No activity yet"
+msgstr "アクティビティはまだありません"
+
+#: app/components/computer-panel.tsx
+msgctxt "DDQbGJ"
+msgid "Delete files"
+msgstr "ファイルを削除"
+
+#: app/components/computer-panel.tsx
+msgctxt "Kt9ABW"
+msgid "Delete every file in this workspace? This cannot be undone."
+msgstr "このワークスペースのすべてのファイルを削除しますか?この操作は元に戻せません。"
+
+#: app/components/computer-panel.tsx
+msgctxt "v-sWn9"
+msgid "Delete {count, plural, one {# item} other {# items}}? This cannot be undone."
+msgstr "{count}件の項目を削除しますか?この操作は元に戻せません。"
+
+#: app/components/computer-panel.tsx
+msgctxt "d3s_qZ"
+msgid "Enlarged computer screen"
+msgstr "拡大したコンピューターの画面"
+
+#: app/components/computer-panel.tsx
+msgctxt "5n94vR"
+msgid "Close enlarged screen"
+msgstr "拡大画面を閉じる"
+
+#: app/components/computer-panel.tsx
+msgctxt "d56OMq"
+msgid "Enlarged Deni Run screen"
+msgstr "拡大した Deni Run の画面"
+
+#: app/components/computer-panel.tsx
+msgctxt "INpgTu"
+msgid "Live remote browser"
+msgstr "ライブリモートブラウザ"
+
+#: app/components/computer-panel.tsx
+msgctxt "mRFXeh"
+msgid "Expanded live remote browser"
+msgstr "拡大したライブリモートブラウザ"
+
+#: app/components/computer-panel.tsx
+msgctxt "579Y3Y"
+msgid "Close enlarged browser"
+msgstr "拡大ブラウザを閉じる"
+
+#: app/components/computer-panel.tsx
+msgctxt "WNemwT"
+msgid "Enlarge live browser"
+msgstr "ライブブラウザを拡大"
+
+#: app/components/computer-panel.tsx
+msgctxt "BP_qeB"
+msgid "Teammate routines"
+msgstr "チームメイトのルーティン"
+
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+#: app/components/sidebar.tsx
+msgctxt "Dbc6Xa"
+msgid "Routines"
+msgstr "ルーティン"
+
+#: app/components/computer-panel.tsx
+msgctxt "0Azlrb"
+msgid "Manage"
+msgstr "管理"
+
+#: app/components/computer-panel.tsx
+msgctxt "25Ilqj"
+msgid "Routines are recurring tasks this teammate runs on a schedule."
+msgstr "ルーティンは、このチームメイトがスケジュールに沿って実行する定期タスクです。"
+
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+msgctxt "-5D7Gr"
+msgid "Create routine"
+msgstr "ルーティンを作成"
+
+#: app/components/computer-panel.tsx
+msgctxt "s3IOQQ"
+msgid "Edit {name}"
+msgstr "{name}を編集"
+
+#: app/components/computer-panel.tsx
+msgctxt "3a5wL8"
+msgid "Active"
+msgstr "有効"
+
+#: app/components/computer-panel.tsx
+msgctxt "C2iTEH"
+msgid "Paused"
+msgstr "一時停止中"
+
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+msgctxt "7_XGRf"
+msgid "Next {time}"
+msgstr "次回 {time}"
+
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+msgctxt "OvzONl"
+msgid "Off"
+msgstr "オフ"
+
+#: app/components/computer-panel.tsx
+msgctxt "jxjZFH"
+msgid "+ New routine"
+msgstr "+ 新しいルーティン"
+
+#: app/components/computer-panel.tsx
+msgctxt "G65XME"
+msgid "Select {name}"
+msgstr "{name}を選択"
+
+#: app/components/computer-panel.tsx
+msgctxt "R3ptDD"
+msgid "Download {name}"
+msgstr "{name}をダウンロード"
+
+#: app/components/computer-panel.tsx
+#: app/components/mcp-settings.tsx
+#: app/components/skills-dialog.tsx
+msgctxt "JpsXCp"
+msgid "Delete {name}"
+msgstr "{name}を削除"
+
+#: app/components/landing.tsx
+msgctxt "5Wwopw"
+msgid "Pricing"
+msgstr "料金"
+
+#: app/components/landing.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "R_eOkj"
+msgid "Pro"
+msgstr "Pro"
+
+#: app/components/landing.tsx
+#: app/components/setup-screen.tsx
+msgctxt "oeAC65"
+msgid "Open workspace"
+msgstr "ワークスペースを開く"
+
+#: app/components/landing.tsx
+#: app/sign-in/page.tsx
+msgctxt "SQJto2"
+msgid "Sign in"
+msgstr "ログイン"
+
+#: app/components/landing.tsx
+msgctxt "_aBLH2"
+msgid "Get started"
+msgstr "はじめる"
+
+#: app/components/landing.tsx
+msgctxt "sRPYBI"
+msgid "AI teammates with their own computer"
+msgstr "専用のコンピューターを持つAIチームメイト"
+
+#: app/components/landing.tsx
+msgctxt "a7jWEj"
+msgid "Hand work to named teammates and let them finish it on an isolated computer."
+msgstr "名前のあるチームメイトに仕事を任せ、隔離されたコンピューターで完了させましょう。"
+
+#: app/components/landing.tsx
+msgctxt "hMCg85"
+msgid "Browser, files, and terminal stay private to your account. Watch the screen, take control for logins, and keep memory, skills, and routines with each teammate."
+msgstr "ブラウザ、ファイル、ターミナルはあなたのアカウント専用です。画面を見守り、ログイン時には操作を引き継ぎ、メモリ、スキル、ルーティンをチームメイトごとに保持できます。"
+
+#: app/components/landing.tsx
+msgctxt "i7IHHZ"
+msgid "Start free"
+msgstr "無料ではじめる"
+
+#: app/components/landing.tsx
+msgctxt "vbFKkT"
+msgid "See plans"
+msgstr "プランを見る"
+
+#: app/components/landing.tsx
+msgctxt "CJ4p2s"
+msgid "Named teammates"
+msgstr "名前付きチームメイト"
+
+#: app/components/landing.tsx
+msgctxt "pNCgDf"
+msgid "Chief, Research, Operations — or create your own. Each keeps memory and a job."
+msgstr "チーフ、リサーチ、オペレーション、またはオリジナルのチームメイトを作成できます。それぞれがメモリと役割を持ちます。"
+
+#: app/components/landing.tsx
+msgctxt "MGDxk0"
+msgid "Private computer"
+msgstr "専用コンピューター"
+
+#: app/components/landing.tsx
+msgctxt "gEvuSO"
+msgid "A browser, workspace, and Linux sandbox scoped to your account. Not a shared VM."
+msgstr "ブラウザ、ワークスペース、Linuxサンドボックスはあなたのアカウント専用で、共有VMではありません。"
+
+#: app/components/landing.tsx
+msgctxt "so-AdY"
+msgid "When login or 2FA is needed, drive the live browser yourself, then hand it back."
+msgstr "ログインや二要素認証が必要なときは、ライブブラウザを自分で操作し、終わったら任せ直せます。"
+
+#: app/components/landing.tsx
+msgctxt "Z3X7Uc"
+msgid "Monthly limits reset at the start of each UTC month."
+msgstr "月間の上限は、毎月UTCの月初にリセットされます。"
+
+#: app/components/landing.tsx
+msgctxt "V8OnRy"
+msgid "{count} tokens / month"
+msgstr "{count}トークン/月"
+
+#: app/components/landing.tsx
+msgctxt "-qqZhD"
+msgid "{count} browser minutes"
+msgstr "ブラウザ{count}分"
+
+#: app/components/landing.tsx
+msgctxt "ySrqJm"
+msgid "{count} computer minutes"
+msgstr "コンピューター{count}分"
+
+#: app/components/landing.tsx
+msgctxt "zk8iSN"
+msgid "Up to {count} teammates"
+msgstr "チームメイトは最大{count}人"
+
+#: app/components/landing.tsx
+msgctxt "uGVdXS"
+msgid "Isolated files, browser, and terminal"
+msgstr "隔離されたファイル、ブラウザ、ターミナル"
+
+#: app/components/landing.tsx
+msgctxt "huqKGl"
+msgid "Create account"
+msgstr "アカウントを作成"
+
+#: app/components/landing.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "Vn2ud4"
+msgid "/ month"
+msgstr "/月"
+
+#: app/components/landing.tsx
+msgctxt "HV3Goi"
+msgid "Same private computer, higher ceiling"
+msgstr "同じ専用コンピューターで、上限がさらに高く"
+
+#: app/components/landing.tsx
+msgctxt "liqo9V"
+msgid "Start Pro"
+msgstr "Proをはじめる"
+
+#: app/components/landing.tsx
+msgctxt "xkr-zo"
+msgid "Terms"
+msgstr "利用規約"
+
+#: app/components/landing.tsx
+#: app/privacy/page.tsx
+msgctxt "cXBJ7U"
+msgid "Privacy"
+msgstr "プライバシー"
+
+#: app/components/landing.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "0h_lPM"
+msgid "Upgrade"
+msgstr "アップグレード"
+
+#: app/components/mcp-settings.tsx
+msgctxt "vBjft2"
+msgid "Could not connect plugin."
+msgstr "プラグインに接続できませんでした。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "4Mk9Y8"
+msgid "Could not change permission."
+msgstr "権限を変更できませんでした。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "PiF85g"
+msgid "Unable to save connection"
+msgstr "接続を保存できません"
+
+#: app/components/mcp-settings.tsx
+msgctxt "tKgUrp"
+msgid "Connection saved. Test it before asking a teammate to call it."
+msgstr "接続を保存しました。チームメイトに呼び出させる前にテストしてください。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "_snqzY"
+msgid "MCP test failed"
+msgstr "MCPのテストに失敗しました"
+
+#: app/components/mcp-settings.tsx
+msgctxt "0e0B3L"
+msgid "Connected. Discovered {count, plural, one {# tool} other {# tools}}."
+msgstr "接続しました。{count}個のツールが見つかりました。"
+
+#: app/components/mcp-settings.tsx
+#: app/components/sidebar.tsx
+msgctxt "QJAllU"
+msgid "Plugins"
+msgstr "プラグイン"
+
+#: app/components/mcp-settings.tsx
+msgctxt "nHp2Yf"
+msgid "Connect built-in services for search and reading. Writing requires a separate approval unless you enable Always allow for that action."
+msgstr "検索と閲覧のために組み込みサービスに接続します。書き込みは、そのアクションで「常に許可」を有効にしない限り、個別の承認が必要です。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "SaKXK4"
+msgid "Connected · search and read"
+msgstr "接続済み · 検索と閲覧"
+
+#: app/components/mcp-settings.tsx
+msgctxt "PuU15u"
+msgid "Not connected"
+msgstr "未接続"
+
+#: app/components/mcp-settings.tsx
+msgctxt "Eg11ZY"
+msgid "Reconnect"
+msgstr "再接続"
+
+#: app/components/mcp-settings.tsx
+msgctxt "1_zz7T"
+msgid "Enable write access"
+msgstr "書き込みを有効にする"
+
+#: app/components/mcp-settings.tsx
+msgctxt "BhUhpa"
+msgid "{action} · Always allow"
+msgstr "{action} · 常に許可"
+
+#: app/components/mcp-settings.tsx
+msgctxt "VJKXaS"
+msgid "Custom MCP servers"
+msgstr "カスタムMCPサーバー"
+
+#: app/components/mcp-settings.tsx
+msgctxt "CkbIrf"
+msgid "Connect a streamable HTTP or SSE MCP server. Secrets are encrypted per account."
+msgstr "ストリーミング可能なHTTPまたはSSEのMCPサーバーに接続します。シークレットはアカウントごとに暗号化されます。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "2ggvbL"
+msgid "My tools"
+msgstr "マイツール"
+
+#: app/components/mcp-settings.tsx
+msgctxt "C9POHl"
+msgid "Server URL"
+msgstr "サーバーURL"
+
+#: app/components/mcp-settings.tsx
+msgctxt "KwHBKR"
+msgid "Transport"
+msgstr "トランスポート"
+
+#: app/components/mcp-settings.tsx
+msgctxt "PpfgW1"
+msgid "Bearer token (optional)"
+msgstr "Bearerトークン(任意)"
+
+#: app/components/mcp-settings.tsx
+msgctxt "mFWZ5K"
+msgid "Extra headers JSON (optional)"
+msgstr "追加ヘッダーJSON(任意)"
+
+#: app/components/mcp-settings.tsx
+msgctxt "yOSZPp"
+msgid "Save connection"
+msgstr "接続を保存"
+
+#: app/components/mcp-settings.tsx
+msgctxt "FzjLqk"
+msgid "No MCP connections yet."
+msgstr "MCP接続はまだありません。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "Pe7yxq"
+msgid "Secret saved"
+msgstr "シークレット保存済み"
+
+#: app/components/mcp-settings.tsx
+msgctxt "ezGZ7a"
+msgid "No secret"
+msgstr "シークレットなし"
+
+#: app/components/mcp-settings.tsx
+msgctxt "6w6AoB"
+msgid "tested {time}"
+msgstr "{time}にテスト済み"
+
+#: app/components/mcp-settings.tsx
+msgctxt "t7HOdt"
+msgid "not tested"
+msgstr "未テスト"
+
+#: app/components/mcp-settings.tsx
+msgctxt "xu6eM8"
+msgid "Test"
+msgstr "テスト"
+
+#: app/components/message-actions.tsx
+msgctxt "tV9bAW"
+msgid "Could not copy. Select the message text and copy it manually."
+msgstr "コピーできませんでした。メッセージのテキストを選択して手動でコピーしてください。"
+
+#: app/components/message-actions.tsx
+msgctxt "eLq8k-"
+msgid "Could not save the reaction. Please try again."
+msgstr "リアクションを保存できませんでした。もう一度お試しください。"
+
+#: app/components/message-actions.tsx
+msgctxt "8FU11i"
+msgid "Message actions"
+msgstr "メッセージの操作"
+
+#: app/components/message-actions.tsx
+msgctxt "9HU8vw"
+msgid "Reply"
+msgstr "返信"
+
+#: app/components/message-actions.tsx
+msgctxt "uX6eKe"
+msgid "React"
+msgstr "リアクション"
+
+#: app/components/message-actions.tsx
+msgctxt "6pCY5K"
+msgid "Choose a reaction"
+msgstr "リアクションを選択"
+
+#: app/components/message-actions.tsx
+msgctxt "jefSDd"
+msgid "Quick reactions"
+msgstr "クイックリアクション"
+
+#: app/components/message-actions.tsx
+msgctxt "w5Qfyu"
+msgid "React {emoji}"
+msgstr "{emoji}でリアクション"
+
+#: app/components/message-actions.tsx
+msgctxt "hw9VFi"
+msgid "More emoji"
+msgstr "その他の絵文字"
+
+#: app/components/message-actions.tsx
+msgctxt "-dsiqM"
+msgid "Message copied"
+msgstr "メッセージをコピーしました"
+
+#: app/components/message-actions.tsx
+msgctxt "TaDFih"
+msgid "Remove {emoji} reaction"
+msgstr "{emoji}のリアクションを削除"
+
+#: app/components/notification-inbox.tsx
+msgctxt "YPBnhF"
+msgid "Notifications ({count} unread)"
+msgstr "通知(未読{count}件)"
+
+#: app/components/notification-inbox.tsx
+msgctxt "NAidKb"
+msgid "Notifications"
+msgstr "通知"
+
+#: app/components/notification-inbox.tsx
+msgctxt "i-qOIV"
+msgid "Task completions, failures, approvals, and takeover requests stay here until you read them."
+msgstr "タスクの完了、失敗、承認、操作の引き継ぎ依頼は、読むまでここに残ります。"
+
+#: app/components/notification-inbox.tsx
+msgctxt "ShdEie"
+msgid "Mark all read"
+msgstr "すべて既読にする"
+
+#: app/components/notification-inbox.tsx
+msgctxt "56G1F0"
+msgid "No notifications."
+msgstr "通知はありません。"
+
+#: app/components/reaction-picker.tsx
+msgctxt "AstDeQ"
+msgid "Smileys & People"
+msgstr "顔と人"
+
+#: app/components/reaction-picker.tsx
+msgctxt "szFhEu"
+msgid "Animals & Nature"
+msgstr "動物と自然"
+
+#: app/components/reaction-picker.tsx
+msgctxt "39T2UN"
+msgid "Food & Drink"
+msgstr "食べ物と飲み物"
+
+#: app/components/reaction-picker.tsx
+msgctxt "MHUeF8"
+msgid "Travel & Places"
+msgstr "旅行と場所"
+
+#: app/components/reaction-picker.tsx
+msgctxt "UmEsZF"
+msgid "Activities"
+msgstr "アクティビティ"
+
+#: app/components/reaction-picker.tsx
+msgctxt "sWVioT"
+msgid "Objects"
+msgstr "物"
+
+#: app/components/reaction-picker.tsx
+msgctxt "HWhnps"
+msgid "Symbols"
+msgstr "記号"
+
+#: app/components/reaction-picker.tsx
+msgctxt "Ed112w"
+msgid "Flags"
+msgstr "旗"
+
+#: app/components/reaction-picker.tsx
+msgctxt "iEa3Li"
+msgid "Back to quick reactions"
+msgstr "クイックリアクションに戻る"
+
+#: app/components/reaction-picker.tsx
+msgctxt "dv4wxl"
+msgid "Skin tone"
+msgstr "肌の色"
+
+#: app/components/reaction-picker.tsx
+msgctxt "83pc9G"
+msgid "Search emoji"
+msgstr "絵文字を検索"
+
+#: app/components/reaction-picker.tsx
+msgctxt "7f-dl0"
+msgid "Search emoji…"
+msgstr "絵文字を検索…"
+
+#: app/components/reaction-picker.tsx
+msgctxt "4YJHut"
+msgid "Clear search"
+msgstr "検索をクリア"
+
+#: app/components/reaction-picker.tsx
+msgctxt "ex_RxJ"
+msgid "Emoji categories"
+msgstr "絵文字のカテゴリ"
+
+#: app/components/reaction-picker.tsx
+msgctxt "USl5Em"
+msgid "Emoji results"
+msgstr "絵文字の検索結果"
+
+#: app/components/reaction-picker.tsx
+msgctxt "KA48y_"
+msgid "No emoji found"
+msgstr "絵文字が見つかりません"
+
+#: app/components/reaction-picker.tsx
+msgctxt "aWpBzj"
+msgid "Show more"
+msgstr "もっと見る"
+
+#: app/components/routines-dialog.tsx
+msgctxt "Kf8HlF"
+msgid "Could not refresh routines."
+msgstr "ルーティンを更新できませんでした。"
+
+#: app/components/routines-dialog.tsx
+msgctxt "Hh1rVh"
+msgid "Could not delete routine."
+msgstr "ルーティンを削除できませんでした。"
+
+#: app/components/routines-dialog.tsx
+msgctxt "-9K6yq"
+msgid "Delete routine"
+msgstr "ルーティンを削除"
+
+#: app/components/routines-dialog.tsx
+msgctxt "15YN9e"
+msgid "Edit routine"
+msgstr "ルーティンを編集"
+
+#: app/components/routines-dialog.tsx
+msgctxt "HGXiIY"
+msgid "New routine"
+msgstr "新しいルーティン"
+
+#: app/components/routines-dialog.tsx
+msgctxt "I6wCzN"
+msgid "Set up recurring work and manage it here. Changes apply to future runs; a task already running continues."
+msgstr "定期的な作業を設定し、ここで管理します。変更は今後の実行に適用され、実行中のタスクはそのまま続行されます。"
+
+#: app/components/routines-dialog.tsx
+msgctxt "_kpzvf"
+msgid "Delete <strong>{name}</strong>? Its schedule will be removed. Existing conversations and files will remain."
+msgstr "<strong>{name}</strong>を削除しますか?スケジュールは削除されますが、既存の会話とファイルは残ります。"
+
+#: app/components/routines-dialog.tsx
+msgctxt "hpflgR"
+msgid "All routines"
+msgstr "すべてのルーティン"
+
+#: app/components/routines-dialog.tsx
+msgctxt "m7qEK6"
+msgid "{count, plural, one {# routine} other {# routines}}"
+msgstr "ルーティン{count}件"
+
+#: app/components/routines-dialog.tsx
+msgctxt "0Zzfct"
+msgid "Create a routine to schedule recurring work."
+msgstr "ルーティンを作成して、定期的な作業をスケジュールしましょう。"
+
+#: app/components/routines-dialog.tsx
+msgctxt "kTv7t3"
+msgid "Turn off {name}"
+msgstr "{name}をオフにする"
+
+#: app/components/routines-dialog.tsx
+msgctxt "sRrYwE"
+msgid "Turn on {name}"
+msgstr "{name}をオンにする"
+
+#: app/components/routines-dialog.tsx
+msgctxt "wEQDC6"
+msgid "Edit"
+msgstr "編集"
+
+#: app/components/routines-dialog.tsx
+msgctxt "Zh-5A6"
+msgid "On"
+msgstr "オン"
+
+#: app/components/routines-dialog.tsx
+msgctxt "1ooK0d"
+msgid "Every day"
+msgstr "毎日"
+
+#: app/components/routines-dialog.tsx
+msgctxt "_TUEtl"
+msgid "Weekdays (Mon–Fri)"
+msgstr "平日(月〜金)"
+
+#: app/components/routines-dialog.tsx
+msgctxt "g7bjQR"
+msgid "Every week"
+msgstr "毎週"
+
+#: app/components/routines-dialog.tsx
+msgctxt "YaEHga"
+msgid "Every month"
+msgstr "毎月"
+
+#: app/components/routines-dialog.tsx
+msgctxt "YdpXat"
+msgid "Custom schedule (cron)"
+msgstr "カスタムスケジュール(cron)"
+
+#: app/components/routines-dialog.tsx
+msgctxt "PQG8YT"
+msgid "Check your schedule."
+msgstr "スケジュールを確認してください。"
+
+#: app/components/routines-dialog.tsx
+msgctxt "JoiYoD"
+msgid "Morning news"
+msgstr "朝のニュース"
+
+#: app/components/routines-dialog.tsx
+msgctxt "5E9DcX"
+msgid "Instruction"
+msgstr "指示"
+
+#: app/components/routines-dialog.tsx
+msgctxt "-Eg4uN"
+msgid "Find today's important news and send me a concise summary with sources."
+msgstr "今日の重要なニュースを調べて、出典付きの簡潔な要約を送ってください。"
+
+#: app/components/routines-dialog.tsx
+msgctxt "gegfoA"
+msgid "Conversation"
+msgstr "会話"
+
+#: app/components/routines-dialog.tsx
+msgctxt "Xk5d8n"
+msgid "No conversation available"
+msgstr "利用できる会話がありません"
+
+#: app/components/routines-dialog.tsx
+msgctxt "sNfAaf"
+msgid "When to run"
+msgstr "実行タイミング"
+
+#: app/components/routines-dialog.tsx
+msgctxt "YmslQP"
+msgid "Cron expression"
+msgstr "cron式"
+
+#: app/components/routines-dialog.tsx
+msgctxt "2-sQVi"
+msgid "Minute · hour · day of month · month · weekday"
+msgstr "分 · 時 · 日 · 月 · 曜日"
+
+#: app/components/routines-dialog.tsx
+msgctxt "ug01Mk"
+msgid "Time"
+msgstr "時刻"
+
+#: app/components/routines-dialog.tsx
+msgctxt "awaLB4"
+msgid "Enter a time between 00:00 and 23:59"
+msgstr "00:00〜23:59の時刻を入力してください"
+
+#: app/components/routines-dialog.tsx
+msgctxt "ApANWN"
+msgid "Choose hour"
+msgstr "時を選択"
+
+#: app/components/routines-dialog.tsx
+msgctxt "-biUKF"
+msgid "Choose minute"
+msgstr "分を選択"
+
+#: app/components/routines-dialog.tsx
+msgctxt "7pXrnq"
+msgid "Day"
+msgstr "曜日"
+
+#: app/components/routines-dialog.tsx
+msgctxt "oMsZ4g"
+msgid "Day of month"
+msgstr "日"
+
+#: app/components/routines-dialog.tsx
+msgctxt "4ovEF5"
+msgid "Months without this day are skipped."
+msgstr "この日がない月はスキップされます。"
+
+#: app/components/routines-dialog.tsx
+msgctxt "7nUCu9"
+msgid "Timezone"
+msgstr "タイムゾーン"
+
+#: app/components/routines-dialog.tsx
+msgctxt "9wTsCY"
+msgid "Search timezones…"
+msgstr "タイムゾーンを検索…"
+
+#: app/components/routines-dialog.tsx
+msgctxt "_VFKg9"
+msgid "No matching timezone. You can enter one manually."
+msgstr "一致するタイムゾーンがありません。手動で入力できます。"
+
+#: app/components/routines-dialog.tsx
+msgctxt "V52jNn"
+msgid "Enabled"
+msgstr "有効"
+
+#: app/components/routines-dialog.tsx
+msgctxt "1Y2tYW"
+msgid "Enable routine"
+msgstr "ルーティンを有効にする"
+
+#: app/components/routines-dialog.tsx
+#: app/components/skills-dialog.tsx
+#: app/components/workspace.tsx
+msgctxt "X0ha1a"
+msgid "Save changes"
+msgstr "変更を保存"
+
+#: app/components/setup-screen.tsx
+msgctxt "-OtV6h"
+msgid "Failed to save"
+msgstr "保存に失敗しました"
+
+#: app/components/setup-screen.tsx
+msgctxt "ahYtFD"
+msgid "error"
+msgstr "エラー"
+
+#: app/components/setup-screen.tsx
+msgctxt "-pGJhv"
+msgid "AI teammates."
+msgstr "AIチームメイト。"
+
+#: app/components/setup-screen.tsx
+msgctxt "_zgXVh"
+msgid "Their own computer."
+msgstr "専用のコンピューター。"
+
+#: app/components/setup-screen.tsx
+msgctxt "lNSY5T"
+msgid "Hand work to named teammates and let them finish it on an isolated computer (browser, files, and terminal). Your workspace stays private to your account."
+msgstr "名前のあるチームメイトに仕事を任せ、隔離されたコンピューター(ブラウザ、ファイル、ターミナル)で完了させましょう。ワークスペースはあなたのアカウント専用です。"
+
+#: app/components/setup-screen.tsx
+msgctxt "b99Plc"
+msgid "Get a key at openrouter.ai. Run uses openai/gpt-6-luna; Run+ uses openai/gpt-6-sol and consumes 20× the matching Run mode’s tokens. Pick a mode in the workspace. This screen is skipped when an environment variable is set."
+msgstr "キーは openrouter.ai で取得できます。Run は openai/gpt-6-luna を、Run+ は openai/gpt-6-sol を使用し、対応する Run モードの20倍のトークンを消費します。モードはワークスペースで選択します。環境変数が設定されている場合、この画面はスキップされます。"
+
+#: app/components/setup-screen.tsx
+msgctxt "YtxGgO"
+msgid "Connecting…"
+msgstr "接続中…"
+
+#: app/components/sidebar.tsx
+msgctxt "hzmswI"
+msgid "Groups"
+msgstr "グループ"
+
+#: app/components/sidebar.tsx
+msgctxt "rS4OCa"
+msgid "{section} · Groups"
+msgstr "{section} · グループ"
+
+#: app/components/sidebar.tsx
+msgctxt "RiMC6D"
+msgid "Hidden groups"
+msgstr "非表示のグループ"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "ORESkJ"
+msgid "New teammate"
+msgstr "新しいチームメイト"
+
+#: app/components/sidebar.tsx
+msgctxt "xmcVZ0"
+msgid "Search"
+msgstr "検索"
+
+#: app/components/sidebar.tsx
+msgctxt "TA1mK7"
+msgid "Search conversations"
+msgstr "会話を検索"
+
+#: app/components/sidebar.tsx
+msgctxt "ThUvIL"
+msgid "Hidden"
+msgstr "非表示"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "HpoDwk"
+msgid "Group"
+msgstr "グループ"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "HkK3Rt"
+msgid "New group"
+msgstr "新しいグループ"
+
+#: app/components/sidebar.tsx
+#: app/components/skills-dialog.tsx
+msgctxt "EJSVsO"
+msgid "Skills"
+msgstr "スキル"
+
+#: app/components/sidebar.tsx
+msgctxt "ltt9yB"
+msgid "Task waiting"
+msgstr "タスク待機中"
+
+#: app/components/sidebar.tsx
+msgctxt "DZ8d0P"
+msgid "Task needs attention"
+msgstr "タスクの確認が必要です"
+
+#: app/components/sidebar.tsx
+msgctxt "fWZYP5"
+msgid "Pinned"
+msgstr "ピン留め中"
+
+#: app/components/sidebar.tsx
+msgctxt "jabB4C"
+msgid "Unread"
+msgstr "未読"
+
+#: app/components/sidebar.tsx
+msgctxt "opNVQC"
+msgid "Unpin"
+msgstr "ピン留めを解除"
+
+#: app/components/sidebar.tsx
+msgctxt "puLNUJ"
+msgid "Pin"
+msgstr "ピン留め"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "0suuAM"
+msgid "Move to new section"
+msgstr "新しいセクションに移動"
+
+#: app/components/sidebar.tsx
+msgctxt "NhMfV6"
+msgid "Remove from section"
+msgstr "セクションから外す"
+
+#: app/components/sidebar.tsx
+msgctxt "CVph6v"
+msgid "Mark as Read"
+msgstr "既読にする"
+
+#: app/components/sidebar.tsx
+msgctxt "Fpscrv"
+msgid "Mark as Unread"
+msgstr "未読にする"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "Z_1udv"
+msgid "Edit group"
+msgstr "グループを編集"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "nYrKWp"
+msgid "Edit profile"
+msgstr "プロフィールを編集"
+
+#: app/components/sidebar.tsx
+msgctxt "4fHiNl"
+msgid "Duplicate"
+msgstr "複製"
+
+#: app/components/sidebar.tsx
+msgctxt "9wElwh"
+msgid "Show in sidebar"
+msgstr "サイドバーに表示"
+
+#: app/components/sidebar.tsx
+msgctxt "bt2xOt"
+msgid "Hide from sidebar"
+msgstr "サイドバーから隠す"
+
+#: app/components/skills-dialog.tsx
+msgctxt "lZ-2PI"
+msgid "Could not refresh skills."
+msgstr "スキルを更新できませんでした。"
+
+#: app/components/skills-dialog.tsx
+msgctxt "9zifG7"
+msgid "Could not delete skill."
+msgstr "スキルを削除できませんでした。"
+
+#: app/components/skills-dialog.tsx
+msgctxt "-YklZ6"
+msgid "Delete skill?"
+msgstr "スキルを削除しますか?"
+
+#: app/components/skills-dialog.tsx
+msgctxt "xsrj8z"
+msgid "Edit skill"
+msgstr "スキルを編集"
+
+#: app/components/skills-dialog.tsx
+msgctxt "CBuich"
+msgid "New skill"
+msgstr "新しいスキル"
+
+#: app/components/skills-dialog.tsx
+msgctxt "8Osegw"
+msgid "Delete “{name}”? This cannot be undone."
+msgstr "「{name}」を削除しますか?この操作は元に戻せません。"
+
+#: app/components/skills-dialog.tsx
+msgctxt "untkX2"
+msgid "Reusable instructions for your teammates. Saved changes apply when a skill is read again."
+msgstr "チームメイト向けの再利用できる指示です。保存した変更は、スキルが再び読み込まれたときに反映されます。"
+
+#: app/components/skills-dialog.tsx
+msgctxt "k-phZu"
+msgid "Delete skill"
+msgstr "スキルを削除"
+
+#: app/components/skills-dialog.tsx
+msgctxt "rVO16l"
+msgid "All skills"
+msgstr "すべてのスキル"
+
+#: app/components/skills-dialog.tsx
+msgctxt "S9fw5I"
+msgid "Instructions (Markdown)"
+msgstr "指示(Markdown)"
+
+#: app/components/skills-dialog.tsx
+msgctxt "765YHs"
+msgid "When to use this skill, steps to follow, and how to verify the result…"
+msgstr "このスキルを使う場面、従う手順、結果の確認方法…"
+
+#: app/components/skills-dialog.tsx
+msgctxt "8jD_lL"
+msgid "Create skill"
+msgstr "スキルを作成"
+
+#: app/components/skills-dialog.tsx
+msgctxt "t0O6wC"
+msgid "No skills yet."
+msgstr "スキルはまだありません。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "Afrot4"
+msgid "Teammate limit reached"
+msgstr "チームメイトの上限に達しました"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "WFUu-6"
+msgid "You've used {used} of {limit} teammates on {plan}. Pro includes {pro}."
+msgstr "{plan}プランでは、チームメイト{limit}人のうち{used}人を使用済みです。Proでは{pro}人まで作成できます。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "nHLZZq"
+msgid "Token limit reached"
+msgstr "トークンの上限に達しました"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "_0wIjW"
+msgid "You've used {used} of {limit} tokens on {plan} this month."
+msgstr "{plan}プランの今月のトークン{limit}のうち、{used}を使用済みです。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "ddKuob"
+msgid "Browser time limit reached"
+msgstr "ブラウザ時間の上限に達しました"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "_klU1V"
+msgid "You've used {used} of {limit} browser minutes on {plan} this month."
+msgstr "{plan}プランの今月のブラウザ時間{limit}分のうち、{used}分を使用済みです。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "YGZssW"
+msgid "Computer time limit reached"
+msgstr "コンピューター時間の上限に達しました"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "A62Dva"
+msgid "You've used {used} of {limit} computer minutes on {plan} this month."
+msgstr "{plan}プランの今月のコンピューター時間{limit}分のうち、{used}分を使用済みです。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "jvPWrj"
+msgid "Same private computer. More teammates, tokens, and time on the browser and terminal."
+msgstr "同じ専用コンピューターで、チームメイト、トークン、ブラウザとターミナルの時間がさらに増えます。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "P-8WQA"
+msgid "25 teammates"
+msgstr "チームメイト25人"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "i5EU9h"
+msgid "Name specialists, keep memory on each one, and hand work off instead of stretching a single bot."
+msgstr "専門家に名前を付け、それぞれにメモリを持たせ、1つのボットに無理をさせず仕事を引き継げます。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "xqhm1T"
+msgid "200M tokens / month"
+msgstr "2億トークン/月"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "bgBjJu"
+msgid "Longer threads, more handoffs, and routines that can finish without stopping mid-task."
+msgstr "長いスレッド、より多くの引き継ぎ、途中で止まらず完了できるルーティン。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "5SSqKv"
+msgid "10 hours of browser time"
+msgstr "ブラウザ時間10時間"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "rde8Gr"
+msgid "600 minutes to research, fill forms, and watch the live screen — 20× Free."
+msgstr "調査、フォーム入力、ライブ画面の確認に使える600分。Freeの20倍です。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "BUJ2OC"
+msgid "10 hours of computer time"
+msgstr "コンピューター時間10時間"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "RHmadt"
+msgid "600 minutes of terminal and files on your isolated sandbox."
+msgstr "隔離されたサンドボックスでターミナルとファイルを使える600分。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "k2FVr_"
+msgid "The same private computer"
+msgstr "同じ専用コンピューター"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "1SmbRL"
+msgid "Browser, workspace, and Linux sandbox stay scoped to your account. Pro only raises the ceiling."
+msgstr "ブラウザ、ワークスペース、Linuxサンドボックスはあなたのアカウント専用のままです。Proは上限が高くなるだけです。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "v6t6lE"
+msgid "You're on Pro"
+msgstr "Proをご利用中です"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "gG68f4"
+msgid "Your account already has the higher monthly ceiling. Manage billing if you need invoices or cancellation."
+msgstr "アカウントにはすでに高い月間上限が適用されています。請求書の確認や解約は「請求を管理」から行えます。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "3oXm6f"
+msgid "What Pro includes"
+msgstr "Proに含まれるもの"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "ZBALng"
+msgid "Current plan"
+msgstr "現在のプラン"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "tf1lIh"
+msgid "Free"
+msgstr "Free"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "E3oB-t"
+msgid "Browser"
+msgstr "ブラウザ"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "CFgeHP"
+msgid "{count} min"
+msgstr "{count}分"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "Xoz5dY"
+msgid "Monthly limits reset at the start of each UTC month. Cancel anytime."
+msgstr "月間の上限は、毎月UTCの月初にリセットされます。いつでも解約できます。"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "EOgl4B"
+msgid "Could not open billing"
+msgstr "請求ページを開けませんでした"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "wqyizR"
+msgid "Start Pro · ${price}/mo"
+msgstr "Proをはじめる · ${price}/月"
+
+#: app/components/workspace.tsx
+msgctxt "66I97y"
+msgid "Loading computer…"
+msgstr "コンピューターを読み込み中…"
+
+#: app/components/workspace.tsx
+msgctxt "B12JBq"
+msgid "Delete {title}? The group conversation and its routines will be removed. Teammates and shared files will remain."
+msgstr "{title}を削除しますか?グループの会話とルーティンは削除されますが、チームメイトと共有ファイルは残ります。"
+
+#: app/components/workspace.tsx
+msgctxt "hW_d9H"
+msgid "{title} copy"
+msgstr "{title}のコピー"
+
+#: app/components/workspace.tsx
+msgctxt "uzzi6K"
+msgid "Could not duplicate group."
+msgstr "グループを複製できませんでした。"
+
+#: app/components/workspace.tsx
+msgctxt "H9Slxu"
+msgid "Could not delete group."
+msgstr "グループを削除できませんでした。"
+
+#: app/components/workspace.tsx
+msgctxt "354mCs"
+msgid "Could not update group."
+msgstr "グループを更新できませんでした。"
+
+#: app/components/workspace.tsx
+msgctxt "u7zDdn"
+msgid "{name} copy"
+msgstr "{name}のコピー"
+
+#: app/components/workspace.tsx
+msgctxt "bK0COR"
+msgid "Delete {name}? Their conversation and routines will be removed."
+msgstr "{name}を削除しますか?会話とルーティンは削除されます。"
+
+#: app/components/workspace.tsx
+#: app/loading.tsx
+#: components/page-loading.tsx
+msgctxt "T4VxQN"
+msgid "Loading…"
+msgstr "読み込み中…"
+
+#: app/components/workspace.tsx
+msgctxt "HFB1Us"
+msgid "Select a teammate"
+msgstr "チームメイトを選択してください"
+
+#: app/components/workspace.tsx
+msgctxt "joLiY5"
+msgid "Close computer"
+msgstr "コンピューターを閉じる"
+
+#: app/components/workspace.tsx
+msgctxt "ngPasU"
+msgid "Could not save profile."
+msgstr "プロフィールを保存できませんでした。"
+
+#: app/components/workspace.tsx
+msgctxt "ZOJkFw"
+msgid "Could not create teammate."
+msgstr "チームメイトを作成できませんでした。"
+
+#: app/components/workspace.tsx
+msgctxt "MEvKnW"
+msgid "Job"
+msgstr "役割"
+
+#: app/components/workspace.tsx
+msgctxt "sV2v5L"
+msgid "Instructions"
+msgstr "指示"
+
+#: app/components/workspace.tsx
+msgctxt "jvo0vs"
+msgid "Save"
+msgstr "保存"
+
+#: app/components/workspace.tsx
+msgctxt "VzzYJk"
+msgid "Create"
+msgstr "作成"
+
+#: app/components/workspace.tsx
+msgctxt "wJt_1b"
+msgid "Section name"
+msgstr "セクション名"
+
+#: app/components/workspace.tsx
+msgctxt "UMbBzo"
+msgid "Move"
+msgstr "移動"
+
+#: app/components/workspace.tsx
+msgctxt "N39Wl0"
+msgid "Could not save group."
+msgstr "グループを保存できませんでした。"
+
+#: app/components/workspace.tsx
+msgctxt "-a-2ug"
+msgid "Members"
+msgstr "メンバー"
+
+#: app/error.tsx
+#: lib/localize-error.ts
+msgctxt "JqiqNj"
+msgid "Something went wrong"
+msgstr "問題が発生しました"
+
+#: app/error.tsx
+msgctxt "N4_7uj"
+msgid "Reload this page. If it keeps happening, wait a moment and try again."
+msgstr "ページを再読み込みしてください。改善しない場合は、しばらくしてからもう一度お試しください。"
+
+#: app/error.tsx
+msgctxt "FazwRl"
+msgid "Try again"
+msgstr "もう一度試す"
+
+#: app/layout.tsx
+msgctxt "fEMMml"
+msgid "AI teammates with an isolated computer for every account."
+msgstr "アカウントごとに隔離されたコンピューターを持つAIチームメイト。"
+
+#: app/not-found.tsx
+msgctxt "QRccCM"
+msgid "Page not found"
+msgstr "ページが見つかりません"
+
+#: app/not-found.tsx
+msgctxt "cOlyLA"
+msgid "That URL is not part of Deni Run."
+msgstr "このURLは Deni Run にありません。"
+
+#: app/not-found.tsx
+msgctxt "rPgekg"
+msgid "Back home"
+msgstr "ホームに戻る"
+
+#: app/privacy/page.tsx
+msgctxt "oIpAL1"
+msgid "Account authentication is handled on this service with Better Auth. You sign in with Google or GitHub, then an authenticator app. Sessions and two-factor secrets are stored in Postgres. Conversation history, teammates, routines, skills, and computer state are stored in Postgres keyed by your user ID. Workspace files and screenshots are stored in your tenant namespace on object storage (S3-compatible, typically Cloudflare R2)."
+msgstr "アカウント認証は、このサービス上で Better Auth を使って処理されます。GoogleまたはGitHubでログインし、そのあと認証アプリで確認します。セッションと二要素認証のシークレットは Postgres に保存されます。会話履歴、チームメイト、ルーティン、スキル、コンピューターの状態は、ユーザーIDに紐づけて Postgres に保存されます。ワークスペースのファイルとスクリーンショットは、オブジェクトストレージ(S3互換、通常は Cloudflare R2)内のあなたのテナント領域に保存されます。"
+
+#: app/privacy/page.tsx
+msgctxt "7TawRD"
+msgid "Browser sessions run through Steel. Terminal commands run in an isolated E2B sandbox. Model requests go through OpenRouter. Billing, if enabled, is processed by Stripe. Session cookies keep you signed in."
+msgstr "ブラウザセッションは Steel を介して実行されます。ターミナルコマンドは隔離された E2B サンドボックスで実行されます。モデルへのリクエストは OpenRouter を経由します。請求は、有効な場合、Stripe が処理します。セッションCookieによってログイン状態が維持されます。"
+
+#: app/privacy/page.tsx
+msgctxt "OFbLfE"
+msgid "We do not sell your workspace contents. You can export a copy of stored account data, or delete your account, from <link>Account</link>. Deleting the account removes the login and stored workspace data."
+msgstr "ワークスペースの内容を販売することはありません。保存されているアカウントデータのコピーのエクスポートやアカウントの削除は、<link>アカウント</link>から行えます。アカウントを削除すると、ログイン情報と保存されたワークスペースのデータが削除されます。"
+
+#: app/privacy/page.tsx
+msgctxt "yqZI8W"
+msgid "Processors that may receive data needed to run the product: Google and GitHub (sign-in), Stripe (billing), OpenRouter (model inference), Steel (browser), E2B (sandbox), and the configured object-storage provider."
+msgstr "製品の運用に必要なデータを受け取る可能性のある処理事業者:GoogleおよびGitHub(ログイン)、Stripe(請求)、OpenRouter(モデル推論)、Steel(ブラウザ)、E2B(サンドボックス)、設定されたオブジェクトストレージ事業者。"
+
+#: app/privacy/page.tsx
+#: app/terms/page.tsx
+msgctxt "Iexom4"
+msgid "Contact:"
+msgstr "お問い合わせ:"
+
+#: app/privacy/page.tsx
+#: app/terms/page.tsx
+msgctxt "mv-MT8"
+msgid "the operator of this deployment"
+msgstr "このデプロイの運営者"
+
+#: app/sign-up/page.tsx
+msgctxt "0vL5u1"
+msgid "Create an account"
+msgstr "アカウントを作成"
+
+#: app/terms/page.tsx
+msgctxt "32rBNK"
+msgid "Terms of Service"
+msgstr "利用規約"
+
+#: app/terms/page.tsx
+msgctxt "iSjB38"
+msgid "Deni Run is an AI teammate service that can operate a private computer (browser, files, and terminal) on your behalf. By creating an account you agree to these terms."
+msgstr "Deni Run は、あなたに代わって専用コンピューター(ブラウザ、ファイル、ターミナル)を操作できるAIチームメイトのサービスです。アカウントを作成すると、本規約に同意したものとみなされます。"
+
+#: app/terms/page.tsx
+msgctxt "j9MGr2"
+msgid "You are responsible for the tasks you assign, including browsing, file changes, and shell commands. Do not use Deni Run to break the law, attack systems, send spam, or process data you are not allowed to handle. Destructive actions may require your approval, but you remain responsible for the outcome."
+msgstr "ブラウジング、ファイルの変更、シェルコマンドを含め、依頼したタスクについてはお客様が責任を負います。Deni Run を、法律に違反する行為、システムへの攻撃、スパムの送信、取り扱う権限のないデータの処理に使用しないでください。破壊的な操作では承認を求める場合がありますが、結果の責任はお客様にあります。"
+
+#: app/terms/page.tsx
+msgctxt "F5hHF3"
+msgid "Usage limits apply by plan. Paid subscriptions renew monthly until canceled through the billing portal. Fees are charged by Stripe. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms."
+msgstr "使用量の上限はプランごとに適用されます。有料のサブスクリプションは、請求ポータルから解約するまで毎月更新されます。料金は Stripe を通じて請求されます。インフラの濫用、フェアユースの超過、または本規約への違反があった場合、アカウントを停止することがあります。"
+
+#: app/terms/page.tsx
+msgctxt "BARVqC"
+msgid "Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service."
+msgstr "コンピューターのセッション、ファイル、メモリはあなたのアカウント内に限定されます。これらのデータは<link>アカウント</link>からエクスポートまたは削除できます。アカウントを削除すると、このサービスに保存されたログイン情報も削除されます。"
+
+#: app/terms/page.tsx
+msgctxt "fyPFTO"
+msgid "The service is provided as-is. We do not warrant uninterrupted availability. These terms may be updated as the product changes."
+msgstr "本サービスは現状有姿で提供され、中断のない提供を保証するものではありません。本規約は、製品の変更に応じて更新されることがあります。"
+
+#: app/upgrade/page.tsx
+msgctxt "kEgsaX"
+msgid "Upgrade to Pro · Deni Run"
+msgstr "Proにアップグレード · Deni Run"
+
+#: app/upgrade/page.tsx
+msgctxt "aKq-bu"
+msgid "More teammates, tokens, and computer time on a private computer."
+msgstr "専用コンピューターで、より多くのチームメイト、トークン、コンピューター時間を。"
+
+#: components/locale-switcher.tsx
+msgctxt "y1Z3or"
+msgid "Language"
+msgstr "言語"
+
+#: components/routine-labels.ts
+msgctxt "mJR06P"
+msgid "Sunday"
+msgstr "日曜日"
+
+#: components/routine-labels.ts
+msgctxt "azMsfM"
+msgid "Monday"
+msgstr "月曜日"
+
+#: components/routine-labels.ts
+msgctxt "YAgYL6"
+msgid "Tuesday"
+msgstr "火曜日"
+
+#: components/routine-labels.ts
+msgctxt "lxblgl"
+msgid "Wednesday"
+msgstr "水曜日"
+
+#: components/routine-labels.ts
+msgctxt "qAhUUO"
+msgid "Thursday"
+msgstr "木曜日"
+
+#: components/routine-labels.ts
+msgctxt "QrihTZ"
+msgid "Friday"
+msgstr "金曜日"
+
+#: components/routine-labels.ts
+msgctxt "WMNHPh"
+msgid "Saturday"
+msgstr "土曜日"
+
+#: components/routine-labels.ts
+msgctxt "ftz3w-"
+msgid "Custom: {cron}"
+msgstr "カスタム: {cron}"
+
+#: components/routine-labels.ts
+msgctxt "M_8K_W"
+msgid "Every day at {time}"
+msgstr "毎日 {time}"
+
+#: components/routine-labels.ts
+msgctxt "BwQLiY"
+msgid "Weekdays at {time}"
+msgstr "平日 {time}"
+
+#: components/routine-labels.ts
+msgctxt "hkGJ_f"
+msgid "Every {weekday} at {time}"
+msgstr "毎週{weekday} {time}"
+
+#: components/routine-labels.ts
+msgctxt "dag1_v"
+msgid "Day {day} of each month at {time}"
+msgstr "毎月{day}日 {time}"
+
+#: components/ui/sidebar.tsx
+msgctxt "HyS0qp"
+msgid "Close sidebar"
+msgstr "サイドバーを閉じる"
+
+#: components/ui/sidebar.tsx
+msgctxt "6D4Ghb"
+msgid "Toggle sidebar"
+msgstr "サイドバーの表示を切り替え"
+
+#: components/ui/spinner.tsx
+msgctxt "iFsDVR"
+msgid "Loading"
+msgstr "読み込み中"
+
+#: lib/api-auth.ts
+msgctxt "WlyxAh"
+msgid "Unauthorized"
+msgstr "認証されていません"
+
+#: lib/localize-error.ts
+msgctxt "UxEkbJ"
+msgid "Invalid cron expression"
+msgstr "cron式が正しくありません"
+
+#: lib/localize-error.ts
+msgctxt "ENOGtn"
+msgid "Cron expression has no matching time in the next five years"
+msgstr "cron式に一致する時刻が今後5年間にありません"
+
+#: lib/localize-error.ts
+msgctxt "8_6raW"
+msgid "MCP URL is invalid"
+msgstr "MCPのURLが正しくありません"
+
+#: lib/localize-error.ts
+msgctxt "9ktfmP"
+msgid "MCP URL must use http or https"
+msgstr "MCPのURLには http または https を使用してください"
+
+#: lib/localize-error.ts
+msgctxt "GvydES"
+msgid "MCP connection name is required"
+msgstr "MCP接続名は必須です"
+
+#: lib/localize-error.ts
+msgctxt "MonAal"
+msgid "MCP connection not found"
+msgstr "MCP接続が見つかりません"
+
+#: lib/localize-error.ts
+msgctxt "oGclRw"
+msgid "MCP connection is not available"
+msgstr "MCP接続は利用できません"
+
+#: lib/localize-error.ts
+msgctxt "XDn9_r"
+msgid "MCP tool name is invalid"
+msgstr "MCPツール名が正しくありません"
+
+#: lib/localize-error.ts
+msgctxt "xagOzr"
+msgid "MCP request failed"
+msgstr "MCPリクエストに失敗しました"
+
+#: lib/localize-error.ts
+msgctxt "m24QeN"
+msgid "Path is outside the workspace"
+msgstr "パスがワークスペースの外にあります"
+
+#: lib/localize-error.ts
+msgctxt "S3gMXt"
+msgid "A file path is required"
+msgstr "ファイルパスは必須です"
+
+#: lib/localize-error.ts
+msgctxt "zT71zc"
+msgid "A directory path is required"
+msgstr "ディレクトリパスは必須です"
+
+#: lib/localize-error.ts
+msgctxt "9plh_v"
+msgid "File is too large (maximum 1 MB)"
+msgstr "ファイルが大きすぎます(最大1 MB)"
+
+#: lib/localize-error.ts
+msgctxt "id2tYJ"
+msgid "File is too large to download"
+msgstr "ファイルが大きすぎてダウンロードできません"
+
+#: lib/localize-error.ts
+msgctxt "gcaJtR"
+msgid "File not found"
+msgstr "ファイルが見つかりません"
+
+#: lib/localize-error.ts
+msgctxt "Q6-txY"
+msgid "Path is a directory"
+msgstr "パスはディレクトリです"
+
+#: lib/localize-error.ts
+msgctxt "QqJ8Jt"
+msgid "The workspace root cannot be deleted"
+msgstr "ワークスペースのルートは削除できません"
+
+#: lib/localize-error.ts
+msgctxt "70Mhc3"
+msgid "Artifact path must stay inside the workspace"
+msgstr "成果物のパスはワークスペース内にある必要があります"
+
+#: lib/localize-error.ts
+msgctxt "4GVcRl"
+msgid "Unable to register artifact"
+msgstr "成果物を登録できません"
+
+#: lib/localize-error.ts
+msgctxt "SASA4f"
+msgid "Invalid URL"
+msgstr "URLが正しくありません"
+
+#: lib/localize-error.ts
+msgctxt "qPT1b3"
+msgid "Only http(s) URLs are allowed"
+msgstr "http(s) のURLのみ使用できます"
+
+#: lib/localize-error.ts
+msgctxt "DwRyBa"
+msgid "Invalid plugin operation"
+msgstr "プラグインの操作が正しくありません"
+
+#: lib/localize-error.ts
+msgctxt "0lvXw-"
+msgid "Connect write access first"
+msgstr "先に書き込みアクセスを接続してください"
+
+#: lib/localize-error.ts
+msgctxt "0j0pr4"
+msgid "Result too large to display"
+msgstr "結果が大きすぎて表示できません"
+
+#: lib/localize-error.ts
+msgctxt "TIFz5D"
+msgid "Input too large"
+msgstr "入力が大きすぎます"
+
+#: lib/localize-error.ts
+msgctxt "S8Bliy"
+msgid "No teammate matched that mention. Choose a name or use @everyone."
+msgstr "そのメンションに一致するチームメイトがいません。名前を選ぶか、@everyone を使ってください。"
+
+#: lib/localize-error.ts
+msgctxt "eAmkuo"
+msgid "Conversation no longer exists"
+msgstr "会話は存在しません"
+
+#: lib/localize-error.ts
+msgctxt "SAsUPy"
+msgid "Reply target not found"
+msgstr "返信先が見つかりません"
+
+#: lib/localize-error.ts
+msgctxt "ugkBR_"
+msgid "Choose a valid time."
+msgstr "有効な時刻を選んでください。"
+
+#: lib/localize-error.ts
+msgctxt "no3FAT"
+msgid "Choose a weekday."
+msgstr "曜日を選んでください。"
+
+#: lib/localize-error.ts
+msgctxt "lQTsmw"
+msgid "Choose a day between 1 and 31."
+msgstr "1〜31の日を選んでください。"
+
+#: lib/localize-error.ts
+msgctxt "cKsSBA"
+msgid "Checkout URL is unavailable"
+msgstr "チェックアウトのURLを利用できません"
+
+#: lib/localize-error.ts
+msgctxt "B_OzoS"
+msgid "Invalid timezone: {timezone}"
+msgstr "タイムゾーンが正しくありません: {timezone}"
+
+#: lib/localize-error.ts
+msgctxt "cLbuuK"
+msgid "Invalid MCP header: {name}"
+msgstr "MCPヘッダーが正しくありません: {name}"
+
+#: lib/localize-error.ts
+msgctxt "F8zKvI"
+msgid "MCP SSE connection failed ({status})"
+msgstr "MCPのSSE接続に失敗しました({status})"
+
+#: lib/localize-error.ts
+msgctxt "F03gjv"
+msgid "MCP request failed ({status})"
+msgstr "MCPリクエストに失敗しました({status})"
+
+#: lib/localize-error.ts
+msgctxt "mEYAdG"
+msgid "Connect {service} write access in Plugins first."
+msgstr "先にプラグインで{service}の書き込みアクセスを接続してください。"
+
+#: lib/localize-error.ts
+msgctxt "GTgdaw"
+msgid "Connect {service} in Plugins first."
+msgstr "先にプラグインで{service}を接続してください。"
+
+#: lib/localize-error.ts
+msgctxt "mSTRV1"
+msgid "Reconnect {service} in Plugins."
+msgstr "プラグインで{service}を再接続してください。"
+
+#: lib/localize-error.ts
+msgctxt "r0AFNc"
+msgid "Monthly token limit reached ({limit} on {plan}). Upgrade to keep chatting."
+msgstr "今月のトークン上限に達しました({plan}プランで{limit})。チャットを続けるにはアップグレードしてください。"
+
+#: lib/localize-error.ts
+msgctxt "8XEouI"
+msgid "Monthly browser time limit reached ({limit} min on {plan}). Upgrade to keep using the browser."
+msgstr "今月のブラウザ時間の上限に達しました({plan}プランで{limit}分)。ブラウザを使い続けるにはアップグレードしてください。"
+
+#: lib/localize-error.ts
+msgctxt "dH9YEG"
+msgid "Monthly computer time limit reached ({limit} min on {plan}). Upgrade to keep using the terminal."
+msgstr "今月のコンピューター時間の上限に達しました({plan}プランで{limit}分)。ターミナルを使い続けるにはアップグレードしてください。"
+
+#: lib/localize-error.ts
+msgctxt "6EJO1G"
+msgid "Teammate limit reached ({limit} on {plan}). Upgrade to add more teammates."
+msgstr "チームメイトの上限に達しました({plan}プランで{limit}人)。追加するにはアップグレードしてください。"
+
+#: lib/rate-limit.ts
+msgctxt "GhZx8v"
+msgid "Too many requests. Wait a moment and try again."
+msgstr "リクエストが多すぎます。しばらく待ってからもう一度お試しください。"

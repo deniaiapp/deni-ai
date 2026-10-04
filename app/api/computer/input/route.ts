@@ -10,6 +10,8 @@ import {
 } from "@/lib/computer";
 import { claimBrowserTakeover, releaseBrowserTakeover } from "@/lib/browser-workspaces";
 import { updateJob } from "@/lib/jobs";
+import { getExtracted } from "next-intl/server";
+import { localizeError } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,7 @@ function inputSummary(input: ComputerInput) {
 }
 
 export async function POST(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const limited = await limitOrResponse(userId, "computer-input", 120);
@@ -50,7 +53,7 @@ export async function POST(req: Request) {
     if (body.jobId) {
       const claimed = await claimBrowserTakeover(userId, body.jobId).catch(() => false);
       if (!claimed) {
-        return NextResponse.json({ error: "Another task currently owns the computer" }, { status: 409 });
+        return NextResponse.json({ error: t("Another task currently owns the computer") }, { status: 409 });
       }
       await updateJob(userId, body.jobId, { status: "waiting_takeover" }).catch(() => undefined);
     }
@@ -101,7 +104,7 @@ export async function POST(req: Request) {
     } else if (body.type === "scroll" && body.dy != null) {
       await browserScroll(userId, body.dy, body.jobId);
     } else {
-      return NextResponse.json({ error: "bad input" }, { status: 400 });
+      return NextResponse.json({ error: t("Invalid input") }, { status: 400 });
     }
     if (process.env.NODE_ENV !== "production") {
       console.info("[computer-api] input completed", {
@@ -115,11 +118,11 @@ export async function POST(req: Request) {
       console.error("[computer-api] input failed", {
         ...summary,
         elapsedMs: Date.now() - startedAt,
-        error: error instanceof Error ? error.message : String(error),
+        error: await localizeError(error),
       });
     }
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: await localizeError(error) },
       { status: 500 },
     );
   }

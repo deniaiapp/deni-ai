@@ -32,8 +32,8 @@ export function describeRoutineSchedule(cron: string): string {
   return `${cadence} at ${schedule.time}`;
 }
 
-export function formatRoutineTime(value: string | null, timezone: string): string {
+export function formatRoutineTime(value: string | null, timezone: string, locale = "en"): string {
   if (!value) return "—";
-  try { return new Intl.DateTimeFormat("en", { timeZone: timezone, month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
+  try { return new Intl.DateTimeFormat(locale, { timeZone: timezone, month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value)); }
   catch { return value; }
 }

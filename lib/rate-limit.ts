@@ -1,5 +1,6 @@
 import "server-only";
 
+import { getExtracted } from "next-intl/server";
 import { sqlClient } from "@/db";
 
 export class RateLimitError extends Error {
@@ -60,8 +61,9 @@ export async function assertRateLimit(
   if (!memoryLimit(key, limit, windowMs)) throw new RateLimitError();
 }
 
-export function rateLimitResponse() {
-  return new Response("Too many requests. Wait a moment and try again.", {
+export async function rateLimitResponse() {
+  const t = await getExtracted();
+  return new Response(t("Too many requests. Wait a moment and try again."), {
     status: 429,
     headers: { "Retry-After": "30" },
   });

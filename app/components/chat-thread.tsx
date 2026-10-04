@@ -1,6 +1,7 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
+import { useExtracted } from "next-intl";
 import { type UIMessage } from "ai";
 import {
   memo,
@@ -183,6 +184,7 @@ export function ChatThread({
   onJobsChange?: (jobs: AgentJob[]) => void;
   chat: Chat<UIMessage>;
 }) {
+  const t = useExtracted();
   const conversationContextRef = useRef<StickToBottomContext | null>(null);
   const {
     messages,
@@ -343,7 +345,7 @@ export function ChatThread({
           setApprovalError(
             error instanceof Error
               ? error.message
-              : "Could not submit approval.",
+              : t("Could not submit approval."),
           );
         }
         return;
@@ -353,7 +355,7 @@ export function ChatThread({
       // Do not queue old input for the background worker before approval is sent.
       addToolApprovalResponse({ id, approved });
     },
-    [addToolApprovalResponse, thread.id, thread.kind],
+    [addToolApprovalResponse, t, thread.id, thread.kind],
   );
 
   const busy = status === "submitted" || status === "streaming";
@@ -627,15 +629,15 @@ export function ChatThread({
             icon={StopIcon}
             onClick={stopTask}
           >
-            Stop
+            {t("Stop")}
           </Button>
         ) : showBusyIndicator && savingResult ? (
           <span className="text-xs tracking-tighter text-muted-foreground">
-            Saving result…
+            {t("Saving result…")}
           </span>
         ) : showBusyIndicator && waitingForUser ? (
           <span className="text-xs tracking-tighter text-warning-300">
-            Waiting for your help…
+            {t("Waiting for your help…")}
           </span>
         ) : null}
       </motion.header>
@@ -643,13 +645,13 @@ export function ChatThread({
       {thread.kind === "group" ? (
         <div className="shrink-0 border-b border-foreground/5 px-4 py-2">
           <p className="text-[11px] text-neutral-500">
-            @everyone to ask everyone · @name to ask a teammate
+            {t("@everyone to ask everyone · @name to ask a teammate")}
           </p>
           {Object.values(groupStatuses).length ? (
             <div
               className="mt-2 flex flex-wrap gap-2"
               role="status"
-              aria-label="Teammate responses"
+              aria-label={t("Teammate responses")}
             >
               {Object.values(groupStatuses).map((item) => (
                 <div
@@ -670,10 +672,10 @@ export function ChatThread({
                   ) : (
                     <span>
                       {item.status === "waiting"
-                        ? "Needs your help"
+                        ? t("Needs your help")
                         : item.status === "failed"
-                          ? "Failed"
-                          : "Done"}
+                          ? t("Failed")
+                          : t("Done")}
                     </span>
                   )}
                 </div>
@@ -748,10 +750,10 @@ export function ChatThread({
           {showBusyIndicator ? (
             <span className="text-xs text-muted-foreground">
               {waitingForUser
-                ? "Waiting for your help"
+                ? t("Waiting for your help")
                 : savingResult
-                  ? "Saving result"
-                  : "Working on the computer"}
+                  ? t("Saving result")
+                  : t("Working on the computer")}
               <AnimatedDots />
             </span>
           ) : null}
@@ -761,7 +763,7 @@ export function ChatThread({
           {error || approvalError ? (
             <Alert variant="destructive">
               <WarningCircleIcon weight="fill" />
-              <AlertTitle>Failed to send</AlertTitle>
+              <AlertTitle>{t("Failed to send")}</AlertTitle>
               <AlertDescription>
                 <p>{error?.message ?? approvalError}</p>
                 <Button
@@ -774,7 +776,7 @@ export function ChatThread({
                   }}
                   className="-ml-2"
                 >
-                  Dismiss
+                  {t("Dismiss")}
                 </Button>
               </AlertDescription>
             </Alert>
@@ -787,7 +789,7 @@ export function ChatThread({
           <div
             id={`mentions-${thread.id}`}
             role="listbox"
-            aria-label="Mention a teammate"
+            aria-label={t("Mention a teammate")}
             className="absolute bottom-full left-4 z-20 mb-1 max-h-64 w-72 max-w-[calc(100%_-_2rem)] overflow-y-auto rounded-xl border border-foreground/10 bg-surface-32 p-1.5 shadow-xl"
           >
             {mentionOptions.map((member, index) => (
@@ -815,7 +817,7 @@ export function ChatThread({
                 <span>@{member.name}</span>
                 {member.id === "everyone" ? (
                   <span className="ml-auto text-xs text-neutral-500">
-                    All teammates
+                    {t("All teammates")}
                   </span>
                 ) : null}
               </button>
@@ -831,7 +833,7 @@ export function ChatThread({
             />
             <button
               type="button"
-              aria-label="Cancel reply"
+              aria-label={t("Cancel reply")}
               onClick={() => {
                 setReplyTarget(null);
                 replyCache.delete(thread.id);
@@ -855,7 +857,7 @@ export function ChatThread({
           <PromptInputTextarea
             ref={inputRef}
             className="min-h-9 min-w-0 flex-1 rounded-2xl border-0 bg-transparent px-2 py-2 focus-visible:border-transparent"
-            title="Enter to send · Shift+Enter for a new line"
+            title={t("Enter to send · Shift+Enter for a new line")}
             value={input}
             onChange={(e) => {
               const next = e.currentTarget.value;
@@ -903,18 +905,18 @@ export function ChatThread({
             onSubmit={submit}
             placeholder={
               thread.kind === "group"
-                ? `Message ${thread.title} · @everyone`
-                : `Message ${bot.name}`
+                ? t("Message {name} · @everyone", { name: thread.title })
+                : t("Message {name}", { name: bot.name })
             }
-            aria-label={`Message ${thread.kind === "group" ? thread.title : bot.name}`}
+            aria-label={t("Message {name}", { name: thread.kind === "group" ? thread.title : bot.name })}
           />
           <PromptInputToolbar className="shrink-0 pb-0.5 pr-0.5">
             <PromptInputSubmit
               className="size-8 rounded-full p-0"
               aria-label={
                 status === "streaming" || status === "submitted"
-                  ? "Stop response"
-                  : "Send message"
+                  ? t("Stop response")
+                  : t("Send message")
               }
               status={status}
               onStop={stopTask}
@@ -942,10 +944,11 @@ function ArtifactList({
   artifacts: Artifact[];
   onRevision: (artifact: Artifact) => void;
 }) {
+  const t = useExtracted();
   return (
-    <div className="mt-4 space-y-2" aria-label="Artifacts">
+    <div className="mt-4 space-y-2" aria-label={t("Artifacts")}>
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Deliverables
+        {t("Deliverables")}
       </p>
       {artifacts.slice(0, 12).map((artifact) => (
         <ArtifactCard
@@ -965,6 +968,7 @@ function ArtifactCard({
   artifact: Artifact;
   onRevision: (artifact: Artifact) => void;
 }) {
+  const t = useExtracted();
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   async function showPreview() {
@@ -979,7 +983,7 @@ function ArtifactCard({
         { cache: "no-store" },
       );
       const json = (await response.json()) as { content?: string };
-      setPreview(json.content ?? "Unable to preview this file.");
+      setPreview(json.content ?? t("Unable to preview this file."));
     } finally {
       setBusy(false);
     }
@@ -1008,7 +1012,7 @@ function ArtifactCard({
           loading={busy}
           onClick={() => void showPreview()}
         >
-          {preview == null ? "Preview" : "Hide preview"}
+          {preview == null ? t("Preview") : t("Hide preview")}
         </Button>
         <Button
           type="button"
@@ -1019,7 +1023,7 @@ function ArtifactCard({
             window.location.href = `/api/artifacts/${artifact.id}?mode=download`;
           }}
         >
-          Download
+          {t("Download")}
         </Button>
         <Button
           type="button"
@@ -1027,7 +1031,7 @@ function ArtifactCard({
           variant="outline"
           onClick={() => onRevision(artifact)}
         >
-          Request revision
+          {t("Request revision")}
         </Button>
       </div>
       {preview != null ? (
@@ -1078,14 +1082,6 @@ function useWorkedDuration(key: string, active: boolean) {
   return rec.end - rec.start;
 }
 
-function formatWorkedDuration(ms: number) {
-  const seconds = Math.max(1, Math.round(ms / 1000));
-  if (seconds < 60) return `Worked for ${seconds}s`;
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `Worked for ${minutes}m`;
-  return `Worked for ${Math.round(minutes / 60)}h`;
-}
-
 function collectHandoffIds(messages: UIMessage[]) {
   const ids: string[] = [];
   for (const message of messages) {
@@ -1106,6 +1102,7 @@ function collectHandoffIds(messages: UIMessage[]) {
 }
 
 function EmptyState({ bot }: { bot: Bot }) {
+  const t = useExtracted();
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -1115,7 +1112,7 @@ function EmptyState({ bot }: { bot: Bot }) {
       <Empty
         icon={<RobotIcon size={48} className="text-neutral-109" />}
         title={bot.name}
-        description={`${bot.job}. No workflow is required. Write as if you were asking a colleague. I will research on the computer, leave artifacts in files, and ask for approval only when needed.`}
+        description={t("{job}. No workflow is required. Write as if you were asking a colleague. I will research on the computer, leave artifacts in files, and ask for approval only when needed.", { job: bot.job })}
       />
     </motion.div>
   );
@@ -1162,10 +1159,21 @@ const MessageBlock = memo(function MessageBlock({
   showAuthor: boolean;
   authorIcon?: string | null;
 }) {
+  const t = useExtracted();
+  const toolLabel = useToolDisplayLabel();
+  const formatWorkedDuration = (ms: number) => {
+    const seconds = Math.max(1, Math.round(ms / 1000));
+    if (seconds < 60) return t("Worked for {count}s", { count: String(seconds) });
+    const minutes = Math.round(seconds / 60);
+    if (minutes < 60) return t("Worked for {count}m", { count: String(minutes) });
+    return t("Worked for {count}h", { count: String(Math.round(minutes / 60)) });
+  };
   const lastPart = message.parts.at(-1);
   const reasoningIsStreaming =
     isLastMessage && isStreaming && lastPart?.type === "reasoning";
   const cotSteps = buildCotSteps(
+    toolLabel,
+    t("Reasoning"),
     message.parts,
     reasoningIsStreaming,
     handoffs,
@@ -1195,13 +1203,13 @@ const MessageBlock = memo(function MessageBlock({
           <div className="mb-1 flex items-center gap-2">
             <span className="[&>span]:size-6">
               <Avatar
-                name={author?.name ?? "Teammate"}
+                name={author?.name ?? t("Teammate")}
                 accent={author?.accent ?? "#555555"}
                 icon={authorIcon}
               />
             </span>
             <span className="text-xs font-semibold text-neutral-300">
-              {author?.name ?? "Teammate"}
+              {author?.name ?? t("Teammate")}
             </span>
           </div>
         ) : null}
@@ -1210,13 +1218,13 @@ const MessageBlock = memo(function MessageBlock({
             <ChainOfThoughtHeader>
               {cotWorking ? (
                 <>
-                  Working
+                  {t("Working")}
                   <AnimatedDots />
                 </>
               ) : workedMs != null ? (
                 formatWorkedDuration(workedMs)
               ) : (
-                "Thinking"
+                t("Thinking")
               )}
             </ChainOfThoughtHeader>
             <ChainOfThoughtContent>
@@ -1267,7 +1275,7 @@ const MessageBlock = memo(function MessageBlock({
           {replyTo ? (
             <MessageReferenceCard
               reference={replyTo}
-              botName="Teammate"
+              botName={t("Teammate")}
               onLocate={onLocate}
             />
           ) : null}
@@ -1337,11 +1345,12 @@ function MessageReferenceCard({
   botName: string;
   onLocate: (key: string) => void;
 }) {
+  const t = useExtracted();
   return (
     <button
       type="button"
       onClick={() => onLocate(reference.key)}
-      aria-label="Go to referenced message"
+      aria-label={t("Go to referenced message")}
       className="flex min-w-0 max-w-full items-start gap-2 rounded-lg border-l-2 border-focus-muted bg-foreground/5 px-3 py-2 text-left hover:bg-foreground/10 focus-visible:outline-2 focus-visible:outline-foreground/40"
     >
       <CornerUpLeftIcon
@@ -1350,10 +1359,10 @@ function MessageReferenceCard({
       />
       <span className="min-w-0">
         <span className="block text-[11px] font-medium text-neutral-300">
-          Replying to {reference.role === "user" ? "you" : botName}
+          {reference.role === "user" ? t("Replying to you") : t("Replying to {name}", { name: botName })}
         </span>
         <span className="block max-w-full truncate text-xs text-neutral-400">
-          {reference.text.slice(0, 180) || "Message"}
+          {reference.text.slice(0, 180) || t("Message")}
         </span>
       </span>
     </button>
@@ -1383,6 +1392,8 @@ type CotStep = {
 };
 
 function buildCotSteps(
+  toolLabel: ReturnType<typeof useToolDisplayLabel>,
+  reasoningLabel: string,
   parts: UIMessage["parts"],
   reasoningIsStreaming: boolean,
   handoffs?: Record<string, HandoffSnapshot>,
@@ -1399,7 +1410,7 @@ function buildCotSteps(
       steps.push({
         key: `reasoning-${index}`,
         icon: BrainIcon,
-        label: title ?? "Reasoning",
+        label: title ?? reasoningLabel,
         description: body ? (
           <MessageResponse>{body}</MessageResponse>
         ) : undefined,
@@ -1435,7 +1446,7 @@ function buildCotSteps(
     steps.push({
       key: toolPart.toolCallId ?? `tool-${index}`,
       icon: toolStepIcon(name),
-      label: toolDisplayLabel(name, input, state, liveHandoff, bots),
+      label: toolLabel(name, input, state, liveHandoff, bots),
       description:
         failed && errorText
           ? errorText
@@ -1488,6 +1499,8 @@ function toolStepIcon(name: string): LucideIcon {
       return SearchIcon;
     case "mcp":
     case "listMcpConnections":
+    case "listBuiltinPlugins":
+    case "builtInPlugin":
       return WrenchIcon;
     case "remember":
       return BookOpenIcon;
@@ -1579,6 +1592,8 @@ function PartView({
   onApprove: (id: string, approved: boolean) => void;
   isAnimating?: boolean;
 }) {
+  const t = useExtracted();
+  const toolLabel = useToolDisplayLabel();
   if (part.type === "text" && part.text.trim()) {
     return (
       <MessageContent>
@@ -1599,7 +1614,7 @@ function PartView({
     const errorText =
       toolPart.errorText ??
       (toolPart.error != null ? formatDetail(toolPart.error) : "");
-    const displayLabel = toolDisplayLabel(name, input, state);
+    const displayLabel = toolLabel(name, input, state);
     if (toolPart.approval && !toolPart.approval.isAutomatic) {
       const approval = toolPart.approval;
       const detail = toolApprovalDetail(name, input);
@@ -1610,19 +1625,25 @@ function PartView({
             {detail ? (
               <p className="font-mono text-xs text-secondary-foreground">{detail}</p>
             ) : null}
+            {name === "builtInPlugin" && inputValue(input, "body") ? <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-foreground/5 p-2 text-xs">{inputValue(input, "body")}</pre> : null}
             <ApprovalActions
               onApprove={() => onApprove(approval.id, true)}
               onDeny={() => onApprove(approval.id, false)}
+              onAlwaysAllow={name === "builtInPlugin" ? async () => {
+                const response = await fetch("/api/plugins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: inputValue(input, "kind"), action: inputValue(input, "action"), enabled: true }) });
+                if (!response.ok) throw new Error((await response.json()).error ?? t("Could not save permission."));
+                onApprove(approval.id, true);
+              } : undefined}
             />
           </ConfirmationRequest>
           <ConfirmationAccepted>
-            <ConfirmationTitle>Approved · {displayLabel}</ConfirmationTitle>
+            <ConfirmationTitle>{t("Approved · {label}", { label: displayLabel })}</ConfirmationTitle>
             {detail ? (
               <p className="font-mono text-xs text-muted-foreground">{detail}</p>
             ) : null}
           </ConfirmationAccepted>
           <ConfirmationRejected>
-            <ConfirmationTitle>Declined · {displayLabel}</ConfirmationTitle>
+            <ConfirmationTitle>{t("Declined · {label}", { label: displayLabel })}</ConfirmationTitle>
             {detail ? (
               <p className="font-mono text-xs text-muted-foreground">{detail}</p>
             ) : null}
@@ -1631,6 +1652,10 @@ function PartView({
       );
     }
     if (name === "messageBot" || name === "handoffStatus") return null;
+    if (name === "listBuiltinPlugins" && state === "output-available" && Array.isArray(toolPart.output)) {
+      const plugins = toolPart.output as { kind: string; connected: boolean }[];
+      return <div className="grid gap-2 sm:grid-cols-3">{plugins.map((plugin) => <button type="button" key={plugin.kind} onClick={() => window.dispatchEvent(new Event("open-plugins"))} className="rounded-xl border border-primary/25 bg-primary/5 p-3 text-left transition-colors hover:bg-primary/10"><span className="block font-medium">{plugin.kind === "drive" ? "Google Drive" : plugin.kind === "gmail" ? "Gmail" : "GitHub"}</span><span className="text-xs text-muted-foreground">{plugin.connected ? t("Connected · manage") : t("Connect")}</span></button>)}</div>;
+    }
     if (name === "requestTakeover") {
       const reason = inputValue(input, "reason");
       const failed = state === "output-error";
@@ -1638,12 +1663,12 @@ function PartView({
         <Alert variant={failed ? "destructive" : "warning"}>
           <WarningCircleIcon weight="fill" />
           <AlertTitle>
-            {failed ? "Couldn't request your help" : "Requested your help"}
+            {failed ? t("Couldn't request your help") : t("Requested your help")}
           </AlertTitle>
           <AlertDescription>
             {failed
-              ? errorText || "The computer could not be handed over."
-              : `${reason ? `${reason} ` : ""}Take control of the computer to continue.`}
+              ? errorText || t("The computer could not be handed over.")
+              : `${reason ? `${reason} ` : ""}${t("Take control of the computer to continue.")}`}
           </AlertDescription>
         </Alert>
       );
@@ -1664,7 +1689,10 @@ function formatDetail(value: unknown) {
   }
 }
 
-function toolDisplayLabel(
+function useToolDisplayLabel() {
+  const t = useExtracted();
+
+  function toolDisplayLabel(
   name: string,
   input: unknown,
   state: string,
@@ -1681,76 +1709,84 @@ function toolDisplayLabel(
     const teammate =
       liveHandoff?.targetName ||
       bots?.find((item) => item.id === botId)?.name ||
-      "a teammate";
+      t("a teammate");
     if (failed || liveHandoff?.status === "error")
-      return `Couldn't reach ${teammate}`;
-    if (liveHandoff?.status === "running") return `${teammate} is working`;
-    return completed ? `Asked ${teammate}` : `Asking ${teammate}`;
+      return t("Couldn't reach {teammate}", { teammate });
+    if (liveHandoff?.status === "running") return t("{teammate} is working", { teammate });
+    return completed ? t("Asked {teammate}", { teammate }) : t("Asking {teammate}", { teammate });
   }
 
-  if (denied) return "Action was declined";
+  if (denied) return t("Action was declined");
 
   if (name === "browser" || name.toLowerCase().includes("browser")) {
     switch (action) {
       case "navigate":
-        if (failed) return "Couldn't open the page";
-        return completed ? `Opened page` : `Opening page`;
+        if (failed) return t("Couldn't open the page");
+        return completed ? t("Opened page") : t("Opening page");
       case "snapshot":
-        if (failed) return "Couldn't read the page";
-        return completed ? "Read the page" : "Reading the page";
+        if (failed) return t("Couldn't read the page");
+        return completed ? t("Read the page") : t("Reading the page");
       case "click":
-        if (failed) return "Couldn't click the page";
-        return completed ? "Clicked the page" : "Clicking the page";
+        if (failed) return t("Couldn't click the page");
+        return completed ? t("Clicked the page") : t("Clicking the page");
       case "type":
-        if (failed) return "Couldn't enter the text";
-        return completed ? "Entered text" : "Entering text";
+        if (failed) return t("Couldn't enter the text");
+        return completed ? t("Entered text") : t("Entering text");
       case "press": {
-        const key = inputValue(input, "key") ?? "a key";
-        if (failed) return `Couldn't press ${key}`;
-        return completed ? `Pressed ${key}` : `Pressing ${key}`;
+        const key = inputValue(input, "key") ?? t("a key");
+        if (failed) return t("Couldn't press {key}", { key });
+        return completed ? t("Pressed {key}", { key }) : t("Pressing {key}", { key });
       }
       case "scroll": {
         const dy = inputNumber(input, "dy");
-        const direction = dy != null && dy < 0 ? "up" : "down";
-        if (failed) return "Couldn't scroll the page";
-        return completed ? `Scrolled ${direction}` : `Scrolling ${direction}`;
+        const up = dy != null && dy < 0;
+        if (failed) return t("Couldn't scroll the page");
+        if (completed) return up ? t("Scrolled up") : t("Scrolled down");
+        return up ? t("Scrolling up") : t("Scrolling down");
       }
       default:
         return failed
-          ? "Couldn't use the browser"
+          ? t("Couldn't use the browser")
           : completed
-            ? "Used the browser"
-            : "Using the browser";
+            ? t("Used the browser")
+            : t("Using the browser");
     }
   }
 
-  const labels: Record<string, [present: string, past: string]> = {
-    workspace: ["Updating files", "Updated files"],
-    runCommand: ["Running a command", "Ran a command"],
-    stopSandbox: ["Stopping the computer", "Stopped the computer"],
-    webSearch: ["Searching the web", "Searched the web"],
-    remember: ["Saving a memory", "Saved a memory"],
-    saveSkill: ["Saving a skill", "Saved a skill"],
-    listSkills: ["Checking saved skills", "Checked saved skills"],
-    readSkill: ["Reading a skill", "Read a skill"],
-    scheduleRoutine: ["Scheduling a routine", "Scheduled a routine"],
-    listRoutines: ["Checking routines", "Checked routines"],
-    pauseRoutine: ["Updating a routine", "Updated a routine"],
-    messageBot: ["Asking a teammate", "Asked a teammate"],
-    handoffStatus: ["Checking a teammate", "Checked a teammate"],
-    requestTakeover: ["Waiting for your help", "Requested your help"],
+  const labels: Record<string, [present: string, past: string, failed: string]> = {
+    workspace: [t("Updating files"), t("Updated files"), t("Couldn't update files")],
+    runCommand: [t("Running a command"), t("Ran a command"), t("Couldn't run a command")],
+    stopSandbox: [t("Stopping the computer"), t("Stopped the computer"), t("Couldn't stop the computer")],
+    webSearch: [t("Searching the web"), t("Searched the web"), t("Couldn't search the web")],
+    remember: [t("Saving a memory"), t("Saved a memory"), t("Couldn't save a memory")],
+    saveSkill: [t("Saving a skill"), t("Saved a skill"), t("Couldn't save a skill")],
+    listSkills: [t("Checking saved skills"), t("Checked saved skills"), t("Couldn't check saved skills")],
+    readSkill: [t("Reading a skill"), t("Read a skill"), t("Couldn't read a skill")],
+    scheduleRoutine: [t("Scheduling a routine"), t("Scheduled a routine"), t("Couldn't schedule a routine")],
+    listRoutines: [t("Checking routines"), t("Checked routines"), t("Couldn't check routines")],
+    listBuiltinPlugins: [t("Showing connected services"), t("Showed connected services"), t("Couldn't show connected services")],
+    builtInPlugin: [t("Using a connected service"), t("Used a connected service"), t("Couldn't use a connected service")],
+    pauseRoutine: [t("Updating a routine"), t("Updated a routine"), t("Couldn't update a routine")],
+    messageBot: [t("Asking a teammate"), t("Asked a teammate"), t("Couldn't ask a teammate")],
+    handoffStatus: [t("Checking a teammate"), t("Checked a teammate"), t("Couldn't check a teammate")],
+    requestTakeover: [t("Waiting for your help"), t("Requested your help"), t("Couldn't request your help")],
   };
-  const [present, past] = labels[name] ?? [
-    `Working on ${humanizeToolName(name)}`,
-    `Finished ${humanizeToolName(name)}`,
+  const tool = humanizeToolName(name);
+  const [present, past, couldNot] = labels[name] ?? [
+    t("Working on {tool}", { tool }),
+    t("Finished {tool}", { tool }),
+    t("Couldn't finish {tool}", { tool }),
   ];
-  if (failed)
-    return `Couldn't ${present.charAt(0).toLowerCase()}${present.slice(1)}`;
+  if (failed) return couldNot;
   return completed ? past : present;
+  }
+
+  return toolDisplayLabel;
 }
 
 function toolApprovalDetail(name: string, input: unknown) {
   if (name === "runCommand") return snippet(inputValue(input, "command"));
+  if (name === "builtInPlugin") return snippet([inputValue(input, "kind"), inputValue(input, "action"), inputValue(input, "repo"), inputValue(input, "to"), inputValue(input, "subject"), inputValue(input, "title"), inputValue(input, "id")].filter(Boolean).join(" · "), 220);
   if (name === "workspace") {
     const path = inputValue(input, "path");
     return path ? snippet(path) : undefined;
@@ -1768,11 +1804,15 @@ function snippet(value?: string, max = 72) {
 function ApprovalActions({
   onApprove,
   onDeny,
+  onAlwaysAllow,
 }: {
   onApprove: () => void;
   onDeny: () => void;
+  onAlwaysAllow?: () => Promise<void>;
 }) {
-  const [busy, setBusy] = useState<"approve" | "deny" | null>(null);
+  const t = useExtracted();
+  const [busy, setBusy] = useState<"approve" | "deny" | "always" | null>(null);
+  const [permissionError, setPermissionError] = useState<string | null>(null);
   return (
     <ConfirmationActions>
       <ConfirmationAction
@@ -1784,8 +1824,13 @@ function ApprovalActions({
           onApprove();
         }}
       >
-        Approve
+        {t("Approve")}
       </ConfirmationAction>
+      {onAlwaysAllow ? <ConfirmationAction variant="outline" loading={busy === "always"} disabled={busy !== null} onClick={() => {
+        setBusy("always");
+        void onAlwaysAllow().catch((error) => { setPermissionError(error instanceof Error ? error.message : t("Could not save permission.")); setBusy(null); });
+      }}>{t("Always allow")}</ConfirmationAction> : null}
+      {permissionError ? <span role="alert" className="text-xs text-destructive-300">{permissionError}</span> : null}
       <ConfirmationAction
         variant="outline"
         loading={busy === "deny"}
@@ -1795,7 +1840,7 @@ function ApprovalActions({
           onDeny();
         }}
       >
-        Deny
+        {t("Deny")}
       </ConfirmationAction>
     </ConfirmationActions>
   );
@@ -1808,9 +1853,10 @@ function RunModePicker({
   value: RunMode;
   onChange: (mode: RunMode) => void | Promise<void>;
 }) {
+  const t = useExtracted();
   const isPlus = value.startsWith("plus-");
   const level = (isPlus ? value.slice(5) : value) as "default" | "high" | "xhigh" | "max";
-  const levelLabels = { default: "Default", high: "High", xhigh: "xhigh", max: "Max" };
+  const levelLabels = { default: t("Default"), high: t("High"), xhigh: t("xhigh"), max: t("Max") };
   const levels = ["default", "high", "xhigh", "max"] as const;
   const selectMode = (mode: RunMode) => {
     void onChange(mode);
@@ -1822,7 +1868,7 @@ function RunModePicker({
           type="button"
           className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
         >
-          {RUN_MODES[value].label}
+          {isPlus ? "Run+" : "Run"} {levelLabels[level]}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" className="w-56">
@@ -1836,7 +1882,7 @@ function RunModePicker({
             >
               <span className="flex min-w-0 flex-col">
                 <span>{levelLabels[id]}</span>
-                <span className="text-[11px] text-muted-foreground">{mode.hint}</span>
+                <span className="text-[11px] text-muted-foreground">{mode.tokenMultiplier === 1 ? t("Default") : t("{multiplier}× tokens", { multiplier: String(mode.tokenMultiplier) })}</span>
               </span>
             </DropdownMenuItem>
           );
@@ -1891,8 +1937,9 @@ function isToolRunning(state: string) {
 }
 
 function AnimatedDots() {
+  const t = useExtracted();
   return (
-    <span aria-label="in progress" className="animated-dots ml-1" role="img">
+    <span aria-label={t("in progress")} className="animated-dots ml-1" role="img">
       <span>.</span>
       <span>.</span>
       <span>.</span>

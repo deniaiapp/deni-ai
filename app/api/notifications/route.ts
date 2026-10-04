@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { listNotifications, markAllNotificationsRead, markNotificationRead } from "@/lib/notifications";
+import { getExtracted } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +15,7 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const body = (await req.json().catch(() => ({}))) as { id?: string; read?: boolean; all?: boolean };
@@ -21,8 +23,8 @@ export async function PATCH(req: Request) {
     await markAllNotificationsRead(userId);
     return NextResponse.json({ ok: true });
   }
-  if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
+  if (!body.id) return NextResponse.json({ error: t("ID is required") }, { status: 400 });
   const notification = await markNotificationRead(userId, body.id, body.read !== false);
-  if (!notification) return NextResponse.json({ error: "notification not found" }, { status: 404 });
+  if (!notification) return NextResponse.json({ error: t("Notification not found") }, { status: 404 });
   return NextResponse.json({ notification });
 }

@@ -6,6 +6,8 @@ import {
   saveMcpConnection,
   testMcpConnection,
 } from "@/lib/mcp";
+import { getExtracted } from "next-intl/server";
+import { localizeError } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const body = (await req.json().catch(() => ({}))) as {
@@ -32,18 +35,18 @@ export async function POST(req: Request) {
   };
   try {
     if (body.action === "test") {
-      if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
+      if (!body.id) return NextResponse.json({ error: t("ID is required") }, { status: 400 });
       return NextResponse.json(await testMcpConnection(userId, body.id));
     }
     if (body.action === "delete") {
-      if (!body.id) return NextResponse.json({ error: "id required" }, { status: 400 });
+      if (!body.id) return NextResponse.json({ error: t("ID is required") }, { status: 400 });
       const deleted = await deleteMcpConnection(userId, body.id);
       return deleted
         ? NextResponse.json({ ok: true })
-        : NextResponse.json({ error: "connection not found" }, { status: 404 });
+        : NextResponse.json({ error: t("Connection not found") }, { status: 404 });
     }
     if (!body.name || !body.url) {
-      return NextResponse.json({ error: "name and url required" }, { status: 400 });
+      return NextResponse.json({ error: t("Name and URL are required") }, { status: 400 });
     }
     const connection = await saveMcpConnection({
       userId,
@@ -58,7 +61,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ connection }, { status: body.id ? 200 : 201 });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: await localizeError(error) },
       { status: 400 },
     );
   }

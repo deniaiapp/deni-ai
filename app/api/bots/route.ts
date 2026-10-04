@@ -6,12 +6,15 @@ import type { Bot, Thread } from "@/lib/types";
 import { limitOrResponse } from "@/lib/rate-limit";
 import { assertCanCreateTeammate, isUsageLimitError, usageLimitPayload } from "@/lib/usage";
 import { validAvatarIcon } from "@/lib/avatar";
+import { getExtracted } from "next-intl/server";
+import { localizeUsageLimit } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
 
 const ACCENTS = ["#d4a574", "#8fad86", "#7f9bb8", "#c97b7b", "#c4b36a", "#b08bb8"];
 
 export async function POST(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const limited = await limitOrResponse(userId, "bots", 20);
@@ -23,15 +26,15 @@ export async function POST(req: Request) {
     icon?: string | null;
   };
   const name = body.name?.trim();
-  if (body.icon !== undefined && !validAvatarIcon(body.icon)) return NextResponse.json({ error: "Invalid icon" }, { status: 400 });
+  if (body.icon !== undefined && !validAvatarIcon(body.icon)) return NextResponse.json({ error: t("Invalid icon") }, { status: 400 });
   if (!name) {
-    return NextResponse.json({ error: "name required" }, { status: 400 });
+    return NextResponse.json({ error: t("Name is required.") }, { status: 400 });
   }
   try {
     await assertCanCreateTeammate(userId);
   } catch (error) {
     if (isUsageLimitError(error)) {
-      return NextResponse.json(usageLimitPayload(error), { status: 402 });
+      return NextResponse.json({ ...usageLimitPayload(error), error: await localizeUsageLimit(userId, error) }, { status: 402 });
     }
     throw error;
   }

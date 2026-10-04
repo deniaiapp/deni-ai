@@ -1,5 +1,6 @@
 "use client";
 
+import { useExtracted, useLocale } from "next-intl";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { easeOut } from "@/lib/motion";
@@ -27,7 +28,8 @@ import { LoadingFallback } from "@/components/ui/loading";
 import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { ComputerState, Routine, ShellRecord, WorkspaceNode } from "@/lib/types";
-import { describeRoutineSchedule, formatRoutineTime } from "@/lib/routine-schedule";
+import { formatRoutineTime } from "@/lib/routine-schedule";
+import { useRoutineLabels } from "@/components/routine-labels";
 
 type Tab = "screen" | "files" | "terminal" | "log";
 
@@ -64,6 +66,7 @@ export function ComputerPanel({
   onRefresh: (capture?: boolean, includeFiles?: boolean) => Promise<void>;
   onOpenRoutines?: (id?: string) => void;
 }) {
+  const t = useExtracted();
   const [tab, setTab] = useState<Tab>("screen");
   const [takeover, setTakeover] = useState(false);
   const takeoverActive = takeover && computer.status === "takeover";
@@ -109,7 +112,7 @@ export function ComputerPanel({
             response,
             elapsedMs: Math.round(performance.now() - startedAt),
           });
-          throw new Error("The computer did not accept the input");
+          throw new Error(t("The computer did not accept the input"));
         }
         debugComputer("input accepted", {
           ...safeInput,
@@ -121,7 +124,7 @@ export function ComputerPanel({
       inputQueue.current = run.catch(() => undefined);
       return run;
     },
-    [jobId, onRefresh],
+    [jobId, onRefresh, t],
   );
 
   async function clickScreen(e: React.MouseEvent<HTMLElement>) {
@@ -208,7 +211,7 @@ export function ComputerPanel({
       if (!res.ok) {
         setTakeover(!next);
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || "The computer is currently owned by another task");
+        throw new Error(json?.error || t("The computer is currently owned by another task"));
       }
       await onRefresh(next, false);
     } finally {
@@ -276,7 +279,7 @@ export function ComputerPanel({
           });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || "Download failed");
+        throw new Error(json?.error || t("Download failed"));
       }
       await saveBrowserDownload(res, onlyFile ? downloadLabel(paths[0]!) : "workspace.zip");
     } catch (error) {
@@ -299,7 +302,7 @@ export function ComputerPanel({
       });
       if (!res.ok) {
         const json = await res.json().catch(() => null);
-        throw new Error(json?.error || "Delete failed");
+        throw new Error(json?.error || t("Delete failed"));
       }
       if (
         fileView &&
@@ -338,12 +341,12 @@ export function ComputerPanel({
   const screenshotQuery = `${jobId ? `&jobId=${encodeURIComponent(jobId)}` : ""}`;
   const statusLabel =
     computer.status === "working"
-      ? computer.workingLabel || "Working"
+      ? computer.workingLabel || t("Working")
       : computer.status === "takeover"
-        ? "Your help is needed"
+        ? t("Your help is needed")
         : computer.status === "error"
-          ? "Error"
-          : "Idle";
+          ? t("Error")
+          : t("Idle");
   const statusVariant =
     computer.status === "working"
       ? "warning"
@@ -377,10 +380,10 @@ export function ComputerPanel({
   }, [visibleTab, onRefresh]);
 
   return (
-    <aside aria-label="Computer and routines" className="flex h-full w-[304px] max-w-[calc(100vw-2.5rem)] shrink-0 flex-col border-l border-foreground/10 bg-surface-8 text-foreground 2xl:w-[320px]">
+    <aside aria-label={t("Computer and routines")} className="flex h-full w-[304px] max-w-[calc(100vw-2.5rem)] shrink-0 flex-col border-l border-foreground/10 bg-surface-8 text-foreground 2xl:w-[320px]">
       <header className="flex h-[54px] shrink-0 items-center justify-between border-b border-foreground/10 px-4">
         <div className="min-w-0">
-          <span className="text-sm font-semibold text-foreground">Computer</span>
+          <span className="text-sm font-semibold text-foreground">{t("Computer")}</span>
         </div>
         <Badge variant={statusVariant} appearance="dot">
           {statusLabel}
@@ -391,16 +394,16 @@ export function ComputerPanel({
       <div className="px-3 py-2">
         <Tabs value={visibleTab} onValueChange={(value) => setTab(value as Tab)}>
           <TabsList className="w-full">
-            <TabsTrigger value="screen">Screen</TabsTrigger>
+            <TabsTrigger value="screen">{t("Screen")}</TabsTrigger>
             <TabsTrigger value="files">
               {tabBusy === "files" ? <Spinner size="sm" className="size-3.5" /> : null}
-              Files
+              {t("Files")}
             </TabsTrigger>
             <TabsTrigger value="terminal">
               {tabBusy === "terminal" ? <Spinner size="sm" className="size-3.5" /> : null}
-              Terminal
+              {t("Terminal")}
             </TabsTrigger>
-            <TabsTrigger value="log">Log</TabsTrigger>
+            <TabsTrigger value="log">{t("Log")}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
@@ -418,18 +421,18 @@ export function ComputerPanel({
           <div className="space-y-3 p-4">
             <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-lg border border-foreground/5 bg-surface-25 px-5 text-center">
               {computer.status === "working" ? <Spinner size="sm" /> : <TerminalIcon size={24} className="text-neutral-101" />}
-              <span className="text-xs text-neutral-160">{computer.status === "working" ? computer.workingLabel || "Working on your task" : "No browser open"}</span>
+              <span className="text-xs text-neutral-160">{computer.status === "working" ? computer.workingLabel || t("Working on your task") : t("No browser open")}</span>
             </div>
-            <p className="text-center text-xs text-muted-foreground">{botName ? `${botName}'s screen` : "Computer screen"}</p>
-            <p className="px-2 text-center text-xs leading-relaxed text-neutral-111">The screen appears here when your teammate opens the browser.</p>
-            {computer.lastError ? <Alert variant="destructive"><AlertTitle>Computer error</AlertTitle><AlertDescription>{computer.lastError}</AlertDescription></Alert> : null}
+            <p className="text-center text-xs text-muted-foreground">{botName ? t("{name}'s screen", { name: botName }) : t("Computer screen")}</p>
+            <p className="px-2 text-center text-xs leading-relaxed text-neutral-111">{t("The screen appears here when your teammate opens the browser.")}</p>
+            {computer.lastError ? <Alert variant="destructive"><AlertTitle>{t("Computer error")}</AlertTitle><AlertDescription>{computer.lastError}</AlertDescription></Alert> : null}
           </div>
         ) : null}
         {visibleTab === "screen" && showScreen ? (
           <div className="space-y-4 p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex flex-col">
-                <span className="text-sm font-semibold text-foreground">Screen</span>
+                <span className="text-sm font-semibold text-foreground">{t("Screen")}</span>
                 <span className="min-w-0 truncate font-mono text-xs text-muted-foreground">
                   {computer.url || "about:blank"}
                 </span>
@@ -442,7 +445,7 @@ export function ComputerPanel({
                     variant="outline"
                     onClick={() => setScreenExpanded(true)}
                   >
-                    Expand
+                    {t("Expand")}
                   </Button>
                 ) : (
                   <Button
@@ -452,7 +455,7 @@ export function ComputerPanel({
                     loading={screenBusy === "takeover"}
                     onClick={() => void toggleTakeover()}
                   >
-                    {takeoverActive ? "In control" : "Take control"}
+                    {takeoverActive ? t("In control") : t("Take control")}
                   </Button>
                 )}
                 <Button
@@ -462,7 +465,7 @@ export function ComputerPanel({
                   loading={screenBusy === "close"}
                   onClick={() => void closeBrowser()}
                 >
-                  Close
+                  {t("Close")}
                 </Button>
               </div>
             </div>
@@ -482,7 +485,7 @@ export function ComputerPanel({
                   }`}
                   onClick={clickScreen}
                   onWheel={handleScreenWheel}
-                  aria-label={takeoverActive ? "Control computer screen" : "Enlarge computer screen"}
+                  aria-label={takeoverActive ? t("Control computer screen") : t("Enlarge computer screen")}
                   data-computer-screen="true"
                 >
                   {!shotReady ? (
@@ -513,7 +516,7 @@ export function ComputerPanel({
                   shape="square"
                   size="xs"
                   icon={ArrowsOutIcon}
-                  aria-label="Enlarge computer screen"
+                  aria-label={t("Enlarge computer screen")}
                   onClick={() => setScreenExpanded(true)}
                   className="absolute top-2 right-2 bg-surface-raised/90 text-foreground shadow-lg"
                 />
@@ -521,19 +524,19 @@ export function ComputerPanel({
             )}
             <div className="flex flex-col">
               <span className="text-sm font-semibold text-foreground">
-                {botName ? `${botName}'s screen` : "Computer screen"}
+                {botName ? t("{name}'s screen", { name: botName }) : t("Computer screen")}
               </span>
               <span className="text-xs tracking-tighter text-muted-foreground">
                 {computer.steelDebugUrl
-                  ? "Live browser. Click, type, and scroll directly in the remote session."
+                  ? t("Live browser. Click, type, and scroll directly in the remote session.")
                   : takeoverActive
-                    ? "Click the screen, type, paste, or scroll to control the browser directly."
-                    : "The bot's clicks and input appear here. Click the preview to enlarge it."}
+                    ? t("Click the screen, type, paste, or scroll to control the browser directly.")
+                    : t("The bot's clicks and input appear here. Click the preview to enlarge it.")}
               </span>
             </div>
             {computer.lastError ? (
               <Alert variant="destructive">
-                <AlertTitle>Computer error</AlertTitle>
+                <AlertTitle>{t("Computer error")}</AlertTitle>
                 <AlertDescription>{computer.lastError}</AlertDescription>
               </Alert>
             ) : null}
@@ -543,9 +546,9 @@ export function ComputerPanel({
         {visibleTab === "files" ? (
           <div className="p-3">
             {tabBusy === "files" && !fileView ? (
-              <LoadingFallback label="Loading files…" />
+              <LoadingFallback label={t("Loading files…")} />
             ) : openingPath && !fileView ? (
-              <LoadingFallback label="Opening file…" />
+              <LoadingFallback label={t("Opening file…")} />
             ) : fileView ? (
               <div>
                 <div className="flex items-center gap-1">
@@ -556,7 +559,7 @@ export function ComputerPanel({
                     icon={ArrowLeftIcon}
                     onClick={() => setFileView(null)}
                   >
-                    Back
+                    {t("Back")}
                   </Button>
                   <Button
                     type="button"
@@ -566,7 +569,7 @@ export function ComputerPanel({
                     loading={filesBusy}
                     onClick={() => void downloadWorkspace([fileView.path])}
                   >
-                    Download
+                    {t("Download")}
                   </Button>
                   <Button
                     type="button"
@@ -576,7 +579,7 @@ export function ComputerPanel({
                     disabled={filesBusy}
                     onClick={() => setDeleteConfirm({ paths: [fileView.path] })}
                   >
-                    Delete
+                    {t("Delete")}
                   </Button>
                 </div>
                 <div className="mt-2">
@@ -593,7 +596,7 @@ export function ComputerPanel({
                     checked={allSelected ? true : someSelected ? "indeterminate" : false}
                     onCheckedChange={(value) => toggleAll(value === true)}
                     disabled={files.length === 0 || filesBusy}
-                    aria-label="Select all files"
+                    aria-label={t("Select all files")}
                   />
                   <Button
                     type="button"
@@ -604,7 +607,7 @@ export function ComputerPanel({
                     disabled={files.length === 0}
                     onClick={() => void downloadWorkspace(selectedList)}
                   >
-                    {selectedList.length > 0 ? "Download selected" : "Download all"}
+                    {selectedList.length > 0 ? t("Download selected") : t("Download all")}
                   </Button>
                   <Button
                     type="button"
@@ -618,14 +621,14 @@ export function ComputerPanel({
                       )
                     }
                   >
-                    {selectedList.length > 0 ? "Delete selected" : "Delete all"}
+                    {selectedList.length > 0 ? t("Delete selected") : t("Delete all")}
                   </Button>
                 </div>
                 {files.length === 0 ? (
                   <Empty
                     size="sm"
                     icon={<FolderIcon size={32} className="text-neutral-109" />}
-                    title="No files yet"
+                    title={t("No files yet")}
                   />
                 ) : (
                   <FileTree
@@ -647,12 +650,12 @@ export function ComputerPanel({
         {visibleTab === "terminal" ? (
           <div className="space-y-3 p-3">
             {tabBusy === "terminal" ? (
-              <LoadingFallback label="Loading terminal…" />
+              <LoadingFallback label={t("Loading terminal…")} />
             ) : shells.length === 0 ? (
               <Empty
                 size="sm"
                 icon={<TerminalIcon size={32} className="text-neutral-109" />}
-                title="No commands yet"
+                title={t("No commands yet")}
               />
             ) : (
               shells.map((item) => (
@@ -677,7 +680,7 @@ export function ComputerPanel({
         {visibleTab === "log" ? (
           <div className="space-y-2 p-3">
             {computer.activity.length === 0 ? (
-              <Empty size="sm" title="No activity yet" />
+              <Empty size="sm" title={t("No activity yet")} />
             ) : (
               computer.activity.map((item, index) => (
                 <div
@@ -711,17 +714,15 @@ export function ComputerPanel({
         }}
       >
         <DialogContent className="p-6">
-          <DialogTitle className="text-lg font-semibold">Delete files</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">{t("Delete files")}</DialogTitle>
           <p className="mt-2 text-sm text-muted-foreground">
             {deleteConfirm?.all
-              ? "Delete every file in this workspace? This cannot be undone."
-              : `Delete ${deleteConfirm?.paths.length ?? 0} item${
-                  (deleteConfirm?.paths.length ?? 0) === 1 ? "" : "s"
-                }? This cannot be undone.`}
+              ? t("Delete every file in this workspace? This cannot be undone.")
+              : t("Delete {count, plural, one {# item} other {# items}}? This cannot be undone.", { count: deleteConfirm?.paths.length ?? 0 })}
           </p>
           <div className="mt-6 flex justify-end gap-2">
             <DialogClose asChild>
-              <Button variant="secondary">Cancel</Button>
+              <Button variant="secondary">{t("Cancel")}</Button>
             </DialogClose>
             <Button
               type="button"
@@ -729,7 +730,7 @@ export function ComputerPanel({
               loading={filesBusy}
               onClick={() => void confirmDelete()}
             >
-              Delete
+              {t("Delete")}
             </Button>
           </div>
         </DialogContent>
@@ -741,7 +742,7 @@ export function ComputerPanel({
           className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
           role="dialog"
           aria-modal="true"
-          aria-label="Enlarged computer screen"
+          aria-label={t("Enlarged computer screen")}
           onClick={() => setScreenExpanded(false)}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -763,14 +764,14 @@ export function ComputerPanel({
               variant="secondary"
               shape="square"
               icon={XIcon}
-              aria-label="Close enlarged screen"
+              aria-label={t("Close enlarged screen")}
               onClick={() => setScreenExpanded(false)}
               className="absolute top-3 right-3 z-10 bg-surface-raised text-foreground shadow-lg"
             />
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/api/computer/screenshot?t=${encodeURIComponent(stamp)}${screenshotQuery}`}
-              alt="Enlarged Deni Run screen"
+              alt={t("Enlarged Deni Run screen")}
               onLoad={handleScreenshotLoad}
               onError={handleScreenshotError}
               onClick={takeoverActive ? clickScreen : undefined}
@@ -797,10 +798,11 @@ function LiveBrowserView({
   onExpand: () => void;
   onClose: () => void;
 }) {
+  const t = useExtracted();
   const frame = (
     <iframe
       src={url}
-      title="Live remote browser"
+      title={t("Live remote browser")}
       allow="clipboard-read; clipboard-write; fullscreen"
       allowFullScreen
       onLoad={() => debugComputer("live browser loaded")}
@@ -817,7 +819,7 @@ function LiveBrowserView({
         animate={{ opacity: 1 }}
         transition={{ duration: 0.2, ease: easeOut }}
         aria-modal="true"
-        aria-label="Expanded live remote browser"
+        aria-label={t("Expanded live remote browser")}
         onClick={onClose}
       >
         <div
@@ -829,7 +831,7 @@ function LiveBrowserView({
             variant="secondary"
             shape="square"
             icon={XIcon}
-            aria-label="Close enlarged browser"
+            aria-label={t("Close enlarged browser")}
             onClick={onClose}
             className="absolute top-3 right-3 z-10 bg-surface-raised text-foreground shadow-lg"
           />
@@ -848,7 +850,7 @@ function LiveBrowserView({
         shape="square"
         size="xs"
         icon={ArrowsOutIcon}
-        aria-label="Enlarge live browser"
+        aria-label={t("Enlarge live browser")}
         onClick={onExpand}
         className="absolute top-2 right-2 z-10 bg-surface-raised/90 text-foreground shadow-lg"
       />
@@ -857,16 +859,19 @@ function LiveBrowserView({
 }
 
 function RoutineList({ routines, onOpen }: { routines: Routine[]; onOpen?: (id?: string) => void }) {
+  const t = useExtracted();
+  const locale = useLocale();
+  const { describe } = useRoutineLabels();
   return (
-    <section aria-label="Teammate routines" className="space-y-3">
+    <section aria-label={t("Teammate routines")} className="space-y-3">
       <div className="mb-2 flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold text-foreground">Routines</span>
-        {onOpen ? <Button type="button" variant="ghost" size="xs" onClick={() => onOpen()}>Manage</Button> : null}
+        <span className="text-sm font-semibold text-foreground">{t("Routines")}</span>
+        {onOpen ? <Button type="button" variant="ghost" size="xs" onClick={() => onOpen()}>{t("Manage")}</Button> : null}
       </div>
       {routines.length === 0 ? (
         <div className="flex flex-col items-center gap-3 py-8 text-center">
-          <p className="max-w-60 text-xs leading-relaxed text-muted-foreground">Routines are recurring tasks this teammate runs on a schedule.</p>
-          {onOpen ? <Button type="button" variant="outline" size="sm" onClick={() => onOpen("new")}>Create routine</Button> : null}
+          <p className="max-w-60 text-xs leading-relaxed text-muted-foreground">{t("Routines are recurring tasks this teammate runs on a schedule.")}</p>
+          {onOpen ? <Button type="button" variant="outline" size="sm" onClick={() => onOpen("new")}>{t("Create routine")}</Button> : null}
         </div>
       ) : (
         <div className="space-y-2">
@@ -874,7 +879,7 @@ function RoutineList({ routines, onOpen }: { routines: Routine[]; onOpen?: (id?:
             <button
               key={routine.id}
               type="button"
-              aria-label={`Edit ${routine.name}`}
+              aria-label={t("Edit {name}", { name: routine.name })}
               onClick={() => onOpen?.(routine.id)}
               disabled={!onOpen}
               className="block w-full rounded-lg bg-surface-raised px-2.5 py-2 text-left ring-1 ring-foreground/10 hover:bg-surface-37 focus-visible:outline-2 focus-visible:outline-foreground/40"
@@ -884,14 +889,14 @@ function RoutineList({ routines, onOpen }: { routines: Routine[]; onOpen?: (id?:
                   {routine.name}
                 </span>
                 <span className={routine.enabled ? "text-success-soft" : "text-muted-foreground"}>
-                  {routine.enabled ? "Active" : "Paused"}
+                  {routine.enabled ? t("Active") : t("Paused")}
                 </span>
               </div>
-              <span className="mt-1 block text-xs text-muted-foreground">{describeRoutineSchedule(routine.cron)}</span>
-              <span className="mt-1 block text-[11px] text-neutral-119">{routine.timezone} · {routine.enabled ? `Next ${formatRoutineTime(routine.nextRunAt, routine.timezone)}` : "Off"}</span>
+              <span className="mt-1 block text-xs text-muted-foreground">{describe(routine.cron)}</span>
+              <span className="mt-1 block text-[11px] text-neutral-119">{routine.timezone} · {routine.enabled ? t("Next {time}", { time: formatRoutineTime(routine.nextRunAt, routine.timezone, locale) }) : t("Off")}</span>
             </button>
           ))}
-          {onOpen ? <Button type="button" variant="ghost" size="xs" onClick={() => onOpen("new")}>+ New routine</Button> : null}
+          {onOpen ? <Button type="button" variant="ghost" size="xs" onClick={() => onOpen("new")}>{t("+ New routine")}</Button> : null}
         </div>
       )}
     </section>
@@ -899,8 +904,9 @@ function RoutineList({ routines, onOpen }: { routines: Routine[]; onOpen?: (id?:
 }
 
 function AnimatedDots() {
+  const t = useExtracted();
   return (
-    <span aria-label="in progress" className="animated-dots ml-1" role="img">
+    <span aria-label={t("in progress")} className="animated-dots ml-1" role="img">
       <span>.</span>
       <span>.</span>
       <span>.</span>
@@ -929,6 +935,7 @@ function FileTree({
   onDelete: (path: string) => void;
   depth?: number;
 }) {
+  const t = useExtracted();
   return (
     <ul className="space-y-0.5">
       {nodes.map((node) => (
@@ -940,7 +947,7 @@ function FileTree({
             <Checkbox
               checked={selected.has(node.path)}
               onCheckedChange={(value) => onToggle(node.path, value === true)}
-              aria-label={`Select ${node.name}`}
+              aria-label={t("Select {name}", { name: node.name })}
             />
             {node.type === "dir" ? (
               <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">{node.name}/</span>
@@ -961,7 +968,7 @@ function FileTree({
               size="xs"
               shape="square"
               icon={DownloadSimpleIcon}
-              aria-label={`Download ${node.name}`}
+              aria-label={t("Download {name}", { name: node.name })}
               disabled={busy}
               className="opacity-0 group-hover:opacity-100"
               onClick={() => onDownload(node.path)}
@@ -972,7 +979,7 @@ function FileTree({
               size="xs"
               shape="square"
               icon={TrashIcon}
-              aria-label={`Delete ${node.name}`}
+              aria-label={t("Delete {name}", { name: node.name })}
               disabled={busy}
               className="opacity-0 group-hover:opacity-100"
               onClick={() => onDelete(node.path)}

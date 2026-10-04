@@ -3,6 +3,7 @@ import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { nowIso } from "@/lib/ids";
 import { mutateStore } from "@/lib/store";
 import { validAvatarIcon } from "@/lib/avatar";
+import { getExtracted } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const { id } = await params;
@@ -19,7 +21,7 @@ export async function PATCH(
     instructions?: string;
     icon?: string | null;
   };
-  if (body.icon !== undefined && !validAvatarIcon(body.icon)) return NextResponse.json({ error: "Invalid icon" }, { status: 400 });
+  if (body.icon !== undefined && !validAvatarIcon(body.icon)) return NextResponse.json({ error: t("Invalid icon") }, { status: 400 });
   const bot = await mutateStore(userId, (store) => {
     const item = store.bots.find((entry) => entry.id === id);
     if (!item) return null;
@@ -34,7 +36,7 @@ export async function PATCH(
     if (dm) dm.title = item.name;
     return item;
   });
-  if (!bot) return NextResponse.json({ error: "not found" }, { status: 404 });
+  if (!bot) return NextResponse.json({ error: t("Teammate not found") }, { status: 404 });
   return NextResponse.json({ bot });
 }
 
@@ -42,11 +44,12 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const { id } = await params;
   if (["chief", "research", "ops"].includes(id)) {
-    return NextResponse.json({ error: "default bots stay" }, { status: 400 });
+    return NextResponse.json({ error: t("Default teammates cannot be deleted") }, { status: 400 });
   }
   await mutateStore(userId, (store) => {
     store.bots = store.bots.filter((item) => item.id !== id);

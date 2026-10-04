@@ -12,6 +12,8 @@ import {
 } from "@/lib/workspace";
 import { createZip } from "@/lib/zip";
 import { attachmentDisposition } from "@/lib/download";
+import { getExtracted } from "next-intl/server";
+import { localizeError } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
 
@@ -44,44 +46,46 @@ export async function GET(req: Request) {
     return NextResponse.json({ tree: await listWorkspace(userId, rel, 3) });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: await localizeError(error) },
       { status: 400 },
     );
   }
 }
 
 export async function PUT(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const body = (await req.json()) as { path?: string; content?: string };
   if (!body.path || body.content == null) {
-    return NextResponse.json({ error: "path and content required" }, { status: 400 });
+    return NextResponse.json({ error: t("Path and content are required") }, { status: 400 });
   }
   try {
     return NextResponse.json(await writeWorkspaceFile(userId, body.path, body.content));
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: await localizeError(error) },
       { status: 400 },
     );
   }
 }
 
 export async function POST(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const body = (await req.json().catch(() => ({}))) as { action?: string; paths?: string[] };
   if (body.action !== "zip") {
-    return NextResponse.json({ error: "unsupported action" }, { status: 400 });
+    return NextResponse.json({ error: t("Unsupported action") }, { status: 400 });
   }
   try {
     const listed = await collectWorkspaceFiles(userId, body.paths ?? []);
     if (listed.length === 0) {
-      return NextResponse.json({ error: "No files to download" }, { status: 400 });
+      return NextResponse.json({ error: t("No files to download") }, { status: 400 });
     }
     if (listed.length > MAX_ZIP_FILES) {
       return NextResponse.json(
-        { error: `Too many files to download (maximum ${MAX_ZIP_FILES})` },
+        { error: t("Too many files to download (maximum {max})", { max: String(MAX_ZIP_FILES) }) },
         { status: 400 },
       );
     }
@@ -89,7 +93,7 @@ export async function POST(req: Request) {
     if (listedBytes > MAX_ZIP_UNCOMPRESSED_BYTES) {
       return NextResponse.json(
         {
-          error: `Files are too large to download together (maximum ${MAX_ZIP_UNCOMPRESSED_BYTES} bytes)`,
+          error: t("Files are too large to download together (maximum {max} bytes)", { max: String(MAX_ZIP_UNCOMPRESSED_BYTES) }),
         },
         { status: 400 },
       );
@@ -101,7 +105,7 @@ export async function POST(req: Request) {
       totalBytes += file.data.byteLength;
       if (totalBytes > MAX_ZIP_UNCOMPRESSED_BYTES) {
         throw new Error(
-          `Files are too large to download together (maximum ${MAX_ZIP_UNCOMPRESSED_BYTES} bytes)`,
+          t("Files are too large to download together (maximum {max} bytes)", { max: String(MAX_ZIP_UNCOMPRESSED_BYTES) }),
         );
       }
       entries.push({ name: item.path, data: file.data });
@@ -117,13 +121,14 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: await localizeError(error) },
       { status: 400 },
     );
   }
 }
 
 export async function DELETE(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const url = new URL(req.url);
@@ -133,10 +138,10 @@ export async function DELETE(req: Request) {
     if (body.all) return NextResponse.json(await deleteWorkspaceContents(userId));
     if (body.paths?.length) return NextResponse.json(await deleteWorkspacePaths(userId, body.paths));
     if (rel) return NextResponse.json(await deleteWorkspacePath(userId, rel));
-    return NextResponse.json({ error: "path required" }, { status: 400 });
+    return NextResponse.json({ error: t("Path is required") }, { status: 400 });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: await localizeError(error) },
       { status: 400 },
     );
   }

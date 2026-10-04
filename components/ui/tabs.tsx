@@ -34,7 +34,7 @@ function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitiv
       data-slot="tabs-trigger"
       className={cn(
         "inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1 text-sm font-medium text-muted-foreground transition-colors outline-none",
-        "data-[state=active]:bg-foreground/10 data-[state=active]:text-foreground",
+        "data-[state=active]:bg-primary/15 data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-2px_0_var(--primary)] focus-visible:ring-2 focus-visible:ring-primary/50",
         "disabled:pointer-events-none disabled:opacity-50",
         className,
       )}

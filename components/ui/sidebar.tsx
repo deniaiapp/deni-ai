@@ -1,6 +1,7 @@
 "use client";
 
 import { Loader2Icon, PanelLeftIcon, XIcon } from "lucide-react";
+import { useExtracted } from "next-intl";
 import type { ComponentProps } from "react";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
@@ -42,6 +43,7 @@ function SidebarProvider({
 }
 
 function Sidebar({ className, children, ...props }: ComponentProps<"aside">) {
+  const t = useExtracted();
   const { open, setOpen } = useSidebar();
 
   return (
@@ -49,7 +51,7 @@ function Sidebar({ className, children, ...props }: ComponentProps<"aside">) {
       {open ? (
         <button
           type="button"
-          aria-label="Close sidebar"
+          aria-label={t("Close sidebar")}
           onClick={() => setOpen(false)}
           className="fixed inset-0 z-30 bg-black/60 md:hidden"
         />
@@ -72,12 +74,13 @@ function Sidebar({ className, children, ...props }: ComponentProps<"aside">) {
 }
 
 function SidebarTrigger({ className, ...props }: ComponentProps<"button">) {
+  const t = useExtracted();
   const { toggle } = useSidebar();
 
   return (
     <button
       type="button"
-      aria-label="Toggle sidebar"
+      aria-label={t("Toggle sidebar")}
       onClick={toggle}
       className={cn(
         "inline-flex size-8 items-center justify-center rounded-lg text-secondary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground",
@@ -91,12 +94,13 @@ function SidebarTrigger({ className, ...props }: ComponentProps<"button">) {
 }
 
 function SidebarClose({ className, ...props }: ComponentProps<"button">) {
+  const t = useExtracted();
   const { setOpen } = useSidebar();
 
   return (
     <button
       type="button"
-      aria-label="Close sidebar"
+      aria-label={t("Close sidebar")}
       onClick={() => setOpen(false)}
       className={cn(
         "inline-flex size-8 items-center justify-center rounded-lg text-secondary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground",
@@ -184,7 +188,7 @@ function SidebarMenuButton({
       data-slot="sidebar-menu-button"
       disabled={disabled || loading}
       className={cn(
-        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-secondary-foreground transition-colors hover:bg-foreground/5 hover:text-foreground disabled:opacity-60",
+        "flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-secondary-foreground transition-colors hover:bg-primary/10 hover:text-foreground focus-visible:outline-2 focus-visible:outline-primary/60 disabled:opacity-60",
         className,
       )}
       {...props}
@@ -192,7 +196,7 @@ function SidebarMenuButton({
       {loading ? (
         <Loader2Icon className="size-4 shrink-0 animate-spin" />
       ) : Icon ? (
-        <Icon size={16} className="shrink-0" />
+        <Icon size={16} className="shrink-0 text-sidebar-primary" />
       ) : null}
       {children}
     </button>
@@ -204,7 +208,7 @@ function SidebarMenuBadge({ className, ...props }: ComponentProps<"span">) {
     <span
       data-slot="sidebar-menu-badge"
       className={cn(
-        "ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-foreground/10 px-1.5 text-xs text-secondary-foreground",
+        "ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/15 px-1.5 text-xs text-foreground",
         className,
       )}
       {...props}

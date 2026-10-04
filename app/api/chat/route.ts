@@ -35,15 +35,18 @@ import { messagesWithReplyContext, resolveReplyReferences } from "@/lib/message-
 import { releaseBrowserTakeover } from "@/lib/browser-workspaces";
 import { createHash } from "node:crypto";
 import { groupContext } from "@/lib/group-chat";
+import { getExtracted } from "next-intl/server";
+import { localizeUsageLimit } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 800;
 
-function jobConflict(job: { id: string; status: string }) {
-  const message = job.status === "waiting_approval" ? "Please approve or deny the pending action before continuing."
-    : job.status === "waiting_takeover" ? "Finish the step on the computer, then send a new message to continue."
-    : job.status === "uncertain" ? "Review the previous run before retrying it."
-    : "This task is already running or this message has already been submitted.";
+async function jobConflict(job: { id: string; status: string }) {
+  const t = await getExtracted();
+  const message = job.status === "waiting_approval" ? t("Please approve or deny the pending action before continuing.")
+    : job.status === "waiting_takeover" ? t("Finish the step on the computer, then send a new message to continue.")
+    : job.status === "uncertain" ? t("Review the previous run before retrying it.")
+    : t("This task is already running or this message has already been submitted.");
   return new Response(message, { status: 409, headers: { "Content-Type": "text/plain; charset=utf-8", "X-Deni-Job-Id": job.id, "X-Deni-Job-Status": job.status } });
 }
 
@@ -60,6 +63,7 @@ function includesApprovalResponse(incoming: UIMessage[], persisted: UIMessage[])
 }
 
 export async function POST(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const limited = await limitOrResponse(userId, "chat", 40);
@@ -78,25 +82,25 @@ export async function POST(req: Request) {
   const store = await readStore(userId);
   const thread = store.threads.find((item) => item.id === threadId);
   if (!thread) {
-    return new Response("thread not found", { status: 404 });
+    return new Response(t("Conversation not found."), { status: 404 });
   }
 
   const botId = body.botId || thread.botIds[0];
   const bot = store.bots.find((item) => item.id === botId);
   if (!bot || !thread.botIds.includes(bot.id)) {
-    return new Response("bot not found", { status: 404 });
+    return new Response(t("Teammate not found"), { status: 404 });
   }
 
   const apiKey = await getApiKey(userId);
   if (!apiKey) {
-    return new Response("OPENROUTER_API_KEY is missing", { status: 401 });
+    return new Response(t("OPENROUTER_API_KEY is missing"), { status: 401 });
   }
 
   try {
     await assertCanUseTokens(userId);
   } catch (error) {
     if (isUsageLimitError(error)) {
-      return new Response(error.message, { status: 402 });
+      return new Response(await localizeUsageLimit(userId, error), { status: 402 });
     }
     throw error;
   }
@@ -104,7 +108,7 @@ export async function POST(req: Request) {
   let incoming = body.messages ?? [];
   const persisted = await loadMessages(userId, thread.id);
   try { incoming = resolveReplyReferences(incoming, persisted); }
-  catch { return Response.json({ error: "The message you replied to is no longer available." }, { status: 400 }); }
+  catch { return Response.json({ error: t("The message you replied to is no longer available.") }, { status: 400 }); }
   const messages = mergeThreadMessages(persisted, incoming);
   const runMode = parseRunMode(body.runMode ?? store.config.runMode);
   if (body.runMode && runMode !== store.config.runMode) {
@@ -169,7 +173,7 @@ export async function POST(req: Request) {
     } catch (error) {
       await transitionJob(userId, job.id, "running", { status: continuationFrom, payload: job.payload, lockedAt: null, heartbeatAt: null });
       reportError(error, "resume chat");
-      return new Response("Could not resume the task. Please send your message again.", { status: 503 });
+      return new Response(t("Could not resume the task. Please send your message again."), { status: 503 });
     }
   }
   job = claimed.job;

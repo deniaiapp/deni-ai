@@ -20,6 +20,7 @@ import {
   Loader2,
   Plug,
 } from "lucide-react";
+import { useExtracted } from "next-intl";
 import { useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { easeOut } from "@/lib/motion";
@@ -100,6 +101,7 @@ export function Sidebar({
   jobStateByThread?: Record<string, "running" | "waiting" | "attention">;
   notifications?: ReactNode;
 }) {
+  const t = useExtracted();
   const dms = threads.filter((item) => item.kind === "dm");
   const groups = threads.filter((item) => item.kind === "group");
   const [query, setQuery] = useState("");
@@ -115,9 +117,9 @@ export function Sidebar({
   const visibleGroups = groups.filter((thread) => matches(`${thread.title} ${thread.lastPreview}`));
   const groupSections = [...new Set(visibleGroups.filter((thread) => !thread.hidden && thread.section).map((thread) => thread.section!))];
   const groupBuckets = [
-    { label: "Groups", threads: visibleGroups.filter((thread) => !thread.hidden && !thread.section) },
-    ...groupSections.map((section) => ({ label: `${section} · Groups`, threads: visibleGroups.filter((thread) => !thread.hidden && thread.section === section) })),
-    { label: "Hidden groups", threads: visibleGroups.filter((thread) => thread.hidden) },
+    { label: t("Groups"), threads: visibleGroups.filter((thread) => !thread.hidden && !thread.section) },
+    ...groupSections.map((section) => ({ label: t("{section} · Groups", { section }), threads: visibleGroups.filter((thread) => !thread.hidden && thread.section === section) })),
+    { label: t("Hidden groups"), threads: visibleGroups.filter((thread) => thread.hidden) },
   ];
   const hiddenDms = visibleDms.filter((thread) => thread.hidden);
   const shownDms = visibleDms.filter((thread) => !thread.hidden);
@@ -136,7 +138,7 @@ export function Sidebar({
         <div className="min-w-0 flex-1 whitespace-normal">
           <h1 className="text-sm font-semibold text-neutral-189">Deni Run</h1>
         </div>
-        <button type="button" onClick={onNewBot} aria-label="New teammate" title="New teammate" className="flex size-8 items-center justify-center rounded-lg text-neutral-153 hover:bg-foreground/5 hover:text-foreground focus-visible:outline-2 focus-visible:outline-foreground/50">
+        <button type="button" onClick={onNewBot} aria-label={t("New teammate")} title={t("New teammate")} className="flex size-8 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary/60 dark:text-sidebar-primary">
           <PlusIcon size={18} />
         </button>
         <SidebarClose className="md:hidden" />
@@ -144,20 +146,20 @@ export function Sidebar({
 
       <SidebarContent>
         <div className="px-3 pb-1">
-          <label className="flex items-center gap-2 rounded-lg bg-surface-hover px-2.5 py-1.5 text-sm text-neutral-165 ring-1 ring-foreground/5 focus-within:ring-foreground/20">
+          <label className="flex items-center gap-2 rounded-lg bg-surface-hover px-2.5 py-1.5 text-sm text-neutral-165 ring-1 ring-foreground/5 focus-within:ring-primary/50">
             <MagnifyingGlassIcon size={16} aria-hidden="true" />
             <input
               value={query}
               onChange={(event) => setQuery(event.currentTarget.value)}
-              placeholder="Search"
-              aria-label="Search conversations"
+              placeholder={t("Search")}
+              aria-label={t("Search conversations")}
               className="min-w-0 flex-1 bg-transparent text-foreground outline-none placeholder:text-neutral-138"
             />
           </label>
         </div>
         {showTeammatesGroup ? (
           <TeammateGroup
-            label="Teammates"
+            label={t("Teammates")}
             threads={unsectioned}
             bots={bots}
             activeThreadId={activeThreadId}
@@ -185,7 +187,7 @@ export function Sidebar({
         ))}
         {hiddenDms.length > 0 ? (
           <TeammateGroup
-            label="Hidden"
+            label={t("Hidden")}
             threads={hiddenDms}
             bots={bots}
             activeThreadId={activeThreadId}
@@ -200,7 +202,7 @@ export function Sidebar({
         {groupBuckets.filter((bucket) => bucket.threads.length).map((bucket) => <SidebarGroup key={bucket.label}>
           <SidebarGroupLabel>{bucket.label}</SidebarGroupLabel>
           <div className="flex flex-col gap-0.5">{[...bucket.threads].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned))).map((thread) => {
-            const group: Bot = { id: thread.id, name: thread.title, job: "Group", icon: thread.icon || "👥", accent: "#454545", instructions: "", memory: [], createdAt: thread.createdAt, updatedAt: thread.updatedAt };
+            const group: Bot = { id: thread.id, name: thread.title, job: t("Group"), icon: thread.icon || "👥", accent: "#454545", instructions: "", memory: [], createdAt: thread.createdAt, updatedAt: thread.updatedAt };
             return <TeammateRow key={thread.id} thread={thread} bot={group} active={activeThreadId === thread.id} loading={loadingThreadId === thread.id || actionBusyId === thread.id || jobStateByThread?.[thread.id] === "running"} jobState={jobStateByThread?.[thread.id]} onSelect={() => onSelectThread(thread.id)} onAction={(action) => onTeammateAction(thread, group, action)} />;
           })}</div>
         </SidebarGroup>)}
@@ -208,21 +210,21 @@ export function Sidebar({
         <SidebarGroup className="mt-auto pt-6">
           <SidebarMenu>
             <SidebarMenuButton icon={PlusIcon} onClick={onNewBot}>
-              New teammate
+              {t("New teammate")}
             </SidebarMenuButton>
             <SidebarMenuButton icon={UsersThreeIcon} onClick={onNewGroup}>
-              New group
+              {t("New group")}
             </SidebarMenuButton>
             <SidebarMenuButton icon={LightningIcon} onClick={onOpenSkills}>
-              Skills
+              {t("Skills")}
               <SidebarMenuBadge>{skills.length}</SidebarMenuBadge>
             </SidebarMenuButton>
             <SidebarMenuButton icon={ClockIcon} onClick={onOpenRoutines}>
-              Routines
+              {t("Routines")}
               <SidebarMenuBadge>{routines.length}</SidebarMenuBadge>
             </SidebarMenuButton>
             <SidebarMenuButton icon={Plug} onClick={onOpenMcp}>
-              Plugins
+              {t("Plugins")}
             </SidebarMenuButton>
           </SidebarMenu>
         </SidebarGroup>
@@ -263,11 +265,12 @@ function TeammateGroup({
   onSelectThread: (id: string) => void;
   onTeammateAction: (thread: Thread, bot: Bot, action: TeammateMenuAction) => void;
 }) {
+  const t = useExtracted();
   const sorted = [...threads].sort((a, b) => Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)));
 
   return (
     <SidebarGroup>
-      {label !== "Teammates" ? <SidebarGroupLabel className={labelClassName}>{label}</SidebarGroupLabel> : null}
+      {label !== t("Teammates") ? <SidebarGroupLabel className={labelClassName}>{label}</SidebarGroupLabel> : null}
       <div className="flex flex-col gap-0.5">
         {sorted.map((thread) => {
           const bot = bots.find((item) => item.id === thread.botIds[0]);
@@ -307,6 +310,7 @@ function TeammateRow({
   onSelect: () => void;
   onAction: (action: TeammateMenuAction) => void;
 }) {
+  const t = useExtracted();
   return (
     <motion.div
       initial={{ opacity: 0, x: -8 }}
@@ -320,7 +324,7 @@ function TeammateRow({
           onClick={onSelect}
           className={cn(
             "flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-left whitespace-normal",
-            active ? "bg-surface-active" : "hover:bg-foreground/5",
+            active ? "bg-primary/10 ring-1 ring-inset ring-primary/25" : "hover:bg-primary/5",
           )}
         >
           <Avatar name={bot.name} accent={bot.accent} icon={bot.icon} />
@@ -336,48 +340,48 @@ function TeammateRow({
           {loading ? (
             <Loader2 className="mt-1.5 size-3.5 shrink-0 animate-spin text-muted-foreground" />
           ) : jobState === "waiting" ? (
-            <span className="mt-1.5 text-xs text-warning-300" aria-label="Task waiting">⏸</span>
+            <span className="mt-1.5 text-xs text-warning-300" aria-label={t("Task waiting")}>⏸</span>
           ) : jobState === "attention" ? (
-            <span className="mt-1.5 text-xs text-warning-300" aria-label="Task needs attention">⚠</span>
+            <span className="mt-1.5 text-xs text-warning-300" aria-label={t("Task needs attention")}>⚠</span>
           ) : thread.pinned ? (
-            <Pin className="mt-1.5 size-3 shrink-0 text-muted-foreground" aria-label="Pinned" />
+            <Pin className="mt-1.5 size-3 shrink-0 text-muted-foreground" aria-label={t("Pinned")} />
           ) : null}
           {thread.unread ? (
-            <span className="mt-2 size-2 shrink-0 rounded-full bg-info-soft" aria-label="Unread" />
+            <span className="mt-2 size-2 shrink-0 rounded-full bg-primary" aria-label={t("Unread")} />
           ) : null}
         </button>
       </ContextMenuTrigger>
       <ContextMenuContent>
         <ContextMenuItem onSelect={() => onAction("pin")}>
           <Pin />
-          {thread.pinned ? "Unpin" : "Pin"}
+          {thread.pinned ? t("Unpin") : t("Pin")}
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => onAction("new-section")}>
           <FolderInput />
-          Move to new section
+          {t("Move to new section")}
         </ContextMenuItem>
         {thread.section ? (
           <ContextMenuItem onSelect={() => onAction("remove-section")}>
             <FolderMinus />
-            Remove from section
+            {t("Remove from section")}
           </ContextMenuItem>
         ) : null}
         <ContextMenuItem onSelect={() => onAction("unread")}>
           <MessageSquare />
-          {thread.unread ? "Mark as Read" : "Mark as Unread"}
+          {thread.unread ? t("Mark as Read") : t("Mark as Unread")}
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => onAction("edit")}>
           <Pencil />
-          {thread.kind === "group" ? "Edit group" : "Edit profile"}
+          {thread.kind === "group" ? t("Edit group") : t("Edit profile")}
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => onAction("duplicate")}>
           <Copy />
-          Duplicate
+          {t("Duplicate")}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onSelect={() => onAction("hide")}>
           {thread.hidden ? <Eye /> : <EyeOff />}
-          {thread.hidden ? "Show in sidebar" : "Hide from sidebar"}
+          {thread.hidden ? t("Show in sidebar") : t("Hide from sidebar")}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem
@@ -386,7 +390,7 @@ function TeammateRow({
           onSelect={() => onAction("delete")}
         >
           <Trash2 />
-          Delete
+          {t("Delete")}
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

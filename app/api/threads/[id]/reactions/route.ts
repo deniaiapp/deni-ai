@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { loadMessages, mutateStore, readStore } from "@/lib/store";
 import { isMessageReaction, messageBubbleTargets, updateReactions } from "@/lib/message-actions";
+import { getExtracted } from "next-intl/server";
 
 type Context = { params: Promise<{ id: string }> };
 const schema = z.object({
@@ -12,28 +13,30 @@ const schema = z.object({
 });
 
 export async function GET(_request: Request, { params }: Context) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const { id } = await params;
   const thread = (await readStore(userId)).threads.find((item) => item.id === id);
-  if (!thread) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
+  if (!thread) return NextResponse.json({ error: t("Conversation not found.") }, { status: 404 });
   return NextResponse.json({ reactions: thread.reactions ?? {} });
 }
 
 export async function PUT(request: Request, { params }: Context) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const { id } = await params;
   const parsed = schema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid reaction" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: t("Invalid reaction") }, { status: 400 });
   const { messageId, emoji, selected } = parsed.data;
   const store = await readStore(userId);
   if (!store.threads.some((thread) => thread.id === id)) {
-    return NextResponse.json({ error: "Thread not found" }, { status: 404 });
+    return NextResponse.json({ error: t("Conversation not found.") }, { status: 404 });
   }
   const messages = await loadMessages(userId, id);
   if (!messages.some((message, index) => messageBubbleTargets(message, index).some((bubble) => bubble.key === messageId))) {
-    return NextResponse.json({ error: "Message not found" }, { status: 404 });
+    return NextResponse.json({ error: t("Message not found") }, { status: 404 });
   }
   const reactions = await mutateStore(userId, (next) => {
     const thread = next.threads.find((item) => item.id === id);
@@ -46,6 +49,6 @@ export async function PUT(request: Request, { params }: Context) {
     thread.reactions = map;
     return map;
   });
-  if (!reactions) return NextResponse.json({ error: "Thread not found" }, { status: 404 });
+  if (!reactions) return NextResponse.json({ error: t("Conversation not found.") }, { status: 404 });
   return NextResponse.json({ reactions });
 }

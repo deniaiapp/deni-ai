@@ -2,17 +2,19 @@ import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { cancelJob, getJob, listJobEvents, retryJob } from "@/lib/jobs";
 import { runBackgroundJob } from "@/lib/job-runner";
+import { getExtracted } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 type Context = { params: Promise<{ id: string }> };
 
 export async function GET(req: Request, context: Context) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const { id } = await context.params;
   const job = await getJob(userId, id);
-  if (!job) return NextResponse.json({ error: "job not found" }, { status: 404 });
+  if (!job) return NextResponse.json({ error: t("Job not found") }, { status: 404 });
   const after = Number(new URL(req.url).searchParams.get("after") ?? 0);
   return NextResponse.json(
     { job, events: await listJobEvents(userId, id, Number.isFinite(after) ? after : 0) },
@@ -21,20 +23,21 @@ export async function GET(req: Request, context: Context) {
 }
 
 export async function POST(req: Request, context: Context) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const { id } = await context.params;
   const body = (await req.json().catch(() => ({}))) as { action?: string; reviewed?: boolean };
   if (body.action === "cancel") {
     const job = await cancelJob(userId, id);
-    if (!job) return NextResponse.json({ error: "job cannot be cancelled" }, { status: 409 });
+    if (!job) return NextResponse.json({ error: t("This job cannot be cancelled") }, { status: 409 });
     return NextResponse.json({ job });
   }
   if (body.action === "retry") {
     const job = await retryJob(userId, id, { reviewed: body.reviewed === true });
-    if (!job) return NextResponse.json({ error: "job not found" }, { status: 404 });
+    if (!job) return NextResponse.json({ error: t("Job not found") }, { status: 404 });
     if (job.status !== "queued") {
-      return NextResponse.json({ error: "job is not retryable", job }, { status: 409 });
+      return NextResponse.json({ error: t("This job cannot be retried"), job }, { status: 409 });
     }
     void runBackgroundJob(userId, job.id).catch((error) => {
       console.error("[jobs] retry failed", error);
@@ -43,7 +46,7 @@ export async function POST(req: Request, context: Context) {
   }
   if (body.action === "resume") {
     const current = await getJob(userId, id);
-    if (!current) return NextResponse.json({ error: "job not found" }, { status: 404 });
+    if (!current) return NextResponse.json({ error: t("Job not found") }, { status: 404 });
     if (current.status !== "waiting_approval" && current.status !== "waiting_takeover") {
       return NextResponse.json({ job: current }, { status: 409 });
     }
@@ -51,5 +54,5 @@ export async function POST(req: Request, context: Context) {
     // this job. Exposing it as queued here lets the worker replay old input.
     return NextResponse.json({ job: current, resumeVia: "chat" });
   }
-  return NextResponse.json({ error: "unsupported action" }, { status: 400 });
+  return NextResponse.json({ error: t("Unsupported action") }, { status: 400 });
 }

@@ -1,8 +1,10 @@
+import { getExtracted } from "next-intl/server";
 import Link from "next/link";
 import { FadeIn } from "@/components/motion";
 import { supportEmail, supportMailto } from "@/lib/site";
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const t = await getExtracted();
   const email = supportEmail();
   const mail = supportMailto();
   return (
@@ -10,46 +12,39 @@ export default function TermsPage() {
       <FadeIn>
       <article className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-secondary-foreground">
         <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">
-          Back
+          {t("Back")}
         </Link>
-        <h1 className="text-2xl font-semibold text-foreground">Terms of Service</h1>
+        <h1 className="text-2xl font-semibold text-foreground">{t("Terms of Service")}</h1>
         <p>
-          Deni Run is an AI teammate service that can operate a private computer (browser, files,
-          and terminal) on your behalf. By creating an account you agree to these terms.
+          {t("Deni Run is an AI teammate service that can operate a private computer (browser, files, and terminal) on your behalf. By creating an account you agree to these terms.")}
         </p>
         <p>
-          You are responsible for the tasks you assign, including browsing, file changes, and shell
-          commands. Do not use Deni Run to break the law, attack systems, send spam, or process
-          data you are not allowed to handle. Destructive actions may require your approval, but
-          you remain responsible for the outcome.
+          {t("You are responsible for the tasks you assign, including browsing, file changes, and shell commands. Do not use Deni Run to break the law, attack systems, send spam, or process data you are not allowed to handle. Destructive actions may require your approval, but you remain responsible for the outcome.")}
         </p>
         <p>
-          Usage limits apply by plan. Paid subscriptions renew monthly until canceled through the
-          billing portal. Fees are charged by Stripe. We may suspend accounts that abuse
-          infrastructure, exceed fair use, or violate these terms.
+          {t("Usage limits apply by plan. Paid subscriptions renew monthly until canceled through the billing portal. Fees are charged by Stripe. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms.")}
         </p>
         <p>
-          Computer sessions, files, and memory stay scoped to your account. You can export or
-          delete that data from{" "}
-          <Link href="/account" className="text-foreground hover:underline">
-            Account
-          </Link>
-          . Deleting your account also removes the login stored for this service.
+          {t.rich("Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service.", {
+            link: (chunks) => (
+              <Link href="/account" className="text-foreground hover:underline">
+                {chunks}
+              </Link>
+            ),
+          })}
         </p>
         <p>
-          The service is provided as-is. We do not warrant uninterrupted availability. These terms
-          may be updated as the product changes.
+          {t("The service is provided as-is. We do not warrant uninterrupted availability. These terms may be updated as the product changes.")}
         </p>
         <p>
-          Contact:{" "}
+          {t("Contact:")}{" "}
           {mail ? (
             <a href={mail} className="text-foreground hover:underline">
               {email}
             </a>
           ) : (
-            "the operator of this deployment"
+            t("the operator of this deployment")
           )}
-          .
         </p>
       </article>
       </FadeIn>

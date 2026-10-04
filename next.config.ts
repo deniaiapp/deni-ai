@@ -1,4 +1,18 @@
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
+
+const withNextIntl = createNextIntlPlugin({
+  experimental: {
+    srcPath: ["./app", "./components", "./lib"],
+    extract: {},
+    messages: {
+      path: "./messages",
+      format: "po",
+      locales: ["en", "ja"],
+      sourceLocale: "en",
+    },
+  },
+});
 
 const playwrightTrace = [
   "./node_modules/playwright/**/*",
@@ -23,4 +37,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withNextIntl(nextConfig);

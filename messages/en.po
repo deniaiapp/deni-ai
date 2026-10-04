@@ -1,0 +1,3416 @@
+msgid ""
+msgstr ""
+"Language: en\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"X-Generator: @eloqnt/format-po\n"
+"X-Message-Key: msgctxt\n"
+
+#: app/api/account/route.ts
+msgctxt "5CloRe"
+msgid "Could not finish deleting your account. Please try again."
+msgstr "Could not finish deleting your account. Please try again."
+
+#: app/api/artifacts/[id]/route.ts
+msgctxt "crm7iz"
+msgid "Artifact not found"
+msgstr "Artifact not found"
+
+#: app/api/artifacts/route.ts
+msgctxt "H6cAuM"
+msgid "threadId, path, and title are required"
+msgstr "threadId, path, and title are required"
+
+#: app/api/billing/checkout/route.ts
+#: app/api/billing/portal/route.ts
+#: app/api/billing/sync/route.ts
+msgctxt "7o8Vnj"
+msgid "Billing is not configured yet"
+msgstr "Billing is not configured yet"
+
+#: app/api/billing/portal/route.ts
+msgctxt "Rqx0bS"
+msgid "No billing account yet"
+msgstr "No billing account yet"
+
+#: app/api/bots/[id]/route.ts
+#: app/api/bots/route.ts
+msgctxt "YeQIlr"
+msgid "Invalid icon"
+msgstr "Invalid icon"
+
+#: app/api/bots/[id]/route.ts
+#: app/api/chat/route.ts
+msgctxt "7BBlLa"
+msgid "Teammate not found"
+msgstr "Teammate not found"
+
+#: app/api/bots/[id]/route.ts
+msgctxt "8xZJax"
+msgid "Default teammates cannot be deleted"
+msgstr "Default teammates cannot be deleted"
+
+#: app/api/bots/route.ts
+#: app/api/routines/route.ts
+msgctxt "_4pQDl"
+msgid "Name is required."
+msgstr "Name is required."
+
+#: app/api/chat/route.ts
+msgctxt "1qOPhr"
+msgid "Please approve or deny the pending action before continuing."
+msgstr "Please approve or deny the pending action before continuing."
+
+#: app/api/chat/route.ts
+msgctxt "LlIzf6"
+msgid "Finish the step on the computer, then send a new message to continue."
+msgstr "Finish the step on the computer, then send a new message to continue."
+
+#: app/api/chat/route.ts
+msgctxt "c65x3L"
+msgid "Review the previous run before retrying it."
+msgstr "Review the previous run before retrying it."
+
+#: app/api/chat/route.ts
+msgctxt "BCRyYP"
+msgid "This task is already running or this message has already been submitted."
+msgstr "This task is already running or this message has already been submitted."
+
+#: app/api/chat/route.ts
+#: app/api/threads/[id]/reactions/route.ts
+#: app/api/threads/[id]/route.ts
+msgctxt "eePQiZ"
+msgid "Conversation not found."
+msgstr "Conversation not found."
+
+#: app/api/chat/route.ts
+msgctxt "xFBzaV"
+msgid "OPENROUTER_API_KEY is missing"
+msgstr "OPENROUTER_API_KEY is missing"
+
+#: app/api/chat/route.ts
+msgctxt "s-buJt"
+msgid "The message you replied to is no longer available."
+msgstr "The message you replied to is no longer available."
+
+#: app/api/chat/route.ts
+msgctxt "4LlISz"
+msgid "Could not resume the task. Please send your message again."
+msgstr "Could not resume the task. Please send your message again."
+
+#: app/api/computer/files/route.ts
+msgctxt "9dhBF3"
+msgid "Path and content are required"
+msgstr "Path and content are required"
+
+#: app/api/computer/files/route.ts
+#: app/api/jobs/[id]/route.ts
+msgctxt "hILI0p"
+msgid "Unsupported action"
+msgstr "Unsupported action"
+
+#: app/api/computer/files/route.ts
+msgctxt "Yhh1t3"
+msgid "No files to download"
+msgstr "No files to download"
+
+#: app/api/computer/files/route.ts
+msgctxt "sRcnfR"
+msgid "Too many files to download (maximum {max})"
+msgstr "Too many files to download (maximum {max})"
+
+#: app/api/computer/files/route.ts
+msgctxt "Z3YXLX"
+msgid "Files are too large to download together (maximum {max} bytes)"
+msgstr "Files are too large to download together (maximum {max} bytes)"
+
+#: app/api/computer/files/route.ts
+msgctxt "dMkFLa"
+msgid "Path is required"
+msgstr "Path is required"
+
+#: app/api/computer/input/route.ts
+msgctxt "v9-mKP"
+msgid "Another task currently owns the computer"
+msgstr "Another task currently owns the computer"
+
+#: app/api/computer/input/route.ts
+msgctxt "HP3V8w"
+msgid "Invalid input"
+msgstr "Invalid input"
+
+#: app/api/computer/workspaces/route.ts
+msgctxt "igLZna"
+msgid "Job ID is required"
+msgstr "Job ID is required"
+
+#: app/api/computer/workspaces/route.ts
+msgctxt "IQgAIB"
+msgid "Workspace not found"
+msgstr "Workspace not found"
+
+#: app/api/group-chat/route.ts
+#: app/api/threads/[id]/route.ts
+msgctxt "fSEJPG"
+msgid "Group not found."
+msgstr "Group not found."
+
+#: app/api/group-chat/route.ts
+msgctxt "RDI57C"
+msgid "A message is required"
+msgstr "A message is required"
+
+#: app/api/group-chat/route.ts
+msgctxt "VyIPiQ"
+msgid "Invalid mention"
+msgstr "Invalid mention"
+
+#: app/api/group-chat/route.ts
+msgctxt "YdfYZs"
+msgid "No matching teammate in this group"
+msgstr "No matching teammate in this group"
+
+#: app/api/group-chat/route.ts
+msgctxt "aDCKS8"
+msgid "This approval is no longer pending."
+msgstr "This approval is no longer pending."
+
+#: app/api/group-chat/route.ts
+msgctxt "HNqXjI"
+msgid "Could not respond ({status})."
+msgstr "Could not respond ({status})."
+
+#: app/api/group-chat/route.ts
+msgctxt "6U8g0S"
+msgid "This teammate could not respond."
+msgstr "This teammate could not respond."
+
+#: app/api/handoffs/route.ts
+msgctxt "WMOB8_"
+msgid "Handoff not found"
+msgstr "Handoff not found"
+
+#: app/api/jobs/[id]/route.ts
+msgctxt "s9ZiB3"
+msgid "Job not found"
+msgstr "Job not found"
+
+#: app/api/jobs/[id]/route.ts
+msgctxt "pHxHMB"
+msgid "This job cannot be cancelled"
+msgstr "This job cannot be cancelled"
+
+#: app/api/jobs/[id]/route.ts
+msgctxt "XLzOqk"
+msgid "This job cannot be retried"
+msgstr "This job cannot be retried"
+
+#: app/api/mcp/route.ts
+#: app/api/notifications/route.ts
+msgctxt "9W2lsE"
+msgid "ID is required"
+msgstr "ID is required"
+
+#: app/api/mcp/route.ts
+msgctxt "ijB2JA"
+msgid "Connection not found"
+msgstr "Connection not found"
+
+#: app/api/mcp/route.ts
+msgctxt "aMeYz5"
+msgid "Name and URL are required"
+msgstr "Name and URL are required"
+
+#: app/api/notifications/route.ts
+msgctxt "YNzq0k"
+msgid "Notification not found"
+msgstr "Notification not found"
+
+#: app/api/plugins/route.ts
+msgctxt "CocmeK"
+msgid "Invalid permission"
+msgstr "Invalid permission"
+
+#: app/api/plugins/route.ts
+msgctxt "bsJmcP"
+msgid "Unable to change permission"
+msgstr "Unable to change permission"
+
+#: app/api/routines/route.ts
+msgctxt "LbfSKQ"
+msgid "Instruction is required."
+msgstr "Instruction is required."
+
+#: app/api/routines/route.ts
+msgctxt "w8Ol2I"
+msgid "When to run is required."
+msgstr "When to run is required."
+
+#: app/api/routines/route.ts
+msgctxt "QiZ_c0"
+msgid "Invalid routine."
+msgstr "Invalid routine."
+
+#: app/api/routines/route.ts
+msgctxt "8QFcFD"
+msgid "Routine not found."
+msgstr "Routine not found."
+
+#: app/api/routines/route.ts
+msgctxt "6TYLcK"
+msgid "Teammate or conversation not found."
+msgstr "Teammate or conversation not found."
+
+#: app/api/routines/route.ts
+#: app/components/routines-dialog.tsx
+msgctxt "AUygSW"
+msgid "Could not save routine."
+msgstr "Could not save routine."
+
+#: app/api/routines/route.ts
+#: app/components/routines-dialog.tsx
+msgctxt "KvfPWt"
+msgid "Could not update routine."
+msgstr "Could not update routine."
+
+#: app/api/routines/route.ts
+msgctxt "OgPpjk"
+msgid "Routine ID is required."
+msgstr "Routine ID is required."
+
+#: app/api/setup/route.ts
+msgctxt "4ElhnU"
+msgid "API key is required"
+msgstr "API key is required"
+
+#: app/api/setup/route.ts
+msgctxt "6Cu7HT"
+msgid "Unable to save API key"
+msgstr "Unable to save API key"
+
+#: app/api/skills/route.ts
+msgctxt "rDFJbh"
+msgid "Name and instructions are required."
+msgstr "Name and instructions are required."
+
+#: app/api/skills/route.ts
+msgctxt "lu5_IO"
+msgid "Skill ID is required."
+msgstr "Skill ID is required."
+
+#: app/api/skills/route.ts
+msgctxt "R5O_G-"
+msgid "A skill with this name already exists."
+msgstr "A skill with this name already exists."
+
+#: app/api/skills/route.ts
+msgctxt "KaE7gK"
+msgid "Skill not found."
+msgstr "Skill not found."
+
+#: app/api/skills/route.ts
+#: app/components/skills-dialog.tsx
+msgctxt "c5QIy0"
+msgid "Could not save skill."
+msgstr "Could not save skill."
+
+#: app/api/threads/[id]/reactions/route.ts
+msgctxt "H8UP1V"
+msgid "Invalid reaction"
+msgstr "Invalid reaction"
+
+#: app/api/threads/[id]/reactions/route.ts
+msgctxt "UhsO-i"
+msgid "Message not found"
+msgstr "Message not found"
+
+#: app/api/threads/[id]/route.ts
+msgctxt "rDFiEI"
+msgid "Invalid conversation settings."
+msgstr "Invalid conversation settings."
+
+#: app/api/threads/[id]/route.ts
+msgctxt "pzrKQf"
+msgid "Use the teammate profile to edit a DM."
+msgstr "Use the teammate profile to edit a DM."
+
+#: app/api/threads/[id]/route.ts
+#: app/api/threads/route.ts
+msgctxt "ybsB88"
+msgid "Choose at least two valid teammates."
+msgstr "Choose at least two valid teammates."
+
+#: app/api/threads/[id]/route.ts
+msgctxt "F3zqeC"
+msgid "Could not update conversation."
+msgstr "Could not update conversation."
+
+#: app/api/threads/route.ts
+msgctxt "gGF2lC"
+msgid "Choose at least two teammates and a valid group name/icon."
+msgstr "Choose at least two teammates and a valid group name/icon."
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+#: app/components/landing.tsx
+msgctxt "TwyMau"
+msgid "Account"
+msgstr "Account"
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+msgctxt "N6LOG3"
+msgid "Could not export data"
+msgstr "Could not export data"
+
+#: app/components/account-menu.tsx
+msgctxt "eoHluI"
+msgid "Could not delete account data"
+msgstr "Could not delete account data"
+
+#: app/components/account-menu.tsx
+msgctxt "yuQ593"
+msgid "Account menu"
+msgstr "Account menu"
+
+#: app/components/account-menu.tsx
+msgctxt "fz0x1F"
+msgid "{plan} · {percent}% remaining"
+msgstr "{plan} · {percent}% remaining"
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+msgctxt "77MbQy"
+msgid "Signed in"
+msgstr "Signed in"
+
+#: app/components/account-menu.tsx
+#: app/components/billing-dialog.tsx
+msgctxt "3fnGyl"
+msgid "Plan and usage"
+msgstr "Plan and usage"
+
+#: app/components/account-menu.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "5N04mo"
+msgid "Upgrade to Pro"
+msgstr "Upgrade to Pro"
+
+#: app/components/account-menu.tsx
+msgctxt "GAGFKL"
+msgid "Manage profile"
+msgstr "Manage profile"
+
+#: app/components/account-menu.tsx
+msgctxt "LQbQno"
+msgid "Exporting…"
+msgstr "Exporting…"
+
+#: app/components/account-menu.tsx
+msgctxt "SX126d"
+msgid "Export data"
+msgstr "Export data"
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+msgctxt "wyxJrL"
+msgid "Delete account"
+msgstr "Delete account"
+
+#: app/components/account-menu.tsx
+msgctxt "QfaEcB"
+msgid "Signing out…"
+msgstr "Signing out…"
+
+#: app/components/account-menu.tsx
+#: app/components/auth-form.tsx
+msgctxt "xXbJso"
+msgid "Sign out"
+msgstr "Sign out"
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+msgctxt "sizJ6v"
+msgid "This deletes your login, workspace files, conversations, teammates, and billing records. Type DELETE to confirm."
+msgstr "This deletes your login, workspace files, conversations, teammates, and billing records. Type DELETE to confirm."
+
+#: app/components/account-menu.tsx
+#: app/components/account-screen.tsx
+msgctxt "t4Ybzr"
+msgid "Type DELETE to confirm"
+msgstr "Type DELETE to confirm"
+
+#: app/components/account-menu.tsx
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+#: app/components/skills-dialog.tsx
+msgctxt "47FYwb"
+msgid "Cancel"
+msgstr "Cancel"
+
+#: app/components/account-menu.tsx
+msgctxt "5CWeqU"
+msgid "Delete my data"
+msgstr "Delete my data"
+
+#: app/components/account-screen.tsx
+msgctxt "UWeLlR"
+msgid "Could not update name"
+msgstr "Could not update name"
+
+#: app/components/account-screen.tsx
+msgctxt "w6sKzl"
+msgid "Name updated."
+msgstr "Name updated."
+
+#: app/components/account-screen.tsx
+msgctxt "nXjoV3"
+msgid "Could not delete account"
+msgstr "Could not delete account"
+
+#: app/components/account-screen.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "AasydN"
+msgid "Back to workspace"
+msgstr "Back to workspace"
+
+#: app/components/account-screen.tsx
+msgctxt "Zmcjcz"
+msgid "{email} · signed in with Google or GitHub."
+msgstr "{email} · signed in with Google or GitHub."
+
+#: app/components/account-screen.tsx
+msgctxt "itPgxd"
+msgid "Profile"
+msgstr "Profile"
+
+#: app/components/account-screen.tsx
+#: app/components/mcp-settings.tsx
+#: app/components/routines-dialog.tsx
+#: app/components/skills-dialog.tsx
+#: app/components/workspace.tsx
+msgctxt "HAlOn1"
+msgid "Name"
+msgstr "Name"
+
+#: app/components/account-screen.tsx
+msgctxt "pO99pv"
+msgid "Save name"
+msgstr "Save name"
+
+#: app/components/account-screen.tsx
+#: app/components/auth-form.tsx
+msgctxt "Zmrie7"
+msgid "Two-factor authentication"
+msgstr "Two-factor authentication"
+
+#: app/components/account-screen.tsx
+#: app/components/auth-form.tsx
+msgctxt "P0s1jE"
+msgid "An authenticator app is required after Google or GitHub sign-in."
+msgstr "An authenticator app is required after Google or GitHub sign-in."
+
+#: app/components/account-screen.tsx
+msgctxt "gqj6t6"
+msgid "Finish setup so this account can open the workspace."
+msgstr "Finish setup so this account can open the workspace."
+
+#: app/components/account-screen.tsx
+msgctxt "SFHRua"
+msgid "Could not generate backup codes"
+msgstr "Could not generate backup codes"
+
+#: app/components/account-screen.tsx
+msgctxt "KvVttF"
+msgid "New backup codes replace any previous set."
+msgstr "New backup codes replace any previous set."
+
+#: app/components/account-screen.tsx
+msgctxt "9tQOB1"
+msgid "Generate backup codes"
+msgstr "Generate backup codes"
+
+#: app/components/account-screen.tsx
+msgctxt "eH00wg"
+msgid "Could not disable two-factor"
+msgstr "Could not disable two-factor"
+
+#: app/components/account-screen.tsx
+msgctxt "Ylx62Q"
+msgid "Two-factor authentication is off."
+msgstr "Two-factor authentication is off."
+
+#: app/components/account-screen.tsx
+msgctxt "bfWH4i"
+msgid "Disable two-factor"
+msgstr "Disable two-factor"
+
+#: app/components/account-screen.tsx
+msgctxt "73Eqvi"
+msgid "Set up authenticator app"
+msgstr "Set up authenticator app"
+
+#: app/components/account-screen.tsx
+msgctxt "SVwJTM"
+msgid "Export"
+msgstr "Export"
+
+#: app/components/account-screen.tsx
+msgctxt "83sApy"
+msgid "Download teammates, conversations, skills, routines, and usage. API keys are redacted."
+msgstr "Download teammates, conversations, skills, routines, and usage. API keys are redacted."
+
+#: app/components/account-screen.tsx
+msgctxt "JudhTj"
+msgid "Download JSON"
+msgstr "Download JSON"
+
+#: app/components/account-screen.tsx
+msgctxt "Sk9SL5"
+msgid "Delete my account"
+msgstr "Delete my account"
+
+#: app/components/account-screen.tsx
+msgctxt "GGG4u8"
+msgid "Support:"
+msgstr "Support:"
+
+#: app/components/account-screen.tsx
+msgctxt "LQHT4G"
+msgid "set NEXT_PUBLIC_SUPPORT_EMAIL on this deployment."
+msgstr "set NEXT_PUBLIC_SUPPORT_EMAIL on this deployment."
+
+#: app/components/auth-form.tsx
+msgctxt "G2XlKG"
+msgid "Save these backup codes. They are shown once."
+msgstr "Save these backup codes. They are shown once."
+
+#: app/components/auth-form.tsx
+#: app/components/message-actions.tsx
+msgctxt "4l6vz1"
+msgid "Copy"
+msgstr "Copy"
+
+#: app/components/auth-form.tsx
+#: app/components/message-actions.tsx
+msgctxt "p556q3"
+msgid "Copied"
+msgstr "Copied"
+
+#: app/components/auth-form.tsx
+#: app/components/chat-thread.tsx
+#: app/components/computer-panel.tsx
+msgctxt "5q3qC0"
+msgid "Download"
+msgstr "Download"
+
+#: app/components/auth-form.tsx
+msgctxt "fsB_4p"
+msgid "Saved"
+msgstr "Saved"
+
+#: app/components/auth-form.tsx
+msgctxt "R9XGTp"
+msgid "Could not start sign-in"
+msgstr "Could not start sign-in"
+
+#: app/components/auth-form.tsx
+msgctxt "pq85D4"
+msgid "Sign-in was cancelled or failed. Try again."
+msgstr "Sign-in was cancelled or failed. Try again."
+
+#: app/components/auth-form.tsx
+msgctxt "wZpyBS"
+msgid "Continue with Google or GitHub, then set up an authenticator app."
+msgstr "Continue with Google or GitHub, then set up an authenticator app."
+
+#: app/components/auth-form.tsx
+msgctxt "mXc8V6"
+msgid "New here? <link>Create an account</link>"
+msgstr "New here? <link>Create an account</link>"
+
+#: app/components/auth-form.tsx
+msgctxt "xotCDt"
+msgid "Already have an account? <link>Sign in</link>"
+msgstr "Already have an account? <link>Sign in</link>"
+
+#: app/components/auth-form.tsx
+msgctxt "FJ6r9E"
+msgid "Continue with Google"
+msgstr "Continue with Google"
+
+#: app/components/auth-form.tsx
+msgctxt "8eQ7FM"
+msgid "Continue with GitHub"
+msgstr "Continue with GitHub"
+
+#: app/components/auth-form.tsx
+msgctxt "bokqOg"
+msgid "By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy</privacy> pages."
+msgstr "By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy</privacy> pages."
+
+#: app/components/auth-form.tsx
+msgctxt "x2R8CB"
+msgid "Invalid code"
+msgstr "Invalid code"
+
+#: app/components/auth-form.tsx
+msgctxt "YgJbIQ"
+msgid "Enter a backup code from when you enabled two-factor authentication."
+msgstr "Enter a backup code from when you enabled two-factor authentication."
+
+#: app/components/auth-form.tsx
+msgctxt "RKK2dE"
+msgid "Enter the 6-digit code from your authenticator app."
+msgstr "Enter the 6-digit code from your authenticator app."
+
+#: app/components/auth-form.tsx
+msgctxt "Db6T6A"
+msgid "Backup code"
+msgstr "Backup code"
+
+#: app/components/auth-form.tsx
+msgctxt "p7pE5V"
+msgid "One-time code"
+msgstr "One-time code"
+
+#: app/components/auth-form.tsx
+msgctxt "ABFUjV"
+msgid "Trust this device for 30 days"
+msgstr "Trust this device for 30 days"
+
+#: app/components/auth-form.tsx
+msgctxt "q5Xl0M"
+msgid "Verify"
+msgstr "Verify"
+
+#: app/components/auth-form.tsx
+msgctxt "lWZTDG"
+msgid "Use authenticator app"
+msgstr "Use authenticator app"
+
+#: app/components/auth-form.tsx
+msgctxt "T0bwmY"
+msgid "Use a backup code"
+msgstr "Use a backup code"
+
+#: app/components/auth-form.tsx
+msgctxt "8g7PrW"
+msgid "Could not start two-factor setup"
+msgstr "Could not start two-factor setup"
+
+#: app/components/auth-form.tsx
+msgctxt "Ac2ehz"
+msgid "Invalid authenticator code"
+msgstr "Invalid authenticator code"
+
+#: app/components/auth-form.tsx
+msgctxt "io-wG_"
+msgid "Set up two-factor authentication"
+msgstr "Set up two-factor authentication"
+
+#: app/components/auth-form.tsx
+msgctxt "q-x1aG"
+msgid "Enable authenticator app"
+msgstr "Enable authenticator app"
+
+#: app/components/auth-form.tsx
+msgctxt "dChb0Y"
+msgid "Scan the QR code"
+msgstr "Scan the QR code"
+
+#: app/components/auth-form.tsx
+msgctxt "yiGQqM"
+msgid "Add Deni Run in your authenticator app, save the backup codes, then enter a 6-digit code."
+msgstr "Add Deni Run in your authenticator app, save the backup codes, then enter a 6-digit code."
+
+#: app/components/auth-form.tsx
+msgctxt "TV0Ha_"
+msgid "Verify and continue"
+msgstr "Verify and continue"
+
+#: app/components/avatar-field.tsx
+msgctxt "MAGAzv"
+msgid "Choose a PNG, JPG, WebP, or GIF image under 5 MB."
+msgstr "Choose a PNG, JPG, WebP, or GIF image under 5 MB."
+
+#: app/components/avatar-field.tsx
+msgctxt "wAQY68"
+msgid "Image processing is unavailable."
+msgstr "Image processing is unavailable."
+
+#: app/components/avatar-field.tsx
+msgctxt "lm9RTS"
+msgid "This image is too large. Choose a simpler image."
+msgstr "This image is too large. Choose a simpler image."
+
+#: app/components/avatar-field.tsx
+msgctxt "2Wr9z9"
+msgid "Could not read this image."
+msgstr "Could not read this image."
+
+#: app/components/avatar-field.tsx
+msgctxt "kk4TVW"
+msgid "Icon"
+msgstr "Icon"
+
+#: app/components/avatar-field.tsx
+#: app/components/reaction-picker.tsx
+msgctxt "34NuzG"
+msgid "Emoji"
+msgstr "Emoji"
+
+#: app/components/avatar-field.tsx
+msgctxt "p4N05H"
+msgid "Upload"
+msgstr "Upload"
+
+#: app/components/avatar-field.tsx
+msgctxt "jm_spn"
+msgid "Reset"
+msgstr "Reset"
+
+#: app/components/avatar-field.tsx
+msgctxt "sZTv2D"
+msgid "Upload icon"
+msgstr "Upload icon"
+
+#: app/components/billing-dialog.tsx
+msgctxt "i43vh-"
+msgid "{plan} plan · {period} UTC"
+msgstr "{plan} plan · {period} UTC"
+
+#: app/components/billing-dialog.tsx
+msgctxt "q_-b76"
+msgid "renews {date}"
+msgstr "renews {date}"
+
+#: app/components/billing-dialog.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "P6EE_a"
+msgid "Tokens"
+msgstr "Tokens"
+
+#: app/components/billing-dialog.tsx
+msgctxt "fS9BhU"
+msgid "Browser minutes"
+msgstr "Browser minutes"
+
+#: app/components/billing-dialog.tsx
+msgctxt "P1IEKh"
+msgid "Computer minutes"
+msgstr "Computer minutes"
+
+#: app/components/billing-dialog.tsx
+#: app/components/sidebar.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "hDxIJm"
+msgid "Teammates"
+msgstr "Teammates"
+
+#: app/components/billing-dialog.tsx
+msgctxt "GoRRWr"
+msgid "Loading usage…"
+msgstr "Loading usage…"
+
+#: app/components/billing-dialog.tsx
+#: app/components/computer-panel.tsx
+#: app/components/workspace.tsx
+#: components/ui/dialog.tsx
+msgctxt "rbrahO"
+msgid "Close"
+msgstr "Close"
+
+#: app/components/billing-dialog.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "wLCwU4"
+msgid "Manage billing"
+msgstr "Manage billing"
+
+#: app/components/billing-dialog.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "epeZNJ"
+msgid "Upgrade to Pro · ${price}/mo"
+msgstr "Upgrade to Pro · ${price}/mo"
+
+#: app/components/billing-dialog.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "ZNYO98"
+msgid "Stripe is not configured on this deployment. Limits still apply to the Free plan."
+msgstr "Stripe is not configured on this deployment. Limits still apply to the Free plan."
+
+#: app/components/chat-thread.tsx
+msgctxt "frgrwx"
+msgid "Could not submit approval."
+msgstr "Could not submit approval."
+
+#: app/components/chat-thread.tsx
+msgctxt "q_uwLT"
+msgid "Stop"
+msgstr "Stop"
+
+#: app/components/chat-thread.tsx
+msgctxt "N2fEr-"
+msgid "Saving result…"
+msgstr "Saving result…"
+
+#: app/components/chat-thread.tsx
+msgctxt "HohM7W"
+msgid "Waiting for your help…"
+msgstr "Waiting for your help…"
+
+#: app/components/chat-thread.tsx
+msgctxt "40zwh7"
+msgid "@everyone to ask everyone · @name to ask a teammate"
+msgstr "@everyone to ask everyone · @name to ask a teammate"
+
+#: app/components/chat-thread.tsx
+msgctxt "lkZr3d"
+msgid "Teammate responses"
+msgstr "Teammate responses"
+
+#: app/components/chat-thread.tsx
+msgctxt "JqfMd9"
+msgid "Needs your help"
+msgstr "Needs your help"
+
+#: app/components/chat-thread.tsx
+msgctxt "vXCeIi"
+msgid "Failed"
+msgstr "Failed"
+
+#: app/components/chat-thread.tsx
+msgctxt "JXdbo8"
+msgid "Done"
+msgstr "Done"
+
+#: app/components/chat-thread.tsx
+msgctxt "0E-C4I"
+msgid "Waiting for your help"
+msgstr "Waiting for your help"
+
+#: app/components/chat-thread.tsx
+msgctxt "_LViiD"
+msgid "Saving result"
+msgstr "Saving result"
+
+#: app/components/chat-thread.tsx
+msgctxt "xdZNBn"
+msgid "Working on the computer"
+msgstr "Working on the computer"
+
+#: app/components/chat-thread.tsx
+msgctxt "VAdNNz"
+msgid "Failed to send"
+msgstr "Failed to send"
+
+#: app/components/chat-thread.tsx
+#: app/components/workspace.tsx
+msgctxt "TDaF6J"
+msgid "Dismiss"
+msgstr "Dismiss"
+
+#: app/components/chat-thread.tsx
+msgctxt "XQG9Ux"
+msgid "Mention a teammate"
+msgstr "Mention a teammate"
+
+#: app/components/chat-thread.tsx
+msgctxt "FEVQGc"
+msgid "All teammates"
+msgstr "All teammates"
+
+#: app/components/chat-thread.tsx
+msgctxt "v4zwVA"
+msgid "Cancel reply"
+msgstr "Cancel reply"
+
+#: app/components/chat-thread.tsx
+msgctxt "Dat5EN"
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr "Enter to send · Shift+Enter for a new line"
+
+#: app/components/chat-thread.tsx
+msgctxt "j4HzNR"
+msgid "Message {name} · @everyone"
+msgstr "Message {name} · @everyone"
+
+#: app/components/chat-thread.tsx
+msgctxt "Dij_iT"
+msgid "Message {name}"
+msgstr "Message {name}"
+
+#: app/components/chat-thread.tsx
+msgctxt "RANC4_"
+msgid "Stop response"
+msgstr "Stop response"
+
+#: app/components/chat-thread.tsx
+msgctxt "Xx0WZV"
+msgid "Send message"
+msgstr "Send message"
+
+#: app/components/chat-thread.tsx
+msgctxt "eW5eoW"
+msgid "Artifacts"
+msgstr "Artifacts"
+
+#: app/components/chat-thread.tsx
+msgctxt "woJXRP"
+msgid "Deliverables"
+msgstr "Deliverables"
+
+#: app/components/chat-thread.tsx
+msgctxt "oM6JUS"
+msgid "Unable to preview this file."
+msgstr "Unable to preview this file."
+
+#: app/components/chat-thread.tsx
+msgctxt "TJo5E6"
+msgid "Preview"
+msgstr "Preview"
+
+#: app/components/chat-thread.tsx
+msgctxt "pXNgqm"
+msgid "Hide preview"
+msgstr "Hide preview"
+
+#: app/components/chat-thread.tsx
+msgctxt "pM1vUw"
+msgid "Request revision"
+msgstr "Request revision"
+
+#: app/components/chat-thread.tsx
+msgctxt "W-q5ue"
+msgid "{job}. No workflow is required. Write as if you were asking a colleague. I will research on the computer, leave artifacts in files, and ask for approval only when needed."
+msgstr "{job}. No workflow is required. Write as if you were asking a colleague. I will research on the computer, leave artifacts in files, and ask for approval only when needed."
+
+#: app/components/chat-thread.tsx
+msgctxt "Ajoqx1"
+msgid "Worked for {count}s"
+msgstr "Worked for {count}s"
+
+#: app/components/chat-thread.tsx
+msgctxt "VSp1Sr"
+msgid "Worked for {count}m"
+msgstr "Worked for {count}m"
+
+#: app/components/chat-thread.tsx
+msgctxt "6Wz8hi"
+msgid "Worked for {count}h"
+msgstr "Worked for {count}h"
+
+#: app/components/chat-thread.tsx
+msgctxt "Aw3qRf"
+msgid "Reasoning"
+msgstr "Reasoning"
+
+#: app/components/chat-thread.tsx
+#: app/components/routines-dialog.tsx
+msgctxt "aX1b8r"
+msgid "Teammate"
+msgstr "Teammate"
+
+#: app/components/chat-thread.tsx
+#: app/components/computer-panel.tsx
+msgctxt "gAR0at"
+msgid "Working"
+msgstr "Working"
+
+#: app/components/chat-thread.tsx
+msgctxt "AHQWDT"
+msgid "Thinking"
+msgstr "Thinking"
+
+#: app/components/chat-thread.tsx
+msgctxt "iZJU2H"
+msgid "Go to referenced message"
+msgstr "Go to referenced message"
+
+#: app/components/chat-thread.tsx
+msgctxt "fbNp11"
+msgid "Replying to you"
+msgstr "Replying to you"
+
+#: app/components/chat-thread.tsx
+msgctxt "3fyB8h"
+msgid "Replying to {name}"
+msgstr "Replying to {name}"
+
+#: app/components/chat-thread.tsx
+msgctxt "T7Ry38"
+msgid "Message"
+msgstr "Message"
+
+#: app/components/chat-thread.tsx
+msgctxt "Kiv4kU"
+msgid "Could not save permission."
+msgstr "Could not save permission."
+
+#: app/components/chat-thread.tsx
+msgctxt "hlNVnU"
+msgid "Approved · {label}"
+msgstr "Approved · {label}"
+
+#: app/components/chat-thread.tsx
+msgctxt "a3EMWN"
+msgid "Declined · {label}"
+msgstr "Declined · {label}"
+
+#: app/components/chat-thread.tsx
+msgctxt "ofCpTm"
+msgid "Connected · manage"
+msgstr "Connected · manage"
+
+#: app/components/chat-thread.tsx
+#: app/components/mcp-settings.tsx
+msgctxt "-vVZ_G"
+msgid "Connect"
+msgstr "Connect"
+
+#: app/components/chat-thread.tsx
+msgctxt "KFXoaa"
+msgid "Couldn't request your help"
+msgstr "Couldn't request your help"
+
+#: app/components/chat-thread.tsx
+msgctxt "uNru86"
+msgid "Requested your help"
+msgstr "Requested your help"
+
+#: app/components/chat-thread.tsx
+msgctxt "xRaksx"
+msgid "The computer could not be handed over."
+msgstr "The computer could not be handed over."
+
+#: app/components/chat-thread.tsx
+msgctxt "kLVM3X"
+msgid "Take control of the computer to continue."
+msgstr "Take control of the computer to continue."
+
+#: app/components/chat-thread.tsx
+msgctxt "2-zQlP"
+msgid "a teammate"
+msgstr "a teammate"
+
+#: app/components/chat-thread.tsx
+msgctxt "BTagga"
+msgid "Couldn't reach {teammate}"
+msgstr "Couldn't reach {teammate}"
+
+#: app/components/chat-thread.tsx
+msgctxt "P87nrX"
+msgid "{teammate} is working"
+msgstr "{teammate} is working"
+
+#: app/components/chat-thread.tsx
+msgctxt "w2A7J0"
+msgid "Asked {teammate}"
+msgstr "Asked {teammate}"
+
+#: app/components/chat-thread.tsx
+msgctxt "1leOUS"
+msgid "Asking {teammate}"
+msgstr "Asking {teammate}"
+
+#: app/components/chat-thread.tsx
+msgctxt "2kqa9E"
+msgid "Action was declined"
+msgstr "Action was declined"
+
+#: app/components/chat-thread.tsx
+msgctxt "AY7syN"
+msgid "Couldn't open the page"
+msgstr "Couldn't open the page"
+
+#: app/components/chat-thread.tsx
+msgctxt "_OmsSP"
+msgid "Opened page"
+msgstr "Opened page"
+
+#: app/components/chat-thread.tsx
+msgctxt "ml6bIZ"
+msgid "Opening page"
+msgstr "Opening page"
+
+#: app/components/chat-thread.tsx
+msgctxt "gHAj9d"
+msgid "Couldn't read the page"
+msgstr "Couldn't read the page"
+
+#: app/components/chat-thread.tsx
+msgctxt "48j2Bn"
+msgid "Read the page"
+msgstr "Read the page"
+
+#: app/components/chat-thread.tsx
+msgctxt "Fz6nox"
+msgid "Reading the page"
+msgstr "Reading the page"
+
+#: app/components/chat-thread.tsx
+msgctxt "Ckj91Y"
+msgid "Couldn't click the page"
+msgstr "Couldn't click the page"
+
+#: app/components/chat-thread.tsx
+msgctxt "Z9K0wg"
+msgid "Clicked the page"
+msgstr "Clicked the page"
+
+#: app/components/chat-thread.tsx
+msgctxt "ZvoNJ0"
+msgid "Clicking the page"
+msgstr "Clicking the page"
+
+#: app/components/chat-thread.tsx
+msgctxt "OS0NXQ"
+msgid "Couldn't enter the text"
+msgstr "Couldn't enter the text"
+
+#: app/components/chat-thread.tsx
+msgctxt "fwZFBf"
+msgid "Entered text"
+msgstr "Entered text"
+
+#: app/components/chat-thread.tsx
+msgctxt "Q8ovsh"
+msgid "Entering text"
+msgstr "Entering text"
+
+#: app/components/chat-thread.tsx
+msgctxt "CL5GjO"
+msgid "a key"
+msgstr "a key"
+
+#: app/components/chat-thread.tsx
+msgctxt "8ERrD-"
+msgid "Couldn't press {key}"
+msgstr "Couldn't press {key}"
+
+#: app/components/chat-thread.tsx
+msgctxt "m2KEZF"
+msgid "Pressed {key}"
+msgstr "Pressed {key}"
+
+#: app/components/chat-thread.tsx
+msgctxt "S3LNqv"
+msgid "Pressing {key}"
+msgstr "Pressing {key}"
+
+#: app/components/chat-thread.tsx
+msgctxt "Qxdzjn"
+msgid "Couldn't scroll the page"
+msgstr "Couldn't scroll the page"
+
+#: app/components/chat-thread.tsx
+msgctxt "bH5aVB"
+msgid "Scrolled up"
+msgstr "Scrolled up"
+
+#: app/components/chat-thread.tsx
+msgctxt "dZdDvw"
+msgid "Scrolled down"
+msgstr "Scrolled down"
+
+#: app/components/chat-thread.tsx
+msgctxt "gsZoWr"
+msgid "Scrolling up"
+msgstr "Scrolling up"
+
+#: app/components/chat-thread.tsx
+msgctxt "SvPr_l"
+msgid "Scrolling down"
+msgstr "Scrolling down"
+
+#: app/components/chat-thread.tsx
+msgctxt "ojTHkH"
+msgid "Couldn't use the browser"
+msgstr "Couldn't use the browser"
+
+#: app/components/chat-thread.tsx
+msgctxt "ObRTsD"
+msgid "Used the browser"
+msgstr "Used the browser"
+
+#: app/components/chat-thread.tsx
+msgctxt "-mNq_K"
+msgid "Using the browser"
+msgstr "Using the browser"
+
+#: app/components/chat-thread.tsx
+msgctxt "diMib6"
+msgid "Updating files"
+msgstr "Updating files"
+
+#: app/components/chat-thread.tsx
+msgctxt "yyFzmA"
+msgid "Updated files"
+msgstr "Updated files"
+
+#: app/components/chat-thread.tsx
+msgctxt "W1jkFo"
+msgid "Couldn't update files"
+msgstr "Couldn't update files"
+
+#: app/components/chat-thread.tsx
+msgctxt "-B6q99"
+msgid "Running a command"
+msgstr "Running a command"
+
+#: app/components/chat-thread.tsx
+msgctxt "cv9VNY"
+msgid "Ran a command"
+msgstr "Ran a command"
+
+#: app/components/chat-thread.tsx
+msgctxt "43JasP"
+msgid "Couldn't run a command"
+msgstr "Couldn't run a command"
+
+#: app/components/chat-thread.tsx
+msgctxt "_A_8_D"
+msgid "Stopping the computer"
+msgstr "Stopping the computer"
+
+#: app/components/chat-thread.tsx
+msgctxt "EGo5k7"
+msgid "Stopped the computer"
+msgstr "Stopped the computer"
+
+#: app/components/chat-thread.tsx
+msgctxt "toIWwV"
+msgid "Couldn't stop the computer"
+msgstr "Couldn't stop the computer"
+
+#: app/components/chat-thread.tsx
+msgctxt "5Kajyz"
+msgid "Searching the web"
+msgstr "Searching the web"
+
+#: app/components/chat-thread.tsx
+msgctxt "4-310B"
+msgid "Searched the web"
+msgstr "Searched the web"
+
+#: app/components/chat-thread.tsx
+msgctxt "_kh6dX"
+msgid "Couldn't search the web"
+msgstr "Couldn't search the web"
+
+#: app/components/chat-thread.tsx
+msgctxt "uqElma"
+msgid "Saving a memory"
+msgstr "Saving a memory"
+
+#: app/components/chat-thread.tsx
+msgctxt "P27R7w"
+msgid "Saved a memory"
+msgstr "Saved a memory"
+
+#: app/components/chat-thread.tsx
+msgctxt "OoZnj6"
+msgid "Couldn't save a memory"
+msgstr "Couldn't save a memory"
+
+#: app/components/chat-thread.tsx
+msgctxt "nFuHdT"
+msgid "Saving a skill"
+msgstr "Saving a skill"
+
+#: app/components/chat-thread.tsx
+msgctxt "OCZfYz"
+msgid "Saved a skill"
+msgstr "Saved a skill"
+
+#: app/components/chat-thread.tsx
+msgctxt "5wrwRW"
+msgid "Couldn't save a skill"
+msgstr "Couldn't save a skill"
+
+#: app/components/chat-thread.tsx
+msgctxt "pWZJnj"
+msgid "Checking saved skills"
+msgstr "Checking saved skills"
+
+#: app/components/chat-thread.tsx
+msgctxt "pSgP2-"
+msgid "Checked saved skills"
+msgstr "Checked saved skills"
+
+#: app/components/chat-thread.tsx
+msgctxt "EP0kSQ"
+msgid "Couldn't check saved skills"
+msgstr "Couldn't check saved skills"
+
+#: app/components/chat-thread.tsx
+msgctxt "l0SB4M"
+msgid "Reading a skill"
+msgstr "Reading a skill"
+
+#: app/components/chat-thread.tsx
+msgctxt "98LMUl"
+msgid "Read a skill"
+msgstr "Read a skill"
+
+#: app/components/chat-thread.tsx
+msgctxt "kWSbtt"
+msgid "Couldn't read a skill"
+msgstr "Couldn't read a skill"
+
+#: app/components/chat-thread.tsx
+msgctxt "e6oE27"
+msgid "Scheduling a routine"
+msgstr "Scheduling a routine"
+
+#: app/components/chat-thread.tsx
+msgctxt "B-XoGJ"
+msgid "Scheduled a routine"
+msgstr "Scheduled a routine"
+
+#: app/components/chat-thread.tsx
+msgctxt "1nC17M"
+msgid "Couldn't schedule a routine"
+msgstr "Couldn't schedule a routine"
+
+#: app/components/chat-thread.tsx
+msgctxt "NBbGOD"
+msgid "Checking routines"
+msgstr "Checking routines"
+
+#: app/components/chat-thread.tsx
+msgctxt "OGzYmC"
+msgid "Checked routines"
+msgstr "Checked routines"
+
+#: app/components/chat-thread.tsx
+msgctxt "yMyb4d"
+msgid "Couldn't check routines"
+msgstr "Couldn't check routines"
+
+#: app/components/chat-thread.tsx
+msgctxt "iH2n13"
+msgid "Showing connected services"
+msgstr "Showing connected services"
+
+#: app/components/chat-thread.tsx
+msgctxt "X31EWP"
+msgid "Showed connected services"
+msgstr "Showed connected services"
+
+#: app/components/chat-thread.tsx
+msgctxt "GeR2eE"
+msgid "Couldn't show connected services"
+msgstr "Couldn't show connected services"
+
+#: app/components/chat-thread.tsx
+msgctxt "TRVbaQ"
+msgid "Using a connected service"
+msgstr "Using a connected service"
+
+#: app/components/chat-thread.tsx
+msgctxt "KT5Mss"
+msgid "Used a connected service"
+msgstr "Used a connected service"
+
+#: app/components/chat-thread.tsx
+msgctxt "04VF7h"
+msgid "Couldn't use a connected service"
+msgstr "Couldn't use a connected service"
+
+#: app/components/chat-thread.tsx
+msgctxt "zQDTkW"
+msgid "Updating a routine"
+msgstr "Updating a routine"
+
+#: app/components/chat-thread.tsx
+msgctxt "OrSVcQ"
+msgid "Updated a routine"
+msgstr "Updated a routine"
+
+#: app/components/chat-thread.tsx
+msgctxt "_mIlHk"
+msgid "Couldn't update a routine"
+msgstr "Couldn't update a routine"
+
+#: app/components/chat-thread.tsx
+msgctxt "ZrhVFY"
+msgid "Asking a teammate"
+msgstr "Asking a teammate"
+
+#: app/components/chat-thread.tsx
+msgctxt "GNudob"
+msgid "Asked a teammate"
+msgstr "Asked a teammate"
+
+#: app/components/chat-thread.tsx
+msgctxt "IAqmHD"
+msgid "Couldn't ask a teammate"
+msgstr "Couldn't ask a teammate"
+
+#: app/components/chat-thread.tsx
+msgctxt "47Km2R"
+msgid "Checking a teammate"
+msgstr "Checking a teammate"
+
+#: app/components/chat-thread.tsx
+msgctxt "Bo2eRL"
+msgid "Checked a teammate"
+msgstr "Checked a teammate"
+
+#: app/components/chat-thread.tsx
+msgctxt "Q61-l7"
+msgid "Couldn't check a teammate"
+msgstr "Couldn't check a teammate"
+
+#: app/components/chat-thread.tsx
+msgctxt "2lqdze"
+msgid "Working on {tool}"
+msgstr "Working on {tool}"
+
+#: app/components/chat-thread.tsx
+msgctxt "d3q1Pu"
+msgid "Finished {tool}"
+msgstr "Finished {tool}"
+
+#: app/components/chat-thread.tsx
+msgctxt "k6qg1w"
+msgid "Couldn't finish {tool}"
+msgstr "Couldn't finish {tool}"
+
+#: app/components/chat-thread.tsx
+msgctxt "WCaf5C"
+msgid "Approve"
+msgstr "Approve"
+
+#: app/components/chat-thread.tsx
+msgctxt "lr3QX_"
+msgid "Always allow"
+msgstr "Always allow"
+
+#: app/components/chat-thread.tsx
+msgctxt "htvX-Z"
+msgid "Deny"
+msgstr "Deny"
+
+#: app/components/chat-thread.tsx
+msgctxt "lKv8ex"
+msgid "Default"
+msgstr "Default"
+
+#: app/components/chat-thread.tsx
+msgctxt "AxMhQr"
+msgid "High"
+msgstr "High"
+
+#: app/components/chat-thread.tsx
+msgctxt "x8d3rq"
+msgid "xhigh"
+msgstr "xhigh"
+
+#: app/components/chat-thread.tsx
+msgctxt "kkjl2v"
+msgid "Max"
+msgstr "Max"
+
+#: app/components/chat-thread.tsx
+msgctxt "r_LXBB"
+msgid "{multiplier}× tokens"
+msgstr "{multiplier}× tokens"
+
+#: app/components/chat-thread.tsx
+#: app/components/computer-panel.tsx
+msgctxt "NhDwgx"
+msgid "in progress"
+msgstr "in progress"
+
+#: app/components/computer-panel.tsx
+msgctxt "Vwhrki"
+msgid "The computer did not accept the input"
+msgstr "The computer did not accept the input"
+
+#: app/components/computer-panel.tsx
+msgctxt "1Lvuek"
+msgid "The computer is currently owned by another task"
+msgstr "The computer is currently owned by another task"
+
+#: app/components/computer-panel.tsx
+msgctxt "RVhqZ4"
+msgid "Download failed"
+msgstr "Download failed"
+
+#: app/components/computer-panel.tsx
+msgctxt "ecjViF"
+msgid "Delete failed"
+msgstr "Delete failed"
+
+#: app/components/computer-panel.tsx
+msgctxt "qkBusW"
+msgid "Your help is needed"
+msgstr "Your help is needed"
+
+#: app/components/computer-panel.tsx
+msgctxt "KN7zKn"
+msgid "Error"
+msgstr "Error"
+
+#: app/components/computer-panel.tsx
+msgctxt "sNY4nx"
+msgid "Idle"
+msgstr "Idle"
+
+#: app/components/computer-panel.tsx
+msgctxt "gWEDtt"
+msgid "Computer and routines"
+msgstr "Computer and routines"
+
+#: app/components/computer-panel.tsx
+#: app/components/upgrade-screen.tsx
+#: app/components/workspace.tsx
+msgctxt "GufTjD"
+msgid "Computer"
+msgstr "Computer"
+
+#: app/components/computer-panel.tsx
+msgctxt "kzaYlD"
+msgid "Screen"
+msgstr "Screen"
+
+#: app/components/computer-panel.tsx
+msgctxt "m4vqJl"
+msgid "Files"
+msgstr "Files"
+
+#: app/components/computer-panel.tsx
+msgctxt "GAHVEi"
+msgid "Terminal"
+msgstr "Terminal"
+
+#: app/components/computer-panel.tsx
+msgctxt "ZjmERS"
+msgid "Log"
+msgstr "Log"
+
+#: app/components/computer-panel.tsx
+msgctxt "nLdxaG"
+msgid "Working on your task"
+msgstr "Working on your task"
+
+#: app/components/computer-panel.tsx
+msgctxt "cA0m7F"
+msgid "No browser open"
+msgstr "No browser open"
+
+#: app/components/computer-panel.tsx
+msgctxt "HC3YXR"
+msgid "{name}'s screen"
+msgstr "{name}'s screen"
+
+#: app/components/computer-panel.tsx
+msgctxt "AwJzsq"
+msgid "Computer screen"
+msgstr "Computer screen"
+
+#: app/components/computer-panel.tsx
+msgctxt "9x8vKu"
+msgid "The screen appears here when your teammate opens the browser."
+msgstr "The screen appears here when your teammate opens the browser."
+
+#: app/components/computer-panel.tsx
+msgctxt "Wz7SLe"
+msgid "Computer error"
+msgstr "Computer error"
+
+#: app/components/computer-panel.tsx
+msgctxt "0oLj_t"
+msgid "Expand"
+msgstr "Expand"
+
+#: app/components/computer-panel.tsx
+msgctxt "Wf8D-B"
+msgid "In control"
+msgstr "In control"
+
+#: app/components/computer-panel.tsx
+#: app/components/landing.tsx
+msgctxt "snStu0"
+msgid "Take control"
+msgstr "Take control"
+
+#: app/components/computer-panel.tsx
+msgctxt "WZJpxK"
+msgid "Control computer screen"
+msgstr "Control computer screen"
+
+#: app/components/computer-panel.tsx
+msgctxt "a7he5o"
+msgid "Enlarge computer screen"
+msgstr "Enlarge computer screen"
+
+#: app/components/computer-panel.tsx
+msgctxt "bayRPq"
+msgid "Live browser. Click, type, and scroll directly in the remote session."
+msgstr "Live browser. Click, type, and scroll directly in the remote session."
+
+#: app/components/computer-panel.tsx
+msgctxt "KPT6R2"
+msgid "Click the screen, type, paste, or scroll to control the browser directly."
+msgstr "Click the screen, type, paste, or scroll to control the browser directly."
+
+#: app/components/computer-panel.tsx
+msgctxt "H10fgt"
+msgid "The bot's clicks and input appear here. Click the preview to enlarge it."
+msgstr "The bot's clicks and input appear here. Click the preview to enlarge it."
+
+#: app/components/computer-panel.tsx
+msgctxt "IP_I5A"
+msgid "Loading files…"
+msgstr "Loading files…"
+
+#: app/components/computer-panel.tsx
+msgctxt "kiqUN5"
+msgid "Opening file…"
+msgstr "Opening file…"
+
+#: app/components/computer-panel.tsx
+#: app/components/upgrade-screen.tsx
+#: app/privacy/page.tsx
+#: app/terms/page.tsx
+msgctxt "cyR7Kh"
+msgid "Back"
+msgstr "Back"
+
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+#: app/components/sidebar.tsx
+msgctxt "K3r6DQ"
+msgid "Delete"
+msgstr "Delete"
+
+#: app/components/computer-panel.tsx
+msgctxt "zbwcPM"
+msgid "Select all files"
+msgstr "Select all files"
+
+#: app/components/computer-panel.tsx
+msgctxt "IhrEx8"
+msgid "Download selected"
+msgstr "Download selected"
+
+#: app/components/computer-panel.tsx
+msgctxt "V1UrPN"
+msgid "Download all"
+msgstr "Download all"
+
+#: app/components/computer-panel.tsx
+msgctxt "ELsv-o"
+msgid "Delete selected"
+msgstr "Delete selected"
+
+#: app/components/computer-panel.tsx
+msgctxt "1L8nF4"
+msgid "Delete all"
+msgstr "Delete all"
+
+#: app/components/computer-panel.tsx
+msgctxt "WdH4YV"
+msgid "No files yet"
+msgstr "No files yet"
+
+#: app/components/computer-panel.tsx
+msgctxt "bKI5Hi"
+msgid "Loading terminal…"
+msgstr "Loading terminal…"
+
+#: app/components/computer-panel.tsx
+msgctxt "ZBf_mh"
+msgid "No commands yet"
+msgstr "No commands yet"
+
+#: app/components/computer-panel.tsx
+msgctxt "aojEGT"
+msgid "No activity yet"
+msgstr "No activity yet"
+
+#: app/components/computer-panel.tsx
+msgctxt "DDQbGJ"
+msgid "Delete files"
+msgstr "Delete files"
+
+#: app/components/computer-panel.tsx
+msgctxt "Kt9ABW"
+msgid "Delete every file in this workspace? This cannot be undone."
+msgstr "Delete every file in this workspace? This cannot be undone."
+
+#: app/components/computer-panel.tsx
+msgctxt "v-sWn9"
+msgid "Delete {count, plural, one {# item} other {# items}}? This cannot be undone."
+msgstr "Delete {count, plural, one {# item} other {# items}}? This cannot be undone."
+
+#: app/components/computer-panel.tsx
+msgctxt "d3s_qZ"
+msgid "Enlarged computer screen"
+msgstr "Enlarged computer screen"
+
+#: app/components/computer-panel.tsx
+msgctxt "5n94vR"
+msgid "Close enlarged screen"
+msgstr "Close enlarged screen"
+
+#: app/components/computer-panel.tsx
+msgctxt "d56OMq"
+msgid "Enlarged Deni Run screen"
+msgstr "Enlarged Deni Run screen"
+
+#: app/components/computer-panel.tsx
+msgctxt "INpgTu"
+msgid "Live remote browser"
+msgstr "Live remote browser"
+
+#: app/components/computer-panel.tsx
+msgctxt "mRFXeh"
+msgid "Expanded live remote browser"
+msgstr "Expanded live remote browser"
+
+#: app/components/computer-panel.tsx
+msgctxt "579Y3Y"
+msgid "Close enlarged browser"
+msgstr "Close enlarged browser"
+
+#: app/components/computer-panel.tsx
+msgctxt "WNemwT"
+msgid "Enlarge live browser"
+msgstr "Enlarge live browser"
+
+#: app/components/computer-panel.tsx
+msgctxt "BP_qeB"
+msgid "Teammate routines"
+msgstr "Teammate routines"
+
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+#: app/components/sidebar.tsx
+msgctxt "Dbc6Xa"
+msgid "Routines"
+msgstr "Routines"
+
+#: app/components/computer-panel.tsx
+msgctxt "0Azlrb"
+msgid "Manage"
+msgstr "Manage"
+
+#: app/components/computer-panel.tsx
+msgctxt "25Ilqj"
+msgid "Routines are recurring tasks this teammate runs on a schedule."
+msgstr "Routines are recurring tasks this teammate runs on a schedule."
+
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+msgctxt "-5D7Gr"
+msgid "Create routine"
+msgstr "Create routine"
+
+#: app/components/computer-panel.tsx
+msgctxt "s3IOQQ"
+msgid "Edit {name}"
+msgstr "Edit {name}"
+
+#: app/components/computer-panel.tsx
+msgctxt "3a5wL8"
+msgid "Active"
+msgstr "Active"
+
+#: app/components/computer-panel.tsx
+msgctxt "C2iTEH"
+msgid "Paused"
+msgstr "Paused"
+
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+msgctxt "7_XGRf"
+msgid "Next {time}"
+msgstr "Next {time}"
+
+#: app/components/computer-panel.tsx
+#: app/components/routines-dialog.tsx
+msgctxt "OvzONl"
+msgid "Off"
+msgstr "Off"
+
+#: app/components/computer-panel.tsx
+msgctxt "jxjZFH"
+msgid "+ New routine"
+msgstr "+ New routine"
+
+#: app/components/computer-panel.tsx
+msgctxt "G65XME"
+msgid "Select {name}"
+msgstr "Select {name}"
+
+#: app/components/computer-panel.tsx
+msgctxt "R3ptDD"
+msgid "Download {name}"
+msgstr "Download {name}"
+
+#: app/components/computer-panel.tsx
+#: app/components/mcp-settings.tsx
+#: app/components/skills-dialog.tsx
+msgctxt "JpsXCp"
+msgid "Delete {name}"
+msgstr "Delete {name}"
+
+#: app/components/landing.tsx
+msgctxt "5Wwopw"
+msgid "Pricing"
+msgstr "Pricing"
+
+#: app/components/landing.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "R_eOkj"
+msgid "Pro"
+msgstr "Pro"
+
+#: app/components/landing.tsx
+#: app/components/setup-screen.tsx
+msgctxt "oeAC65"
+msgid "Open workspace"
+msgstr "Open workspace"
+
+#: app/components/landing.tsx
+#: app/sign-in/page.tsx
+msgctxt "SQJto2"
+msgid "Sign in"
+msgstr "Sign in"
+
+#: app/components/landing.tsx
+msgctxt "_aBLH2"
+msgid "Get started"
+msgstr "Get started"
+
+#: app/components/landing.tsx
+msgctxt "sRPYBI"
+msgid "AI teammates with their own computer"
+msgstr "AI teammates with their own computer"
+
+#: app/components/landing.tsx
+msgctxt "a7jWEj"
+msgid "Hand work to named teammates and let them finish it on an isolated computer."
+msgstr "Hand work to named teammates and let them finish it on an isolated computer."
+
+#: app/components/landing.tsx
+msgctxt "hMCg85"
+msgid "Browser, files, and terminal stay private to your account. Watch the screen, take control for logins, and keep memory, skills, and routines with each teammate."
+msgstr "Browser, files, and terminal stay private to your account. Watch the screen, take control for logins, and keep memory, skills, and routines with each teammate."
+
+#: app/components/landing.tsx
+msgctxt "i7IHHZ"
+msgid "Start free"
+msgstr "Start free"
+
+#: app/components/landing.tsx
+msgctxt "vbFKkT"
+msgid "See plans"
+msgstr "See plans"
+
+#: app/components/landing.tsx
+msgctxt "CJ4p2s"
+msgid "Named teammates"
+msgstr "Named teammates"
+
+#: app/components/landing.tsx
+msgctxt "pNCgDf"
+msgid "Chief, Research, Operations — or create your own. Each keeps memory and a job."
+msgstr "Chief, Research, Operations — or create your own. Each keeps memory and a job."
+
+#: app/components/landing.tsx
+msgctxt "MGDxk0"
+msgid "Private computer"
+msgstr "Private computer"
+
+#: app/components/landing.tsx
+msgctxt "gEvuSO"
+msgid "A browser, workspace, and Linux sandbox scoped to your account. Not a shared VM."
+msgstr "A browser, workspace, and Linux sandbox scoped to your account. Not a shared VM."
+
+#: app/components/landing.tsx
+msgctxt "so-AdY"
+msgid "When login or 2FA is needed, drive the live browser yourself, then hand it back."
+msgstr "When login or 2FA is needed, drive the live browser yourself, then hand it back."
+
+#: app/components/landing.tsx
+msgctxt "Z3X7Uc"
+msgid "Monthly limits reset at the start of each UTC month."
+msgstr "Monthly limits reset at the start of each UTC month."
+
+#: app/components/landing.tsx
+msgctxt "V8OnRy"
+msgid "{count} tokens / month"
+msgstr "{count} tokens / month"
+
+#: app/components/landing.tsx
+msgctxt "-qqZhD"
+msgid "{count} browser minutes"
+msgstr "{count} browser minutes"
+
+#: app/components/landing.tsx
+msgctxt "ySrqJm"
+msgid "{count} computer minutes"
+msgstr "{count} computer minutes"
+
+#: app/components/landing.tsx
+msgctxt "zk8iSN"
+msgid "Up to {count} teammates"
+msgstr "Up to {count} teammates"
+
+#: app/components/landing.tsx
+msgctxt "uGVdXS"
+msgid "Isolated files, browser, and terminal"
+msgstr "Isolated files, browser, and terminal"
+
+#: app/components/landing.tsx
+msgctxt "huqKGl"
+msgid "Create account"
+msgstr "Create account"
+
+#: app/components/landing.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "Vn2ud4"
+msgid "/ month"
+msgstr "/ month"
+
+#: app/components/landing.tsx
+msgctxt "HV3Goi"
+msgid "Same private computer, higher ceiling"
+msgstr "Same private computer, higher ceiling"
+
+#: app/components/landing.tsx
+msgctxt "liqo9V"
+msgid "Start Pro"
+msgstr "Start Pro"
+
+#: app/components/landing.tsx
+msgctxt "xkr-zo"
+msgid "Terms"
+msgstr "Terms"
+
+#: app/components/landing.tsx
+#: app/privacy/page.tsx
+msgctxt "cXBJ7U"
+msgid "Privacy"
+msgstr "Privacy"
+
+#: app/components/landing.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "0h_lPM"
+msgid "Upgrade"
+msgstr "Upgrade"
+
+#: app/components/mcp-settings.tsx
+msgctxt "vBjft2"
+msgid "Could not connect plugin."
+msgstr "Could not connect plugin."
+
+#: app/components/mcp-settings.tsx
+msgctxt "4Mk9Y8"
+msgid "Could not change permission."
+msgstr "Could not change permission."
+
+#: app/components/mcp-settings.tsx
+msgctxt "PiF85g"
+msgid "Unable to save connection"
+msgstr "Unable to save connection"
+
+#: app/components/mcp-settings.tsx
+msgctxt "tKgUrp"
+msgid "Connection saved. Test it before asking a teammate to call it."
+msgstr "Connection saved. Test it before asking a teammate to call it."
+
+#: app/components/mcp-settings.tsx
+msgctxt "_snqzY"
+msgid "MCP test failed"
+msgstr "MCP test failed"
+
+#: app/components/mcp-settings.tsx
+msgctxt "0e0B3L"
+msgid "Connected. Discovered {count, plural, one {# tool} other {# tools}}."
+msgstr "Connected. Discovered {count, plural, one {# tool} other {# tools}}."
+
+#: app/components/mcp-settings.tsx
+#: app/components/sidebar.tsx
+msgctxt "QJAllU"
+msgid "Plugins"
+msgstr "Plugins"
+
+#: app/components/mcp-settings.tsx
+msgctxt "nHp2Yf"
+msgid "Connect built-in services for search and reading. Writing requires a separate approval unless you enable Always allow for that action."
+msgstr "Connect built-in services for search and reading. Writing requires a separate approval unless you enable Always allow for that action."
+
+#: app/components/mcp-settings.tsx
+msgctxt "SaKXK4"
+msgid "Connected · search and read"
+msgstr "Connected · search and read"
+
+#: app/components/mcp-settings.tsx
+msgctxt "PuU15u"
+msgid "Not connected"
+msgstr "Not connected"
+
+#: app/components/mcp-settings.tsx
+msgctxt "Eg11ZY"
+msgid "Reconnect"
+msgstr "Reconnect"
+
+#: app/components/mcp-settings.tsx
+msgctxt "1_zz7T"
+msgid "Enable write access"
+msgstr "Enable write access"
+
+#: app/components/mcp-settings.tsx
+msgctxt "BhUhpa"
+msgid "{action} · Always allow"
+msgstr "{action} · Always allow"
+
+#: app/components/mcp-settings.tsx
+msgctxt "VJKXaS"
+msgid "Custom MCP servers"
+msgstr "Custom MCP servers"
+
+#: app/components/mcp-settings.tsx
+msgctxt "CkbIrf"
+msgid "Connect a streamable HTTP or SSE MCP server. Secrets are encrypted per account."
+msgstr "Connect a streamable HTTP or SSE MCP server. Secrets are encrypted per account."
+
+#: app/components/mcp-settings.tsx
+msgctxt "2ggvbL"
+msgid "My tools"
+msgstr "My tools"
+
+#: app/components/mcp-settings.tsx
+msgctxt "C9POHl"
+msgid "Server URL"
+msgstr "Server URL"
+
+#: app/components/mcp-settings.tsx
+msgctxt "KwHBKR"
+msgid "Transport"
+msgstr "Transport"
+
+#: app/components/mcp-settings.tsx
+msgctxt "PpfgW1"
+msgid "Bearer token (optional)"
+msgstr "Bearer token (optional)"
+
+#: app/components/mcp-settings.tsx
+msgctxt "mFWZ5K"
+msgid "Extra headers JSON (optional)"
+msgstr "Extra headers JSON (optional)"
+
+#: app/components/mcp-settings.tsx
+msgctxt "yOSZPp"
+msgid "Save connection"
+msgstr "Save connection"
+
+#: app/components/mcp-settings.tsx
+msgctxt "FzjLqk"
+msgid "No MCP connections yet."
+msgstr "No MCP connections yet."
+
+#: app/components/mcp-settings.tsx
+msgctxt "Pe7yxq"
+msgid "Secret saved"
+msgstr "Secret saved"
+
+#: app/components/mcp-settings.tsx
+msgctxt "ezGZ7a"
+msgid "No secret"
+msgstr "No secret"
+
+#: app/components/mcp-settings.tsx
+msgctxt "6w6AoB"
+msgid "tested {time}"
+msgstr "tested {time}"
+
+#: app/components/mcp-settings.tsx
+msgctxt "t7HOdt"
+msgid "not tested"
+msgstr "not tested"
+
+#: app/components/mcp-settings.tsx
+msgctxt "xu6eM8"
+msgid "Test"
+msgstr "Test"
+
+#: app/components/message-actions.tsx
+msgctxt "tV9bAW"
+msgid "Could not copy. Select the message text and copy it manually."
+msgstr "Could not copy. Select the message text and copy it manually."
+
+#: app/components/message-actions.tsx
+msgctxt "eLq8k-"
+msgid "Could not save the reaction. Please try again."
+msgstr "Could not save the reaction. Please try again."
+
+#: app/components/message-actions.tsx
+msgctxt "8FU11i"
+msgid "Message actions"
+msgstr "Message actions"
+
+#: app/components/message-actions.tsx
+msgctxt "9HU8vw"
+msgid "Reply"
+msgstr "Reply"
+
+#: app/components/message-actions.tsx
+msgctxt "uX6eKe"
+msgid "React"
+msgstr "React"
+
+#: app/components/message-actions.tsx
+msgctxt "6pCY5K"
+msgid "Choose a reaction"
+msgstr "Choose a reaction"
+
+#: app/components/message-actions.tsx
+msgctxt "jefSDd"
+msgid "Quick reactions"
+msgstr "Quick reactions"
+
+#: app/components/message-actions.tsx
+msgctxt "w5Qfyu"
+msgid "React {emoji}"
+msgstr "React {emoji}"
+
+#: app/components/message-actions.tsx
+msgctxt "hw9VFi"
+msgid "More emoji"
+msgstr "More emoji"
+
+#: app/components/message-actions.tsx
+msgctxt "-dsiqM"
+msgid "Message copied"
+msgstr "Message copied"
+
+#: app/components/message-actions.tsx
+msgctxt "TaDFih"
+msgid "Remove {emoji} reaction"
+msgstr "Remove {emoji} reaction"
+
+#: app/components/notification-inbox.tsx
+msgctxt "YPBnhF"
+msgid "Notifications ({count} unread)"
+msgstr "Notifications ({count} unread)"
+
+#: app/components/notification-inbox.tsx
+msgctxt "NAidKb"
+msgid "Notifications"
+msgstr "Notifications"
+
+#: app/components/notification-inbox.tsx
+msgctxt "i-qOIV"
+msgid "Task completions, failures, approvals, and takeover requests stay here until you read them."
+msgstr "Task completions, failures, approvals, and takeover requests stay here until you read them."
+
+#: app/components/notification-inbox.tsx
+msgctxt "ShdEie"
+msgid "Mark all read"
+msgstr "Mark all read"
+
+#: app/components/notification-inbox.tsx
+msgctxt "56G1F0"
+msgid "No notifications."
+msgstr "No notifications."
+
+#: app/components/reaction-picker.tsx
+msgctxt "AstDeQ"
+msgid "Smileys & People"
+msgstr "Smileys & People"
+
+#: app/components/reaction-picker.tsx
+msgctxt "szFhEu"
+msgid "Animals & Nature"
+msgstr "Animals & Nature"
+
+#: app/components/reaction-picker.tsx
+msgctxt "39T2UN"
+msgid "Food & Drink"
+msgstr "Food & Drink"
+
+#: app/components/reaction-picker.tsx
+msgctxt "MHUeF8"
+msgid "Travel & Places"
+msgstr "Travel & Places"
+
+#: app/components/reaction-picker.tsx
+msgctxt "UmEsZF"
+msgid "Activities"
+msgstr "Activities"
+
+#: app/components/reaction-picker.tsx
+msgctxt "sWVioT"
+msgid "Objects"
+msgstr "Objects"
+
+#: app/components/reaction-picker.tsx
+msgctxt "HWhnps"
+msgid "Symbols"
+msgstr "Symbols"
+
+#: app/components/reaction-picker.tsx
+msgctxt "Ed112w"
+msgid "Flags"
+msgstr "Flags"
+
+#: app/components/reaction-picker.tsx
+msgctxt "iEa3Li"
+msgid "Back to quick reactions"
+msgstr "Back to quick reactions"
+
+#: app/components/reaction-picker.tsx
+msgctxt "dv4wxl"
+msgid "Skin tone"
+msgstr "Skin tone"
+
+#: app/components/reaction-picker.tsx
+msgctxt "83pc9G"
+msgid "Search emoji"
+msgstr "Search emoji"
+
+#: app/components/reaction-picker.tsx
+msgctxt "7f-dl0"
+msgid "Search emoji…"
+msgstr "Search emoji…"
+
+#: app/components/reaction-picker.tsx
+msgctxt "4YJHut"
+msgid "Clear search"
+msgstr "Clear search"
+
+#: app/components/reaction-picker.tsx
+msgctxt "ex_RxJ"
+msgid "Emoji categories"
+msgstr "Emoji categories"
+
+#: app/components/reaction-picker.tsx
+msgctxt "USl5Em"
+msgid "Emoji results"
+msgstr "Emoji results"
+
+#: app/components/reaction-picker.tsx
+msgctxt "KA48y_"
+msgid "No emoji found"
+msgstr "No emoji found"
+
+#: app/components/reaction-picker.tsx
+msgctxt "aWpBzj"
+msgid "Show more"
+msgstr "Show more"
+
+#: app/components/routines-dialog.tsx
+msgctxt "Kf8HlF"
+msgid "Could not refresh routines."
+msgstr "Could not refresh routines."
+
+#: app/components/routines-dialog.tsx
+msgctxt "Hh1rVh"
+msgid "Could not delete routine."
+msgstr "Could not delete routine."
+
+#: app/components/routines-dialog.tsx
+msgctxt "-9K6yq"
+msgid "Delete routine"
+msgstr "Delete routine"
+
+#: app/components/routines-dialog.tsx
+msgctxt "15YN9e"
+msgid "Edit routine"
+msgstr "Edit routine"
+
+#: app/components/routines-dialog.tsx
+msgctxt "HGXiIY"
+msgid "New routine"
+msgstr "New routine"
+
+#: app/components/routines-dialog.tsx
+msgctxt "I6wCzN"
+msgid "Set up recurring work and manage it here. Changes apply to future runs; a task already running continues."
+msgstr "Set up recurring work and manage it here. Changes apply to future runs; a task already running continues."
+
+#: app/components/routines-dialog.tsx
+msgctxt "_kpzvf"
+msgid "Delete <strong>{name}</strong>? Its schedule will be removed. Existing conversations and files will remain."
+msgstr "Delete <strong>{name}</strong>? Its schedule will be removed. Existing conversations and files will remain."
+
+#: app/components/routines-dialog.tsx
+msgctxt "hpflgR"
+msgid "All routines"
+msgstr "All routines"
+
+#: app/components/routines-dialog.tsx
+msgctxt "m7qEK6"
+msgid "{count, plural, one {# routine} other {# routines}}"
+msgstr "{count, plural, one {# routine} other {# routines}}"
+
+#: app/components/routines-dialog.tsx
+msgctxt "0Zzfct"
+msgid "Create a routine to schedule recurring work."
+msgstr "Create a routine to schedule recurring work."
+
+#: app/components/routines-dialog.tsx
+msgctxt "kTv7t3"
+msgid "Turn off {name}"
+msgstr "Turn off {name}"
+
+#: app/components/routines-dialog.tsx
+msgctxt "sRrYwE"
+msgid "Turn on {name}"
+msgstr "Turn on {name}"
+
+#: app/components/routines-dialog.tsx
+msgctxt "wEQDC6"
+msgid "Edit"
+msgstr "Edit"
+
+#: app/components/routines-dialog.tsx
+msgctxt "Zh-5A6"
+msgid "On"
+msgstr "On"
+
+#: app/components/routines-dialog.tsx
+msgctxt "1ooK0d"
+msgid "Every day"
+msgstr "Every day"
+
+#: app/components/routines-dialog.tsx
+msgctxt "_TUEtl"
+msgid "Weekdays (Mon–Fri)"
+msgstr "Weekdays (Mon–Fri)"
+
+#: app/components/routines-dialog.tsx
+msgctxt "g7bjQR"
+msgid "Every week"
+msgstr "Every week"
+
+#: app/components/routines-dialog.tsx
+msgctxt "YaEHga"
+msgid "Every month"
+msgstr "Every month"
+
+#: app/components/routines-dialog.tsx
+msgctxt "YdpXat"
+msgid "Custom schedule (cron)"
+msgstr "Custom schedule (cron)"
+
+#: app/components/routines-dialog.tsx
+msgctxt "PQG8YT"
+msgid "Check your schedule."
+msgstr "Check your schedule."
+
+#: app/components/routines-dialog.tsx
+msgctxt "JoiYoD"
+msgid "Morning news"
+msgstr "Morning news"
+
+#: app/components/routines-dialog.tsx
+msgctxt "5E9DcX"
+msgid "Instruction"
+msgstr "Instruction"
+
+#: app/components/routines-dialog.tsx
+msgctxt "-Eg4uN"
+msgid "Find today's important news and send me a concise summary with sources."
+msgstr "Find today's important news and send me a concise summary with sources."
+
+#: app/components/routines-dialog.tsx
+msgctxt "gegfoA"
+msgid "Conversation"
+msgstr "Conversation"
+
+#: app/components/routines-dialog.tsx
+msgctxt "Xk5d8n"
+msgid "No conversation available"
+msgstr "No conversation available"
+
+#: app/components/routines-dialog.tsx
+msgctxt "sNfAaf"
+msgid "When to run"
+msgstr "When to run"
+
+#: app/components/routines-dialog.tsx
+msgctxt "YmslQP"
+msgid "Cron expression"
+msgstr "Cron expression"
+
+#: app/components/routines-dialog.tsx
+msgctxt "2-sQVi"
+msgid "Minute · hour · day of month · month · weekday"
+msgstr "Minute · hour · day of month · month · weekday"
+
+#: app/components/routines-dialog.tsx
+msgctxt "ug01Mk"
+msgid "Time"
+msgstr "Time"
+
+#: app/components/routines-dialog.tsx
+msgctxt "awaLB4"
+msgid "Enter a time between 00:00 and 23:59"
+msgstr "Enter a time between 00:00 and 23:59"
+
+#: app/components/routines-dialog.tsx
+msgctxt "ApANWN"
+msgid "Choose hour"
+msgstr "Choose hour"
+
+#: app/components/routines-dialog.tsx
+msgctxt "-biUKF"
+msgid "Choose minute"
+msgstr "Choose minute"
+
+#: app/components/routines-dialog.tsx
+msgctxt "7pXrnq"
+msgid "Day"
+msgstr "Day"
+
+#: app/components/routines-dialog.tsx
+msgctxt "oMsZ4g"
+msgid "Day of month"
+msgstr "Day of month"
+
+#: app/components/routines-dialog.tsx
+msgctxt "4ovEF5"
+msgid "Months without this day are skipped."
+msgstr "Months without this day are skipped."
+
+#: app/components/routines-dialog.tsx
+msgctxt "7nUCu9"
+msgid "Timezone"
+msgstr "Timezone"
+
+#: app/components/routines-dialog.tsx
+msgctxt "9wTsCY"
+msgid "Search timezones…"
+msgstr "Search timezones…"
+
+#: app/components/routines-dialog.tsx
+msgctxt "_VFKg9"
+msgid "No matching timezone. You can enter one manually."
+msgstr "No matching timezone. You can enter one manually."
+
+#: app/components/routines-dialog.tsx
+msgctxt "V52jNn"
+msgid "Enabled"
+msgstr "Enabled"
+
+#: app/components/routines-dialog.tsx
+msgctxt "1Y2tYW"
+msgid "Enable routine"
+msgstr "Enable routine"
+
+#: app/components/routines-dialog.tsx
+#: app/components/skills-dialog.tsx
+#: app/components/workspace.tsx
+msgctxt "X0ha1a"
+msgid "Save changes"
+msgstr "Save changes"
+
+#: app/components/setup-screen.tsx
+msgctxt "-OtV6h"
+msgid "Failed to save"
+msgstr "Failed to save"
+
+#: app/components/setup-screen.tsx
+msgctxt "ahYtFD"
+msgid "error"
+msgstr "error"
+
+#: app/components/setup-screen.tsx
+msgctxt "-pGJhv"
+msgid "AI teammates."
+msgstr "AI teammates."
+
+#: app/components/setup-screen.tsx
+msgctxt "_zgXVh"
+msgid "Their own computer."
+msgstr "Their own computer."
+
+#: app/components/setup-screen.tsx
+msgctxt "lNSY5T"
+msgid "Hand work to named teammates and let them finish it on an isolated computer (browser, files, and terminal). Your workspace stays private to your account."
+msgstr "Hand work to named teammates and let them finish it on an isolated computer (browser, files, and terminal). Your workspace stays private to your account."
+
+#: app/components/setup-screen.tsx
+msgctxt "b99Plc"
+msgid "Get a key at openrouter.ai. Run uses openai/gpt-6-luna; Run+ uses openai/gpt-6-sol and consumes 20× the matching Run mode’s tokens. Pick a mode in the workspace. This screen is skipped when an environment variable is set."
+msgstr "Get a key at openrouter.ai. Run uses openai/gpt-6-luna; Run+ uses openai/gpt-6-sol and consumes 20× the matching Run mode’s tokens. Pick a mode in the workspace. This screen is skipped when an environment variable is set."
+
+#: app/components/setup-screen.tsx
+msgctxt "YtxGgO"
+msgid "Connecting…"
+msgstr "Connecting…"
+
+#: app/components/sidebar.tsx
+msgctxt "hzmswI"
+msgid "Groups"
+msgstr "Groups"
+
+#: app/components/sidebar.tsx
+msgctxt "rS4OCa"
+msgid "{section} · Groups"
+msgstr "{section} · Groups"
+
+#: app/components/sidebar.tsx
+msgctxt "RiMC6D"
+msgid "Hidden groups"
+msgstr "Hidden groups"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "ORESkJ"
+msgid "New teammate"
+msgstr "New teammate"
+
+#: app/components/sidebar.tsx
+msgctxt "xmcVZ0"
+msgid "Search"
+msgstr "Search"
+
+#: app/components/sidebar.tsx
+msgctxt "TA1mK7"
+msgid "Search conversations"
+msgstr "Search conversations"
+
+#: app/components/sidebar.tsx
+msgctxt "ThUvIL"
+msgid "Hidden"
+msgstr "Hidden"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "HpoDwk"
+msgid "Group"
+msgstr "Group"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "HkK3Rt"
+msgid "New group"
+msgstr "New group"
+
+#: app/components/sidebar.tsx
+#: app/components/skills-dialog.tsx
+msgctxt "EJSVsO"
+msgid "Skills"
+msgstr "Skills"
+
+#: app/components/sidebar.tsx
+msgctxt "ltt9yB"
+msgid "Task waiting"
+msgstr "Task waiting"
+
+#: app/components/sidebar.tsx
+msgctxt "DZ8d0P"
+msgid "Task needs attention"
+msgstr "Task needs attention"
+
+#: app/components/sidebar.tsx
+msgctxt "fWZYP5"
+msgid "Pinned"
+msgstr "Pinned"
+
+#: app/components/sidebar.tsx
+msgctxt "jabB4C"
+msgid "Unread"
+msgstr "Unread"
+
+#: app/components/sidebar.tsx
+msgctxt "opNVQC"
+msgid "Unpin"
+msgstr "Unpin"
+
+#: app/components/sidebar.tsx
+msgctxt "puLNUJ"
+msgid "Pin"
+msgstr "Pin"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "0suuAM"
+msgid "Move to new section"
+msgstr "Move to new section"
+
+#: app/components/sidebar.tsx
+msgctxt "NhMfV6"
+msgid "Remove from section"
+msgstr "Remove from section"
+
+#: app/components/sidebar.tsx
+msgctxt "CVph6v"
+msgid "Mark as Read"
+msgstr "Mark as Read"
+
+#: app/components/sidebar.tsx
+msgctxt "Fpscrv"
+msgid "Mark as Unread"
+msgstr "Mark as Unread"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "Z_1udv"
+msgid "Edit group"
+msgstr "Edit group"
+
+#: app/components/sidebar.tsx
+#: app/components/workspace.tsx
+msgctxt "nYrKWp"
+msgid "Edit profile"
+msgstr "Edit profile"
+
+#: app/components/sidebar.tsx
+msgctxt "4fHiNl"
+msgid "Duplicate"
+msgstr "Duplicate"
+
+#: app/components/sidebar.tsx
+msgctxt "9wElwh"
+msgid "Show in sidebar"
+msgstr "Show in sidebar"
+
+#: app/components/sidebar.tsx
+msgctxt "bt2xOt"
+msgid "Hide from sidebar"
+msgstr "Hide from sidebar"
+
+#: app/components/skills-dialog.tsx
+msgctxt "lZ-2PI"
+msgid "Could not refresh skills."
+msgstr "Could not refresh skills."
+
+#: app/components/skills-dialog.tsx
+msgctxt "9zifG7"
+msgid "Could not delete skill."
+msgstr "Could not delete skill."
+
+#: app/components/skills-dialog.tsx
+msgctxt "-YklZ6"
+msgid "Delete skill?"
+msgstr "Delete skill?"
+
+#: app/components/skills-dialog.tsx
+msgctxt "xsrj8z"
+msgid "Edit skill"
+msgstr "Edit skill"
+
+#: app/components/skills-dialog.tsx
+msgctxt "CBuich"
+msgid "New skill"
+msgstr "New skill"
+
+#: app/components/skills-dialog.tsx
+msgctxt "8Osegw"
+msgid "Delete “{name}”? This cannot be undone."
+msgstr "Delete “{name}”? This cannot be undone."
+
+#: app/components/skills-dialog.tsx
+msgctxt "untkX2"
+msgid "Reusable instructions for your teammates. Saved changes apply when a skill is read again."
+msgstr "Reusable instructions for your teammates. Saved changes apply when a skill is read again."
+
+#: app/components/skills-dialog.tsx
+msgctxt "k-phZu"
+msgid "Delete skill"
+msgstr "Delete skill"
+
+#: app/components/skills-dialog.tsx
+msgctxt "rVO16l"
+msgid "All skills"
+msgstr "All skills"
+
+#: app/components/skills-dialog.tsx
+msgctxt "S9fw5I"
+msgid "Instructions (Markdown)"
+msgstr "Instructions (Markdown)"
+
+#: app/components/skills-dialog.tsx
+msgctxt "765YHs"
+msgid "When to use this skill, steps to follow, and how to verify the result…"
+msgstr "When to use this skill, steps to follow, and how to verify the result…"
+
+#: app/components/skills-dialog.tsx
+msgctxt "8jD_lL"
+msgid "Create skill"
+msgstr "Create skill"
+
+#: app/components/skills-dialog.tsx
+msgctxt "t0O6wC"
+msgid "No skills yet."
+msgstr "No skills yet."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "Afrot4"
+msgid "Teammate limit reached"
+msgstr "Teammate limit reached"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "WFUu-6"
+msgid "You've used {used} of {limit} teammates on {plan}. Pro includes {pro}."
+msgstr "You've used {used} of {limit} teammates on {plan}. Pro includes {pro}."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "nHLZZq"
+msgid "Token limit reached"
+msgstr "Token limit reached"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "_0wIjW"
+msgid "You've used {used} of {limit} tokens on {plan} this month."
+msgstr "You've used {used} of {limit} tokens on {plan} this month."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "ddKuob"
+msgid "Browser time limit reached"
+msgstr "Browser time limit reached"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "_klU1V"
+msgid "You've used {used} of {limit} browser minutes on {plan} this month."
+msgstr "You've used {used} of {limit} browser minutes on {plan} this month."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "YGZssW"
+msgid "Computer time limit reached"
+msgstr "Computer time limit reached"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "A62Dva"
+msgid "You've used {used} of {limit} computer minutes on {plan} this month."
+msgstr "You've used {used} of {limit} computer minutes on {plan} this month."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "jvPWrj"
+msgid "Same private computer. More teammates, tokens, and time on the browser and terminal."
+msgstr "Same private computer. More teammates, tokens, and time on the browser and terminal."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "P-8WQA"
+msgid "25 teammates"
+msgstr "25 teammates"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "i5EU9h"
+msgid "Name specialists, keep memory on each one, and hand work off instead of stretching a single bot."
+msgstr "Name specialists, keep memory on each one, and hand work off instead of stretching a single bot."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "xqhm1T"
+msgid "200M tokens / month"
+msgstr "200M tokens / month"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "bgBjJu"
+msgid "Longer threads, more handoffs, and routines that can finish without stopping mid-task."
+msgstr "Longer threads, more handoffs, and routines that can finish without stopping mid-task."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "5SSqKv"
+msgid "10 hours of browser time"
+msgstr "10 hours of browser time"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "rde8Gr"
+msgid "600 minutes to research, fill forms, and watch the live screen — 20× Free."
+msgstr "600 minutes to research, fill forms, and watch the live screen — 20× Free."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "BUJ2OC"
+msgid "10 hours of computer time"
+msgstr "10 hours of computer time"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "RHmadt"
+msgid "600 minutes of terminal and files on your isolated sandbox."
+msgstr "600 minutes of terminal and files on your isolated sandbox."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "k2FVr_"
+msgid "The same private computer"
+msgstr "The same private computer"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "1SmbRL"
+msgid "Browser, workspace, and Linux sandbox stay scoped to your account. Pro only raises the ceiling."
+msgstr "Browser, workspace, and Linux sandbox stay scoped to your account. Pro only raises the ceiling."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "v6t6lE"
+msgid "You're on Pro"
+msgstr "You're on Pro"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "gG68f4"
+msgid "Your account already has the higher monthly ceiling. Manage billing if you need invoices or cancellation."
+msgstr "Your account already has the higher monthly ceiling. Manage billing if you need invoices or cancellation."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "3oXm6f"
+msgid "What Pro includes"
+msgstr "What Pro includes"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "ZBALng"
+msgid "Current plan"
+msgstr "Current plan"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "tf1lIh"
+msgid "Free"
+msgstr "Free"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "E3oB-t"
+msgid "Browser"
+msgstr "Browser"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "CFgeHP"
+msgid "{count} min"
+msgstr "{count} min"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "Xoz5dY"
+msgid "Monthly limits reset at the start of each UTC month. Cancel anytime."
+msgstr "Monthly limits reset at the start of each UTC month. Cancel anytime."
+
+#: app/components/upgrade-screen.tsx
+msgctxt "EOgl4B"
+msgid "Could not open billing"
+msgstr "Could not open billing"
+
+#: app/components/upgrade-screen.tsx
+msgctxt "wqyizR"
+msgid "Start Pro · ${price}/mo"
+msgstr "Start Pro · ${price}/mo"
+
+#: app/components/workspace.tsx
+msgctxt "66I97y"
+msgid "Loading computer…"
+msgstr "Loading computer…"
+
+#: app/components/workspace.tsx
+msgctxt "B12JBq"
+msgid "Delete {title}? The group conversation and its routines will be removed. Teammates and shared files will remain."
+msgstr "Delete {title}? The group conversation and its routines will be removed. Teammates and shared files will remain."
+
+#: app/components/workspace.tsx
+msgctxt "hW_d9H"
+msgid "{title} copy"
+msgstr "{title} copy"
+
+#: app/components/workspace.tsx
+msgctxt "uzzi6K"
+msgid "Could not duplicate group."
+msgstr "Could not duplicate group."
+
+#: app/components/workspace.tsx
+msgctxt "H9Slxu"
+msgid "Could not delete group."
+msgstr "Could not delete group."
+
+#: app/components/workspace.tsx
+msgctxt "354mCs"
+msgid "Could not update group."
+msgstr "Could not update group."
+
+#: app/components/workspace.tsx
+msgctxt "u7zDdn"
+msgid "{name} copy"
+msgstr "{name} copy"
+
+#: app/components/workspace.tsx
+msgctxt "bK0COR"
+msgid "Delete {name}? Their conversation and routines will be removed."
+msgstr "Delete {name}? Their conversation and routines will be removed."
+
+#: app/components/workspace.tsx
+#: app/loading.tsx
+#: components/page-loading.tsx
+msgctxt "T4VxQN"
+msgid "Loading…"
+msgstr "Loading…"
+
+#: app/components/workspace.tsx
+msgctxt "HFB1Us"
+msgid "Select a teammate"
+msgstr "Select a teammate"
+
+#: app/components/workspace.tsx
+msgctxt "joLiY5"
+msgid "Close computer"
+msgstr "Close computer"
+
+#: app/components/workspace.tsx
+msgctxt "ngPasU"
+msgid "Could not save profile."
+msgstr "Could not save profile."
+
+#: app/components/workspace.tsx
+msgctxt "ZOJkFw"
+msgid "Could not create teammate."
+msgstr "Could not create teammate."
+
+#: app/components/workspace.tsx
+msgctxt "MEvKnW"
+msgid "Job"
+msgstr "Job"
+
+#: app/components/workspace.tsx
+msgctxt "sV2v5L"
+msgid "Instructions"
+msgstr "Instructions"
+
+#: app/components/workspace.tsx
+msgctxt "jvo0vs"
+msgid "Save"
+msgstr "Save"
+
+#: app/components/workspace.tsx
+msgctxt "VzzYJk"
+msgid "Create"
+msgstr "Create"
+
+#: app/components/workspace.tsx
+msgctxt "wJt_1b"
+msgid "Section name"
+msgstr "Section name"
+
+#: app/components/workspace.tsx
+msgctxt "UMbBzo"
+msgid "Move"
+msgstr "Move"
+
+#: app/components/workspace.tsx
+msgctxt "N39Wl0"
+msgid "Could not save group."
+msgstr "Could not save group."
+
+#: app/components/workspace.tsx
+msgctxt "-a-2ug"
+msgid "Members"
+msgstr "Members"
+
+#: app/error.tsx
+#: lib/localize-error.ts
+msgctxt "JqiqNj"
+msgid "Something went wrong"
+msgstr "Something went wrong"
+
+#: app/error.tsx
+msgctxt "N4_7uj"
+msgid "Reload this page. If it keeps happening, wait a moment and try again."
+msgstr "Reload this page. If it keeps happening, wait a moment and try again."
+
+#: app/error.tsx
+msgctxt "FazwRl"
+msgid "Try again"
+msgstr "Try again"
+
+#: app/layout.tsx
+msgctxt "fEMMml"
+msgid "AI teammates with an isolated computer for every account."
+msgstr "AI teammates with an isolated computer for every account."
+
+#: app/not-found.tsx
+msgctxt "QRccCM"
+msgid "Page not found"
+msgstr "Page not found"
+
+#: app/not-found.tsx
+msgctxt "cOlyLA"
+msgid "That URL is not part of Deni Run."
+msgstr "That URL is not part of Deni Run."
+
+#: app/not-found.tsx
+msgctxt "rPgekg"
+msgid "Back home"
+msgstr "Back home"
+
+#: app/privacy/page.tsx
+msgctxt "oIpAL1"
+msgid "Account authentication is handled on this service with Better Auth. You sign in with Google or GitHub, then an authenticator app. Sessions and two-factor secrets are stored in Postgres. Conversation history, teammates, routines, skills, and computer state are stored in Postgres keyed by your user ID. Workspace files and screenshots are stored in your tenant namespace on object storage (S3-compatible, typically Cloudflare R2)."
+msgstr "Account authentication is handled on this service with Better Auth. You sign in with Google or GitHub, then an authenticator app. Sessions and two-factor secrets are stored in Postgres. Conversation history, teammates, routines, skills, and computer state are stored in Postgres keyed by your user ID. Workspace files and screenshots are stored in your tenant namespace on object storage (S3-compatible, typically Cloudflare R2)."
+
+#: app/privacy/page.tsx
+msgctxt "7TawRD"
+msgid "Browser sessions run through Steel. Terminal commands run in an isolated E2B sandbox. Model requests go through OpenRouter. Billing, if enabled, is processed by Stripe. Session cookies keep you signed in."
+msgstr "Browser sessions run through Steel. Terminal commands run in an isolated E2B sandbox. Model requests go through OpenRouter. Billing, if enabled, is processed by Stripe. Session cookies keep you signed in."
+
+#: app/privacy/page.tsx
+msgctxt "OFbLfE"
+msgid "We do not sell your workspace contents. You can export a copy of stored account data, or delete your account, from <link>Account</link>. Deleting the account removes the login and stored workspace data."
+msgstr "We do not sell your workspace contents. You can export a copy of stored account data, or delete your account, from <link>Account</link>. Deleting the account removes the login and stored workspace data."
+
+#: app/privacy/page.tsx
+msgctxt "yqZI8W"
+msgid "Processors that may receive data needed to run the product: Google and GitHub (sign-in), Stripe (billing), OpenRouter (model inference), Steel (browser), E2B (sandbox), and the configured object-storage provider."
+msgstr "Processors that may receive data needed to run the product: Google and GitHub (sign-in), Stripe (billing), OpenRouter (model inference), Steel (browser), E2B (sandbox), and the configured object-storage provider."
+
+#: app/privacy/page.tsx
+#: app/terms/page.tsx
+msgctxt "Iexom4"
+msgid "Contact:"
+msgstr "Contact:"
+
+#: app/privacy/page.tsx
+#: app/terms/page.tsx
+msgctxt "mv-MT8"
+msgid "the operator of this deployment"
+msgstr "the operator of this deployment"
+
+#: app/sign-up/page.tsx
+msgctxt "0vL5u1"
+msgid "Create an account"
+msgstr "Create an account"
+
+#: app/terms/page.tsx
+msgctxt "32rBNK"
+msgid "Terms of Service"
+msgstr "Terms of Service"
+
+#: app/terms/page.tsx
+msgctxt "iSjB38"
+msgid "Deni Run is an AI teammate service that can operate a private computer (browser, files, and terminal) on your behalf. By creating an account you agree to these terms."
+msgstr "Deni Run is an AI teammate service that can operate a private computer (browser, files, and terminal) on your behalf. By creating an account you agree to these terms."
+
+#: app/terms/page.tsx
+msgctxt "j9MGr2"
+msgid "You are responsible for the tasks you assign, including browsing, file changes, and shell commands. Do not use Deni Run to break the law, attack systems, send spam, or process data you are not allowed to handle. Destructive actions may require your approval, but you remain responsible for the outcome."
+msgstr "You are responsible for the tasks you assign, including browsing, file changes, and shell commands. Do not use Deni Run to break the law, attack systems, send spam, or process data you are not allowed to handle. Destructive actions may require your approval, but you remain responsible for the outcome."
+
+#: app/terms/page.tsx
+msgctxt "F5hHF3"
+msgid "Usage limits apply by plan. Paid subscriptions renew monthly until canceled through the billing portal. Fees are charged by Stripe. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms."
+msgstr "Usage limits apply by plan. Paid subscriptions renew monthly until canceled through the billing portal. Fees are charged by Stripe. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms."
+
+#: app/terms/page.tsx
+msgctxt "BARVqC"
+msgid "Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service."
+msgstr "Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service."
+
+#: app/terms/page.tsx
+msgctxt "fyPFTO"
+msgid "The service is provided as-is. We do not warrant uninterrupted availability. These terms may be updated as the product changes."
+msgstr "The service is provided as-is. We do not warrant uninterrupted availability. These terms may be updated as the product changes."
+
+#: app/upgrade/page.tsx
+msgctxt "kEgsaX"
+msgid "Upgrade to Pro · Deni Run"
+msgstr "Upgrade to Pro · Deni Run"
+
+#: app/upgrade/page.tsx
+msgctxt "aKq-bu"
+msgid "More teammates, tokens, and computer time on a private computer."
+msgstr "More teammates, tokens, and computer time on a private computer."
+
+#: components/locale-switcher.tsx
+msgctxt "y1Z3or"
+msgid "Language"
+msgstr "Language"
+
+#: components/routine-labels.ts
+msgctxt "mJR06P"
+msgid "Sunday"
+msgstr "Sunday"
+
+#: components/routine-labels.ts
+msgctxt "azMsfM"
+msgid "Monday"
+msgstr "Monday"
+
+#: components/routine-labels.ts
+msgctxt "YAgYL6"
+msgid "Tuesday"
+msgstr "Tuesday"
+
+#: components/routine-labels.ts
+msgctxt "lxblgl"
+msgid "Wednesday"
+msgstr "Wednesday"
+
+#: components/routine-labels.ts
+msgctxt "qAhUUO"
+msgid "Thursday"
+msgstr "Thursday"
+
+#: components/routine-labels.ts
+msgctxt "QrihTZ"
+msgid "Friday"
+msgstr "Friday"
+
+#: components/routine-labels.ts
+msgctxt "WMNHPh"
+msgid "Saturday"
+msgstr "Saturday"
+
+#: components/routine-labels.ts
+msgctxt "ftz3w-"
+msgid "Custom: {cron}"
+msgstr "Custom: {cron}"
+
+#: components/routine-labels.ts
+msgctxt "M_8K_W"
+msgid "Every day at {time}"
+msgstr "Every day at {time}"
+
+#: components/routine-labels.ts
+msgctxt "BwQLiY"
+msgid "Weekdays at {time}"
+msgstr "Weekdays at {time}"
+
+#: components/routine-labels.ts
+msgctxt "hkGJ_f"
+msgid "Every {weekday} at {time}"
+msgstr "Every {weekday} at {time}"
+
+#: components/routine-labels.ts
+msgctxt "dag1_v"
+msgid "Day {day} of each month at {time}"
+msgstr "Day {day} of each month at {time}"
+
+#: components/ui/sidebar.tsx
+msgctxt "HyS0qp"
+msgid "Close sidebar"
+msgstr "Close sidebar"
+
+#: components/ui/sidebar.tsx
+msgctxt "6D4Ghb"
+msgid "Toggle sidebar"
+msgstr "Toggle sidebar"
+
+#: components/ui/spinner.tsx
+msgctxt "iFsDVR"
+msgid "Loading"
+msgstr "Loading"
+
+#: lib/api-auth.ts
+msgctxt "WlyxAh"
+msgid "Unauthorized"
+msgstr "Unauthorized"
+
+#: lib/localize-error.ts
+msgctxt "UxEkbJ"
+msgid "Invalid cron expression"
+msgstr "Invalid cron expression"
+
+#: lib/localize-error.ts
+msgctxt "ENOGtn"
+msgid "Cron expression has no matching time in the next five years"
+msgstr "Cron expression has no matching time in the next five years"
+
+#: lib/localize-error.ts
+msgctxt "8_6raW"
+msgid "MCP URL is invalid"
+msgstr "MCP URL is invalid"
+
+#: lib/localize-error.ts
+msgctxt "9ktfmP"
+msgid "MCP URL must use http or https"
+msgstr "MCP URL must use http or https"
+
+#: lib/localize-error.ts
+msgctxt "GvydES"
+msgid "MCP connection name is required"
+msgstr "MCP connection name is required"
+
+#: lib/localize-error.ts
+msgctxt "MonAal"
+msgid "MCP connection not found"
+msgstr "MCP connection not found"
+
+#: lib/localize-error.ts
+msgctxt "oGclRw"
+msgid "MCP connection is not available"
+msgstr "MCP connection is not available"
+
+#: lib/localize-error.ts
+msgctxt "XDn9_r"
+msgid "MCP tool name is invalid"
+msgstr "MCP tool name is invalid"
+
+#: lib/localize-error.ts
+msgctxt "xagOzr"
+msgid "MCP request failed"
+msgstr "MCP request failed"
+
+#: lib/localize-error.ts
+msgctxt "m24QeN"
+msgid "Path is outside the workspace"
+msgstr "Path is outside the workspace"
+
+#: lib/localize-error.ts
+msgctxt "S3gMXt"
+msgid "A file path is required"
+msgstr "A file path is required"
+
+#: lib/localize-error.ts
+msgctxt "zT71zc"
+msgid "A directory path is required"
+msgstr "A directory path is required"
+
+#: lib/localize-error.ts
+msgctxt "9plh_v"
+msgid "File is too large (maximum 1 MB)"
+msgstr "File is too large (maximum 1 MB)"
+
+#: lib/localize-error.ts
+msgctxt "id2tYJ"
+msgid "File is too large to download"
+msgstr "File is too large to download"
+
+#: lib/localize-error.ts
+msgctxt "gcaJtR"
+msgid "File not found"
+msgstr "File not found"
+
+#: lib/localize-error.ts
+msgctxt "Q6-txY"
+msgid "Path is a directory"
+msgstr "Path is a directory"
+
+#: lib/localize-error.ts
+msgctxt "QqJ8Jt"
+msgid "The workspace root cannot be deleted"
+msgstr "The workspace root cannot be deleted"
+
+#: lib/localize-error.ts
+msgctxt "70Mhc3"
+msgid "Artifact path must stay inside the workspace"
+msgstr "Artifact path must stay inside the workspace"
+
+#: lib/localize-error.ts
+msgctxt "4GVcRl"
+msgid "Unable to register artifact"
+msgstr "Unable to register artifact"
+
+#: lib/localize-error.ts
+msgctxt "SASA4f"
+msgid "Invalid URL"
+msgstr "Invalid URL"
+
+#: lib/localize-error.ts
+msgctxt "qPT1b3"
+msgid "Only http(s) URLs are allowed"
+msgstr "Only http(s) URLs are allowed"
+
+#: lib/localize-error.ts
+msgctxt "DwRyBa"
+msgid "Invalid plugin operation"
+msgstr "Invalid plugin operation"
+
+#: lib/localize-error.ts
+msgctxt "0lvXw-"
+msgid "Connect write access first"
+msgstr "Connect write access first"
+
+#: lib/localize-error.ts
+msgctxt "0j0pr4"
+msgid "Result too large to display"
+msgstr "Result too large to display"
+
+#: lib/localize-error.ts
+msgctxt "TIFz5D"
+msgid "Input too large"
+msgstr "Input too large"
+
+#: lib/localize-error.ts
+msgctxt "S8Bliy"
+msgid "No teammate matched that mention. Choose a name or use @everyone."
+msgstr "No teammate matched that mention. Choose a name or use @everyone."
+
+#: lib/localize-error.ts
+msgctxt "eAmkuo"
+msgid "Conversation no longer exists"
+msgstr "Conversation no longer exists"
+
+#: lib/localize-error.ts
+msgctxt "SAsUPy"
+msgid "Reply target not found"
+msgstr "Reply target not found"
+
+#: lib/localize-error.ts
+msgctxt "ugkBR_"
+msgid "Choose a valid time."
+msgstr "Choose a valid time."
+
+#: lib/localize-error.ts
+msgctxt "no3FAT"
+msgid "Choose a weekday."
+msgstr "Choose a weekday."
+
+#: lib/localize-error.ts
+msgctxt "lQTsmw"
+msgid "Choose a day between 1 and 31."
+msgstr "Choose a day between 1 and 31."
+
+#: lib/localize-error.ts
+msgctxt "cKsSBA"
+msgid "Checkout URL is unavailable"
+msgstr "Checkout URL is unavailable"
+
+#: lib/localize-error.ts
+msgctxt "B_OzoS"
+msgid "Invalid timezone: {timezone}"
+msgstr "Invalid timezone: {timezone}"
+
+#: lib/localize-error.ts
+msgctxt "cLbuuK"
+msgid "Invalid MCP header: {name}"
+msgstr "Invalid MCP header: {name}"
+
+#: lib/localize-error.ts
+msgctxt "F8zKvI"
+msgid "MCP SSE connection failed ({status})"
+msgstr "MCP SSE connection failed ({status})"
+
+#: lib/localize-error.ts
+msgctxt "F03gjv"
+msgid "MCP request failed ({status})"
+msgstr "MCP request failed ({status})"
+
+#: lib/localize-error.ts
+msgctxt "mEYAdG"
+msgid "Connect {service} write access in Plugins first."
+msgstr "Connect {service} write access in Plugins first."
+
+#: lib/localize-error.ts
+msgctxt "GTgdaw"
+msgid "Connect {service} in Plugins first."
+msgstr "Connect {service} in Plugins first."
+
+#: lib/localize-error.ts
+msgctxt "mSTRV1"
+msgid "Reconnect {service} in Plugins."
+msgstr "Reconnect {service} in Plugins."
+
+#: lib/localize-error.ts
+msgctxt "r0AFNc"
+msgid "Monthly token limit reached ({limit} on {plan}). Upgrade to keep chatting."
+msgstr "Monthly token limit reached ({limit} on {plan}). Upgrade to keep chatting."
+
+#: lib/localize-error.ts
+msgctxt "8XEouI"
+msgid "Monthly browser time limit reached ({limit} min on {plan}). Upgrade to keep using the browser."
+msgstr "Monthly browser time limit reached ({limit} min on {plan}). Upgrade to keep using the browser."
+
+#: lib/localize-error.ts
+msgctxt "dH9YEG"
+msgid "Monthly computer time limit reached ({limit} min on {plan}). Upgrade to keep using the terminal."
+msgstr "Monthly computer time limit reached ({limit} min on {plan}). Upgrade to keep using the terminal."
+
+#: lib/localize-error.ts
+msgctxt "6EJO1G"
+msgid "Teammate limit reached ({limit} on {plan}). Upgrade to add more teammates."
+msgstr "Teammate limit reached ({limit} on {plan}). Upgrade to add more teammates."
+
+#: lib/rate-limit.ts
+msgctxt "GhZx8v"
+msgid "Too many requests. Wait a moment and try again."
+msgstr "Too many requests. Wait a moment and try again."

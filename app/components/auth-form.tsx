@@ -1,5 +1,6 @@
 "use client";
 
+import { useExtracted } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
@@ -143,6 +144,7 @@ function ActionFeedback({
 }
 
 export function BackupCodesPanel({ codes }: { codes: string[] }) {
+  const t = useExtracted();
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -178,7 +180,7 @@ export function BackupCodesPanel({ codes }: { codes: string[] }) {
 
   return (
     <div className="rounded-lg border border-foreground/10 bg-foreground/5 p-3">
-      <p className="mb-2 text-xs text-muted-foreground">Save these backup codes. They are shown once.</p>
+      <p className="mb-2 text-xs text-muted-foreground">{t("Save these backup codes. They are shown once.")}</p>
       <div className="grid grid-cols-2 gap-1 font-mono text-xs">
         {codes.map((item) => (
           <span key={item}>{item}</span>
@@ -191,8 +193,8 @@ export function BackupCodesPanel({ codes }: { codes: string[] }) {
               done={copied}
               idleIcon={<Copy />}
               doneIcon={<Check />}
-              idleLabel="Copy"
-              doneLabel="Copied"
+              idleLabel={t("Copy")}
+              doneLabel={t("Copied")}
             />
           </Button>
         </motion.div>
@@ -202,8 +204,8 @@ export function BackupCodesPanel({ codes }: { codes: string[] }) {
               done={saved}
               idleIcon={<Download />}
               doneIcon={<Check />}
-              idleLabel="Download"
-              doneLabel="Saved"
+              idleLabel={t("Download")}
+              doneLabel={t("Saved")}
             />
           </Button>
         </motion.div>
@@ -259,6 +261,7 @@ export function SocialAuth({
   error?: string;
   mode: "sign-in" | "sign-up";
 }) {
+  const t = useExtracted();
   const [busy, setBusy] = useState<"google" | "github" | null>(null);
   const [localError, setLocalError] = useState("");
 
@@ -271,35 +274,37 @@ export function SocialAuth({
       errorCallbackURL: "/sign-in?error=auth",
     });
     if (nextError) {
-      setLocalError(nextError.message || "Could not start sign-in");
+      setLocalError(nextError.message || t("Could not start sign-in"));
       setBusy(null);
     }
   }
 
   const message =
     localError ||
-    (error === "auth" ? "Sign-in was cancelled or failed. Try again." : error);
+    (error === "auth" ? t("Sign-in was cancelled or failed. Try again.") : error);
 
   return (
     <AuthCard
       title={title}
-      description="Continue with Google or GitHub, then set up an authenticator app."
+      description={t("Continue with Google or GitHub, then set up an authenticator app.")}
       footer={
         <p className="text-center text-xs text-muted-foreground">
           {mode === "sign-in" ? (
-            <>
-              New here?{" "}
-              <Link href="/sign-up" className="text-foreground hover:underline">
-                Create an account
-              </Link>
-            </>
+            t.rich("New here? <link>Create an account</link>", {
+              link: (chunks) => (
+                <Link href="/sign-up" className="text-foreground hover:underline">
+                  {chunks}
+                </Link>
+              ),
+            })
           ) : (
-            <>
-              Already have an account?{" "}
-              <Link href="/sign-in" className="text-foreground hover:underline">
-                Sign in
-              </Link>
-            </>
+            t.rich("Already have an account? <link>Sign in</link>", {
+              link: (chunks) => (
+                <Link href="/sign-in" className="text-foreground hover:underline">
+                  {chunks}
+                </Link>
+              ),
+            })
           )}
         </p>
       }
@@ -314,7 +319,7 @@ export function SocialAuth({
         onClick={() => void signIn("google")}
       >
         {busy === "google" ? null : <GoogleIcon />}
-        Continue with Google
+        {t("Continue with Google")}
       </Button>
       <Button
         type="button"
@@ -326,25 +331,29 @@ export function SocialAuth({
         onClick={() => void signIn("github")}
       >
         {busy === "github" ? null : <GitHubIcon />}
-        Continue with GitHub
+        {t("Continue with GitHub")}
       </Button>
       {message ? <p className="text-center text-sm text-destructive-300">{message}</p> : null}
       <p className="text-center text-xs text-muted-foreground">
-        By continuing you agree to the{" "}
-        <Link href="/terms" className="text-secondary-foreground hover:text-foreground">
-          Terms
-        </Link>{" "}
-        and{" "}
-        <Link href="/privacy" className="text-secondary-foreground hover:text-foreground">
-          Privacy
-        </Link>{" "}
-        pages.
+        {t.rich("By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy</privacy> pages.", {
+          terms: (chunks) => (
+            <Link href="/terms" className="text-secondary-foreground hover:text-foreground">
+              {chunks}
+            </Link>
+          ),
+          privacy: (chunks) => (
+            <Link href="/privacy" className="text-secondary-foreground hover:text-foreground">
+              {chunks}
+            </Link>
+          ),
+        })}
       </p>
     </AuthCard>
   );
 }
 
 export function TwoFactorForm() {
+  const t = useExtracted();
   const router = useRouter();
   const [code, setCode] = useState("");
   const [trustDevice, setTrustDevice] = useState(true);
@@ -360,7 +369,7 @@ export function TwoFactorForm() {
       ? await authClient.twoFactor.verifyBackupCode({ code, trustDevice })
       : await authClient.twoFactor.verifyTotp({ code, trustDevice });
     if (result.error) {
-      setError(result.error.message || "Invalid code");
+      setError(result.error.message || t("Invalid code"));
       setBusy(false);
       return;
     }
@@ -370,16 +379,16 @@ export function TwoFactorForm() {
 
   return (
     <AuthCard
-      title="Two-factor authentication"
+      title={t("Two-factor authentication")}
       description={
         useBackup
-          ? "Enter a backup code from when you enabled two-factor authentication."
-          : "Enter the 6-digit code from your authenticator app."
+          ? t("Enter a backup code from when you enabled two-factor authentication.")
+          : t("Enter the 6-digit code from your authenticator app.")
       }
     >
       <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)}>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="code">{useBackup ? "Backup code" : "One-time code"}</Label>
+          <Label htmlFor="code">{useBackup ? t("Backup code") : t("One-time code")}</Label>
           {useBackup ? (
             <Input
               id="code"
@@ -398,11 +407,11 @@ export function TwoFactorForm() {
             checked={trustDevice}
             onCheckedChange={(value) => setTrustDevice(value === true)}
           />
-          Trust this device for 30 days
+          {t("Trust this device for 30 days")}
         </label>
         {error ? <p className="text-sm text-destructive-300">{error}</p> : null}
         <Button type="submit" size="md" className="w-full" loading={busy} disabled={!useBackup && code.length < 6}>
-          Verify
+          {t("Verify")}
         </Button>
       </form>
       <button
@@ -414,13 +423,14 @@ export function TwoFactorForm() {
           setError("");
         }}
       >
-        {useBackup ? "Use authenticator app" : "Use a backup code"}
+        {useBackup ? t("Use authenticator app") : t("Use a backup code")}
       </button>
     </AuthCard>
   );
 }
 
 export function TwoFactorSetupForm() {
+  const t = useExtracted();
   const router = useRouter();
   const [totpUri, setTotpUri] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
@@ -435,7 +445,7 @@ export function TwoFactorSetupForm() {
       method: "totp",
     });
     if (nextError) {
-      setError(nextError.message || "Could not start two-factor setup");
+      setError(nextError.message || t("Could not start two-factor setup"));
       setBusy(null);
       return;
     }
@@ -452,7 +462,7 @@ export function TwoFactorSetupForm() {
     setError("");
     const { error: nextError } = await authClient.twoFactor.verifyTotp({ code });
     if (nextError) {
-      setError(nextError.message || "Invalid authenticator code");
+      setError(nextError.message || t("Invalid authenticator code"));
       setBusy(null);
       return;
     }
@@ -463,12 +473,12 @@ export function TwoFactorSetupForm() {
   if (!totpUri) {
     return (
       <AuthCard
-        title="Set up two-factor authentication"
-        description="An authenticator app is required after Google or GitHub sign-in."
+        title={t("Set up two-factor authentication")}
+        description={t("An authenticator app is required after Google or GitHub sign-in.")}
       >
         {error ? <p className="text-sm text-destructive-300">{error}</p> : null}
         <Button type="button" size="md" className="w-full" loading={busy === "enable"} onClick={() => void enable()}>
-          Enable authenticator app
+          {t("Enable authenticator app")}
         </Button>
         <button
           type="button"
@@ -483,7 +493,7 @@ export function TwoFactorSetupForm() {
             })
           }
         >
-          Sign out
+          {t("Sign out")}
         </button>
       </AuthCard>
     );
@@ -493,8 +503,8 @@ export function TwoFactorSetupForm() {
 
   return (
     <AuthCard
-      title="Scan the QR code"
-      description="Add Deni Run in your authenticator app, save the backup codes, then enter a 6-digit code."
+      title={t("Scan the QR code")}
+      description={t("Add Deni Run in your authenticator app, save the backup codes, then enter a 6-digit code.")}
     >
       <div className="mx-auto rounded-xl bg-white p-3">
         <QRCode value={totpUri} size={168} />
@@ -505,12 +515,12 @@ export function TwoFactorSetupForm() {
       <BackupCodesPanel codes={backupCodes} />
       <form className="flex flex-col gap-3" onSubmit={(event) => void verify(event)}>
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="setup-code">One-time code</Label>
+          <Label htmlFor="setup-code">{t("One-time code")}</Label>
           <OneTimeCode id="setup-code" value={code} onChange={setCode} />
         </div>
         {error ? <p className="text-sm text-destructive-300">{error}</p> : null}
         <Button type="submit" size="md" className="w-full" loading={busy === "verify"} disabled={code.length < 6}>
-          Verify and continue
+          {t("Verify and continue")}
         </Button>
       </form>
     </AuthCard>

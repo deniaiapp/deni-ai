@@ -1,6 +1,7 @@
 "use client";
 
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { useExtracted } from "next-intl";
 import { XIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 
@@ -46,13 +47,14 @@ function DialogContent({
   showCloseButton?: boolean;
   size?: "md" | "lg";
 }) {
+  const t = useExtracted();
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-foreground/10 bg-surface-input p-4 text-foreground shadow-lg outline-none",
+          "fixed top-1/2 left-1/2 z-50 grid w-full max-w-lg -translate-x-1/2 -translate-y-1/2 gap-4 rounded-xl border border-foreground/10 bg-surface-input p-6 text-foreground shadow-lg outline-none",
           "deni-dialog-content",
           size === "lg" ? "max-w-2xl" : "max-w-lg",
           className,
@@ -63,7 +65,7 @@ function DialogContent({
         {showCloseButton ? (
           <DialogPrimitive.Close className="absolute top-4 right-4 rounded-lg p-1 text-muted-foreground outline-none transition-colors hover:bg-foreground/5 hover:text-foreground">
             <XIcon className="size-4" />
-            <span className="sr-only">Close</span>
+            <span className="sr-only">{t("Close")}</span>
           </DialogPrimitive.Close>
         ) : null}
       </DialogPrimitive.Content>

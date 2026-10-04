@@ -250,6 +250,7 @@ export type Store = {
   artifacts?: Artifact[];
   notifications?: AppNotification[];
   mcpConnections?: McpConnection[];
+  pluginAlwaysAllow?: Record<string, boolean>;
 };
 
 export type WorkspaceNode = {

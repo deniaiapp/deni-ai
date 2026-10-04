@@ -1,11 +1,13 @@
 "use client";
 
+import { useExtracted } from "next-intl";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { FadeIn, FadeInView, Stagger, StaggerItem } from "@/components/motion";
 import { formatTokenCount, PLANS } from "@/lib/plans";
 
 export function Landing({ signedIn = false }: { signedIn?: boolean }) {
+  const t = useExtracted();
   const free = PLANS.free;
   const pro = PLANS.pro;
   const startHref = signedIn ? "/" : "/sign-up";
@@ -17,28 +19,28 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <span className="text-[0.925rem] font-semibold">Deni Run</span>
         <div className="flex items-center gap-3 text-sm">
           <a href="#pricing" className="text-muted-foreground hover:text-foreground">
-            Pricing
+            {t("Pricing")}
           </a>
           <Link href="/upgrade" className="text-muted-foreground hover:text-foreground">
-            Pro
+            {t("Pro")}
           </Link>
           {signedIn ? (
             <Link
               href="/"
               className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
             >
-              Open workspace
+              {t("Open workspace")}
             </Link>
           ) : (
             <>
               <Link href="/sign-in" className="text-muted-foreground hover:text-foreground">
-                Sign in
+                {t("Sign in")}
               </Link>
               <Link
                 href="/sign-up"
                 className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
               >
-                Get started
+                {t("Get started")}
               </Link>
             </>
           )}
@@ -48,17 +50,16 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
 
       <Stagger className="mx-auto max-w-5xl px-6 py-20">
         <StaggerItem>
-        <p className="text-sm text-muted-foreground">AI teammates with their own computer</p>
+        <p className="text-sm text-muted-foreground">{t("AI teammates with their own computer")}</p>
         </StaggerItem>
         <StaggerItem>
         <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">
-          Hand work to named teammates and let them finish it on an isolated computer.
+          {t("Hand work to named teammates and let them finish it on an isolated computer.")}
         </h1>
         </StaggerItem>
         <StaggerItem>
         <p className="mt-5 max-w-2xl text-[0.925rem] leading-relaxed text-muted-foreground">
-          Browser, files, and terminal stay private to your account. Watch the screen, take control
-          for logins, and keep memory, skills, and routines with each teammate.
+          {t("Browser, files, and terminal stay private to your account. Watch the screen, take control for logins, and keep memory, skills, and routines with each teammate.")}
         </p>
         </StaggerItem>
         <StaggerItem>
@@ -67,13 +68,13 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             href={startHref}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
           >
-            {signedIn ? "Open workspace" : "Start free"}
+            {signedIn ? t("Open workspace") : t("Start free")}
           </Link>
           <a
             href="#pricing"
             className="rounded-lg bg-foreground/10 px-4 py-2 text-sm text-foreground transition-transform hover:bg-foreground/15 active:scale-[0.98]"
           >
-            See plans
+            {t("See plans")}
           </a>
         </div>
         </StaggerItem>
@@ -82,16 +83,16 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
       <section className="mx-auto grid max-w-5xl gap-4 px-6 pb-20 md:grid-cols-3">
         {[
           {
-            title: "Named teammates",
-            body: "Chief, Research, Operations — or create your own. Each keeps memory and a job.",
+            title: t("Named teammates"),
+            body: t("Chief, Research, Operations — or create your own. Each keeps memory and a job."),
           },
           {
-            title: "Private computer",
-            body: "A browser, workspace, and Linux sandbox scoped to your account. Not a shared VM.",
+            title: t("Private computer"),
+            body: t("A browser, workspace, and Linux sandbox scoped to your account. Not a shared VM."),
           },
           {
-            title: "Take control",
-            body: "When login or 2FA is needed, drive the live browser yourself, then hand it back.",
+            title: t("Take control"),
+            body: t("When login or 2FA is needed, drive the live browser yourself, then hand it back."),
           },
         ].map((item, index) => (
           <motion.div
@@ -111,9 +112,9 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
 
       <section id="pricing" className="mx-auto max-w-5xl px-6 pb-24">
         <FadeInView>
-          <h2 className="text-2xl font-semibold">Pricing</h2>
+          <h2 className="text-2xl font-semibold">{t("Pricing")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Monthly limits reset at the start of each UTC month.
+            {t("Monthly limits reset at the start of each UTC month.")}
           </p>
         </FadeInView>
         <div className="mt-8 grid gap-4 md:grid-cols-2">
@@ -128,17 +129,17 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             <h3 className="text-lg font-semibold">{free.name}</h3>
             <p className="mt-1 text-3xl font-semibold">$0</p>
             <ul className="mt-5 space-y-2 text-sm text-secondary-foreground">
-              <li>{formatTokenCount(free.tokens)} tokens / month</li>
-              <li>{free.browserMinutes} browser minutes</li>
-              <li>{free.computerMinutes} computer minutes</li>
-              <li>Up to {free.teammates} teammates</li>
-              <li>Isolated files, browser, and terminal</li>
+              <li>{t("{count} tokens / month", { count: formatTokenCount(free.tokens) })}</li>
+              <li>{t("{count} browser minutes", { count: String(free.browserMinutes) })}</li>
+              <li>{t("{count} computer minutes", { count: String(free.computerMinutes) })}</li>
+              <li>{t("Up to {count} teammates", { count: String(free.teammates) })}</li>
+              <li>{t("Isolated files, browser, and terminal")}</li>
             </ul>
             <Link
               href={startHref}
               className="mt-6 inline-flex rounded-lg bg-foreground/10 px-4 py-2 text-sm transition-transform hover:bg-foreground/15 active:scale-[0.98]"
             >
-              {signedIn ? "Open workspace" : "Create account"}
+              {signedIn ? t("Open workspace") : t("Create account")}
             </Link>
           </motion.article>
           <motion.article
@@ -152,20 +153,20 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             <h3 className="text-lg font-semibold">{pro.name}</h3>
             <p className="mt-1 text-3xl font-semibold">
               ${pro.priceUsd}
-              <span className="text-sm font-normal text-muted-foreground"> / month</span>
+              <span className="text-sm font-normal text-muted-foreground"> {t("/ month")}</span>
             </p>
             <ul className="mt-5 space-y-2 text-sm text-secondary-foreground">
-              <li>{formatTokenCount(pro.tokens)} tokens / month</li>
-              <li>{pro.browserMinutes} browser minutes</li>
-              <li>{pro.computerMinutes} computer minutes</li>
-              <li>Up to {pro.teammates} teammates</li>
-              <li>Same private computer, higher ceiling</li>
+              <li>{t("{count} tokens / month", { count: formatTokenCount(pro.tokens) })}</li>
+              <li>{t("{count} browser minutes", { count: String(pro.browserMinutes) })}</li>
+              <li>{t("{count} computer minutes", { count: String(pro.computerMinutes) })}</li>
+              <li>{t("Up to {count} teammates", { count: String(pro.teammates) })}</li>
+              <li>{t("Same private computer, higher ceiling")}</li>
             </ul>
             <Link
               href="/upgrade"
               className="mt-6 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
             >
-              Start Pro
+              {t("Start Pro")}
             </Link>
           </motion.article>
         </div>
@@ -176,16 +177,16 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <div className="mx-auto flex max-w-5xl flex-wrap gap-4">
           <span>Deni Run</span>
           <Link href="/terms" className="hover:text-foreground">
-            Terms
+            {t("Terms")}
           </Link>
           <Link href="/privacy" className="hover:text-foreground">
-            Privacy
+            {t("Privacy")}
           </Link>
           <Link href="/upgrade" className="hover:text-foreground">
-            Upgrade
+            {t("Upgrade")}
           </Link>
           <Link href="/account" className="hover:text-foreground">
-            Account
+            {t("Account")}
           </Link>
         </div>
       </footer>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useExtracted } from "next-intl";
 import Link from "next/link";
 import { useState } from "react";
 import { Check } from "lucide-react";
@@ -9,28 +10,6 @@ import { Button } from "@/components/ui/button";
 import { easeOut } from "@/lib/motion";
 import { formatTokenCount, PLANS, type UsageMetric, type UsageSnapshot } from "@/lib/plans";
 
-const PERKS = [
-  {
-    title: "25 teammates",
-    body: "Name specialists, keep memory on each one, and hand work off instead of stretching a single bot.",
-  },
-  {
-    title: "200M tokens / month",
-    body: "Longer threads, more handoffs, and routines that can finish without stopping mid-task.",
-  },
-  {
-    title: "10 hours of browser time",
-    body: "600 minutes to research, fill forms, and watch the live screen — 20× Free.",
-  },
-  {
-    title: "10 hours of computer time",
-    body: "600 minutes of terminal and files on your isolated sandbox.",
-  },
-  {
-    title: "The same private computer",
-    body: "Browser, workspace, and Linux sandbox stay scoped to your account. Pro only raises the ceiling.",
-  },
-] as const;
 
 function meterFor(usage: UsageSnapshot, reason: UsageMetric) {
   if (reason === "tokens") return usage.tokens;
@@ -39,36 +18,37 @@ function meterFor(usage: UsageSnapshot, reason: UsageMetric) {
   return usage.teammates;
 }
 
-function headline(reason: UsageMetric | undefined, usage: UsageSnapshot | null) {
+function useHeadline(reason: UsageMetric | undefined, usage: UsageSnapshot | null) {
+  const t = useExtracted();
   const plan = usage?.planName ?? "Free";
   if (reason && usage) {
     const meter = meterFor(usage, reason);
     if (reason === "teammates") {
       return {
-        title: "Teammate limit reached",
-        body: `You've used ${meter.used} of ${meter.limit} teammates on ${plan}. Pro includes ${PLANS.pro.teammates}.`,
+        title: t("Teammate limit reached"),
+        body: t("You've used {used} of {limit} teammates on {plan}. Pro includes {pro}.", { used: String(meter.used), limit: String(meter.limit), plan, pro: String(PLANS.pro.teammates) }),
       };
     }
     if (reason === "tokens") {
       return {
-        title: "Token limit reached",
-        body: `You've used ${formatTokenCount(meter.used)} of ${formatTokenCount(meter.limit)} tokens on ${plan} this month.`,
+        title: t("Token limit reached"),
+        body: t("You've used {used} of {limit} tokens on {plan} this month.", { used: formatTokenCount(meter.used), limit: formatTokenCount(meter.limit), plan }),
       };
     }
     if (reason === "browser") {
       return {
-        title: "Browser time limit reached",
-        body: `You've used ${meter.used} of ${meter.limit} browser minutes on ${plan} this month.`,
+        title: t("Browser time limit reached"),
+        body: t("You've used {used} of {limit} browser minutes on {plan} this month.", { used: String(meter.used), limit: String(meter.limit), plan }),
       };
     }
     return {
-      title: "Computer time limit reached",
-      body: `You've used ${meter.used} of ${meter.limit} computer minutes on ${plan} this month.`,
+      title: t("Computer time limit reached"),
+      body: t("You've used {used} of {limit} computer minutes on {plan} this month.", { used: String(meter.used), limit: String(meter.limit), plan }),
     };
   }
   return {
-    title: "Upgrade to Pro",
-    body: "Same private computer. More teammates, tokens, and time on the browser and terminal.",
+    title: t("Upgrade to Pro"),
+    body: t("Same private computer. More teammates, tokens, and time on the browser and terminal."),
   };
 }
 
@@ -81,9 +61,32 @@ export function UpgradeScreen({
   usage: UsageSnapshot | null;
   signedIn: boolean;
 }) {
+  const t = useExtracted();
   const free = PLANS.free;
   const pro = PLANS.pro;
-  const copy = headline(reason, usage);
+  const copy = useHeadline(reason, usage);
+  const perks = [
+    {
+      title: t("25 teammates"),
+      body: t("Name specialists, keep memory on each one, and hand work off instead of stretching a single bot."),
+    },
+    {
+      title: t("200M tokens / month"),
+      body: t("Longer threads, more handoffs, and routines that can finish without stopping mid-task."),
+    },
+    {
+      title: t("10 hours of browser time"),
+      body: t("600 minutes to research, fill forms, and watch the live screen — 20× Free."),
+    },
+    {
+      title: t("10 hours of computer time"),
+      body: t("600 minutes of terminal and files on your isolated sandbox."),
+    },
+    {
+      title: t("The same private computer"),
+      body: t("Browser, workspace, and Linux sandbox stay scoped to your account. Pro only raises the ceiling."),
+    },
+  ];
   const onPro = usage?.plan === "pro";
 
   return (
@@ -94,24 +97,21 @@ export function UpgradeScreen({
             Deni Run
           </Link>
           <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
-            {signedIn ? "Back to workspace" : "Back"}
+            {signedIn ? t("Back to workspace") : t("Back")}
           </Link>
         </header>
       </FadeIn>
 
-      <Stagger className="mx-auto max-w-5xl px-6 pt-8 pb-12 md:pt-14">
-        <StaggerItem>
-          <p className="text-sm text-muted-foreground">Pro · ${pro.priceUsd}/month</p>
-        </StaggerItem>
+      <Stagger className="mx-auto max-w-5xl px-6 pb-12 pt-12">
         <StaggerItem>
           <h1 className="mt-3 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl">
-            {onPro ? "You're on Pro" : copy.title}
+            {onPro ? t("You're on Pro") : copy.title}
           </h1>
         </StaggerItem>
         <StaggerItem>
           <p className="mt-5 max-w-2xl text-[0.925rem] leading-relaxed text-muted-foreground">
             {onPro
-              ? "Your account already has the higher monthly ceiling. Manage billing if you need invoices or cancellation."
+              ? t("Your account already has the higher monthly ceiling. Manage billing if you need invoices or cancellation.")
               : copy.body}
           </p>
         </StaggerItem>
@@ -120,10 +120,10 @@ export function UpgradeScreen({
       <section className="mx-auto grid max-w-5xl items-start gap-8 px-6 pb-24 lg:grid-cols-[1fr_22rem]">
         <div>
           <FadeIn>
-            <h2 className="text-lg font-semibold">What Pro includes</h2>
+            <h2 className="text-lg font-semibold">{t("What Pro includes")}</h2>
           </FadeIn>
           <ul className="mt-5 grid gap-3 sm:grid-cols-2">
-            {PERKS.map((perk, index) => (
+            {perks.map((perk, index) => (
               <motion.li
                 key={perk.title}
                 className="rounded-xl border border-foreground/10 bg-surface p-5"
@@ -152,44 +152,44 @@ export function UpgradeScreen({
           viewport={{ once: true, amount: 0.25 }}
           transition={{ duration: 0.45, ease: easeOut }}
         >
-          <p className="text-sm text-muted-foreground">{onPro ? "Current plan" : "Upgrade"}</p>
+          <p className="text-sm text-muted-foreground">{onPro ? t("Current plan") : t("Upgrade")}</p>
           <h2 className="mt-1 text-lg font-semibold">Pro</h2>
           <p className="mt-1 text-3xl font-semibold">
             ${pro.priceUsd}
-            <span className="text-sm font-normal text-muted-foreground"> / month</span>
+            <span className="text-sm font-normal text-muted-foreground"> {t("/ month")}</span>
           </p>
           <div className="mt-5">
             <div className="grid grid-cols-[1fr_auto_auto] gap-3 text-xs text-muted-foreground">
               <span />
-              <span className="w-20 text-right">Free</span>
-              <span className="w-20 text-right text-secondary-foreground">Pro</span>
+              <span className="w-20 text-right">{t("Free")}</span>
+              <span className="w-20 text-right text-secondary-foreground">{t("Pro")}</span>
             </div>
             <CompareRow
-              label="Teammates"
+              label={t("Teammates")}
               free={String(free.teammates)}
               pro={String(pro.teammates)}
             />
             <CompareRow
-              label="Tokens"
+              label={t("Tokens")}
               free={formatTokenCount(free.tokens)}
               pro={formatTokenCount(pro.tokens)}
             />
             <CompareRow
-              label="Browser"
-              free={`${free.browserMinutes} min`}
-              pro={`${pro.browserMinutes} min`}
+              label={t("Browser")}
+              free={t("{count} min", { count: String(free.browserMinutes) })}
+              pro={t("{count} min", { count: String(pro.browserMinutes) })}
             />
             <CompareRow
-              label="Computer"
-              free={`${free.computerMinutes} min`}
-              pro={`${pro.computerMinutes} min`}
+              label={t("Computer")}
+              free={t("{count} min", { count: String(free.computerMinutes) })}
+              pro={t("{count} min", { count: String(pro.computerMinutes) })}
             />
           </div>
           <div className="mt-6">
             <UpgradeActions signedIn={signedIn} usage={usage} />
           </div>
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-            Monthly limits reset at the start of each UTC month. Cancel anytime.
+            {t("Monthly limits reset at the start of each UTC month. Cancel anytime.")}
           </p>
         </motion.aside>
       </section>
@@ -214,6 +214,7 @@ function UpgradeActions({
   signedIn: boolean;
   usage: UsageSnapshot | null;
 }) {
+  const t = useExtracted();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const pro = PLANS.pro;
@@ -229,9 +230,9 @@ function UpgradeActions({
         window.location.href = json.url;
         return;
       }
-      setError(json.error ?? "Could not open billing");
+      setError(json.error ?? t("Could not open billing"));
     } catch {
-      setError("Could not open billing");
+      setError(t("Could not open billing"));
     } finally {
       setBusy(false);
     }
@@ -243,7 +244,7 @@ function UpgradeActions({
         href="/sign-up"
         className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
       >
-        Start Pro · ${pro.priceUsd}/mo
+        {t("Start Pro · ${price}/mo", { price: String(pro.priceUsd) })}
       </Link>
     );
   }
@@ -259,7 +260,7 @@ function UpgradeActions({
           loading={busy}
           onClick={() => post("/api/billing/portal")}
         >
-          Manage billing
+          {t("Manage billing")}
         </Button>
         {error ? <p className="text-xs text-destructive-300">{error}</p> : null}
       </div>
@@ -277,11 +278,11 @@ function UpgradeActions({
         disabled={!usage?.stripeConfigured}
         onClick={() => post("/api/billing/checkout")}
       >
-        Upgrade to Pro · ${pro.priceUsd}/mo
+        {t("Upgrade to Pro · ${price}/mo", { price: String(pro.priceUsd) })}
       </Button>
       {usage && !usage.stripeConfigured ? (
         <p className="text-xs text-muted-foreground">
-          Stripe is not configured on this deployment. Limits still apply to the Free plan.
+          {t("Stripe is not configured on this deployment. Limits still apply to the Free plan.")}
         </p>
       ) : null}
       {error ? <p className="text-xs text-destructive-300">{error}</p> : null}

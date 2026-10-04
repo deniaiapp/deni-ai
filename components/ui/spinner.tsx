@@ -1,4 +1,5 @@
 import { Loader2Icon } from "lucide-react";
+import { useExtracted } from "next-intl";
 import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";
@@ -14,10 +15,11 @@ function Spinner({
   size = "md",
   ...props
 }: ComponentProps<"svg"> & { size?: keyof typeof spinnerSizes }) {
+  const t = useExtracted();
   return (
     <Loader2Icon
       role="status"
-      aria-label="Loading"
+      aria-label={t("Loading")}
       className={cn("animate-spin text-muted-foreground", spinnerSizes[size], className)}
       {...props}
     />

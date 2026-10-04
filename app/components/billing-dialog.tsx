@@ -1,5 +1,6 @@
 "use client";
 
+import { useExtracted } from "next-intl";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { LoadingFallback } from "@/components/ui/loading";
@@ -30,7 +31,7 @@ function Meter({
       </div>
       <div className="h-1.5 overflow-hidden rounded-full bg-foreground/10">
         <motion.div
-          className={`h-full rounded-full ${pct >= 100 ? "bg-destructive-400" : "bg-foreground"}`}
+          className={`h-full rounded-full ${pct >= 100 ? "bg-destructive-400" : "bg-sidebar-primary"}`}
           initial={{ width: 0 }}
           animate={{ width: `${pct}%` }}
           transition={{ duration: 0.5, ease: easeOut }}
@@ -55,6 +56,7 @@ export function BillingDialog({
   onUpgrade: () => void;
   onManage: () => void;
 }) {
+  const t = useExtracted();
   const pro = PLANS.pro;
   return (
     <Dialog
@@ -65,44 +67,44 @@ export function BillingDialog({
     >
       <DialogContent className="p-6">
         <div className="mb-4">
-          <DialogTitle className="text-lg font-semibold">Plan and usage</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">{t("Plan and usage")}</DialogTitle>
         </div>
         {usage ? (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
-              {usage.planName} plan · {usage.period} UTC
+              {t("{plan} plan · {period} UTC", { plan: usage.planName, period: usage.period })}
               {usage.currentPeriodEnd
-                ? ` · renews ${new Date(usage.currentPeriodEnd).toLocaleDateString()}`
+                ? ` · ${t("renews {date}", { date: new Date(usage.currentPeriodEnd).toLocaleDateString() })}`
                 : null}
             </p>
             <Meter
-              label="Tokens"
+              label={t("Tokens")}
               used={usage.tokens.used}
               limit={usage.tokens.limit}
               format={formatTokenCount}
             />
             <Meter
-              label="Browser minutes"
+              label={t("Browser minutes")}
               used={usage.browserMinutes.used}
               limit={usage.browserMinutes.limit}
             />
             <Meter
-              label="Computer minutes"
+              label={t("Computer minutes")}
               used={usage.computerMinutes.used}
               limit={usage.computerMinutes.limit}
             />
-            <Meter label="Teammates" used={usage.teammates.used} limit={usage.teammates.limit} />
+            <Meter label={t("Teammates")} used={usage.teammates.used} limit={usage.teammates.limit} />
           </div>
         ) : (
-          <LoadingFallback label="Loading usage…" className="py-8" />
+          <LoadingFallback label={t("Loading usage…")} className="py-8" />
         )}
         <div className="mt-6 flex justify-end gap-2">
           <DialogClose asChild>
-            <Button variant="secondary">Close</Button>
+            <Button variant="secondary">{t("Close")}</Button>
           </DialogClose>
           {usage?.plan === "pro" ? (
             <Button type="button" variant="primary" loading={busy} onClick={onManage}>
-              Manage billing
+              {t("Manage billing")}
             </Button>
           ) : (
             <Button
@@ -112,13 +114,13 @@ export function BillingDialog({
               onClick={onUpgrade}
               disabled={!usage?.stripeConfigured}
             >
-              Upgrade to Pro · ${pro.priceUsd}/mo
+              {t("Upgrade to Pro · ${price}/mo", { price: String(pro.priceUsd) })}
             </Button>
           )}
         </div>
         {usage && usage.plan === "free" && !usage.stripeConfigured ? (
           <p className="mt-3 text-xs text-muted-foreground">
-            Stripe is not configured on this deployment. Limits still apply to the Free plan.
+            {t("Stripe is not configured on this deployment. Limits still apply to the Free plan.")}
           </p>
         ) : null}
       </DialogContent>

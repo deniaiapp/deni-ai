@@ -1,5 +1,6 @@
 "use client";
 
+import { useExtracted } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CreditCard, Download, Loader2, LogOut, Sparkles, Trash2, UserRound } from "lucide-react";
@@ -24,6 +25,7 @@ export function AccountMenu({
   usage: UsageSnapshot | null;
   onOpenBilling: () => void;
 }) {
+  const t = useExtracted();
   const { data: session } = authClient.useSession();
   const user = session?.user;
   const router = useRouter();
@@ -32,7 +34,7 @@ export function AccountMenu({
   const [menuOpen, setMenuOpen] = useState(false);
   const [busy, setBusy] = useState<"export" | "delete" | "signout" | null>(null);
   const [error, setError] = useState("");
-  const name = user?.name || user?.email || "Account";
+  const name = user?.name || user?.email || t("Account");
   const onPro = usage?.plan === "pro";
   const remainingPercent = usage
     ? usage.tokens.limit > 0
@@ -47,7 +49,7 @@ export function AccountMenu({
     setError("");
     try {
       const res = await fetch("/api/account");
-      if (!res.ok) throw new Error("Could not export data");
+      if (!res.ok) throw new Error(t("Could not export data"));
       const blob = new Blob([await res.text()], { type: "application/json" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -57,7 +59,7 @@ export function AccountMenu({
       URL.revokeObjectURL(url);
       setMenuOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not export data");
+      setError(err instanceof Error ? err.message : t("Could not export data"));
     } finally {
       setBusy(null);
     }
@@ -69,11 +71,11 @@ export function AccountMenu({
     setError("");
     try {
       const res = await fetch("/api/account", { method: "DELETE" });
-      if (!res.ok) throw new Error("Could not delete account data");
+      if (!res.ok) throw new Error(t("Could not delete account data"));
       await authClient.signOut();
       window.location.href = "/";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not delete account data");
+      setError(err instanceof Error ? err.message : t("Could not delete account data"));
       setBusy(null);
     }
   }
@@ -90,7 +92,7 @@ export function AccountMenu({
         <DropdownMenuTrigger asChild>
           <button
             type="button"
-            aria-label="Account menu"
+            aria-label={t("Account menu")}
             className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-foreground/5"
           >
             {user?.image ? (
@@ -109,15 +111,15 @@ export function AccountMenu({
               <span className="min-w-0 truncate text-sm text-foreground">{name}</span>
               <span className="min-w-0 truncate text-xs text-muted-foreground">
                 {usage
-                  ? `${usage.planName} · ${remainingPercent}% remaining`
-                  : "Account"}
+                  ? t("{plan} · {percent}% remaining", { plan: usage.planName, percent: String(remainingPercent) })
+                  : t("Account")}
               </span>
             </span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" className="w-56">
           <DropdownMenuLabel>
-            {user?.email ?? "Signed in"}
+            {user?.email ?? t("Signed in")}
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -127,17 +129,17 @@ export function AccountMenu({
             }}
           >
             <CreditCard />
-            Plan and usage
+            {t("Plan and usage")}
           </DropdownMenuItem>
           {onPro ? null : (
             <DropdownMenuItem disabled={exporting || signingOut} onSelect={() => router.push("/upgrade")}>
               <Sparkles />
-              Upgrade to Pro
+              {t("Upgrade to Pro")}
             </DropdownMenuItem>
           )}
           <DropdownMenuItem disabled={exporting || signingOut} onSelect={() => router.push("/account")}>
             <UserRound />
-            Manage profile
+            {t("Manage profile")}
           </DropdownMenuItem>
           <DropdownMenuItem
             aria-busy={exporting}
@@ -148,7 +150,7 @@ export function AccountMenu({
             }}
           >
             {exporting ? <Loader2 className="animate-spin" /> : <Download />}
-            {exporting ? "Exporting…" : "Export data"}
+            {exporting ? t("Exporting…") : t("Export data")}
           </DropdownMenuItem>
           {error && !deleteOpen ? <p className="px-2 py-1 text-xs text-destructive-300">{error}</p> : null}
           <DropdownMenuSeparator />
@@ -162,7 +164,7 @@ export function AccountMenu({
             }}
           >
             <Trash2 />
-            Delete account
+            {t("Delete account")}
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={exporting || signingOut}
@@ -180,7 +182,7 @@ export function AccountMenu({
             }}
           >
             {signingOut ? <Loader2 className="animate-spin" /> : <LogOut />}
-            {signingOut ? "Signing out…" : "Sign out"}
+            {signingOut ? t("Signing out…") : t("Sign out")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -191,22 +193,21 @@ export function AccountMenu({
         }}
       >
         <DialogContent className="p-6">
-          <DialogTitle className="text-lg font-semibold">Delete account</DialogTitle>
+          <DialogTitle className="text-lg font-semibold">{t("Delete account")}</DialogTitle>
           <p className="mt-2 text-sm text-muted-foreground">
-            This deletes your login, workspace files, conversations, teammates, and billing
-            records. Type DELETE to confirm.
+            {t("This deletes your login, workspace files, conversations, teammates, and billing records. Type DELETE to confirm.")}
           </p>
           <Input
             className="mt-4"
             value={confirm}
             onChange={(event) => setConfirm(event.currentTarget.value)}
             placeholder="DELETE"
-            aria-label="Type DELETE to confirm"
+            aria-label={t("Type DELETE to confirm")}
           />
           {error ? <p className="mt-2 text-sm text-destructive-300">{error}</p> : null}
           <div className="mt-6 flex justify-end gap-2">
             <DialogClose asChild>
-              <Button variant="secondary">Cancel</Button>
+              <Button variant="secondary">{t("Cancel")}</Button>
             </DialogClose>
             <Button
               type="button"
@@ -215,7 +216,7 @@ export function AccountMenu({
               loading={busy === "delete"}
               onClick={() => void destroy()}
             >
-              Delete my data
+              {t("Delete my data")}
             </Button>
           </div>
         </DialogContent>

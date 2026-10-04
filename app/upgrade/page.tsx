@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
+import { getExtracted } from "next-intl/server";
 import { UpgradeScreen } from "../components/upgrade-screen";
 import { getAuthenticatedUserId } from "@/lib/auth";
 import { syncBilling } from "@/lib/billing";
 import type { UsageMetric } from "@/lib/plans";
 import { getUsageSnapshot } from "@/lib/usage";
 
-export const metadata: Metadata = {
-  title: "Upgrade to Pro · Deni Run",
-  description: "More teammates, tokens, and computer time on a private computer.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getExtracted();
+  return {
+    title: t("Upgrade to Pro · Deni Run"),
+    description: t("More teammates, tokens, and computer time on a private computer."),
+  };
+}
 
 const REASONS = new Set<string>(["teammates", "tokens", "browser", "computer"]);
 

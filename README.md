@@ -28,6 +28,8 @@ pnpm exec playwright install chromium
 
 Copy `.env.example` to `.env.local` and configure Better Auth, Google/GitHub OAuth, Postgres, and an encryption key. Set the OAuth redirect URIs to `{BETTER_AUTH_URL}/api/auth/callback/google` and `{BETTER_AUTH_URL}/api/auth/callback/github`.
 
+Plugins can link Gmail, Google Drive, and GitHub through these OAuth providers. Enable Gmail API and Drive API in the Google Cloud project and configure its consent screen for `gmail.readonly`, `gmail.send`, `drive.readonly`, and `drive.file` scopes; Gmail scopes can require Google verification for public use. GitHub uses the `repo` scope to access private repositories (GitHub OAuth does not offer a read-only private-repository scope); Deni Run gates all write operations behind per-action approval by default. Google Drive writes are limited to files created with this app by `drive.file`, and binary files are metadata-only in the agent. OAuth linking requires a normal signed-in session, not the local auth bypass.
+
 For local development without OAuth, set `LOCAL_AUTH_BYPASS=true` in `.env.local` and run `next dev`. Open `http://localhost:3000` (or `127.0.0.1`). The app creates a dedicated `local-dev-user` in Postgres and skips sign-in and 2FA for that user. This only works in development on localhost; do not enable it on a shared server. Better Auth client-side account actions (profile, sign-out, 2FA) still require a real session.
 
 ```bash

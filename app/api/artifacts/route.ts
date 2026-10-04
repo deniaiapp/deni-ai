@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { listArtifacts, registerArtifact } from "@/lib/artifacts";
 import { readWorkspaceBytes } from "@/lib/workspace";
+import { getExtracted } from "next-intl/server";
+import { localizeError } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const body = (await req.json().catch(() => ({}))) as {
@@ -27,7 +30,7 @@ export async function POST(req: Request) {
     description?: string;
   };
   if (!body.threadId || !body.path || !body.title) {
-    return NextResponse.json({ error: "threadId, path, and title required" }, { status: 400 });
+    return NextResponse.json({ error: t("threadId, path, and title are required") }, { status: 400 });
   }
   try {
     await readWorkspaceBytes(userId, body.path);
@@ -44,7 +47,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ artifact }, { status: 201 });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : String(error) },
+      { error: await localizeError(error) },
       { status: 400 },
     );
   }

@@ -4,6 +4,8 @@ import { hasApiKey } from "@/lib/config";
 import { mutateStore } from "@/lib/store";
 import { encryptSecret } from "@/lib/secrets";
 import { limitOrResponse } from "@/lib/rate-limit";
+import { getExtracted } from "next-intl/server";
+import { localizeError } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
 
@@ -14,6 +16,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const limited = await limitOrResponse(userId, "setup", 10);
@@ -21,7 +24,7 @@ export async function POST(req: Request) {
   const body = (await req.json()) as { apiKey?: string; timezone?: string };
   const apiKey = body.apiKey?.trim() ?? "";
   if (!apiKey) {
-    return NextResponse.json({ error: "apiKey required" }, { status: 400 });
+    return NextResponse.json({ error: t("API key is required") }, { status: 400 });
   }
   try {
     const encryptedApiKey = encryptSecret(apiKey);
@@ -31,7 +34,7 @@ export async function POST(req: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unable to save API key" },
+      { error: await localizeError(error, t("Unable to save API key")) },
       { status: 500 },
     );
   }

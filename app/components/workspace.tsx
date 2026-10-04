@@ -1,5 +1,6 @@
 "use client";
 
+import { useExtracted } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { easeOut } from "@/lib/motion";
@@ -50,13 +51,18 @@ import { AvatarField } from "./avatar-field";
 const ComputerPanel = dynamic(
   () => import("./computer-panel").then((mod) => ({ default: mod.ComputerPanel })),
   {
-    loading: () => (
-      <div className="hidden h-full w-[320px] items-center justify-center border-l border-foreground/10 bg-surface xl:flex">
-        <LoadingFallback label="Loading computer…" />
-      </div>
-    ),
+    loading: () => <ComputerPanelLoading />,
   },
 );
+
+function ComputerPanelLoading() {
+  const t = useExtracted();
+  return (
+    <div className="hidden h-full w-[320px] items-center justify-center border-l border-foreground/10 bg-surface xl:flex">
+      <LoadingFallback label={t("Loading computer…")} />
+    </div>
+  );
+}
 
 type StatePayload = {
   ready: boolean;
@@ -73,6 +79,7 @@ type StatePayload = {
 type Modal = "bot" | "group" | "skills" | "routines" | "mcp" | null;
 
 export function Workspace() {
+  const t = useExtracted();
   const [boot, setBoot] = useState<"loading" | "setup" | "app">("loading");
   const [bots, setBots] = useState<Bot[]>([]);
   const [threads, setThreads] = useState<Thread[]>([]);
@@ -95,6 +102,17 @@ export function Workspace() {
   const activeThreadRef = useRef<string | null>(null);
   const threadReady = loadedThreadId != null && loadedThreadId === activeThreadId;
   const [modal, setModal] = useState<Modal>(null);
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("plugins") === "1") {
+      // OAuth returns here; show the newly connected service without keeping the query parameter.
+      // eslint-disable-next-line react/set-state-in-effect
+      setModal("mcp");
+      window.history.replaceState(null, "", window.location.pathname);
+    }
+    const openPlugins = () => setModal("mcp");
+    window.addEventListener("open-plugins", openPlugins);
+    return () => window.removeEventListener("open-plugins", openPlugins);
+  }, []);
   const [routineEditorId, setRoutineEditorId] = useState<string | null>(null);
   const openRoutines = useCallback((id?: string) => { setRoutineEditorId(id ?? null); setModal("routines"); }, []);
   const [mobileComputer, setMobileComputer] = useState(false);
@@ -401,17 +419,17 @@ export function Workspace() {
         setActionError(null);
         if (action === "edit") { setEditGroup(thread); return; }
         if (action === "hide") { patchThread(thread.id, { hidden: !thread.hidden }); return; }
-        if (action === "delete" && !window.confirm(`Delete ${thread.title}? The group conversation and its routines will be removed. Teammates and shared files will remain.`)) return;
+        if (action === "delete" && !window.confirm(t("Delete {title}? The group conversation and its routines will be removed. Teammates and shared files will remain.", { title: thread.title }))) return;
         setActionBusyId(thread.id);
         try {
           if (action === "duplicate") {
-            const response = await fetch("/api/threads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: `${thread.title.slice(0, 115)} copy`, botIds: thread.botIds, icon: thread.icon ?? null }) });
+            const response = await fetch("/api/threads", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: t("{title} copy", { title: thread.title.slice(0, 115) }), botIds: thread.botIds, icon: thread.icon ?? null }) });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || "Could not duplicate group.");
+            if (!response.ok) throw new Error(data.error || t("Could not duplicate group."));
             setThreads((current) => [...current, data.thread]); setActiveThreadId(data.thread.id);
           } else if (action === "delete") {
             const response = await fetch(`/api/threads/${thread.id}`, { method: "DELETE" });
-            if (!response.ok && response.status !== 404) throw new Error("Could not delete group.");
+            if (!response.ok && response.status !== 404) throw new Error(t("Could not delete group."));
             discardChatSession(thread.id); forgetChatThread(thread.id);
             setThreads((current) => current.filter((item) => item.id !== thread.id));
             setRoutines((current) => current.filter((item) => item.threadId !== thread.id));
@@ -419,7 +437,7 @@ export function Workspace() {
             setJobsByThread((current) => { const next = { ...current }; delete next[thread.id]; jobsByThreadRef.current = next; return next; });
             if (activeThreadId === thread.id) { setActiveThreadId(threads.find((item) => item.id !== thread.id && !item.hidden)?.id ?? null); setActiveJobId(null); }
           }
-        } catch (error) { setActionError(error instanceof Error ? error.message : "Could not update group."); }
+        } catch (error) { setActionError(error instanceof Error ? error.message : t("Could not update group.")); }
         finally { setActionBusyId(null); }
         return;
       }
@@ -438,7 +456,7 @@ export function Workspace() {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              name: `${bot.name} copy`,
+              name: t("{name} copy", { name: bot.name }),
               job: bot.job,
               instructions: bot.instructions,
               icon: bot.icon ?? null,
@@ -467,7 +485,7 @@ export function Workspace() {
       }
       if (action === "delete") {
         if (
-          !window.confirm(`Delete ${bot.name}? Their conversation and routines will be removed.`)
+          !window.confirm(t("Delete {name}? Their conversation and routines will be removed.", { name: bot.name }))
         ) {
           return;
         }
@@ -506,6 +524,7 @@ export function Workspace() {
       openTeammatePaywall,
       patchThread,
       routines,
+      t,
       teammateLimitReached,
       threads,
     ],
@@ -536,7 +555,7 @@ export function Workspace() {
         animate={{ opacity: 1 }}
         transition={{ duration: 0.35, ease: easeOut }}
       >
-        <LoadingFallback label="Loading..." />
+        <LoadingFallback label={t("Loading…")} />
       </motion.div>
     );
   }
@@ -605,12 +624,12 @@ export function Workspace() {
               icon={MonitorIcon}
               onClick={() => setMobileComputer(true)}
             >
-              Computer
+              {t("Computer")}
             </Button>
           ) : null}
         </div>
 
-        {actionError ? <div role="alert" className="flex items-center justify-between gap-3 bg-destructive-500/10 px-4 py-2 text-sm text-destructive-300"><span>{actionError}</span><button type="button" onClick={() => setActionError(null)} className="text-xs underline">Dismiss</button></div> : null}
+        {actionError ? <div role="alert" className="flex items-center justify-between gap-3 bg-destructive-500/10 px-4 py-2 text-sm text-destructive-300"><span>{actionError}</span><button type="button" onClick={() => setActionError(null)} className="text-xs underline">{t("Dismiss")}</button></div> : null}
 
         {activeThread && activeBot && threadReady ? (
           <ChatThread
@@ -640,7 +659,7 @@ export function Workspace() {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.3, ease: easeOut }}
           >
-            <LoadingFallback label="Loading…" />
+            <LoadingFallback label={t("Loading…")} />
           </motion.div>
         ) : (
           <motion.div
@@ -649,7 +668,7 @@ export function Workspace() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.35, ease: easeOut }}
           >
-            <Empty size="sm" title="Select a teammate" />
+            <Empty size="sm" title={t("Select a teammate")} />
           </motion.div>
         )}
       </motion.div>
@@ -686,7 +705,7 @@ export function Workspace() {
           onClick={() => setMobileComputer(true)}
           className="fixed right-4 bottom-4 z-20 hidden md:inline-flex xl:hidden"
         >
-          Computer
+          {t("Computer")}
         </Button>
       ) : null}
 
@@ -702,7 +721,7 @@ export function Workspace() {
             <button
               type="button"
               className="flex-1"
-              aria-label="Close computer"
+              aria-label={t("Close computer")}
               onClick={() => setMobileComputer(false)}
             />
             <motion.div
@@ -729,7 +748,6 @@ export function Workspace() {
       </AnimatePresence>
 
       <BotDialog
-        key={editBot ? `bot-${editBot.id}` : modal === "bot" ? "bot-new" : "bot-closed"}
         open={modal === "bot" || Boolean(editBot)}
         bot={editBot}
         onClose={() => {
@@ -755,7 +773,6 @@ export function Workspace() {
         }}
       />
       <SectionDialog
-        key={sectionThread ? `section-${sectionThread.id}` : "section-closed"}
         open={Boolean(sectionThread)}
         existing={[
           ...new Set(
@@ -770,7 +787,6 @@ export function Workspace() {
         }}
       />
       <GroupDialog
-        key={editGroup?.id ?? (modal === "group" ? "new-group" : "group-closed")}
         open={modal === "group" || Boolean(editGroup)}
         thread={editGroup}
         bots={bots}
@@ -782,16 +798,16 @@ export function Workspace() {
           setModal(null);
         }}
       />
-      <SkillsDialog key={modal === "skills" ? "skills-open" : "skills-closed"} open={modal === "skills"} skills={skills} onSync={setSkills} onClose={() => setModal(null)} onDeleted={(id) => setSkills((current) => current.filter((skill) => skill.id !== id))} onSaved={(skill) => setSkills((current) => current.some((item) => item.id === skill.id) ? current.map((item) => item.id === skill.id ? skill : item) : [...current, skill])} />
-      {modal === "routines" ? <RoutinesDialog
-        key={routineEditorId ?? "list"}
+      <SkillsDialog open={modal === "skills"} skills={skills} onSync={setSkills} onClose={() => setModal(null)} onDeleted={(id) => setSkills((current) => current.filter((skill) => skill.id !== id))} onSaved={(skill) => setSkills((current) => current.some((item) => item.id === skill.id) ? current.map((item) => item.id === skill.id ? skill : item) : [...current, skill])} />
+      <RoutinesDialog
+        open={modal === "routines"}
         routines={routines} bots={bots} threads={threads}
         initialRoutineId={routineEditorId}
         defaultBotId={activeBot?.id} defaultThreadId={activeThread?.id}
         onClose={() => setModal(null)} onSync={setRoutines}
         onSaved={(routine) => setRoutines((current) => current.some((item) => item.id === routine.id) ? current.map((item) => item.id === routine.id ? routine : item) : [...current, routine])}
         onDeleted={(id) => setRoutines((current) => current.filter((item) => item.id !== id))}
-      /> : null}
+      />
       <BillingDialog
         open={billingOpen}
         usage={usage}
@@ -849,6 +865,7 @@ function BotDialog({
   onUpdated: (bot: Bot) => void;
   onLimitReached: () => void;
 }) {
+  const t = useExtracted();
   const [name, setName] = useState(bot?.name ?? "");
   const [job, setJob] = useState(bot?.job ?? "");
   const [instructions, setInstructions] = useState(bot?.instructions ?? "");
@@ -857,6 +874,18 @@ function BotDialog({
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const isEdit = Boolean(bot);
+
+  useEffect(() => {
+    if (!open) return;
+    // Preserve the mounted dialog through its exit animation; reset the form on the next opening.
+    // eslint-disable-next-line react/set-state-in-effect
+    setName(bot?.name ?? "");
+    setJob(bot?.job ?? "");
+    setInstructions(bot?.instructions ?? "");
+    setIcon(bot?.icon ?? null);
+    setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, bot?.id]);
 
   async function save() {
     if (iconBusy) return;
@@ -870,7 +899,7 @@ function BotDialog({
           body: JSON.stringify({ name, job, instructions, icon }),
         });
         const json = (await res.json()) as { bot?: Bot; error?: string };
-        if (!res.ok || !json.bot) throw new Error(json.error || "Could not save profile.");
+        if (!res.ok || !json.bot) throw new Error(json.error || t("Could not save profile."));
         if (json.bot) onUpdated(json.bot);
         return;
       }
@@ -884,14 +913,14 @@ function BotDialog({
         return;
       }
       const json = await res.json();
-      if (!res.ok || !json.bot || !json.thread) throw new Error(json.error || "Could not create teammate.");
+      if (!res.ok || !json.bot || !json.thread) throw new Error(json.error || t("Could not create teammate."));
       setName("");
       setJob("");
       setInstructions("");
       setIcon(null);
       onCreated(json.bot, json.thread);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Could not save profile.");
+      setError(cause instanceof Error ? cause.message : t("Could not save profile."));
     } finally {
       setBusy(false);
     }
@@ -905,20 +934,20 @@ function BotDialog({
       }}
     >
       <DialogContent className="p-6">
-        <DialogHeader title={isEdit ? "Edit profile" : "New teammate"} />
+        <DialogHeader title={isEdit ? t("Edit profile") : t("New teammate")} />
         <div className="flex flex-col gap-3">
           <AvatarField name={name} accent={bot?.accent} value={icon} onChange={setIcon} disabled={busy} onBusyChange={setIconBusy} />
           {error ? <p role="alert" className="text-sm text-destructive-300">{error}</p> : null}
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="bot-name">Name</Label>
+            <Label htmlFor="bot-name">{t("Name")}</Label>
             <Input id="bot-name" value={name} onChange={(e) => setName(e.currentTarget.value)} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="bot-job">Job</Label>
+            <Label htmlFor="bot-job">{t("Job")}</Label>
             <Input id="bot-job" value={job} onChange={(e) => setJob(e.currentTarget.value)} />
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="bot-instructions">Instructions</Label>
+            <Label htmlFor="bot-instructions">{t("Instructions")}</Label>
             <Textarea
               id="bot-instructions"
               value={instructions}
@@ -929,7 +958,7 @@ function BotDialog({
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <DialogClose asChild>
-            <Button variant="secondary" disabled={busy || iconBusy}>Close</Button>
+            <Button variant="secondary" disabled={busy || iconBusy}>{t("Close")}</Button>
           </DialogClose>
           <Button
             type="button"
@@ -938,7 +967,7 @@ function BotDialog({
             loading={busy}
             onClick={save}
           >
-            {isEdit ? "Save" : "Create"}
+            {isEdit ? t("Save") : t("Create")}
           </Button>
         </div>
       </DialogContent>
@@ -957,8 +986,15 @@ function SectionDialog({
   onClose: () => void;
   onSubmit: (name: string) => void | Promise<void>;
 }) {
+  const t = useExtracted();
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    // Reset the form without remounting the dialog during its close animation.
+    // eslint-disable-next-line react/set-state-in-effect
+    if (open) setName("");
+  }, [open]);
 
   async function submit() {
     const trimmed = name.trim();
@@ -979,9 +1015,9 @@ function SectionDialog({
       }}
     >
       <DialogContent className="p-6">
-        <DialogHeader title="Move to new section" />
+        <DialogHeader title={t("Move to new section")} />
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="section-name">Section name</Label>
+          <Label htmlFor="section-name">{t("Section name")}</Label>
           <Input
             id="section-name"
             value={name}
@@ -1002,7 +1038,7 @@ function SectionDialog({
         </div>
         <div className="mt-6 flex justify-end gap-2">
           <DialogClose asChild>
-            <Button variant="secondary">Close</Button>
+            <Button variant="secondary">{t("Close")}</Button>
           </DialogClose>
           <Button
             type="button"
@@ -1011,7 +1047,7 @@ function SectionDialog({
             loading={busy}
             onClick={submit}
           >
-            Move
+            {t("Move")}
           </Button>
         </div>
       </DialogContent>
@@ -1034,12 +1070,24 @@ function GroupDialog({
   onCreated: (thread: Thread) => void;
   onUpdated: (thread: Thread) => void;
 }) {
+  const t = useExtracted();
   const [picked, setPicked] = useState<string[]>(thread?.botIds ?? []);
   const [title, setTitle] = useState(thread?.title ?? "");
   const [icon, setIcon] = useState<string | null>(thread?.icon ?? null);
   const [iconBusy, setIconBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    // Preserve the mounted dialog through its exit animation; reset the form on the next opening.
+    // eslint-disable-next-line react/set-state-in-effect
+    setPicked(thread?.botIds ?? []);
+    setTitle(thread?.title ?? "");
+    setIcon(thread?.icon ?? null);
+    setError(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, thread?.id]);
 
   function toggleBot(botId: string, checked: boolean) {
     setPicked((current) => (checked ? [...new Set([...current, botId])] : current.filter((id) => id !== botId)));
@@ -1056,7 +1104,7 @@ function GroupDialog({
         body: JSON.stringify({ title, botIds: picked, icon }),
       });
       const json = await res.json();
-      if (!res.ok || !json.thread) throw new Error(json.error || "Could not save group.");
+      if (!res.ok || !json.thread) throw new Error(json.error || t("Could not save group."));
       if (thread) { onUpdated(json.thread); return; }
       if (json.thread) {
         setPicked([]);
@@ -1064,7 +1112,7 @@ function GroupDialog({
         setIcon(null);
         onCreated(json.thread);
       }
-    } catch (cause) { setError(cause instanceof Error ? cause.message : "Could not save group."); }
+    } catch (cause) { setError(cause instanceof Error ? cause.message : t("Could not save group.")); }
     finally {
       setBusy(false);
     }
@@ -1078,12 +1126,12 @@ function GroupDialog({
       }}
     >
       <DialogContent className="p-6">
-        <DialogHeader title={thread ? "Edit group" : "New group"} />
+        <DialogHeader title={thread ? t("Edit group") : t("New group")} />
         <div className="flex flex-col gap-3">
-          <AvatarField name={title || "Group"} value={icon} onChange={setIcon} disabled={busy} onBusyChange={setIconBusy} />
+          <AvatarField name={title || t("Group")} value={icon} onChange={setIcon} disabled={busy} onBusyChange={setIconBusy} />
           {error ? <p role="alert" className="text-sm text-destructive-300">{error}</p> : null}
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="group-title">Name</Label>
+            <Label htmlFor="group-title">{t("Name")}</Label>
             <Input
               id="group-title"
               value={title}
@@ -1093,7 +1141,7 @@ function GroupDialog({
             />
           </div>
           <div className="flex flex-col gap-2">
-            <span className="text-sm font-medium text-neutral-224">Members</span>
+            <span className="text-sm font-medium text-neutral-224">{t("Members")}</span>
             {bots.map((bot) => (
               <Label key={bot.id} className="cursor-pointer font-normal">
                 <Checkbox
@@ -1114,7 +1162,7 @@ function GroupDialog({
             loading={busy}
             onClick={create}
           >
-            {thread ? "Save changes" : "Create"}
+            {thread ? t("Save changes") : t("Create")}
           </Button>
         </div>
       </DialogContent>
