@@ -7,6 +7,8 @@ allowBuilds:
   '@embedded-postgres/linux-ia32': true
   '@embedded-postgres/linux-ppc64': true
   '@embedded-postgres/linux-x64': true
+  '@parcel/watcher': false
+  '@swc/core': false
   esbuild: true
   unrs-resolver: true
 minimumReleaseAgeExclude:
