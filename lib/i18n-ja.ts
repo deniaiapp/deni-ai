@@ -1,0 +1,215 @@
+/**
+ * Japanese strings for server code that runs outside a Next.js request: agent tool errors,
+ * background jobs, the standalone worker, and the labels they persist. `{name}` marks a
+ * placeholder. Keys must match the English text exactly. UI and API route strings live in
+ * messages/*.po instead.
+ */
+export const ja: Record<string, string> = {
+  // Agent tool errors and results
+  "Job cancelled or conversation deleted": "ジョブがキャンセルされたか、会話が削除されました",
+  "content is required": "content は必須です",
+  "url is required": "url は必須です",
+  "text is required": "text は必須です",
+  "key is required": "key は必須です",
+  "name is required for an MCP call": "MCP 呼び出しには name が必要です",
+  "skill not found": "スキルが見つかりません",
+  "not found": "見つかりません",
+  "Cannot hand off to yourself": "自分自身に引き継ぐことはできません",
+  "handoff not found": "引き継ぎが見つかりません",
+  "bot not found": "チームメイトが見つかりません",
+  "dm not found": "ダイレクトメッセージが見つかりません",
+  "Handoffs cannot wait for approval": "引き継ぎでは承認を待てません",
+  "Take control of the computer screen. When you are done, tell the teammate in chat to continue.":
+    "コンピューターの画面を操作してください。完了したら、チャットでチームメイトに続行を伝えてください。",
+  "The teammate is working in the background. Keep doing other work. Call handoffStatus to read their thinking and tool use.":
+    "チームメイトはバックグラウンドで作業中です。ほかの作業を続けてください。handoffStatus で思考やツールの使用状況を確認できます。",
+
+  // Computer activity and working labels
+  "Running a command": "コマンドを実行中",
+  "Ran a command": "コマンドを実行しました",
+  "Stopping computer": "コンピューターを停止中",
+  "Stopped the computer": "コンピューターを停止しました",
+  "Listing MCP tools": "MCP ツールを一覧表示中",
+  "Calling MCP tool": "MCP ツールを呼び出し中",
+  "Listed MCP tools": "MCP ツールを一覧表示しました",
+  "Called MCP tool": "MCP ツールを呼び出しました",
+  "Searching the web": "ウェブを検索中",
+  "Searched the web": "ウェブを検索しました",
+  "Waiting for your help": "あなたの操作を待っています",
+  "Requested your help": "操作をお願いしました",
+  "Opening page": "ページを開いています",
+  "Reading page": "ページを読み取り中",
+  "Clicking page": "ページをクリック中",
+  "Entering text": "テキストを入力中",
+  "Pressing key": "キーを押しています",
+  "Scrolling page": "ページをスクロール中",
+  "Using browser": "ブラウザーを使用中",
+  "Opened a page": "ページを開きました",
+  "Read the page": "ページを読み取りました",
+  "Clicked the page": "ページをクリックしました",
+  "Entered text": "テキストを入力しました",
+  "Pressed a key": "キーを押しました",
+  "Scrolled the page": "ページをスクロールしました",
+  "Used the browser": "ブラウザーを使用しました",
+  "Working in the background": "バックグラウンドで作業中",
+  "Saving result": "結果を保存中",
+  "The browser could not be started": "ブラウザーを起動できませんでした",
+  "files:list": "ファイル: 一覧",
+  "files:read": "ファイル: 読み取り",
+  "files:write": "ファイル: 書き込み",
+  "files:mkdir": "ファイル: フォルダー作成",
+  "files:delete": "ファイル: 削除",
+  "list": "一覧",
+  "read": "読み取り",
+  "write": "書き込み",
+  "mkdir": "フォルダー作成",
+  "delete": "削除",
+
+  // Notifications
+  "{name} needs your help": "{name} さんの操作が必要です",
+  "{name} finished a task": "{name} さんがタスクを完了しました",
+  "{name} could not finish the task": "{name} さんはタスクを完了できませんでした",
+  "{name} could not save the result": "{name} さんは結果を保存できませんでした",
+  "Task is waiting for approval": "タスクが承認待ちです",
+  "Review the requested action in the conversation before continuing.": "続行する前に、会話内で求められている操作を確認してください。",
+  "Task needs setup": "タスクにセットアップが必要です",
+  "Add an OpenRouter API key before retrying this task.": "このタスクを再試行する前に、OpenRouter の API キーを追加してください。",
+  "Task paused by usage limit": "使用量の上限によりタスクが一時停止しました",
+  "Task needs review before retry": "再試行の前にタスクの確認が必要です",
+  "The worker stopped unexpectedly after a checkpoint. Review external side effects, then retry explicitly.":
+    "チェックポイントの後でワーカーが予期せず停止しました。外部への影響を確認してから、明示的に再試行してください。",
+  "The result is ready in this conversation.": "結果はこの会話で確認できます。",
+  "The task is complete.": "タスクが完了しました。",
+  "Task completed.": "タスクが完了しました。",
+
+  // Routines
+  "[Routine {name}]": "[ルーティン {name}]",
+  "This is a scheduled run. Do not perform actions that require approval; leave the result behind.":
+    "これは定期実行です。承認が必要な操作は行わず、結果だけを残してください。",
+
+  // Job state
+  "Conversation was deleted": "会話が削除されました",
+  "Routine was disabled, deleted, or changed before this run started.": "この実行が始まる前に、ルーティンが無効化、削除、または変更されました。",
+  "OPENROUTER_API_KEY is missing": "OPENROUTER_API_KEY が設定されていません",
+  "Cancelled by user": "ユーザーがキャンセルしました",
+  "Worker lease expired; review this task before retrying to avoid duplicate side effects":
+    "ワーカーのリースが期限切れになりました。副作用の重複を避けるため、再試行の前にこのタスクを確認してください",
+  "The model call failed": "モデルの呼び出しに失敗しました",
+  "Could not save the response": "応答を保存できませんでした",
+  "Unable to persist job": "ジョブを保存できませんでした",
+
+  // Handoffs
+  "Starting": "開始中",
+  "Failed": "失敗",
+  "Thinking": "考え中",
+  "Writing": "作成中",
+  "Done": "完了",
+  "Finished without a written report.": "報告書は書かれずに終了しました。",
+  "[Handoff from {name}]": "[{name} さんからの引き継ぎ]",
+
+  // Computer, sandbox, storage, secrets
+  "Screenshot storage timed out": "スクリーンショットの保存がタイムアウトしました",
+  "Steel returned no browser context": "Steel からブラウザーコンテキストが返されませんでした",
+  "STEEL_API_KEY is required in production": "本番環境では STEEL_API_KEY が必要です",
+  "E2B_API_KEY is required in production": "本番環境では E2B_API_KEY が必要です",
+  "S3-compatible screenshot storage is required in production": "本番環境では S3 互換のスクリーンショットストレージが必要です",
+  "S3-compatible workspace storage is required in production": "本番環境では S3 互換のワークスペースストレージが必要です",
+  "A selector or x,y coordinates are required": "セレクターまたは x,y 座標が必要です",
+  "Sandbox was stopped": "サンドボックスが停止されました",
+  "Invalid object path": "オブジェクトのパスが正しくありません",
+  "APP_ENCRYPTION_KEY is required": "APP_ENCRYPTION_KEY が必要です",
+  "APP_ENCRYPTION_KEY must decode to 32 bytes": "APP_ENCRYPTION_KEY は 32 バイトにデコードできる必要があります",
+  "Stored secret is not encrypted": "保存されているシークレットは暗号化されていません",
+  "Invalid encrypted secret": "暗号化されたシークレットが正しくありません",
+  "Workspace sync snapshot is missing; refusing to overwrite remote files":
+    "ワークスペースの同期スナップショットがないため、リモートのファイルは上書きしません",
+  "Workspace changed while the command was running: /{path}": "コマンドの実行中にワークスペースが変更されました: /{path}",
+  "Workspace file changed while it was being synced: /{path}": "同期中にワークスペースのファイルが変更されました: /{path}",
+  "{message}; local command workspace was preserved at {path}": "{message}。ローカルのコマンド用ワークスペースは {path} に保持されました",
+
+  // Search
+  "EXA_API_KEY is not configured; web search is unavailable": "EXA_API_KEY が設定されていないため、ウェブ検索は利用できません",
+  "query is required": "query は必須です",
+  "Web search request failed: {message}": "ウェブ検索のリクエストに失敗しました: {message}",
+  "Web search failed ({status}): {detail}": "ウェブ検索に失敗しました ({status}): {detail}",
+
+  // Plugins
+  "Unsupported plugin operation": "サポートされていないプラグイン操作です",
+  "Message ID required": "メッセージ ID が必要です",
+  "Valid recipient, subject and body required": "有効な宛先、件名、本文が必要です",
+  "File ID required": "ファイル ID が必要です",
+  "Title and content required": "タイトルと内容が必要です",
+  "File ID and content required": "ファイル ID と内容が必要です",
+  "Repository must be owner/name": "リポジトリは owner/name の形式で指定してください",
+  "Issue/PR number or file path required": "Issue/PR の番号またはファイルパスが必要です",
+  "Invalid file path": "ファイルパスが正しくありません",
+  "Issue number and comment required": "Issue 番号とコメントが必要です",
+  "Title and body required": "タイトルと本文が必要です",
+  "Head and base branches required": "head と base のブランチが必要です",
+  "{service} request failed ({status}): {detail}": "{service} のリクエストに失敗しました ({status}): {detail}",
+
+  // Billing and store
+  "STRIPE_SECRET_KEY is not configured": "STRIPE_SECRET_KEY が設定されていません",
+  "STRIPE_PRICE_PRO is not configured": "STRIPE_PRICE_PRO が設定されていません",
+  "user store not found": "ユーザーのデータが見つかりません",
+  "invalid thread id": "会話 ID が正しくありません",
+  "thread not found": "会話が見つかりません",
+  "Conversation is not available.": "会話を利用できません。",
+  "The approval message is no longer available.": "承認メッセージはすでに利用できません。",
+
+  // Messages thrown by lib code (mirrors lib/localize-error.ts)
+  "Invalid cron expression": "cron式が正しくありません",
+  "Cron expression has no matching time in the next five years": "cron式に一致する時刻が今後5年間にありません",
+  "MCP URL is invalid": "MCPのURLが正しくありません",
+  "MCP URL must use http or https": "MCPのURLには http または https を使用してください",
+  "MCP connection name is required": "MCP接続名は必須です",
+  "MCP connection not found": "MCP接続が見つかりません",
+  "MCP connection is not available": "MCP接続は利用できません",
+  "MCP tool name is invalid": "MCPツール名が正しくありません",
+  "MCP request failed": "MCPリクエストに失敗しました",
+  "Path is outside the workspace": "パスがワークスペースの外にあります",
+  "A file path is required": "ファイルパスは必須です",
+  "A directory path is required": "ディレクトリパスは必須です",
+  "File is too large (maximum 1 MB)": "ファイルが大きすぎます(最大1 MB)",
+  "File is too large to download": "ファイルが大きすぎてダウンロードできません",
+  "File not found": "ファイルが見つかりません",
+  "Path is a directory": "パスはディレクトリです",
+  "The workspace root cannot be deleted": "ワークスペースのルートは削除できません",
+  "Artifact path must stay inside the workspace": "成果物のパスはワークスペース内にある必要があります",
+  "Unable to register artifact": "成果物を登録できません",
+  "Invalid URL": "URLが正しくありません",
+  "Only http(s) URLs are allowed": "http(s) のURLのみ使用できます",
+  "Invalid plugin operation": "プラグインの操作が正しくありません",
+  "Connect write access first": "先に書き込みアクセスを接続してください",
+  "Result too large to display": "結果が大きすぎて表示できません",
+  "Input too large": "入力が大きすぎます",
+  "No teammate matched that mention. Choose a name or use @everyone.": "そのメンションに一致するチームメイトがいません。名前を選ぶか、@everyone を使ってください。",
+  "Conversation no longer exists": "会話は存在しません",
+  "Reply target not found": "返信先が見つかりません",
+  "Choose a valid time.": "有効な時刻を選んでください。",
+  "Choose a weekday.": "曜日を選んでください。",
+  "Choose a day between 1 and 31.": "1〜31の日を選んでください。",
+  "Checkout URL is unavailable": "チェックアウトのURLを利用できません",
+  "Invalid timezone: {timezone}": "タイムゾーンが正しくありません: {timezone}",
+  "Invalid MCP header: {name}": "MCPヘッダーが正しくありません: {name}",
+  "MCP SSE connection failed ({status})": "MCPのSSE接続に失敗しました({status})",
+  "MCP request failed ({status})": "MCPリクエストに失敗しました({status})",
+  "Connect {service} write access in Plugins first.": "先にプラグインで{service}の書き込みアクセスを接続してください。",
+  "Connect {service} in Plugins first.": "先にプラグインで{service}を接続してください。",
+  "Reconnect {service} in Plugins.": "プラグインで{service}を再接続してください。",
+
+  // Usage limits
+  "Monthly token limit reached ({limit} on {plan}). Upgrade to keep chatting.":
+    "今月のトークン上限に達しました({plan}プランで{limit})。チャットを続けるにはアップグレードしてください。",
+  "Monthly browser time limit reached ({limit} min on {plan}). Upgrade to keep using the browser.":
+    "今月のブラウザ時間の上限に達しました({plan}プランで{limit}分)。ブラウザを使い続けるにはアップグレードしてください。",
+  "Monthly computer time limit reached ({limit} min on {plan}). Upgrade to keep using the terminal.":
+    "今月のコンピューター時間の上限に達しました({plan}プランで{limit}分)。ターミナルを使い続けるにはアップグレードしてください。",
+  "Teammate limit reached ({limit} on {plan}). Upgrade to add more teammates.":
+    "チームメイトの上限に達しました({plan}プランで{limit}人)。追加するにはアップグレードしてください。",
+
+  // Webhook
+  "webhook is not configured": "Webhook が設定されていません",
+  "missing signature": "署名がありません",
+  "invalid signature": "署名が正しくありません",
+};

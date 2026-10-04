@@ -15,15 +15,13 @@ import { parseRunMode } from "./model";
 import type { AgentJob } from "./types";
 import { messagesWithReplyContext } from "./message-actions";
 import { groupContext } from "./group-chat";
+import { translateError, translatorFor } from "./i18n-server";
 
 function payloadMessages(job: AgentJob): UIMessage[] {
   const value = job.payload.messages;
   return Array.isArray(value) ? (value as UIMessage[]) : [];
 }
 
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
-}
 
 /**
  * Execute a queued job without a request lifecycle. This is used by the scheduler and
@@ -34,32 +32,34 @@ export async function runBackgroundJob(userId: string, jobId: string) {
   const claimed = await claimJob(userId, jobId);
   if (!claimed || !claimed.claimed || claimed.job.status !== "running") return claimed?.job ?? null;
   const job = claimed.job;
+  const locale = typeof job.payload.locale === "string" ? job.payload.locale : undefined;
+  const tr = translatorFor(locale);
   const store = await readStore(userId);
   if (!store.threads.some((thread) => thread.id === job.threadId)) {
-    await finishJob(userId, job.id, "cancelled", { error: "Conversation was deleted" });
+    await finishJob(userId, job.id, "cancelled", { error: tr("Conversation was deleted") });
     return getJob(userId, job.id);
   }
   if (job.kind === "routine") {
     const routine = store.routines.find((item) => item.id === job.payload.routineId);
     if (!routine?.enabled || (routine.revision ?? 0) !== (job.payload.routineRevision ?? 0)) {
-      await finishJob(userId, job.id, "cancelled", { error: "Routine was disabled, deleted, or changed before this run started." });
+      await finishJob(userId, job.id, "cancelled", { error: tr("Routine was disabled, deleted, or changed before this run started.") });
       return getJob(userId, job.id);
     }
   }
   const bot = store.bots.find((item) => item.id === job.botId);
   if (!bot) {
-    await finishJob(userId, job.id, "failed", { error: "bot not found" });
+    await finishJob(userId, job.id, "failed", { error: tr("bot not found") });
     return getJob(userId, job.id);
   }
   const apiKey = await getApiKey(userId);
   if (!apiKey) {
-    await finishJob(userId, job.id, "failed", { error: "OPENROUTER_API_KEY is missing" });
+    await finishJob(userId, job.id, "failed", { error: tr("OPENROUTER_API_KEY is missing") });
     await createNotification({
       userId,
       jobId: job.id,
       kind: "failed",
-      title: "Task needs setup",
-      body: "Add an OpenRouter API key before retrying this task.",
+      title: tr("Task needs setup"),
+      body: tr("Add an OpenRouter API key before retrying this task."),
     }).catch(() => undefined);
     return getJob(userId, job.id);
   }
@@ -76,7 +76,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
     await setComputer(userId, {
       status: "working",
       workingBotId: bot.id,
-      workingLabel: "Working in the background",
+      workingLabel: tr("Working in the background"),
       botId: bot.id,
       jobId: job.id,
     });
@@ -92,11 +92,11 @@ export async function runBackgroundJob(userId: string, jobId: string) {
         store.bots.map((item) => ({ id: item.id, name: item.name, job: item.job })),
       ),
       messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(isGroup ? groupContext(messages, bot.id) : messages))),
-      tools: createDeniTools({ userId, bot, threadId: job.threadId, jobId: job.id, allowHandoff: !isGroup }),
+      tools: createDeniTools({ userId, bot, threadId: job.threadId, jobId: job.id, allowHandoff: !isGroup, locale }),
       toolApproval:
         job.kind === "routine"
-          ? deniHandoffToolApproval()
-          : deniToolApproval({ userId, jobId: job.id }),
+          ? deniHandoffToolApproval(locale)
+          : deniToolApproval({ userId, jobId: job.id, locale }),
       stopWhen: isLoopFinished(),
       providerOptions,
       onStepFinish: async (step) => {
@@ -107,7 +107,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
           updatedAt: nowIso(),
         }).catch(() => undefined);
         const current = await getJob(userId, job.id);
-        if (!current || current.status === "cancelled") throw new Error("Job cancelled or conversation deleted");
+        if (!current || current.status === "cancelled") throw new Error(tr("Job cancelled or conversation deleted"));
       },
     });
     await recordTokenUsage(userId, result.usage, { multiplier: tokenMultiplier });
@@ -117,7 +117,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
       id: `${job.id}_assistant`,
       role: "assistant",
       metadata: { author: { id: bot.id, name: bot.name, accent: bot.accent }, jobId: job.id },
-      parts: [{ type: "text", text: result.text || "Task completed." }],
+      parts: [{ type: "text", text: result.text || tr("Task completed.") }],
     };
     await saveMessages(userId, job.threadId, [assistant]);
     if (typeof job.payload.routineId === "string") {
@@ -129,20 +129,20 @@ export async function runBackgroundJob(userId: string, jobId: string) {
       }).catch(() => undefined);
     }
     const completed = await finishJob(userId, job.id, "completed", {
-      result: { text: result.text || "Task completed.", usage: result.usage },
+      result: { text: result.text || tr("Task completed."), usage: result.usage },
     });
     if (completed) {
       await createNotification({
         userId,
         jobId: job.id,
         kind: "completed",
-        title: `${bot.name} finished a task`,
-        body: result.text?.slice(0, 240) || "The task is complete.",
+        title: tr("{name} finished a task", { name: bot.name }),
+        body: result.text?.slice(0, 240) || tr("The task is complete."),
       }).catch(() => undefined);
     }
     return completed;
   } catch (error) {
-    const message = errorMessage(error);
+    const message = translateError(locale, error);
     const usageError = isUsageLimitError(error);
     const current = await getJob(userId, job.id);
     if (current?.status === "cancelled") return current;
@@ -158,7 +158,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
         userId,
         jobId: job.id,
         kind: "failed",
-        title: usageError ? "Task paused by usage limit" : `${bot.name} could not finish the task`,
+        title: usageError ? tr("Task paused by usage limit") : tr("{name} could not finish the task", { name: bot.name }),
         body: message,
       }).catch(() => undefined);
     }

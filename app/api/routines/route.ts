@@ -4,7 +4,7 @@ import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { nextCron } from "@/lib/cron";
 import { createId, nowIso } from "@/lib/ids";
 import { mutateStore, readStore } from "@/lib/store";
-import { getExtracted } from "next-intl/server";
+import { getExtracted, getLocale } from "next-intl/server";
 import { localizeError } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +31,7 @@ async function updateRoutine(userId: string, body: unknown) {
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) return NextResponse.json({ error: (({ name: t("Name is required."), instructions: t("Instruction is required."), cron: t("When to run is required.") } as Record<string, string>)[String(parsed.error.issues[0]?.path[0])] ?? t("Invalid routine.")) }, { status: 400 });
   const data = parsed.data;
+  const locale = await getLocale();
   const routine = await mutateStore(userId, (store) => {
     const item = store.routines.find((entry) => entry.id === data.id);
     if (!item) return null;
@@ -46,6 +47,7 @@ async function updateRoutine(userId: string, body: unknown) {
     item.cron = cron;
     item.timezone = timezone;
     item.enabled = enabled;
+    item.locale = locale;
     item.nextRunAt = enabled ? (scheduleChanged || !item.nextRunAt ? nextRunAt ?? nextCron(cron, timezone) : item.nextRunAt) : null;
     if (changed) { item.revision = (item.revision ?? 0) + 1; item.lastError = null; }
     return item;
@@ -64,13 +66,14 @@ export async function POST(request: Request) {
     const parsed = createSchema.safeParse(body);
     if (!parsed.success) return NextResponse.json({ error: (({ name: t("Name is required."), instructions: t("Instruction is required."), cron: t("When to run is required.") } as Record<string, string>)[String(parsed.error.issues[0]?.path[0])] ?? t("Invalid routine.")) }, { status: 400 });
     const data = parsed.data;
+    const locale = await getLocale();
     const routine = await mutateStore(userId, (store) => {
       const thread = store.threads.find((entry) => entry.id === data.threadId);
       if (!store.bots.some((bot) => bot.id === data.botId) || !thread?.botIds.includes(data.botId)) return null;
       const timezone = data.timezone ?? store.config.timezone;
       const nextRunAt = nextCron(data.cron, timezone);
       const enabled = data.enabled ?? true;
-      const item = { id: createId("rtn"), botId: data.botId, threadId: data.threadId, name: data.name, instructions: data.instructions, cron: data.cron, timezone, enabled, revision: 0, lastRunAt: null, nextRunAt: enabled ? nextRunAt : null, lastError: null, createdAt: nowIso() };
+      const item = { id: createId("rtn"), botId: data.botId, threadId: data.threadId, name: data.name, instructions: data.instructions, cron: data.cron, timezone, enabled, revision: 0, lastRunAt: null, nextRunAt: enabled ? nextRunAt : null, lastError: null, createdAt: nowIso(), locale };
       store.routines.push(item);
       return item;
     });

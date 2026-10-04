@@ -35,7 +35,8 @@ import { messagesWithReplyContext, resolveReplyReferences } from "@/lib/message-
 import { releaseBrowserTakeover } from "@/lib/browser-workspaces";
 import { createHash } from "node:crypto";
 import { groupContext } from "@/lib/group-chat";
-import { getExtracted } from "next-intl/server";
+import { translateError, translateMessage } from "@/lib/i18n-server";
+import { getExtracted, getLocale } from "next-intl/server";
 import { localizeUsageLimit } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
@@ -64,6 +65,7 @@ function includesApprovalResponse(incoming: UIMessage[], persisted: UIMessage[])
 
 export async function POST(req: Request) {
   const t = await getExtracted();
+  const locale = await getLocale();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const limited = await limitOrResponse(userId, "chat", 40);
@@ -148,17 +150,17 @@ export async function POST(req: Request) {
       botId: bot.id,
       kind: "chat",
       idempotencyKey,
-      payload: { messages, runMode },
+      payload: { messages, runMode, locale },
     });
   }
   if (resumeCandidate && job && !continuationFrom) {
-    job = (await updateJob(userId, job.id, { payload: { ...job.payload, messages, runMode } })) ?? job;
+    job = (await updateJob(userId, job.id, { payload: { ...job.payload, messages, runMode, locale } })) ?? job;
   }
   // Claim a waiting continuation with its updated input atomically. It is never
   // exposed as queued with old input for the background worker to pick up.
   if (!continuationFrom) await saveMessages(userId, thread.id, incoming);
   const claimed = await claimJob(userId, job.id, continuationFrom ? {
-    from: continuationFrom, threadId: thread.id, botId: bot.id, key: idempotencyKey, payload: { messages, runMode },
+    from: continuationFrom, threadId: thread.id, botId: bot.id, key: idempotencyKey, payload: { messages, runMode, locale },
   } : undefined);
   if (!claimed || !claimed.claimed || claimed.job.status !== "running") {
     return jobConflict(claimed?.job ?? job);
@@ -184,7 +186,7 @@ export async function POST(req: Request) {
   // Concurrent group replies may already follow this input in stored history.
   // The UI stream must still create this bot's own answer, not continue theirs.
   const streamHistory = requestMessage ? [...messages.filter((message) => message.id !== requestMessage.id), requestMessage] : messages;
-  const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: thread.kind !== "group" });
+  const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: thread.kind !== "group", locale });
   let writeRunStatus: ((status: "working" | "finalizing" | "waiting" | "completed" | "failed") => void) | undefined;
   let finalizationPromise: Promise<boolean> | undefined;
   const finalizeChatJob = () => {
@@ -211,7 +213,7 @@ export async function POST(req: Request) {
       try {
         await setComputer(userId, {
           status: "working",
-          workingLabel: "Saving result",
+          workingLabel: t("Saving result"),
           workingBotId: bot.id,
           jobId: job.id,
         });
@@ -230,12 +232,12 @@ export async function POST(req: Request) {
           userId,
           jobId: job.id,
           kind: "completed",
-          title: `${bot.name} finished a task`,
-          body: "The result is ready in this conversation.",
+          title: t("{name} finished a task", { name: bot.name }),
+          body: t("The result is ready in this conversation."),
         }).catch(() => undefined);
         return true;
       } catch (error) {
-        const message = error instanceof Error ? error.message : String(error);
+        const message = translateError(locale, error);
         writeRunStatus?.("failed");
         await finishJob(userId, job.id, "failed", { error: message }).catch(() => undefined);
         await setComputer(userId, {
@@ -249,7 +251,7 @@ export async function POST(req: Request) {
           userId,
           jobId: job.id,
           kind: "failed",
-          title: `${bot.name} could not save the result`,
+          title: t("{name} could not save the result", { name: bot.name }),
           body: message,
         }).catch(() => undefined);
         return false;
@@ -271,7 +273,7 @@ export async function POST(req: Request) {
     ) + (thread.kind === "group" ? `\nYou are speaking as ${bot.name} in a group chat. Respond only as yourself, from your role. Other teammates may answer in parallel; do not impersonate them or start extra handoffs for this group message.` : ""),
     messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(thread.kind === "group" ? groupContext(messages, bot.id) : messages))),
     tools,
-    toolApproval: deniToolApproval({ userId, jobId: job.id }),
+    toolApproval: deniToolApproval({ userId, jobId: job.id, locale }),
     stopWhen: isLoopFinished(),
     providerOptions,
     onStepEnd: async (step) => {
@@ -316,18 +318,18 @@ export async function POST(req: Request) {
           status: "idle",
           workingLabel: "",
           workingBotId: null,
-          lastError: "The model call failed",
+          lastError: t("The model call failed"),
           jobId: job.id,
         }).catch(() => undefined);
         await finishJob(userId, job.id, "failed", {
-          error: event.error instanceof Error ? event.error.message : "The model call failed",
+          error: event.error instanceof Error ? translateMessage(locale, event.error.message) : t("The model call failed"),
         }).catch(() => undefined);
         await createNotification({
           userId,
           jobId: job.id,
           kind: "failed",
-          title: `${bot.name} could not finish the task`,
-          body: event.error instanceof Error ? event.error.message : "The model call failed",
+          title: t("{name} could not finish the task", { name: bot.name }),
+          body: event.error instanceof Error ? translateMessage(locale, event.error.message) : t("The model call failed"),
         }).catch(() => undefined);
       }
     },
@@ -366,7 +368,7 @@ export async function POST(req: Request) {
               await finalizeChatJob();
             } catch (error) {
               reportError(error, "save chat response");
-              await finishJob(userId, job.id, "failed", { error: "Could not save the response" }).catch(() => undefined);
+              await finishJob(userId, job.id, "failed", { error: t("Could not save the response") }).catch(() => undefined);
               writeRunStatus?.("failed");
             }
           },

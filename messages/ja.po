@@ -33,6 +33,21 @@ msgctxt "Rqx0bS"
 msgid "No billing account yet"
 msgstr "請求アカウントがまだありません"
 
+#: app/api/billing/webhook/route.ts
+msgctxt "psyCqT"
+msgid "webhook is not configured"
+msgstr "Webhook が設定されていません"
+
+#: app/api/billing/webhook/route.ts
+msgctxt "rCW5d_"
+msgid "missing signature"
+msgstr "署名がありません"
+
+#: app/api/billing/webhook/route.ts
+msgctxt "p90_sR"
+msgid "invalid signature"
+msgstr "署名が正しくありません"
+
 #: app/api/bots/[id]/route.ts
 #: app/api/bots/route.ts
 msgctxt "YeQIlr"
@@ -97,6 +112,42 @@ msgstr "返信先のメッセージは存在しません。"
 msgctxt "4LlISz"
 msgid "Could not resume the task. Please send your message again."
 msgstr "タスクを再開できませんでした。メッセージをもう一度送信してください。"
+
+#: app/api/chat/route.ts
+#: app/components/chat-thread.tsx
+msgctxt "_LViiD"
+msgid "Saving result"
+msgstr "結果を保存中"
+
+#: app/api/chat/route.ts
+msgctxt "S5QEJr"
+msgid "{name} finished a task"
+msgstr "{name} さんがタスクを完了しました"
+
+#: app/api/chat/route.ts
+msgctxt "jIeWzL"
+msgid "The result is ready in this conversation."
+msgstr "結果はこの会話で確認できます。"
+
+#: app/api/chat/route.ts
+msgctxt "wHKxTi"
+msgid "{name} could not save the result"
+msgstr "{name} さんは結果を保存できませんでした"
+
+#: app/api/chat/route.ts
+msgctxt "SqDnJo"
+msgid "The model call failed"
+msgstr "モデルの呼び出しに失敗しました"
+
+#: app/api/chat/route.ts
+msgctxt "Xa8iLm"
+msgid "{name} could not finish the task"
+msgstr "{name} さんはタスクを完了できませんでした"
+
+#: app/api/chat/route.ts
+msgctxt "ojVpVJ"
+msgid "Could not save the response"
+msgstr "応答を保存できませんでした"
 
 #: app/api/computer/files/route.ts
 msgctxt "9dhBF3"
@@ -581,6 +632,21 @@ msgid "set NEXT_PUBLIC_SUPPORT_EMAIL on this deployment."
 msgstr "このデプロイでは NEXT_PUBLIC_SUPPORT_EMAIL を設定してください。"
 
 #: app/components/auth-form.tsx
+msgctxt "Tza51f"
+msgid "Deni Run backup codes"
+msgstr "Deni Run のバックアップコード"
+
+#: app/components/auth-form.tsx
+msgctxt "I5dYYr"
+msgid "Saved {time}"
+msgstr "保存日時: {time}"
+
+#: app/components/auth-form.tsx
+msgctxt "L1AWG9"
+msgid "Each code can be used once if you lose your authenticator app."
+msgstr "認証アプリを紛失した場合、各コードは1回だけ使用できます。"
+
+#: app/components/auth-form.tsx
 msgctxt "G2XlKG"
 msgid "Save these backup codes. They are shown once."
 msgstr "このバックアップコードを保存してください。表示されるのは一度だけです。"
@@ -845,6 +911,7 @@ msgid "Could not submit approval."
 msgstr "承認を送信できませんでした。"
 
 #: app/components/chat-thread.tsx
+#: components/ai-elements/prompt-input.tsx
 msgctxt "q_uwLT"
 msgid "Stop"
 msgstr "停止"
@@ -888,11 +955,6 @@ msgstr "完了"
 msgctxt "0E-C4I"
 msgid "Waiting for your help"
 msgstr "あなたの操作を待っています"
-
-#: app/components/chat-thread.tsx
-msgctxt "_LViiD"
-msgid "Saving result"
-msgstr "結果を保存中"
 
 #: app/components/chat-thread.tsx
 msgctxt "xdZNBn"
@@ -1550,6 +1612,7 @@ msgid "Your help is needed"
 msgstr "操作が必要です"
 
 #: app/components/computer-panel.tsx
+#: components/ai-elements/tool.tsx
 msgctxt "KN7zKn"
 msgid "Error"
 msgstr "エラー"
@@ -3110,6 +3173,81 @@ msgctxt "aKq-bu"
 msgid "More teammates, tokens, and computer time on a private computer."
 msgstr "専用コンピューターで、より多くのチームメイト、トークン、コンピューター時間を。"
 
+#: components/ai-elements/conversation.tsx
+msgctxt "zu9kMq"
+msgid "No messages yet"
+msgstr "メッセージはまだありません"
+
+#: components/ai-elements/conversation.tsx
+msgctxt "5PPOsI"
+msgid "Start a conversation to see messages here"
+msgstr "会話を始めると、ここにメッセージが表示されます"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "9WRlF4"
+msgid "Send"
+msgstr "送信"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "C2CIgC"
+msgid "Sending"
+msgstr "送信中"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "62nsdy"
+msgid "Retry"
+msgstr "再試行"
+
+#: components/ai-elements/reasoning.tsx
+msgctxt "QrZMdi"
+msgid "Thinking..."
+msgstr "考え中…"
+
+#: components/ai-elements/reasoning.tsx
+msgctxt "tfrHH2"
+msgid "Thought for a few seconds"
+msgstr "数秒間考えました"
+
+#: components/ai-elements/reasoning.tsx
+msgctxt "bfs4eB"
+msgid "Thought for {duration} seconds"
+msgstr "{duration}秒間考えました"
+
+#: components/ai-elements/tool.tsx
+msgctxt "uPFUUe"
+msgid "Awaiting approval"
+msgstr "承認待ち"
+
+#: components/ai-elements/tool.tsx
+msgctxt "Nuo4L7"
+msgid "Responded"
+msgstr "応答済み"
+
+#: components/ai-elements/tool.tsx
+msgctxt "nDyaq_"
+msgid "Running"
+msgstr "実行中"
+
+#: components/ai-elements/tool.tsx
+msgctxt "eKEL_g"
+msgid "Pending"
+msgstr "保留中"
+
+#: components/ai-elements/tool.tsx
+msgctxt "95stPq"
+msgid "Completed"
+msgstr "完了"
+
+#: components/ai-elements/tool.tsx
+msgctxt "5kp1Ie"
+msgid "Denied"
+msgstr "拒否"
+
+#: components/ai-elements/tool.tsx
+msgctxt "ZpQ6us"
+msgid "Result"
+msgstr "結果"
+
 #: components/locale-switcher.tsx
 msgctxt "y1Z3or"
 msgid "Language"
@@ -3174,6 +3312,11 @@ msgstr "毎週{weekday} {time}"
 msgctxt "dag1_v"
 msgid "Day {day} of each month at {time}"
 msgstr "毎月{day}日 {time}"
+
+#: components/theme-toggle.tsx
+msgctxt "jqxEYs"
+msgid "Toggle light and dark theme"
+msgstr "ライト/ダークテーマを切り替え"
 
 #: components/ui/sidebar.tsx
 msgctxt "HyS0qp"

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getExtracted } from "next-intl/server";
 import type Stripe from "stripe";
 import {
   applyCheckoutSession,
@@ -15,20 +16,21 @@ function customerIdOf(value: string | Stripe.Customer | Stripe.DeletedCustomer |
 }
 
 export async function POST(req: Request) {
+  const t = await getExtracted();
   const secret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
   if (!secret) {
-    return NextResponse.json({ error: "webhook is not configured" }, { status: 501 });
+    return NextResponse.json({ error: t("webhook is not configured") }, { status: 501 });
   }
   const signature = req.headers.get("stripe-signature");
   if (!signature) {
-    return NextResponse.json({ error: "missing signature" }, { status: 400 });
+    return NextResponse.json({ error: t("missing signature") }, { status: 400 });
   }
   const payload = await req.text();
   let event: Stripe.Event;
   try {
     event = getStripe().webhooks.constructEvent(payload, signature, secret);
   } catch {
-    return NextResponse.json({ error: "invalid signature" }, { status: 400 });
+    return NextResponse.json({ error: t("invalid signature") }, { status: 400 });
   }
 
   if (event.type === "checkout.session.completed") {

@@ -1,5 +1,6 @@
 import "server-only";
 
+import { translatorFor } from "./i18n-server";
 import { and, asc, desc, eq, getTableColumns, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { agentJobs, jobEvents } from "@/db/schema";
@@ -330,10 +331,10 @@ export async function listJobEvents(userId: string, jobId: string, after = 0) {
   return rows.map(mapEvent);
 }
 
-export async function cancelJob(userId: string, jobId: string) {
+export async function cancelJob(userId: string, jobId: string, locale?: string) {
   const [row] = await db
     .update(agentJobs)
-    .set({ status: "cancelled", error: "Cancelled by user", finishedAt: new Date(), updatedAt: new Date() })
+    .set({ status: "cancelled", error: translatorFor(locale)("Cancelled by user"), finishedAt: new Date(), updatedAt: new Date() })
     .where(
       and(
         eq(agentJobs.userId, userId),
@@ -389,12 +390,13 @@ export async function recoverStaleJobs(at = new Date()) {
     )
     .limit(100);
   for (const job of stale) {
+    const tr = translatorFor(job.payload.locale);
     const nextStatus: JobStatus = "uncertain";
     await db
       .update(agentJobs)
       .set({
         status: nextStatus,
-        error: "Worker lease expired; review this task before retrying to avoid duplicate side effects",
+        error: tr("Worker lease expired; review this task before retrying to avoid duplicate side effects"),
         lockedAt: null,
         heartbeatAt: null,
         updatedAt: at,
@@ -409,8 +411,8 @@ export async function recoverStaleJobs(at = new Date()) {
       userId: job.userId,
       jobId: job.id,
       kind: "failed",
-      title: "Task needs review before retry",
-      body: "The worker stopped unexpectedly after a checkpoint. Review external side effects, then retry explicitly.",
+      title: tr("Task needs review before retry"),
+      body: tr("The worker stopped unexpectedly after a checkpoint. Review external side effects, then retry explicitly."),
     }).catch(() => undefined);
   }
   return stale.length;

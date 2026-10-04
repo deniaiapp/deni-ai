@@ -28,6 +28,7 @@ import { isAlwaysAllowed, pluginStatus, runPlugin } from "./builtin-plugins";
 import { createNotification } from "./notifications";
 import { getJob, transitionJob } from "./jobs";
 import { nextCron } from "./cron";
+import { translateError, translatorFor, type Translate } from "./i18n-server";
 export { nextCron } from "./cron";
 
 export type AgentContext = {
@@ -36,6 +37,8 @@ export type AgentContext = {
   threadId: string;
   jobId?: string;
   allowHandoff?: boolean;
+  /** Language for messages the agent persists or receives. Defaults to English. */
+  locale?: string;
 };
 
 export function buildInstructions(
@@ -98,6 +101,7 @@ When an answer genuinely needs more detail, use several short paragraphs separat
 Keep code blocks, tables, and related list items together. Add detail when the user asks for it, and do not omit facts needed for an accurate answer.`;
 }
 export function createDeniTools(ctx: AgentContext) {
+  const tr = translatorFor(ctx.locale);
   const setAgentComputer = (patch: Parameters<typeof setComputer>[1]) => {
     if (!ctx.jobId) {
       return setComputer(ctx.userId, {
@@ -106,7 +110,7 @@ export function createDeniTools(ctx: AgentContext) {
       });
     }
     return getJob(ctx.userId, ctx.jobId).then((job) => {
-      if (!job || job.status === "cancelled") throw new Error("Job cancelled or conversation deleted");
+      if (!job || job.status === "cancelled") throw new Error(tr("Job cancelled or conversation deleted"));
       return setComputer(ctx.userId, {
         ...patch,
         botId: patch.botId ?? ctx.bot.id,
@@ -127,15 +131,15 @@ export function createDeniTools(ctx: AgentContext) {
         await setAgentComputer({
           status: "working",
           workingBotId: ctx.bot.id,
-          workingLabel: `files:${action}`,
+          workingLabel: tr(`files:${action}`),
           activityKind: "files",
-          activityTitle: `${action} ${rel}`,
+          activityTitle: `${tr(action)} ${rel}`,
           botId: ctx.bot.id,
         });
         if (action === "list") return { tree: await listWorkspace(ctx.userId, rel || ".") };
         if (action === "read") return await readWorkspaceFile(ctx.userId, rel);
         if (action === "write") {
-          if (content == null) throw new Error("content is required");
+          if (content == null) throw new Error(tr("content is required"));
           return await writeWorkspaceFile(ctx.userId, rel, content);
         }
         if (action === "mkdir") return await makeWorkspaceDir(ctx.userId, rel);
@@ -152,10 +156,10 @@ export function createDeniTools(ctx: AgentContext) {
         await setAgentComputer({
           status: "working",
           workingBotId: ctx.bot.id,
-          workingLabel: "Running a command",
+          workingLabel: tr("Running a command"),
           lastCommand: command,
           activityKind: "shell",
-          activityTitle: "Ran a command",
+          activityTitle: tr("Ran a command"),
           botId: ctx.bot.id,
         });
         const result = await runCommand(ctx.userId, command);
@@ -169,9 +173,9 @@ export function createDeniTools(ctx: AgentContext) {
       execute: async () => {
         await setAgentComputer({
           workingBotId: ctx.bot.id,
-          workingLabel: "Stopping computer",
+          workingLabel: tr("Stopping computer"),
           activityKind: "system",
-          activityTitle: "Stopped the computer",
+          activityTitle: tr("Stopped the computer"),
           botId: ctx.bot.id,
         });
         const result = await stopSandbox(ctx.userId, ctx.jobId);
@@ -198,21 +202,21 @@ export function createDeniTools(ctx: AgentContext) {
         await setAgentComputer({
           status: "working",
           workingBotId: ctx.bot.id,
-          workingLabel: browserWorkingLabel(input.action),
+          workingLabel: browserWorkingLabel(tr, input.action),
           activityKind: "browser",
-          activityTitle: browserActivityTitle(input.action),
+          activityTitle: browserActivityTitle(tr, input.action),
           activityDetail: input.url ?? input.selector ?? input.text ?? "",
           botId: ctx.bot.id,
         });
         try {
           if (input.action === "navigate") {
-            if (!input.url) throw new Error("url is required");
+            if (!input.url) throw new Error(tr("url is required"));
             return await browserNavigate(ctx.userId, input.url, ctx.jobId);
           }
           if (input.action === "snapshot") return await browserSnapshot(ctx.userId, ctx.jobId);
           if (input.action === "click") return await browserClick(ctx.userId, input, ctx.jobId);
           if (input.action === "type") {
-            if (!input.text) throw new Error("text is required");
+            if (!input.text) throw new Error(tr("text is required"));
             return await browserType(
               ctx.userId,
               { selector: input.selector, text: input.text },
@@ -220,12 +224,12 @@ export function createDeniTools(ctx: AgentContext) {
             );
           }
           if (input.action === "press") {
-            if (!input.key) throw new Error("key is required");
+            if (!input.key) throw new Error(tr("key is required"));
             return await browserPress(ctx.userId, input.key, ctx.jobId);
           }
           return await browserScroll(ctx.userId, input.dy ?? 600, ctx.jobId);
         } catch (error) {
-          const message = error instanceof Error ? error.message : String(error);
+          const message = translateError(ctx.locale, error);
           await setAgentComputer({
             status: "error",
             workingBotId: null,
@@ -261,13 +265,13 @@ export function createDeniTools(ctx: AgentContext) {
       execute: async ({ connectionId, action, name, arguments: args }) => {
         await setAgentComputer({
           status: "working",
-          workingLabel: action === "list" ? "Listing MCP tools" : "Calling MCP tool",
+          workingLabel: action === "list" ? tr("Listing MCP tools") : tr("Calling MCP tool"),
           activityKind: "system",
-          activityTitle: action === "list" ? "Listed MCP tools" : "Called MCP tool",
+          activityTitle: action === "list" ? tr("Listed MCP tools") : tr("Called MCP tool"),
           activityDetail: name ?? connectionId,
         });
         if (action === "list") return await listMcpTools(ctx.userId, connectionId);
-        if (!name) throw new Error("name is required for an MCP call");
+        if (!name) throw new Error(tr("name is required for an MCP call"));
         return await callMcpTool(ctx.userId, connectionId, name, args ?? {});
       },
     }),
@@ -340,9 +344,9 @@ export function createDeniTools(ctx: AgentContext) {
             execute: async (input) => {
               await setAgentComputer({
                 workingBotId: ctx.bot.id,
-                workingLabel: "Searching the web",
+                workingLabel: tr("Searching the web"),
                 activityKind: "system",
-                activityTitle: "Searched the web",
+                activityTitle: tr("Searched the web"),
                 activityDetail: input.query,
                 botId: ctx.bot.id,
               });
@@ -416,7 +420,7 @@ export function createDeniTools(ctx: AgentContext) {
       execute: async ({ name, id }) => {
         const store = await readStore(ctx.userId);
         const skill = store.skills.find((item) => item.id === id || item.name === name);
-        if (!skill) return { error: "skill not found" };
+        if (!skill) return { error: tr("skill not found") };
         return skill;
       },
     }),
@@ -445,6 +449,7 @@ export function createDeniTools(ctx: AgentContext) {
             nextRunAt,
             lastError: null,
             createdAt: nowIso(),
+            locale: ctx.locale,
           };
           s.routines.push(created);
           return created;
@@ -475,7 +480,7 @@ export function createDeniTools(ctx: AgentContext) {
           item.nextRunAt = enabled ? nextCron(item.cron, item.timezone || store.config.timezone) : null;
           return item;
         });
-        return routine ?? { error: "not found" };
+        return routine ?? { error: tr("not found") };
       },
     }),
     ...(ctx.allowHandoff === false
@@ -489,7 +494,7 @@ export function createDeniTools(ctx: AgentContext) {
               message: z.string(),
             }),
             execute: async ({ botId, message }) => {
-              if (botId === ctx.bot.id) return { error: "Cannot hand off to yourself" };
+              if (botId === ctx.bot.id) return { error: tr("Cannot hand off to yourself") };
               const { startHandoff } = await import("./handoff");
               return startHandoff({
                 userId: ctx.userId,
@@ -497,6 +502,7 @@ export function createDeniTools(ctx: AgentContext) {
                 fromBotName: ctx.bot.name,
                 targetBotId: botId,
                 message,
+                locale: ctx.locale,
               });
             },
           }),
@@ -510,7 +516,7 @@ export function createDeniTools(ctx: AgentContext) {
               const { getHandoff, listHandoffs } = await import("./handoff");
               if (handoffId) {
                 const run = await getHandoff(ctx.userId, handoffId);
-                return run ?? { error: "handoff not found" };
+                return run ?? { error: tr("handoff not found") };
               }
               return { handoffs: await listHandoffs(ctx.userId) };
             },
@@ -527,10 +533,10 @@ export function createDeniTools(ctx: AgentContext) {
         await setAgentComputer({
           status: "takeover",
           workingBotId: ctx.bot.id,
-          workingLabel: "Waiting for your help",
+          workingLabel: tr("Waiting for your help"),
           url: url ?? undefined,
           activityKind: "system",
-          activityTitle: "Requested your help",
+          activityTitle: tr("Requested your help"),
           activityDetail: reason,
           botId: ctx.bot.id,
         });
@@ -542,60 +548,85 @@ export function createDeniTools(ctx: AgentContext) {
             userId: ctx.userId,
             jobId: ctx.jobId,
             kind: "takeover",
-            title: `${ctx.bot.name} needs your help`,
+            title: tr("{name} needs your help", { name: ctx.bot.name }),
             body: reason,
           }).catch(() => undefined);
         }
         return {
           waiting: true,
-          instruction:
+          instruction: tr(
             "Take control of the computer screen. When you are done, tell the teammate in chat to continue.",
+          ),
         };
       },
     }),
   };
-  return tools;
+  return localizeToolErrors(tools, ctx.locale);
 }
 
-function browserWorkingLabel(action: string) {
+/** Tool errors go back to the model and the activity feed; keep them in the viewer's language. */
+function localizeToolErrors<T extends Record<string, unknown>>(tools: T, locale: string | undefined): T {
+  const localized: Record<string, unknown> = {};
+  for (const [name, entry] of Object.entries(tools)) {
+    const original = (entry as { execute?: (...args: unknown[]) => unknown }).execute;
+    if (typeof original !== "function") {
+      localized[name] = entry;
+      continue;
+    }
+    localized[name] = {
+      ...(entry as object),
+      execute: async (...args: unknown[]) => {
+        try {
+          return await original.apply(entry, args);
+        } catch (error) {
+          throw new Error(translateError(locale, error));
+        }
+      },
+    };
+  }
+  return localized as T;
+}
+
+function browserWorkingLabel(tr: Translate, action: string) {
   switch (action) {
     case "navigate":
-      return "Opening page";
+      return tr("Opening page");
     case "snapshot":
-      return "Reading page";
+      return tr("Reading page");
     case "click":
-      return "Clicking page";
+      return tr("Clicking page");
     case "type":
-      return "Entering text";
+      return tr("Entering text");
     case "press":
-      return "Pressing key";
+      return tr("Pressing key");
     case "scroll":
-      return "Scrolling page";
+      return tr("Scrolling page");
     default:
-      return "Using browser";
+      return tr("Using browser");
   }
 }
 
-function browserActivityTitle(action: string) {
+function browserActivityTitle(tr: Translate, action: string) {
   switch (action) {
     case "navigate":
-      return "Opened a page";
+      return tr("Opened a page");
     case "snapshot":
-      return "Read the page";
+      return tr("Read the page");
     case "click":
-      return "Clicked the page";
+      return tr("Clicked the page");
     case "type":
-      return "Entered text";
+      return tr("Entered text");
     case "press":
-      return "Pressed a key";
+      return tr("Pressed a key");
     case "scroll":
-      return "Scrolled the page";
+      return tr("Scrolled the page");
     default:
-      return "Used the browser";
+      return tr("Used the browser");
   }
 }
 
-export function deniToolApproval(options?: { userId?: string; jobId?: string }) {
+export function deniToolApproval(options?: { userId?: string; jobId?: string; locale?: string }) {
+  const tr = translatorFor(options?.locale);
   const approval = () => {
     if (options?.userId && options.jobId) {
       void transitionJob(options.userId, options.jobId, "running", { status: "waiting_approval" }).catch(
@@ -605,8 +636,8 @@ export function deniToolApproval(options?: { userId?: string; jobId?: string }) 
         userId: options.userId,
         jobId: options.jobId,
         kind: "approval",
-        title: "Task is waiting for approval",
-        body: "Review the requested action in the conversation before continuing.",
+        title: tr("Task is waiting for approval"),
+        body: tr("Review the requested action in the conversation before continuing."),
       }).catch(() => undefined);
     }
     return "user-approval" as const;
@@ -623,22 +654,23 @@ export function deniToolApproval(options?: { userId?: string; jobId?: string }) 
         : options?.userId && await isAlwaysAllowed(options.userId, kind, action as "send" | "create" | "update" | "createIssue" | "createPR" | "comment") ? ("approved" as const) : approval(),
   };
 }
-export function deniHandoffToolApproval() {
+export function deniHandoffToolApproval(locale?: string) {
+  const reason = translatorFor(locale)("Handoffs cannot wait for approval");
   return {
     runCommand: ({ command }: { command: string }) =>
       commandNeedsApproval(command)
-        ? { type: "denied" as const, reason: "Handoffs cannot wait for approval" }
+        ? { type: "denied" as const, reason }
         : ("not-applicable" as const),
     workspace: ({ action }: { action: string }) =>
       action === "delete"
-        ? { type: "denied" as const, reason: "Handoffs cannot wait for approval" }
+        ? { type: "denied" as const, reason }
         : ("not-applicable" as const),
     mcp: ({ action }: { action: string }) =>
       action === "call"
-        ? { type: "denied" as const, reason: "Handoffs cannot wait for approval" }
+        ? { type: "denied" as const, reason }
         : ("not-applicable" as const),
     builtInPlugin: ({ action }: { action: string }) =>
       action === "search" || action === "read" ? ("not-applicable" as const)
-        : { type: "denied" as const, reason: "Handoffs cannot wait for approval" },
+        : { type: "denied" as const, reason },
   };
 }

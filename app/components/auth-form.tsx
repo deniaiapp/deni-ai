@@ -93,12 +93,9 @@ function OneTimeCode({
   );
 }
 
-function backupCodesFile(codes: string[]) {
+function backupCodesFile(header: string[], codes: string[]) {
   return [
-    "Deni Run backup codes",
-    `Saved ${new Date().toISOString()}`,
-    "",
-    "Each code can be used once if you lose your authenticator app.",
+    ...header,
     "",
     ...codes,
     "",
@@ -147,6 +144,12 @@ export function BackupCodesPanel({ codes }: { codes: string[] }) {
   const t = useExtracted();
   const [copied, setCopied] = useState(false);
   const [saved, setSaved] = useState(false);
+  const header = () => [
+    t("Deni Run backup codes"),
+    t("Saved {time}", { time: new Date().toISOString() }),
+    "",
+    t("Each code can be used once if you lose your authenticator app."),
+  ];
 
   useEffect(() => {
     if (!copied) return;
@@ -161,12 +164,12 @@ export function BackupCodesPanel({ codes }: { codes: string[] }) {
   }, [saved]);
 
   async function copy() {
-    await navigator.clipboard.writeText(backupCodesFile(codes));
+    await navigator.clipboard.writeText(backupCodesFile(header(), codes));
     setCopied(true);
   }
 
   function download() {
-    const blob = new Blob([backupCodesFile(codes)], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([backupCodesFile(header(), codes)], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;

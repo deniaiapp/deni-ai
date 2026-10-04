@@ -107,7 +107,7 @@ export async function POST(request: Request) {
           if (latest) emit("data-group-message", { message: slimMessagesForClient([latest])[0] });
           if (!["waiting", "failed", "completed"].includes(statuses.get(bot.id) ?? "")) report("completed");
         } catch (error) {
-          report("failed", { error: error instanceof Error ? error.message : t("This teammate could not respond.") });
+          report("failed", { error: error instanceof Error ? await localizeError(error) : t("This teammate could not respond.") });
         }
       }));
       const values = [...statuses.values()];

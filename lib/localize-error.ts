@@ -1,12 +1,14 @@
 import "server-only";
 
-import { getExtracted } from "next-intl/server";
+import { getExtracted, getLocale } from "next-intl/server";
+import { translateMessage } from "./i18n-server";
 import type { UsageLimitError } from "./plans";
 import { getUsageSnapshot } from "./usage";
 
 /**
  * Translates the English messages that lib code throws so API routes can return them in the
- * viewer's language. Unknown messages are returned unchanged.
+ * viewer's language. Messages that are not mapped here fall back to the
+ * shared server dictionary, and anything still unknown is returned unchanged.
  */
 export async function localizeError(error: unknown, fallback?: string): Promise<string> {
   const t = await getExtracted();
@@ -62,7 +64,7 @@ export async function localizeError(error: unknown, fallback?: string): Promise<
   }
   if ((match = message.match(/^Reconnect (\w+) in Plugins\.$/))) return t("Reconnect {service} in Plugins.", { service: match[1] });
 
-  return message;
+  return translateMessage(await getLocale(), message);
 }
 
 /** Usage limits are phrased from the plan limits at the time of the request. */

@@ -9,6 +9,7 @@ import {
   WrenchIcon,
   XCircleIcon,
 } from "lucide-react";
+import { useExtracted } from "next-intl";
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 
@@ -35,15 +36,18 @@ export type ToolHeaderProps = {
   | { type: DynamicToolUIPart["type"]; state: DynamicToolUIPart["state"]; toolName: string }
 );
 
-const statusLabels: Record<ToolPart["state"], string> = {
-  "approval-requested": "Awaiting approval",
-  "approval-responded": "Responded",
-  "input-available": "Running",
-  "input-streaming": "Pending",
-  "output-available": "Completed",
-  "output-denied": "Denied",
-  "output-error": "Error",
-};
+function useStatusLabels(): Record<ToolPart["state"], string> {
+  const t = useExtracted();
+  return {
+    "approval-requested": t("Awaiting approval"),
+    "approval-responded": t("Responded"),
+    "input-available": t("Running"),
+    "input-streaming": t("Pending"),
+    "output-available": t("Completed"),
+    "output-denied": t("Denied"),
+    "output-error": t("Error"),
+  };
+}
 
 const statusIcons: Record<ToolPart["state"], ReactNode> = {
   "approval-requested": <ClockIcon className="size-3.5 text-warning-400" />,
@@ -55,12 +59,17 @@ const statusIcons: Record<ToolPart["state"], ReactNode> = {
   "output-error": <XCircleIcon className="size-3.5 text-destructive-400" />,
 };
 
-export const getStatusBadge = (status: ToolPart["state"]) => (
-  <Badge variant="outline" className="gap-1.5 text-xs">
-    {statusIcons[status]}
-    {statusLabels[status]}
-  </Badge>
-);
+function StatusBadge({ status }: { status: ToolPart["state"] }) {
+  const statusLabels = useStatusLabels();
+  return (
+    <Badge variant="outline" className="gap-1.5 text-xs">
+      {statusIcons[status]}
+      {statusLabels[status]}
+    </Badge>
+  );
+}
+
+export const getStatusBadge = (status: ToolPart["state"]) => <StatusBadge status={status} />;
 
 export const ToolHeader = ({ className, title, type, state, toolName, ...props }: ToolHeaderProps) => {
   const derivedName = type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
@@ -121,6 +130,7 @@ export type ToolOutputProps = ComponentProps<"div"> & {
 };
 
 export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutputProps) => {
+  const t = useExtracted();
   if (!(output || errorText)) return null;
 
   let body: ReactNode;
@@ -135,7 +145,7 @@ export const ToolOutput = ({ className, output, errorText, ...props }: ToolOutpu
   return (
     <div className={cn("space-y-1.5", className)} {...props}>
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
-        {errorText ? "Error" : "Result"}
+        {errorText ? t("Error") : t("Result")}
       </h4>
       <div className={cn(errorText ? "text-destructive-300" : undefined)}>
         {errorText ? <Pre>{errorText}</Pre> : body}

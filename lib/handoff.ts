@@ -6,9 +6,10 @@ import { getDeniModel } from "./llm";
 import { compactMessagesForModel } from "./messages";
 import { loadMessages, mutateStore, readStore, saveMessages } from "./store";
 import type { HandoffSnapshot, HandoffStep } from "./types";
+import { translateError, translateMessage, translatorFor } from "./i18n-server";
 import { assertCanUseTokens, isUsageLimitError, recordTokenUsage } from "./usage";
 
-type HandoffRun = HandoffSnapshot & { userId: string };
+type HandoffRun = HandoffSnapshot & { userId: string; locale?: string };
 
 const g = globalThis as typeof globalThis & {
   __deniHandoffs?: Map<string, HandoffRun>;
@@ -20,7 +21,7 @@ function handoffs() {
 }
 
 function snapshotOf(run: HandoffRun): HandoffSnapshot {
-  const { userId: _userId, ...rest } = run;
+  const { userId: _userId, locale: _locale, ...rest } = run;
   return rest;
 }
 
@@ -77,14 +78,16 @@ export async function startHandoff(opts: {
   fromBotName: string;
   targetBotId: string;
   message: string;
+  locale?: string;
 }) {
+  const tr = translatorFor(opts.locale);
   const store = await readStore(opts.userId);
   const target = store.bots.find((item) => item.id === opts.targetBotId);
-  if (!target) return { error: "bot not found" };
+  if (!target) return { error: tr("bot not found") };
   const thread =
     store.threads.find((item) => item.kind === "dm" && item.botIds.includes(opts.targetBotId)) ??
     null;
-  if (!thread) return { error: "dm not found" };
+  if (!thread) return { error: tr("dm not found") };
 
   const existing = await loadMessages(opts.userId, thread.id);
   const note: UIMessage = {
@@ -93,7 +96,7 @@ export async function startHandoff(opts: {
     parts: [
       {
         type: "text",
-        text: `[Handoff from ${opts.fromBotName}]\n${opts.message}`,
+        text: `${tr("[Handoff from {name}]", { name: opts.fromBotName })}\n${opts.message}`,
       },
     ],
   };
@@ -110,7 +113,7 @@ export async function startHandoff(opts: {
     await assertCanUseTokens(opts.userId);
   } catch (error) {
     if (isUsageLimitError(error)) {
-      return { error: error.message, deliveredTo: target.name, threadId: thread.id };
+      return { error: translateMessage(opts.locale, error.message), deliveredTo: target.name, threadId: thread.id };
     }
     throw error;
   }
@@ -118,13 +121,14 @@ export async function startHandoff(opts: {
   const run: HandoffRun = {
     id: createId("hdo"),
     userId: opts.userId,
+    locale: opts.locale,
     fromBotId: opts.fromBotId,
     fromBotName: opts.fromBotName,
     targetBotId: target.id,
     targetName: target.name,
     threadId: thread.id,
     status: "running",
-    currentLabel: "Starting",
+    currentLabel: tr("Starting"),
     steps: [],
     reply: null,
     error: null,
@@ -136,8 +140,8 @@ export async function startHandoff(opts: {
   void executeHandoff(run, messages).catch((error) => {
     publish(run, {
       status: "error",
-      error: error instanceof Error ? error.message : String(error),
-      currentLabel: "Failed",
+      error: translateError(opts.locale, error),
+      currentLabel: tr("Failed"),
       finishedAt: Date.now(),
     });
   });
@@ -154,10 +158,11 @@ export async function startHandoff(opts: {
 
 async function executeHandoff(run: HandoffRun, messages: UIMessage[]) {
   const { buildInstructions, createDeniTools, deniHandoffToolApproval } = await import("./agent");
+  const tr = translatorFor(run.locale);
   const store = await readStore(run.userId);
   const target = store.bots.find((item) => item.id === run.targetBotId);
   if (!target) {
-    publish(run, { status: "error", error: "bot not found", finishedAt: Date.now() });
+    publish(run, { status: "error", error: tr("bot not found"), finishedAt: Date.now() });
     return;
   }
 
@@ -181,14 +186,15 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
       bot: target,
       threadId: run.threadId,
       allowHandoff: false,
+      locale: run.locale,
     }),
-    toolApproval: deniHandoffToolApproval(),
+    toolApproval: deniHandoffToolApproval(run.locale),
     stopWhen: isStepCount(16),
     timeout: { totalMs: 180_000, stepMs: 45_000 },
     providerOptions,
     onStepStart: () => {
-      publish(run, { currentLabel: "Thinking" });
-      addStep(run, { kind: "thinking", label: "Thinking", status: "active" });
+      publish(run, { currentLabel: tr("Thinking") });
+      addStep(run, { kind: "thinking", label: tr("Thinking"), status: "active" });
     },
     onStepEnd: async (step) => {
       await recordTokenUsage(run.userId, step.usage, { multiplier: tokenMultiplier }).catch(
@@ -197,7 +203,7 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
       if (step.reasoningText?.trim()) {
         addStep(run, {
           kind: "thinking",
-          label: splitTitle(step.reasoningText),
+          label: splitTitle(step.reasoningText, tr("Thinking")),
           detail: step.reasoningText.trim().slice(0, 1_200),
           status: "complete",
         });
@@ -211,12 +217,12 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
           status: "complete",
         });
       }
-      if (step.text?.trim()) publish(run, { currentLabel: "Writing" });
+      if (step.text?.trim()) publish(run, { currentLabel: tr("Writing") });
     },
   });
 
   const text = await result.text;
-  const reply = text.trim() || "Finished without a written report.";
+  const reply = text.trim() || tr("Finished without a written report.");
   const assistant: UIMessage = {
     id: `${run.id}_assistant`,
     role: "assistant",
@@ -227,14 +233,14 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
   publish(run, {
     status: "done",
     reply,
-    currentLabel: "Done",
+    currentLabel: tr("Done"),
     finishedAt: Date.now(),
   });
 }
 
-function splitTitle(text: string) {
+function splitTitle(text: string, fallback: string) {
   const match = text.trimStart().match(/^\*\*(.+?)\*\*/);
-  return match?.[1]?.trim() || "Thinking";
+  return match?.[1]?.trim() || fallback;
 }
 
 function toolDetail(input: unknown) {

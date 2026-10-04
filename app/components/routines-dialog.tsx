@@ -1,6 +1,7 @@
 "use client";
 
 import { useExtracted, useLocale } from "next-intl";
+import { translateMessage } from "@/lib/i18n-server";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { ArrowLeft, Clock3, Pencil, Plus, Trash2 } from "lucide-react";
 import { Autocomplete } from "@base-ui/react/autocomplete";
@@ -109,7 +110,7 @@ export function RoutinesDialog({ open, routines, bots, threads, initialRoutineId
             <p className="mt-2 line-clamp-2 whitespace-pre-wrap text-sm text-neutral-400">{routine.instructions}</p>
             <p className="mt-3 text-xs text-neutral-300">{describe(routine.cron)}</p>
             <p className="mt-1 text-xs text-neutral-500">{routine.timezone} · {routine.enabled ? t("Next {time}", { time: formatRoutineTime(routine.nextRunAt, routine.timezone, locale) }) : t("Off")}</p>
-            {routine.lastError ? <p className="mt-2 text-xs text-warning-300">{routine.lastError}</p> : null}
+            {routine.lastError ? <p className="mt-2 text-xs text-warning-300">{translateMessage(locale, routine.lastError)}</p> : null}
             <div className="mt-3 flex justify-end gap-1"><Button type="button" variant="ghost" size="xs" icon={Pencil} disabled={Boolean(busy)} onClick={() => { setEditing(routine); setView("form"); setError(null); }}>{t("Edit")}</Button><Button type="button" variant="ghost" size="xs" icon={Trash2} className="text-destructive-300" disabled={Boolean(busy)} onClick={() => { setDeleting(routine); setError(null); }}>{t("Delete")}</Button></div>
           </div>)}
         </div>}

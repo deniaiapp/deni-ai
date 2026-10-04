@@ -1,6 +1,7 @@
 "use client";
 
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
+import { useExtracted } from "next-intl";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";
@@ -114,11 +115,16 @@ export type ReasoningTriggerProps = ComponentProps<typeof CollapsibleTrigger> & 
   getThinkingMessage?: (isStreaming: boolean, duration?: number) => ReactNode;
 };
 
-const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number) => {
-  if (isStreaming || duration === 0) return <Shimmer duration={1}>Thinking...</Shimmer>;
-  if (duration === undefined) return <span>Thought for a few seconds</span>;
-  return <span>Thought for {duration} seconds</span>;
-};
+function DefaultThinkingMessage({ isStreaming, duration }: { isStreaming: boolean; duration?: number }) {
+  const t = useExtracted();
+  if (isStreaming || duration === 0) return <Shimmer duration={1}>{t("Thinking...")}</Shimmer>;
+  if (duration === undefined) return <span>{t("Thought for a few seconds")}</span>;
+  return <span>{t("Thought for {duration} seconds", { duration: String(duration) })}</span>;
+}
+
+const defaultGetThinkingMessage = (isStreaming: boolean, duration?: number) => (
+  <DefaultThinkingMessage isStreaming={isStreaming} duration={duration} />
+);
 
 export const ReasoningTrigger = memo(
   ({ className, children, getThinkingMessage = defaultGetThinkingMessage, ...props }: ReasoningTriggerProps) => {

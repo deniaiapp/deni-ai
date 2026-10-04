@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDownIcon } from "lucide-react";
+import { useExtracted } from "next-intl";
 import type { ComponentProps, ReactNode } from "react";
 import { useCallback } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
@@ -40,12 +41,16 @@ export type ConversationEmptyStateProps = ComponentProps<"div"> & {
 
 export const ConversationEmptyState = ({
   className,
-  title = "No messages yet",
-  description = "Start a conversation to see messages here",
+  title,
+  description,
   icon,
   children,
   ...props
-}: ConversationEmptyStateProps) => (
+}: ConversationEmptyStateProps) => {
+  const t = useExtracted();
+  const resolvedTitle = title ?? t("No messages yet");
+  const resolvedDescription = description ?? t("Start a conversation to see messages here");
+  return (
   <div
     className={cn(
       "flex size-full flex-col items-center justify-center gap-3 p-8 text-center",
@@ -57,13 +62,14 @@ export const ConversationEmptyState = ({
       <>
         {icon ? <div className="text-neutral-109">{icon}</div> : null}
         <div className="space-y-1">
-          <h3 className="font-medium text-sm text-foreground">{title}</h3>
-          {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+          <h3 className="font-medium text-sm text-foreground">{resolvedTitle}</h3>
+          {resolvedDescription ? <p className="text-sm text-muted-foreground">{resolvedDescription}</p> : null}
         </div>
       </>
     )}
   </div>
-);
+  );
+};
 
 export type ConversationScrollButtonProps = ComponentProps<typeof Button>;
 

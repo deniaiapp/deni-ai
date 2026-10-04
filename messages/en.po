@@ -33,6 +33,21 @@ msgctxt "Rqx0bS"
 msgid "No billing account yet"
 msgstr "No billing account yet"
 
+#: app/api/billing/webhook/route.ts
+msgctxt "psyCqT"
+msgid "webhook is not configured"
+msgstr "webhook is not configured"
+
+#: app/api/billing/webhook/route.ts
+msgctxt "rCW5d_"
+msgid "missing signature"
+msgstr "missing signature"
+
+#: app/api/billing/webhook/route.ts
+msgctxt "p90_sR"
+msgid "invalid signature"
+msgstr "invalid signature"
+
 #: app/api/bots/[id]/route.ts
 #: app/api/bots/route.ts
 msgctxt "YeQIlr"
@@ -97,6 +112,42 @@ msgstr "The message you replied to is no longer available."
 msgctxt "4LlISz"
 msgid "Could not resume the task. Please send your message again."
 msgstr "Could not resume the task. Please send your message again."
+
+#: app/api/chat/route.ts
+#: app/components/chat-thread.tsx
+msgctxt "_LViiD"
+msgid "Saving result"
+msgstr "Saving result"
+
+#: app/api/chat/route.ts
+msgctxt "S5QEJr"
+msgid "{name} finished a task"
+msgstr "{name} finished a task"
+
+#: app/api/chat/route.ts
+msgctxt "jIeWzL"
+msgid "The result is ready in this conversation."
+msgstr "The result is ready in this conversation."
+
+#: app/api/chat/route.ts
+msgctxt "wHKxTi"
+msgid "{name} could not save the result"
+msgstr "{name} could not save the result"
+
+#: app/api/chat/route.ts
+msgctxt "SqDnJo"
+msgid "The model call failed"
+msgstr "The model call failed"
+
+#: app/api/chat/route.ts
+msgctxt "Xa8iLm"
+msgid "{name} could not finish the task"
+msgstr "{name} could not finish the task"
+
+#: app/api/chat/route.ts
+msgctxt "ojVpVJ"
+msgid "Could not save the response"
+msgstr "Could not save the response"
 
 #: app/api/computer/files/route.ts
 msgctxt "9dhBF3"
@@ -581,6 +632,21 @@ msgid "set NEXT_PUBLIC_SUPPORT_EMAIL on this deployment."
 msgstr "set NEXT_PUBLIC_SUPPORT_EMAIL on this deployment."
 
 #: app/components/auth-form.tsx
+msgctxt "Tza51f"
+msgid "Deni Run backup codes"
+msgstr "Deni Run backup codes"
+
+#: app/components/auth-form.tsx
+msgctxt "I5dYYr"
+msgid "Saved {time}"
+msgstr "Saved {time}"
+
+#: app/components/auth-form.tsx
+msgctxt "L1AWG9"
+msgid "Each code can be used once if you lose your authenticator app."
+msgstr "Each code can be used once if you lose your authenticator app."
+
+#: app/components/auth-form.tsx
 msgctxt "G2XlKG"
 msgid "Save these backup codes. They are shown once."
 msgstr "Save these backup codes. They are shown once."
@@ -845,6 +911,7 @@ msgid "Could not submit approval."
 msgstr "Could not submit approval."
 
 #: app/components/chat-thread.tsx
+#: components/ai-elements/prompt-input.tsx
 msgctxt "q_uwLT"
 msgid "Stop"
 msgstr "Stop"
@@ -888,11 +955,6 @@ msgstr "Done"
 msgctxt "0E-C4I"
 msgid "Waiting for your help"
 msgstr "Waiting for your help"
-
-#: app/components/chat-thread.tsx
-msgctxt "_LViiD"
-msgid "Saving result"
-msgstr "Saving result"
 
 #: app/components/chat-thread.tsx
 msgctxt "xdZNBn"
@@ -1550,6 +1612,7 @@ msgid "Your help is needed"
 msgstr "Your help is needed"
 
 #: app/components/computer-panel.tsx
+#: components/ai-elements/tool.tsx
 msgctxt "KN7zKn"
 msgid "Error"
 msgstr "Error"
@@ -3110,6 +3173,81 @@ msgctxt "aKq-bu"
 msgid "More teammates, tokens, and computer time on a private computer."
 msgstr "More teammates, tokens, and computer time on a private computer."
 
+#: components/ai-elements/conversation.tsx
+msgctxt "zu9kMq"
+msgid "No messages yet"
+msgstr "No messages yet"
+
+#: components/ai-elements/conversation.tsx
+msgctxt "5PPOsI"
+msgid "Start a conversation to see messages here"
+msgstr "Start a conversation to see messages here"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "9WRlF4"
+msgid "Send"
+msgstr "Send"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "C2CIgC"
+msgid "Sending"
+msgstr "Sending"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "62nsdy"
+msgid "Retry"
+msgstr "Retry"
+
+#: components/ai-elements/reasoning.tsx
+msgctxt "QrZMdi"
+msgid "Thinking..."
+msgstr "Thinking..."
+
+#: components/ai-elements/reasoning.tsx
+msgctxt "tfrHH2"
+msgid "Thought for a few seconds"
+msgstr "Thought for a few seconds"
+
+#: components/ai-elements/reasoning.tsx
+msgctxt "bfs4eB"
+msgid "Thought for {duration} seconds"
+msgstr "Thought for {duration} seconds"
+
+#: components/ai-elements/tool.tsx
+msgctxt "uPFUUe"
+msgid "Awaiting approval"
+msgstr "Awaiting approval"
+
+#: components/ai-elements/tool.tsx
+msgctxt "Nuo4L7"
+msgid "Responded"
+msgstr "Responded"
+
+#: components/ai-elements/tool.tsx
+msgctxt "nDyaq_"
+msgid "Running"
+msgstr "Running"
+
+#: components/ai-elements/tool.tsx
+msgctxt "eKEL_g"
+msgid "Pending"
+msgstr "Pending"
+
+#: components/ai-elements/tool.tsx
+msgctxt "95stPq"
+msgid "Completed"
+msgstr "Completed"
+
+#: components/ai-elements/tool.tsx
+msgctxt "5kp1Ie"
+msgid "Denied"
+msgstr "Denied"
+
+#: components/ai-elements/tool.tsx
+msgctxt "ZpQ6us"
+msgid "Result"
+msgstr "Result"
+
 #: components/locale-switcher.tsx
 msgctxt "y1Z3or"
 msgid "Language"
@@ -3174,6 +3312,11 @@ msgstr "Every {weekday} at {time}"
 msgctxt "dag1_v"
 msgid "Day {day} of each month at {time}"
 msgstr "Day {day} of each month at {time}"
+
+#: components/theme-toggle.tsx
+msgctxt "jqxEYs"
+msgid "Toggle light and dark theme"
+msgstr "Toggle light and dark theme"
 
 #: components/ui/sidebar.tsx
 msgctxt "HyS0qp"

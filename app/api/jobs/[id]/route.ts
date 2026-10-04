@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { cancelJob, getJob, listJobEvents, retryJob } from "@/lib/jobs";
 import { runBackgroundJob } from "@/lib/job-runner";
-import { getExtracted } from "next-intl/server";
+import { getExtracted, getLocale } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +29,7 @@ export async function POST(req: Request, context: Context) {
   const { id } = await context.params;
   const body = (await req.json().catch(() => ({}))) as { action?: string; reviewed?: boolean };
   if (body.action === "cancel") {
-    const job = await cancelJob(userId, id);
+    const job = await cancelJob(userId, id, await getLocale());
     if (!job) return NextResponse.json({ error: t("This job cannot be cancelled") }, { status: 409 });
     return NextResponse.json({ job });
   }

@@ -9,6 +9,7 @@ import {
   listQueuedJobs,
   recoverStaleJobs,
 } from "./jobs";
+import { translatorFor } from "./i18n-server";
 import { runBackgroundJob } from "./job-runner";
 import {
   listDueRoutineUserIds,
@@ -112,13 +113,14 @@ async function enqueueRoutine(userId: string, routineId: string) {
   const idempotencyKey = `routine:${routine.id}:${scheduledFor}:v${routineRevision}`;
   const existing = await getJobByIdempotencyKey(userId, idempotencyKey);
   if (existing) return existing;
+  const tr = translatorFor(routine.locale);
   const kickoff: UIMessage = {
     id: `routine_${createHash("sha256").update(idempotencyKey).digest("hex").slice(0, 24)}`,
     role: "user",
     parts: [
       {
         type: "text",
-        text: `[Routine ${routine.name}]\n${routine.instructions}\n\nThis is a scheduled run. Do not perform actions that require approval; leave the result behind.`,
+        text: `${tr("[Routine {name}]", { name: routine.name })}\n${routine.instructions}\n\n${tr("This is a scheduled run. Do not perform actions that require approval; leave the result behind.")}`,
       },
     ],
   };
@@ -131,7 +133,7 @@ async function enqueueRoutine(userId: string, routineId: string) {
     botId: bot.id,
     kind: "routine",
     idempotencyKey,
-    payload: { messages, routineId: routine.id, routineRevision, runMode: store.config.runMode },
+    payload: { messages, routineId: routine.id, routineRevision, runMode: store.config.runMode, locale: routine.locale },
     maxAttempts: 2,
   });
   // Advance the schedule at enqueue time. This prevents duplicate kickoff messages while

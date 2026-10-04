@@ -2,6 +2,7 @@
 
 import { PaperPlaneTiltIcon, StopIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import type { ChatStatus } from "ai";
+import { useExtracted } from "next-intl";
 import type { ComponentProps, KeyboardEventHandler, MouseEvent } from "react";
 import { useCallback } from "react";
 
@@ -66,19 +67,20 @@ export const PromptInputSubmit = ({
   children,
   ...props
 }: PromptInputSubmitProps) => {
+  const t = useExtracted();
   const isGenerating = status === "submitted" || status === "streaming";
 
   let icon = <PaperPlaneTiltIcon />;
-  let label = "Send";
+  let label = t("Send");
   if (status === "submitted") {
     icon = <Spinner size="sm" />;
-    label = "Sending";
+    label = t("Sending");
   } else if (status === "streaming") {
     icon = <StopIcon />;
-    label = "Stop";
+    label = t("Stop");
   } else if (status === "error") {
     icon = <WarningCircleIcon />;
-    label = "Retry";
+    label = t("Retry");
   }
 
   const handleClick = useCallback(

@@ -60,6 +60,8 @@ export type Routine = {
   nextRunAt: string | null;
   lastError: string | null;
   createdAt: string;
+  /** Language of the person who last saved the routine; background runs write in it. */
+  locale?: string;
 };
 
 export type ComputerActivity = {

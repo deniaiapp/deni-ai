@@ -1,6 +1,7 @@
 "use client";
 
 import { useExtracted, useLocale } from "next-intl";
+import { translateMessage } from "@/lib/i18n-server";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { easeOut } from "@/lib/motion";
@@ -67,6 +68,7 @@ export function ComputerPanel({
   onOpenRoutines?: (id?: string) => void;
 }) {
   const t = useExtracted();
+  const locale = useLocale();
   const [tab, setTab] = useState<Tab>("screen");
   const [takeover, setTakeover] = useState(false);
   const takeoverActive = takeover && computer.status === "takeover";
@@ -425,7 +427,7 @@ export function ComputerPanel({
             </div>
             <p className="text-center text-xs text-muted-foreground">{botName ? t("{name}'s screen", { name: botName }) : t("Computer screen")}</p>
             <p className="px-2 text-center text-xs leading-relaxed text-neutral-111">{t("The screen appears here when your teammate opens the browser.")}</p>
-            {computer.lastError ? <Alert variant="destructive"><AlertTitle>{t("Computer error")}</AlertTitle><AlertDescription>{computer.lastError}</AlertDescription></Alert> : null}
+            {computer.lastError ? <Alert variant="destructive"><AlertTitle>{t("Computer error")}</AlertTitle><AlertDescription>{translateMessage(locale, computer.lastError)}</AlertDescription></Alert> : null}
           </div>
         ) : null}
         {visibleTab === "screen" && showScreen ? (
@@ -537,7 +539,7 @@ export function ComputerPanel({
             {computer.lastError ? (
               <Alert variant="destructive">
                 <AlertTitle>{t("Computer error")}</AlertTitle>
-                <AlertDescription>{computer.lastError}</AlertDescription>
+                <AlertDescription>{translateMessage(locale, computer.lastError)}</AlertDescription>
               </Alert>
             ) : null}
           </div>
