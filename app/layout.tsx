@@ -2,10 +2,8 @@ import type { Metadata } from "next";
 import { Geist_Mono, Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getExtracted, getLocale } from "next-intl/server";
-import { LocaleSwitcher } from "@/components/locale-switcher";
 import { MotionProvider } from "@/components/motion";
 import { ThemeProvider } from "@/components/theme-provider";
-import { ThemeToggle } from "@/components/theme-toggle";
 import "./globals.css";
 
 const inter = Inter({
@@ -20,9 +18,12 @@ const geistMono = Geist_Mono({
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getExtracted();
+  const description = t("AI teammates with an isolated computer for every account.");
   return {
     title: "Deni Run",
-    description: t("AI teammates with an isolated computer for every account."),
+    applicationName: "Deni Run",
+    description,
+    openGraph: { siteName: "Deni Run", title: "Deni Run", description, type: "website" },
   };
 }
 
@@ -38,8 +39,6 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <NextIntlClientProvider>
             <MotionProvider>{children}</MotionProvider>
-            <LocaleSwitcher />
-            <ThemeToggle />
           </NextIntlClientProvider>
         </ThemeProvider>
       </body>

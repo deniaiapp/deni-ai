@@ -1,6 +1,5 @@
 import { getExtracted } from "next-intl/server";
 import Link from "next/link";
-import { FadeIn } from "@/components/motion";
 import { supportEmail, supportMailto } from "@/lib/site";
 
 export default async function TermsPage() {
@@ -9,8 +8,7 @@ export default async function TermsPage() {
   const mail = supportMailto();
   return (
     <main className="h-full overflow-y-auto bg-background px-6 py-12 text-foreground">
-      <FadeIn>
-      <article className="mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-secondary-foreground">
+      <article className="deni-rise mx-auto max-w-2xl space-y-4 text-sm leading-relaxed text-secondary-foreground">
         <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">
           {t("Back")}
         </Link>
@@ -22,12 +20,24 @@ export default async function TermsPage() {
           {t("You are responsible for the tasks you assign, including browsing, file changes, and shell commands. Do not use Deni Run to break the law, attack systems, send spam, or process data you are not allowed to handle. Destructive actions may require your approval, but you remain responsible for the outcome.")}
         </p>
         <p>
+          {t("You must not use Deni Run to create, edit, or distribute sexual or intimate imagery of a real person without their consent, including AI-generated imagery, or any sexual content involving minors. We remove such content and suspend and report the accounts involved.")}
+        </p>
+        <p>
           {t("Usage limits apply by plan. Paid subscriptions renew monthly until canceled through the billing portal. Fees are charged by Stripe. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms.")}
         </p>
         <p>
           {t.rich("Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service.", {
             link: (chunks) => (
               <Link href="/account" className="text-foreground hover:underline">
+                {chunks}
+              </Link>
+            ),
+          })}
+        </p>
+        <p>
+          {t.rich("Our <link>Privacy Policy</link> explains how we handle your data, including information received from Google sign-in.", {
+            link: (chunks) => (
+              <Link href="/privacy" className="text-foreground hover:underline">
                 {chunks}
               </Link>
             ),
@@ -47,7 +57,6 @@ export default async function TermsPage() {
           )}
         </p>
       </article>
-      </FadeIn>
     </main>
   );
 }

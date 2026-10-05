@@ -1,9 +1,23 @@
 "use client";
 
-import { useExtracted } from "next-intl";
+import { useExtracted, useLocale } from "next-intl";
+import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { CreditCard, Download, Loader2, LogOut, Sparkles, Trash2, UserRound } from "lucide-react";
+import { useState, useTransition } from "react";
+import {
+  CreditCard,
+  Download,
+  Globe,
+  Loader2,
+  LogOut,
+  Monitor,
+  Moon,
+  Palette,
+  Sparkles,
+  Sun,
+  Trash2,
+  UserRound,
+} from "lucide-react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -12,11 +26,20 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
+import { setLocale } from "@/i18n/actions";
+import { locales, type Locale } from "@/i18n/config";
 import type { UsageSnapshot } from "@/lib/plans";
+
+const localeLabels: Record<Locale, string> = { en: "English", ja: "日本語" };
 
 export function AccountMenu({
   usage,
@@ -29,6 +52,9 @@ export function AccountMenu({
   const { data: session } = authClient.useSession();
   const user = session?.user;
   const router = useRouter();
+  const locale = useLocale();
+  const { theme, setTheme } = useTheme();
+  const [localePending, startLocaleTransition] = useTransition();
   const [confirm, setConfirm] = useState("");
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -141,6 +167,52 @@ export function AccountMenu({
             <UserRound />
             {t("Manage profile")}
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger disabled={localePending}>
+              <Globe />
+              {t("Language")}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup
+                value={locale}
+                onValueChange={(next) => {
+                  if (next === locale) return;
+                  startLocaleTransition(async () => {
+                    await setLocale(next);
+                    router.refresh();
+                  });
+                }}
+              >
+                {locales.map((value) => (
+                  <DropdownMenuRadioItem key={value} value={value}>
+                    {localeLabels[value]}
+                  </DropdownMenuRadioItem>
+                ))}
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Palette />
+              {t("Theme")}
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
+                <DropdownMenuRadioItem value="light">
+                  <Sun />
+                  {t("Light")}
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark">
+                  <Moon />
+                  {t("Dark")}
+                </DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system">
+                  <Monitor />
+                  {t("System")}
+                </DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
           <DropdownMenuItem
             aria-busy={exporting}
             onSelect={(event) => {

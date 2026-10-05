@@ -453,6 +453,31 @@ msgid "Manage profile"
 msgstr "プロフィールを管理"
 
 #: app/components/account-menu.tsx
+msgctxt "y1Z3or"
+msgid "Language"
+msgstr "言語"
+
+#: app/components/account-menu.tsx
+msgctxt "Pe0ogR"
+msgid "Theme"
+msgstr "テーマ"
+
+#: app/components/account-menu.tsx
+msgctxt "3cc4Ct"
+msgid "Light"
+msgstr "ライト"
+
+#: app/components/account-menu.tsx
+msgctxt "tOdNiY"
+msgid "Dark"
+msgstr "ダーク"
+
+#: app/components/account-menu.tsx
+msgctxt "-CwN9C"
+msgid "System"
+msgstr "システム"
+
+#: app/components/account-menu.tsx
 msgctxt "LQbQno"
 msgid "Exporting…"
 msgstr "エクスポート中…"
@@ -1737,7 +1762,6 @@ msgstr "ファイルを開いています…"
 
 #: app/components/computer-panel.tsx
 #: app/components/upgrade-screen.tsx
-#: app/privacy/page.tsx
 #: app/terms/page.tsx
 msgctxt "cyR7Kh"
 msgid "Back"
@@ -1923,15 +1947,25 @@ msgid "Delete {name}"
 msgstr "{name}を削除"
 
 #: app/components/landing.tsx
+msgctxt "EFTSMc"
+msgid "Main"
+msgstr "メイン"
+
+#: app/components/landing.tsx
+msgctxt "ZXp0z1"
+msgid "Features"
+msgstr "機能"
+
+#: app/components/landing.tsx
 msgctxt "5Wwopw"
 msgid "Pricing"
 msgstr "料金"
 
 #: app/components/landing.tsx
-#: app/components/upgrade-screen.tsx
-msgctxt "R_eOkj"
-msgid "Pro"
-msgstr "Pro"
+#: app/privacy/page.tsx
+msgctxt "vx0nkZ"
+msgid "Privacy Policy"
+msgstr "プライバシーポリシー"
 
 #: app/components/landing.tsx
 #: app/components/setup-screen.tsx
@@ -1951,9 +1985,9 @@ msgid "Get started"
 msgstr "はじめる"
 
 #: app/components/landing.tsx
-msgctxt "sRPYBI"
-msgid "AI teammates with their own computer"
-msgstr "専用のコンピューターを持つAIチームメイト"
+msgctxt "-y-H5I"
+msgid "Deni Run · AI teammates with their own computer"
+msgstr "Deni Run · 専用コンピューターを持つAIチームメイト"
 
 #: app/components/landing.tsx
 msgctxt "a7jWEj"
@@ -1961,9 +1995,14 @@ msgid "Hand work to named teammates and let them finish it on an isolated comput
 msgstr "名前のあるチームメイトに仕事を任せ、隔離されたコンピューターで完了させましょう。"
 
 #: app/components/landing.tsx
-msgctxt "hMCg85"
-msgid "Browser, files, and terminal stay private to your account. Watch the screen, take control for logins, and keep memory, skills, and routines with each teammate."
-msgstr "ブラウザ、ファイル、ターミナルはあなたのアカウント専用です。画面を見守り、ログイン時には操作を引き継ぎ、メモリ、スキル、ルーティンをチームメイトごとに保持できます。"
+msgctxt "32pw60"
+msgid "Deni Run is a web application where you assign tasks to AI teammates. Each teammate works in a private browser, file workspace, and Linux terminal that belongs only to your account, so research, form filling, file work, and scripted jobs get done without touching your own machine."
+msgstr "Deni Run は、AIチームメイトにタスクを任せられるWebアプリケーションです。各チームメイトは、あなたのアカウント専用のブラウザ、ファイルワークスペース、Linuxターミナルで作業するため、調査、フォーム入力、ファイル作業、スクリプトによるジョブを、お使いのパソコンに触れることなく完了できます。"
+
+#: app/components/landing.tsx
+msgctxt "FqdHss"
+msgid "Watch the screen live, take control for logins, and keep memory, skills, and routines with each teammate."
+msgstr "画面をリアルタイムで確認し、ログインが必要なときは自分で操作し、メモリ、スキル、ルーティンをチームメイトごとに保持できます。"
 
 #: app/components/landing.tsx
 msgctxt "i7IHHZ"
@@ -1974,6 +2013,11 @@ msgstr "無料ではじめる"
 msgctxt "vbFKkT"
 msgid "See plans"
 msgstr "プランを見る"
+
+#: app/components/landing.tsx
+msgctxt "xf9gK7"
+msgid "What Deni Run does"
+msgstr "Deni Run でできること"
 
 #: app/components/landing.tsx
 msgctxt "CJ4p2s"
@@ -1999,6 +2043,63 @@ msgstr "ブラウザ、ワークスペース、Linuxサンドボックスはあ�
 msgctxt "so-AdY"
 msgid "When login or 2FA is needed, drive the live browser yourself, then hand it back."
 msgstr "ログインや二要素認証が必要なときは、ライブブラウザを自分で操作し、終わったら任せ直せます。"
+
+#: app/components/landing.tsx
+msgctxt "HK3ph8"
+msgid "How it works"
+msgstr "使い方"
+
+#: app/components/landing.tsx
+msgctxt "IqwL_d"
+msgid "Sign in with Google or GitHub and confirm with an authenticator app."
+msgstr "GoogleまたはGitHubでログインし、認証アプリで確認します。"
+
+#: app/components/landing.tsx
+msgctxt "y4vBsI"
+msgid "Give a teammate a task, such as researching a topic, filling in a form, or organizing files."
+msgstr "チームメイトにタスク(トピックの調査、フォーム入力、ファイルの整理など)を依頼します。"
+
+#: app/components/landing.tsx
+msgctxt "zu2pLH"
+msgid "Follow the live screen, approve risky steps, and collect the results in your workspace."
+msgstr "ライブ画面を確認し、リスクのある操作を承認して、結果をワークスペースで受け取ります。"
+
+#: app/components/landing.tsx
+msgctxt "e23dz_"
+msgid "Google sign-in and your data"
+msgstr "Googleログインとお客様のデータ"
+
+#: app/components/landing.tsx
+msgctxt "3Hyh1Y"
+msgid "Deni Run uses Google Sign-In only to identify you. We request the basic profile scopes (openid, email, and profile) and receive your name, email address, and profile picture. We do not request access to Gmail, Google Drive, Calendar, Contacts, or any other Google service."
+msgstr "Deni Run は、お客様を識別する目的でのみ Google ログインを使用します。基本的なプロフィールスコープ(openid、email、profile)を要求し、お名前、メールアドレス、プロフィール画像を受け取ります。Gmail、Google ドライブ、カレンダー、連絡先など、その他の Google サービスへのアクセスは要求しません。"
+
+#: app/components/landing.tsx
+msgctxt "NZMrS_"
+msgid "Google account information is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
+msgstr "Google アカウントの情報は、販売、広告への利用、AIモデルの学習への利用を一切行いません。Google API から受け取った情報の利用は、限定的な使用の要件を含む Google API サービスのユーザーデータに関するポリシーに準拠します。"
+
+#: app/components/landing.tsx
+msgctxt "ffKO-8"
+msgid "Read the Privacy Policy"
+msgstr "プライバシーポリシーを読む"
+
+#: app/components/landing.tsx
+msgctxt "9FuywR"
+msgid "Acceptable use"
+msgstr "利用上のルール"
+
+#: app/components/landing.tsx
+msgctxt "HKh30c"
+msgid "Deni Run must not be used to break the law, attack systems, send spam, harass people, or create or distribute sexual or intimate imagery of a real person without their consent, including AI-generated imagery. Accounts that do so are suspended."
+msgstr "Deni Run を、法律に違反する行為、システムへの攻撃、スパムの送信、他者への嫌がらせ、本人の同意のない実在の人物の性的・親密な画像(AI生成のものを含む)の作成や配布に使用してはいけません。違反したアカウントは停止されます。"
+
+#: app/components/landing.tsx
+#: app/privacy/page.tsx
+#: app/terms/page.tsx
+msgctxt "32rBNK"
+msgid "Terms of Service"
+msgstr "利用規約"
 
 #: app/components/landing.tsx
 msgctxt "Z3X7Uc"
@@ -2055,12 +2156,6 @@ msgstr "Proをはじめる"
 msgctxt "xkr-zo"
 msgid "Terms"
 msgstr "利用規約"
-
-#: app/components/landing.tsx
-#: app/privacy/page.tsx
-msgctxt "cXBJ7U"
-msgid "Privacy"
-msgstr "プライバシー"
 
 #: app/components/landing.tsx
 #: app/components/upgrade-screen.tsx
@@ -2929,6 +3024,11 @@ msgid "Free"
 msgstr "Free"
 
 #: app/components/upgrade-screen.tsx
+msgctxt "R_eOkj"
+msgid "Pro"
+msgstr "Pro"
+
+#: app/components/upgrade-screen.tsx
 msgctxt "E3oB-t"
 msgid "Browser"
 msgstr "ブラウザ"
@@ -3097,30 +3197,209 @@ msgid "Back home"
 msgstr "ホームに戻る"
 
 #: app/privacy/page.tsx
-msgctxt "oIpAL1"
-msgid "Account authentication is handled on this service with Better Auth. You sign in with Google or GitHub, then an authenticator app. Sessions and two-factor secrets are stored in Postgres. Conversation history, teammates, routines, skills, and computer state are stored in Postgres keyed by your user ID. Workspace files and screenshots are stored in your tenant namespace on object storage (S3-compatible, typically Cloudflare R2)."
-msgstr "アカウント認証は、このサービス上で Better Auth を使って処理されます。GoogleまたはGitHubでログインし、そのあと認証アプリで確認します。セッションと二要素認証のシークレットは Postgres に保存されます。会話履歴、チームメイト、ルーティン、スキル、コンピューターの状態は、ユーザーIDに紐づけて Postgres に保存されます。ワークスペースのファイルとスクリーンショットは、オブジェクトストレージ(S3互換、通常は Cloudflare R2)内のあなたのテナント領域に保存されます。"
+msgctxt "abpBoW"
+msgid "Privacy Policy · Deni Run"
+msgstr "プライバシーポリシー · Deni Run"
 
 #: app/privacy/page.tsx
-msgctxt "7TawRD"
-msgid "Browser sessions run through Steel. Terminal commands run in an isolated E2B sandbox. Model requests go through OpenRouter. Billing, if enabled, is processed by Stripe. Session cookies keep you signed in."
-msgstr "ブラウザセッションは Steel を介して実行されます。ターミナルコマンドは隔離された E2B サンドボックスで実行されます。モデルへのリクエストは OpenRouter を経由します。請求は、有効な場合、Stripe が処理します。セッションCookieによってログイン状態が維持されます。"
+msgctxt "mJcUKC"
+msgid "How Deni Run collects, uses, shares, protects, retains, and deletes your data."
+msgstr "Deni Run がお客様のデータをどのように収集、利用、共有、保護、保持、削除するかを説明します。"
 
 #: app/privacy/page.tsx
-msgctxt "OFbLfE"
-msgid "We do not sell your workspace contents. You can export a copy of stored account data, or delete your account, from <link>Account</link>. Deleting the account removes the login and stored workspace data."
-msgstr "ワークスペースの内容を販売することはありません。保存されているアカウントデータのコピーのエクスポートやアカウントの削除は、<link>アカウント</link>から行えます。アカウントを削除すると、ログイン情報と保存されたワークスペースのデータが削除されます。"
+msgctxt "eKGYwl"
+msgid "Back to Deni Run home"
+msgstr "Deni Run のホームに戻る"
 
 #: app/privacy/page.tsx
-msgctxt "yqZI8W"
-msgid "Processors that may receive data needed to run the product: Google and GitHub (sign-in), Stripe (billing), OpenRouter (model inference), Steel (browser), E2B (sandbox), and the configured object-storage provider."
-msgstr "製品の運用に必要なデータを受け取る可能性のある処理事業者:GoogleおよびGitHub(ログイン)、Stripe(請求)、OpenRouter(モデル推論)、Steel(ブラウザ)、E2B(サンドボックス)、設定されたオブジェクトストレージ事業者。"
+msgctxt "FDORri"
+msgid "Last updated: October 5, 2026"
+msgstr "最終更新日: 2026年10月5日"
 
 #: app/privacy/page.tsx
-#: app/terms/page.tsx
-msgctxt "Iexom4"
-msgid "Contact:"
-msgstr "お問い合わせ:"
+msgctxt "zFZQnj"
+msgid "This policy explains what data Deni Run (run.deniai.app, “Deni Run”, “we”) collects when you use the service, why we collect it, who receives it, how we protect it, and how you can delete it. Deni Run is a web application where AI teammates complete tasks for you on a private, isolated computer (browser, files, and terminal)."
+msgstr "本ポリシーは、お客様がサービスを利用する際に Deni Run(run.deniai.app、以下「Deni Run」「当社」)が収集するデータ、その目的、受領者、保護方法、削除方法を説明するものです。Deni Run は、AIチームメイトが専用の隔離されたコンピューター(ブラウザ、ファイル、ターミナル)上でお客様に代わってタスクを完了するWebアプリケーションです。"
+
+#: app/privacy/page.tsx
+msgctxt "Xri3zT"
+msgid "1. Data we collect"
+msgstr "1. 収集するデータ"
+
+#: app/privacy/page.tsx
+msgctxt "I5Wnfc"
+msgid "Account data."
+msgstr "アカウントデータ。"
+
+#: app/privacy/page.tsx
+msgctxt "jcE7Bx"
+msgid "When you sign in with Google or GitHub we receive your name, email address, profile picture, and the provider account ID. We also store the session records and the two-factor authentication secret and backup codes needed to sign you in."
+msgstr "GoogleまたはGitHubでログインすると、お名前、メールアドレス、プロフィール画像、プロバイダーのアカウントIDを受け取ります。また、ログインに必要なセッション記録、二要素認証のシークレット、バックアップコードを保存します。"
+
+#: app/privacy/page.tsx
+msgctxt "YsRzex"
+msgid "Content you create."
+msgstr "お客様が作成するコンテンツ。"
+
+#: app/privacy/page.tsx
+msgctxt "fzP87f"
+msgid "Messages and tasks you give teammates, teammate settings and memory, routines, skills, connected tool settings, files in your workspace, and screenshots of the computer session."
+msgstr "チームメイトに送るメッセージやタスク、チームメイトの設定とメモリ、ルーティン、スキル、接続したツールの設定、ワークスペース内のファイル、コンピューターセッションのスクリーンショット。"
+
+#: app/privacy/page.tsx
+msgctxt "HNafWa"
+msgid "Billing data."
+msgstr "請求データ。"
+
+#: app/privacy/page.tsx
+msgctxt "SCuuas"
+msgid "If you subscribe to Pro, Stripe collects your payment details. We store only your plan, Stripe customer and subscription IDs, and usage counters. We never see or store your card number."
+msgstr "Pro を購読すると、Stripe がお支払い情報を収集します。当社が保存するのは、プラン、Stripe の顧客IDおよびサブスクリプションID、使用量カウンターのみです。カード番号を見たり保存したりすることはありません。"
+
+#: app/privacy/page.tsx
+msgctxt "qorkWG"
+msgid "Technical data."
+msgstr "技術データ。"
+
+#: app/privacy/page.tsx
+msgctxt "9OAK8d"
+msgid "Session cookies, rate-limit counters, and server logs that may include IP address and request metadata, used to keep the service secure and working."
+msgstr "セッションCookie、レート制限カウンター、IPアドレスやリクエストのメタデータを含むことがあるサーバーログ。サービスの安全性と稼働を保つために使用します。"
+
+#: app/privacy/page.tsx
+msgctxt "lsHi-v"
+msgid "2. Google user data"
+msgstr "2. Google ユーザーデータ"
+
+#: app/privacy/page.tsx
+msgctxt "gAmNTp"
+msgid "Deni Run offers Google Sign-In for authentication only. We request the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We do not request access to Gmail, Google Drive, Google Calendar, Contacts, or any other Google service, and we do not read data from your Google account beyond this basic profile."
+msgstr "Deni Run は、認証のみを目的として Google ログインを提供しています。openid、email、profile スコープを要求し、お名前、メールアドレス、プロフィール画像、Google アカウントIDを受け取ります。Gmail、Google ドライブ、Google カレンダー、連絡先など、その他の Google サービスへのアクセスは要求せず、この基本プロフィール以外のデータを Google アカウントから読み取ることはありません。"
+
+#: app/privacy/page.tsx
+msgctxt "0T55rf"
+msgid "We use this information only to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service."
+msgstr "この情報は、アカウントの作成と識別、アプリ内でのお名前と画像の表示、お客様が選択した場合の GitHub ログインの同一アカウントへの紐づけ、Stripe を通じた請求領収書の送付、サービスに関するご連絡にのみ使用します。"
+
+#: app/privacy/page.tsx
+msgctxt "yM2WvQ"
+msgid "Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to train generalized AI or machine-learning models, and no human reads it except as needed for security, support you request, or legal compliance."
+msgstr "Deni Run による、Google API から受け取った情報の利用および他のアプリへの転送は、限定的な使用の要件を含む Google API サービスのユーザーデータに関するポリシーに準拠します。Google ユーザーデータを広告に使用すること、販売やデータブローカーへの転送、汎用的なAI・機械学習モデルの学習への使用は行いません。また、セキュリティ上必要な場合、お客様が依頼したサポート、法令遵守の場合を除き、人が閲覧することはありません。"
+
+#: app/privacy/page.tsx
+msgctxt "G4kUCt"
+msgid "3. How we use data"
+msgstr "3. データの利用目的"
+
+#: app/privacy/page.tsx
+msgctxt "Y5Qt1h"
+msgid "To provide the service: run your teammates and computer sessions, store your workspace, enforce plan limits, process payments, keep the service secure, prevent abuse, fix bugs, and answer support requests. We do not use your data for advertising or profiling, and we do not sell it."
+msgstr "サービスを提供するために利用します。具体的には、チームメイトとコンピューターセッションの実行、ワークスペースの保存、プラン上限の適用、決済処理、サービスの安全性の維持、不正利用の防止、不具合の修正、サポート対応です。お客様のデータを広告やプロファイリングに使用することはなく、販売もしません。"
+
+#: app/privacy/page.tsx
+msgctxt "NucqTm"
+msgid "4. Who receives data"
+msgstr "4. データの提供先"
+
+#: app/privacy/page.tsx
+msgctxt "oZbZjp"
+msgid "We share data only with the providers that run the product, and only what each needs:"
+msgstr "データは、製品を運営するプロバイダーに対して、それぞれが必要とする範囲でのみ共有します。"
+
+#: app/privacy/page.tsx
+msgctxt "rvxQkz"
+msgid "Google and GitHub: sign-in. They tell us who you are; we send them no workspace content."
+msgstr "Google と GitHub: ログイン。お客様が誰であるかを当社に伝えます。ワークスペースの内容は送信しません。"
+
+#: app/privacy/page.tsx
+msgctxt "A54dst"
+msgid "Stripe: billing. Receives your email address and payment details."
+msgstr "Stripe: 請求。メールアドレスとお支払い情報を受け取ります。"
+
+#: app/privacy/page.tsx
+msgctxt "u2dalX"
+msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, and page content a teammate needs for a task. We do not send your Google profile data."
+msgstr "OpenRouter と、その接続先のモデルプロバイダー: AIモデルへのリクエスト。チームメイトがタスクに必要とするメッセージ、ファイル、ページの内容を受け取ります。Google のプロフィールデータは送信しません。"
+
+#: app/privacy/page.tsx
+msgctxt "e_XJkf"
+msgid "Steel: cloud browser sessions, which load the websites your teammate visits."
+msgstr "Steel: クラウドブラウザセッション。チームメイトが訪問するウェブサイトを読み込みます。"
+
+#: app/privacy/page.tsx
+msgctxt "Hbf4RH"
+msgid "E2B: the isolated sandbox where terminal commands run."
+msgstr "E2B: ターミナルコマンドを実行する隔離されたサンドボックス。"
+
+#: app/privacy/page.tsx
+msgctxt "hMrc-Q"
+msgid "Our database and S3-compatible object storage (typically Cloudflare R2) hosting providers."
+msgstr "データベースおよびS3互換オブジェクトストレージ(通常は Cloudflare R2)のホスティングプロバイダー。"
+
+#: app/privacy/page.tsx
+msgctxt "3UIoog"
+msgid "We may also disclose data when required by law or to protect the rights, safety, and security of users and the service. If the service is sold or merged, data may transfer to the new operator under this policy."
+msgstr "法律で求められる場合、またはユーザーとサービスの権利、安全、セキュリティを守るために、データを開示することがあります。サービスが売却または合併された場合、データは本ポリシーに基づき新しい運営者に引き継がれることがあります。"
+
+#: app/privacy/page.tsx
+msgctxt "obGr2j"
+msgid "5. How we protect data"
+msgstr "5. データの保護"
+
+#: app/privacy/page.tsx
+msgctxt "BRq0T-"
+msgid "Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires an authenticator-app second factor. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security."
+msgstr "アカウントはそれぞれ隔離されています。ワークスペースのファイル、ブラウザセッション、ターミナルのサンドボックスはユーザーIDに紐づけられ、他のアカウントとは共有されません。通信はHTTPSで暗号化されます。ログインには認証アプリによる二要素認証が必要です。データベースとストレージへのアクセスは、サービスのみが保持する認証情報で制限されます。完全に安全なシステムは存在しないため、絶対的な安全性を保証することはできません。"
+
+#: app/privacy/page.tsx
+msgctxt "DXkzgx"
+msgid "6. Retention and deletion"
+msgstr "6. 保持と削除"
+
+#: app/privacy/page.tsx
+msgctxt "WSq4pI"
+msgid "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation."
+msgstr "アカウントが有効な間、データを保持します。<link>アカウント</link>から、保存されているアカウントデータのコピーをエクスポートしたり、アカウントを削除したりできます。アカウントを削除すると、サブスクリプションが解約され、ログイン、セッション、会話、チームメイト、ルーティン、スキル、コンピューターの状態、ワークスペースのファイル、スクリーンショットがデータベースとオブジェクトストレージから削除されます。Stripe の請求書など、税務・会計の法令で保存が必要な記録は、法定期間 Stripe が保持します。バックアップとログは通常のローテーションで上書きされます。"
+
+#: app/privacy/page.tsx
+msgctxt "_VtuT5"
+msgid "You can also revoke Deni Run’s access to your Google account at any time from your Google Account security settings. To request deletion without signing in, contact us at the address below."
+msgstr "Google アカウントのセキュリティ設定から、Deni Run のアクセス権をいつでも取り消すことができます。ログインせずに削除を依頼する場合は、下記の連絡先までご連絡ください。"
+
+#: app/privacy/page.tsx
+msgctxt "ZaMphK"
+msgid "7. Cookies"
+msgstr "7. Cookie"
+
+#: app/privacy/page.tsx
+msgctxt "idVmmZ"
+msgid "We use only the cookies needed to keep you signed in and to remember your language and theme. We do not use advertising or cross-site tracking cookies."
+msgstr "ログイン状態の維持と、言語およびテーマの記憶に必要なCookieのみを使用します。広告用やサイト横断のトラッキング用Cookieは使用しません。"
+
+#: app/privacy/page.tsx
+msgctxt "qd7tYO"
+msgid "8. Your rights and children"
+msgstr "8. お客様の権利と子ども"
+
+#: app/privacy/page.tsx
+msgctxt "hZJFta"
+msgid "Depending on where you live, you may have the right to access, correct, export, or delete your data and to object to certain processing. Use the Account page or contact us. Deni Run is not directed to children under 16, and we do not knowingly collect their data."
+msgstr "お住まいの地域によっては、データの閲覧、訂正、エクスポート、削除を求める権利や、特定の処理に異議を述べる権利があります。アカウントページをご利用いただくか、ご連絡ください。Deni Run は16歳未満の子どもを対象としておらず、そのデータを意図的に収集することはありません。"
+
+#: app/privacy/page.tsx
+msgctxt "0cZ8bw"
+msgid "9. Changes to this policy"
+msgstr "9. 本ポリシーの変更"
+
+#: app/privacy/page.tsx
+msgctxt "tQFFTq"
+msgid "We will update this page and the date above when this policy changes, and we will notify signed-in users of material changes in the app or by email."
+msgstr "本ポリシーを変更する場合は、このページと上記の日付を更新し、重要な変更についてはログイン中のユーザーにアプリ内またはメールでお知らせします。"
+
+#: app/privacy/page.tsx
+msgctxt "0nbvfu"
+msgid "10. Contact"
+msgstr "10. お問い合わせ"
 
 #: app/privacy/page.tsx
 #: app/terms/page.tsx
@@ -3134,11 +3413,6 @@ msgid "Create an account"
 msgstr "アカウントを作成"
 
 #: app/terms/page.tsx
-msgctxt "32rBNK"
-msgid "Terms of Service"
-msgstr "利用規約"
-
-#: app/terms/page.tsx
 msgctxt "iSjB38"
 msgid "Deni Run is an AI teammate service that can operate a private computer (browser, files, and terminal) on your behalf. By creating an account you agree to these terms."
 msgstr "Deni Run は、あなたに代わって専用コンピューター(ブラウザ、ファイル、ターミナル)を操作できるAIチームメイトのサービスです。アカウントを作成すると、本規約に同意したものとみなされます。"
@@ -3147,6 +3421,11 @@ msgstr "Deni Run は、あなたに代わって専用コンピューター(ブ�
 msgctxt "j9MGr2"
 msgid "You are responsible for the tasks you assign, including browsing, file changes, and shell commands. Do not use Deni Run to break the law, attack systems, send spam, or process data you are not allowed to handle. Destructive actions may require your approval, but you remain responsible for the outcome."
 msgstr "ブラウジング、ファイルの変更、シェルコマンドを含め、依頼したタスクについてはお客様が責任を負います。Deni Run を、法律に違反する行為、システムへの攻撃、スパムの送信、取り扱う権限のないデータの処理に使用しないでください。破壊的な操作では承認を求める場合がありますが、結果の責任はお客様にあります。"
+
+#: app/terms/page.tsx
+msgctxt "8BzMay"
+msgid "You must not use Deni Run to create, edit, or distribute sexual or intimate imagery of a real person without their consent, including AI-generated imagery, or any sexual content involving minors. We remove such content and suspend and report the accounts involved."
+msgstr "Deni Run を、本人の同意のない実在の人物の性的・親密な画像(AI生成のものを含む)、または未成年者が関わる性的コンテンツの作成、編集、配布に使用してはいけません。当社はそのようなコンテンツを削除し、関係するアカウントを停止して通報します。"
 
 #: app/terms/page.tsx
 msgctxt "F5hHF3"
@@ -3159,9 +3438,19 @@ msgid "Computer sessions, files, and memory stay scoped to your account. You can
 msgstr "コンピューターのセッション、ファイル、メモリはあなたのアカウント内に限定されます。これらのデータは<link>アカウント</link>からエクスポートまたは削除できます。アカウントを削除すると、このサービスに保存されたログイン情報も削除されます。"
 
 #: app/terms/page.tsx
+msgctxt "PR34Xj"
+msgid "Our <link>Privacy Policy</link> explains how we handle your data, including information received from Google sign-in."
+msgstr "当社の<link>プライバシーポリシー</link>では、Google ログインから受け取る情報を含め、データの取り扱いについて説明しています。"
+
+#: app/terms/page.tsx
 msgctxt "fyPFTO"
 msgid "The service is provided as-is. We do not warrant uninterrupted availability. These terms may be updated as the product changes."
 msgstr "本サービスは現状有姿で提供され、中断のない提供を保証するものではありません。本規約は、製品の変更に応じて更新されることがあります。"
+
+#: app/terms/page.tsx
+msgctxt "Iexom4"
+msgid "Contact:"
+msgstr "お問い合わせ:"
 
 #: app/upgrade/page.tsx
 msgctxt "kEgsaX"
@@ -3248,11 +3537,6 @@ msgctxt "ZpQ6us"
 msgid "Result"
 msgstr "結果"
 
-#: components/locale-switcher.tsx
-msgctxt "y1Z3or"
-msgid "Language"
-msgstr "言語"
-
 #: components/routine-labels.ts
 msgctxt "mJR06P"
 msgid "Sunday"
@@ -3312,11 +3596,6 @@ msgstr "毎週{weekday} {time}"
 msgctxt "dag1_v"
 msgid "Day {day} of each month at {time}"
 msgstr "毎月{day}日 {time}"
-
-#: components/theme-toggle.tsx
-msgctxt "jqxEYs"
-msgid "Toggle light and dark theme"
-msgstr "ライト/ダークテーマを切り替え"
 
 #: components/ui/sidebar.tsx
 msgctxt "HyS0qp"
