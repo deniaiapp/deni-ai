@@ -120,7 +120,7 @@ export default async function PrivacyPage() {
             })}
           </p>
           <p>
-            {t("You can revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account at any time from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below.")}
+            {t("You can disconnect the Gmail, Google Drive, and GitHub plugins at any time from Plugins in the app, which stops teammates using them right away and revokes our access at Google or GitHub once the last plugin of that provider is disconnected. You can also revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below.")}
           </p>
         </Section>
 

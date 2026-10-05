@@ -41,6 +41,74 @@ export async function isAlwaysAllowed(userId: string, kind: PluginKind, action: 
   return Boolean((await readStore(userId)).pluginAlwaysAllow?.[`${kind}:${action}`]);
 }
 
+const splitScopes = (scope: string | null | undefined) => (scope ?? "").split(/[,\s]+/).filter(Boolean);
+
+async function revokeGoogleToken(token: string) {
+  const response = await fetch("https://oauth2.googleapis.com/revoke", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({ token }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  // 400 means the token is already invalid or revoked, which is the state we want.
+  if (!response.ok && response.status !== 400) throw new Error("Could not revoke access at Google. Try again.");
+}
+
+async function revokeGithubToken(token: string) {
+  const clientId = process.env.GITHUB_CLIENT_ID?.trim();
+  const clientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
+  if (!clientId || !clientSecret) return;
+  const response = await fetch(`https://api.github.com/applications/${encodeURIComponent(clientId)}/token`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Basic ${Buffer.from(`${clientId}:${clientSecret}`).toString("base64")}`,
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+    body: JSON.stringify({ access_token: token }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  if (!response.ok && response.status !== 404) throw new Error("Could not revoke access at GitHub. Try again.");
+}
+
+/**
+ * Stop using a plugin and give the access back. Google cannot revoke one scope at a time,
+ * so while another Google plugin is still connected only this plugin's scopes are dropped
+ * from our record (the app stops using them); the Google grant itself is revoked once the
+ * last Google plugin is disconnected. The sign-in identity (the account row) is kept.
+ */
+export async function disconnectPlugin(userId: string, kind: PluginKind) {
+  const rows = await db.select().from(account).where(and(eq(account.userId, userId), eq(account.providerId, provider(kind))));
+  const own = new Set<string>([scopes[kind].read, scopes[kind].write]);
+  const otherGoogleScopes = new Set<string>(
+    kind === "github" ? [] : pluginKinds.filter((other) => other !== kind && other !== "github").flatMap((other) => [scopes[other].read, scopes[other].write]),
+  );
+  for (const row of rows) {
+    const granted = splitScopes(row.scope);
+    if (!granted.some((scope) => own.has(scope))) continue;
+    const kept = granted.filter((scope) => !own.has(scope));
+    const othersRemain = kept.some((scope) => otherGoogleScopes.has(scope));
+    if (!othersRemain) {
+      const token = row.refreshToken || row.accessToken;
+      if (token) await (kind === "github" ? revokeGithubToken(token) : revokeGoogleToken(token));
+    }
+    const delimiter = (row.scope ?? "").includes(",") ? "," : " ";
+    await db
+      .update(account)
+      .set({
+        scope: kept.join(delimiter),
+        ...(othersRemain ? {} : { accessToken: null, refreshToken: null, accessTokenExpiresAt: null, refreshTokenExpiresAt: null }),
+        updatedAt: new Date(),
+      })
+      .where(eq(account.id, row.id));
+  }
+  await mutateStore(userId, (store) => {
+    for (const action of actions[kind]) delete store.pluginAlwaysAllow?.[`${kind}:${action}`];
+  });
+  return pluginStatus(userId);
+}
+
 async function accessToken(userId: string, kind: PluginKind, write = false) {
   const rows = await db.select().from(account).where(and(eq(account.userId, userId), eq(account.providerId, provider(kind))));
   const required = write ? scopes[kind].write : scopes[kind].read;

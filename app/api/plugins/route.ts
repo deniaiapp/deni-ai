@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
-import { pluginKinds, pluginStatus, setPluginAlwaysAllow, writeActions } from "@/lib/builtin-plugins";
+import { disconnectPlugin, pluginKinds, pluginStatus, setPluginAlwaysAllow, writeActions } from "@/lib/builtin-plugins";
+import { limitOrResponse } from "@/lib/rate-limit";
 import { getExtracted } from "next-intl/server";
 import { localizeError } from "@/lib/localize-error";
 
@@ -25,5 +26,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ plugins: await pluginStatus(userId) });
   } catch (error) {
     return NextResponse.json({ error: await localizeError(error, t("Unable to change permission")) }, { status: 400 });
+  }
+}
+
+export async function DELETE(req: Request) {
+  const t = await getExtracted();
+  const userId = await getApiUserId();
+  if (!userId) return unauthorizedResponse();
+  const limited = await limitOrResponse(userId, "plugin-disconnect", 20);
+  if (limited) return limited;
+  const body = await req.json().catch(() => null) as { kind?: string } | null;
+  if (!body || !pluginKinds.includes(body.kind as (typeof pluginKinds)[number])) {
+    return NextResponse.json({ error: t("Invalid plugin") }, { status: 400 });
+  }
+  try {
+    return NextResponse.json({ plugins: await disconnectPlugin(userId, body.kind as (typeof pluginKinds)[number]) });
+  } catch (error) {
+    return NextResponse.json({ error: await localizeError(error, t("Could not disconnect plugin.")) }, { status: 502 });
   }
 }

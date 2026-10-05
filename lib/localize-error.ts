@@ -17,6 +17,8 @@ export async function localizeError(error: unknown, fallback?: string): Promise<
 
   const exact: Record<string, () => string> = {
     "Invalid cron expression": () => t("Invalid cron expression"),
+    "Could not revoke access at Google. Try again.": () => t("Could not revoke access at Google. Try again."),
+    "Could not revoke access at GitHub. Try again.": () => t("Could not revoke access at GitHub. Try again."),
     "Cron expression has no matching time in the next five years": () => t("Cron expression has no matching time in the next five years"),
     "MCP URL is invalid": () => t("MCP URL is invalid"),
     "MCP URL must use http or https": () => t("MCP URL must use http or https"),

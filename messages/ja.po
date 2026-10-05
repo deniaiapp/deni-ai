@@ -287,6 +287,17 @@ msgctxt "bsJmcP"
 msgid "Unable to change permission"
 msgstr "権限を変更できません"
 
+#: app/api/plugins/route.ts
+msgctxt "TfSUhU"
+msgid "Invalid plugin"
+msgstr "無効なプラグインです"
+
+#: app/api/plugins/route.ts
+#: app/components/mcp-settings.tsx
+msgctxt "2lM-aK"
+msgid "Could not disconnect plugin."
+msgstr "プラグインの接続を解除できませんでした。"
+
 #: app/api/routines/route.ts
 msgctxt "LbfSKQ"
 msgid "Instruction is required."
@@ -2085,9 +2096,9 @@ msgid "Signing in with Google uses only the openid, email, and profile scopes, s
 msgstr "Google でのログインでは openid、email、profile スコープのみを使用し、アカウントを識別するためにお名前、メールアドレス、プロフィール画像を受け取ります。"
 
 #: app/components/landing.tsx
-msgctxt "7eblHM"
-msgid "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from your Google Account."
-msgstr "オプションの Gmail と Google ドライブのプラグインを接続すると、Deni Run は追加のアクセスを権限ごとに個別に求めます。Gmail の閲覧(gmail.readonly)、承認したメールの送信(gmail.send)、ドライブのファイルの閲覧(drive.readonly)、ドライブ内のファイルの作成と更新(drive.file)です。チームメイトはこのアクセスを、あなたが依頼したタスクを行う場合にのみ使用し、Google アカウントからいつでも接続を解除できます。"
+msgctxt "UcjAOk"
+msgid "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from Plugins in the app or from your Google Account."
+msgstr "オプションの Gmail と Google ドライブのプラグインを接続すると、Deni Run は追加のアクセスを権限ごとに個別に求めます。Gmail の閲覧(gmail.readonly)、承認したメールの送信(gmail.send)、ドライブのファイルの閲覧(drive.readonly)、ドライブ内のファイルの作成と更新(drive.file)です。チームメイトはこのアクセスを、あなたが依頼したタスクを行う場合にのみ使用し、アプリのプラグイン画面または Google アカウントからいつでも接続を解除できます。"
 
 #: app/components/landing.tsx
 msgctxt "GIGG04"
@@ -2189,6 +2200,16 @@ msgid "Could not change permission."
 msgstr "権限を変更できませんでした。"
 
 #: app/components/mcp-settings.tsx
+msgctxt "MfmOfk"
+msgid "Disconnect {plugin}? Teammates will lose access to it right away. You can connect it again later."
+msgstr "{plugin} の接続を解除しますか?チームメイトは直ちに使えなくなります。あとで再び接続できます。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "lEIfUi"
+msgid "Disconnected {plugin}. Teammates can no longer use it."
+msgstr "{plugin} の接続を解除しました。チームメイトは使用できなくなりました。"
+
+#: app/components/mcp-settings.tsx
 msgctxt "PiF85g"
 msgid "Unable to save connection"
 msgstr "接続を保存できません"
@@ -2243,6 +2264,11 @@ msgstr "書き込みを有効にする"
 msgctxt "BhUhpa"
 msgid "{action} · Always allow"
 msgstr "{action} · 常に許可"
+
+#: app/components/mcp-settings.tsx
+msgctxt "qj1uhz"
+msgid "Disconnect"
+msgstr "接続を解除"
 
 #: app/components/mcp-settings.tsx
 msgctxt "VJKXaS"
@@ -3412,9 +3438,9 @@ msgid "We keep your data while your account is active. You can export a copy of 
 msgstr "アカウントが有効な間、データを保持します。<link>アカウント</link>から、保存されているアカウントデータのコピーをエクスポートしたり、アカウントを削除したりできます。アカウントを削除すると、サブスクリプションが解約され、ログイン、セッション、会話、チームメイト、ルーティン、スキル、コンピューターの状態、ワークスペースのファイル、スクリーンショットがデータベースとオブジェクトストレージから削除されます。Stripe の請求書など、税務・会計の法令で保存が必要な記録は、法定期間 Stripe が保持します。バックアップとログは通常のローテーションで上書きされます。"
 
 #: app/privacy/page.tsx
-msgctxt "L28Kqo"
-msgid "You can revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account at any time from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
-msgstr "Google アカウントのセキュリティ設定から、Gmail、Google ドライブ、または Google アカウント全体に対する Deni Run のアクセス権をいつでも取り消すことができ、アクセスは直ちに停止します。Deni Run のアカウントを削除すると、当社が保持する Google のアクセストークンも削除されます。ログインせずに削除を依頼する場合は、下記の連絡先までご連絡ください。"
+msgctxt "QbGVAA"
+msgid "You can disconnect the Gmail, Google Drive, and GitHub plugins at any time from Plugins in the app, which stops teammates using them right away and revokes our access at Google or GitHub once the last plugin of that provider is disconnected. You can also revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
+msgstr "アプリのプラグイン画面から、Gmail、Google ドライブ、GitHub のプラグインをいつでも接続解除できます。解除するとチームメイトは直ちに使えなくなり、そのプロバイダーの最後のプラグインを解除した時点で、Google または GitHub 側のアクセス権も取り消されます。Google アカウントのセキュリティ設定から、Gmail、Google ドライブ、または Google アカウント全体に対する Deni Run のアクセス権を取り消すこともでき、アクセスは直ちに停止します。Deni Run のアカウントを削除すると、当社が保持する Google のアクセストークンも削除されます。ログインせずに削除を依頼する場合は、下記の連絡先までご連絡ください。"
 
 #: app/privacy/page.tsx
 msgctxt "ZaMphK"
@@ -3671,6 +3697,16 @@ msgstr "認証されていません"
 msgctxt "UxEkbJ"
 msgid "Invalid cron expression"
 msgstr "cron式が正しくありません"
+
+#: lib/localize-error.ts
+msgctxt "JtDM8D"
+msgid "Could not revoke access at Google. Try again."
+msgstr "Google 側のアクセス権を取り消せませんでした。もう一度お試しください。"
+
+#: lib/localize-error.ts
+msgctxt "ncmD5T"
+msgid "Could not revoke access at GitHub. Try again."
+msgstr "GitHub 側のアクセス権を取り消せませんでした。もう一度お試しください。"
 
 #: lib/localize-error.ts
 msgctxt "ENOGtn"

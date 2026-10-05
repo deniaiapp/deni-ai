@@ -287,6 +287,17 @@ msgctxt "bsJmcP"
 msgid "Unable to change permission"
 msgstr "Unable to change permission"
 
+#: app/api/plugins/route.ts
+msgctxt "TfSUhU"
+msgid "Invalid plugin"
+msgstr "Invalid plugin"
+
+#: app/api/plugins/route.ts
+#: app/components/mcp-settings.tsx
+msgctxt "2lM-aK"
+msgid "Could not disconnect plugin."
+msgstr "Could not disconnect plugin."
+
 #: app/api/routines/route.ts
 msgctxt "LbfSKQ"
 msgid "Instruction is required."
@@ -2085,9 +2096,9 @@ msgid "Signing in with Google uses only the openid, email, and profile scopes, s
 msgstr "Signing in with Google uses only the openid, email, and profile scopes, so Deni Run receives your name, email address, and profile picture to identify your account."
 
 #: app/components/landing.tsx
-msgctxt "7eblHM"
-msgid "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from your Google Account."
-msgstr "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from your Google Account."
+msgctxt "UcjAOk"
+msgid "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from Plugins in the app or from your Google Account."
+msgstr "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from Plugins in the app or from your Google Account."
 
 #: app/components/landing.tsx
 msgctxt "GIGG04"
@@ -2189,6 +2200,16 @@ msgid "Could not change permission."
 msgstr "Could not change permission."
 
 #: app/components/mcp-settings.tsx
+msgctxt "MfmOfk"
+msgid "Disconnect {plugin}? Teammates will lose access to it right away. You can connect it again later."
+msgstr "Disconnect {plugin}? Teammates will lose access to it right away. You can connect it again later."
+
+#: app/components/mcp-settings.tsx
+msgctxt "lEIfUi"
+msgid "Disconnected {plugin}. Teammates can no longer use it."
+msgstr "Disconnected {plugin}. Teammates can no longer use it."
+
+#: app/components/mcp-settings.tsx
 msgctxt "PiF85g"
 msgid "Unable to save connection"
 msgstr "Unable to save connection"
@@ -2243,6 +2264,11 @@ msgstr "Enable write access"
 msgctxt "BhUhpa"
 msgid "{action} · Always allow"
 msgstr "{action} · Always allow"
+
+#: app/components/mcp-settings.tsx
+msgctxt "qj1uhz"
+msgid "Disconnect"
+msgstr "Disconnect"
 
 #: app/components/mcp-settings.tsx
 msgctxt "VJKXaS"
@@ -3412,9 +3438,9 @@ msgid "We keep your data while your account is active. You can export a copy of 
 msgstr "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation."
 
 #: app/privacy/page.tsx
-msgctxt "L28Kqo"
-msgid "You can revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account at any time from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
-msgstr "You can revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account at any time from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
+msgctxt "QbGVAA"
+msgid "You can disconnect the Gmail, Google Drive, and GitHub plugins at any time from Plugins in the app, which stops teammates using them right away and revokes our access at Google or GitHub once the last plugin of that provider is disconnected. You can also revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
+msgstr "You can disconnect the Gmail, Google Drive, and GitHub plugins at any time from Plugins in the app, which stops teammates using them right away and revokes our access at Google or GitHub once the last plugin of that provider is disconnected. You can also revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
 
 #: app/privacy/page.tsx
 msgctxt "ZaMphK"
@@ -3671,6 +3697,16 @@ msgstr "Unauthorized"
 msgctxt "UxEkbJ"
 msgid "Invalid cron expression"
 msgstr "Invalid cron expression"
+
+#: lib/localize-error.ts
+msgctxt "JtDM8D"
+msgid "Could not revoke access at Google. Try again."
+msgstr "Could not revoke access at Google. Try again."
+
+#: lib/localize-error.ts
+msgctxt "ncmD5T"
+msgid "Could not revoke access at GitHub. Try again."
+msgstr "Could not revoke access at GitHub. Try again."
 
 #: lib/localize-error.ts
 msgctxt "ENOGtn"

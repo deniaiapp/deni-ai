@@ -147,7 +147,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             {t("Signing in with Google uses only the openid, email, and profile scopes, so Deni Run receives your name, email address, and profile picture to identify your account.")}
           </p>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-secondary-foreground">
-            {t("If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from your Google Account.")}
+            {t("If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from Plugins in the app or from your Google Account.")}
           </p>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-secondary-foreground">
             {t("Google user data is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.")}

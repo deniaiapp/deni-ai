@@ -12,7 +12,7 @@
     "build": "next build",
     "start": "next start",
     "worker": "tsx worker/index.ts",
-    "test:core": "tsx scripts/verify-review-fixes.ts && tsx scripts/verify-cron.ts && tsx scripts/verify-job-ui.ts && tsx scripts/verify-chat-sessions.ts && tsx scripts/verify-migrations.ts && tsx scripts/verify-jobs-mcp.ts && tsx scripts/verify-d1-semantics.ts && tsx scripts/verify-auth-d1.ts",
+    "test:core": "tsx scripts/verify-review-fixes.ts && tsx scripts/verify-cron.ts && tsx scripts/verify-job-ui.ts && tsx scripts/verify-chat-sessions.ts && tsx scripts/verify-migrations.ts && tsx scripts/verify-jobs-mcp.ts && tsx scripts/verify-d1-semantics.ts && tsx scripts/verify-auth-d1.ts && tsx scripts/verify-plugin-disconnect.ts",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "oxlint",
     "format": "oxfmt",

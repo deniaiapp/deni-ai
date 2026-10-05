@@ -63,6 +63,24 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
     else setMessage(data.error ?? t("Could not change permission."));
   }
 
+  async function disconnect(kind: BuiltinPlugin["kind"]) {
+    const label = pluginLabels[kind];
+    if (!window.confirm(t("Disconnect {plugin}? Teammates will lose access to it right away. You can connect it again later.", { plugin: label }))) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      const res = await fetch("/api/plugins", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind }) });
+      const data = await res.json().catch(() => ({})) as { plugins?: BuiltinPlugin[]; error?: string };
+      if (!res.ok || !data.plugins) throw new Error(data.error ?? t("Could not disconnect plugin."));
+      setPlugins(data.plugins);
+      setMessage(t("Disconnected {plugin}. Teammates can no longer use it.", { plugin: label }));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function load() {
     const res = await fetch("/api/mcp", { cache: "no-store" });
     if (!res.ok) return;
@@ -150,9 +168,10 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
             <div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold">{pluginLabels[plugin.kind]}</h3><p className="text-xs text-muted-foreground">{plugin.connected ? t("Connected · search and read") : t("Not connected")}</p></div>
               <Button type="button" size="sm" variant={plugin.connected ? "outline" : "primary"} onClick={() => void connect(plugin.kind, false)}>{plugin.connected ? t("Reconnect") : t("Connect")}</Button>
             </div>
-            {plugin.connected ? <div className="mt-3 border-t border-foreground/10 pt-3">
+            {plugin.connected ? <div className="mt-3 space-y-3 border-t border-foreground/10 pt-3">
               {!plugin.writeAccess && plugin.kind !== "github" ? <Button type="button" size="sm" variant="outline" onClick={() => void connect(plugin.kind, true)}>{t("Enable write access")}</Button> : null}
               {plugin.writeAccess ? <div className="space-y-2">{builtinActions[plugin.kind].map((action) => <label key={action} className="flex items-center justify-between gap-3 text-sm"><span>{t("{action} · Always allow", { action })}</span><input type="checkbox" checked={plugin.alwaysAllow.includes(action)} onChange={(event) => void setAlwaysAllow(plugin.kind, action, event.target.checked)} className="accent-primary" /></label>)}</div> : null}
+              <div><Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void disconnect(plugin.kind)}>{t("Disconnect")}</Button></div>
             </div> : null}
           </div>)}
         </div>
