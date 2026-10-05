@@ -2045,6 +2045,16 @@ msgid "When login or 2FA is needed, drive the live browser yourself, then hand i
 msgstr "ログインや二要素認証が必要なときは、ライブブラウザを自分で操作し、終わったら任せ直せます。"
 
 #: app/components/landing.tsx
+msgctxt "oITIgt"
+msgid "Optional plugins"
+msgstr "オプションのプラグイン"
+
+#: app/components/landing.tsx
+msgctxt "TM42yk"
+msgid "Connect Gmail, Google Drive, or GitHub so a teammate can search, read, and draft or send on your behalf. Each is off until you connect it."
+msgstr "Gmail、Google ドライブ、GitHub を接続すると、チームメイトがあなたに代わって検索、閲覧、下書きや送信を行えます。接続するまではどれもオフです。"
+
+#: app/components/landing.tsx
 msgctxt "HK3ph8"
 msgid "How it works"
 msgstr "使い方"
@@ -2065,19 +2075,24 @@ msgid "Follow the live screen, approve risky steps, and collect the results in y
 msgstr "ライブ画面を確認し、リスクのある操作を承認して、結果をワークスペースで受け取ります。"
 
 #: app/components/landing.tsx
-msgctxt "e23dz_"
-msgid "Google sign-in and your data"
-msgstr "Googleログインとお客様のデータ"
+msgctxt "fjh1-d"
+msgid "Google sign-in and optional Google plugins"
+msgstr "Googleログインとオプションの Google プラグイン"
 
 #: app/components/landing.tsx
-msgctxt "3Hyh1Y"
-msgid "Deni Run uses Google Sign-In only to identify you. We request the basic profile scopes (openid, email, and profile) and receive your name, email address, and profile picture. We do not request access to Gmail, Google Drive, Calendar, Contacts, or any other Google service."
-msgstr "Deni Run は、お客様を識別する目的でのみ Google ログインを使用します。基本的なプロフィールスコープ(openid、email、profile)を要求し、お名前、メールアドレス、プロフィール画像を受け取ります。Gmail、Google ドライブ、カレンダー、連絡先など、その他の Google サービスへのアクセスは要求しません。"
+msgctxt "HU5HuM"
+msgid "Signing in with Google uses only the openid, email, and profile scopes, so Deni Run receives your name, email address, and profile picture to identify your account."
+msgstr "Google でのログインでは openid、email、profile スコープのみを使用し、アカウントを識別するためにお名前、メールアドレス、プロフィール画像を受け取ります。"
 
 #: app/components/landing.tsx
-msgctxt "NZMrS_"
-msgid "Google account information is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
-msgstr "Google アカウントの情報は、販売、広告への利用、AIモデルの学習への利用を一切行いません。Google API から受け取った情報の利用は、限定的な使用の要件を含む Google API サービスのユーザーデータに関するポリシーに準拠します。"
+msgctxt "7eblHM"
+msgid "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from your Google Account."
+msgstr "オプションの Gmail と Google ドライブのプラグインを接続すると、Deni Run は追加のアクセスを権限ごとに個別に求めます。Gmail の閲覧(gmail.readonly)、承認したメールの送信(gmail.send)、ドライブのファイルの閲覧(drive.readonly)、ドライブ内のファイルの作成と更新(drive.file)です。チームメイトはこのアクセスを、あなたが依頼したタスクを行う場合にのみ使用し、Google アカウントからいつでも接続を解除できます。"
+
+#: app/components/landing.tsx
+msgctxt "GIGG04"
+msgid "Google user data is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
+msgstr "Google ユーザーデータは、販売、広告への利用、AIモデルの学習への利用を一切行いません。Google API から受け取った情報の利用は、限定的な使用の要件を含む Google API サービスのユーザーデータに関するポリシーに準拠します。"
 
 #: app/components/landing.tsx
 msgctxt "ffKO-8"
@@ -3272,19 +3287,54 @@ msgid "2. Google user data"
 msgstr "2. Google ユーザーデータ"
 
 #: app/privacy/page.tsx
-msgctxt "gAmNTp"
-msgid "Deni Run offers Google Sign-In for authentication only. We request the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We do not request access to Gmail, Google Drive, Google Calendar, Contacts, or any other Google service, and we do not read data from your Google account beyond this basic profile."
-msgstr "Deni Run は、認証のみを目的として Google ログインを提供しています。openid、email、profile スコープを要求し、お名前、メールアドレス、プロフィール画像、Google アカウントIDを受け取ります。Gmail、Google ドライブ、Google カレンダー、連絡先など、その他の Google サービスへのアクセスは要求せず、この基本プロフィール以外のデータを Google アカウントから読み取ることはありません。"
+msgctxt "I3x0KK"
+msgid "Google Sign-In."
+msgstr "Google ログイン。"
 
 #: app/privacy/page.tsx
-msgctxt "0T55rf"
-msgid "We use this information only to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service."
-msgstr "この情報は、アカウントの作成と識別、アプリ内でのお名前と画像の表示、お客様が選択した場合の GitHub ログインの同一アカウントへの紐づけ、Stripe を通じた請求領収書の送付、サービスに関するご連絡にのみ使用します。"
+msgctxt "-zVhSJ"
+msgid "When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service."
+msgstr "Google でログインする際は、openid、email、profile スコープのみを要求し、お名前、メールアドレス、プロフィール画像、Google アカウントIDを受け取ります。これらは、アカウントの作成と識別、アプリ内でのお名前と画像の表示、お客様が選択した場合の GitHub ログインの同一アカウントへの紐づけ、Stripe を通じた請求領収書の送付、サービスに関するご連絡に使用します。"
 
 #: app/privacy/page.tsx
-msgctxt "yM2WvQ"
-msgid "Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to train generalized AI or machine-learning models, and no human reads it except as needed for security, support you request, or legal compliance."
-msgstr "Deni Run による、Google API から受け取った情報の利用および他のアプリへの転送は、限定的な使用の要件を含む Google API サービスのユーザーデータに関するポリシーに準拠します。Google ユーザーデータを広告に使用すること、販売やデータブローカーへの転送、汎用的なAI・機械学習モデルの学習への使用は行いません。また、セキュリティ上必要な場合、お客様が依頼したサポート、法令遵守の場合を除き、人が閲覧することはありません。"
+msgctxt "2p4qSu"
+msgid "Optional Gmail and Google Drive plugins."
+msgstr "オプションの Gmail / Google ドライブ プラグイン。"
+
+#: app/privacy/page.tsx
+msgctxt "PAazL_"
+msgid "Only if you choose to connect them from Plugins in the app, Deni Run asks Google for additional access. Each permission is requested separately and you can decline it. The permissions are:"
+msgstr "アプリ内のプラグインから接続することを選んだ場合にのみ、Deni Run は Google に追加のアクセスを求めます。権限はそれぞれ個別に要求され、拒否することもできます。権限は次のとおりです。"
+
+#: app/privacy/page.tsx
+msgctxt "ga4Jey"
+msgid "Gmail, read-only (gmail.readonly): lets a teammate search your mail and read the sender, recipient, date, subject, and text of messages it needs for a task you gave it."
+msgstr "Gmail の閲覧のみ(gmail.readonly): チームメイトがメールを検索し、依頼されたタスクに必要なメッセージの差出人、宛先、日付、件名、本文を読めるようにします。"
+
+#: app/privacy/page.tsx
+msgctxt "puN7BV"
+msgid "Gmail, send (gmail.send): lets a teammate send an email on your behalf. Each message needs your approval unless you turn on “always allow” for sending."
+msgstr "Gmail の送信(gmail.send): チームメイトがあなたに代わってメールを送信できるようにします。送信で「常に許可」をオンにしていない限り、メールごとにあなたの承認が必要です。"
+
+#: app/privacy/page.tsx
+msgctxt "aebB6S"
+msgid "Google Drive, read-only (drive.readonly): lets a teammate search your Drive by file name and read Google Docs and text files it needs for a task you gave it."
+msgstr "Google ドライブの閲覧のみ(drive.readonly): チームメイトがファイル名でドライブを検索し、依頼されたタスクに必要な Google ドキュメントとテキストファイルを読めるようにします。"
+
+#: app/privacy/page.tsx
+msgctxt "WMtQfW"
+msgid "Google Drive, files created by the app (drive.file): lets a teammate create new files, and update files it created, in your Drive. Each change needs your approval unless you turn on “always allow”."
+msgstr "Google ドライブのアプリが作成したファイル(drive.file): チームメイトがドライブに新しいファイルを作成し、自身が作成したファイルを更新できるようにします。「常に許可」をオンにしていない限り、変更ごとにあなたの承認が必要です。"
+
+#: app/privacy/page.tsx
+msgctxt "vEYtSS"
+msgid "These permissions are used only to carry out the tasks you ask a teammate to do, and only when you ask. We do not scan, index, or copy your whole mailbox or Drive. Content retrieved for a task is sent to the AI model provider listed below to produce the response you see, and may be kept in that task’s conversation history in your workspace. Google access tokens are stored in our database and used only to call Google APIs for you."
+msgstr "これらの権限は、チームメイトに依頼されたタスクを実行するためにのみ、依頼があったときにのみ使用します。メールボックスやドライブ全体をスキャン、インデックス化、コピーすることはありません。タスクのために取得した内容は、表示される応答を生成するために下記のAIモデルプロバイダーに送信され、ワークスペース内のそのタスクの会話履歴に残ることがあります。Google のアクセストークンはデータベースに保存され、お客様に代わって Google API を呼び出す目的でのみ使用します。"
+
+#: app/privacy/page.tsx
+msgctxt "AK5rCT"
+msgid "Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to develop, improve, or train generalized AI or machine-learning models, and we do not allow humans to read it unless you give consent for specific items, it is necessary for security or abuse investigation, or the law requires it."
+msgstr "Deni Run による、Google API から受け取った情報の利用および他のアプリへの転送は、限定的な使用の要件を含む Google API サービスのユーザーデータに関するポリシーに準拠します。Google ユーザーデータを広告に使用すること、販売やデータブローカーへの転送、汎用的なAI・機械学習モデルの開発、改善、学習への使用は行いません。また、お客様が特定の項目について同意した場合、セキュリティや不正利用の調査に必要な場合、法律で求められる場合を除き、人が閲覧することを認めません。"
 
 #: app/privacy/page.tsx
 msgctxt "G4kUCt"
@@ -3307,9 +3357,9 @@ msgid "We share data only with the providers that run the product, and only what
 msgstr "データは、製品を運営するプロバイダーに対して、それぞれが必要とする範囲でのみ共有します。"
 
 #: app/privacy/page.tsx
-msgctxt "rvxQkz"
-msgid "Google and GitHub: sign-in. They tell us who you are; we send them no workspace content."
-msgstr "Google と GitHub: ログイン。お客様が誰であるかを当社に伝えます。ワークスペースの内容は送信しません。"
+msgctxt "az6da7"
+msgid "Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email."
+msgstr "Google と GitHub: ログインと、接続したプラグイン。ログインや、メール送信など依頼された操作の実行に必要なリクエストのみを送信します。"
 
 #: app/privacy/page.tsx
 msgctxt "A54dst"
@@ -3317,9 +3367,9 @@ msgid "Stripe: billing. Receives your email address and payment details."
 msgstr "Stripe: 請求。メールアドレスとお支払い情報を受け取ります。"
 
 #: app/privacy/page.tsx
-msgctxt "u2dalX"
-msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, and page content a teammate needs for a task. We do not send your Google profile data."
-msgstr "OpenRouter と、その接続先のモデルプロバイダー: AIモデルへのリクエスト。チームメイトがタスクに必要とするメッセージ、ファイル、ページの内容を受け取ります。Google のプロフィールデータは送信しません。"
+msgctxt "6GHvNo"
+msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
+msgstr "OpenRouter と、その接続先のモデルプロバイダー: AIモデルへのリクエスト。メッセージ、ファイル、ページの内容に加え、Gmail や Google ドライブを接続している場合は、チームメイトがタスクのために取得したメールやファイルの内容を受け取ります。これらはそのタスクへの応答にのみ使用され、当社がモデルの学習に使用することはありません。Google のプロフィールデータは送信しません。"
 
 #: app/privacy/page.tsx
 msgctxt "e_XJkf"
@@ -3362,9 +3412,9 @@ msgid "We keep your data while your account is active. You can export a copy of 
 msgstr "アカウントが有効な間、データを保持します。<link>アカウント</link>から、保存されているアカウントデータのコピーをエクスポートしたり、アカウントを削除したりできます。アカウントを削除すると、サブスクリプションが解約され、ログイン、セッション、会話、チームメイト、ルーティン、スキル、コンピューターの状態、ワークスペースのファイル、スクリーンショットがデータベースとオブジェクトストレージから削除されます。Stripe の請求書など、税務・会計の法令で保存が必要な記録は、法定期間 Stripe が保持します。バックアップとログは通常のローテーションで上書きされます。"
 
 #: app/privacy/page.tsx
-msgctxt "_VtuT5"
-msgid "You can also revoke Deni Run’s access to your Google account at any time from your Google Account security settings. To request deletion without signing in, contact us at the address below."
-msgstr "Google アカウントのセキュリティ設定から、Deni Run のアクセス権をいつでも取り消すことができます。ログインせずに削除を依頼する場合は、下記の連絡先までご連絡ください。"
+msgctxt "L28Kqo"
+msgid "You can revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account at any time from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
+msgstr "Google アカウントのセキュリティ設定から、Gmail、Google ドライブ、または Google アカウント全体に対する Deni Run のアクセス権をいつでも取り消すことができ、アクセスは直ちに停止します。Deni Run のアカウントを削除すると、当社が保持する Google のアクセストークンも削除されます。ログインせずに削除を依頼する場合は、下記の連絡先までご連絡ください。"
 
 #: app/privacy/page.tsx
 msgctxt "ZaMphK"

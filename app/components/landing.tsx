@@ -97,7 +97,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
 
       <section id="features" className="mx-auto max-w-5xl px-6 pb-20">
         <h2 className="text-2xl font-semibold">{t("What Deni Run does")}</h2>
-        <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[
             {
               title: t("Named teammates"),
@@ -110,6 +110,10 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             {
               title: t("Take control"),
               body: t("When login or 2FA is needed, drive the live browser yourself, then hand it back."),
+            },
+            {
+              title: t("Optional plugins"),
+              body: t("Connect Gmail, Google Drive, or GitHub so a teammate can search, read, and draft or send on your behalf. Each is off until you connect it."),
             },
           ].map((item, index) => (
             <div key={item.title} className={`${rise} ${card}`} style={delay(index * 80)}>
@@ -138,12 +142,15 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
 
       <section id="google-data" className="mx-auto max-w-5xl px-6 pb-20">
         <div className="rounded-xl border border-foreground/10 bg-surface p-6">
-          <h2 className="text-2xl font-semibold">{t("Google sign-in and your data")}</h2>
+          <h2 className="text-2xl font-semibold">{t("Google sign-in and optional Google plugins")}</h2>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-secondary-foreground">
-            {t("Deni Run uses Google Sign-In only to identify you. We request the basic profile scopes (openid, email, and profile) and receive your name, email address, and profile picture. We do not request access to Gmail, Google Drive, Calendar, Contacts, or any other Google service.")}
+            {t("Signing in with Google uses only the openid, email, and profile scopes, so Deni Run receives your name, email address, and profile picture to identify your account.")}
           </p>
           <p className="mt-3 max-w-3xl text-sm leading-relaxed text-secondary-foreground">
-            {t("Google account information is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.")}
+            {t("If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from your Google Account.")}
+          </p>
+          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-secondary-foreground">
+            {t("Google user data is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.")}
           </p>
           <Link
             href="/privacy"

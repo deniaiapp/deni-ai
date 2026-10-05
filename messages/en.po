@@ -2045,6 +2045,16 @@ msgid "When login or 2FA is needed, drive the live browser yourself, then hand i
 msgstr "When login or 2FA is needed, drive the live browser yourself, then hand it back."
 
 #: app/components/landing.tsx
+msgctxt "oITIgt"
+msgid "Optional plugins"
+msgstr "Optional plugins"
+
+#: app/components/landing.tsx
+msgctxt "TM42yk"
+msgid "Connect Gmail, Google Drive, or GitHub so a teammate can search, read, and draft or send on your behalf. Each is off until you connect it."
+msgstr "Connect Gmail, Google Drive, or GitHub so a teammate can search, read, and draft or send on your behalf. Each is off until you connect it."
+
+#: app/components/landing.tsx
 msgctxt "HK3ph8"
 msgid "How it works"
 msgstr "How it works"
@@ -2065,19 +2075,24 @@ msgid "Follow the live screen, approve risky steps, and collect the results in y
 msgstr "Follow the live screen, approve risky steps, and collect the results in your workspace."
 
 #: app/components/landing.tsx
-msgctxt "e23dz_"
-msgid "Google sign-in and your data"
-msgstr "Google sign-in and your data"
+msgctxt "fjh1-d"
+msgid "Google sign-in and optional Google plugins"
+msgstr "Google sign-in and optional Google plugins"
 
 #: app/components/landing.tsx
-msgctxt "3Hyh1Y"
-msgid "Deni Run uses Google Sign-In only to identify you. We request the basic profile scopes (openid, email, and profile) and receive your name, email address, and profile picture. We do not request access to Gmail, Google Drive, Calendar, Contacts, or any other Google service."
-msgstr "Deni Run uses Google Sign-In only to identify you. We request the basic profile scopes (openid, email, and profile) and receive your name, email address, and profile picture. We do not request access to Gmail, Google Drive, Calendar, Contacts, or any other Google service."
+msgctxt "HU5HuM"
+msgid "Signing in with Google uses only the openid, email, and profile scopes, so Deni Run receives your name, email address, and profile picture to identify your account."
+msgstr "Signing in with Google uses only the openid, email, and profile scopes, so Deni Run receives your name, email address, and profile picture to identify your account."
 
 #: app/components/landing.tsx
-msgctxt "NZMrS_"
-msgid "Google account information is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
-msgstr "Google account information is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
+msgctxt "7eblHM"
+msgid "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from your Google Account."
+msgstr "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from your Google Account."
+
+#: app/components/landing.tsx
+msgctxt "GIGG04"
+msgid "Google user data is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
+msgstr "Google user data is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
 
 #: app/components/landing.tsx
 msgctxt "ffKO-8"
@@ -3272,19 +3287,54 @@ msgid "2. Google user data"
 msgstr "2. Google user data"
 
 #: app/privacy/page.tsx
-msgctxt "gAmNTp"
-msgid "Deni Run offers Google Sign-In for authentication only. We request the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We do not request access to Gmail, Google Drive, Google Calendar, Contacts, or any other Google service, and we do not read data from your Google account beyond this basic profile."
-msgstr "Deni Run offers Google Sign-In for authentication only. We request the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We do not request access to Gmail, Google Drive, Google Calendar, Contacts, or any other Google service, and we do not read data from your Google account beyond this basic profile."
+msgctxt "I3x0KK"
+msgid "Google Sign-In."
+msgstr "Google Sign-In."
 
 #: app/privacy/page.tsx
-msgctxt "0T55rf"
-msgid "We use this information only to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service."
-msgstr "We use this information only to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service."
+msgctxt "-zVhSJ"
+msgid "When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service."
+msgstr "When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service."
 
 #: app/privacy/page.tsx
-msgctxt "yM2WvQ"
-msgid "Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to train generalized AI or machine-learning models, and no human reads it except as needed for security, support you request, or legal compliance."
-msgstr "Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to train generalized AI or machine-learning models, and no human reads it except as needed for security, support you request, or legal compliance."
+msgctxt "2p4qSu"
+msgid "Optional Gmail and Google Drive plugins."
+msgstr "Optional Gmail and Google Drive plugins."
+
+#: app/privacy/page.tsx
+msgctxt "PAazL_"
+msgid "Only if you choose to connect them from Plugins in the app, Deni Run asks Google for additional access. Each permission is requested separately and you can decline it. The permissions are:"
+msgstr "Only if you choose to connect them from Plugins in the app, Deni Run asks Google for additional access. Each permission is requested separately and you can decline it. The permissions are:"
+
+#: app/privacy/page.tsx
+msgctxt "ga4Jey"
+msgid "Gmail, read-only (gmail.readonly): lets a teammate search your mail and read the sender, recipient, date, subject, and text of messages it needs for a task you gave it."
+msgstr "Gmail, read-only (gmail.readonly): lets a teammate search your mail and read the sender, recipient, date, subject, and text of messages it needs for a task you gave it."
+
+#: app/privacy/page.tsx
+msgctxt "puN7BV"
+msgid "Gmail, send (gmail.send): lets a teammate send an email on your behalf. Each message needs your approval unless you turn on “always allow” for sending."
+msgstr "Gmail, send (gmail.send): lets a teammate send an email on your behalf. Each message needs your approval unless you turn on “always allow” for sending."
+
+#: app/privacy/page.tsx
+msgctxt "aebB6S"
+msgid "Google Drive, read-only (drive.readonly): lets a teammate search your Drive by file name and read Google Docs and text files it needs for a task you gave it."
+msgstr "Google Drive, read-only (drive.readonly): lets a teammate search your Drive by file name and read Google Docs and text files it needs for a task you gave it."
+
+#: app/privacy/page.tsx
+msgctxt "WMtQfW"
+msgid "Google Drive, files created by the app (drive.file): lets a teammate create new files, and update files it created, in your Drive. Each change needs your approval unless you turn on “always allow”."
+msgstr "Google Drive, files created by the app (drive.file): lets a teammate create new files, and update files it created, in your Drive. Each change needs your approval unless you turn on “always allow”."
+
+#: app/privacy/page.tsx
+msgctxt "vEYtSS"
+msgid "These permissions are used only to carry out the tasks you ask a teammate to do, and only when you ask. We do not scan, index, or copy your whole mailbox or Drive. Content retrieved for a task is sent to the AI model provider listed below to produce the response you see, and may be kept in that task’s conversation history in your workspace. Google access tokens are stored in our database and used only to call Google APIs for you."
+msgstr "These permissions are used only to carry out the tasks you ask a teammate to do, and only when you ask. We do not scan, index, or copy your whole mailbox or Drive. Content retrieved for a task is sent to the AI model provider listed below to produce the response you see, and may be kept in that task’s conversation history in your workspace. Google access tokens are stored in our database and used only to call Google APIs for you."
+
+#: app/privacy/page.tsx
+msgctxt "AK5rCT"
+msgid "Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to develop, improve, or train generalized AI or machine-learning models, and we do not allow humans to read it unless you give consent for specific items, it is necessary for security or abuse investigation, or the law requires it."
+msgstr "Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to develop, improve, or train generalized AI or machine-learning models, and we do not allow humans to read it unless you give consent for specific items, it is necessary for security or abuse investigation, or the law requires it."
 
 #: app/privacy/page.tsx
 msgctxt "G4kUCt"
@@ -3307,9 +3357,9 @@ msgid "We share data only with the providers that run the product, and only what
 msgstr "We share data only with the providers that run the product, and only what each needs:"
 
 #: app/privacy/page.tsx
-msgctxt "rvxQkz"
-msgid "Google and GitHub: sign-in. They tell us who you are; we send them no workspace content."
-msgstr "Google and GitHub: sign-in. They tell us who you are; we send them no workspace content."
+msgctxt "az6da7"
+msgid "Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email."
+msgstr "Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email."
 
 #: app/privacy/page.tsx
 msgctxt "A54dst"
@@ -3317,9 +3367,9 @@ msgid "Stripe: billing. Receives your email address and payment details."
 msgstr "Stripe: billing. Receives your email address and payment details."
 
 #: app/privacy/page.tsx
-msgctxt "u2dalX"
-msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, and page content a teammate needs for a task. We do not send your Google profile data."
-msgstr "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, and page content a teammate needs for a task. We do not send your Google profile data."
+msgctxt "6GHvNo"
+msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
+msgstr "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
 
 #: app/privacy/page.tsx
 msgctxt "e_XJkf"
@@ -3362,9 +3412,9 @@ msgid "We keep your data while your account is active. You can export a copy of 
 msgstr "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation."
 
 #: app/privacy/page.tsx
-msgctxt "_VtuT5"
-msgid "You can also revoke Deni Run’s access to your Google account at any time from your Google Account security settings. To request deletion without signing in, contact us at the address below."
-msgstr "You can also revoke Deni Run’s access to your Google account at any time from your Google Account security settings. To request deletion without signing in, contact us at the address below."
+msgctxt "L28Kqo"
+msgid "You can revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account at any time from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
+msgstr "You can revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account at any time from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
 
 #: app/privacy/page.tsx
 msgctxt "ZaMphK"

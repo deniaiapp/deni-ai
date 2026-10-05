@@ -63,13 +63,24 @@ export default async function PrivacyPage() {
 
         <Section title={t("2. Google user data")}>
           <p>
-            {t("Deni Run offers Google Sign-In for authentication only. We request the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We do not request access to Gmail, Google Drive, Google Calendar, Contacts, or any other Google service, and we do not read data from your Google account beyond this basic profile.")}
+            <strong className="font-medium text-foreground">{t("Google Sign-In.")}</strong>{" "}
+            {t("When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service.")}
           </p>
           <p>
-            {t("We use this information only to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service.")}
+            <strong className="font-medium text-foreground">{t("Optional Gmail and Google Drive plugins.")}</strong>{" "}
+            {t("Only if you choose to connect them from Plugins in the app, Deni Run asks Google for additional access. Each permission is requested separately and you can decline it. The permissions are:")}
+          </p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>{t("Gmail, read-only (gmail.readonly): lets a teammate search your mail and read the sender, recipient, date, subject, and text of messages it needs for a task you gave it.")}</li>
+            <li>{t("Gmail, send (gmail.send): lets a teammate send an email on your behalf. Each message needs your approval unless you turn on “always allow” for sending.")}</li>
+            <li>{t("Google Drive, read-only (drive.readonly): lets a teammate search your Drive by file name and read Google Docs and text files it needs for a task you gave it.")}</li>
+            <li>{t("Google Drive, files created by the app (drive.file): lets a teammate create new files, and update files it created, in your Drive. Each change needs your approval unless you turn on “always allow”.")}</li>
+          </ul>
+          <p>
+            {t("These permissions are used only to carry out the tasks you ask a teammate to do, and only when you ask. We do not scan, index, or copy your whole mailbox or Drive. Content retrieved for a task is sent to the AI model provider listed below to produce the response you see, and may be kept in that task’s conversation history in your workspace. Google access tokens are stored in our database and used only to call Google APIs for you.")}
           </p>
           <p>
-            {t("Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to train generalized AI or machine-learning models, and no human reads it except as needed for security, support you request, or legal compliance.")}
+            {t("Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to develop, improve, or train generalized AI or machine-learning models, and we do not allow humans to read it unless you give consent for specific items, it is necessary for security or abuse investigation, or the law requires it.")}
           </p>
         </Section>
 
@@ -84,9 +95,9 @@ export default async function PrivacyPage() {
             {t("We share data only with the providers that run the product, and only what each needs:")}
           </p>
           <ul className="list-disc space-y-1 pl-5">
-            <li>{t("Google and GitHub: sign-in. They tell us who you are; we send them no workspace content.")}</li>
+            <li>{t("Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email.")}</li>
             <li>{t("Stripe: billing. Receives your email address and payment details.")}</li>
-            <li>{t("OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, and page content a teammate needs for a task. We do not send your Google profile data.")}</li>
+            <li>{t("OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data.")}</li>
             <li>{t("Steel: cloud browser sessions, which load the websites your teammate visits.")}</li>
             <li>{t("E2B: the isolated sandbox where terminal commands run.")}</li>
             <li>{t("Our database and S3-compatible object storage (typically Cloudflare R2) hosting providers.")}</li>
@@ -109,7 +120,7 @@ export default async function PrivacyPage() {
             })}
           </p>
           <p>
-            {t("You can also revoke Deni Run’s access to your Google account at any time from your Google Account security settings. To request deletion without signing in, contact us at the address below.")}
+            {t("You can revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account at any time from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below.")}
           </p>
         </Section>
 
