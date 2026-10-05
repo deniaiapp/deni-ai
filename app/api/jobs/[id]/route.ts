@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { cancelJob, getJob, listJobEvents, retryJob } from "@/lib/jobs";
+import { releaseBrowserTakeover } from "@/lib/browser-workspaces";
+import { setComputer } from "@/lib/computer";
 import { runBackgroundJob } from "@/lib/job-runner";
 import { getExtracted, getLocale } from "next-intl/server";
 
@@ -29,8 +31,15 @@ export async function POST(req: Request, context: Context) {
   const { id } = await context.params;
   const body = (await req.json().catch(() => ({}))) as { action?: string; reviewed?: boolean };
   if (body.action === "cancel") {
+    const before = await getJob(userId, id);
     const job = await cancelJob(userId, id, await getLocale());
     if (!job) return NextResponse.json({ error: t("This job cannot be cancelled") }, { status: 409 });
+    // A job parked for takeover or approval has no running handler to clean up after it, so
+    // release its workspace here; otherwise the computer keeps showing "Your help is needed".
+    if (before?.status === "waiting_takeover" || before?.status === "waiting_approval") {
+      await releaseBrowserTakeover(userId, id).catch(() => undefined);
+      await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId: id }).catch(() => undefined);
+    }
     return NextResponse.json({ job });
   }
   if (body.action === "retry") {
