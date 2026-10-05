@@ -1,8 +1,8 @@
 import "server-only";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import type { UIMessage } from "ai";
-import { db, sqlClient } from "@/db";
+import { db, rawRows } from "@/db";
 import {
   agentJobs,
   appNotifications,
@@ -43,6 +43,9 @@ function withUserLock<T>(userId: string, fn: () => Promise<T>): Promise<T> {
   return run;
 }
 
+const WRITE_ATTEMPTS = 8;
+const backoff = (attempt: number) => new Promise((resolve) => setTimeout(resolve, 20 * (attempt + 1)));
+
 async function ensureUserStore(userId: string) {
   const existing = await db
     .select({ data: userStores.data })
@@ -69,28 +72,30 @@ export async function listUserStores() {
 }
 
 export async function listDueRoutineUserIds(at = new Date()) {
-  const rows = await sqlClient<{ user_id: string }[]>`
-    SELECT user_id
-    FROM user_stores
-    WHERE EXISTS (
-      SELECT 1
-      FROM jsonb_array_elements(COALESCE(data->'routines', '[]'::jsonb)) AS r
-      WHERE COALESCE((r->>'enabled')::boolean, false)
-        AND NULLIF(r->>'nextRunAt', '') IS NOT NULL
-        AND (r->>'nextRunAt')::timestamptz <= ${at.toISOString()}::timestamptz
-    )
-  `;
-  return rows.map((row) => row.user_id);
+  const rows = await rawRows<[string]>(
+    `SELECT user_id
+     FROM user_stores
+     WHERE EXISTS (
+       SELECT 1
+       FROM json_each(COALESCE(json_extract(data, '$.routines'), '[]')) AS r
+       WHERE COALESCE(json_extract(r.value, '$.enabled'), 0) = 1
+         AND NULLIF(json_extract(r.value, '$.nextRunAt'), '') IS NOT NULL
+         AND julianday(json_extract(r.value, '$.nextRunAt')) <= julianday(?)
+     )`,
+    [at.toISOString()],
+  );
+  return rows.map((row) => row[0]);
 }
 
 export async function findUserIdByStripeCustomer(customerId: string) {
-  const rows = await sqlClient<{ user_id: string }[]>`
-    SELECT user_id
-    FROM user_stores
-    WHERE data->'billing'->>'stripeCustomerId' = ${customerId}
-    LIMIT 1
-  `;
-  return rows[0]?.user_id ?? null;
+  const rows = await rawRows<[string]>(
+    `SELECT user_id
+     FROM user_stores
+     WHERE json_extract(data, '$.billing.stripeCustomerId') = ?
+     LIMIT 1`,
+    [customerId],
+  );
+  return rows[0]?.[0] ?? null;
 }
 
 function normalizeStore(store: Store) {
@@ -132,36 +137,43 @@ export async function readStore(userId: string): Promise<Store> {
   return structuredClone(store);
 }
 
+/**
+ * Read-modify-write of the user document. D1 has no row locks, so concurrent writers in
+ * other processes (the app and the worker) are resolved with a version compare-and-swap:
+ * the loser re-reads and re-runs `fn`. `fn` can therefore run more than once and must be
+ * safe to repeat.
+ */
 export async function mutateStore<T>(
   userId: string,
   fn: (store: Store) => T | Promise<T>,
 ): Promise<T> {
   return withUserLock(userId, async () => {
-    return db.transaction(async (tx) => {
-      const rows = await tx
+    for (let attempt = 0; attempt < WRITE_ATTEMPTS; attempt++) {
+      const [row] = await db
         .select()
         .from(userStores)
         .where(eq(userStores.userId, userId))
-        .for("update");
-      let row = rows[0];
-      // The row lock serializes updates across processes. Initialize only on the
-      // missing-row path rather than reading the same store before every mutation.
+        .limit(1);
       if (!row) {
-        await tx.insert(userStores).values({ userId, data: emptyStore() }).onConflictDoNothing({ target: userStores.userId });
-        const created = await tx.select().from(userStores).where(eq(userStores.userId, userId)).for("update");
-        row = created[0];
+        await db
+          .insert(userStores)
+          .values({ userId, data: emptyStore() })
+          .onConflictDoNothing({ target: userStores.userId });
+        continue;
       }
-      if (!row) throw new Error("user store not found");
       const store = structuredClone(row.data);
       normalizeStore(store);
       const result = await fn(store);
       store.computer.activity = store.computer.activity.slice(0, 40);
-      await tx
+      const written = await db
         .update(userStores)
-        .set({ data: store, updatedAt: new Date() })
-        .where(eq(userStores.userId, userId));
-      return result;
-    });
+        .set({ data: store, updatedAt: new Date(), version: row.version + 1 })
+        .where(and(eq(userStores.userId, userId), eq(userStores.version, row.version)))
+        .returning({ version: userStores.version });
+      if (written.length) return result;
+      await backoff(attempt);
+    }
+    throw new Error("The workspace is busy. Please try again.");
   });
 }
 
@@ -188,15 +200,40 @@ export async function loadMessages(
 
 export async function saveMessages(userId: string, threadId: string, messages: UIMessage[]) {
   validateThreadId(threadId);
-  const merged = await db.transaction(async (tx) => {
-    const [owner] = await tx.select({ data: userStores.data }).from(userStores).where(eq(userStores.userId, userId)).for("share");
-    if (!owner?.data.threads.some((thread) => thread.id === threadId)) throw new Error("Conversation no longer exists");
-    await tx.insert(threadMessages).values({ userId, threadId, messages: [], updatedAt: new Date() }).onConflictDoNothing();
-    const [row] = await tx.select().from(threadMessages).where(and(eq(threadMessages.userId, userId), eq(threadMessages.threadId, threadId))).for("update");
-    const next = mergeStoredMessages(row?.messages ?? [], messages);
-    await tx.update(threadMessages).set({ messages: next, updatedAt: new Date() }).where(and(eq(threadMessages.userId, userId), eq(threadMessages.threadId, threadId)));
-    return next;
-  });
+  const [owner] = await db
+    .select({ data: userStores.data })
+    .from(userStores)
+    .where(eq(userStores.userId, userId));
+  if (!owner?.data.threads.some((thread) => thread.id === threadId)) throw new Error("Conversation no longer exists");
+  await db
+    .insert(threadMessages)
+    .values({ userId, threadId, messages: [], updatedAt: new Date() })
+    .onConflictDoNothing();
+  // updated_at doubles as the version: merge against what was read and commit only if
+  // nobody else saved in between, otherwise read and merge again.
+  let merged: UIMessage[] | null = null;
+  for (let attempt = 0; attempt < WRITE_ATTEMPTS && !merged; attempt++) {
+    const [row] = await db
+      .select()
+      .from(threadMessages)
+      .where(and(eq(threadMessages.userId, userId), eq(threadMessages.threadId, threadId)));
+    if (!row) throw new Error("Conversation no longer exists");
+    const next = mergeStoredMessages(row.messages ?? [], messages);
+    const written = await db
+      .update(threadMessages)
+      .set({ messages: next, updatedAt: new Date(Math.max(Date.now(), row.updatedAt.getTime() + 1)) })
+      .where(
+        and(
+          eq(threadMessages.userId, userId),
+          eq(threadMessages.threadId, threadId),
+          eq(threadMessages.updatedAt, row.updatedAt),
+        ),
+      )
+      .returning({ threadId: threadMessages.threadId });
+    if (written.length) merged = next;
+    else await backoff(attempt);
+  }
+  if (!merged) throw new Error("The conversation is busy. Please try again.");
   await touchThreadPreview(userId, threadId, lastText(merged));
 }
 
@@ -219,29 +256,53 @@ export async function ensureThread(userId: string, threadId: string): Promise<Th
 }
 
 export async function deleteGroupThread(userId: string, threadId: string): Promise<boolean> {
-  const computer = await withUserLock(userId, () => db.transaction(async (tx) => {
-    const [row] = await tx.select().from(userStores).where(eq(userStores.userId, userId)).for("update");
-    if (!row?.data.threads.some((thread) => thread.id === threadId && thread.kind === "group")) return null;
-    const store = structuredClone(row.data);
-    const jobs = await tx.select({ id: agentJobs.id }).from(agentJobs).where(and(eq(agentJobs.userId, userId), eq(agentJobs.threadId, threadId)));
-    const jobIds = jobs.map((job) => job.id);
-    if (jobIds.length) {
-      await tx.delete(jobEvents).where(and(eq(jobEvents.userId, userId), inArray(jobEvents.jobId, jobIds)));
-      await tx.delete(appNotifications).where(and(eq(appNotifications.userId, userId), inArray(appNotifications.jobId, jobIds)));
-      await tx.delete(browserWorkspaces).where(and(eq(browserWorkspaces.userId, userId), inArray(browserWorkspaces.jobId, jobIds)));
+  const computer = await withUserLock(userId, async () => {
+    for (let attempt = 0; attempt < WRITE_ATTEMPTS; attempt++) {
+      const [row] = await db.select().from(userStores).where(eq(userStores.userId, userId));
+      if (!row?.data.threads.some((thread) => thread.id === threadId && thread.kind === "group")) return null;
+      const store = structuredClone(row.data);
+      const jobs = await db
+        .select({ id: agentJobs.id })
+        .from(agentJobs)
+        .where(and(eq(agentJobs.userId, userId), eq(agentJobs.threadId, threadId)));
+      const jobIds = jobs.map((job) => job.id);
+      store.threads = store.threads.filter((thread) => thread.id !== threadId);
+      store.routines = store.routines.filter((routine) => routine.threadId !== threadId);
+      for (const id of jobIds) if (store.computer.workspaces) delete store.computer.workspaces[id];
+      if (store.computer.activeJobId && jobIds.includes(store.computer.activeJobId)) {
+        store.computer.status = "idle"; store.computer.activeJobId = null; store.computer.workingBotId = null; store.computer.workingLabel = "";
+      }
+      // A batch is one D1 transaction. The first statement is the version guard (it only
+      // matches if nobody changed the document since it was read); every delete after it
+      // is gated on that write having happened, so a lost race changes nothing.
+      const next = row.version + 1;
+      const guard = sql`exists (select 1 from user_stores where user_id = ${userId} and version = ${next})`;
+      const statements = [
+        db
+          .update(userStores)
+          .set({ data: store, updatedAt: new Date(), version: next })
+          .where(and(eq(userStores.userId, userId), eq(userStores.version, row.version))),
+        ...(jobIds.length
+          ? [
+              db.delete(jobEvents).where(and(eq(jobEvents.userId, userId), inArray(jobEvents.jobId, jobIds), guard)),
+              db.delete(appNotifications).where(and(eq(appNotifications.userId, userId), inArray(appNotifications.jobId, jobIds), guard)),
+              db.delete(browserWorkspaces).where(and(eq(browserWorkspaces.userId, userId), inArray(browserWorkspaces.jobId, jobIds), guard)),
+            ]
+          : []),
+        db.delete(jobArtifacts).where(and(eq(jobArtifacts.userId, userId), eq(jobArtifacts.threadId, threadId), guard)),
+        db.delete(agentJobs).where(and(eq(agentJobs.userId, userId), eq(agentJobs.threadId, threadId), guard)),
+        db.delete(threadMessages).where(and(eq(threadMessages.userId, userId), eq(threadMessages.threadId, threadId), guard)),
+      ];
+      await db.batch(statements as [(typeof statements)[number], ...(typeof statements)[number][]]);
+      const [after] = await db
+        .select({ version: userStores.version })
+        .from(userStores)
+        .where(eq(userStores.userId, userId));
+      if (after?.version === next) return store.computer;
+      await backoff(attempt);
     }
-    await tx.delete(jobArtifacts).where(and(eq(jobArtifacts.userId, userId), eq(jobArtifacts.threadId, threadId)));
-    await tx.delete(agentJobs).where(and(eq(agentJobs.userId, userId), eq(agentJobs.threadId, threadId)));
-    await tx.delete(threadMessages).where(and(eq(threadMessages.userId, userId), eq(threadMessages.threadId, threadId)));
-    store.threads = store.threads.filter((thread) => thread.id !== threadId);
-    store.routines = store.routines.filter((routine) => routine.threadId !== threadId);
-    for (const id of jobIds) if (store.computer.workspaces) delete store.computer.workspaces[id];
-    if (store.computer.activeJobId && jobIds.includes(store.computer.activeJobId)) {
-      store.computer.status = "idle"; store.computer.activeJobId = null; store.computer.workingBotId = null; store.computer.workingLabel = "";
-    }
-    await tx.update(userStores).set({ data: store, updatedAt: new Date() }).where(eq(userStores.userId, userId));
-    return store.computer;
-  }));
+    throw new Error("The workspace is busy. Please try again.");
+  });
   if (computer) emitComputer(userId, computer);
   return Boolean(computer);
 }

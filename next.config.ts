@@ -21,12 +21,11 @@ const playwrightTrace = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["playwright", "playwright-core", "stripe", "postgres"],
+  serverExternalPackages: ["playwright", "playwright-core", "stripe"],
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react"],
   },
   outputFileTracingIncludes: {
-    "/*": ["./node_modules/postgres/**/*"],
     "/api/chat": playwrightTrace,
     "/api/computer/:path*": playwrightTrace,
     "/api/handoffs": playwrightTrace,

@@ -1,14 +1,9 @@
-import dotenv from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-dotenv.config({ path: ".env" });
-dotenv.config({ path: ".env.local", override: true });
-
+// Schema changes are generated here and applied with `wrangler d1 migrations apply`
+// (production) or automatically by the local SQLite executor (development and tests).
 export default defineConfig({
   schema: "./db/schema.ts",
   out: "./db/migrations",
-  dialect: "postgresql",
-  dbCredentials: {
-    url: process.env.DATABASE_URL ?? "",
-  },
+  dialect: "sqlite",
 });

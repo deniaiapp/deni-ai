@@ -22,7 +22,7 @@ export const auth = betterAuth({
     process.env.NODE_ENV !== "production" ? "http://127.0.0.1:3000" : "",
   ].filter((value, index, all): value is string => Boolean(value) && all.indexOf(value) === index),
   database: drizzleAdapter(db, {
-    provider: "pg",
+    provider: "sqlite",
     schema: {
       user: authSchema.user,
       session: authSchema.session,

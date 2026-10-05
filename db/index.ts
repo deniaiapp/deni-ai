@@ -1,21 +1,40 @@
 import "server-only";
 
-import postgres from "postgres";
-import { drizzle } from "drizzle-orm/postgres-js";
+import { drizzle } from "drizzle-orm/sqlite-proxy";
+import type { Executor, Method } from "./executor";
+import { localExecutor } from "./local-executor";
+import { remoteExecutor } from "./remote-executor";
 import * as schema from "./schema";
 
-const databaseUrl = process.env.DATABASE_URL;
+const globalDb = globalThis as typeof globalThis & { __deniExecutor?: Executor };
 
-if (!databaseUrl) {
-  throw new Error("DATABASE_URL is required");
+function createExecutor(): Executor {
+  const url = process.env.D1_PROXY_URL?.trim();
+  if (url) {
+    const token = process.env.D1_PROXY_TOKEN?.trim();
+    if (!token) throw new Error("D1_PROXY_TOKEN is required when D1_PROXY_URL is set");
+    return remoteExecutor(url, token);
+  }
+  if (process.env.NODE_ENV === "production") throw new Error("D1_PROXY_URL is required");
+  return localExecutor();
 }
 
-const globalDb = globalThis as typeof globalThis & { __deniPostgres?: ReturnType<typeof postgres> };
-const client = globalDb.__deniPostgres ?? postgres(databaseUrl, {
-  max: Number(process.env.DATABASE_POOL_MAX ?? 10),
-  prepare: false,
-});
-if (process.env.NODE_ENV !== "production") globalDb.__deniPostgres = client;
+// Created on first query so importing this module at build time needs no database.
+function executor(): Executor {
+  return (globalDb.__deniExecutor ??= createExecutor());
+}
 
-export const sqlClient = client;
-export const db = drizzle(client, { schema });
+export const db = drizzle(
+  (sql, params, method: Method) => executor().query({ sql, params, method }),
+  (batch) => executor().batch(batch),
+  { schema },
+);
+
+/** Raw SQL. Rows come back as arrays of column values, in SELECT order. */
+export async function rawRows<T extends unknown[] = unknown[]>(
+  sql: string,
+  params: unknown[] = [],
+): Promise<T[]> {
+  const result = await executor().query({ sql, params, method: "all" });
+  return result.rows as T[];
+}

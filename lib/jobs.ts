@@ -15,9 +15,11 @@ type JobPayload = Record<string, unknown>;
 const jobSummaryColumns = {
   ...getTableColumns(agentJobs),
   // Job payloads contain entire conversations. Never fetch them for a status poll.
-  payload: sql<JobPayload>`'{}'::jsonb`,
-  result: sql<Record<string, unknown> | null>`NULL::jsonb`,
-  checkpoint: sql<Record<string, unknown> | null>`CASE WHEN ${agentJobs.checkpoint} IS NULL THEN NULL ELSE jsonb_build_object('text', left(coalesce(${agentJobs.checkpoint}->>'text', ''), 2000), 'step', ${agentJobs.checkpoint}->'step', 'updatedAt', ${agentJobs.checkpoint}->'updatedAt') END`,
+  payload: sql<JobPayload>`'{}'`.mapWith(() => ({}) as JobPayload),
+  result: sql<Record<string, unknown> | null>`NULL`.mapWith(() => null),
+  checkpoint: sql<Record<string, unknown> | null>`CASE WHEN ${agentJobs.checkpoint} IS NULL THEN NULL ELSE json_object('text', substr(coalesce(${agentJobs.checkpoint} ->> '$.text', ''), 1, 2000), 'step', ${agentJobs.checkpoint} -> '$.step', 'updatedAt', ${agentJobs.checkpoint} -> '$.updatedAt') END`.mapWith((value: unknown) =>
+    typeof value === "string" ? (JSON.parse(value) as Record<string, unknown>) : null,
+  ),
 };
 
 function asDate(value: Date | string | null | undefined) {
@@ -165,13 +167,14 @@ export async function claimJob(userId: string, jobId: string, continuation?: {
   key: string;
   payload: Record<string, unknown>;
 }) {
-  return db.transaction(async (tx) => {
-    const rows = await tx
+  // No row lock on D1: decide from a read, then make the UPDATE itself the guard by
+  // repeating the observed state in its WHERE clause. If another worker got there first
+  // the update matches nothing and the caller sees the winner's job instead.
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const [row] = await db
       .select()
       .from(agentJobs)
-      .where(and(eq(agentJobs.userId, userId), eq(agentJobs.id, jobId)))
-      .for("update");
-    const row = rows[0];
+      .where(and(eq(agentJobs.userId, userId), eq(agentJobs.id, jobId)));
     if (!row) return null;
     if (continuation && (row.threadId !== continuation.threadId || row.botId !== continuation.botId || row.status !== continuation.from || row.payload.continuationKey === continuation.key)) {
       return { job: mapJob(row), claimed: false };
@@ -183,7 +186,7 @@ export async function claimJob(userId: string, jobId: string, continuation?: {
       return { job: mapJob(row), claimed: false };
     }
     const now = new Date();
-    const [claimed] = await tx
+    const [claimed] = await db
       .update(agentJobs)
       .set({
         status: "running",
@@ -195,10 +198,21 @@ export async function claimJob(userId: string, jobId: string, continuation?: {
         updatedAt: now,
         error: null,
       })
-      .where(eq(agentJobs.id, jobId))
+      .where(
+        and(
+          eq(agentJobs.userId, userId),
+          eq(agentJobs.id, jobId),
+          eq(agentJobs.status, row.status),
+          eq(agentJobs.attempt, row.attempt),
+          row.heartbeatAt ? eq(agentJobs.heartbeatAt, row.heartbeatAt) : isNull(agentJobs.heartbeatAt),
+          eq(agentJobs.updatedAt, row.updatedAt),
+        ),
+      )
       .returning();
-    return claimed ? { job: mapJob(claimed), claimed: true } : null;
-  });
+    if (claimed) return { job: mapJob(claimed), claimed: true };
+  }
+  const latest = await getJob(userId, jobId);
+  return latest ? { job: latest, claimed: false } : null;
 }
 
 export async function updateJob(
@@ -294,30 +308,29 @@ export async function appendJobEvent(
   kind: string,
   payload: JobPayload = {},
 ) {
-  return db.transaction(async (tx) => {
-    // Serialize event writers for one job on the database connection. A read of the
-    // latest sequence followed by an insert is otherwise vulnerable to two writers
-    // observing the same value at the same time.
-    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`${userId}:${jobId}`}))`);
-    const latest = await tx
-      .select({ sequence: jobEvents.sequence })
-      .from(jobEvents)
-      .where(and(eq(jobEvents.userId, userId), eq(jobEvents.jobId, jobId)))
-      .orderBy(desc(jobEvents.sequence))
-      .limit(1);
-    const [row] = await tx
-      .insert(jobEvents)
-      .values({
-        id: createId("evt"),
-        userId,
-        jobId,
-        kind,
-        payload,
-        sequence: (latest[0]?.sequence ?? 0) + 1,
-      })
-      .returning();
-    return row ? mapEvent(row) : null;
-  });
+  // The next sequence is computed inside the INSERT itself, and the unique
+  // (user, job, sequence) index rejects a concurrent writer that picked the same number.
+  // The loser simply retries with the new maximum.
+  for (let attempt = 0; attempt < 8; attempt++) {
+    try {
+      const [row] = await db
+        .insert(jobEvents)
+        .values({
+          id: createId("evt"),
+          userId,
+          jobId,
+          kind,
+          payload,
+          sequence: sql`(select coalesce(max(${jobEvents.sequence}), 0) + 1 from ${jobEvents} where ${jobEvents.userId} = ${userId} and ${jobEvents.jobId} = ${jobId})`,
+        })
+        .returning();
+      return row ? mapEvent(row) : null;
+    } catch (error) {
+      if (!/UNIQUE constraint failed/i.test(String((error as Error)?.message))) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 10 * (attempt + 1)));
+    }
+  }
+  throw new Error("Unable to record job event");
 }
 
 export async function listJobEvents(userId: string, jobId: string, after = 0) {

@@ -1,40 +1,32 @@
 import { relations } from "drizzle-orm";
 import {
-  bigint,
-  boolean,
   index,
   integer,
-  pgTable,
+  sqliteTable,
   text,
-  timestamp,
   uniqueIndex,
-} from "drizzle-orm/pg-core";
+} from "drizzle-orm/sqlite-core";
+import { createdNow, timestampMs } from "./columns";
 
-export const user = pgTable("user", {
+export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
-  emailVerified: boolean("email_verified").default(false).notNull(),
+  emailVerified: integer("email_verified", { mode: "boolean" }).default(false).notNull(),
   image: text("image"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .$onUpdate(() => new Date())
-    .notNull(),
-  twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  createdAt: createdNow("created_at"),
+  updatedAt: createdNow("updated_at").$onUpdate(() => new Date()),
+  twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }).default(false),
 });
 
-export const session = pgTable(
+export const session = sqliteTable(
   "session",
   {
     id: text("id").primaryKey(),
-    expiresAt: timestamp("expires_at").notNull(),
+    expiresAt: timestampMs("expires_at").notNull(),
     token: text("token").notNull().unique(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    createdAt: createdNow("created_at"),
+    updatedAt: createdNow("updated_at").$onUpdate(() => new Date()),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
     userId: text("user_id")
@@ -44,7 +36,7 @@ export const session = pgTable(
   (table) => [index("session_userId_idx").on(table.userId)],
 );
 
-export const account = pgTable(
+export const account = sqliteTable(
   "account",
   {
     id: text("id").primaryKey(),
@@ -58,38 +50,32 @@ export const account = pgTable(
     accessToken: text("access_token"),
     refreshToken: text("refresh_token"),
     idToken: text("id_token"),
-    accessTokenExpiresAt: timestamp("access_token_expires_at"),
-    refreshTokenExpiresAt: timestamp("refresh_token_expires_at"),
+    accessTokenExpiresAt: timestampMs("access_token_expires_at"),
+    refreshTokenExpiresAt: timestampMs("refresh_token_expires_at"),
     scope: text("scope"),
     password: text("password"),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    createdAt: createdNow("created_at"),
+    updatedAt: createdNow("updated_at").$onUpdate(() => new Date()),
   },
   (table) => [
     index("account_userId_idx").on(table.userId),
   ],
 );
 
-export const verification = pgTable(
+export const verification = sqliteTable(
   "verification",
   {
     id: text("id").primaryKey(),
     identifier: text("identifier").notNull(),
     value: text("value").notNull(),
-    expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
-    updatedAt: timestamp("updated_at")
-      .defaultNow()
-      .$onUpdate(() => new Date())
-      .notNull(),
+    expiresAt: timestampMs("expires_at").notNull(),
+    createdAt: createdNow("created_at"),
+    updatedAt: createdNow("updated_at").$onUpdate(() => new Date()),
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
-export const twoFactor = pgTable(
+export const twoFactor = sqliteTable(
   "two_factor",
   {
     id: text("id").primaryKey(),
@@ -98,9 +84,9 @@ export const twoFactor = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    verified: boolean("verified").default(true),
+    verified: integer("verified", { mode: "boolean" }).default(true),
     failedVerificationCount: integer("failed_verification_count").default(0),
-    lockedUntil: timestamp("locked_until"),
+    lockedUntil: timestampMs("locked_until"),
   },
   (table) => [
     index("twoFactor_userId_idx").on(table.userId),
@@ -108,11 +94,11 @@ export const twoFactor = pgTable(
   ],
 );
 
-export const authRateLimit = pgTable("auth_rate_limit", {
+export const authRateLimit = sqliteTable("auth_rate_limit", {
   id: text("id").primaryKey(),
   key: text("key").notNull().unique(),
   count: integer("count").notNull(),
-  lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+  lastRequest: integer("last_request", { mode: "number" }).notNull(),
 });
 
 export const userRelations = relations(user, ({ many }) => ({

@@ -1,8 +1,9 @@
 import dotenv from "dotenv";
-import { readFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
 import Module from "node:module";
 import { createServer } from "node:http";
-import postgres from "postgres";
 
 dotenv.config({ path: ".env" });
 dotenv.config({ path: ".env.local", override: true });
@@ -19,39 +20,16 @@ function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);
 }
 
-const baseUrl = process.env.DATABASE_URL;
-if (!baseUrl) throw new Error("DATABASE_URL is required");
-const admin = postgres(baseUrl, { prepare: false, max: 1 });
-const schema = `deni_job_test_${Date.now().toString(36)}`;
-const quoteIdentifier = (value: string) => `"${value.replaceAll('"', '""')}"`;
-
-async function applyMigration(path: string) {
-  // The baseline migration names public.user explicitly; point that reference at
-  // the isolated test schema so this also works against an empty database.
-  const sql = (await readFile(path, "utf8")).replaceAll(
-    '"public"."user"',
-    `${quoteIdentifier(schema)}."user"`,
-  );
-  for (const statement of sql.split(/--> statement-breakpoint/)) {
-    if (statement.trim()) await admin.unsafe(statement);
-  }
-}
+let tempDir = "";
 
 async function main() {
-  await admin.unsafe(`create schema ${quoteIdentifier(schema)}`);
-  await admin.unsafe(`set search_path to ${quoteIdentifier(schema)}`);
-  await applyMigration("db/migrations/0000_init.sql");
-  await applyMigration("db/migrations/0001_wakeful_king_cobra.sql");
-  await applyMigration("db/migrations/0002_funny_thundra.sql");
-
-  // Neon rejects search_path as a startup parameter. Keep the test pool at one
-  // connection and set the temporary schema explicitly after it connects.
-  process.env.DATABASE_POOL_MAX = "1";
+  tempDir = await mkdtemp(path.join(os.tmpdir(), "deni-jobs-"));
+  // Same dialect as D1, in an isolated file. The local executor applies db/migrations itself.
+  delete process.env.D1_PROXY_URL;
+  process.env.LOCAL_DB_PATH = path.join(tempDir, "test.sqlite");
   const jobs = await import("../lib/jobs");
   const mcp = await import("../lib/mcp");
   const agent = await import("../lib/agent");
-  const dbModule = await import("../db");
-  await dbModule.sqlClient.unsafe(`set search_path to ${quoteIdentifier(schema)}`);
 
   const first = await jobs.createJob({
     userId: "tenant-a",
@@ -149,16 +127,14 @@ async function main() {
   const approval = agent.deniToolApproval({ userId: "tenant-a", jobId: stale.id });
   assert(approval.mcp({ action: "call" }) === "user-approval", "MCP call did not require approval");
   server.close();
-  await dbModule.sqlClient.end({ timeout: 1 });
-  console.log(`verified durable job claims, checkpoints, cancel, uncertain recovery, tenant isolation, and MCP discovery/call in ${schema}`);
+  console.log(`verified durable job claims, checkpoints, cancel, uncertain recovery, tenant isolation, and MCP discovery/call on local SQLite`);
 }
 
 async function run() {
   try {
     await main();
   } finally {
-    await admin.unsafe(`drop schema if exists ${quoteIdentifier(schema)} cascade`).catch(() => undefined);
-    await admin.end();
+    if (tempDir) await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
   }
 }
 

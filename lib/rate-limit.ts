@@ -1,7 +1,7 @@
 import "server-only";
 
 import { getExtracted } from "next-intl/server";
-import { sqlClient } from "@/db";
+import { rawRows } from "@/db";
 
 export class RateLimitError extends Error {
   code = "rate_limit" as const;
@@ -25,22 +25,18 @@ function memoryLimit(key: string, limit: number, windowMs: number) {
 }
 
 async function databaseLimit(key: string, limit: number, windowMs: number) {
-  const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
-  const rows = await sqlClient<{ count: number }[]>`
-    INSERT INTO rate_limits AS r (key, window_start, count)
-    VALUES (${key}, now(), 1)
-    ON CONFLICT (key) DO UPDATE SET
-      count = CASE
-        WHEN r.window_start <= now() - (${windowSeconds}::text || ' seconds')::interval THEN 1
-        ELSE r.count + 1
-      END,
-      window_start = CASE
-        WHEN r.window_start <= now() - (${windowSeconds}::text || ' seconds')::interval THEN now()
-        ELSE r.window_start
-      END
-    RETURNING count
-  `;
-  const count = rows[0]?.count ?? 1;
+  const now = Date.now();
+  const cutoff = now - windowMs;
+  const rows = await rawRows<[number]>(
+    `INSERT INTO rate_limits (key, window_start, count)
+     VALUES (?, ?, 1)
+     ON CONFLICT (key) DO UPDATE SET
+       count = CASE WHEN rate_limits.window_start <= ? THEN 1 ELSE rate_limits.count + 1 END,
+       window_start = CASE WHEN rate_limits.window_start <= ? THEN ? ELSE rate_limits.window_start END
+     RETURNING count`,
+    [key, now, cutoff, cutoff, now],
+  );
+  const count = rows[0]?.[0] ?? 1;
   return count <= limit;
 }
 

@@ -1,33 +1,19 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1788525023050,
+      "version": "6",
+      "when": 1791196447167,
       "tag": "0000_init",
       "breakpoints": true
     },
     {
       "idx": 1,
-      "version": "7",
-      "when": 1788605342894,
-      "tag": "0001_wakeful_king_cobra",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1789276504499,
-      "tag": "0002_funny_thundra",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1791191466188,
-      "tag": "0003_relax_account_issuer",
+      "version": "6",
+      "when": 1791196450046,
+      "tag": "0001_user_stores_stripe_index",
       "breakpoints": true
     }
   ]

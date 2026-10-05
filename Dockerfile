@@ -19,8 +19,7 @@ WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV NODE_ENV=production
-# Imported at build time; not used to connect.
-ENV DATABASE_URL=postgres://build:build@127.0.0.1:5432/build
+# Imported at build time; the database is only contacted at runtime.
 ENV BETTER_AUTH_SECRET=build-placeholder-secret-not-used-at-runtime
 ENV BETTER_AUTH_URL=http://localhost:3000
 
