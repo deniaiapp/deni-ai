@@ -20,9 +20,9 @@ describe("Claude Sonnet 5.5 model support", () => {
     );
 
     expect(model?.id).toBe("anthropic/claude-sonnet-5.5");
-    expect(model?.tier).toBe("plus");
+    expect(model?.tier).toBe("free");
     expect(getModelCategory("claude-sonnet-5-5")).toBe("premium");
-    expect(getRequiredTierForModel("claude-sonnet-5-5")).toBe("plus");
+    expect(getRequiredTierForModel("claude-sonnet-5-5")).toBeNull();
     expect(model?.contextWindow).toBe(1_000_000);
     expect(model?.maxOutputTokens).toBe(128_000);
     expect(model?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
@@ -124,11 +124,15 @@ describe("Codex long-context model support", () => {
     ).toBe(2);
   });
 
-  test("allows only GPT-6 Luna on the free plan and flags it as default", () => {
+  test("allows only GPT-6 Luna, Sonnet 5.5, and Gemini 3.8 Flash on the free plan and flags it as default", () => {
     const free = MODEL_DEFINITIONS.filter((model) => model.tier === "free");
     const defaults = listModelDefinitions().filter((model) => model.default);
 
-    expect(free.map((model) => model.id)).toEqual(["openai/gpt-6-luna"]);
+    expect(free.map((model) => model.id).sort()).toEqual([
+      "anthropic/claude-sonnet-5.5",
+      "google/gemini-3.8-flash",
+      "openai/gpt-6-luna",
+    ]);
     expect(defaults.map((model) => model.id)).toEqual([DEFAULT_MODEL]);
     expect(DEFAULT_MODEL).toBe("openai/gpt-6-luna");
   });
@@ -137,6 +141,13 @@ describe("Codex long-context model support", () => {
     expect(getRequiredTierForModel("openai/gpt-6-luna")).toBeNull();
     expect(getRequiredTierForModel("openai/gpt-5.5")).toBe("plus");
     expect(getRequiredTierForModel("anthropic/claude-opus-4.8")).toBe("plus");
+  });
+
+  test("charges Sonnet 5.5 at 1.5x on the free plan only", () => {
+    expect(getModelTokenUsageMultiplier("claude-sonnet-5-5", "free")).toBe(1.5);
+    expect(getModelTokenUsageMultiplier("claude-sonnet-5-5", "plus")).toBe(3);
+    expect(getModelTokenUsageMultiplier("claude-sonnet-5-5")).toBe(3);
+    expect(getModelTokenUsageMultiplier("gpt-6-luna", "free")).toBe(2);
   });
 
   test("assigns cost tiers explicitly to every registered model", () => {

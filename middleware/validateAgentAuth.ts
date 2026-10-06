@@ -25,7 +25,7 @@ import {
   evaluateSilentBanRules,
 } from '../utils/deni';
 import { recordClientSignalLog } from '../utils/deni/clientSignalLog';
-import { getModelTokenUsageMultiplier } from '../utils/agent/models';
+import { getModelDefinition, getModelTokenUsageMultiplier } from '../utils/agent/models';
 import { checkUserRateLimit } from './rateLimit';
 import {
   getAuthDisabledUserId,
@@ -343,9 +343,21 @@ export async function validateAgentAuth(c: Context, next: Next) {
     );
   }
 
-  const modelCategory = getModelCategory(model);
-  const tokenUsageMultiplier = getModelTokenUsageMultiplier(model);
+  if (!getModelDefinition(model)) {
+    return c.json(
+      {
+        error: {
+          message: `The model "${model}" does not exist or is not available.`,
+          type: 'invalid_request_error',
+          param: 'model',
+          code: 'model_not_found',
+        },
+      },
+      404
+    );
+  }
 
+  const modelCategory = getModelCategory(model);
   if (isAuthDisabledMode()) {
     c.set('agentAuth', {
       userId: keyValidation.userId,
@@ -355,7 +367,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
       usageUnit: 'tokens',
       usageReserved: false,
       hasVerifiedPaymentMethod: true,
-      tokenUsageMultiplier,
+      tokenUsageMultiplier: getModelTokenUsageMultiplier(model),
       usageMeteringEnabled: false,
     } satisfies AgentAuthContext);
 
@@ -369,6 +381,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
   // Check model category and reserve quota when needed
   const requiredTier = getRequiredTierForModel(model);
   const tier = billingProfile.tier;
+  const tokenUsageMultiplier = getModelTokenUsageMultiplier(model, tier);
 
   if (requiredTier && !isTierSufficient(tier, requiredTier)) {
     return c.json(
@@ -387,7 +400,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
   const protocol = c.req.path.endsWith('/responses/compact') ? 'compact'
     : c.req.path.endsWith('/responses') ? 'responses'
     : c.req.path.endsWith('/messages') ? 'messages' : 'chat';
-  const usageEstimate = new UsageEstimate(body as Record<string, unknown>, model, protocol);
+  const usageEstimate = new UsageEstimate(body as Record<string, unknown>, model, protocol, tier);
   if (!Number.isSafeInteger(usageEstimate.reservationAmount)) {
     return c.json({ error: {
       message: 'Requested token budget is too large.',

@@ -1,4 +1,8 @@
-import { getModelDefinition, getEffectiveTokenUsageMultiplier } from "./models";
+import {
+  getModelDefinition,
+  getEffectiveTokenUsageMultiplier,
+  type ModelDefinition,
+} from "./models";
 import { computeMeteredTokens } from "./usageMetering";
 
 const encoder = new TextEncoder();
@@ -19,6 +23,7 @@ export class UsageEstimate {
     body: Record<string, unknown>,
     model: string,
     protocol: "chat" | "responses" | "messages" | "compact" = "chat",
+    tier?: ModelDefinition["tier"],
   ) {
     const input = JSON.stringify({
       messages: body.messages,
@@ -45,7 +50,7 @@ export class UsageEstimate {
     this.reservationAmount = Math.max(
       1,
       Math.ceil(
-        (computeMeteredTokens(estimate) ?? 0) * getEffectiveTokenUsageMultiplier(model, estimate),
+        (computeMeteredTokens(estimate) ?? 0) * getEffectiveTokenUsageMultiplier(model, estimate, tier),
       ),
     );
   }

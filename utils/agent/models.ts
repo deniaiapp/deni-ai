@@ -13,6 +13,8 @@ export interface ModelDefinition {
   maxOutputTokens?: number;
   premium?: boolean;
   tokenUsageMultiplier?: number;
+  /** Overrides tokenUsageMultiplier for free-plan users only. */
+  freeTierTokenUsageMultiplier?: number;
   /**
    * OpenAI 1M-context models charge more once the prompt exceeds this
    * threshold (prompt/input tokens). Applied on top of tokenUsageMultiplier.
@@ -254,13 +256,14 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
     id: "anthropic/claude-sonnet-5.5",
     tokenUsageMultiplier: 3,
+    freeTierTokenUsageMultiplier: 1.5,
     label: "Claude Sonnet 5.5",
     description: "Fast, balanced model for coding, agents, and everyday knowledge work.",
     tags: ["balanced", "coding", "agentic", "long-context"],
     efforts: ANTHROPIC_SONNET_5_5_EFFORTS,
     contextWindow: 1_000_000,
     maxOutputTokens: 128_000,
-    tier: "plus",
+    tier: "free",
   },
   {
     id: "anthropic/claude-sonnet-4.6",
@@ -332,7 +335,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     tags: ["fast", "coding", "agentic"],
     efforts: GOOGLE_GEMINI_3_8_FLASH_EFFORTS,
     contextWindow: 1_000_000,
-    tier: "plus",
+    tier: "free",
   },
   {
     id: "google/gemini-3.5-flash-lite",
@@ -477,15 +480,6 @@ export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
   },
   {
     type: "model",
-    id: "claude-opus-4.6",
-    display_name: "Claude Opus 4.6",
-    created_at: "2026-02-04T00:00:00Z",
-    max_input_tokens: 1000000,
-    max_tokens: 128000,
-    capabilities: ANTHROPIC_FULL_CAPABILITIES,
-  },
-  {
-    type: "model",
     id: "claude-haiku-4.5",
     display_name: "Claude Haiku 4.5",
     created_at: "2025-10-15T00:00:00Z",
@@ -592,9 +586,14 @@ function getPromptTokenCount(usage: unknown): number | null {
 /**
  * Base per-model usage multiplier (ignores long-context surcharge).
  */
-export function getModelTokenUsageMultiplier(modelId: string): number {
+export function getModelTokenUsageMultiplier(
+  modelId: string,
+  tier?: ModelDefinition["tier"],
+): number {
+  const definition = getModelDefinition(modelId);
   const multiplier =
-    getModelDefinition(modelId)?.tokenUsageMultiplier ??
+    (tier === "free" ? definition?.freeTierTokenUsageMultiplier : undefined) ??
+    definition?.tokenUsageMultiplier ??
     DEFAULT_TOKEN_USAGE_MULTIPLIER;
 
   return Number.isFinite(multiplier) && multiplier > 0
@@ -640,8 +639,9 @@ export function getLongContextUsageMultiplier(
 export function getEffectiveTokenUsageMultiplier(
   modelId: string,
   usage?: unknown,
+  tier?: ModelDefinition["tier"],
 ): number {
-  const base = getModelTokenUsageMultiplier(modelId);
+  const base = getModelTokenUsageMultiplier(modelId, tier);
   if (usage === undefined) {
     return base;
   }
