@@ -150,7 +150,7 @@ export interface AnthropicModelDefinition {
 export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
     id: "openai/gpt-6-astra",
-    tokenUsageMultiplier: 3,
+    tokenUsageMultiplier: 6,
     label: "GPT-6 Astra",
     description:
       "GPT-6 frontier model for advanced reasoning, coding, and agentic work.",
@@ -161,7 +161,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "openai/gpt-6-sol",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "GPT-6 Sol",
     description:
       "Cost-efficient high-end GPT-6 model for demanding reasoning, coding, and agentic work.",
@@ -170,11 +170,11 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     contextWindow: 1_050_000,
     maxOutputTokens: 128_000,
     ...OPENAI_1M_LONG_CONTEXT,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "openai/gpt-6.1-sol",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "GPT-6.1 Sol",
     description:
       "High-end GPT-6.1 model for demanding reasoning, coding, and agentic work.",
@@ -184,11 +184,11 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     maxOutputTokens: 128_000,
     longContextThreshold: 272_000,
     longContextUsageMultiplier: 2,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "openai/gpt-6-luna",
-    tokenUsageMultiplier: 1,
+    tokenUsageMultiplier: 2,
     label: "GPT-6 Luna",
     description:
       "Fast, cost-efficient GPT-6 model for high-volume and latency-sensitive tasks.",
@@ -201,7 +201,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "openai/gpt-5.6-sol",
-    tokenUsageMultiplier: 2,
+    tokenUsageMultiplier: 4,
     label: "GPT-5.6 Sol",
     description:
       "GPT-5.6 flagship: frontier reasoning, coding, agentic & long-context work.",
@@ -209,11 +209,11 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     efforts: OPENAI_GPT_5_6_EFFORTS,
     ...GPT_5_6_CONTEXT,
     ...OPENAI_1M_LONG_CONTEXT,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "openai/gpt-5.6-terra",
-    tokenUsageMultiplier: 1,
+    tokenUsageMultiplier: 2,
     label: "GPT-5.6 Terra",
     description:
       "GPT-5.6 balanced tier: GPT-5.5-competitive performance at lower cost.",
@@ -221,11 +221,11 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     efforts: OPENAI_GPT_5_6_EFFORTS,
     ...GPT_5_6_CONTEXT,
     ...OPENAI_1M_LONG_CONTEXT,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "openai/gpt-5.6-luna",
-    tokenUsageMultiplier: 1,
+    tokenUsageMultiplier: 2,
     label: "GPT-5.6 Luna",
     description:
       "GPT-5.6 fast & affordable tier for high-volume and lighter tasks.",
@@ -233,71 +233,71 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     efforts: OPENAI_GPT_5_6_EFFORTS,
     ...GPT_5_6_CONTEXT,
     ...OPENAI_1M_LONG_CONTEXT,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "openai/gpt-5.5",
-    tokenUsageMultiplier: 2,
+    tokenUsageMultiplier: 4,
     label: "GPT-5.5",
     description: "Flagship model: top reasoning, code, long-context tasks.",
     tags: ["general", "reasoning", "fast", "long-context"],
     efforts: OPENAI_GPT_5_EFFORTS,
     ...OPENAI_1M_LONG_CONTEXT,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "openai/gpt-5.4",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "GPT-5.4",
     description:
       "Flagship model: top reasoning, code tasks. low-cost than GPT-5.5.",
     tags: ["general", "reasoning", "fast", "long-context"],
     efforts: OPENAI_GPT_5_EFFORTS,
     ...OPENAI_1M_LONG_CONTEXT,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "openai/gpt-5.3-codex",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "GPT-5.3 Codex",
     description: "Advanced agentic coding for complex engineering & security.",
     tags: ["coding", "agentic", "fast"],
     efforts: OPENAI_CODEX_EFFORTS,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "openai/gpt-5.2-codex",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "GPT-5.2 Codex",
     description: "Advanced agentic coding for complex engineering & security.",
     tags: ["coding", "agentic", "fast"],
     efforts: OPENAI_CODEX_EFFORTS,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "openai/gpt-5.2",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "GPT-5.2",
     description: "Flagship model: top reasoning, code, long-context tasks.",
     tags: ["general", "reasoning"],
     efforts: OPENAI_GPT_5_EFFORTS,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "anthropic/claude-haiku-4.5",
-    tokenUsageMultiplier: 1,
+    tokenUsageMultiplier: 2,
     label: "Claude Haiku 4.5",
     description: "Fastest model with Sonnet-level coding at low cost.",
     tags: ["fast", "lightweight"],
     efforts: ANTHROPIC_NO_EFFORTS,
-    tier: "free",
+    tier: "plus",
   },
   // Claude Sonnet 5.5 standard rates verified 2026-09-28:
   // $2 / 1M input tokens and $10 / 1M output tokens.
   // https://platform.claude.com/docs/en/models/sonnet-5-5/overview
   {
     id: "anthropic/claude-sonnet-5.5",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "Claude Sonnet 5.5",
     description: "Fast, balanced model for coding, agents, and everyday knowledge work.",
     tags: ["balanced", "coding", "agentic", "long-context"],
@@ -308,7 +308,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "anthropic/claude-sonnet-4.6",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "Claude Sonnet 4.6",
     description: "Latest balanced model with frontier performance.",
     tags: ["balanced", "latest"],
@@ -317,7 +317,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "anthropic/claude-fable-5.1",
-    tokenUsageMultiplier: 3,
+    tokenUsageMultiplier: 6,
     label: "Claude Fable 5.1",
     description: "The world's most advanced model for coding, knowledge work, and long-running problem solving.",
     tags: ["coding", "agentic", "long-context"],
@@ -327,7 +327,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "anthropic/claude-fable-5",
-    tokenUsageMultiplier: 3,
+    tokenUsageMultiplier: 6,
     label: "Claude Fable 5",
     description:
       "Mythos-class model from Anthropic: frontier intelligence for long-horizon coding & knowledge work.",
@@ -338,7 +338,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "anthropic/claude-opus-5.5",
-    tokenUsageMultiplier: 2,
+    tokenUsageMultiplier: 4,
     label: "Claude Opus 5.5",
     description: "Claude Opus 5.5 for reasoning, coding, and agentic tasks.",
     tags: ["powerful", "agentic"],
@@ -350,7 +350,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "anthropic/claude-opus-5",
-    tokenUsageMultiplier: 2,
+    tokenUsageMultiplier: 4,
     label: "Claude Opus 5",
     description: "Hybrid reasoning & long-horizon tasks.",
     tags: ["powerful", "agentic"],
@@ -360,7 +360,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "anthropic/claude-opus-4.8",
-    tokenUsageMultiplier: 2,
+    tokenUsageMultiplier: 4,
     label: "Claude Opus 4.8",
     description: "Most capable: hybrid reasoning & long-horizon tasks.",
     tags: ["powerful", "agentic"],
@@ -370,7 +370,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "anthropic/claude-opus-4.7",
-    tokenUsageMultiplier: 2,
+    tokenUsageMultiplier: 4,
     label: "Claude Opus 4.7",
     description: "Most capable: hybrid reasoning & long-horizon tasks.",
     tags: ["powerful", "agentic"],
@@ -380,7 +380,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "anthropic/claude-opus-4.6",
-    tokenUsageMultiplier: 2,
+    tokenUsageMultiplier: 4,
     label: "Claude Opus 4.6",
     description: "Legacy Claude Opus model.",
     tags: ["powerful", "agentic"],
@@ -390,7 +390,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "anthropic/claude-sonnet-4.5",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "Claude Sonnet 4.5",
     description: "Balanced flagship: best coding, agents & reasoning.",
     tags: ["balanced", "coding"],
@@ -399,56 +399,64 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "google/gemini-3.1-pro-preview",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "Gemini 3.1 Pro Preview",
     description:
       "Google frontier model: agentic coding, 1M context, multimodal.",
     tags: ["powerful", "preview"],
     efforts: GOOGLE_GEMINI_PRO_EFFORTS,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "google/gemini-3-pro-preview",
-    tokenUsageMultiplier: 1.5,
+    tokenUsageMultiplier: 3,
     label: "Gemini 3 Pro Preview",
     description: "Cutting-edge preview: advanced reasoning & agents.",
     tags: ["powerful", "preview"],
     efforts: GOOGLE_GEMINI_PRO_PREVIEW_EFFORTS,
     premium: true,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "google/gemini-3.5-flash",
-    tokenUsageMultiplier: 1,
+    tokenUsageMultiplier: 2,
     label: "Gemini 3.5 Flash",
     description: "Ultra-fast multimodal model with strong reasoning.",
     tags: ["fast"],
     efforts: GOOGLE_GEMINI_FLASH_EFFORTS,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "google/gemini-3-flash-preview",
-    tokenUsageMultiplier: 1,
+    tokenUsageMultiplier: 2,
     label: "Gemini 3 Flash Preview",
     description: "Ultra-fast multimodal preview with strong reasoning.",
     tags: ["fast", "preview"],
     efforts: GOOGLE_GEMINI_FLASH_EFFORTS,
-    tier: "free",
+    tier: "plus",
   },
   {
     id: "google/gemini-3.1-flash-lite",
-    tokenUsageMultiplier: 1,
+    tokenUsageMultiplier: 2,
     label: "Gemini 3.1 Flash Lite",
     description: "Ultra-fast model for fast tasks.",
     tags: ["fast"],
     efforts: GOOGLE_GEMINI_FLASH_EFFORTS,
-    tier: "free",
+    tier: "plus",
   },
 ];
 
-export const DEFAULT_MODEL = "openai/gpt-5.5";
+export const DEFAULT_MODEL = "openai/gpt-6-luna";
 export const AVAILABLE_MODELS = MODEL_DEFINITIONS.map((model) => model.id);
-export const DEFAULT_TOKEN_USAGE_MULTIPLIER = 1;
+export const DEFAULT_TOKEN_USAGE_MULTIPLIER = 2;
+
+/** Model definitions as exposed to clients; flags the default model. */
+export function listModelDefinitions(): Array<ModelDefinition & { default: boolean }> {
+  return MODEL_DEFINITIONS.map((model) => ({
+    ...model,
+    default: model.id === DEFAULT_MODEL,
+  }));
+}
 
 /**
  * OpenAI's unsuffixed `gpt-5.6` alias is the Sol tier. Resolve it before the

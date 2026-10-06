@@ -3,7 +3,7 @@ import type { Context } from 'hono';
 import { validateAgentApiKey } from '../../middleware/validateAgentAuth';
 import {
   ANTHROPIC_MODEL_DEFINITIONS,
-  MODEL_DEFINITIONS,
+  listModelDefinitions,
 } from '../../utils/agent/models';
 
 const router = new Hono();
@@ -35,7 +35,7 @@ async function listModels(c: Context) {
     );
   }
 
-  return c.json(MODEL_DEFINITIONS, 200);
+  return c.json(listModelDefinitions(), 200);
 }
 
 router.get('/models', validateAgentApiKey, listModels);
