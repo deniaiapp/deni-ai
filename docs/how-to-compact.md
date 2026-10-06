@@ -62,7 +62,7 @@ Authorization: Bearer <FLIXA_API_KEY>
 
 ```json
 {
-  "model": "openai/gpt-5.5",
+  "model": "openai/gpt-6-luna",
   "input": [
     { "role": "user", "content": "Plan a multi-file refactor." },
     {
@@ -133,7 +133,7 @@ Upstream-compatible compacted object (typical):
 
 ```json
 {
-  "model": "openai/gpt-5.5",
+  "model": "openai/gpt-6-luna",
   "input": [
     /* ...spread compacted.output exactly... */,
     {
@@ -153,7 +153,7 @@ If you still want the **upstream** to compact mid-request when a token threshold
 
 ```json
 {
-  "model": "openai/gpt-5.5",
+  "model": "openai/gpt-6-luna",
   "input": [ /* history */ ],
   "context_management": [
     {
@@ -184,7 +184,7 @@ const client = new FlixaClient({
 
 // 1) Normal turn
 const response = (await client.createResponse({
-  model: "openai/gpt-5.5",
+  model: "openai/gpt-6-luna",
   input: history,
 })) as { output: unknown[] };
 
@@ -192,7 +192,7 @@ history.push(...response.output);
 
 // 2) When large enough, compact
 const compacted = (await client.compactResponse({
-  model: "openai/gpt-5.5",
+  model: "openai/gpt-6-luna",
   input: history,
 })) as { output: unknown[] };
 
@@ -208,7 +208,7 @@ curl -sS "$FLIXA_API_URL/v1/agent/responses/compact" \
   -H "Authorization: Bearer $FLIXA_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "openai/gpt-5.5",
+    "model": "openai/gpt-6-luna",
     "input": [ /* full item window */ ]
   }'
 ```

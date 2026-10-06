@@ -133,6 +133,12 @@ describe("Codex long-context model support", () => {
     expect(DEFAULT_MODEL).toBe("openai/gpt-6-luna");
   });
 
+  test("requires a paid plan for unlisted and removed models", () => {
+    expect(getRequiredTierForModel("openai/gpt-6-luna")).toBeNull();
+    expect(getRequiredTierForModel("openai/gpt-5.5")).toBe("plus");
+    expect(getRequiredTierForModel("anthropic/claude-opus-4.8")).toBe("plus");
+  });
+
   test("assigns cost tiers explicitly to every registered model", () => {
     expect(
       MODEL_DEFINITIONS.every(
@@ -165,8 +171,8 @@ describe("Codex long-context model support", () => {
       "max",
     ]);
     expect(
-      getModelDefinition("google/gemini-3-pro-preview")?.efforts,
-    ).toEqual(["low", "high"]);
+      getModelDefinition("google/gemini-3.8-flash")?.efforts,
+    ).toEqual(["low", "medium", "high"]);
     expect(getModelDefinition("glm-4.6")).toBeUndefined();
     expect(getModelDefinition("grok-code-fast-1")).toBeUndefined();
   });

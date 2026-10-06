@@ -57,7 +57,8 @@ export function getRequiredTierForModel(model: string): "plus" | "pro" | "max" |
       return minTier;
     }
   }
-  return null;
+  // Unlisted models are never free: only registered free-tier models skip this check.
+  return definition ? null : "plus";
 }
 
 /**
