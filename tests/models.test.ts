@@ -49,9 +49,9 @@ describe("Claude Haiku 5.5 model support", () => {
     );
 
     expect(model?.id).toBe("anthropic/claude-haiku-5.5");
-    expect(model?.tier).toBe("plus");
+    expect(model?.tier).toBe("free");
     expect(getModelCategory("claude-haiku-5-5")).toBe("basic");
-    expect(getRequiredTierForModel("claude-haiku-5-5")).toBe("plus");
+    expect(getRequiredTierForModel("claude-haiku-5-5")).toBeNull();
     expect(model?.contextWindow).toBe(1_000_000);
     expect(model?.maxOutputTokens).toBe(128_000);
     expect(model?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
@@ -153,11 +153,12 @@ describe("Codex long-context model support", () => {
     ).toBe(2);
   });
 
-  test("allows only GPT-6 Luna, Sonnet 5.5, and Gemini 3.8 Flash on the free plan and flags it as default", () => {
+  test("allows only GPT-6 Luna, Haiku 5.5, Sonnet 5.5, and Gemini 3.8 Flash on the free plan and flags it as default", () => {
     const free = MODEL_DEFINITIONS.filter((model) => model.tier === "free");
     const defaults = listModelDefinitions().filter((model) => model.default);
 
     expect(free.map((model) => model.id).sort()).toEqual([
+      "anthropic/claude-haiku-5.5",
       "anthropic/claude-sonnet-5.5",
       "google/gemini-3.8-flash",
       "openai/gpt-6-luna",

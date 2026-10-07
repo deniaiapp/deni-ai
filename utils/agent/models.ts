@@ -253,7 +253,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     efforts: ANTHROPIC_HAIKU_5_5_EFFORTS,
     contextWindow: 1_000_000,
     maxOutputTokens: 128_000,
-    tier: "plus",
+    tier: "free",
   },
   {
     id: "anthropic/claude-haiku-4.5",
