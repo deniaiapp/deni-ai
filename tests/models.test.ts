@@ -41,6 +41,35 @@ describe("Claude Sonnet 5.5 model support", () => {
   });
 });
 
+describe("Claude Haiku 5.5 model support", () => {
+  test("registers the official model id, limits, pricing tier, and efforts", () => {
+    const model = getModelDefinition("claude-haiku-5-5");
+    const anthropicModel = ANTHROPIC_MODEL_DEFINITIONS.find(
+      (entry) => entry.id === "claude-haiku-5-5",
+    );
+
+    expect(model?.id).toBe("anthropic/claude-haiku-5.5");
+    expect(model?.tier).toBe("plus");
+    expect(getModelCategory("claude-haiku-5-5")).toBe("basic");
+    expect(getRequiredTierForModel("claude-haiku-5-5")).toBe("plus");
+    expect(model?.contextWindow).toBe(1_000_000);
+    expect(model?.maxOutputTokens).toBe(128_000);
+    expect(model?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
+    expect(getModelTokenUsageMultiplier("claude-haiku-5-5")).toBe(2);
+    expect(resolveAvailableModelId("anthropic/claude-haiku-5-5")).toBe(
+      "anthropic/claude-haiku-5.5",
+    );
+    expect(anthropicModel).toMatchObject({
+      display_name: "Claude Haiku 5.5",
+      max_input_tokens: 1_000_000,
+      max_tokens: 128_000,
+    });
+    expect(anthropicModel?.capabilities.effort.xhigh).toEqual({
+      supported: true,
+    });
+  });
+});
+
 describe("Codex long-context model support", () => {
   test("registers GPT-6 Astra as a premium model", () => {
     const definition = getModelDefinition("gpt-6-astra");
