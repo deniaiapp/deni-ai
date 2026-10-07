@@ -86,6 +86,13 @@ const ANTHROPIC_SONNET_5_5_EFFORTS: ReasoningEffort[] = [
   "xhigh",
   "max",
 ];
+const ANTHROPIC_HAIKU_5_5_EFFORTS: ReasoningEffort[] = [
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+];
 const ANTHROPIC_NO_EFFORTS: ReasoningEffort[] = [];
 
 const GOOGLE_GEMINI_PRO_EFFORTS: ReasoningEffort[] = [
@@ -232,6 +239,22 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
     ...OPENAI_1M_LONG_CONTEXT,
     tier: "plus",
   },
+  // Claude Haiku 5.5 standard rates verified 2026-10-07:
+  // $0.10 / 1M input and $0.50 / 1M output for prompts up to 100K tokens
+  // ($0.50 / $2.50 above 100K). Both bands stay under the $5 mean-price tier.
+  // https://platform.claude.com/docs/en/models/haiku-5-5/overview
+  // https://platform.claude.com/docs/en/about-claude/pricing
+  {
+    id: "anthropic/claude-haiku-5.5",
+    tokenUsageMultiplier: 2,
+    label: "Claude Haiku 5.5",
+    description: "Anthropic's fastest model for high-volume, latency-sensitive tasks such as classification, extraction, and routing.",
+    tags: ["fast", "lightweight", "long-context"],
+    efforts: ANTHROPIC_HAIKU_5_5_EFFORTS,
+    contextWindow: 1_000_000,
+    maxOutputTokens: 128_000,
+    tier: "free",
+  },
   {
     id: "anthropic/claude-haiku-4.5",
     tokenUsageMultiplier: 2,
@@ -376,6 +399,8 @@ const MODEL_ALIASES: ReadonlyMap<string, string> = new Map([
   ["anthropic/claude-opus-5-5", "anthropic/claude-opus-5.5"],
   ["claude-sonnet-5-5", "anthropic/claude-sonnet-5.5"],
   ["anthropic/claude-sonnet-5-5", "anthropic/claude-sonnet-5.5"],
+  ["claude-haiku-5-5", "anthropic/claude-haiku-5.5"],
+  ["anthropic/claude-haiku-5-5", "anthropic/claude-haiku-5.5"],
 ]);
 
 function stripModelProvider(modelId: string): string {
@@ -469,6 +494,15 @@ export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
     id: "claude-sonnet-5-5",
     display_name: "Claude Sonnet 5.5",
     created_at: "2026-09-28T00:00:00Z",
+    max_input_tokens: 1000000,
+    max_tokens: 128000,
+    capabilities: ANTHROPIC_SONNET_5_5_CAPABILITIES,
+  },
+  {
+    type: "model",
+    id: "claude-haiku-5-5",
+    display_name: "Claude Haiku 5.5",
+    created_at: "2026-10-07T00:00:00Z",
     max_input_tokens: 1000000,
     max_tokens: 128000,
     capabilities: ANTHROPIC_SONNET_5_5_CAPABILITIES,
