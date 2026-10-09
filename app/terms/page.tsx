@@ -35,6 +35,9 @@ export default async function TermsPage() {
           })}
         </p>
         <p>
+          {t("If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can give your teammates tasks, including approving actions with the Approve button. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink.")}
+        </p>
+        <p>
           {t.rich("Our <link>Privacy Policy</link> explains how we handle your data, including information received from Google sign-in.", {
             link: (chunks) => (
               <Link href="/privacy" className="text-foreground hover:underline">

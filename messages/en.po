@@ -1957,6 +1957,56 @@ msgctxt "JpsXCp"
 msgid "Delete {name}"
 msgstr "Delete {name}"
 
+#: app/components/discord-settings.tsx
+msgctxt "E-Jff3"
+msgid "Commands in the DM: /teammate chooses who you talk to, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
+msgstr "Commands in the DM: /teammate chooses who you talk to, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
+
+#: app/components/discord-settings.tsx
+msgctxt "p7E89o"
+msgid "Could not create a code. Try again in a moment."
+msgstr "Could not create a code. Try again in a moment."
+
+#: app/components/discord-settings.tsx
+msgctxt "E4wZU1"
+msgid "Unlink Discord? Messages from that account will no longer reach your teammates."
+msgstr "Unlink Discord? Messages from that account will no longer reach your teammates."
+
+#: app/components/discord-settings.tsx
+msgctxt "aF2GZW"
+msgid "Could not unlink Discord."
+msgstr "Could not unlink Discord."
+
+#: app/components/discord-settings.tsx
+msgctxt "TXM8YF"
+msgid "Linked to {name} · talk to teammates in Discord DMs"
+msgstr "Linked to {name} · talk to teammates in Discord DMs"
+
+#: app/components/discord-settings.tsx
+msgctxt "tTpLsN"
+msgid "Not linked"
+msgstr "Not linked"
+
+#: app/components/discord-settings.tsx
+msgctxt "4PKxPs"
+msgid "Unlink"
+msgstr "Unlink"
+
+#: app/components/discord-settings.tsx
+msgctxt "FMb851"
+msgid "Create link code"
+msgstr "Create link code"
+
+#: app/components/discord-settings.tsx
+msgctxt "NOt03J"
+msgid "Send this code to the bot in a Discord direct message. It works once and expires in 10 minutes."
+msgstr "Send this code to the bot in a Discord direct message. It works once and expires in 10 minutes."
+
+#: app/components/discord-settings.tsx
+msgctxt "-OXqB4"
+msgid "Open the bot on Discord"
+msgstr "Open the bot on Discord"
+
 #: app/components/landing.tsx
 msgctxt "EFTSMc"
 msgid "Main"
@@ -3253,9 +3303,9 @@ msgid "Back to Deni Run home"
 msgstr "Back to Deni Run home"
 
 #: app/privacy/page.tsx
-msgctxt "FDORri"
-msgid "Last updated: October 5, 2026"
-msgstr "Last updated: October 5, 2026"
+msgctxt "7Q7uOl"
+msgid "Last updated: October 10, 2026"
+msgstr "Last updated: October 10, 2026"
 
 #: app/privacy/page.tsx
 msgctxt "zFZQnj"
@@ -3296,6 +3346,16 @@ msgstr "Billing data."
 msgctxt "SCuuas"
 msgid "If you subscribe to Pro, Stripe collects your payment details. We store only your plan, Stripe customer and subscription IDs, and usage counters. We never see or store your card number."
 msgstr "If you subscribe to Pro, Stripe collects your payment details. We store only your plan, Stripe customer and subscription IDs, and usage counters. We never see or store your card number."
+
+#: app/privacy/page.tsx
+msgctxt "bl_WHw"
+msgid "Discord data."
+msgstr "Discord data."
+
+#: app/privacy/page.tsx
+msgctxt "Q09cnv"
+msgid "Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, and which teammate you are talking to. The messages you send to the Deni Run bot in a direct message and the replies are saved in that teammate’s conversation in your workspace, like any other message. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent."
+msgstr "Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, and which teammate you are talking to. The messages you send to the Deni Run bot in a direct message and the replies are saved in that teammate’s conversation in your workspace, like any other message. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent."
 
 #: app/privacy/page.tsx
 msgctxt "qorkWG"
@@ -3388,6 +3448,11 @@ msgid "Google and GitHub: sign-in and the plugins you connect. We send them only
 msgstr "Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email."
 
 #: app/privacy/page.tsx
+msgctxt "daoL2n"
+msgid "Discord: if you link it, Discord carries the direct messages you and the bot exchange, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
+msgstr "Discord: if you link it, Discord carries the direct messages you and the bot exchange, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
+
+#: app/privacy/page.tsx
 msgctxt "A54dst"
 msgid "Stripe: billing. Receives your email address and payment details."
 msgstr "Stripe: billing. Receives your email address and payment details."
@@ -3436,6 +3501,11 @@ msgstr "6. Retention and deletion"
 msgctxt "WSq4pI"
 msgid "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation."
 msgstr "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation."
+
+#: app/privacy/page.tsx
+msgctxt "3xC8Ih"
+msgid "You can unlink Discord at any time from Plugins in the app or by sending /unlink to the bot. Unlinking deletes the stored link and any unused link code, and the bot stops answering that Discord account. Deleting your Deni Run account does the same. Messages already delivered in Discord stay in your Discord account until you delete them there."
+msgstr "You can unlink Discord at any time from Plugins in the app or by sending /unlink to the bot. Unlinking deletes the stored link and any unused link code, and the bot stops answering that Discord account. Deleting your Deni Run account does the same. Messages already delivered in Discord stay in your Discord account until you delete them there."
 
 #: app/privacy/page.tsx
 msgctxt "QbGVAA"
@@ -3512,6 +3582,11 @@ msgstr "Usage limits apply by plan. Paid subscriptions renew monthly until cance
 msgctxt "BARVqC"
 msgid "Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service."
 msgstr "Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service."
+
+#: app/terms/page.tsx
+msgctxt "BJc6Mq"
+msgid "If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can give your teammates tasks, including approving actions with the Approve button. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink."
+msgstr "If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can give your teammates tasks, including approving actions with the Approve button. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink."
 
 #: app/terms/page.tsx
 msgctxt "PR34Xj"

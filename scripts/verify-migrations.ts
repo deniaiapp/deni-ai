@@ -18,6 +18,8 @@ async function main() {
     "app_notifications",
     "auth_rate_limit",
     "browser_workspaces",
+    "discord_link_codes",
+    "discord_links",
     "job_artifacts",
     "job_events",
     "mcp_connections",
@@ -38,6 +40,7 @@ async function main() {
     "user_stores_stripe_customer_idx",
     "agent_jobs_user_idempotency_uidx",
     "job_events_user_job_sequence_uidx",
+    "discord_links_discord_user_uidx",
   ]) {
     if (!indexes.includes(required)) throw new Error(`Missing index ${required}`);
   }

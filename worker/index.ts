@@ -19,6 +19,8 @@ async function main() {
   const { startScheduler } = await import("../lib/scheduler");
   startScheduler();
   console.info("[deni worker] scheduler started");
+  const { startDiscordBot } = await import("../lib/discord-bot");
+  startDiscordBot();
 }
 
 void main();

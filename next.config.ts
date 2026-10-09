@@ -21,7 +21,7 @@ const playwrightTrace = [
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: ["playwright", "playwright-core", "stripe"],
+  serverExternalPackages: ["playwright", "playwright-core", "stripe", "discord.js"],
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react"],
   },

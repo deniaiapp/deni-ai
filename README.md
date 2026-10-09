@@ -18,6 +18,7 @@ While Grok Bot provides a cloud VM, Deni Run gives each account an isolated comp
 - Generic streamable HTTP/SSE MCP connections with encrypted credentials and approval-gated calls
 - Deliverable cards with safe text preview, download, and revision requests
 - Persistent in-app notifications for completed, failed, approval, and takeover states
+- Chat with teammates in Discord direct messages, with Approve and Deny buttons for gated actions
 
 ## Setup
 
@@ -168,6 +169,19 @@ Usage is metered per account and month (UTC):
 Set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, and `STRIPE_WEBHOOK_SECRET` to enable upgrades. Create a Stripe Price for the Pro plan and point the webhook at `/api/billing/webhook` (`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`).
 
 Run the scheduler on exactly one dedicated worker instance with `DENI_SCHEDULER=true`. Do not enable it on every web replica.
+
+## Discord
+
+Teammates can be reached from Discord direct messages through one shared bot.
+
+1. In the [Discord Developer Portal](https://discord.com/developers/applications) create an application and add a bot. No privileged intents are needed: direct messages carry their text without Message Content access.
+2. Set `DISCORD_BOT_TOKEN` (and optionally `DISCORD_INVITE_URL`, an install link people can open). The bot connects from the instance that runs the scheduler (`DENI_SCHEDULER=true`, or `pnpm worker`). Set the token on web instances too, or the settings card stays hidden.
+3. Run `pnpm db:migrate` to create the `discord_links` and `discord_link_codes` tables.
+4. In the app open **Plugins**, choose **Create link code** on the Discord card, and send the code to the bot in a direct message (or use `/link`). The code works once and expires after 10 minutes.
+
+After linking, a plain direct message goes to the chosen teammate and the reply comes back in the same conversation, which is also visible in the web app. `/teammate` lists teammates or switches to one, and `/unlink` disconnects the account.
+
+Commands that need approval, file deletion, and plugin writes arrive as a message with **Approve** and **Deny** buttons; the task resumes after you answer. A step that needs the browser (login, 2FA, CAPTCHA) cannot be done in Discord, so the bot asks you to finish it in the app. Only direct messages are served, never server channels, because a teammate's answer can contain private data.
 
 ## Grok Bot mapping
 

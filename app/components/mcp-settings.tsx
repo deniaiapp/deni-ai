@@ -2,13 +2,16 @@
 
 import { useExtracted } from "next-intl";
 import { useEffect, useState } from "react";
-import { PlugIcon, TrashIcon, WrenchIcon } from "lucide-react";
+import { ChevronDownIcon, PlugIcon, TrashIcon, WrenchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LoadingFallback } from "@/components/ui/loading";
 import { Select } from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
+import { DiscordCard, fetchDiscordStatus, type DiscordStatus } from "./discord-settings";
 
 type BuiltinPlugin = { kind: "gmail" | "drive" | "github"; connected: boolean; writeAccess: boolean; alwaysAllow: string[] };
 const builtinActions: Record<BuiltinPlugin["kind"], string[]> = {
@@ -26,6 +29,10 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
   const t = useExtracted();
   const [connections, setConnections] = useState<McpConnection[]>([]);
   const [plugins, setPlugins] = useState<BuiltinPlugin[]>([]);
+  const [discord, setDiscord] = useState<DiscordStatus | null>(null);
+  // Cards render together once the first load settles, so none of them pops in late.
+  const [ready, setReady] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState(false);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [secret, setSecret] = useState("");
@@ -37,6 +44,10 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
   async function loadPlugins() {
     const res = await fetch("/api/plugins", { cache: "no-store" });
     if (res.ok) setPlugins(((await res.json()) as { plugins: BuiltinPlugin[] }).plugins);
+  }
+
+  async function loadDiscord() {
+    setDiscord(await fetchDiscordStatus());
   }
 
   async function connect(kind: BuiltinPlugin["kind"], write: boolean) {
@@ -92,8 +103,7 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
     if (open) {
       // A dialog opening is the external event that requires refreshing the connection list.
       // eslint-disable-next-line react/set-state-in-effect
-      void load();
-      void loadPlugins();
+      void Promise.allSettled([load(), loadPlugins(), loadDiscord()]).then(() => setReady(true));
     }
   }, [open]);
 
@@ -163,38 +173,48 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
       <DialogContent size="lg" className="max-h-[85vh] overflow-auto">
         <DialogTitle className="flex items-center gap-2"><PlugIcon className="size-4" /> {t("Plugins")}</DialogTitle>
         <DialogDescription>{t("Connect built-in services for search and reading. Writing requires a separate approval unless you enable Always allow for that action.")}</DialogDescription>
-        <div className="grid gap-3">
-          {plugins.map((plugin) => <div key={plugin.kind} className="rounded-xl border border-foreground/10 bg-surface-raised p-4">
-            <div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold">{pluginLabels[plugin.kind]}</h3><p className="text-xs text-muted-foreground">{plugin.connected ? t("Connected · search and read") : t("Not connected")}</p></div>
-              <Button type="button" size="sm" variant={plugin.connected ? "outline" : "primary"} onClick={() => void connect(plugin.kind, false)}>{plugin.connected ? t("Reconnect") : t("Connect")}</Button>
-            </div>
-            {plugin.connected ? <div className="mt-3 space-y-3 border-t border-foreground/10 pt-3">
-              {!plugin.writeAccess && plugin.kind !== "github" ? <Button type="button" size="sm" variant="outline" onClick={() => void connect(plugin.kind, true)}>{t("Enable write access")}</Button> : null}
-              {plugin.writeAccess ? <div className="space-y-2">{builtinActions[plugin.kind].map((action) => <label key={action} className="flex items-center justify-between gap-3 text-sm"><span>{t("{action} · Always allow", { action })}</span><input type="checkbox" checked={plugin.alwaysAllow.includes(action)} onChange={(event) => void setAlwaysAllow(plugin.kind, action, event.target.checked)} className="accent-primary" /></label>)}</div> : null}
-              <div><Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void disconnect(plugin.kind)}>{t("Disconnect")}</Button></div>
-            </div> : null}
-          </div>)}
-        </div>
-        <h3 className="text-sm font-semibold">{t("Custom MCP servers")}</h3>
-        <p className="text-xs text-muted-foreground">{t("Connect a streamable HTTP or SSE MCP server. Secrets are encrypted per account.")}</p>
-        <div className="grid gap-3 rounded-lg bg-foreground/5 p-3 ring-1 ring-foreground/10">
-          <div className="grid gap-1.5"><Label htmlFor="mcp-name">{t("Name")}</Label><Input id="mcp-name" value={name} onChange={(event) => setName(event.currentTarget.value)} placeholder={t("My tools")} /></div>
-          <div className="grid gap-1.5"><Label htmlFor="mcp-url">{t("Server URL")}</Label><Input id="mcp-url" value={url} onChange={(event) => setUrl(event.currentTarget.value)} placeholder="https://example.com/mcp" /></div>
-          <div className="grid gap-1.5"><Label htmlFor="mcp-transport">{t("Transport")}</Label><Select id="mcp-transport" value={transport} options={[{ value: "streamable-http", label: "Streamable HTTP" }, { value: "sse", label: "SSE" }]} onValueChange={(value) => setTransport(value as "streamable-http" | "sse")} disabled={busy} /></div>
-          <div className="grid gap-1.5"><Label htmlFor="mcp-secret">{t("Bearer token (optional)")}</Label><Input id="mcp-secret" type="password" value={secret} onChange={(event) => setSecret(event.currentTarget.value)} autoComplete="off" /></div>
-          <div className="grid gap-1.5"><Label htmlFor="mcp-headers">{t("Extra headers JSON (optional)")}</Label><Input id="mcp-headers" value={headers} onChange={(event) => setHeaders(event.currentTarget.value)} placeholder={'{"X-Workspace":"demo"}'} /></div>
-          <Button type="button" onClick={() => void save()} loading={busy} disabled={!name.trim() || !url.trim()} icon={PlugIcon}>{t("Save connection")}</Button>
-        </div>
-        {message ? <p className="text-sm text-secondary-foreground">{message}</p> : null}
-        <div className="space-y-2">
-          {connections.length === 0 ? <p className="text-sm text-muted-foreground">{t("No MCP connections yet.")}</p> : connections.map((connection) => (
-            <div key={connection.id} className="flex items-center gap-2 rounded-lg bg-surface-raised p-3 ring-1 ring-foreground/10">
-              <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{connection.name}</p><p className="truncate font-mono text-xs text-muted-foreground">{connection.url}</p><p className="text-xs text-muted-foreground">{connection.hasSecret ? t("Secret saved") : t("No secret")} · {connection.lastTestAt ? t("tested {time}", { time: connection.lastTestAt }) : t("not tested")}</p></div>
-              <Button type="button" size="xs" variant="outline" icon={WrenchIcon} loading={busy} onClick={() => void test(connection.id)}>{t("Test")}</Button>
-              <Button type="button" size="xs" variant="ghost" icon={TrashIcon} disabled={busy} onClick={() => void remove(connection.id)} aria-label={t("Delete {name}", { name: connection.name })} />
-            </div>
-          ))}
-        </div>
+        {ready ? <>
+          <div className="grid gap-3">
+            {plugins.map((plugin) => <div key={plugin.kind} className="rounded-xl border border-foreground/10 bg-surface-raised p-4">
+              <div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold">{pluginLabels[plugin.kind]}</h3><p className="text-xs text-muted-foreground">{plugin.connected ? t("Connected · search and read") : t("Not connected")}</p></div>
+                <Button type="button" size="sm" variant={plugin.connected ? "outline" : "primary"} onClick={() => void connect(plugin.kind, false)}>{plugin.connected ? t("Reconnect") : t("Connect")}</Button>
+              </div>
+              {plugin.connected ? <div className="mt-3 space-y-3 border-t border-foreground/10 pt-3">
+                {!plugin.writeAccess && plugin.kind !== "github" ? <Button type="button" size="sm" variant="outline" onClick={() => void connect(plugin.kind, true)}>{t("Enable write access")}</Button> : null}
+                {plugin.writeAccess ? <div className="space-y-2">{builtinActions[plugin.kind].map((action) => <label key={action} className="flex items-center justify-between gap-3 text-sm"><span>{t("{action} · Always allow", { action })}</span><input type="checkbox" checked={plugin.alwaysAllow.includes(action)} onChange={(event) => void setAlwaysAllow(plugin.kind, action, event.target.checked)} className="accent-primary" /></label>)}</div> : null}
+                <div><Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void disconnect(plugin.kind)}>{t("Disconnect")}</Button></div>
+              </div> : null}
+            </div>)}
+            <DiscordCard status={discord} onStatusChange={setDiscord} />
+          </div>
+          {message ? <p className="text-sm text-secondary-foreground">{message}</p> : null}
+          <Collapsible open={mcpOpen} onOpenChange={setMcpOpen} className="space-y-3">
+            <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1 text-left text-sm font-semibold hover:bg-foreground/5">
+              <span>{t("Custom MCP servers")}{connections.length > 0 ? ` (${connections.length})` : ""}</span>
+              <ChevronDownIcon className={`size-4 transition-transform ${mcpOpen ? "rotate-180" : ""}`} />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">{t("Connect a streamable HTTP or SSE MCP server. Secrets are encrypted per account.")}</p>
+              <div className="grid gap-3 rounded-lg bg-foreground/5 p-3 ring-1 ring-foreground/10">
+                <div className="grid gap-1.5"><Label htmlFor="mcp-name">{t("Name")}</Label><Input id="mcp-name" value={name} onChange={(event) => setName(event.currentTarget.value)} placeholder={t("My tools")} /></div>
+                <div className="grid gap-1.5"><Label htmlFor="mcp-url">{t("Server URL")}</Label><Input id="mcp-url" value={url} onChange={(event) => setUrl(event.currentTarget.value)} placeholder="https://example.com/mcp" /></div>
+                <div className="grid gap-1.5"><Label htmlFor="mcp-transport">{t("Transport")}</Label><Select id="mcp-transport" value={transport} options={[{ value: "streamable-http", label: "Streamable HTTP" }, { value: "sse", label: "SSE" }]} onValueChange={(value) => setTransport(value as "streamable-http" | "sse")} disabled={busy} /></div>
+                <div className="grid gap-1.5"><Label htmlFor="mcp-secret">{t("Bearer token (optional)")}</Label><Input id="mcp-secret" type="password" value={secret} onChange={(event) => setSecret(event.currentTarget.value)} autoComplete="off" /></div>
+                <div className="grid gap-1.5"><Label htmlFor="mcp-headers">{t("Extra headers JSON (optional)")}</Label><Input id="mcp-headers" value={headers} onChange={(event) => setHeaders(event.currentTarget.value)} placeholder={'{"X-Workspace":"demo"}'} /></div>
+                <Button type="button" onClick={() => void save()} loading={busy} disabled={!name.trim() || !url.trim()} icon={PlugIcon}>{t("Save connection")}</Button>
+              </div>
+              <div className="space-y-2">
+                {connections.length === 0 ? <p className="text-sm text-muted-foreground">{t("No MCP connections yet.")}</p> : connections.map((connection) => (
+                  <div key={connection.id} className="flex items-center gap-2 rounded-lg bg-surface-raised p-3 ring-1 ring-foreground/10">
+                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{connection.name}</p><p className="truncate font-mono text-xs text-muted-foreground">{connection.url}</p><p className="text-xs text-muted-foreground">{connection.hasSecret ? t("Secret saved") : t("No secret")} · {connection.lastTestAt ? t("tested {time}", { time: connection.lastTestAt }) : t("not tested")}</p></div>
+                    <Button type="button" size="xs" variant="outline" icon={WrenchIcon} loading={busy} onClick={() => void test(connection.id)}>{t("Test")}</Button>
+                    <Button type="button" size="xs" variant="ghost" icon={TrashIcon} disabled={busy} onClick={() => void remove(connection.id)} aria-label={t("Delete {name}", { name: connection.name })} />
+                  </div>
+                ))}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </> : <LoadingFallback className="py-8" />}
       </DialogContent>
     </Dialog>
   );

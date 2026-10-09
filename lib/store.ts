@@ -7,6 +7,8 @@ import {
   agentJobs,
   appNotifications,
   browserWorkspaces,
+  discordLinkCodes,
+  discordLinks,
   jobArtifacts,
   jobEvents,
   mcpConnections,
@@ -314,6 +316,8 @@ export async function deleteUserRecords(userId: string) {
   await db.delete(mcpConnections).where(eq(mcpConnections.userId, userId));
   await db.delete(jobArtifacts).where(eq(jobArtifacts.userId, userId));
   await db.delete(appNotifications).where(eq(appNotifications.userId, userId));
+  await db.delete(discordLinkCodes).where(eq(discordLinkCodes.userId, userId));
+  await db.delete(discordLinks).where(eq(discordLinks.userId, userId));
   await db.delete(threadMessages).where(eq(threadMessages.userId, userId));
   await db.delete(userStores).where(eq(userStores.userId, userId));
 }

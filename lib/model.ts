@@ -90,3 +90,17 @@ export function parseRunMode(value: unknown): RunMode {
   }
   return "max";
 }
+
+export const RUN_LEVELS = ["default", "high", "xhigh", "max"] as const;
+export type RunLevel = (typeof RUN_LEVELS)[number];
+
+/** A run mode is a model family (Run or Run+) plus a reasoning level. */
+export function splitRunMode(mode: RunMode): { plus: boolean; level: RunLevel } {
+  return mode.startsWith("plus-")
+    ? { plus: true, level: mode.slice("plus-".length) as RunLevel }
+    : { plus: false, level: mode as RunLevel };
+}
+
+export function joinRunMode(plus: boolean, level: RunLevel): RunMode {
+  return plus ? (`plus-${level}` as RunMode) : level;
+}

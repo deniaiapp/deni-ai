@@ -154,6 +154,35 @@ export const jobArtifacts = sqliteTable(
   ],
 );
 
+// One Discord account per workspace user. The shared bot looks the sender up here, so a
+// message is only ever served for the user who proved ownership with a link code.
+export const discordLinks = sqliteTable(
+  "discord_links",
+  {
+    userId: text("user_id").primaryKey(),
+    discordUserId: text("discord_user_id").notNull(),
+    discordUsername: text("discord_username").notNull(),
+    // Teammate that plain messages go to; null means the first teammate.
+    botId: text("bot_id"),
+    // Language of the web session that created the link; replies are written in it.
+    locale: text("locale").notNull().default("en"),
+    createdAt: createdNow("created_at"),
+  },
+  (table) => [uniqueIndex("discord_links_discord_user_uidx").on(table.discordUserId)],
+);
+
+// Short-lived, single-use codes. Only the hash is stored.
+export const discordLinkCodes = sqliteTable(
+  "discord_link_codes",
+  {
+    codeHash: text("code_hash").primaryKey(),
+    userId: text("user_id").notNull(),
+    locale: text("locale").notNull().default("en"),
+    expiresAt: timestampMs("expires_at").notNull(),
+  },
+  (table) => [index("discord_link_codes_user_idx").on(table.userId)],
+);
+
 export const appNotifications = sqliteTable(
   "app_notifications",
   {

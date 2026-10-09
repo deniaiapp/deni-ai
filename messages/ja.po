@@ -1957,6 +1957,56 @@ msgctxt "JpsXCp"
 msgid "Delete {name}"
 msgstr "{name}を削除"
 
+#: app/components/discord-settings.tsx
+msgctxt "E-Jff3"
+msgid "Commands in the DM: /teammate chooses who you talk to, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
+msgstr "DM のコマンド: /teammate で話す相手を選び、/unlink で連携を解除します。承認が必要な操作には「承認」「拒否」ボタンが表示されます。"
+
+#: app/components/discord-settings.tsx
+msgctxt "p7E89o"
+msgid "Could not create a code. Try again in a moment."
+msgstr "コードを作成できませんでした。しばらくしてからもう一度お試しください。"
+
+#: app/components/discord-settings.tsx
+msgctxt "E4wZU1"
+msgid "Unlink Discord? Messages from that account will no longer reach your teammates."
+msgstr "Discord の連携を解除しますか?そのアカウントからのメッセージはチームメイトに届かなくなります。"
+
+#: app/components/discord-settings.tsx
+msgctxt "aF2GZW"
+msgid "Could not unlink Discord."
+msgstr "Discord の連携を解除できませんでした。"
+
+#: app/components/discord-settings.tsx
+msgctxt "TXM8YF"
+msgid "Linked to {name} · talk to teammates in Discord DMs"
+msgstr "{name} と連携済み · Discord の DM でチームメイトと話せます"
+
+#: app/components/discord-settings.tsx
+msgctxt "tTpLsN"
+msgid "Not linked"
+msgstr "未連携"
+
+#: app/components/discord-settings.tsx
+msgctxt "4PKxPs"
+msgid "Unlink"
+msgstr "連携を解除"
+
+#: app/components/discord-settings.tsx
+msgctxt "FMb851"
+msgid "Create link code"
+msgstr "連携コードを作成"
+
+#: app/components/discord-settings.tsx
+msgctxt "NOt03J"
+msgid "Send this code to the bot in a Discord direct message. It works once and expires in 10 minutes."
+msgstr "このコードを Discord のダイレクトメッセージでボットに送ってください。1回だけ使え、10分で期限切れになります。"
+
+#: app/components/discord-settings.tsx
+msgctxt "-OXqB4"
+msgid "Open the bot on Discord"
+msgstr "Discord でボットを開く"
+
 #: app/components/landing.tsx
 msgctxt "EFTSMc"
 msgid "Main"
@@ -3253,9 +3303,9 @@ msgid "Back to Deni Run home"
 msgstr "Deni Run のホームに戻る"
 
 #: app/privacy/page.tsx
-msgctxt "FDORri"
-msgid "Last updated: October 5, 2026"
-msgstr "最終更新日: 2026年10月5日"
+msgctxt "7Q7uOl"
+msgid "Last updated: October 10, 2026"
+msgstr "最終更新日: 2026年10月10日"
 
 #: app/privacy/page.tsx
 msgctxt "zFZQnj"
@@ -3296,6 +3346,16 @@ msgstr "請求データ。"
 msgctxt "SCuuas"
 msgid "If you subscribe to Pro, Stripe collects your payment details. We store only your plan, Stripe customer and subscription IDs, and usage counters. We never see or store your card number."
 msgstr "Pro を購読すると、Stripe がお支払い情報を収集します。当社が保存するのは、プラン、Stripe の顧客IDおよびサブスクリプションID、使用量カウンターのみです。カード番号を見たり保存したりすることはありません。"
+
+#: app/privacy/page.tsx
+msgctxt "bl_WHw"
+msgid "Discord data."
+msgstr "Discord のデータ。"
+
+#: app/privacy/page.tsx
+msgctxt "Q09cnv"
+msgid "Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, and which teammate you are talking to. The messages you send to the Deni Run bot in a direct message and the replies are saved in that teammate’s conversation in your workspace, like any other message. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent."
+msgstr "アプリの「プラグイン」から Discord を連携した場合に限り、Discord のユーザー ID とユーザー名、連携を作成したセッションの言語、話し相手のチームメイトを保存します。Deni Run のボットにダイレクトメッセージで送ったメッセージと返信は、他のメッセージと同じように、あなたのワークスペースのそのチームメイトの会話に保存されます。読み取るのはボット宛てのダイレクトメッセージだけで、サーバーのチャンネルは読みません。また、ボットは特権インテント「メッセージ内容」を要求しません。"
 
 #: app/privacy/page.tsx
 msgctxt "qorkWG"
@@ -3388,6 +3448,11 @@ msgid "Google and GitHub: sign-in and the plugins you connect. We send them only
 msgstr "Google と GitHub: ログインと、接続したプラグイン。ログインや、メール送信など依頼された操作の実行に必要なリクエストのみを送信します。"
 
 #: app/privacy/page.tsx
+msgctxt "daoL2n"
+msgid "Discord: if you link it, Discord carries the direct messages you and the bot exchange, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
+msgstr "Discord: 連携した場合、あなたとボットがやり取りするダイレクトメッセージは Discord を経由し、Discord 自身の利用規約とプライバシーポリシーが適用されます。Discord に処理されたくない内容は送らないでください。メッセージ内容はあなたへの回答にのみ使い、AI モデルの学習には使いません。"
+
+#: app/privacy/page.tsx
 msgctxt "A54dst"
 msgid "Stripe: billing. Receives your email address and payment details."
 msgstr "Stripe: 請求。メールアドレスとお支払い情報を受け取ります。"
@@ -3436,6 +3501,11 @@ msgstr "6. 保持と削除"
 msgctxt "WSq4pI"
 msgid "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation."
 msgstr "アカウントが有効な間、データを保持します。<link>アカウント</link>から、保存されているアカウントデータのコピーをエクスポートしたり、アカウントを削除したりできます。アカウントを削除すると、サブスクリプションが解約され、ログイン、セッション、会話、チームメイト、ルーティン、スキル、コンピューターの状態、ワークスペースのファイル、スクリーンショットがデータベースとオブジェクトストレージから削除されます。Stripe の請求書など、税務・会計の法令で保存が必要な記録は、法定期間 Stripe が保持します。バックアップとログは通常のローテーションで上書きされます。"
+
+#: app/privacy/page.tsx
+msgctxt "3xC8Ih"
+msgid "You can unlink Discord at any time from Plugins in the app or by sending /unlink to the bot. Unlinking deletes the stored link and any unused link code, and the bot stops answering that Discord account. Deleting your Deni Run account does the same. Messages already delivered in Discord stay in your Discord account until you delete them there."
+msgstr "Discord の連携は、アプリの「プラグイン」またはボットへの /unlink の送信でいつでも解除できます。解除すると、保存されている連携情報と未使用のリンクコードが削除され、ボットはその Discord アカウントに応答しなくなります。Deni Run のアカウントを削除した場合も同様です。すでに Discord に届いたメッセージは、あなたが Discord 上で削除するまで残ります。"
 
 #: app/privacy/page.tsx
 msgctxt "QbGVAA"
@@ -3512,6 +3582,11 @@ msgstr "使用量の上限はプランごとに適用されます。有料のサ
 msgctxt "BARVqC"
 msgid "Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service."
 msgstr "コンピューターのセッション、ファイル、メモリはあなたのアカウント内に限定されます。これらのデータは<link>アカウント</link>からエクスポートまたは削除できます。アカウントを削除すると、このサービスに保存されたログイン情報も削除されます。"
+
+#: app/terms/page.tsx
+msgctxt "BJc6Mq"
+msgid "If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can give your teammates tasks, including approving actions with the Approve button. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink."
+msgstr "Discord アカウントを連携した場合、そのアカウントを誰が使えるかはあなたの責任です。そのアカウントからダイレクトメッセージを送れる人は、チームメイトにタスクを依頼でき、「承認」ボタンで操作を承認することもできます。Discord の利用には Discord 自身の利用規約とプライバシーポリシーが適用されます。連携は「プラグイン」または /unlink でいつでも解除できます。"
 
 #: app/terms/page.tsx
 msgctxt "PR34Xj"
