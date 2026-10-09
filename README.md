@@ -175,7 +175,7 @@ Run the scheduler on exactly one dedicated worker instance with `DENI_SCHEDULER=
 Teammates can be reached from Discord direct messages through one shared bot.
 
 1. In the [Discord Developer Portal](https://discord.com/developers/applications) create an application and add a bot. No privileged intents are needed: direct messages carry their text without Message Content access.
-2. Set `DISCORD_BOT_TOKEN` (and optionally `DISCORD_INVITE_URL`, an install link people can open). The bot connects from the instance that runs the scheduler (`DENI_SCHEDULER=true`, or `pnpm worker`). Set the token on web instances too, or the settings card stays hidden.
+2. Set `DISCORD_BOT_TOKEN` and `DISCORD_INVITE_URL`, the install link shown on the Discord card (in the Portal open **Installation**, enable **User Install**, and copy the **Install Link**; without it users cannot find the bot). The bot connects from the instance that runs the scheduler (`DENI_SCHEDULER=true`, or `pnpm worker`). Set the token on web instances too, or the settings card stays hidden.
 3. Run `pnpm db:migrate` to create the `discord_links` and `discord_link_codes` tables.
 4. In the app open **Plugins**, choose **Create link code** on the Discord card, and send the code to the bot in a direct message (or use `/link`). The code works once and expires after 10 minutes.
 

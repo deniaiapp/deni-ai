@@ -1998,14 +1998,29 @@ msgid "Create link code"
 msgstr "連携コードを作成"
 
 #: app/components/discord-settings.tsx
-msgctxt "NOt03J"
-msgid "Send this code to the bot in a Discord direct message. It works once and expires in 10 minutes."
-msgstr "このコードを Discord のダイレクトメッセージでボットに送ってください。1回だけ使え、10分で期限切れになります。"
+msgctxt "IuW7u3"
+msgid "Add the bot to your Discord account:"
+msgstr "Discord アカウントにボットを追加:"
 
 #: app/components/discord-settings.tsx
 msgctxt "-OXqB4"
 msgid "Open the bot on Discord"
 msgstr "Discord でボットを開く"
+
+#: app/components/discord-settings.tsx
+msgctxt "531YPO"
+msgid "Create a link code with the button above."
+msgstr "上のボタンでリンクコードを作成します。"
+
+#: app/components/discord-settings.tsx
+msgctxt "RzX1b1"
+msgid "Send the code to the bot in a direct message."
+msgstr "そのコードをボットにダイレクトメッセージで送ります。"
+
+#: app/components/discord-settings.tsx
+msgctxt "NOt03J"
+msgid "Send this code to the bot in a Discord direct message. It works once and expires in 10 minutes."
+msgstr "このコードを Discord のダイレクトメッセージでボットに送ってください。1回だけ使え、10分で期限切れになります。"
 
 #: app/components/landing.tsx
 msgctxt "EFTSMc"

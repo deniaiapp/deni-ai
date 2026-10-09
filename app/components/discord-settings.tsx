@@ -90,15 +90,24 @@ export function DiscordCard({ status, onStatusChange }: { status: DiscordStatus 
           <Button type="button" size="sm" variant="primary" loading={busy} onClick={() => void createCode()}>{t("Create link code")}</Button>
         )}
       </div>
+      {!status.link ? (
+        <ol className="mt-3 list-decimal space-y-1 border-t border-foreground/10 pl-5 pt-3 text-xs text-muted-foreground">
+          {status.inviteUrl ? (
+            <li>
+              {t("Add the bot to your Discord account:")}{" "}
+              <a className="text-foreground underline" href={status.inviteUrl} target="_blank" rel="noreferrer">{t("Open the bot on Discord")}</a>
+            </li>
+          ) : null}
+          <li>{t("Create a link code with the button above.")}</li>
+          <li>{t("Send the code to the bot in a direct message.")}</li>
+        </ol>
+      ) : null}
       {!status.link && issued ? (
         <div className="mt-3 space-y-2 border-t border-foreground/10 pt-3 text-sm">
           <p className="font-mono text-2xl font-semibold tracking-widest">{issued.code}</p>
           <p className="text-xs text-muted-foreground">
             {t("Send this code to the bot in a Discord direct message. It works once and expires in 10 minutes.")}
           </p>
-          {status.inviteUrl ? (
-            <a className="text-xs underline" href={status.inviteUrl} target="_blank" rel="noreferrer">{t("Open the bot on Discord")}</a>
-          ) : null}
         </div>
       ) : null}
       {message ? <p className="mt-2 text-sm text-secondary-foreground">{message}</p> : null}
