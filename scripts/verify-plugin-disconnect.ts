@@ -30,6 +30,7 @@ async function main() {
   process.env.LOCAL_DB_PATH = path.join(tempDir, "test.sqlite");
   process.env.BETTER_AUTH_SECRET ||= "verify-plugin-secret-verify-plugin-secret";
   process.env.BETTER_AUTH_URL ||= "http://localhost:3000";
+  process.env.DISABLED_PLUGINS = "";
   process.env.GITHUB_CLIENT_ID = "gh-client";
   process.env.GITHUB_CLIENT_SECRET = "gh-secret";
 

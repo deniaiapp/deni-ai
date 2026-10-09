@@ -15,13 +15,17 @@ export const scopes = {
   drive: { read: "https://www.googleapis.com/auth/drive.readonly", write: "https://www.googleapis.com/auth/drive.file" },
   github: { read: "repo", write: "repo" },
 } as const;
+// Temporarily switched off: hidden from Plugins and refused at runtime. Set DISABLED_PLUGINS
+// (comma separated, empty for none) to override; remove "gmail,drive" below to re-enable.
+const disabledPlugins = () => new Set((process.env.DISABLED_PLUGINS ?? "gmail,drive").split(",").map((item) => item.trim()).filter(Boolean));
 const provider = (kind: PluginKind) => kind === "github" ? "github" : "google";
 const actions: Record<PluginKind, WriteAction[]> = { gmail: ["send"], drive: ["create", "update"], github: ["createIssue", "createPR", "comment"] };
 
 export async function pluginStatus(userId: string) {
   const rows = await db.select({ id: account.id, providerId: account.providerId, scope: account.scope }).from(account).where(eq(account.userId, userId));
   const store = await readStore(userId);
-  return pluginKinds.map((kind) => {
+  const disabled = disabledPlugins();
+  return pluginKinds.filter((kind) => !disabled.has(kind)).map((kind) => {
     const row = rows.find((item) => item.providerId === provider(kind) && item.scope?.split(/[,\s]+/).includes(scopes[kind].read));
     const granted = row?.scope?.split(/[,\s]+/).includes(scopes[kind].write) ?? false;
     return { kind, connected: Boolean(row), writeAccess: granted, alwaysAllow: actions[kind].filter((action) => store.pluginAlwaysAllow?.[`${kind}:${action}`]) };
@@ -135,6 +139,7 @@ async function api(userId: string, kind: PluginKind, url: URL, options?: { metho
 
 export type PluginOperation = "search" | "read" | WriteAction;
 export async function runPlugin(userId: string, kind: PluginKind, action: PluginOperation, input: { query?: string; id?: string; repo?: string; title?: string; body?: string; to?: string; subject?: string; head?: string; base?: string; mimeType?: string }) {
+  if (disabledPlugins().has(kind)) throw new Error(`${kind} is temporarily disabled.`);
   if (Object.values(input).some((value) => value && value.length > 20_000)) throw new Error("Input too large");
   if (action !== "search" && action !== "read" && !actions[kind].includes(action)) throw new Error("Unsupported plugin operation");
   if (kind === "gmail") {
