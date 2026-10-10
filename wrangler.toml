@@ -3,6 +3,13 @@ main = "worker.ts"
 compatibility_date = "2026-09-01"
 compatibility_flags = ["nodejs_compat"]
 
+# Both zones must be on this Cloudflare account. Custom domains create the DNS
+# record + certificate themselves; an existing record for the host blocks it.
+routes = [
+  { pattern = "flixa-api.deniai.app", custom_domain = true },
+  { pattern = "api.flixa.engineer", custom_domain = true },
+]
+
 [limits]
 # Upstream waits do not count; this only covers JSON parsing / stream conversion.
 cpu_ms = 60000
@@ -13,7 +20,7 @@ enabled = true
 # Create with: bunx wrangler hyperdrive create flixa-deni --connection-string="postgres://..."
 [[hyperdrive]]
 binding = "DENI_DB"
-id = "<hyperdrive-id>"
+id = "8f49a4ef24ca4fd8ae27a4b57e6130ab"
 
 # Plain vars. Secrets (ANTHROPIC_API_KEY, OPENROUTER_API_KEY, ADMIN_PASSWORD, ...)
 # go in via `bunx wrangler secret put <NAME>`.
