@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`server.ts` is the Bun entrypoint and wires Hono middleware plus the `/v1` routers. Route handlers live in `routes/v1/` (`agent.ts`, `deni.ts`, `models.ts`). Shared request guards live in `middleware/`. Domain logic is grouped under `utils/`: `utils/agent/` for model routing and upstream clients, `utils/deni/` for auth, billing, usage, and DB access, and `utils/flixa-sdk.ts` for the local client.
+`app.ts` builds the Hono app (middleware plus the `/v1` routers). `server.ts` is the Bun entrypoint and `worker.ts` the Cloudflare Workers entrypoint; both only wrap `app.ts`. Read config via `process.env` (never `Bun.env`) so code runs on both runtimes. Route handlers live in `routes/v1/` (`agent.ts`, `deni.ts`, `models.ts`). Shared request guards live in `middleware/`. Domain logic is grouped under `utils/`: `utils/agent/` for model routing and upstream clients, `utils/deni/` for auth, billing, usage, and DB access, and `utils/flixa-sdk.ts` for the local client.
 
 There is no dedicated `src/` folder; keep new modules close to the feature they support. Follow the existing split: route layer in `routes/`, reusable logic in `utils/`, cross-cutting concerns in `middleware/`.
 
@@ -13,6 +13,7 @@ Install dependencies with `bun install`.
 - `bun --env-file=.env.production --watch server.ts`: run against production-style env vars.
 - `bun build server.ts --outdir ./dist --target bun`: create a build output in `dist/`.
 - `bun run typecheck`: run TypeScript checks with `tsc --noEmit`.
+- `bun run dev:worker` / `bun run deploy:worker`: run on local workerd / deploy to Cloudflare Workers (`wrangler.toml`). DB goes through the `DENI_DB` Hyperdrive binding; secrets via `bunx wrangler secret put <NAME>`.
 - `bunx oxlint .` and `bunx oxfmt . --check`: optional lint/format validation using installed tools.
 
 ## Coding Style & Naming Conventions

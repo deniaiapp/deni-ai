@@ -27,7 +27,7 @@ const WEAK_PASSWORDS = new Set(
  * Empty / unset = allow all.
  */
 export function getAdminIpAllowlist(): string[] {
-  const raw = Bun.env.ADMIN_IP_ALLOWLIST?.trim();
+  const raw = process.env.ADMIN_IP_ALLOWLIST?.trim();
   if (!raw) return [];
   return raw
     .split(/[\s,]+/)
@@ -126,7 +126,7 @@ export function warnAdminConfigAtStartup(): void {
     return;
   }
 
-  const password = Bun.env.ADMIN_PASSWORD;
+  const password = process.env.ADMIN_PASSWORD;
   if (!password) {
     console.warn(
       "[AdminSecurity] ADMIN_PASSWORD unset — /admin is disabled (503).",
@@ -147,7 +147,7 @@ export function warnAdminConfigAtStartup(): void {
   }
 
   if (
-    Bun.env.ADMIN_COOKIE_SECURE !== "true" &&
+    process.env.ADMIN_COOKIE_SECURE !== "true" &&
     process.env.NODE_ENV === "production"
   ) {
     console.warn(

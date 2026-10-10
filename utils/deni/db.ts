@@ -1,9 +1,10 @@
 import { Pool } from 'pg';
+import { getRequestRuntime } from '../runtime';
 
 let pool: Pool | null = null;
 
-function getTimeoutMs(envKey: string, fallback: number): number {
-  const rawValue = Bun.env[envKey];
+function getPositiveIntEnv(envKey: string, fallback: number): number {
+  const rawValue = process.env[envKey];
   if (!rawValue) {
     return fallback;
   }
@@ -31,24 +32,37 @@ function normalizeConnectionString(connectionString: string): string {
  * Get or create a PostgreSQL connection pool for Deni AI database
  */
 export function getDeniPool(): Pool {
-  if (!pool) {
-    const connectionString = Bun.env.DENI_DATABASE_URL;
-    const disableTlsVerification = Bun.env.DENI_DATABASE_SSL_NO_VERIFY === 'true';
-    if (!connectionString) {
-      throw new Error('DENI_DATABASE_URL environment variable is not set');
-    }
-
-    pool = new Pool({
-      connectionString: normalizeConnectionString(connectionString),
-      ssl: disableTlsVerification ? { rejectUnauthorized: false } : { rejectUnauthorized: true },
-      max: 10,
-      idleTimeoutMillis: 30000,
-      connectionTimeoutMillis: getTimeoutMs('DENI_DATABASE_CONNECTION_TIMEOUT_MS', 5000),
-      query_timeout: getTimeoutMs('DENI_DATABASE_QUERY_TIMEOUT_MS', 5000),
-      statement_timeout: getTimeoutMs('DENI_DATABASE_STATEMENT_TIMEOUT_MS', 5000),
-    });
+  const runtime = getRequestRuntime();
+  if (runtime) {
+    runtime.pool ??= createPool();
+    return runtime.pool;
   }
+  pool ??= createPool();
   return pool;
+}
+
+function createPool(): Pool {
+  const connectionString = process.env.DENI_DATABASE_URL;
+  const disableTlsVerification = process.env.DENI_DATABASE_SSL_NO_VERIFY === 'true';
+  // Hyperdrive terminates TLS to the origin itself; its local endpoint is plaintext.
+  const disableTls = process.env.DENI_DATABASE_SSL_DISABLED === 'true';
+  if (!connectionString) {
+    throw new Error('DENI_DATABASE_URL environment variable is not set');
+  }
+
+  return new Pool({
+    connectionString: normalizeConnectionString(connectionString),
+    ssl: disableTls
+      ? false
+      : disableTlsVerification
+        ? { rejectUnauthorized: false }
+        : { rejectUnauthorized: true },
+    max: getPositiveIntEnv('DENI_DATABASE_POOL_MAX', 10),
+    idleTimeoutMillis: getPositiveIntEnv('DENI_DATABASE_IDLE_TIMEOUT_MS', 30000),
+    connectionTimeoutMillis: getPositiveIntEnv('DENI_DATABASE_CONNECTION_TIMEOUT_MS', 5000),
+    query_timeout: getPositiveIntEnv('DENI_DATABASE_QUERY_TIMEOUT_MS', 5000),
+    statement_timeout: getPositiveIntEnv('DENI_DATABASE_STATEMENT_TIMEOUT_MS', 5000),
+  });
 }
 
 /**

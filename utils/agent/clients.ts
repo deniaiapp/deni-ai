@@ -4,15 +4,15 @@ import type { ClientResult } from './types';
 
 // OpenRouter SDK client
 export const openrouterClient = new OpenRouter({
-  apiKey: Bun.env.OPENROUTER_API_KEY || '',
+  apiKey: process.env.OPENROUTER_API_KEY || '',
   httpReferer: "https://flixa.deniai.app",
   appTitle: "Deni AI Flixa"
 });
 
 // Voids.top (OpenAI compatible) client
 export const voidsClient = new OpenAI({
-  baseURL: Bun.env.OPENAI_COMPAT_BASE_URL || 'https://capi.voids.top/v2',
-  apiKey: Bun.env.OPENAI_COMPAT_API_KEY || 'a',
+  baseURL: process.env.OPENAI_COMPAT_BASE_URL || 'https://capi.voids.top/v2',
+  apiKey: process.env.OPENAI_COMPAT_API_KEY || 'a',
 });
 
 export function isAnthropicModel(model: string): boolean {
@@ -25,7 +25,7 @@ export function getClient(model: string): ClientResult {
   const useOpenRouter = model.includes('/');
 
   if (useOpenRouter) {
-    if (!Bun.env.OPENROUTER_API_KEY) {
+    if (!process.env.OPENROUTER_API_KEY) {
 
       return { error: 'OPENROUTER_API_KEY is required for OpenRouter models' };
     }

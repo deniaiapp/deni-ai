@@ -9,7 +9,7 @@ export const GUEST_ACCOUNT_ERROR_MESSAGE =
   'Guest accounts are not supported. Please sign in with a permanent account.';
 
 function getCacheTtlMs(): number {
-  const raw = Bun.env.FLIXA_AUTH_CACHE_TTL_MS;
+  const raw = process.env.FLIXA_AUTH_CACHE_TTL_MS;
   if (!raw) return 60_000;
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 60_000;

@@ -25,7 +25,7 @@ interface UsageWeights {
 }
 
 function getWeight(envKey: string, fallback: number): number {
-  const raw = Bun.env[envKey];
+  const raw = process.env[envKey];
   if (!raw) return fallback;
   const parsed = Number.parseFloat(raw);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;

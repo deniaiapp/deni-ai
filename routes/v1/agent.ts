@@ -69,7 +69,7 @@ router.get("/agent", (c) => {
 });
 
 const anthropicFailoverClient = new Anthropic({
-  apiKey: Bun.env.ANTHROPIC_API_KEY || "",
+  apiKey: process.env.ANTHROPIC_API_KEY || "",
 });
 
 const OPENROUTER_MESSAGES_FAILOVER_TTL_MS = 60 * 60 * 1000;
@@ -84,7 +84,7 @@ const openRouterMessagesFailoverCache = new Map<
 // Resolved once at startup so the hot path can skip all debug work
 // (summaries, extra SSE JSON.parse passes) with a single boolean check.
 const AGENT_DEBUG_LOGS_ENABLED = (() => {
-  const value = Bun.env.FLIXA_AGENT_DEBUG_LOGS?.toLowerCase();
+  const value = process.env.FLIXA_AGENT_DEBUG_LOGS?.toLowerCase();
   return value === "1" || value === "true" || value === "yes";
 })();
 
@@ -332,7 +332,7 @@ function getResponsesBaseUrl(
     return "https://openrouter.ai/api/v1/responses";
   }
 
-  return `${Bun.env.OPENAI_COMPAT_BASE_URL || "https://capi.voids.top/v2"}/responses`;
+  return `${process.env.OPENAI_COMPAT_BASE_URL || "https://capi.voids.top/v2"}/responses`;
 }
 
 function getResponsesHeaders(
@@ -344,7 +344,7 @@ function getResponsesHeaders(
   if (clientResult.type === "openrouter") {
     return {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       "HTTP-Referer": "https://flixa.deniai.app",
       "X-OpenRouter-Title": "Deni AI Flixa",
       "X-OpenRouter-Categories": "cli-agent,ide-extension",
@@ -354,7 +354,7 @@ function getResponsesHeaders(
 
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${Bun.env.OPENAI_COMPAT_API_KEY || "a"}`,
+    Authorization: `Bearer ${process.env.OPENAI_COMPAT_API_KEY || "a"}`,
   };
 }
 
@@ -369,7 +369,7 @@ function getOpenRouterProviderRouting(
 }
 
 function hasAnthropicFailoverKey(): boolean {
-  return Boolean(Bun.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
 function shouldFailoverToAnthropic(status: number, model: string): boolean {
@@ -425,7 +425,7 @@ function toAnthropicModelName(model: string): string {
 function getAnthropicHeaders(requestHeaders: Headers): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "x-api-key": Bun.env.ANTHROPIC_API_KEY || "",
+    "x-api-key": process.env.ANTHROPIC_API_KEY || "",
     "anthropic-version":
       requestHeaders.get("anthropic-version") || "2023-06-01",
   };
@@ -2066,7 +2066,7 @@ router.post(
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
+                Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
                 "HTTP-Referer": "https://flixa.deniai.app",
                 "X-OpenRouter-Title": "Deni AI Flixa",
                 "X-OpenRouter-Categories": "cli-agent,ide-extension",
@@ -2774,7 +2774,7 @@ router.post(
       ) as Anthropic.Messages.MessageCreateParams;
       const { model, stream } = body;
 
-      if (!Bun.env.OPENROUTER_API_KEY) {
+      if (!process.env.OPENROUTER_API_KEY) {
         await releaseReservedUsage(auth);
         return c.json(
           {
@@ -2829,7 +2829,7 @@ router.post(
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
+            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
             "HTTP-Referer": "https://flixa.deniai.app",
             "X-OpenRouter-Title": "Deni AI Flixa",
             "X-OpenRouter-Categories": "cli-agent,ide-extension",

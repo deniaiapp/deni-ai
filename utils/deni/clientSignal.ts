@@ -32,7 +32,7 @@ function lower(value: string): string {
  * Set FLIXA_REQUIRE_CLIENT_SIGNAL=false to disable (e.g. local debugging).
  */
 export function isClientSignalEnforcementEnabled(): boolean {
-  const raw = Bun.env.FLIXA_REQUIRE_CLIENT_SIGNAL?.toLowerCase();
+  const raw = process.env.FLIXA_REQUIRE_CLIENT_SIGNAL?.toLowerCase();
   if (raw === "0" || raw === "false" || raw === "no" || raw === "off") {
     return false;
   }
@@ -45,7 +45,7 @@ export function isClientSignalEnforcementEnabled(): boolean {
  * When set, `x-flixa-signal: <secret>` is accepted as a Flixa signal.
  */
 function hasFlixaSignalSecret(headers: Headers): boolean {
-  const expected = Bun.env.FLIXA_CLIENT_SIGNAL_SECRET;
+  const expected = process.env.FLIXA_CLIENT_SIGNAL_SECRET;
   if (!expected) return false;
 
   const provided = headerValue(headers, "x-flixa-signal");

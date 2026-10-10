@@ -6,11 +6,11 @@ interface PromptCacheControl {
 }
 
 function getPromptCacheTtl(): PromptCacheTtl {
-  return Bun.env.FLIXA_PROMPT_CACHE_TTL === "1h" ? "1h" : "5m";
+  return process.env.FLIXA_PROMPT_CACHE_TTL === "1h" ? "1h" : "5m";
 }
 
 export function isPromptCachingEnabled(): boolean {
-  const value = Bun.env.FLIXA_PROMPT_CACHE?.toLowerCase();
+  const value = process.env.FLIXA_PROMPT_CACHE?.toLowerCase();
   return value !== "0" && value !== "false" && value !== "off";
 }
 
