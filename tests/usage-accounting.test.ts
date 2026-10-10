@@ -17,6 +17,7 @@ let app: Hono;
 let activeAuth: AgentAuthContext;
 const oldAsync = Bun.env.FLIXA_USAGE_FINALIZE_ASYNC;
 const oldProviderKey = Bun.env.OPENROUTER_API_KEY;
+const oldDeniKey = Bun.env.DENI_AI_API_KEY;
 
 beforeAll(async () => {
   await db.exec(`CREATE TABLE usage_quota (
@@ -41,6 +42,7 @@ beforeAll(async () => {
 beforeEach(async () => {
   Bun.env.FLIXA_USAGE_FINALIZE_ASYNC = "false";
   Bun.env.OPENROUTER_API_KEY = "local-test-key";
+  Bun.env.DENI_AI_API_KEY = "deni_local_test_key";
   await db.exec("TRUNCATE usage_quota, flixa_usage_reservation");
 });
 
@@ -51,6 +53,8 @@ afterAll(async () => {
   else Bun.env.FLIXA_USAGE_FINALIZE_ASYNC = oldAsync;
   if (oldProviderKey === undefined) delete Bun.env.OPENROUTER_API_KEY;
   else Bun.env.OPENROUTER_API_KEY = oldProviderKey;
+  if (oldDeniKey === undefined) delete Bun.env.DENI_AI_API_KEY;
+  else Bun.env.DENI_AI_API_KEY = oldDeniKey;
   await db.close();
 });
 

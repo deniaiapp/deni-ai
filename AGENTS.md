@@ -41,7 +41,7 @@ PRs should include:
 - sample requests/responses for API behavior changes
 
 ## Security & Configuration Tips
-Do not commit real API keys or database URLs. Keep secrets in `.env` or deployment-managed env vars such as `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, and `DENI_DATABASE_URL`.
+Do not commit real API keys or database URLs. Keep secrets in `.env` or deployment-managed env vars such as `DENI_AI_API_KEY` (OpenAI models via Deni AI API), `OPENROUTER_API_KEY`, `ANTHROPIC_API_KEY`, and `DENI_DATABASE_URL`.
 
 Admin UI (`/admin/*`) uses a **cookie session** via `/admin/login` (`ADMIN_USER` / `ADMIN_PASSWORD`). Do not rely on browser HTTP Basic Auth dialogs for day-to-day admin access — Chrome often caches bad Basic credentials and then spins forever on 401 when revisiting later. Scripts may still send `Authorization: Basic …` unless `ADMIN_ALLOW_BASIC=false`.
 

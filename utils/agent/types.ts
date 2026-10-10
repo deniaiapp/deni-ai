@@ -115,4 +115,5 @@ export interface ResponsesCompactRequest {
 export type ClientResult =
   | { type: "openrouter"; client: OpenRouter; providerName: string }
   | { type: "openai"; client: OpenAI; providerName: string }
+  | { type: "deni"; client: OpenAI; providerName: string }
   | { error: string };

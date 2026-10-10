@@ -161,6 +161,51 @@ export function normalizeResponsesInputItems(input: unknown): unknown {
   });
 }
 
+function responsesContentPartToChat(part: unknown): unknown {
+  if (!isRecord(part)) {
+    return part;
+  }
+
+  if (
+    (part.type === 'input_text' || part.type === 'output_text') &&
+    typeof part.text === 'string'
+  ) {
+    return { type: 'text', text: part.text };
+  }
+
+  if (part.type === 'input_image' && typeof part.image_url === 'string') {
+    return {
+      type: 'image_url',
+      image_url: {
+        url: part.image_url,
+        ...(typeof part.detail === 'string' ? { detail: part.detail } : {}),
+      },
+    };
+  }
+
+  return part;
+}
+
+/**
+ * Rewrite Responses message content parts (input_text, output_text,
+ * input_image) to their Chat Completions equivalents. For gateways that
+ * accept a Responses request but forward message content unchanged to a
+ * Chat Completions upstream.
+ */
+export function convertResponsesInputContentToChat(input: unknown): unknown {
+  if (!Array.isArray(input)) {
+    return input;
+  }
+
+  return input.map((item) => {
+    if (!isRecord(item) || !Array.isArray(item.content)) {
+      return item;
+    }
+
+    return { ...item, content: item.content.map(responsesContentPartToChat) };
+  });
+}
+
 function chatContentToResponsesInputContent(content: unknown): unknown {
   if (typeof content === 'string') {
     return content;
