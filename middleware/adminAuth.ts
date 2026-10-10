@@ -35,15 +35,15 @@ export const ADMIN_SESSION_COOKIE = "flixa_admin_session";
 const COOKIE_PATH = "/admin";
 
 function adminUsername(): string {
-  return Bun.env.ADMIN_USER?.trim() || "admin";
+  return process.env.ADMIN_USER?.trim() || "admin";
 }
 
 function adminPassword(): string | undefined {
-  return Bun.env.ADMIN_PASSWORD;
+  return process.env.ADMIN_PASSWORD;
 }
 
 function sessionDays(): number {
-  const raw = Bun.env.ADMIN_SESSION_DAYS;
+  const raw = process.env.ADMIN_SESSION_DAYS;
   if (!raw) return 7;
   const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n) || n < 1) return 7;
@@ -60,7 +60,7 @@ function sessionSecret(): string {
 }
 
 function isBasicAuthAllowed(): boolean {
-  const raw = Bun.env.ADMIN_ALLOW_BASIC?.toLowerCase();
+  const raw = process.env.ADMIN_ALLOW_BASIC?.toLowerCase();
   if (raw === "0" || raw === "false" || raw === "no" || raw === "off") {
     return false;
   }
@@ -78,10 +78,10 @@ function requestIsHttps(c: Context): boolean {
     ?.trim()
     .toLowerCase();
   if (proto === "https") return true;
-  if (Bun.env.ADMIN_COOKIE_SECURE === "true") return true;
+  if (process.env.ADMIN_COOKIE_SECURE === "true") return true;
   if (
     process.env.NODE_ENV === "production" &&
-    Bun.env.ADMIN_COOKIE_SECURE !== "false"
+    process.env.ADMIN_COOKIE_SECURE !== "false"
   ) {
     // Prefer Secure in production unless explicitly disabled for local-prod tests.
     return true;
@@ -314,7 +314,7 @@ export const adminAuth: MiddlewareHandler = async (c: Context, next: Next) => {
   if (isBasicAuthAllowed()) {
     const basic = parseBasicAuthHeader(c.req.header("Authorization"));
     if (basic) {
-      const limited = checkAdminLoginRateLimit(c);
+      const limited = await checkAdminLoginRateLimit(c);
       if (limited) return limited;
       const ok = await verifyAdminCredentials(basic.username, basic.password);
       if (ok) {

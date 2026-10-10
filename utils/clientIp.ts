@@ -10,7 +10,7 @@ function isTrustedProxy(ip: string): boolean {
   const family = isIP(ip);
   if (!family) return false;
   const list = new BlockList();
-  for (const entry of (Bun.env.TRUSTED_PROXY_IPS ?? "").split(",")) {
+  for (const entry of (process.env.TRUSTED_PROXY_IPS ?? "").split(",")) {
     const [address, prefix] = entry.trim().split("/");
     const normalized = normalizeIp(address);
     const version = isIP(normalized);
@@ -32,7 +32,7 @@ export function getClientIp(headers: Headers, peerAddress = "unknown"): string {
   if (!isIP(peer)) return "unknown";
   if (!isTrustedProxy(peer)) return peer;
 
-  const header = Bun.env.CLIENT_IP_HEADER?.trim().toLowerCase() || "x-forwarded-for";
+  const header = process.env.CLIENT_IP_HEADER?.trim().toLowerCase() || "x-forwarded-for";
   if (!["x-forwarded-for", "x-real-ip", "cf-connecting-ip"].includes(header)) return peer;
   const raw = headers.get(header);
   if (!raw) return peer;
@@ -50,7 +50,12 @@ export function getClientIp(headers: Headers, peerAddress = "unknown"): string {
 }
 
 export function getRequestClientIp(c: Context): string {
-  const server = c.env?.server as Bun.Server<undefined> | undefined;
+  // Cloudflare sets cf-connecting-ip itself and strips any client-supplied value.
+  if (c.env?.runtime === "workers") {
+    const ip = normalizeIp(c.req.header("cf-connecting-ip") ?? "");
+    return isIP(ip) ? ip : "unknown";
+  }
+  const server = c.env?.server as { requestIP(req: Request): { address: string } | null } | undefined;
   const peer = server?.requestIP(c.req.raw)?.address;
   return getClientIp(c.req.raw.headers, peer);
 }

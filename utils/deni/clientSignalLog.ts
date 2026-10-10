@@ -51,7 +51,7 @@ const entries: ClientSignalLogEntry[] = [];
  * Error/blocking outcomes continue to be logged.
  */
 function isAllowedConsoleLogEnabled(): boolean {
-  const raw = Bun.env.CLIENT_SIGNAL_ALLOWED_LOG_ENABLED?.trim().toLowerCase();
+  const raw = process.env.CLIENT_SIGNAL_ALLOWED_LOG_ENABLED?.trim().toLowerCase();
   return !(raw === "0" || raw === "false" || raw === "no" || raw === "off");
 }
 
@@ -63,7 +63,7 @@ function shouldConsoleLog(entry: ClientSignalLogEntry): boolean {
 }
 
 function maxEntries(): number {
-  const raw = Bun.env.CLIENT_SIGNAL_LOG_MAX;
+  const raw = process.env.CLIENT_SIGNAL_LOG_MAX;
   if (!raw) return DEFAULT_MAX_ENTRIES;
   const n = Number.parseInt(raw, 10);
   if (!Number.isFinite(n) || n < 1) return DEFAULT_MAX_ENTRIES;

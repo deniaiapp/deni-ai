@@ -18,7 +18,7 @@ export type ContextManagementEntry = {
 };
 
 export function isChatViaResponsesEnabled(): boolean {
-  const value = Bun.env.FLIXA_CHAT_VIA_RESPONSES?.toLowerCase();
+  const value = process.env.FLIXA_CHAT_VIA_RESPONSES?.toLowerCase();
   // Default on: OpenAI recommends Responses over Chat Completions for agents.
   return value !== "0" && value !== "false" && value !== "off";
 }

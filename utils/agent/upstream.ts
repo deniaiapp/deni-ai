@@ -21,7 +21,7 @@ function parseTimeoutMs(raw: string | undefined): number {
 }
 
 export function getUpstreamTimeoutMs(): number {
-  return parseTimeoutMs(Bun.env.FLIXA_UPSTREAM_TIMEOUT_MS);
+  return parseTimeoutMs(process.env.FLIXA_UPSTREAM_TIMEOUT_MS);
 }
 
 export type UpstreamTimeout = {

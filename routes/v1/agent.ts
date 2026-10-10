@@ -44,6 +44,7 @@ import {
   rewriteCollaborationNamesInResponsesPayload,
   rewriteCollaborationNamesInSseEventBlock,
   sanitizeReservedCollaborationInResponsesRequest,
+  toDeniResponsesRequest,
   type ResponsesProviderKind,
 } from "../../utils/agent";
 import {
@@ -69,7 +70,7 @@ router.get("/agent", (c) => {
 });
 
 const anthropicFailoverClient = new Anthropic({
-  apiKey: Bun.env.ANTHROPIC_API_KEY || "",
+  apiKey: process.env.ANTHROPIC_API_KEY || "",
 });
 
 const OPENROUTER_MESSAGES_FAILOVER_TTL_MS = 60 * 60 * 1000;
@@ -84,7 +85,7 @@ const openRouterMessagesFailoverCache = new Map<
 // Resolved once at startup so the hot path can skip all debug work
 // (summaries, extra SSE JSON.parse passes) with a single boolean check.
 const AGENT_DEBUG_LOGS_ENABLED = (() => {
-  const value = Bun.env.FLIXA_AGENT_DEBUG_LOGS?.toLowerCase();
+  const value = process.env.FLIXA_AGENT_DEBUG_LOGS?.toLowerCase();
   return value === "1" || value === "true" || value === "yes";
 })();
 
@@ -322,29 +323,26 @@ function collectAnthropicUsageFromSseEvent(
   return usageSnapshot;
 }
 
-function getResponsesBaseUrl(
-  clientResult: Extract<
-    ReturnType<typeof getClient>,
-    { type: "openrouter" | "openai" }
-  >,
-): string {
+type ResponsesClientResult = Extract<
+  ReturnType<typeof getClient>,
+  { type: "openrouter" | "openai" | "deni" }
+>;
+
+function getResponsesBaseUrl(clientResult: ResponsesClientResult): string {
   if (clientResult.type === "openrouter") {
     return "https://openrouter.ai/api/v1/responses";
   }
 
-  return `${Bun.env.OPENAI_COMPAT_BASE_URL || "https://capi.voids.top/v2"}/responses`;
+  return `${clientResult.client.baseURL}/responses`;
 }
 
 function getResponsesHeaders(
-  clientResult: Extract<
-    ReturnType<typeof getClient>,
-    { type: "openrouter" | "openai" }
-  >,
+  clientResult: ResponsesClientResult,
 ): Record<string, string> {
   if (clientResult.type === "openrouter") {
     return {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
       "HTTP-Referer": "https://flixa.deniai.app",
       "X-OpenRouter-Title": "Deni AI Flixa",
       "X-OpenRouter-Categories": "cli-agent,ide-extension",
@@ -354,7 +352,7 @@ function getResponsesHeaders(
 
   return {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${Bun.env.OPENAI_COMPAT_API_KEY || "a"}`,
+    Authorization: `Bearer ${clientResult.client.apiKey ?? ""}`,
   };
 }
 
@@ -369,7 +367,7 @@ function getOpenRouterProviderRouting(
 }
 
 function hasAnthropicFailoverKey(): boolean {
-  return Boolean(Bun.env.ANTHROPIC_API_KEY);
+  return Boolean(process.env.ANTHROPIC_API_KEY);
 }
 
 function shouldFailoverToAnthropic(status: number, model: string): boolean {
@@ -425,7 +423,7 @@ function toAnthropicModelName(model: string): string {
 function getAnthropicHeaders(requestHeaders: Headers): Record<string, string> {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    "x-api-key": Bun.env.ANTHROPIC_API_KEY || "",
+    "x-api-key": process.env.ANTHROPIC_API_KEY || "",
     "anthropic-version":
       requestHeaders.get("anthropic-version") || "2023-06-01",
   };
@@ -959,10 +957,7 @@ function normalizeCompactRequest(
 async function proxyResponsesUpstream(options: {
   auth: AgentAuthContext;
   requestId?: string;
-  clientResult: Extract<
-    ReturnType<typeof getClient>,
-    { type: "openrouter" | "openai" }
-  >;
+  clientResult: ResponsesClientResult;
   providerRequest: Record<string, unknown>;
   stream: boolean;
   /** When true, convert Responses payload/stream back to Chat Completions. */
@@ -1993,6 +1988,8 @@ router.post(
 
       // OpenAI recommendation: prefer Responses API (retained reasoning)
       // for OpenAI-family models. Client-facing shape stays Chat Completions.
+      // Deni AI API's /v1/responses drops reasoning settings, so Deni-routed
+      // models stay on its /v1/chat/completions (forwarded as-is) below.
       if (
         shouldRouteChatViaResponses(model) &&
         (clientResult.type === "openrouter" || clientResult.type === "openai")
@@ -2066,7 +2063,7 @@ router.post(
               method: "POST",
               headers: {
                 "Content-Type": "application/json",
-                Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
+                Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
                 "HTTP-Referer": "https://flixa.deniai.app",
                 "X-OpenRouter-Title": "Deni AI Flixa",
                 "X-OpenRouter-Categories": "cli-agent,ide-extension",
@@ -2274,7 +2271,7 @@ router.post(
         );
       }
 
-      // Use OpenAI SDK for voids.top (fallback)
+      // Use OpenAI SDK for Deni AI API / voids.top (fallback)
       const { client, providerName } = clientResult;
       const normalizedToolChoice =
         tools && tools.length > 0
@@ -2533,6 +2530,18 @@ router.post(
         );
       }
 
+      if (clientResult.type === "deni") {
+        return await proxyResponsesUpstream({
+          auth,
+          clientResult,
+          providerRequest: toDeniResponsesRequest(
+            normalizeResponsesRequest(body, "openai"),
+          ),
+          stream: body.stream ?? false,
+          model: body.model,
+        });
+      }
+
       if (clientResult.type !== "openrouter" && clientResult.type !== "openai") {
         await releaseReservedUsage(auth);
         return c.json(
@@ -2645,6 +2654,24 @@ router.post(
             },
           },
           500,
+        );
+      }
+
+      // Deni AI API has no /v1/responses/compact. 400 (not 5xx) so clients
+      // do not retry and can fall back to local compaction.
+      if (clientResult.type === "deni") {
+        await releaseReservedUsage(auth);
+        return c.json(
+          {
+            error: {
+              message:
+                "Responses compaction is not available for this model. Use client-side compaction.",
+              type: "invalid_request_error",
+              param: "model",
+              code: "unsupported_model",
+            },
+          },
+          400,
         );
       }
 
@@ -2774,7 +2801,7 @@ router.post(
       ) as Anthropic.Messages.MessageCreateParams;
       const { model, stream } = body;
 
-      if (!Bun.env.OPENROUTER_API_KEY) {
+      if (!process.env.OPENROUTER_API_KEY) {
         await releaseReservedUsage(auth);
         return c.json(
           {
@@ -2829,7 +2856,7 @@ router.post(
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${Bun.env.OPENROUTER_API_KEY}`,
+            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
             "HTTP-Referer": "https://flixa.deniai.app",
             "X-OpenRouter-Title": "Deni AI Flixa",
             "X-OpenRouter-Categories": "cli-agent,ide-extension",

@@ -1,12 +1,14 @@
 /**
- * Process-local fixed-window rate limiter.
+ * Fixed-window rate limiter.
  *
- * Suitable for single-instance / sticky routing. Multi-instance deployments
- * share no state (each process enforces its own window); distributed
- * coordination is intentionally out of scope and should be measured at the
- * deployment layer if needed.
+ * - Bun / single process: process-local in-memory buckets (`consumeRateLimit`).
+ * - Cloudflare Workers: when `configureDurableRateLimit(namespace)` has been
+ *   called, `consumeRateLimitAsync` routes each `${scope}:${key}` to its own
+ *   Durable Object (`RateLimiterDO`) so limits hold across isolates.
+ *   DO failures fail open (request allowed) and are logged with `[RateLimit]`.
  */
 
+import type { DurableObjectNamespace } from "@cloudflare/workers-types";
 import { isAuthDisabledMode } from "./authMode";
 
 export type RateLimitResult = {
@@ -19,11 +21,15 @@ export type RateLimitResult = {
   retryAfterSec: number;
 };
 
-type Bucket = {
+export type RateLimitBucket = {
   count: number;
   /** Window start (ms). */
   windowStart: number;
+  /** Window length (ms) the bucket was opened with. */
+  windowMs: number;
 };
+
+type Bucket = RateLimitBucket;
 
 let buckets = new Map<string, Bucket>();
 
@@ -60,7 +66,7 @@ export function isRateLimitEnabled(): boolean {
     return false;
   }
 
-  const raw = Bun.env.RATE_LIMIT_ENABLED?.toLowerCase();
+  const raw = process.env.RATE_LIMIT_ENABLED?.toLowerCase();
   if (raw === "0" || raw === "false" || raw === "no" || raw === "off") {
     return false;
   }
@@ -70,16 +76,16 @@ export function isRateLimitEnabled(): boolean {
 /** Global /v1 IP limits (pre-auth abuse shield). */
 export function getIpRateLimitConfig(): { max: number; windowMs: number } {
   return {
-    max: parsePositiveInt(Bun.env.RATE_LIMIT_IP_MAX, 180),
-    windowMs: parsePositiveInt(Bun.env.RATE_LIMIT_IP_WINDOW_MS, 60_000),
+    max: parsePositiveInt(process.env.RATE_LIMIT_IP_MAX, 180),
+    windowMs: parsePositiveInt(process.env.RATE_LIMIT_IP_WINDOW_MS, 60_000),
   };
 }
 
 /** Per authenticated user limits (agent / models / deni). */
 export function getUserRateLimitConfig(): { max: number; windowMs: number } {
   return {
-    max: parsePositiveInt(Bun.env.RATE_LIMIT_USER_MAX, 90),
-    windowMs: parsePositiveInt(Bun.env.RATE_LIMIT_USER_WINDOW_MS, 60_000),
+    max: parsePositiveInt(process.env.RATE_LIMIT_USER_MAX, 90),
+    windowMs: parsePositiveInt(process.env.RATE_LIMIT_USER_WINDOW_MS, 60_000),
   };
 }
 
@@ -89,9 +95,9 @@ export function getAdminLoginRateLimitConfig(): {
   windowMs: number;
 } {
   return {
-    max: parsePositiveInt(Bun.env.RATE_LIMIT_ADMIN_LOGIN_MAX, 20),
+    max: parsePositiveInt(process.env.RATE_LIMIT_ADMIN_LOGIN_MAX, 20),
     windowMs: parsePositiveInt(
-      Bun.env.RATE_LIMIT_ADMIN_LOGIN_WINDOW_MS,
+      process.env.RATE_LIMIT_ADMIN_LOGIN_WINDOW_MS,
       15 * 60_000,
     ),
   };
@@ -239,36 +245,39 @@ function maybeCleanup(now: number): void {
   }
 }
 
-/**
- * Consume one request for `key` within a fixed window.
- * Window is keyed by the limiter name so IP/user/login limits stay independent.
- */
-export function consumeRateLimit(
-  scope: string,
-  key: string,
+function allowAllResult(
   max: number,
   windowMs: number,
-  now = Date.now(),
+  now: number,
 ): RateLimitResult {
-  if (!isRateLimitEnabled() || max < 1 || windowMs < 1) {
-    return {
-      allowed: true,
-      limit: max,
-      remaining: max,
-      resetAt: Math.ceil((now + windowMs) / 1000),
-      retryAfterSec: 0,
-    };
-  }
+  return {
+    allowed: true,
+    limit: max,
+    remaining: max,
+    resetAt: Math.ceil((now + windowMs) / 1000),
+    retryAfterSec: 0,
+  };
+}
 
-  maybeCleanup(now);
+function shouldBypass(max: number, windowMs: number): boolean {
+  return !isRateLimitEnabled() || max < 1 || windowMs < 1;
+}
 
-  const mapKey = `${scope}:${key}`;
-  let bucket = buckets.get(mapKey);
-
+/**
+ * Pure fixed-window step shared by the in-memory limiter and `RateLimiterDO`.
+ * Opens a new bucket when none exists or the window elapsed; otherwise mutates
+ * `bucket.count` in place. Callers must handle `max < 1 || windowMs < 1`.
+ */
+export function applyFixedWindow(
+  bucket: RateLimitBucket | undefined,
+  max: number,
+  windowMs: number,
+  now: number,
+): { bucket: RateLimitBucket; result: RateLimitResult; isNewWindow: boolean } {
+  let isNewWindow = false;
   if (!bucket || now - bucket.windowStart >= windowMs) {
-    bucket = { count: 0, windowStart: now };
-    buckets.set(mapKey, bucket);
-    scheduleBucketExpiry(mapKey, bucket);
+    bucket = { count: 0, windowStart: now, windowMs };
+    isNewWindow = true;
   }
 
   const resetAtMs = bucket.windowStart + windowMs;
@@ -277,28 +286,165 @@ export function consumeRateLimit(
   if (bucket.count >= max) {
     const retryAfterSec = Math.max(1, Math.ceil((resetAtMs - now) / 1000));
     return {
-      allowed: false,
-      limit: max,
-      remaining: 0,
-      resetAt,
-      retryAfterSec,
+      bucket,
+      isNewWindow,
+      result: {
+        allowed: false,
+        limit: max,
+        remaining: 0,
+        resetAt,
+        retryAfterSec,
+      },
     };
   }
 
   bucket.count += 1;
   return {
-    allowed: true,
-    limit: max,
-    remaining: Math.max(0, max - bucket.count),
-    resetAt,
-    retryAfterSec: 0,
+    bucket,
+    isNewWindow,
+    result: {
+      allowed: true,
+      limit: max,
+      remaining: Math.max(0, max - bucket.count),
+      resetAt,
+      retryAfterSec: 0,
+    },
   };
+}
+
+/**
+ * Consume one request for `key` within a fixed window (process-local only).
+ * Window is keyed by the limiter name so IP/user/login limits stay independent.
+ * Request paths should use `consumeRateLimitAsync`, which honours the Durable
+ * Object backend when configured.
+ */
+export function consumeRateLimit(
+  scope: string,
+  key: string,
+  max: number,
+  windowMs: number,
+  now = Date.now(),
+): RateLimitResult {
+  if (shouldBypass(max, windowMs)) {
+    return allowAllResult(max, windowMs, now);
+  }
+
+  maybeCleanup(now);
+
+  const mapKey = `${scope}:${key}`;
+  const step = applyFixedWindow(buckets.get(mapKey), max, windowMs, now);
+  if (step.isNewWindow) {
+    buckets.set(mapKey, step.bucket);
+    scheduleBucketExpiry(mapKey, step.bucket);
+  }
+  return step.result;
+}
+
+// ---------------------------------------------------------------------------
+// Durable Object backend (Cloudflare Workers)
+// ---------------------------------------------------------------------------
+
+let durableNamespace: DurableObjectNamespace | null = null;
+
+const DO_ERROR_LOG_INTERVAL_MS = 60_000;
+let lastDoErrorLogAt = 0;
+let suppressedDoErrors = 0;
+
+/**
+ * Route rate limiting through a Durable Object namespace (Workers). Pass
+ * `null` to return to the in-memory limiter.
+ */
+export function configureDurableRateLimit(
+  namespace: DurableObjectNamespace | null,
+): void {
+  durableNamespace = namespace;
+}
+
+function logDurableError(error: unknown): void {
+  const now = Date.now();
+  if (now - lastDoErrorLogAt < DO_ERROR_LOG_INTERVAL_MS) {
+    suppressedDoErrors += 1;
+    return;
+  }
+  const suppressed = suppressedDoErrors;
+  lastDoErrorLogAt = now;
+  suppressedDoErrors = 0;
+  console.error(
+    `[RateLimit] durable object call failed; failing open${
+      suppressed > 0 ? ` (${suppressed} similar errors suppressed)` : ""
+    }:`,
+    error instanceof Error ? error.message : error,
+  );
+}
+
+function isRateLimitResult(value: unknown): value is RateLimitResult {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.allowed === "boolean" &&
+    typeof v.limit === "number" &&
+    typeof v.remaining === "number" &&
+    typeof v.resetAt === "number" &&
+    typeof v.retryAfterSec === "number"
+  );
+}
+
+async function consumeDurable(
+  namespace: DurableObjectNamespace,
+  scope: string,
+  key: string,
+  max: number,
+  windowMs: number,
+): Promise<RateLimitResult> {
+  const stub = namespace.get(namespace.idFromName(`${scope}:${key}`));
+  const response = await stub.fetch("https://rate-limiter.internal/consume", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ max, windowMs }),
+  });
+  if (!response.ok) {
+    throw new Error(`RateLimiterDO responded ${response.status}`);
+  }
+  const body: unknown = await response.json();
+  if (!isRateLimitResult(body)) {
+    throw new Error("RateLimiterDO returned an invalid payload");
+  }
+  return body;
+}
+
+/**
+ * Consume one request for `key`. Uses the Durable Object backend when
+ * configured, otherwise the in-memory limiter. Never throws: DO failures are
+ * logged and the request is allowed (fail open).
+ */
+export async function consumeRateLimitAsync(
+  scope: string,
+  key: string,
+  max: number,
+  windowMs: number,
+  now = Date.now(),
+): Promise<RateLimitResult> {
+  const namespace = durableNamespace;
+  if (!namespace) {
+    return consumeRateLimit(scope, key, max, windowMs, now);
+  }
+  if (shouldBypass(max, windowMs)) {
+    return allowAllResult(max, windowMs, now);
+  }
+  try {
+    return await consumeDurable(namespace, scope, key, max, windowMs);
+  } catch (error) {
+    logDurableError(error);
+    return allowAllResult(max, windowMs, now);
+  }
 }
 
 /** Test helper. */
 export function clearRateLimitBuckets(): void {
   resetBuckets();
   opsSinceCleanup = 0;
+  lastDoErrorLogAt = 0;
+  suppressedDoErrors = 0;
 }
 
 /**

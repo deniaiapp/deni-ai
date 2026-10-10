@@ -41,7 +41,7 @@ adminAuthRouter.get("/login", async (c) => {
     return c.redirect(safeNextPath(c.req.query("next")), 302);
   }
 
-  const password = Bun.env.ADMIN_PASSWORD;
+  const password = process.env.ADMIN_PASSWORD;
   if (!password) {
     return c.text(
       "Admin is not configured. Set ADMIN_PASSWORD (and optionally ADMIN_USER).",
@@ -69,7 +69,7 @@ adminAuthRouter.post("/login", async (c) => {
     return c.redirect("/admin/lookup", 302);
   }
 
-  const password = Bun.env.ADMIN_PASSWORD;
+  const password = process.env.ADMIN_PASSWORD;
   if (!password) {
     return c.text(
       "Admin is not configured. Set ADMIN_PASSWORD (and optionally ADMIN_USER).",

@@ -293,7 +293,7 @@ async function validateApiKeyFromRequest(c: Context): Promise<{ userId: string }
   }
 
   // Short-window request rate limit (separate from monthly usage quota).
-  const rateLimited = checkUserRateLimit(c, keyResult.userId);
+  const rateLimited = await checkUserRateLimit(c, keyResult.userId);
   if (rateLimited) {
     return rateLimited;
   }

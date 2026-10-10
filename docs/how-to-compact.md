@@ -241,7 +241,8 @@ See OpenAI’s [Compaction](https://developers.openai.com/api/docs/guides/compac
 
 | Provider path | Compact | Notes |
 |---------------|---------|--------|
-| OpenRouter (`model` contains `/`) | Proxied to `…/responses/compact` | Stateless; no `previous_response_id` / `store: true` |
+| Deni AI API (`openai/...` models) | Not supported: `400 unsupported_model` | Use client-side compaction; Deni drops `reasoning` / `include` / `store` |
+| OpenRouter (other `model` with `/`) | Proxied to `…/responses/compact` | Stateless; no `previous_response_id` / `store: true` |
 | OpenAI-compatible (`OPENAI_COMPAT_BASE_URL`) | Proxied to `…/responses/compact` | May support more stateful features upstream |
 
 ## Checklist

@@ -54,9 +54,9 @@ function getUsageLimit(
 
 function getWebBaseUrl(): string {
   const baseUrl =
-    Bun.env.DENI_WEB_BASE_URL ??
-    Bun.env.FLIXA_WEB_BASE_URL ??
-    Bun.env.WEB_BASE_URL ??
+    process.env.DENI_WEB_BASE_URL ??
+    process.env.FLIXA_WEB_BASE_URL ??
+    process.env.WEB_BASE_URL ??
     "https://deniai.app";
 
   return baseUrl.replace(/\/+$/, "");
@@ -72,11 +72,11 @@ function buildWebUrl(pathOrUrl: string): string {
 }
 
 export function getVerifyUrl(): string {
-  return buildWebUrl(Bun.env.DENI_VERIFY_PATH ?? "/settings/billing");
+  return buildWebUrl(process.env.DENI_VERIFY_PATH ?? "/settings/billing");
 }
 
 export function getUpgradeUrl(): string {
-  return buildWebUrl(Bun.env.DENI_UPGRADE_PATH ?? "/settings/billing");
+  return buildWebUrl(process.env.DENI_UPGRADE_PATH ?? "/settings/billing");
 }
 
 function shouldResetUsageRow(
@@ -142,7 +142,7 @@ interface BillingProfile {
 }
 
 function getBillingCacheTtlMs(): number {
-  const raw = Bun.env.FLIXA_BILLING_CACHE_TTL_MS;
+  const raw = process.env.FLIXA_BILLING_CACHE_TTL_MS;
   if (!raw) return 60_000;
   const parsed = Number.parseInt(raw, 10);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : 60_000;

@@ -104,6 +104,8 @@ Create a `.env` file:
 
 ```
 PORT=3000
+DENI_AI_API_KEY=deni_your_deni_ai_api_key_here
+# DENI_AI_API_BASE_URL=https://api.deniai.app/v1
 OPENROUTER_API_KEY=your_openrouter_api_key_here
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_COMPAT_BASE_URL=https://capi.voids.top/v2
@@ -119,7 +121,8 @@ CLIENT_SIGNAL_ALLOWED_LOG_ENABLED=false
 ```
 
 Get your OpenRouter API key from [OpenRouter](https://openrouter.ai/keys).
-`OPENROUTER_API_KEY` is required when `model` includes `/` (OpenRouter format). If you use an OpenAI-compatible model name without `/`, requests go to `OPENAI_COMPAT_BASE_URL`.
+`DENI_AI_API_KEY` is required for OpenAI models (`openai/...`), which go through Deni AI API: Chat Completions to `/v1/chat/completions` and `/v1/agent/responses` to `/v1/responses`. Deni AI API has no Responses compaction, so `/v1/agent/responses/compact` returns `400` for these models.
+`OPENROUTER_API_KEY` is required when any other `model` includes `/` (OpenRouter format). If you use an OpenAI-compatible model name without `/`, requests go to `OPENAI_COMPAT_BASE_URL`.
 
 `FLIXA_UPSTREAM_TIMEOUT_MS` is an upstream connect/idle timeout. Streaming
 requests refresh it whenever a chunk arrives, so a healthy long-running stream

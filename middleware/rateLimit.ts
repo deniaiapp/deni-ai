@@ -2,7 +2,7 @@ import { getRequestClientIp } from "../utils/clientIp";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import {
-  consumeRateLimit,
+  consumeRateLimitAsync,
   getAdminLoginRateLimitConfig,
   getIpRateLimitConfig,
   getUserRateLimitConfig,
@@ -59,7 +59,7 @@ export function ipRateLimitMiddleware(
 
     const { max, windowMs } = getIpRateLimitConfig();
     const ip = getRequestClientIp(c);
-    const result = consumeRateLimit(scope, ip, max, windowMs);
+    const result = await consumeRateLimitAsync(scope, ip, max, windowMs);
 
     applyRateLimitHeaders(c, result);
     if (!result.allowed) {
@@ -81,10 +81,10 @@ export function ipRateLimitMiddleware(
  * Check per-user rate limit after auth. Returns a Response when blocked.
  * Skips agent inference endpoints (chat completions / responses / messages).
  */
-export function checkUserRateLimit(
+export async function checkUserRateLimit(
   c: Context,
   userId: string,
-): Response | null {
+): Promise<Response | null> {
   if (!isRateLimitEnabled()) {
     return null;
   }
@@ -94,7 +94,7 @@ export function checkUserRateLimit(
   }
 
   const { max, windowMs } = getUserRateLimitConfig();
-  const result = consumeRateLimit("user", userId, max, windowMs);
+  const result = await consumeRateLimitAsync("user", userId, max, windowMs);
   applyRateLimitHeaders(c, result);
 
   if (!result.allowed) {
@@ -114,11 +114,13 @@ export function checkUserRateLimit(
 /**
  * Stricter rate limit for admin login attempts (by IP).
  */
-export function checkAdminLoginRateLimit(c: Context): Response | null {
+export async function checkAdminLoginRateLimit(
+  c: Context,
+): Promise<Response | null> {
   if (!isRateLimitEnabled()) return null;
   const { max, windowMs } = getAdminLoginRateLimitConfig();
   const ip = getRequestClientIp(c);
-  const result = consumeRateLimit("admin-login", ip, max, windowMs);
+  const result = await consumeRateLimitAsync("admin-login", ip, max, windowMs);
   if (result.allowed) return null;
   applyRateLimitHeaders(c, result);
   const accept = (c.req.header("Accept") || "").toLowerCase();
@@ -140,7 +142,7 @@ export function checkAdminLoginRateLimit(c: Context): Response | null {
 export function adminLoginRateLimitMiddleware(): MiddlewareHandler {
   return async (c, next) => {
     if (c.req.method === "POST") {
-      const limited = checkAdminLoginRateLimit(c);
+      const limited = await checkAdminLoginRateLimit(c);
       if (limited) return limited;
     }
     await next();
