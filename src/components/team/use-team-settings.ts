@@ -154,7 +154,10 @@ export function useTeamSettings() {
     { organizationId: activeOrg?.id ?? "", planId: pendingTeamPlanId ?? "pro_team_monthly" },
     {
       enabled: features.billing && Boolean(activeOrg?.id) && pendingTeamPlanId !== null,
+      // The owner confirms this exact charge, so every open fetches a fresh preview.
+      staleTime: 0,
       refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
       retry: false,
     },
   );
@@ -406,6 +409,12 @@ export function useTeamSettings() {
       ["team", "linked-invitation", currentUserId, linkedInvitationId],
       (current) => (current?.id === invitationId ? null : current),
     );
+    // Drop the handled link so a reload does not look up an answered invitation.
+    if (invitationId === linkedInvitationId) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("invitationId");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
   }
 
   async function handleAcceptMyInvitation(invitationId: string) {

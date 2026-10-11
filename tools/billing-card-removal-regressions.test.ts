@@ -4,6 +4,7 @@ import { billingRouter } from "@/server/api/routers/billing";
 const state = vi.hoisted(() => ({
   subscriptions: [] as Record<string, unknown>[],
   invoices: [] as Record<string, unknown>[],
+  previewAmountDue: 0,
   updates: [] as Record<string, unknown>[],
   detach: vi.fn(),
   deletionStatus: vi.fn(),
@@ -24,7 +25,10 @@ vi.mock("@/lib/stripe", () => {
   return {
     stripe: {
       subscriptions: { list: () => iterate(() => state.subscriptions) },
-      invoices: { list: () => iterate(() => state.invoices) },
+      invoices: {
+        list: () => iterate(() => state.invoices),
+        createPreview: async () => ({ amount_due: state.previewAmountDue }),
+      },
       customers: { listPaymentMethods: async () => ({ data: [{ id: "pm_card" }] }) },
       paymentMethods: { detach: state.detach },
     },
@@ -67,6 +71,7 @@ function caller(userId = "user") {
 function subscription(overrides: Record<string, unknown>) {
   return {
     id: "sub",
+    customer: "customer",
     status: "active",
     cancel_at_period_end: false,
     cancel_at: null,
@@ -87,6 +92,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   state.subscriptions = [];
   state.invoices = [];
+  state.previewAmountDue = 0;
   state.updates = [];
   state.detach.mockResolvedValue({});
   state.deletionStatus.mockResolvedValue({ state: "ready", periodEnd: null });
@@ -101,11 +107,12 @@ test.each([
     "Wait for your subscription to end",
   ],
   [
-    "the Max Mode meter subscription of a yearly plan",
+    "a Max Mode meter subscription with usage left to invoice",
     () => {
       state.subscriptions = [subscription({ metadata: { purpose: "max_mode" } })];
+      state.previewAmountDue = 1200;
     },
-    "Cancel your subscription before removing the card.",
+    "Wait for your subscription to end",
   ],
   [
     "an unpaid invoice",
@@ -120,6 +127,16 @@ test.each([
   await expect(caller().removeVerifiedCard()).rejects.toThrow(message);
   expect(state.detach).not.toHaveBeenCalled();
   expect(state.updates).toEqual([]);
+});
+
+test("an idle Max Mode meter subscription left after the plan ended does not block removal", async () => {
+  state.subscriptions = [
+    subscription({ status: "canceled" }),
+    subscription({ id: "sub_meter", metadata: { purpose: "max_mode" } }),
+  ];
+
+  await expect(caller().removeVerifiedCard()).resolves.toEqual({ removed: true });
+  expect(state.detach).toHaveBeenCalledWith("pm_card");
 });
 
 test("removing the card keeps its fingerprint so the reuse slot stays taken", async () => {

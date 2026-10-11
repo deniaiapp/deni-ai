@@ -11,7 +11,7 @@ import {
   getPersonalCustomerOwnership,
   type AccountDeletionStatus,
 } from "@/lib/account-deletion-policy";
-import { isMeteredMaxModePrice } from "@/lib/stripe-subscriptions";
+import { isMaxModeOnlySubscription, isMeteredMaxModePrice } from "@/lib/stripe-subscriptions";
 
 async function hasPendingUsage(
   userId: string,
@@ -173,18 +173,40 @@ async function hasRunningTeamSubscription(userId: string) {
 /**
  * Why a personal customer's cards must stay attached: a running subscription
  * ("active"), or one still due to invoice before it ends, including metered
- * usage billed in arrears and the Max Mode meter host, or money owed
- * ("billingPending"). Null when the cards can be removed.
+ * usage billed in arrears, a Max Mode meter host with usage left to invoice,
+ * or money owed ("billingPending"). Null when the cards can be removed.
  */
 export async function getCardRemovalBlocker(
   customerId: string,
 ): Promise<"active" | "billingPending" | null> {
-  const status = classifyDeletionSubscriptions(await getSubscriptions(customerId));
+  const subscriptions = await getSubscriptions(customerId);
+  // Nothing cancels a Max Mode meter host when the yearly plan that needed it
+  // ends, so the host only blocks while its next invoice still bills usage.
+  const hosts = subscriptions.filter((sub) => isMaxModeOnlySubscription(sub));
+  const status = classifyDeletionSubscriptions(
+    subscriptions.filter((sub) => !isMaxModeOnlySubscription(sub)),
+  );
   if (status.state === "active") return "active";
-  if (status.state === "cancelPending" || (await hasUnpaidInvoices(new Set([customerId])))) {
+  if (
+    status.state === "cancelPending" ||
+    (await hasUnbilledMeterUsage(hosts)) ||
+    (await hasUnpaidInvoices(new Set([customerId])))
+  ) {
     return "billingPending";
   }
   return null;
+}
+
+async function hasUnbilledMeterUsage(hosts: Stripe.Subscription[]) {
+  for (const host of hosts) {
+    if (classifyDeletionSubscriptions([host]).state === "ready") continue;
+    const preview = await stripe.invoices.createPreview({
+      customer: typeof host.customer === "string" ? host.customer : host.customer.id,
+      subscription: host.id,
+    });
+    if (preview.amount_due > 0) return true;
+  }
+  return false;
 }
 
 /** Preview for the deletion dialog; `deletePersonalStripeCustomers` rechecks everything. */
