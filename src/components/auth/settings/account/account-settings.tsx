@@ -1,8 +1,9 @@
 "use client";
 
-import { useAuth } from "@better-auth-ui/react";
+import { useAuth, useSession } from "@better-auth-ui/react";
 import type { ComponentProps } from "react";
 
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 import { ChangeEmail } from "./change-email";
 import { ExportData } from "./export-data";
@@ -19,7 +20,8 @@ export type AccountSettingsProps = {
  * show sections:
  * - `UserProfile` always renders.
  * - `ChangeEmail` renders when `emailAndPassword?.enabled` is truthy or the
- *   `magicLink` plugin is registered.
+ *   `magicLink` plugin is registered, except for guests (they sign up instead;
+ *   the server rejects their email changes).
  * - Plugin-contributed account cards are rendered via the plugins array
  *   (e.g. `Appearance` from the theme plugin, multi-session accounts).
  */
@@ -28,13 +30,15 @@ export function AccountSettings({
   ...props
 }: AccountSettingsProps & ComponentProps<"div">) {
   const { emailAndPassword, plugins } = useAuth();
+  const { data: session } = useSession(authClient);
 
   const hasMagicLink = plugins.some((plugin) => plugin.id === "magicLink");
+  const isAnonymous = Boolean(session?.user.isAnonymous);
 
   return (
     <div className={cn("flex w-full flex-col gap-4 md:gap-6", className)} {...props}>
       <UserProfile />
-      {(emailAndPassword?.enabled || hasMagicLink) && <ChangeEmail />}
+      {(emailAndPassword?.enabled || hasMagicLink) && !isAnonymous && <ChangeEmail />}
       <ExportData />
       {plugins.flatMap(
         (plugin) =>

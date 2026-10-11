@@ -11,8 +11,9 @@ interface KeyboardShortcutsOptions {
 function isEditableTarget(target: EventTarget | null): boolean {
   if (!target || !(target instanceof Element)) return false;
   const tag = target.tagName.toLowerCase();
-  if (tag === "input" || tag === "textarea") return true;
-  if (target.getAttribute("contenteditable") != null) return true;
+  if (tag === "input" || tag === "textarea" || tag === "select") return true;
+  if (target instanceof HTMLElement && target.isContentEditable) return true;
+  if (target.getAttribute("role") === "textbox") return true;
   return false;
 }
 
@@ -30,16 +31,24 @@ export function useKeyboardShortcuts({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
+      // With Shift (or Caps Lock) held, `key` is the upper-case letter.
+      const key = e.key.toLowerCase();
 
-      // Ctrl+K / Cmd+K — focus composer
-      if (isCtrlOrCmd && !e.shiftKey && e.key === "k") {
+      // "/" — focus composer. Ctrl/Cmd+K belongs to AppShell's chat search.
+      if (
+        key === "/" &&
+        !isCtrlOrCmd &&
+        !e.altKey &&
+        !e.defaultPrevented &&
+        !isEditableTarget(e.target)
+      ) {
         e.preventDefault();
         onFocusComposer?.();
         return;
       }
 
       // Ctrl+Shift+C / Cmd+Shift+C — new chat
-      if (isCtrlOrCmd && e.shiftKey && e.key === "c") {
+      if (isCtrlOrCmd && e.shiftKey && key === "c") {
         // Don't intercept if typing in an input
         if (!isEditableTarget(e.target)) {
           e.preventDefault();

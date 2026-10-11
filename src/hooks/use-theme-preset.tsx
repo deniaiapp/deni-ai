@@ -61,13 +61,29 @@ function subscribeThemePreset(onStoreChange: () => void) {
   };
 }
 
+/**
+ * Blocked site data makes `localStorage` access throw, and the snapshot is read
+ * during render on every page. Fall back to an in-memory choice instead, so a
+ * preset picked while storage is unavailable still lasts for this page.
+ */
+let unpersistedPreset: ThemeName = "default";
+
 function getThemePresetSnapshot(): ThemeName {
-  const stored = window.localStorage.getItem(STORAGE_KEY);
+  let stored: string | null;
+  try {
+    stored = window.localStorage.getItem(STORAGE_KEY);
+  } catch {
+    return unpersistedPreset;
+  }
   if (stored && isThemeName(stored)) {
     return normalizePreset(stored);
   }
   if (stored) {
-    window.localStorage.removeItem(STORAGE_KEY);
+    try {
+      window.localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // Ignore; the invalid value is not used either way.
+    }
   }
   return "default";
 }
@@ -78,7 +94,12 @@ function getServerThemePresetSnapshot(): ThemeName {
 
 function setThemePreset(value: ThemeName) {
   const normalizedValue = normalizePreset(value);
-  window.localStorage.setItem(STORAGE_KEY, normalizedValue);
+  unpersistedPreset = normalizedValue;
+  try {
+    window.localStorage.setItem(STORAGE_KEY, normalizedValue);
+  } catch {
+    // Still apply the preset for this page when it cannot be persisted.
+  }
   applyPresetClass(normalizedValue);
   window.dispatchEvent(new Event(PRESET_EVENT));
 }

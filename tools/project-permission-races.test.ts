@@ -45,6 +45,10 @@ vi.mock("@/db/drizzle", () => {
             role === "owner")
         : state.project.userId === "admin-user";
       if (!allowed) return [];
+      // Only the creator may change sharing (`currentProjectSharingWhere`).
+      const creatorCheck = query.sql.match(/\) and "projects"\."user_id" = \$(\d+)\)/);
+      if (creatorCheck && state.project.userId !== query.params[Number(creatorCheck[1]) - 1])
+        return [];
       const targetOrganization =
         typeof fields?.organizationId === "string" ? fields.organizationId : undefined;
       if (
@@ -120,6 +124,8 @@ beforeEach(() => {
 test.each(["archive", "restore", "unshare", "delete"] as const)(
   "%s cannot use membership revoked after the initial check",
   async (operation) => {
+    // Only the creator may unshare; the other operations are open to team admins.
+    if (operation === "unshare") state.project.userId = "admin-user";
     state.beforeWrite = () => {
       state.memberships.delete("team-a");
     };
@@ -147,6 +153,7 @@ test("a previous team admin cannot edit a project concurrently moved into anothe
 });
 
 test("sharing rechecks membership in the destination team at write time", async () => {
+  state.project.userId = "admin-user";
   state.beforeWrite = () => {
     state.memberships.delete("team-b");
   };
@@ -167,4 +174,39 @@ test("a downgraded team admin cannot use the previous role to delete", async () 
   };
   expect(await caller().delete({ id: "project" })).toBeNull();
   expect(state.deleted).toBe(false);
+});
+
+test("a team admin who did not create the project cannot make it personal", async () => {
+  await expect(caller().unshare({ id: "project" })).rejects.toMatchObject({ code: "FORBIDDEN" });
+  // The project must not become the (possibly removed) creator's personal project.
+  expect(state.project).toMatchObject({ userId: "creator", organizationId: "team-a" });
+  expect(state.writes).toEqual([]);
+});
+
+test("a team admin who did not create the project cannot move it to another team", async () => {
+  state.memberships.set("team-b", "admin");
+  await expect(caller().share({ id: "project", organizationId: "team-b" })).rejects.toMatchObject({
+    code: "FORBIDDEN",
+  });
+  expect(state.project.organizationId).toBe("team-a");
+  expect(state.writes).toEqual([]);
+});
+
+test("the creator can make their team project personal and keeps it", async () => {
+  state.project.userId = "admin-user";
+  state.memberships.set("team-a", "member");
+  expect(await caller().unshare({ id: "project" })).toMatchObject({
+    userId: "admin-user",
+    organizationId: null,
+  });
+});
+
+test("unsharing rechecks the creator at write time", async () => {
+  state.project.userId = "admin-user";
+  state.beforeWrite = () => {
+    // e.g. the project was handed to a team owner in the meantime.
+    state.project.userId = "owner-user";
+  };
+  expect(await caller().unshare({ id: "project" })).toBeNull();
+  expect(state.project).toMatchObject({ userId: "owner-user", organizationId: "team-a" });
 });

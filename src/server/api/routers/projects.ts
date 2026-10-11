@@ -5,6 +5,7 @@ import { chats, member, projects } from "@/db/schema";
 import {
   getAccessibleProject,
   currentProjectManagementWhere,
+  currentProjectSharingWhere,
   listUserMemberships,
   projectAccessWhere,
   userIsOrgMember,
@@ -40,6 +41,20 @@ async function requireManageableProject(
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "You do not have permission to manage this project.",
+    });
+  }
+  return project;
+}
+
+async function requireShareableProject(
+  ctx: { db: typeof import("@/db/drizzle").db; userId: string },
+  projectId: string,
+) {
+  const project = await requireManageableProject(ctx, projectId);
+  if (!project.canShare) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Only the project's creator can change its team sharing.",
     });
   }
   return project;
@@ -143,7 +158,7 @@ export const projectsRouter = router({
   share: protectedProcedure
     .input(z.object({ id: z.string().min(1), organizationId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      const project = await requireManageableProject(ctx, input.id);
+      const project = await requireShareableProject(ctx, input.id);
       if (project.organizationId === input.organizationId) {
         return project;
       }
@@ -160,7 +175,7 @@ export const projectsRouter = router({
         .where(
           and(
             eq(projects.id, input.id),
-            currentProjectManagementWhere(ctx.userId),
+            currentProjectSharingWhere(ctx.userId),
             sql`exists (select 1 from ${member} where ${member.organizationId} = ${input.organizationId} and ${member.userId} = ${ctx.userId})`,
           ),
         )
@@ -172,11 +187,11 @@ export const projectsRouter = router({
   unshare: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
-      await requireManageableProject(ctx, input.id);
+      await requireShareableProject(ctx, input.id);
       const [updated] = await ctx.db
         .update(projects)
         .set({ organizationId: null, updatedAt: new Date() })
-        .where(and(eq(projects.id, input.id), currentProjectManagementWhere(ctx.userId)))
+        .where(and(eq(projects.id, input.id), currentProjectSharingWhere(ctx.userId)))
         .returning();
 
       return updated ?? null;

@@ -14,6 +14,11 @@ import { trpc } from "@/lib/trpc/react";
  * and diff by item id so a client/DB clock skew can never hide a save.
  */
 const POLL_DELAYS_MS = [2500, 4000, 6000];
+/**
+ * `fetch()` returns cached data while it is fresh (global staleTime is 60s), so
+ * every poll would just replay the baseline. Always hit the network instead.
+ */
+const FRESH_FETCH = { staleTime: 0 } as const;
 
 export function useMemorySaveNotice({
   status,
@@ -45,7 +50,7 @@ export function useMemorySaveNotice({
     // reports memories produced by the message that was just sent.
     if (isInFlight && !wasInFlight) {
       void utils.memory.get
-        .fetch()
+        .fetch(undefined, FRESH_FETCH)
         .then((data) => {
           autoMemoryRef.current = data.profile.autoMemory;
           knownIdsRef.current = new Set(data.items.map((item) => item.id));
@@ -65,7 +70,7 @@ export function useMemorySaveNotice({
     let timer: ReturnType<typeof setTimeout> | undefined;
 
     const poll = async (attempt: number) => {
-      const data = await utils.memory.get.fetch().catch(() => null);
+      const data = await utils.memory.get.fetch(undefined, FRESH_FETCH).catch(() => null);
       if (cancelled || !data) {
         return;
       }

@@ -6,6 +6,7 @@ test("keeps same-origin post-auth paths with their query and hash", () => {
   expect(toSafeRedirectPath("/account/settings?error=TOKEN_EXPIRED#top")).toBe(
     "/account/settings?error=TOKEN_EXPIRED#top",
   );
+  expect(toSafeRedirectPath("/chat/../account/settings")).toBe("/account/settings");
 });
 
 test.each([
@@ -13,6 +14,13 @@ test.each([
   "//evil.example",
   "/\\evil.example",
   "/\t/evil.example",
+  "/.//evil.example",
+  "/.//evil.example/login",
+  "/%2e//evil.example",
+  "/%2E//evil.example",
+  "/chat/..//evil.example",
+  "/a/b/../..//evil.example",
+  "/./\\evil.example",
   "@evil.example",
   "javascript:alert(1)",
   "chat",

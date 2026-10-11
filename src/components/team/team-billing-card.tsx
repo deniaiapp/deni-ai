@@ -1,7 +1,9 @@
 "use client";
 
 import { useExtracted } from "next-intl";
+import { useState } from "react";
 import { PlanHighlights } from "@/components/billing/plan-highlights";
+import { SubscriptionCancelDialog } from "@/components/billing/subscription-shredder";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -152,6 +154,7 @@ export function TeamBillingCard({
     (plan): plan is TeamPlan => Boolean(plan),
   );
   const canSwitch = Boolean(hasActivePlan && isOwner && !isCanceled);
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
 
   return (
     <Card>
@@ -203,11 +206,11 @@ export function TeamBillingCard({
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={onCancel}
+                    onClick={() => setIsCancelConfirmOpen(true)}
                     disabled={cancelPending}
                   >
                     {cancelPending && <Spinner className="size-3.5" />}
-                    {t("Cancel")}
+                    {t("Cancel subscription")}
                   </Button>
                 )}
               </div>
@@ -251,6 +254,14 @@ export function TeamBillingCard({
           </p>
         )}
       </CardContent>
+      <SubscriptionCancelDialog
+        open={isCancelConfirmOpen}
+        onOpenChange={setIsCancelConfirmOpen}
+        description={t(
+          "The team plan stays active until the end of the current billing period, then ends for every member. You can resume it any time before then.",
+        )}
+        onConfirm={onCancel}
+      />
     </Card>
   );
 }

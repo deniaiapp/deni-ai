@@ -1,7 +1,9 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { passkey } from "@better-auth/passkey";
-import { betterAuth } from "better-auth";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { betterAuth, type GenericEndpointContext } from "better-auth";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
+import { deleteSessionCookie } from "better-auth/cookies";
+import { generateRandomString } from "better-auth/crypto";
 import {
   anonymous,
   captcha,
@@ -28,11 +30,14 @@ import { orgInvitationEmailSubject } from "@/emails/org-invitation-email-subject
 import { PasswordResetEmail, passwordResetEmailSubject } from "@/emails/password-reset-email";
 import { VerificationEmail, verificationEmailSubject } from "@/emails/verification-email";
 import { env } from "@/env";
+import { TWO_FACTOR_PATH } from "@/lib/auth-paths";
+import { toSafeRedirectPath } from "@/lib/auth-redirect";
 import { resolveClientIp } from "@/lib/client-ip";
 import { checkSignupLimits, recordSignupRisk } from "@/lib/signup-risk";
 import { isEmailConfigured, sendEmail } from "@/lib/email";
 import { readEmailChangeToken } from "@/lib/email-change-token";
 import { deletePersonalStripeCustomers } from "@/lib/account-deletion-billing";
+import { reassignTeamProjectsOnAccountDeletion } from "@/lib/project-access";
 import {
   checkSignupEmail,
   signupEmailDenialCode,
@@ -44,7 +49,12 @@ import {
   recordSecurityActivity,
   securityActionForAuthResponse,
 } from "@/lib/security-activity";
-import { teamMemberAuditHooks } from "@/lib/team-member-audit";
+import {
+  accountDeletionSeatHooks,
+  assertCanSendTeamInvitation,
+  teamInvitationHooks,
+  teamMemberAuditHooks,
+} from "@/lib/team-member-audit";
 import {
   cancelPersonalSubscription,
   cancelTeamSubscriptionForDeletion,
@@ -127,12 +137,114 @@ function assertAllowedSignupEmail(email: string, oauthProvider?: SignupOAuthProv
   });
 }
 
+/**
+ * Better Auth answers a sign-up for an existing unverified email with a generic
+ * success and keeps the first registrant's password, so verifying the mailbox
+ * later would confirm a password its owner may never have set (account
+ * pre-hijacking). Once a second sign-up brings a different password, neither is
+ * proven: drop the stored one and its sessions. Whoever then verifies the
+ * mailbox signs in without a password and can set one with a password reset.
+ */
+async function revokeContestedSignupPassword(
+  ctx: GenericEndpointContext,
+  email: string,
+  password: unknown,
+) {
+  // Without required verification an unverified account is a normal account.
+  if (!ctx.context.options.emailAndPassword?.requireEmailVerification) return;
+  // Leave requests the endpoint rejects anyway untouched.
+  const { minPasswordLength, maxPasswordLength } = ctx.context.password.config;
+  if (
+    typeof password !== "string" ||
+    password.length < minPasswordLength ||
+    password.length > maxPasswordLength
+  ) {
+    return;
+  }
+
+  const existing = await ctx.context.internalAdapter.findUserByEmail(email, {
+    includeAccounts: true,
+  });
+  if (!existing || existing.user.emailVerified) return;
+  const credential = existing.accounts.find((account) => account.providerId === "credential");
+  if (!credential?.password) return;
+  // The same password again (a repeated sign-up) changes nothing.
+  if (await ctx.context.password.verify({ hash: credential.password, password })) return;
+
+  await ctx.context.internalAdapter.deleteAccount(credential.id);
+  await ctx.context.internalAdapter.deleteUserSessions(existing.user.id);
+}
+
+/** twoFactor()'s default `twoFactorCookieMaxAge`, in seconds. */
+const TWO_FACTOR_CHALLENGE_MAX_AGE = 60 * 10;
+
+/**
+ * The two-factor plugin only challenges password sign-ins, while
+ * /magic-link/verify issues a full session, so the mailbox alone would get past
+ * an account's 2FA. Swap that session for the challenge the plugin issues after
+ * a password (same cookie and verification rows, which /two-factor/verify-*
+ * consume) and continue on the 2FA page.
+ */
+async function challengeSecondFactorAfterMagicLink(ctx: GenericEndpointContext) {
+  const issued = ctx.context.newSession;
+  if (!issued?.user.twoFactorEnabled) return;
+
+  deleteSessionCookie(ctx, true);
+  await ctx.context.internalAdapter.deleteSession(issued.session.token);
+  ctx.context.setNewSession(null);
+
+  const identifier = `2fa-${generateRandomString(20)}`;
+  const expiresAt = new Date(Date.now() + TWO_FACTOR_CHALLENGE_MAX_AGE * 1000);
+  await ctx.context.internalAdapter.createVerificationValue({
+    value: issued.user.id,
+    identifier,
+    expiresAt,
+  });
+  await ctx.context.internalAdapter.createVerificationValue({
+    value: "0",
+    identifier: `2fa-attempts-${identifier}`,
+    expiresAt,
+  });
+  const challengeCookie = ctx.context.createAuthCookie("two_factor", {
+    maxAge: TWO_FACTOR_CHALLENGE_MAX_AGE,
+  });
+  await ctx.setSignedCookie(
+    challengeCookie.name,
+    identifier,
+    ctx.context.secret,
+    challengeCookie.attributes,
+  );
+
+  // Without a callback URL the endpoint answers with JSON (and a session token).
+  const callbackURL: unknown = ctx.query?.callbackURL;
+  if (typeof callbackURL !== "string") return ctx.json({ twoFactorRedirect: true });
+  // Decoded the same way the endpoint did before it issued the session.
+  const callback = new URL(decodeURIComponent(callbackURL), ctx.context.baseURL);
+  const challengeURL = new URL(TWO_FACTOR_PATH, ctx.context.baseURL);
+  challengeURL.searchParams.set(
+    "redirectTo",
+    toSafeRedirectPath(`${callback.pathname}${callback.search}${callback.hash}`),
+  );
+  throw ctx.redirect(challengeURL.toString());
+}
+
 export const auth = betterAuth({
   appName: "Deni AI",
   database: drizzleAdapter(db, { provider: "pg", schema }),
-  // Reject disallowed domains before verification / magic-link emails are sent.
+  // Reject disallowed domains before verification / magic-link emails are sent,
+  // and gate team invitation emails before they are created or resent.
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/organization/invite-member") {
+        const session = await getSessionFromCtx(ctx);
+        // Without a session the endpoint itself rejects the request.
+        if (session) {
+          const body = ctx.body as { email?: unknown } | undefined;
+          await assertCanSendTeamInvitation({ user: session.user, email: body?.email });
+        }
+        return;
+      }
+
       if (
         ctx.path !== "/sign-up/email" &&
         ctx.path !== "/sign-in/magic-link" &&
@@ -141,14 +253,24 @@ export const auth = betterAuth({
         return;
       }
 
-      const body = ctx.body as { email?: unknown; newEmail?: unknown } | undefined;
-      const email =
-        typeof body?.email === "string"
-          ? body.email
-          : typeof body?.newEmail === "string"
-            ? body.newEmail
-            : null;
-      if (!email) return;
+      if (ctx.path === "/change-email") {
+        // A guest keeps `isAnonymous` after a change, so a verified real address
+        // would end up locked inside a guest account. Guests sign up instead.
+        const session = await getSessionFromCtx(ctx);
+        if (session?.user.isAnonymous) {
+          throw new APIError("FORBIDDEN", {
+            message: "Guest accounts cannot change their email. Sign up instead.",
+            code: "GUEST_EMAIL_CHANGE_NOT_ALLOWED",
+          });
+        }
+      }
+
+      // Check the field the endpoint actually uses: /change-email ignores `email`.
+      const body = ctx.body as
+        | { email?: unknown; newEmail?: unknown; password?: unknown }
+        | undefined;
+      const email = ctx.path === "/change-email" ? body?.newEmail : body?.email;
+      if (typeof email !== "string" || !email) return;
 
       // Magic-link sign-in for an *existing* account keeps working even if
       // the domain is no longer on the allowlist (grandfathered users).
@@ -158,8 +280,16 @@ export const auth = betterAuth({
       }
 
       assertAllowedSignupEmail(email);
+
+      if (ctx.path === "/sign-up/email") {
+        await revokeContestedSignupPassword(ctx, email, body?.password);
+      }
     }),
     after: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/magic-link/verify") {
+        return challengeSecondFactorAfterMagicLink(ctx);
+      }
+
       const action = securityActionForAuthResponse({
         path: ctx.path,
         returned: ctx.context.returned,
@@ -189,6 +319,8 @@ export const auth = betterAuth({
     // Includes advisory letters+digits addresses; the email policy permits them
     // through this verification and the signup CAPTCHA above.
     requireEmailVerification: emailEnabled,
+    // A reset proves the mailbox; sessions opened with the old password end.
+    revokeSessionsOnPasswordReset: true,
     sendResetPassword: emailEnabled
       ? async ({ user, url }) => {
           await sendEmail({
@@ -262,7 +394,8 @@ export const auth = betterAuth({
     haveIBeenPwned(),
     lastLoginMethod(),
     organization({
-      allowUserToCreateOrganization: true,
+      // Guests have placeholder emails and must not own teams (or their billing).
+      allowUserToCreateOrganization: (user) => !user.isAnonymous,
       membershipLimit: 50,
       organizationHooks: {
         afterCreateOrganization: async ({ organization, user }) => {
@@ -285,6 +418,7 @@ export const auth = betterAuth({
           });
         },
         ...teamMemberAuditHooks,
+        ...teamInvitationHooks,
         afterCreateInvitation: async ({ invitation, inviter, organization }) => {
           await recordTeamAuditEvent({
             organizationId: organization.id,
@@ -426,6 +560,8 @@ export const auth = betterAuth({
       enabled: true,
       beforeDelete: async (user) => {
         await deletePersonalStripeCustomers(user.id);
+        // After the billing checks, so a blocked deletion leaves the projects as they were.
+        await reassignTeamProjectsOnAccountDeletion(db, user.id);
       },
     },
   },
@@ -498,6 +634,8 @@ export const auth = betterAuth({
           assertAllowedSignupEmail(email);
         },
       },
+      // Covers every deletion path, including guest cleanup after account linking.
+      delete: accountDeletionSeatHooks,
     },
     session: {
       create: {

@@ -1,9 +1,10 @@
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import {
   billing,
+  invitation,
   member,
   teamMemberUsagePolicy,
   teamUsageAuditLog,
@@ -426,6 +427,74 @@ export const organizationRouter = router({
     return { plans };
   }),
 
+  // Accepting a team invitation cancels the invitee's personal subscription when the
+  // team has a live paid plan (afterAcceptInvitation -> cancelPersonalSubscription).
+  // The accept dialog asks this first so it can warn before the user joins.
+  invitationBillingImpact: protectedProcedure
+    .input(z.object({ invitationId: z.string().min(1) }))
+    .query(async ({ ctx, input }) => {
+      const noImpact = { cancelsPersonalSubscription: false };
+      if (isBillingDisabled) return noImpact;
+
+      const [[invite], [profile]] = await Promise.all([
+        ctx.db
+          .select({
+            organizationId: invitation.organizationId,
+            email: invitation.email,
+            status: invitation.status,
+            expiresAt: invitation.expiresAt,
+          })
+          .from(invitation)
+          .where(eq(invitation.id, input.invitationId))
+          .limit(1),
+        ctx.db.select({ email: user.email }).from(user).where(eq(user.id, ctx.userId)).limit(1),
+      ]);
+      // Only the invitee may ask, and only about an invitation they can still accept.
+      if (
+        !invite ||
+        !profile ||
+        invite.status !== "pending" ||
+        invite.expiresAt < new Date() ||
+        invite.email.toLowerCase() !== profile.email.toLowerCase()
+      ) {
+        return noImpact;
+      }
+
+      const [teamBilling, [personalBilling]] = await Promise.all([
+        findTeamBillingRecord(ctx.db, invite.organizationId),
+        ctx.db
+          .select({ stripeSubscriptionId: billing.stripeSubscriptionId })
+          .from(billing)
+          .where(and(eq(billing.userId, ctx.userId), isNull(billing.organizationId)))
+          .limit(1),
+      ]);
+      if (
+        !teamBilling?.stripeSubscriptionId ||
+        !isTeamPlan(teamBilling.planId) ||
+        !personalBilling?.stripeSubscriptionId
+      ) {
+        return noImpact;
+      }
+
+      try {
+        // Mirror cancelPersonalSubscription's live Stripe checks.
+        const [teamSubscription, personalSubscription] = await Promise.all([
+          stripe.subscriptions.retrieve(teamBilling.stripeSubscriptionId),
+          stripe.subscriptions.retrieve(personalBilling.stripeSubscriptionId),
+        ]);
+        return {
+          cancelsPersonalSubscription:
+            ACTIVE_SUB_STATUSES.has(teamSubscription.status) &&
+            Boolean(getLicensedSubscriptionItem(teamSubscription)) &&
+            ACTIVE_SUB_STATUSES.has(personalSubscription.status),
+        };
+      } catch (error) {
+        console.warn("Failed to check invitation billing impact", error);
+        // When unsure, warn: an unneeded warning costs less than a missing one.
+        return { cancelsPersonalSubscription: true };
+      }
+    }),
+
   teamBillingStatus: billingEnabledProcedure
     .input(z.object({ organizationId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
@@ -490,7 +559,9 @@ export const organizationRouter = router({
             createdAt: teamUsageAuditLog.createdAt,
           })
           .from(teamUsageAuditLog)
-          .innerJoin(auditActorUser, eq(auditActorUser.id, teamUsageAuditLog.actorUserId))
+          // Left join: the actor's account may have been deleted (actor_user_id is
+          // then null) and the entry must still show.
+          .leftJoin(auditActorUser, eq(auditActorUser.id, teamUsageAuditLog.actorUserId))
           .leftJoin(auditTargetUser, eq(auditTargetUser.id, teamUsageAuditLog.targetUserId))
           .where(eq(teamUsageAuditLog.organizationId, input.organizationId))
           .orderBy(desc(teamUsageAuditLog.createdAt))
@@ -589,7 +660,8 @@ export const organizationRouter = router({
           targetImage: targetUser.image,
         })
         .from(teamUsageAuditLog)
-        .innerJoin(actorUser, eq(actorUser.id, teamUsageAuditLog.actorUserId))
+        // Left join keeps entries whose actor deleted their account.
+        .leftJoin(actorUser, eq(actorUser.id, teamUsageAuditLog.actorUserId))
         .leftJoin(targetUser, eq(targetUser.id, teamUsageAuditLog.targetUserId))
         .where(
           and(
@@ -949,6 +1021,68 @@ export const organizationRouter = router({
       );
 
       return { url: portal.url };
+    }),
+
+  estimateTeamPlanChange: billingEnabledProcedure
+    .input(
+      z.object({
+        organizationId: z.string().min(1),
+        planId: teamPlanIdSchema,
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      await verifyOrgOwner(ctx, input.organizationId);
+
+      const plan = findPlanById(input.planId);
+      if (!plan) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Target plan must be a team subscription plan.",
+        });
+      }
+
+      const [price, subscriptionState, memberCount] = await Promise.all([
+        getPriceForPlan(plan),
+        syncTeamSubscription(ctx, ctx.userId, input.organizationId),
+        getOrgMemberCount(input.organizationId),
+      ]);
+      if (!subscriptionState.stripeSubscriptionId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No active team subscription found.",
+        });
+      }
+
+      const subscription = await stripe.subscriptions.retrieve(
+        subscriptionState.stripeSubscriptionId,
+        { expand: ["items"] },
+      );
+      const item = getLicensedSubscriptionItem(subscription) ?? subscription.items.data.at(0);
+      if (!item?.id || isMeteredMaxModePrice(item.price)) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Subscription has no billable items to estimate.",
+        });
+      }
+
+      // Same items and proration as changeTeamPlan, so the preview is what gets charged.
+      const preview = await stripe.invoices.createPreview({
+        customer:
+          typeof subscription.customer === "string"
+            ? subscription.customer
+            : subscription.customer.id,
+        subscription: subscription.id,
+        subscription_details: {
+          items: [{ id: item.id, price: price.id, quantity: memberCount }],
+          proration_behavior: "always_invoice",
+        },
+      });
+
+      return {
+        amountDue: preview.amount_due ?? 0,
+        currency: preview.currency ?? price.currency ?? null,
+        memberCount,
+      };
     }),
 
   changeTeamPlan: billingEnabledProcedure

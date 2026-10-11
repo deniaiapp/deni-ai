@@ -193,7 +193,7 @@ export function TeamMaxModeCard({
                       >
                         <span className="text-muted-foreground">
                           <span className="font-medium text-foreground">
-                            {entry.actorName || entry.actorEmail}
+                            {entry.actorName || entry.actorEmail || t("Deleted user")}
                           </span>{" "}
                           {sentence}
                         </span>

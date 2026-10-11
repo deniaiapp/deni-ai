@@ -28,23 +28,39 @@ export const dateTimeFormatter = new Intl.DateTimeFormat(undefined, {
   minute: "2-digit",
 });
 
+// Editable limits stay ungrouped: a grouped "500.000" (de-DE and others) would be
+// read back as 500 by Number().
 export function formatTokenLimit(value: number | null) {
   if (value === null) return "";
-  return numberFormatter.format(value);
+  return String(value);
 }
 
-export function parseTokenLimit(value: string) {
-  const normalized = value.replace(/[,_\s]/g, "");
-  if (!normalized) return null;
-  const parsed = Number(normalized);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    return undefined;
-  }
-  return parsed;
+function getGroupSeparator(locale?: Intl.LocalesArgument) {
+  return (
+    new Intl.NumberFormat(locale).formatToParts(1_000_000).find((part) => part.type === "group")
+      ?.value ?? ","
+  );
 }
+
+// Limits are whole token counts, so only the locale's digit grouping (plus spaces and
+// underscores) is dropped. Anything else, such as a decimal separator, is rejected
+// rather than guessed at.
+export function parseTokenLimit(value: string, locale?: Intl.LocalesArgument) {
+  const normalized = value.replaceAll(getGroupSeparator(locale), "").replace(/[\s_]/g, "");
+  if (!normalized) return null;
+  if (!/^\d+$/.test(normalized)) return undefined;
+  const parsed = Number(normalized);
+  return Number.isSafeInteger(parsed) ? parsed : undefined;
+}
+
+// Spreadsheet apps run a cell starting with one of these as a formula even when it is
+// quoted, so user-controlled text gets a leading apostrophe. Numbers stay numeric.
+const CSV_FORMULA_PREFIX = /^[=+\-@\t\r]/;
 
 export function escapeCsvCell(value: string | number | null | undefined) {
-  const text = value === null || value === undefined ? "" : String(value);
+  if (value === null || value === undefined) return '""';
+  const text =
+    typeof value === "string" && CSV_FORMULA_PREFIX.test(value) ? `'${value}` : String(value);
   return `"${text.replaceAll('"', '""')}"`;
 }
 

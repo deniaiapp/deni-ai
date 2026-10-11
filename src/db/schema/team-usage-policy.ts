@@ -73,9 +73,9 @@ export const teamUsageAuditLog = pgTable(
     organizationId: text("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
-    actorUserId: text("actor_user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
+    // Nullable with SET NULL so deleting an account keeps the team's audit history;
+    // readers show such entries as a deleted user.
+    actorUserId: text("actor_user_id").references(() => user.id, { onDelete: "set null" }),
     targetUserId: text("target_user_id").references(() => user.id, { onDelete: "set null" }),
     action: text("action").notNull(),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
