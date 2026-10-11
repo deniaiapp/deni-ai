@@ -16,6 +16,7 @@ const state = vi.hoisted(() => ({
   failSettlement: false,
   nextStep: false,
   memory: false,
+  storedMessages: [] as UIMessage[],
 }));
 const stepMessages = [
   { role: "tool", content: [{ type: "tool-result", toolCallId: "call", output: "Result" }] },
@@ -33,7 +34,12 @@ vi.mock("next/server", async () => {
   return { ...actual, after: (task: () => unknown) => void task() };
 });
 vi.mock("@/lib/chat", () => ({
-  getChatById: async () => ({ id: "chat", title: "Existing", messages: [], projectId: null }),
+  getChatById: async () => ({
+    id: "chat",
+    title: "Existing",
+    messages: state.storedMessages,
+    projectId: null,
+  }),
   getChatGenerationContextById: async () => ({ id: "chat", title: "Existing", projectId: null }),
   updateChat: vi.fn(async (_id, _user, _messages, _title, options) => {
     state.activeGenerationId = options.nextGenerationId ?? state.activeGenerationId;
@@ -186,6 +192,7 @@ beforeEach(() => {
   state.failSettlement = false;
   state.nextStep = false;
   state.memory = false;
+  state.storedMessages = [];
 });
 
 function chatRequest(text = "Hello") {
@@ -348,3 +355,93 @@ test("guest output is capped and skips unbilled memory extraction", async () => 
   );
   expect(maybeAutoSaveMemories).toHaveBeenCalledOnce();
 });
+
+async function stopChat() {
+  const { POST: stop } = await import("@/app/api/chat/stop/route");
+  const response = await stop(
+    new Request("http://localhost/api/chat/stop", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ id: "chat" }),
+    }),
+  );
+  expect(response.status).toBe(200);
+}
+
+test.each(["stop request", "client disconnect"] as const)(
+  "a %s that arrives before the generation registers cancels it",
+  async (kind) => {
+    const controller = new AbortController();
+    // The stop is handled while the request is still preparing, so it finds
+    // no active generation; then the request registers its own.
+    vi.mocked(updateChat).mockImplementationOnce(async (_id, _user, _messages, _title, options) => {
+      await new Promise((resolve) => setTimeout(resolve, 2));
+      if (kind === "stop request") await stopChat();
+      else controller.abort();
+      state.activeGenerationId = options?.nextGenerationId ?? null;
+      return "chat";
+    });
+
+    const response = await POST(new Request(chatRequest(), { signal: controller.signal }));
+
+    expect(response.status).toBe(499);
+    expect(streamText).not.toHaveBeenCalled();
+    expect(state.consumed).toBe(0);
+    // Rolled back to the question without the pending answer.
+    expect(vi.mocked(updateChat).mock.lastCall?.[2]).toEqual([
+      expect.objectContaining({ id: "user-message", role: "user" }),
+    ]);
+  },
+);
+
+test("an earlier stop does not cancel a request sent after it", async () => {
+  await stopChat();
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  state.mode = "finished";
+  await run();
+  expect(streamText).toHaveBeenCalledOnce();
+});
+
+test.each([false, true])(
+  "a regenerate that fails before streaming keeps the stored answer (pending: %s)",
+  async (pending) => {
+    const { consumeUsage, UsageLimitError } = await import("@/lib/usage");
+    const question: UIMessage = {
+      id: "user-message",
+      role: "user",
+      parts: [{ type: "text", text: "Hello" }],
+    };
+    const answer: UIMessage = {
+      id: "answer",
+      role: "assistant",
+      parts: [{ type: "text", text: "Original answer" }],
+    };
+    // A pending answer belonged to a generation the regenerate replaced.
+    state.storedMessages = [
+      question,
+      pending ? { ...answer, metadata: { pending: true } } : answer,
+    ];
+    // The token reservation exceeds a positive but low remaining balance.
+    vi.mocked(consumeUsage).mockRejectedValueOnce(new UsageLimitError("Usage limit reached"));
+
+    const response = await POST(
+      new Request("http://localhost/api/chat", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: "chat",
+          model: "gpt-5.6-luna",
+          trigger: "regenerate-message",
+          messageId: "answer",
+          messages: [question],
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(402);
+    expect(vi.mocked(updateChat).mock.lastCall?.[2]).toEqual([
+      question,
+      pending ? { ...answer, metadata: {} } : answer,
+    ]);
+  },
+);

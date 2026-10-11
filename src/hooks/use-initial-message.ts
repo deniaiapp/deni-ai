@@ -1,6 +1,7 @@
 import type { useChat } from "@ai-sdk/react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { ensureChatCreated } from "@/lib/chat-creation";
 import { models, resolveReasoningEffort, type ReasoningEffort } from "@/lib/constants";
 
 const INITIAL_MESSAGE_STORAGE_KEY = "deni_initial_message:v1";
@@ -210,26 +211,36 @@ export function useInitialMessage(params: {
       const parsedProMode = Boolean(storedData.proMode && sendSelected?.supportsProMode);
       const parsedFastMode = Boolean(storedData.fastMode && sendSelected?.supportsFastMode);
 
-      Promise.resolve(
-        sendMessageRef.current(
-          {
-            text: storedData.text,
-            files: files.length > 0 ? files : undefined,
-          },
-          {
-            body: {
-              model: sendModel,
-              webSearch: storedData.webSearch,
-              reasoningEffort: parsedReasoningEffort,
-              proMode: parsedProMode,
-              fastMode: parsedFastMode,
-              deepResearch: storedData.deepResearch ?? false,
-              id,
+      // The chat row is created in the background; /api/chat rejects a message
+      // that arrives before it exists, and the stored prompt is already gone.
+      void ensureChatCreated(id).then((created) => {
+        if (!created) {
+          // Hand the prompt back rather than sending it to a chat that is missing.
+          onDraftRef.current(storedData.text);
+          return;
+        }
+
+        return Promise.resolve(
+          sendMessageRef.current(
+            {
+              text: storedData.text,
+              files: files.length > 0 ? files : undefined,
             },
-          },
-        ),
-      ).finally(() => {
-        onMessageSentRef.current();
+            {
+              body: {
+                model: sendModel,
+                webSearch: storedData.webSearch,
+                reasoningEffort: parsedReasoningEffort,
+                proMode: parsedProMode,
+                fastMode: parsedFastMode,
+                deepResearch: storedData.deepResearch ?? false,
+                id,
+              },
+            },
+          ),
+        ).finally(() => {
+          onMessageSentRef.current();
+        });
       });
       return;
     }

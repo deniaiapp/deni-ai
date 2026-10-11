@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { captureAccountEpoch } from "@/lib/account-query-boundary";
+import { trackChatCreation } from "@/lib/chat-creation";
 import { makeTRPCClient } from "@/lib/trpc/client";
 import { trpc } from "@/lib/trpc/react";
 
@@ -52,17 +53,14 @@ export function useNewChat() {
       },
     );
 
-    // Persist row ASAP so /api/chat can write on first message. A row returned
-    // after the account changed must not reach the next account's cache.
+    // Persist row ASAP; sends to this chat wait for it (and retry a failed
+    // creation) via ensureChatCreated, since /api/chat needs the row. A row
+    // returned after the account changed must not reach the next account's cache.
     const isSameAccount = captureAccountEpoch(queryClient);
-    void makeTRPCClient()
-      .chat.ensureChat.mutate({ id, projectId })
-      .then((row) => {
-        if (isSameAccount()) utils.chat.getChatPage.setData({ id }, row);
-      })
-      .catch(() => {
-        // ChatRouteHost will retry ensure on mount if needed.
-      });
+    void trackChatCreation(id, async () => {
+      const row = await makeTRPCClient().chat.ensureChat.mutate({ id, projectId });
+      if (isSameAccount()) utils.chat.getChatPage.setData({ id }, row);
+    });
 
     const url = projectId
       ? `/chat/${id}?projectId=${encodeURIComponent(projectId)}`

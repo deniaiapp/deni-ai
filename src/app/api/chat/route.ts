@@ -39,6 +39,7 @@ import {
 import { isComparisonConversation } from "@/lib/comparison-conversation";
 import {
   clearChatGeneration,
+  isChatStopRequestedSince,
   isCurrentChatGeneration,
   startChatGeneration,
 } from "@/lib/chat-generation";
@@ -110,6 +111,8 @@ function formatChatStreamError(error: unknown, modelId: string): string {
 }
 
 export async function POST(req: Request) {
+  // Arrival time; a stop that arrives later applies to this request.
+  const requestStartedAt = Date.now();
   const rejected = guardMutationRequest(req, "application/json");
   if (rejected) return rejected;
   const headersList = await headers();
@@ -417,7 +420,19 @@ export async function POST(req: Request) {
       if (!(await ownsCurrentGeneration())) {
         return;
       }
-      await updateChat(id, userId, messages, undefined, {
+      // A regenerate request omits the answer it replaces, so a failed one
+      // restores the stored transcript instead of deleting that answer. A pending
+      // tail belonged to the generation this request replaced.
+      const rollbackMessages =
+        trigger === "regenerate-message"
+          ? storedMessages.map((message, index) =>
+              index === storedMessages.length - 1 &&
+              (message.metadata as { pending?: unknown } | undefined)?.pending
+                ? setPendingState(message, false)
+                : message,
+            )
+          : messages;
+      await updateChat(id, userId, rollbackMessages, undefined, {
         expectedGenerationId: generationId,
       });
     } catch (error) {
@@ -462,6 +477,13 @@ export async function POST(req: Request) {
       await updateChat(id, userId, pendingMessages, undefined, {
         nextGenerationId: generationId,
       });
+      // A stop sent before this registration found no generation to stop. Generations
+      // otherwise survive disconnects, but nothing has been generated or charged yet.
+      if (req.signal.aborted || isChatStopRequestedSince(id, requestStartedAt)) {
+        await rollbackPendingAssistantState();
+        clearGenerationLock();
+        return new Response(null, { status: 499 });
+      }
     }
     projectPrompt = isComparison ? null : await buildProjectPrompt(chat.projectId, userId);
     if (usageUnit === "requests") {

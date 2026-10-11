@@ -20,6 +20,7 @@ import { useMemorySaveNotice } from "@/hooks/use-memory-save-notice";
 import { useNewChat } from "@/hooks/use-new-chat";
 import { useUsageStatus } from "@/hooks/use-usage-status";
 import { authClient } from "@/lib/auth-client";
+import { ensureChatCreated } from "@/lib/chat-creation";
 import { CHAT_OLDER_MESSAGE_COUNT, mergeMessageWindow } from "@/lib/chat-messages";
 import type { QuestionnaireToolOutput } from "@/lib/chat-tools/questionnaire";
 import {
@@ -180,6 +181,14 @@ export function ChatInterface({
       new DefaultChatTransport({
         body: {
           id,
+        },
+        // A chat started on the client may still be creating its row, or need a
+        // retry after a failed attempt; /api/chat rejects chats without one.
+        fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+          if (!(await ensureChatCreated(id)) && !init?.signal?.aborted) {
+            throw new Error("Chat not found");
+          }
+          return fetch(input, init);
         },
       }),
     [id],
@@ -355,7 +364,13 @@ export function ChatInterface({
       message,
       options,
       id,
-      isSubmitBlocked: isSubmitBlocked || hasPendingQuestionnaire,
+      // The SDK does not guard against overlapping requests; a second send while
+      // one is in flight interleaves both streams and truncates the first answer.
+      isSubmitBlocked:
+        isSubmitBlocked ||
+        hasPendingQuestionnaire ||
+        status === "submitted" ||
+        status === "streaming",
       usageTier,
       sendMessage,
       invalidateChats: () => {

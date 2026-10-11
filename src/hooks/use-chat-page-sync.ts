@@ -25,9 +25,11 @@ export function useChatPageSync(params: {
   const lastRecoveredStatusRef = useRef<number | null>(null);
   const previousStatusRef = useRef(status);
 
-  useEffect(() => {
-    const recoveredAt = statusUpdatedAt?.getTime() ?? null;
+  // Each poll deserializes a new Date; keying the effect on it would cancel an
+  // in-flight recovery every second and the guard below would never retry it.
+  const recoveredAt = statusUpdatedAt?.getTime() ?? null;
 
+  useEffect(() => {
     if (
       !isWaitingForResponse ||
       !isStatusSuccess ||
@@ -40,10 +42,14 @@ export function useChatPageSync(params: {
 
     lastRecoveredStatusRef.current = recoveredAt;
     let cancelled = false;
+    let settled = false;
 
+    // The pane loaded this page (with the pending answer) moments ago, so a
+    // cached read would still be fresh and return that same pending snapshot.
     void utils.chat.getChatPage
-      .fetch({ id })
+      .fetch({ id }, { staleTime: 0 })
       .then((chat) => {
+        settled = true;
         if (cancelled || !chat?.messages) {
           return;
         }
@@ -73,6 +79,7 @@ export function useChatPageSync(params: {
         });
       })
       .catch(() => {
+        settled = true;
         if (!cancelled) {
           lastRecoveredStatusRef.current = null;
         }
@@ -80,14 +87,18 @@ export function useChatPageSync(params: {
 
     return () => {
       cancelled = true;
+      // A recovery cut short by a re-run (or a Strict Mode remount) may start again.
+      if (!settled && lastRecoveredStatusRef.current === recoveredAt) {
+        lastRecoveredStatusRef.current = null;
+      }
     };
   }, [
     activeGenerationId,
     id,
     isStatusSuccess,
     isWaitingForResponse,
+    recoveredAt,
     setMessages,
-    statusUpdatedAt,
     utils,
   ]);
 
