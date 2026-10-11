@@ -5,18 +5,20 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
 const harness = vi.hoisted(() => {
   const pageFetch = vi.fn();
-  const invalidate = vi.fn();
+  const pageInvalidate = vi.fn();
+  const usageInvalidate = vi.fn();
   return {
     slots: [] as unknown[],
     cursor: 0,
     effects: [] as Array<() => void>,
     query: new URLSearchParams(),
     pageFetch,
-    invalidate,
+    pageInvalidate,
+    usageInvalidate,
     // `useUtils` returns the same object on every render.
     utils: {
-      chat: { getChatPage: { fetch: pageFetch, invalidate } },
-      billing: { usage: { invalidate } },
+      chat: { getChatPage: { fetch: pageFetch, invalidate: pageInvalidate } },
+      billing: { usage: { invalidate: usageInvalidate } },
     },
   };
 });
@@ -80,7 +82,7 @@ import { groupMessages, useChatBranches } from "./use-chat-branches";
 import { useChatPageSync } from "./use-chat-page-sync";
 import { useInitialMessage } from "./use-initial-message";
 import { useKeyboardShortcuts } from "./use-keyboard-shortcuts";
-import { ensureChatCreated, trackChatCreation } from "@/lib/chat-creation";
+import { ensureChatCreated, isChatCreationPending, trackChatCreation } from "@/lib/chat-creation";
 import { mergeMessageWindow, sliceLatestMessages, sliceOlderMessages } from "@/lib/chat-messages";
 import { models } from "@/lib/constants";
 
@@ -376,10 +378,8 @@ const storedFile = {
   url: "https://files.example/report.pdf",
 };
 
-function sendStoredPrompt(
-  id: string,
-  sendMessage: Parameters<typeof useInitialMessage>[0]["sendMessage"],
-) {
+/** Renders the hooks ChatInterface runs for a new chat opened with a stored home page prompt. */
+function sendStoredPrompt(id: string, chat: Chat<UIMessage>) {
   const storedPrompt = JSON.stringify({
     text: "Stored prompt",
     files: [storedFile],
@@ -387,17 +387,29 @@ function sendStoredPrompt(
   });
   vi.stubGlobal("sessionStorage", { getItem: () => storedPrompt, removeItem: vi.fn() });
   const onDraft = vi.fn();
-  render(() =>
-    useInitialMessage({
-      id,
-      initialMessagesLength: 0,
-      model: models[0].value,
-      sendMessage,
-      onMessageSent: vi.fn(),
-      onDraft,
-    }),
-  );
-  return { onDraft };
+  // Call again for each status change React would render.
+  const rerender = () =>
+    render(() => {
+      useInitialMessage({
+        id,
+        initialMessagesLength: 0,
+        model: models[0].value,
+        sendMessage: chat.sendMessage,
+        onMessageSent: vi.fn(),
+        onDraft,
+      });
+      useChatPageSync({
+        id,
+        status: chat.status,
+        isWaitingForResponse: false,
+        activeGenerationId: null,
+        statusUpdatedAt: null,
+        isStatusSuccess: false,
+        setMessages: vi.fn(),
+      });
+    });
+  rerender();
+  return { onDraft, rerender };
 }
 
 /** A chat whose transport waits for the row, like ChatInterface's. */
@@ -436,22 +448,44 @@ test("the home page prompt shows at once but is posted only after its chat row e
     0,
   );
   const { chat, posted } = chatWaitingForRow("new-chat");
-  sendStoredPrompt("new-chat", chat.sendMessage);
+  const { rerender } = sendStoredPrompt("new-chat", chat);
   await vi.waitFor(() => expect(chat.messages).toHaveLength(1));
+  expect(chat.status).toBe("submitted");
+  rerender();
   expect(posted).toEqual([]);
 
   createRow();
   await vi.waitFor(() => expect(posted).toHaveLength(1));
   expect(posted[0][0].parts).toEqual([storedFile, { type: "text", text: "Stored prompt" }]);
+
+  // Once the row exists, a settled request refreshes the page as usual.
+  await vi.waitFor(() => expect(chat.status).toBe("ready"));
+  rerender();
+  expect(harness.pageInvalidate).toHaveBeenCalledExactlyOnceWith({ id: "new-chat" });
 });
 
-test("a chat that cannot be created keeps the home page prompt and its attachments", async () => {
-  void trackChatCreation("broken-chat", async () => Promise.reject(new Error("down")), 0);
+test("a chat that cannot be created keeps the home page prompt, its attachments and its page", async () => {
+  let failCreation!: () => void;
+  const failedAttempt = new Promise<void>((_resolve, reject) => {
+    failCreation = () => reject(new Error("down"));
+  });
+  const create = vi
+    .fn<() => Promise<void>>()
+    .mockReturnValueOnce(failedAttempt)
+    .mockReturnValueOnce(failedAttempt)
+    .mockResolvedValue(undefined);
+  void trackChatCreation("broken-chat", create, 0);
   const { chat, posted } = chatWaitingForRow("broken-chat");
-  const { onDraft } = sendStoredPrompt("broken-chat", chat.sendMessage);
+  const { onDraft, rerender } = sendStoredPrompt("broken-chat", chat);
+  await vi.waitFor(() => expect(chat.status).toBe("submitted"));
+  rerender();
+
+  failCreation();
+  await vi.waitFor(() => expect(chat.status).toBe("error"));
+  rerender();
 
   // ChatInterface shows this error, and the prompt keeps its file in the transcript.
-  await vi.waitFor(() => expect(chat.status).toBe("error"));
+  expect(create).toHaveBeenCalledTimes(2);
   expect(chat.error?.message).toBe("Chat not found");
   expect(posted).toEqual([]);
   expect(onDraft).not.toHaveBeenCalled();
@@ -460,6 +494,23 @@ test("a chat that cannot be created keeps the home page prompt and its attachmen
     role: "user",
     parts: [storedFile, { type: "text", text: "Stored prompt" }],
   });
+  // The server has no page for the chat yet; refetching it would read null and
+  // replace the pane (and this transcript) with a fresh, empty chat.
+  expect(isChatCreationPending("broken-chat")).toBe(true);
+  expect(harness.usageInvalidate).toHaveBeenCalledOnce();
+  expect(harness.pageInvalidate).not.toHaveBeenCalled();
+
+  // Retrying creates the row first, then sends the kept prompt.
+  void chat.regenerate();
+  expect(chat.status).toBe("submitted");
+  rerender();
+  await vi.waitFor(() => expect(chat.status).toBe("ready"));
+  rerender();
+  expect(create).toHaveBeenCalledTimes(3);
+  expect(isChatCreationPending("broken-chat")).toBe(false);
+  expect(posted).toHaveLength(1);
+  expect(posted[0][0].parts).toEqual([storedFile, { type: "text", text: "Stored prompt" }]);
+  expect(harness.pageInvalidate).toHaveBeenCalledExactlyOnceWith({ id: "broken-chat" });
 });
 
 test("a keydown without a key, as autofill dispatches, is ignored by the chat shortcuts", () => {

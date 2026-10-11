@@ -1,5 +1,6 @@
 import type { ChatStatus, UIMessage } from "ai";
 import { useEffect, useRef, useState } from "react";
+import { isChatCreationPending } from "@/lib/chat-creation";
 import { mergeServerWindow } from "@/lib/chat-messages";
 import { trpc } from "@/lib/trpc/react";
 
@@ -127,6 +128,11 @@ export function useChatPageSync(params: {
     }
 
     void utils.billing.usage.invalidate();
-    void utils.chat.getChatPage.invalidate({ id });
+    // A request also settles when the chat's row could not be created. The
+    // server has no page for it then, and refetching would replace the seeded
+    // page with null, unmounting the prompt, its attachments and the error.
+    if (!isChatCreationPending(id)) {
+      void utils.chat.getChatPage.invalidate({ id });
+    }
   }, [id, status, utils]);
 }

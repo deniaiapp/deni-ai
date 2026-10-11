@@ -1,5 +1,10 @@
 import { expect, test, vi } from "vitest";
-import { ensureChatCreated, trackChatCreation } from "./chat-creation";
+import {
+  ensureChatCreated,
+  isChatCreationPending,
+  subscribeChatCreations,
+  trackChatCreation,
+} from "./chat-creation";
 
 function deferred() {
   let resolve!: () => void;
@@ -57,4 +62,32 @@ test("a failed creation is attempted again by the next send", async () => {
 
   expect(await ensureChatCreated("failed-chat")).toBe(true);
   expect(create).toHaveBeenCalledTimes(3);
+});
+
+test("a chat stays pending, with subscribers told, until its row is created", async () => {
+  const create = vi
+    .fn<() => Promise<void>>()
+    .mockRejectedValueOnce(new Error("down"))
+    .mockRejectedValueOnce(new Error("still down"))
+    .mockResolvedValueOnce();
+  const listener = vi.fn();
+  const unsubscribe = subscribeChatCreations(listener);
+
+  expect(isChatCreationPending("tracked-chat")).toBe(false);
+  const created = trackChatCreation("tracked-chat", create, 0);
+  expect(isChatCreationPending("tracked-chat")).toBe(true);
+  expect(listener).toHaveBeenCalledOnce();
+
+  // A failed creation is still unconfirmed: the next send retries it.
+  expect(await created).toBe(false);
+  expect(isChatCreationPending("tracked-chat")).toBe(true);
+  expect(listener).toHaveBeenCalledOnce();
+
+  expect(await ensureChatCreated("tracked-chat")).toBe(true);
+  expect(isChatCreationPending("tracked-chat")).toBe(false);
+  expect(listener).toHaveBeenCalledTimes(2);
+
+  unsubscribe();
+  void trackChatCreation("other-chat", () => Promise.resolve(), 0);
+  expect(listener).toHaveBeenCalledTimes(2);
 });

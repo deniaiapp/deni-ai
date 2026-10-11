@@ -14,6 +14,8 @@ const state = vi.hoisted(() => ({
   /** Runs between the stop route's read and its write. */
   betweenReadAndWrite: null as null | (() => void),
   updates: [] as { params: unknown[]; sql: string }[],
+  /** Updates that set only the stop time: their WHERE clause and set values. */
+  stopUpdates: [] as { where: { params: unknown[]; sql: string }; values: unknown }[],
 }));
 
 vi.mock("@/env", () => ({ env: {} }));
@@ -35,35 +37,40 @@ vi.mock("@/db/drizzle", () => {
       }),
       update: () => ({
         set: (values: { messages: SQL }) => ({
-          where: (condition: SQL) => ({
-            returning: async () => {
-              const where = dialect.sqlToQuery(condition);
-              const set = dialect.sqlToQuery(values.messages);
-              state.updates.push({ params: [...where.params, ...set.params], sql: set.sql });
-              const row = state.row;
-              if (!row) return [];
-              const expected = where.sql.includes('"active_generation_id" is null')
-                ? null
-                : where.params.at(-1);
-              if (row.activeGenerationId !== expected) return [];
-              // Postgres evaluates the CASE / #- expression on the current row.
-              const last = row.messages.at(-1);
-              if (last?.role === "assistant" && last.metadata?.pending === true) {
-                const metadata = { ...last.metadata };
-                delete metadata.pending;
-                row.messages = [...row.messages.slice(0, -1), { ...last, metadata }];
-              }
-              row.activeGenerationId = null;
-              return [{ id: "chat-1" }];
-            },
-          }),
+          where: (condition: SQL) => {
+            if (!("messages" in values)) {
+              state.stopUpdates.push({ where: dialect.sqlToQuery(condition), values });
+            }
+            return {
+              returning: async () => {
+                const where = dialect.sqlToQuery(condition);
+                const set = dialect.sqlToQuery(values.messages);
+                state.updates.push({ params: [...where.params, ...set.params], sql: set.sql });
+                const row = state.row;
+                if (!row) return [];
+                const expected = where.sql.includes('"active_generation_id" is null')
+                  ? null
+                  : where.params.at(-1);
+                if (row.activeGenerationId !== expected) return [];
+                // Postgres evaluates the CASE / #- expression on the current row.
+                const last = row.messages.at(-1);
+                if (last?.role === "assistant" && last.metadata?.pending === true) {
+                  const metadata = { ...last.metadata };
+                  delete metadata.pending;
+                  row.messages = [...row.messages.slice(0, -1), { ...last, metadata }];
+                }
+                row.activeGenerationId = null;
+                return [{ id: "chat-1" }];
+              },
+            };
+          },
         }),
       }),
     },
   };
 });
 
-const { stopActiveChatGeneration } = await import("./chat");
+const { recordChatStopRequestedAt, stopActiveChatGeneration } = await import("./chat");
 const { startChatGeneration, stopChatGeneration, isCurrentChatGeneration, clearChatGeneration } =
   await import("./chat-generation");
 
@@ -83,6 +90,7 @@ beforeEach(() => {
   state.row = null;
   state.betweenReadAndWrite = null;
   state.updates = [];
+  state.stopUpdates = [];
   clearChatGeneration("chat-1", "gen-new");
   clearChatGeneration("chat-1", "gen-old");
 });
@@ -159,4 +167,15 @@ test.each([["stale"], [{}], [1], [null]])(
 test("returns undefined for a chat the user does not own", async () => {
   expect(await stopActiveChatGeneration("chat-1", "user-1")).toBeUndefined();
   expect(state.updates).toEqual([]);
+});
+
+test("records a stop's arrival time on the chat row without replacing a later one", async () => {
+  const requestedAt = new Date("2026-10-11T10:00:00.000Z");
+  await recordChatStopRequestedAt("chat-1", "user-1", requestedAt);
+  const [update] = state.stopUpdates;
+  expect(update.values).toEqual({ stopRequestedAt: requestedAt });
+  expect(update.where.sql).toContain(
+    '("chats"."stop_requested_at" is null or "chats"."stop_requested_at" < $',
+  );
+  expect(update.where.params).toEqual(["chat-1", "user-1", requestedAt.toISOString()]);
 });

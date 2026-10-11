@@ -4,10 +4,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import type { UIMessage } from "ai";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ChatInterfaceSkeleton } from "@/components/chat/chat-interface-skeleton";
 import { DocumentTitle } from "@/components/document-title";
 import { captureAccountEpoch } from "@/lib/account-query-boundary";
+import { isChatCreationPending, subscribeChatCreations } from "@/lib/chat-creation";
 import { trpc } from "@/lib/trpc/react";
 
 /**
@@ -86,7 +87,22 @@ function useChatPanePage(id: string, isActive: boolean, projectIdFromQuery: stri
     },
   );
 
-  const shouldEnsure = isActive && pageQuery.isSuccess && pageQuery.data === null;
+  // A chat started on this client has no row until its creation succeeds, so a
+  // refetch reads null meanwhile (also after a failed creation, which the next
+  // send retries). Keep the page the pane already shows, with the unsent prompt,
+  // its attachments and its error, instead of unmounting it or ensuring the chat.
+  const isCreationPending = useSyncExternalStore(
+    subscribeChatCreations,
+    () => isChatCreationPending(id),
+    () => false,
+  );
+  const [lastPage, setLastPage] = useState(pageQuery.data ?? null);
+  if (pageQuery.data && pageQuery.data !== lastPage) {
+    setLastPage(pageQuery.data);
+  }
+  const page = pageQuery.data ?? (isCreationPending ? lastPage : null);
+
+  const shouldEnsure = isActive && pageQuery.isSuccess && page === null;
   const paneIdRef = useRef(id);
   const projectIdRef = useRef(projectIdFromQuery);
 
@@ -144,7 +160,7 @@ function useChatPanePage(id: string, isActive: boolean, projectIdFromQuery: stri
     ensureChat({ id, projectId: projectIdFromQuery });
   }, [ensureChat, id, projectIdFromQuery, shouldEnsure]);
 
-  return pageQuery.data ?? null;
+  return page;
 }
 
 function ChatPane({ id, isActive }: { id: string; isActive: boolean }) {

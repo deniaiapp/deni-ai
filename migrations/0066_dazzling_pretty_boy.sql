@@ -1,0 +1,1 @@
+ALTER TABLE "chats" ADD COLUMN "stop_requested_at" timestamp;

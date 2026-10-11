@@ -2,6 +2,13 @@ const CHAT_CREATION_RETRY_DELAY_MS = 1000;
 
 /** Chats started on the client whose row is not confirmed yet, keyed by id. */
 const chatCreations = new Map<string, () => Promise<boolean>>();
+const listeners = new Set<() => void>();
+
+function emitChatCreations() {
+  for (const listener of listeners) {
+    listener();
+  }
+}
 
 /**
  * Persist a chat that was started on the client. /api/chat rejects messages for
@@ -24,6 +31,7 @@ export function trackChatCreation(
       .then(
         () => {
           chatCreations.delete(id);
+          emitChatCreations();
           return true;
         },
         () => {
@@ -36,6 +44,7 @@ export function trackChatCreation(
   };
 
   chatCreations.set(id, run);
+  emitChatCreations();
   return run();
 }
 
@@ -46,4 +55,21 @@ export function trackChatCreation(
  */
 export function ensureChatCreated(id: string): Promise<boolean> {
   return chatCreations.get(id)?.() ?? Promise.resolve(true);
+}
+
+/**
+ * Whether a chat started with `trackChatCreation` has no confirmed row yet,
+ * either still creating or after a failed creation. The server has nothing to
+ * load for it, so its client-side page must not be replaced with a refetch.
+ */
+export function isChatCreationPending(id: string): boolean {
+  return chatCreations.has(id);
+}
+
+/** Subscribe to changes of `isChatCreationPending`, e.g. for `useSyncExternalStore`. */
+export function subscribeChatCreations(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
 }

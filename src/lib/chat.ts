@@ -1,5 +1,5 @@
 import { generateText, type UIMessage } from "ai";
-import { and, eq, isNull, sql } from "drizzle-orm";
+import { and, eq, isNull, lt, or, sql } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { chats } from "@/db/schema";
 import { env } from "@/env";
@@ -86,6 +86,11 @@ function jsonbSetLastMessage(message: UIMessage) {
   )`;
 }
 
+/**
+ * Write the transcript (and optionally the title and active generation).
+ * Returns the row's latest stop time, so registering a generation also tells
+ * whether a stop was recorded meanwhile.
+ */
 export async function updateChat(
   id: string,
   userId: string,
@@ -111,13 +116,13 @@ export async function updateChat(
     .update(chats)
     .set(updates)
     .where(chatRowWhere(id, userId, options?.expectedGenerationId))
-    .returning({ id: chats.id });
+    .returning({ id: chats.id, stopRequestedAt: chats.stopRequestedAt });
 
   if (!updatedChat) {
     throw new Error("Chat not found");
   }
 
-  return updatedChat.id;
+  return updatedChat;
 }
 
 /** Rewrite only the last JSONB element so streaming does not reserialize the transcript. */
@@ -141,6 +146,25 @@ export async function replaceLastChatMessage(
   }
 
   return updatedChat.id;
+}
+
+/**
+ * Record a stop's arrival time on the chat row, keeping a later one. A request
+ * that arrived before the stop sees it when it registers its generation, on any
+ * instance. Call this before reading the active generation to stop: either that
+ * read sees a generation registered meanwhile, or its registration sees this.
+ */
+export async function recordChatStopRequestedAt(id: string, userId: string, requestedAt: Date) {
+  await db
+    .update(chats)
+    .set({ stopRequestedAt: requestedAt })
+    .where(
+      and(
+        eq(chats.id, id),
+        eq(chats.uid, userId),
+        or(isNull(chats.stopRequestedAt), lt(chats.stopRequestedAt, requestedAt)),
+      ),
+    );
 }
 
 /**

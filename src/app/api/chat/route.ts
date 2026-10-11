@@ -42,10 +42,10 @@ import {
 import { isComparisonConversation } from "@/lib/comparison-conversation";
 import {
   clearChatGeneration,
-  getRecentPromptCacheReads,
+  getRecentPromptUsage,
   isChatStopRequestedSince,
   isCurrentChatGeneration,
-  recordPromptCacheReads,
+  recordPromptUsage,
   startChatGeneration,
 } from "@/lib/chat-generation";
 import { createChatTools } from "@/lib/chat-tools";
@@ -81,6 +81,7 @@ import {
   estimatePromptTextTokens,
   estimateTokenReservation,
   estimateUrlAttachmentTokens,
+  fingerprintPromptPrefixes,
   GUEST_MAX_OUTPUT_TOKENS,
   GUEST_MAX_PROMPT_TOKENS,
   GUEST_TOOL_OUTPUT_CHARS,
@@ -307,11 +308,15 @@ export async function POST(req: Request) {
     : null;
 
   // Guest usage is one request regardless of size, so reject oversized prompts
-  // before anything is reserved or written.
+  // before anything is reserved or written. URL files are already downloaded,
+  // so PDFs count by their real size.
   if (
     isAnonymous &&
-    estimateGuestPromptTokens({ modelMessages, systemPrompt: persistentMemory ?? "" }) >
-      GUEST_MAX_PROMPT_TOKENS
+    estimateGuestPromptTokens({
+      modelMessages,
+      systemPrompt: persistentMemory ?? "",
+      attachmentCache,
+    }) > GUEST_MAX_PROMPT_TOKENS
   ) {
     return NextResponse.json(
       {
@@ -356,26 +361,42 @@ export async function POST(req: Request) {
   let finalUsageAmount = 0;
   // Provider usage arrives when a model call ends, and is added once its step
   // finishes. A stop during the step's tool calls keeps the call's reported usage.
-  // A call cut off mid-stream (stop, replacement, disconnect, upstream error)
-  // reports none but was billed by the provider, so it is estimated from its
-  // prompt text plus the output streamed so far. A call the provider rejected
-  // before streaming was not billed, so it is not counted.
+  // A call the provider accepted but that was cut off before it ended (stop,
+  // replacement, disconnect, upstream error) reports none but was billed by the
+  // provider, so it is estimated from its prompt plus the output streamed so
+  // far. A call the provider rejected before streaming was not billed, so it is
+  // not counted.
   let basePromptTokens = 0;
+  let finishedStepCount = 0;
   let finishedStepMessageTokens = 0;
   let stepInFlight = false;
+  let stepStreamStarted = false;
   let stepCallUsage: LanguageModelUsage | undefined;
   let stepPromptTokens = 0;
   let stepOutputChars = 0;
-  // As much of that prompt as the provider last read from cache for this chat is
-  // billed at the cache-read weight, as finishing the call would have been.
+  // The prompt estimate counts text only. The input the provider reported for
+  // the last call whose prompt this one starts with (attachments included),
+  // plus the messages added since, is a lower bound too, so the larger of the
+  // two is billed.
+  let reportedPromptTokens = 0;
+  let reportedStepMessageTokens = 0;
+  // The provider reads part of the prompt from cache: at least what it last
+  // reported reading for this chat, and commonly all of the reported prompt it
+  // was just sent. That much is billed at the cache-read weight, as finishing
+  // the call would have been.
   const promptCacheKey = `${userId}:${id}:${baseModel}${proMode ? ":pro" : ""}`;
-  let promptCacheReadTokens = getRecentPromptCacheReads(promptCacheKey);
+  const recentPromptUsage = getRecentPromptUsage(promptCacheKey);
+  let promptCacheReadTokens = recentPromptUsage.cacheReadTokens;
+  let promptFingerprints: string[] = [];
   const resolveUnfinishedStepAmount = () => {
     if (stepCallUsage) {
       return calculateChatUsageAmount(baseModel, stepCallUsage, { proMode, fastMode });
     }
     if (!hasAssistantOutput || !stepInFlight) return 0;
-    const cacheReadTokens = Math.min(promptCacheReadTokens, stepPromptTokens);
+    const cacheReadTokens = Math.min(
+      Math.max(promptCacheReadTokens, reportedPromptTokens),
+      stepPromptTokens,
+    );
     return calculateChatUsageAmount(
       baseModel,
       {
@@ -506,13 +527,18 @@ export async function POST(req: Request) {
       req.signal.addEventListener("abort", abortComparison, { once: true });
       if (req.signal.aborted) abortComparison();
     } else {
-      await updateChat(id, userId, pendingMessages, undefined, {
+      const { stopRequestedAt } = await updateChat(id, userId, pendingMessages, undefined, {
         nextGenerationId: generationId,
       });
-      // A stop sent to this instance before this registration found no generation
-      // to stop. A client disconnect is not a stop: the generation survives it and
-      // the client recovers the answer from the saved pending message.
-      if (isChatStopRequestedSince(id, requestStartedAt)) {
+      // A stop that arrived after this request but before this registration found
+      // no generation to stop. One handled by this instance is remembered in
+      // memory; one handled by another instance is on the chat row. A client
+      // disconnect is not a stop: the generation survives it and the client
+      // recovers the answer from the saved pending message.
+      if (
+        isChatStopRequestedSince(id, requestStartedAt) ||
+        (stopRequestedAt !== null && stopRequestedAt.getTime() > requestStartedAt)
+      ) {
         await rollbackPendingAssistantState();
         clearGenerationLock();
         return new Response(null, { status: 499 });
@@ -585,9 +611,24 @@ export async function POST(req: Request) {
 
   try {
     if (usageUnit === "tokens") {
-      // Attachment floors are only reserved: a call cut off mid-stream is billed
-      // at its prompt text, so they can never make stopping cost more.
+      // Attachment floors are only reserved: a cut-off call is billed at its
+      // prompt text or the input the provider reported for it, so they can never
+      // make stopping cost more.
       basePromptTokens = estimatePromptTextTokens({ modelMessages, systemPrompt });
+      // A recent report applies only while this prompt still starts with the one
+      // it was for; an edited or branched transcript can be smaller.
+      promptFingerprints = fingerprintPromptPrefixes({
+        modelMessages,
+        systemPrompt,
+        toolNames: Object.keys(tools),
+      });
+      const reportedPrompt = recentPromptUsage.prompt;
+      if (
+        reportedPrompt &&
+        promptFingerprints[reportedPrompt.messageCount] === reportedPrompt.fingerprint
+      ) {
+        reportedPromptTokens = reportedPrompt.inputTokens;
+      }
       consumedUsageAmount = estimateTokenReservation({
         estimatedPromptTokens:
           estimatePromptInputTokens({ modelMessages, systemPrompt }) +
@@ -608,28 +649,36 @@ export async function POST(req: Request) {
       usageRefunded = false;
     }
 
+    const generationSignal = generationAbortController.signal;
     result = streamText({
       model: model,
-      experimental_download: createChatAttachmentDownload(
-        generationAbortController.signal,
-        attachmentCache,
-      ),
+      experimental_download: createChatAttachmentDownload(generationSignal, attachmentCache),
       messages: requestMessages,
-      abortSignal: generationAbortController.signal,
+      abortSignal: generationSignal,
       stopWhen: stepCountIs(isAnonymous ? GUEST_MAX_STEPS : MAX_STEPS),
       maxOutputTokens: isAnonymous ? GUEST_MAX_OUTPUT_TOKENS : undefined,
       tools,
       // Runs right before the provider call, once attachments are downloaded.
-      // The provider can still reject the call; it counts once its stream starts.
+      // The call counts from here, including prefill and hidden reasoning before
+      // its first streamed part, unless the provider rejects it.
       onStepStart: () => {
-        stepInFlight = false;
+        stepInFlight = true;
+        stepStreamStarted = false;
         stepCallUsage = undefined;
-        stepPromptTokens = basePromptTokens + finishedStepMessageTokens;
+        stepPromptTokens = Math.max(
+          basePromptTokens + finishedStepMessageTokens,
+          reportedPromptTokens + finishedStepMessageTokens - reportedStepMessageTokens,
+        );
         stepOutputChars = 0;
       },
       onChunk: ({ chunk }) => {
         if (chunk.type === "start-step") {
-          stepInFlight = true;
+          stepStreamStarted = true;
+        } else if (chunk.type === "error") {
+          // An error before the step's stream started is the provider rejecting
+          // the call (for example 429, 503 or a context-window error), which it
+          // does not bill. A stop surfaces as an abort, not as this error.
+          if (!stepStreamStarted && !generationSignal.aborted) stepInFlight = false;
         } else if (chunk.type === "text-delta" || chunk.type === "reasoning-delta") {
           stepOutputChars += chunk.text.length;
         } else if (chunk.type === "tool-input-delta") {
@@ -640,11 +689,30 @@ export async function POST(req: Request) {
       onLanguageModelCallEnd: ({ usage }) => {
         stepCallUsage = usage;
         promptCacheReadTokens = usage.inputTokenDetails?.cacheReadTokens ?? 0;
-        recordPromptCacheReads(promptCacheKey, promptCacheReadTokens);
+        if (usage.inputTokens !== undefined) {
+          reportedPromptTokens = usage.inputTokens;
+          reportedStepMessageTokens = finishedStepMessageTokens;
+        }
+        recordPromptUsage(promptCacheKey, {
+          cacheReadTokens: promptCacheReadTokens,
+          // Only the first call's prompt is this request's own, which a later
+          // request can start with; later calls add this request's tool steps.
+          prompt:
+            finishedStepCount === 0 &&
+            usage.inputTokens !== undefined &&
+            promptFingerprints.length > 0
+              ? {
+                  inputTokens: usage.inputTokens,
+                  messageCount: modelMessages.length,
+                  fingerprint: promptFingerprints[modelMessages.length],
+                }
+              : undefined,
+        });
       },
       // onFinish is not called by the SDK after an abort. Keep the usage of
       // completed steps so stopped/replaced generations still get reconciled.
       onStepFinish: async ({ usage, response }) => {
+        finishedStepCount++;
         stepInFlight = false;
         stepCallUsage = undefined;
         // Later steps resend this step's assistant and tool messages.
