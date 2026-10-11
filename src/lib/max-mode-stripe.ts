@@ -1,5 +1,5 @@
 import type Stripe from "stripe";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { billing } from "@/db/schema";
 import { isBillingDisabled } from "@/lib/billing-config";
@@ -8,8 +8,11 @@ import {
   getLicensedPrice,
   isMaxModeOnlySubscription,
   isMeteredMaxModePrice,
+  listCustomerSubscriptions,
   pickLicensedSubscription,
 } from "@/lib/stripe-subscriptions";
+
+type Transaction = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 const MAX_MODE_EVENT_NAMES = {
   basic: "max_mode_basic",
@@ -45,6 +48,8 @@ type AttachResult =
   | { ok: false; error: string };
 
 const ACTIVE_STATUSES = new Set(["active", "trialing", "past_due"]);
+/** A meter host in these states has overage invoices that are not being paid. */
+const UNPAID_HOST_STATUSES = new Set(["past_due", "unpaid"]);
 
 function normalizeMaxModeCurrency(currency: string | null | undefined): MaxModeCurrency {
   return currency?.toLowerCase() === "jpy" ? "jpy" : DEFAULT_MAX_MODE_CURRENCY;
@@ -134,10 +139,16 @@ async function ensureSubscriptionItem(
   return created.id;
 }
 
+function paymentMethodId(subscription: Stripe.Subscription | null) {
+  const paymentMethod = subscription?.default_payment_method;
+  return typeof paymentMethod === "string" ? paymentMethod : (paymentMethod?.id ?? null);
+}
+
 async function createMeteredOnlySubscription(
   customerId: string,
   userId: string,
   currency: MaxModeCurrency,
+  paymentMethod: string | null,
 ) {
   const prices = await listMonthlyMaxModePrices(currency);
   if (!prices.basic || !prices.premium) {
@@ -148,39 +159,30 @@ async function createMeteredOnlySubscription(
     customer: customerId,
     currency,
     items: [{ price: prices.basic.id }, { price: prices.premium.id }],
+    // Checkout keeps the card on the plan subscription rather than as the
+    // customer's invoice default, so the overage invoices need it named here.
+    ...(paymentMethod ? { default_payment_method: paymentMethod } : {}),
     metadata: { purpose: "max_mode", userId },
   });
 }
 
-async function findExistingMaxModeSubscription(customerId: string, currency: MaxModeCurrency) {
-  const listed = await stripe.subscriptions.list({
-    customer: customerId,
-    status: "all",
-    limit: 20,
-    expand: ["data.items"],
-  });
-  return (
-    listed.data.find(
-      (sub) =>
-        ACTIVE_STATUSES.has(sub.status) &&
-        isMaxModeOnlySubscription(sub) &&
-        normalizeMaxModeCurrency(sub.currency) === currency,
-    ) ?? null
-  );
+/** Oldest first, so repeated lookups agree on which host to keep. */
+async function listMaxModeOnlySubscriptions(customerId: string) {
+  const subscriptions = await listCustomerSubscriptions(customerId, ["data.items"]);
+  return subscriptions
+    .filter((sub) => isMaxModeOnlySubscription(sub))
+    .sort((a, b) => a.created - b.created || a.id.localeCompare(b.id));
 }
 
+// Stripe aggregates meter events per customer and bills them on every item
+// priced on the meter, so each extra live host bills the same usage again.
 async function pruneDuplicateMaxModeHosts(customerId: string, host: Stripe.Subscription) {
-  const listed = await stripe.subscriptions.list({
-    customer: customerId,
-    status: "all",
-    limit: 20,
-    expand: ["data.items"],
-  });
+  const listed = await listCustomerSubscriptions(customerId, ["data.items"]);
 
   const cancellations: Array<ReturnType<typeof stripe.subscriptions.cancel>> = [];
   const itemDeletes: Array<ReturnType<typeof stripe.subscriptionItems.del>> = [];
 
-  for (const sub of listed.data) {
+  for (const sub of listed) {
     if (sub.id === host.id || !ACTIVE_STATUSES.has(sub.status)) {
       continue;
     }
@@ -189,14 +191,23 @@ async function pruneDuplicateMaxModeHosts(customerId: string, host: Stripe.Subsc
     const hostIsMaxModeOnly = isMaxModeOnlySubscription(host);
 
     if (subIsMaxModeOnly && hostIsMaxModeOnly) {
-      if (normalizeMaxModeCurrency(sub.currency) !== normalizeMaxModeCurrency(host.currency)) {
-        cancellations.push(stripe.subscriptions.cancel(sub.id, { prorate: true }));
-      }
+      // A same-currency duplicate carries the usage the host already bills.
+      const sameCurrency =
+        normalizeMaxModeCurrency(sub.currency) === normalizeMaxModeCurrency(host.currency);
+      cancellations.push(
+        stripe.subscriptions.cancel(
+          sub.id,
+          sameCurrency
+            ? { prorate: false, invoice_now: false }
+            : { prorate: true, invoice_now: true },
+        ),
+      );
       continue;
     }
 
     if (subIsMaxModeOnly && !hostIsMaxModeOnly) {
-      cancellations.push(stripe.subscriptions.cancel(sub.id, { prorate: true }));
+      // The new host only bills usage from now on; invoice what the old one accrued.
+      cancellations.push(stripe.subscriptions.cancel(sub.id, { prorate: true, invoice_now: true }));
       continue;
     }
 
@@ -268,6 +279,16 @@ async function resolveMaxModeHostSubscription(
     ? await retrieveSubscription(record.stripeSubscriptionId)
     : null;
   const planIsActive = planSubscription !== null && ACTIVE_STATUSES.has(planSubscription.status);
+  const hosts = await listMaxModeOnlySubscriptions(record.stripeCustomerId);
+
+  // The webhook turns Max Mode off while a meter host is unpaid; enabling it
+  // again must not reuse that host or leave its invoice behind for a new one.
+  if (hosts.some((sub) => UNPAID_HOST_STATUSES.has(sub.status))) {
+    return {
+      error:
+        "A Max Mode invoice is unpaid. Pay it or update your payment method in the billing portal, then try again.",
+    };
+  }
 
   if (planIsActive && planSubscription && !isMaxModeOnlySubscription(planSubscription)) {
     if (licensedInterval(planSubscription) === "month") {
@@ -284,13 +305,32 @@ async function resolveMaxModeHostSubscription(
     return planSubscription;
   }
 
-  const existing = await findExistingMaxModeSubscription(record.stripeCustomerId, currency);
+  const paymentMethod =
+    planIsActive && !isMaxModeOnlySubscription(planSubscription)
+      ? paymentMethodId(planSubscription)
+      : null;
+  const existing = hosts.find(
+    (sub) => ACTIVE_STATUSES.has(sub.status) && normalizeMaxModeCurrency(sub.currency) === currency,
+  );
   if (existing) {
+    // Hosts created before the plan's card was copied over have nothing to charge.
+    if (paymentMethod && !existing.default_payment_method) {
+      try {
+        await stripe.subscriptions.update(existing.id, { default_payment_method: paymentMethod });
+      } catch (error) {
+        console.warn("[max-mode] Unable to set the meter host's payment method", error);
+      }
+    }
     return existing;
   }
 
   try {
-    const created = await createMeteredOnlySubscription(record.stripeCustomerId, userId, currency);
+    const created = await createMeteredOnlySubscription(
+      record.stripeCustomerId,
+      userId,
+      currency,
+      paymentMethod,
+    );
     if (!created) {
       return {
         error:
@@ -321,6 +361,24 @@ export async function attachMaxModeMeteredItems(
     return { ok: false, error: "No Stripe customer is linked to this account." };
   }
 
+  // Concurrent enables (several buttons, tabs or owners) would each find no host
+  // and create one, and every host bills the customer's meter usage again.
+  return db.transaction(
+    async (transaction) => {
+      await transaction.execute(
+        sql`SELECT pg_advisory_xact_lock(hashtextextended(${`max-mode-host:${record.stripeCustomerId}`}, 0))`,
+      );
+      return attachMaxModeMeteredItemsLocked(transaction, record, userId);
+    },
+    { isolationLevel: "read committed" },
+  );
+}
+
+async function attachMaxModeMeteredItemsLocked(
+  transaction: Transaction,
+  record: MaxModeStripeRecord,
+  userId: string,
+): Promise<AttachResult> {
   const currency = await getMaxModeBillingCurrency(record);
   const host = await resolveMaxModeHostSubscription(record, userId, currency);
   if ("error" in host) {
@@ -363,7 +421,7 @@ export async function attachMaxModeMeteredItems(
       storedPlan !== null && !isMaxModeOnlySubscription(storedPlan) && host.id !== storedPlan.id;
     const planSubscriptionId = keepPlanSubscriptionId ? storedPlan.id : host.id;
 
-    await db
+    await transaction
       .update(billing)
       .set({
         stripeSubscriptionId: planSubscriptionId,

@@ -50,25 +50,39 @@ export type LifetimePurchase = {
   checkoutSessionId: string;
 };
 
-export function isUnreversedCharge(intent: Stripe.Checkout.Session["payment_intent"]) {
-  const charge = intent && typeof intent !== "string" ? intent.latest_charge : null;
-  return Boolean(
-    charge &&
-    typeof charge !== "string" &&
-    !charge.refunded &&
-    !charge.disputed &&
-    !(charge.amount_refunded > 0),
+/** Dispute outcomes that leave the funds with the merchant. */
+const SETTLED_DISPUTE_STATUSES = new Set(["won", "warning_closed"]);
+
+export function isSettledDispute(status: string) {
+  return SETTLED_DISPUTE_STATUSES.has(status);
+}
+
+/**
+ * `charge.disputed` stays true after a dispute is won, so a disputed charge
+ * still stands only when every dispute on it was decided in the merchant's favor.
+ */
+async function areDisputesSettled(chargeId: string) {
+  const disputes = await stripe.disputes.list({ charge: chargeId, limit: 100 });
+  return (
+    disputes.data.length > 0 && disputes.data.every((dispute) => isSettledDispute(dispute.status))
   );
+}
+
+export async function isUnreversedCharge(intent: Stripe.Checkout.Session["payment_intent"]) {
+  const charge = intent && typeof intent !== "string" ? intent.latest_charge : null;
+  if (!charge || typeof charge === "string" || charge.refunded || charge.amount_refunded > 0)
+    return false;
+  return !charge.disputed || (await areDisputesSettled(charge.id));
 }
 
 /**
  * True when a one-time checkout's payment still stands. A session without a
  * payment intent was fully discounted, so there is no charge to reverse.
  */
-export function isPaidCheckoutPaymentCurrent(
+export async function isPaidCheckoutPaymentCurrent(
   session: Pick<Stripe.Checkout.Session, "payment_intent">,
 ) {
-  return session.payment_intent === null || isUnreversedCharge(session.payment_intent);
+  return session.payment_intent === null || (await isUnreversedCharge(session.payment_intent));
 }
 
 /**
@@ -92,7 +106,7 @@ export async function findPaidLifetimePurchase(
       session.mode !== "payment" ||
       session.payment_status !== "paid" ||
       !isLifetimePlanId(planId) ||
-      !isPaidCheckoutPaymentCurrent(session)
+      !(await isPaidCheckoutPaymentCurrent(session))
     ) {
       continue;
     }
@@ -136,7 +150,8 @@ export async function saveLifetimePlan(
         { expand: ["payment_intent.latest_charge"] },
         { timeout: 10_000, maxNetworkRetries: 0 },
       );
-      if (live.payment_status !== "paid" || !isPaidCheckoutPaymentCurrent(live)) return undefined;
+      if (live.payment_status !== "paid" || !(await isPaidCheckoutPaymentCurrent(live)))
+        return undefined;
       const updates = {
         ...extra,
         stripeCustomerId: customerId,
@@ -185,24 +200,35 @@ export async function saveLifetimePlan(
   );
 }
 
+function chargePaymentIntentId(charge: Stripe.Charge) {
+  return typeof charge.payment_intent === "string"
+    ? charge.payment_intent
+    : charge.payment_intent?.id;
+}
+
+function lifetimeCheckoutUserId(session: Stripe.Checkout.Session) {
+  const userId = session.metadata?.userId ?? session.client_reference_id;
+  if (
+    !userId ||
+    session.mode !== "payment" ||
+    session.metadata?.organizationId ||
+    !isLifetimePlanId(session.metadata?.planId)
+  )
+    return null;
+  return userId;
+}
+
 /** Revoke only the reversed one-time checkout, preserving any newer contract. */
 export async function revokeReversedLifetimeCharge(charge: Stripe.Charge) {
-  const paymentIntent =
-    typeof charge.payment_intent === "string" ? charge.payment_intent : charge.payment_intent?.id;
+  const paymentIntent = chargePaymentIntentId(charge);
   if (!paymentIntent) return;
   const sessions = await stripe.checkout.sessions.list({
     payment_intent: paymentIntent,
     limit: 100,
   });
   for (const session of sessions.data) {
-    const userId = session.metadata?.userId ?? session.client_reference_id;
-    if (
-      !userId ||
-      session.mode !== "payment" ||
-      session.metadata?.organizationId ||
-      !isLifetimePlanId(session.metadata?.planId)
-    )
-      continue;
+    const userId = lifetimeCheckoutUserId(session);
+    if (!userId) continue;
     await db.transaction(
       async (tx) => {
         await tx.execute(sql`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`);
@@ -227,5 +253,53 @@ export async function revokeReversedLifetimeCharge(charge: Stripe.Charge) {
       },
       { isolationLevel: "read committed" },
     );
+  }
+}
+
+/**
+ * A dispute decided in the merchant's favor hands back the lifetime plan that
+ * opening it revoked, unless the row has moved on to another contract since.
+ */
+export async function restoreDisputedLifetimeCharge(charge: Stripe.Charge) {
+  const paymentIntent = chargePaymentIntentId(charge);
+  if (!paymentIntent) return;
+  const sessions = await stripe.checkout.sessions.list({
+    payment_intent: paymentIntent,
+    limit: 100,
+    expand: ["data.payment_intent"],
+  });
+  for (const session of sessions.data) {
+    const userId = lifetimeCheckoutUserId(session);
+    const planId = session.metadata?.planId;
+    const customerId =
+      typeof session.customer === "string" ? session.customer : session.customer?.id;
+    if (!userId || !customerId || !isLifetimePlanId(planId)) continue;
+    const [revoked] = await db
+      .select()
+      .from(billing)
+      .where(
+        and(
+          eq(billing.userId, userId),
+          isNull(billing.organizationId),
+          eq(billing.checkoutSessionId, session.id),
+          isNull(billing.planId),
+          isNull(billing.stripeSubscriptionId),
+          eq(billing.status, "inactive"),
+        ),
+      )
+      .limit(1);
+    if (!revoked) continue;
+    const intent = session.payment_intent;
+    // saveLifetimePlan rechecks the live charge, so only a settled dispute restores it.
+    await saveLifetimePlan(db, {
+      userId,
+      customerId,
+      purchase: {
+        planId,
+        priceId: intent && typeof intent !== "string" ? (intent.metadata?.priceId ?? null) : null,
+        checkoutSessionId: session.id,
+      },
+      expectedBillingRecord: revoked,
+    });
   }
 }

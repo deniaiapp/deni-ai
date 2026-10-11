@@ -80,7 +80,10 @@ async function personalDeletionStatus(
   return status;
 }
 
-async function getPersonalCustomerIds(userId: string) {
+async function getPersonalCustomerIds(
+  userId: string,
+  { includeOrphans }: { includeOrphans: boolean },
+) {
   const [record] = await db
     .select({ customerId: billing.stripeCustomerId })
     .from(billing)
@@ -114,6 +117,9 @@ async function getPersonalCustomerIds(userId: string) {
     }
   }
   // Include orphaned personal customers from older concurrent creation attempts.
+  // Stripe Search has a low account-wide rate limit shared with customer creation,
+  // so only the deletion itself pays for it; the status preview skips it.
+  if (!includeOrphans) return ids;
   let page: string | undefined;
   do {
     const result = await stripe.customers.search({
@@ -164,9 +170,27 @@ async function hasRunningTeamSubscription(userId: string) {
   return classifyDeletionSubscriptions(all).state !== "ready";
 }
 
+/**
+ * Why a personal customer's cards must stay attached: a running subscription
+ * ("active"), or one still due to invoice before it ends, including metered
+ * usage billed in arrears and the Max Mode meter host, or money owed
+ * ("billingPending"). Null when the cards can be removed.
+ */
+export async function getCardRemovalBlocker(
+  customerId: string,
+): Promise<"active" | "billingPending" | null> {
+  const status = classifyDeletionSubscriptions(await getSubscriptions(customerId));
+  if (status.state === "active") return "active";
+  if (status.state === "cancelPending" || (await hasUnpaidInvoices(new Set([customerId])))) {
+    return "billingPending";
+  }
+  return null;
+}
+
+/** Preview for the deletion dialog; `deletePersonalStripeCustomers` rechecks everything. */
 export async function getAccountDeletionStatus(userId: string): Promise<AccountDeletionStatus> {
   if (await isTeamOwner(userId)) return { state: "teamOwner", periodEnd: null };
-  const customerIds = await getPersonalCustomerIds(userId);
+  const customerIds = await getPersonalCustomerIds(userId, { includeOrphans: false });
   const all = (await Promise.all([...customerIds].map(getSubscriptions))).flat();
   if (await hasRunningTeamSubscription(userId)) return { state: "active", periodEnd: null };
   return personalDeletionStatus(userId, customerIds, all);
@@ -181,7 +205,7 @@ export async function deletePersonalStripeCustomers(userId: string) {
       message: "Delete your team or transfer its ownership before deleting your account.",
     });
   }
-  const customerIds = await getPersonalCustomerIds(userId);
+  const customerIds = await getPersonalCustomerIds(userId, { includeOrphans: true });
   const subscriptions = (await Promise.all([...customerIds].map(getSubscriptions))).flat();
   const status = await personalDeletionStatus(userId, customerIds, subscriptions);
   if (status.state === "billingPending")

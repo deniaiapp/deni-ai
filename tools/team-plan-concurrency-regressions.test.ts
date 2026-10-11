@@ -54,6 +54,9 @@ vi.mock("@/lib/stripe", () => ({
       },
       update: vi.fn(async () => state.subscription()),
     },
+    invoices: {
+      createPreview: vi.fn(async () => ({ amount_due: 4200, currency: "usd" })),
+    },
   },
 }));
 vi.mock("@/db/drizzle", () => {
@@ -179,4 +182,22 @@ test("an old team status query cannot replace a newly purchased contract", async
   await caller().teamBillingStatus({ organizationId: "team" });
   expect(state.record.stripeSubscriptionId).toBe("new-subscription");
   expect(state.record.planId).toBe("max_team_monthly");
+});
+test("the team plan switch estimate previews every seat without changing the plan", async () => {
+  state.members = 3;
+  const estimate = await caller().estimateTeamPlanChange({
+    organizationId: "team",
+    planId: "max_team_monthly",
+  });
+  expect(estimate).toEqual({ amountDue: 4200, currency: "usd", memberCount: 3 });
+  expect(stripe.invoices.createPreview).toHaveBeenCalledWith(
+    expect.objectContaining({
+      subscription: "subscription",
+      subscription_details: {
+        items: [{ id: "licensed", price: "price_max", quantity: 3 }],
+        proration_behavior: "always_invoice",
+      },
+    }),
+  );
+  expect(stripe.subscriptions.update).not.toHaveBeenCalled();
 });

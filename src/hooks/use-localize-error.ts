@@ -306,6 +306,10 @@ export function useLocalizeError() {
         ),
         ...mapKeys(t("Both conversations need an answer."), "Both conversations need an answer."),
         ...mapKeys(
+          t("Cancel your subscription before buying a one-time plan."),
+          "Cancel your subscription before buying a one-time plan.",
+        ),
+        ...mapKeys(
           t("Cancel your subscription before removing the card."),
           "Cancel your subscription before removing the card.",
         ),
@@ -446,6 +450,12 @@ export function useLocalizeError() {
         ...mapKeys(
           t("Verification intent does not belong to you."),
           "Verification intent does not belong to you.",
+        ),
+        ...mapKeys(
+          t(
+            "Wait for your subscription to end and pay outstanding invoices before removing the card.",
+          ),
+          "Wait for your subscription to end and pay outstanding invoices before removing the card.",
         ),
         ...mapKeys(
           t("You already have an active subscription. Use Change plan or cancel first."),

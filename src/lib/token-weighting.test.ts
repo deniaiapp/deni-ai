@@ -1,5 +1,10 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { computeWeightedTokens, getTokenUsageWeights } from "./token-weighting";
+import {
+  breakdownFromLanguageModelUsage,
+  computeWeightedTokens,
+  computeWeightedUsageFromLanguageModelUsage,
+  getTokenUsageWeights,
+} from "./token-weighting";
 
 const keys = [
   "FLIXA_USAGE_WEIGHT_INPUT",
@@ -41,4 +46,24 @@ test("component weighting rounds up once", () => {
   expect(
     computeWeightedTokens({ input: 1, cacheRead: 1, cacheWrite: 1, output: 1 }, defaults),
   ).toBe(8);
+});
+
+test("cache writes left inside OpenRouter's noCache count once", () => {
+  const { breakdown, weighted } = computeWeightedUsageFromLanguageModelUsage({
+    inputTokens: 100,
+    outputTokens: 0,
+    inputTokenDetails: { noCacheTokens: 100, cacheReadTokens: 0, cacheWriteTokens: 100 },
+  });
+  expect(breakdown).toEqual({ input: 0, cacheRead: 0, cacheWrite: 100, output: 0 });
+  expect(weighted).toBe(125);
+});
+
+test("providers that exclude cache writes from noCache are unchanged", () => {
+  expect(
+    breakdownFromLanguageModelUsage({
+      inputTokens: 150,
+      outputTokens: 10,
+      inputTokenDetails: { noCacheTokens: 50, cacheReadTokens: 0, cacheWriteTokens: 100 },
+    }),
+  ).toEqual({ input: 50, cacheRead: 0, cacheWrite: 100, output: 10 });
 });

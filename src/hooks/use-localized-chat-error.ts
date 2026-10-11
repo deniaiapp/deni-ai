@@ -71,6 +71,10 @@ export function useLocalizedChatError() {
         return t(
           "Fast, Pro, and Deep Research are not available for guest sessions. Log in to use them.",
         );
+      case "Conversations this long are not available for guest sessions.":
+        return t(
+          "Conversations this long are not available for guest sessions. Start a new chat or log in to continue.",
+        );
       default:
         return text;
     }

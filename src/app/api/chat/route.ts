@@ -24,11 +24,17 @@ import {
   replaceLastChatMessage,
   updateChat,
 } from "@/lib/chat";
-import { mergeStoredAndClientMessages } from "@/lib/chat-messages";
+import {
+  getContinuedAssistantMessage,
+  mergeStoredAndClientMessages,
+  selectModelContextMessages,
+} from "@/lib/chat-messages";
 import { inlineTextAttachments } from "@/lib/chat-text-attachments";
 import {
   prepareBinaryAttachments,
   createChatAttachmentDownload,
+  fitBinaryAttachmentsToBudget,
+  type ChatAttachmentCache,
 } from "@/lib/chat-attachment-download";
 import { isComparisonConversation } from "@/lib/comparison-conversation";
 import {
@@ -37,11 +43,7 @@ import {
   startChatGeneration,
 } from "@/lib/chat-generation";
 import { createChatTools } from "@/lib/chat-tools";
-import {
-  getEffectiveTokenMultiplier,
-  getModelContextWindow,
-  getModelDefinition,
-} from "@/lib/constants";
+import { getModelContextWindow, getModelDefinition } from "@/lib/constants";
 import { buildMemoryPrompt, getUserMemoryState, maybeAutoSaveMemories } from "@/lib/memory";
 import { platformCapabilities } from "@/lib/platform-capabilities.server";
 import { buildProjectPrompt } from "@/lib/project-context";
@@ -67,6 +69,13 @@ import { authorLabels } from "@/app/(home)/models/models-author-labels";
 import { addOpenRouterCacheControl, ChatRouteError, resolveChatModelContext } from "./_lib/model";
 import { buildChatSystemPrompt } from "./_lib/prompt";
 import { ChatRequestSchema, setPendingState } from "./_lib/schema";
+import {
+  estimatePromptInputTokens,
+  estimateTokenReservation,
+  estimateUrlAttachmentTokens,
+  GUEST_MAX_OUTPUT_TOKENS,
+  GUEST_MAX_PROMPT_TOKENS,
+} from "./_lib/usage-estimate";
 
 const tokenCountFormatter = new Intl.NumberFormat("en-US");
 
@@ -98,47 +107,6 @@ function formatChatStreamError(error: unknown, modelId: string): string {
   }
 
   return `${modelName} exceeded its context window. Start a new chat or trim earlier messages/files.`;
-}
-
-/** Uncapped prompt-size estimate (chars/4). Used for long-context preflight. */
-function estimatePromptInputTokens({
-  modelMessages,
-  systemPrompt,
-}: {
-  modelMessages: unknown;
-  systemPrompt: string;
-}): number {
-  const serializedMessages = JSON.stringify(modelMessages);
-  return Math.ceil((serializedMessages.length + systemPrompt.length) / 4);
-}
-
-/**
- * Reserve at least the estimated prompt before streaming starts, so a request
- * whose input alone exceeds the remaining quota is rejected up front. Long-context
- * sessions (>200K estimated input on OpenAI 1M models) also hold the 2× premium.
- * Settlement reconciles to the provider-reported usage afterwards.
- */
-function estimateTokenReservation({
-  modelMessages,
-  systemPrompt,
-  modelId,
-  proMode = false,
-  fastMode = false,
-}: {
-  modelMessages: unknown;
-  systemPrompt: string;
-  modelId: string;
-  proMode?: boolean;
-  fastMode?: boolean;
-}) {
-  const estimatedPromptTokens = estimatePromptInputTokens({ modelMessages, systemPrompt });
-  const effectiveMultiplier = getEffectiveTokenMultiplier(modelId, estimatedPromptTokens, {
-    proMode,
-    fastMode,
-  });
-  const baseUnits = Math.max(512, estimatedPromptTokens + 1_024);
-
-  return Math.ceil(baseUnits * effectiveMultiplier);
 }
 
 export async function POST(req: Request) {
@@ -190,6 +158,7 @@ export async function POST(req: Request) {
   const {
     id: requestId,
     messages: rawMessages = [],
+    trigger,
     model: baseModel,
     webSearch = false,
     reasoningEffort = "high",
@@ -297,10 +266,19 @@ export async function POST(req: Request) {
   });
 
   // Models accept images and PDFs as files, not text files, so inline those.
+  const attachmentCache: ChatAttachmentCache = new Map();
   let modelMessages: ModelMessage[];
   try {
     modelMessages = await convertToModelMessages(
-      prepareBinaryAttachments(await inlineTextAttachments(messages)),
+      await fitBinaryAttachmentsToBudget(
+        prepareBinaryAttachments(
+          await inlineTextAttachments(
+            selectModelContextMessages(messages, { regenerate: trigger === "regenerate-message" }),
+          ),
+        ),
+        attachmentCache,
+        req.signal,
+      ),
     );
   } catch {
     return NextResponse.json({ error: "Invalid or oversized attachment" }, { status: 400 });
@@ -310,17 +288,43 @@ export async function POST(req: Request) {
     ? buildMemoryPrompt(memoryState)
     : null;
 
-  const responseMessageId = generateId();
+  // Guest usage is one request regardless of size, so reject oversized prompts
+  // before anything is reserved or written.
+  if (
+    isAnonymous &&
+    estimatePromptInputTokens({ modelMessages, systemPrompt: persistentMemory ?? "" }) >
+      GUEST_MAX_PROMPT_TOKENS
+  ) {
+    return NextResponse.json(
+      {
+        error: "Conversations this long are not available for guest sessions.",
+        reason: "guest_prompt_too_long",
+      },
+      { status: 413 },
+    );
+  }
+
+  // A questionnaire answer continues its assistant message in place, so the
+  // transcript never holds a second copy of that message's tool calls.
+  const continuedMessage = getContinuedAssistantMessage(messages, trigger);
+  const responseMessageId = continuedMessage?.id ?? generateId();
   const generationId = generateId();
   const shouldGenerateTitle = chat.title === "New Chat";
   const pendingAssistantMessage = setPendingState(
-    {
-      id: responseMessageId,
-      role: "assistant",
-      parts: [],
-    } as UIMessage,
+    continuedMessage ??
+      ({
+        id: responseMessageId,
+        role: "assistant",
+        parts: [],
+      } as UIMessage),
     true,
   );
+  const pendingMessages = [
+    ...(continuedMessage ? messages.slice(0, -1) : messages),
+    pendingAssistantMessage,
+  ];
+  // Parts the continued message already had are not output of this request.
+  const previousPartCount = pendingAssistantMessage.parts.length;
 
   let generationAbortController: AbortController | undefined;
   let pendingStateRolledBack = false;
@@ -331,15 +335,31 @@ export async function POST(req: Request) {
   let trailingPersistTimer: ReturnType<typeof setTimeout> | undefined;
   let hasAssistantOutput = false;
   let consumedUsageAmount = 0;
+  let finalUsageAmount = 0;
+  // Provider usage only arrives when a step finishes. A step cut off by a stop,
+  // replacement, disconnect or upstream error was still billed by the provider,
+  // so estimate it from its prompt plus the output streamed so far.
+  let basePromptTokens = 0;
+  let finishedStepMessageTokens = 0;
+  let stepInFlight = false;
+  let stepPromptTokens = 0;
+  let stepOutputChars = 0;
+  const resolveUsageAmount = () => {
+    if (usageUnit !== "tokens") return hasAssistantOutput ? 1 : 0;
+    const unfinishedStepAmount =
+      hasAssistantOutput && stepInFlight
+        ? calculateChatUsageAmount(
+            baseModel,
+            { inputTokens: stepPromptTokens, outputTokens: Math.ceil(stepOutputChars / 4) },
+            { proMode, fastMode },
+          )
+        : 0;
+    return Math.max(finalUsageAmount + unfinishedStepAmount, hasAssistantOutput ? 1 : 0);
+  };
   const modelReservationId = `${generationId}:model`;
   const persistObservedUsage = async () => {
     if (!usageConsumed) return;
-    const amount =
-      usageUnit === "tokens"
-        ? Math.max(finalUsageAmount, hasAssistantOutput ? 1 : 0)
-        : hasAssistantOutput
-          ? 1
-          : 0;
+    const amount = resolveUsageAmount();
     try {
       await recordObservedUsage({ userId, reservationId: modelReservationId, amount });
     } catch (error) {
@@ -351,7 +371,6 @@ export async function POST(req: Request) {
       void persistObservedUsage();
     }, 30_000);
   };
-  let finalUsageAmount = 0;
 
   const ownsCurrentGeneration = async () => {
     return (
@@ -381,12 +400,7 @@ export async function POST(req: Request) {
   const settleUsage = () => {
     usageSettlement ??= (async () => {
       if (!usageConsumed) return;
-      const amount =
-        usageUnit === "tokens"
-          ? Math.max(finalUsageAmount, hasAssistantOutput ? 1 : 0)
-          : hasAssistantOutput
-            ? 1
-            : 0;
+      const amount = resolveUsageAmount();
       await settleUsageReservation({ userId, reservationId: modelReservationId, amount });
     })();
     return usageSettlement;
@@ -445,7 +459,7 @@ export async function POST(req: Request) {
       req.signal.addEventListener("abort", abortComparison, { once: true });
       if (req.signal.aborted) abortComparison();
     } else {
-      await updateChat(id, userId, [...messages, pendingAssistantMessage], undefined, {
+      await updateChat(id, userId, pendingMessages, undefined, {
         nextGenerationId: generationId,
       });
     }
@@ -516,9 +530,11 @@ export async function POST(req: Request) {
 
   try {
     if (usageUnit === "tokens") {
+      basePromptTokens =
+        estimatePromptInputTokens({ modelMessages, systemPrompt }) +
+        estimateUrlAttachmentTokens(modelMessages);
       consumedUsageAmount = estimateTokenReservation({
-        modelMessages,
-        systemPrompt,
+        estimatedPromptTokens: basePromptTokens,
         modelId: baseModel,
         proMode,
         fastMode,
@@ -537,14 +553,37 @@ export async function POST(req: Request) {
 
     result = streamText({
       model: model,
-      experimental_download: createChatAttachmentDownload(generationAbortController.signal),
+      experimental_download: createChatAttachmentDownload(
+        generationAbortController.signal,
+        attachmentCache,
+      ),
       messages: requestMessages,
       abortSignal: generationAbortController.signal,
       stopWhen: stepCountIs(isAnonymous ? GUEST_MAX_STEPS : MAX_STEPS),
+      maxOutputTokens: isAnonymous ? GUEST_MAX_OUTPUT_TOKENS : undefined,
       tools,
+      // Runs right before the provider call, once attachments are downloaded.
+      onStepStart: () => {
+        stepInFlight = true;
+        stepPromptTokens = basePromptTokens + finishedStepMessageTokens;
+        stepOutputChars = 0;
+      },
+      onChunk: ({ chunk }) => {
+        if (chunk.type === "text-delta" || chunk.type === "reasoning-delta") {
+          stepOutputChars += chunk.text.length;
+        } else if (chunk.type === "tool-input-delta") {
+          stepOutputChars += chunk.delta.length;
+        }
+      },
       // onFinish is not called by the SDK after an abort. Keep the usage of
       // completed steps so stopped/replaced generations still get reconciled.
-      onStepFinish: async ({ usage }) => {
+      onStepFinish: async ({ usage, response }) => {
+        stepInFlight = false;
+        // Later steps resend this step's assistant and tool messages.
+        finishedStepMessageTokens += estimatePromptInputTokens({
+          modelMessages: response.messages,
+          systemPrompt: "",
+        });
         finalUsageAmount += calculateChatUsageAmount(baseModel, usage, { proMode, fastMode });
         await persistObservedUsage();
       },
@@ -610,7 +649,7 @@ export async function POST(req: Request) {
 
   const queuePartialPersist = (message: UIMessage, force: boolean = false) => {
     const pendingMessage = setPendingState(message, true);
-    if (pendingMessage.parts.length > 0) {
+    if (pendingMessage.parts.length > previousPartCount) {
       if (!hasAssistantOutput) {
         hasAssistantOutput = true;
         void persistObservedUsage();
@@ -645,7 +684,9 @@ export async function POST(req: Request) {
   };
 
   const stream = createUIMessageStream<UIMessage>({
-    originalMessages: messages,
+    // Ends with the pending message, so the SDK builds the response from it
+    // instead of copying an earlier trailing assistant message's parts.
+    originalMessages: pendingMessages,
     execute: async ({ writer }) => {
       try {
         writer.write({
@@ -663,7 +704,11 @@ export async function POST(req: Request) {
 
         writer.merge(clientStream);
 
+        // No start chunk reaches this branch (sendStart: false), so seed it with
+        // the pending message; otherwise partial saves would carry an empty ID.
+        // The SDK mutates the seed, so it gets a copy.
         for await (const message of readUIMessageStream<UIMessage>({
+          message: structuredClone(pendingAssistantMessage),
           stream: persistenceStream,
         })) {
           // In-memory only: this runs for every chunk. The database ownership check
@@ -692,7 +737,7 @@ export async function POST(req: Request) {
       try {
         await partialPersistPromise;
         hasAssistantOutput ||= updatedMessages.some(
-          (message) => message.id === responseMessageId && message.parts.length > 0,
+          (message) => message.id === responseMessageId && message.parts.length > previousPartCount,
         );
         // Accounting belongs to this request, not to the current chat-row owner.
         // Stopping/replacing the generation must only suppress transcript writes.
@@ -748,7 +793,12 @@ export async function POST(req: Request) {
         // Memory extraction can take seconds and must not keep the chat SSE
         // open. Schedule it after the response finishes so the client can end
         // the request immediately while work continues on the backend.
-        if (platformCapabilities.features.memory && memoryState.profile.autoMemory) {
+        // Guests pay one request per turn, so they get no extra unbilled model call.
+        if (
+          !isAnonymous &&
+          platformCapabilities.features.memory &&
+          memoryState.profile.autoMemory
+        ) {
           after(() =>
             maybeAutoSaveMemories({
               userId,

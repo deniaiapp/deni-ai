@@ -66,6 +66,9 @@ export function PlanCard({
     status.hasActiveSubscription && !cancelDate && !status.isCurrent && mode === "subscription";
   const isBlockedByCancel =
     Number.isInteger(cancelDate) && Boolean(activePlanId) && !status.isCurrent;
+  // A one-time plan does not end a renewing subscription, so checkout refuses it.
+  const isBlockedBySubscription =
+    mode === "payment" && status.hasActiveSubscription && !cancelDate && !status.isCurrent;
   const processing =
     (changePlan.isPending && changePlan.variables?.planId === plan.id) ||
     (checkout.isPending && checkout.variables?.planId === plan.id);
@@ -96,12 +99,15 @@ export function PlanCard({
       ? t("Current plan")
       : isBlockedByCancel
         ? t("Resume to change")
-        : canChange
-          ? t("Change plan")
-          : mode === "payment"
-            ? t("Buy once")
-            : t("Subscribe");
-  const showTrustCopy = !status.isOnTeamPlan && !status.isCurrent && !isBlockedByCancel;
+        : isBlockedBySubscription
+          ? t("Cancel your subscription first")
+          : canChange
+            ? t("Change plan")
+            : mode === "payment"
+              ? t("Buy once")
+              : t("Subscribe");
+  const showTrustCopy =
+    !status.isOnTeamPlan && !status.isCurrent && !isBlockedByCancel && !isBlockedBySubscription;
 
   return (
     <Card
@@ -247,6 +253,7 @@ export function PlanCard({
             status.isCurrent ||
             processing ||
             isBlockedByCancel ||
+            isBlockedBySubscription ||
             isLoadingThisPlan ||
             status.isOnTeamPlan
           }

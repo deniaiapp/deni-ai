@@ -11,6 +11,8 @@ const state = vi.hoisted(() => ({
   replacementDuringLookup: false,
   replacementDuringLineItems: false,
   reversed: false,
+  /** Statuses of the disputes on the lifetime charge. */
+  disputes: [] as string[],
 }));
 vi.mock("@/env", () => ({
   env: { STRIPE_SECRET_KEY: "sk_test", STRIPE_WEBHOOK_SECRET: "whsec_test" },
@@ -33,12 +35,15 @@ vi.mock("@/lib/team-billing", () => ({
   cancelOrgMembersPersonalSubscriptions: vi.fn(),
   getTeamBilling: vi.fn(),
   recordTeamAuditEvent: vi.fn(),
+  updateTeamSeatCount: vi.fn(),
 }));
 vi.mock("@/lib/team-billing-record", () => ({ saveTeamBillingRecord: vi.fn() }));
 vi.mock("@/lib/stripe", () => ({
   stripe: {
     webhooks: { constructEvent: () => state.event },
     customers: { retrieve: async () => ({ metadata: { userId: "user" } }) },
+    charges: { retrieve: async () => ({ id: "ch", payment_intent: "intent" }) },
+    disputes: { list: async () => ({ data: state.disputes.map((status) => ({ status })) }) },
     // The webhook reads the live subscription instead of trusting the event's snapshot.
     subscriptions: {
       retrieve: async () =>
@@ -52,7 +57,14 @@ vi.mock("@/lib/stripe", () => ({
         },
         retrieve: async () => ({
           ...paidLifetimeSession,
-          payment_intent: { latest_charge: { refunded: state.reversed, disputed: false } },
+          payment_intent: {
+            latest_charge: {
+              id: "ch",
+              refunded: state.reversed,
+              disputed: state.disputes.length > 0,
+              amount_refunded: 0,
+            },
+          },
         }),
         listLineItems: async () => {
           if (state.replacementDuringLineItems)
@@ -101,7 +113,11 @@ vi.mock("@/db/drizzle", () => {
           },
         }),
       }),
-      select: () => ({ from: () => ({ where: () => result([{ ...state.record }]) }) }),
+      select: () => ({
+        from: () => ({
+          where: (condition?: SQL) => result(matches(condition) ? [{ ...state.record }] : []),
+        }),
+      }),
       insert: () => ({
         values: () => ({
           onConflictDoUpdate: ({
@@ -165,6 +181,7 @@ beforeEach(() => {
   state.replacementDuringLookup = false;
   state.replacementDuringLineItems = false;
   state.reversed = false;
+  state.disputes = [];
 });
 
 test.each([false, true])(
@@ -367,4 +384,61 @@ test("a refund for an old lifetime checkout preserves a newer subscription", asy
   expect((await deliver()).status).toBe(200);
   expect(state.record.stripeSubscriptionId).toBe("sub_new");
   expect(state.record.status).toBe("active");
+});
+
+function closeDispute(status: string) {
+  state.event = {
+    type: "charge.dispute.closed",
+    data: { object: { object: "dispute", id: "dp", status, charge: "ch" } },
+  };
+  return deliver();
+}
+const revokedByDispute = {
+  mode: "subscription",
+  status: "inactive",
+  planId: null,
+  priceId: null,
+  checkoutSessionId: "cs_lifetime",
+};
+test.each(["won", "warning_closed"])(
+  "a dispute closed as %s restores the lifetime plan it revoked",
+  async (status) => {
+    Object.assign(state.record, revokedByDispute);
+    state.completedSessions = [paidLifetimeSession];
+    state.disputes = [status];
+    expect((await closeDispute(status)).status).toBe(200);
+    expect(state.record).toMatchObject({
+      planId: "pro_lifetime",
+      priceId: "price_pro_lifetime",
+      status: "paid",
+      mode: "payment",
+    });
+  },
+);
+test("a lost dispute keeps the lifetime plan revoked", async () => {
+  Object.assign(state.record, revokedByDispute);
+  state.completedSessions = [paidLifetimeSession];
+  state.disputes = ["lost"];
+  expect((await closeDispute("lost")).status).toBe(200);
+  expect(state.record).toMatchObject({ planId: null, status: "inactive" });
+});
+test("a won dispute does not replace a subscription bought after the revocation", async () => {
+  Object.assign(state.record, {
+    ...revokedByDispute,
+    stripeSubscriptionId: "sub_new",
+    planId: "max_monthly",
+    status: "active",
+  });
+  state.completedSessions = [paidLifetimeSession];
+  state.disputes = ["won"];
+  expect((await closeDispute("won")).status).toBe(200);
+  expect(state.record).toMatchObject({ planId: "max_monthly", status: "active" });
+});
+test("a won dispute leaves a later refund's revocation in place", async () => {
+  Object.assign(state.record, revokedByDispute);
+  state.completedSessions = [paidLifetimeSession];
+  state.disputes = ["won"];
+  state.reversed = true;
+  expect((await closeDispute("won")).status).toBe(200);
+  expect(state.record).toMatchObject({ planId: null, status: "inactive" });
 });

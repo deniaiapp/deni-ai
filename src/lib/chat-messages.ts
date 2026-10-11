@@ -93,6 +93,61 @@ export function mergeStoredAndClientMessages(
   return client.length >= stored.length ? client : stored;
 }
 
+/**
+ * The assistant message a request continues in place. After a questionnaire
+ * answer the client resends that message last, and the answer belongs to it.
+ * A regenerate always starts a new message.
+ */
+export function getContinuedAssistantMessage(
+  messages: UIMessage[],
+  trigger: string | undefined,
+): UIMessage | undefined {
+  const last = messages.at(-1);
+  return trigger !== "regenerate-message" && last?.role === "assistant" && last.id
+    ? last
+    : undefined;
+}
+
+function getBranchGroupId(message: UIMessage): string | undefined {
+  const groupId = (message.metadata as { branchGroupId?: unknown } | undefined)?.branchGroupId;
+  return typeof groupId === "string" && groupId ? groupId : undefined;
+}
+
+function getToolCallIds(message: UIMessage): string[] {
+  return message.parts.flatMap((part) =>
+    "toolCallId" in part && typeof part.toolCallId === "string" ? [part.toolCallId] : [],
+  );
+}
+
+/**
+ * The transcript the model sees. Regenerated alternatives stay stored for the
+ * branch picker, but only the last one (the branch shown by default) is sent,
+ * and a regenerate also drops the alternatives of the answer it replaces so
+ * the prompt ends with the user turn. Older questionnaire continuations were
+ * saved as a second assistant message repeating the first one's tool calls,
+ * so the first copy is skipped to keep tool call IDs unique.
+ */
+export function selectModelContextMessages(
+  messages: UIMessage[],
+  { regenerate = false }: { regenerate?: boolean } = {},
+): UIMessage[] {
+  const selected = messages.filter((message, index) => {
+    const next = messages[index + 1];
+    if (message.role !== "assistant" || next?.role !== "assistant") return true;
+    const groupId = getBranchGroupId(message);
+    if (groupId && getBranchGroupId(next) === groupId) return false;
+    const toolCallIds = getToolCallIds(message);
+    const nextToolCallIds = new Set(getToolCallIds(next));
+    return !(toolCallIds.length > 0 && toolCallIds.every((id) => nextToolCallIds.has(id)));
+  });
+  while (regenerate) {
+    const last = selected.at(-1);
+    if (last?.role !== "assistant" || !getBranchGroupId(last)) break;
+    selected.pop();
+  }
+  return selected;
+}
+
 export function mergeServerWindow(current: UIMessage[], serverWindow: UIMessage[]): UIMessage[] {
   if (current.length === 0) {
     return serverWindow;

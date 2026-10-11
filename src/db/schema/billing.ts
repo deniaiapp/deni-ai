@@ -38,6 +38,9 @@ export const billing = pgTable(
     cardFunding: text("card_funding"),
     // When the user verified a card via SetupIntent (free-tier boost)
     cardVerifiedAt: timestamp("card_verified_at"),
+    // When the user removed their verified card. The fingerprint stays so the
+    // card's reuse slot is not freed; a new verification or paid card clears it.
+    cardRemovedAt: timestamp("card_removed_at"),
     // One-time 48h flash offer granted for verifying a card; survives card removal.
     cardOfferGrantedAt: timestamp("card_offer_granted_at"),
     deletionPending: boolean("deletion_pending").notNull().default(false),

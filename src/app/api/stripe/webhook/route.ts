@@ -13,7 +13,9 @@ import {
   resolveSubscriptionStatus,
   isLifetimePlanId,
   isPaidLifetimeRecord,
+  isSettledDispute,
   saveLifetimePlan,
+  restoreDisputedLifetimeCharge,
   revokeReversedLifetimeCharge,
 } from "@/lib/lifetime-plan";
 import { syncMaxModeMeterPeriod } from "@/lib/max-mode";
@@ -35,6 +37,7 @@ import {
   cancelOrgMembersPersonalSubscriptions,
   getTeamBilling,
   recordTeamAuditEvent,
+  updateTeamSeatCount,
 } from "@/lib/team-billing";
 
 type SubscriptionPayload = {
@@ -117,6 +120,7 @@ async function saveSubscription(payload: SubscriptionPayload) {
         : (existingRecord?.firstPaidAt ?? new Date()),
     paymentMethodFingerprint: fingerprintUpdates.paymentMethodFingerprint,
     cardFunding: fingerprintUpdates.cardFunding,
+    cardRemovedAt: fingerprintUpdates.cardRemovedAt,
   };
 
   if (organizationId) {
@@ -270,24 +274,44 @@ async function savePaidLifetimeCheckout(
       flashOfferEndsAt: null,
       paymentMethodFingerprint: fingerprintUpdates.paymentMethodFingerprint,
       ...(fingerprintUpdates.cardFunding ? { cardFunding: fingerprintUpdates.cardFunding } : {}),
+      cardRemovedAt: fingerprintUpdates.cardRemovedAt,
     },
   });
 }
 
 const METER_HOST_STATUSES = new Set(["trialing", "active", "past_due"]);
+/**
+ * A live meter host whose invoices are not being paid. Ended hosts are left to
+ * customer.subscription.deleted, which knows whether a replacement took over.
+ */
+const UNPAID_METER_HOST_STATUSES = new Set(["past_due", "unpaid", "paused", "incomplete"]);
+
+function hasMeteredMaxModeItems(subscription: Stripe.Subscription) {
+  return subscription.items.data.some((item) => isMeteredMaxModePrice(item.price));
+}
+
+function meterItemsCondition(subscription: Stripe.Subscription) {
+  const itemIds = subscription.items.data.map((item) => item.id);
+  if (itemIds.length === 0) return null;
+  return or(
+    inArray(billing.stripeMeteredBasicItemId, itemIds),
+    inArray(billing.stripeMeteredPremiumItemId, itemIds),
+  );
+}
 
 /**
- * The monthly Max Mode meter subscription can be canceled from the Customer
- * Portal. Meter events only invoice through a live subscription carrying the
- * metered prices, so turn Max Mode off for the rows that relied on it instead of
+ * The Max Mode meters live on the monthly plan subscription or on a separate
+ * monthly subscription, and either can end (Customer Portal, dunning, disputes).
+ * Meter events only invoice through a live subscription carrying the metered
+ * prices, so turn Max Mode off for the rows that relied on it instead of
  * letting overage accrue unbilled.
  */
 async function disableMaxModeForEndedMeterSubscription(
   subscription: Stripe.Subscription,
   customerId: string,
 ) {
-  const itemIds = subscription.items.data.map((item) => item.id);
-  if (itemIds.length === 0) return;
+  const condition = meterItemsCondition(subscription);
+  if (!condition) return;
 
   // The app itself cancels duplicate meter hosts after attaching a new one; the
   // meters are still billable then, so leave Max Mode alone.
@@ -301,7 +325,7 @@ async function disableMaxModeForEndedMeterSubscription(
     (other) =>
       other.id !== subscription.id &&
       METER_HOST_STATUSES.has(other.status) &&
-      other.items.data.some((item) => isMeteredMaxModePrice(item.price)),
+      hasMeteredMaxModeItems(other),
   );
   if (meteredElsewhere) return;
 
@@ -313,12 +337,18 @@ async function disableMaxModeForEndedMeterSubscription(
       stripeMeteredPremiumItemId: null,
       updatedAt: new Date(),
     })
-    .where(
-      or(
-        inArray(billing.stripeMeteredBasicItemId, itemIds),
-        inArray(billing.stripeMeteredPremiumItemId, itemIds),
-      ),
-    );
+    .where(condition);
+}
+
+/**
+ * A Max-Mode-only host that stops being paid must not keep accruing overage.
+ * The item IDs stay, so enabling Max Mode again (refused while the host is
+ * unpaid) reuses the host once it recovers.
+ */
+async function suspendMaxModeForUnpaidMeterSubscription(subscription: Stripe.Subscription) {
+  const condition = meterItemsCondition(subscription);
+  if (!condition) return;
+  await db.update(billing).set({ maxModeEnabled: false, updatedAt: new Date() }).where(condition);
 }
 
 async function resolveUserIdFromCustomer(stripeCustomerId: string, metadataUserId?: string | null) {
@@ -387,8 +417,13 @@ export async function POST(req: Request) {
           break;
         }
 
-        if (isMaxModeOnlySubscription(subscription)) {
+        // A monthly plan subscription hosts the meters itself, so its end must
+        // turn Max Mode off too: a later checkout would not carry the meters.
+        const maxModeOnly = isMaxModeOnlySubscription(subscription);
+        if (maxModeOnly || hasMeteredMaxModeItems(subscription)) {
           await disableMaxModeForEndedMeterSubscription(subscription, customerId);
+        }
+        if (maxModeOnly) {
           break;
         }
 
@@ -468,6 +503,11 @@ export async function POST(req: Request) {
 
         await syncMaxModeMeterPeriod(subscription);
         if (isMaxModeOnlySubscription(subscription)) {
+          // A monthly plan's own status already gates Max Mode; a separate meter
+          // host's status does not reach the billing row, so act on it here.
+          if (UNPAID_METER_HOST_STATUSES.has(subscription.status)) {
+            await suspendMaxModeForUnpaidMeterSubscription(subscription);
+          }
           break;
         }
 
@@ -509,6 +549,8 @@ export async function POST(req: Request) {
           lookupKey &&
           isTeamPlan(findPlanByLookupKey(lookupKey)?.id ?? "")
         ) {
+          // Members who joined while checkout was open were never billed as seats.
+          await updateTeamSeatCount(organizationId);
           await cancelOrgMembersPersonalSubscriptions(organizationId);
         }
 
@@ -576,6 +618,10 @@ export async function POST(req: Request) {
 
             if (organizationId) {
               const plan = findPlanByLookupKey(price?.lookup_key ?? undefined);
+              // The checkout's quantity was the member count when it was opened.
+              if (subscription.status === "active" && isTeamPlan(plan?.id ?? "")) {
+                await updateTeamSeatCount(organizationId);
+              }
               await recordTeamAuditEvent({
                 organizationId,
                 actorUserId: userId,
@@ -622,6 +668,15 @@ export async function POST(req: Request) {
         const dispute = event.data.object;
         if (typeof dispute !== "object" || dispute === null || dispute.object !== "dispute") {
           break;
+        }
+        // charge.dispute.created revoked the lifetime plan; a dispute decided in
+        // our favor (or an inquiry closed without one) gives it back.
+        if (isSettledDispute(dispute.status)) {
+          const charge =
+            typeof dispute.charge === "string"
+              ? await stripe.charges.retrieve(dispute.charge)
+              : dispute.charge;
+          await restoreDisputedLifetimeCharge(charge);
         }
         await handleChargeDisputeClosed(dispute);
         break;

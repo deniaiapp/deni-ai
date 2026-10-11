@@ -58,7 +58,7 @@ vi.mock("./stripe", () => ({
   stripe: {
     customers: {
       retrieve: async () => ({ id: "customer", metadata: { userId: "user" } }),
-      search: async () => ({ data: [] }),
+      search: vi.fn(async () => ({ data: [] })),
       del: vi.fn(async () => {
         expect(state.frozen).toBe(true);
         return {};
@@ -139,4 +139,12 @@ test("a reservation created while checking Stripe is caught before freezing or d
   await expect(deletePersonalStripeCustomers("user")).rejects.toThrow("Usage settlement");
   expect(state.frozen).toBe(false);
   expect(stripe.customers.del).not.toHaveBeenCalled();
+});
+test("the deletion status preview leaves Stripe Search to the deletion itself", async () => {
+  state.canceled = true;
+  expect((await getAccountDeletionStatus("user")).state).toBe("ready");
+  expect(stripe.customers.search).not.toHaveBeenCalled();
+
+  await deletePersonalStripeCustomers("user");
+  expect(stripe.customers.search).toHaveBeenCalledTimes(1);
 });

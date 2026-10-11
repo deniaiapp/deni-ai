@@ -91,7 +91,11 @@ test.each(["active", "trialing", "past_due"])(
   async (status) => {
     state.liveTeamStatus = status;
     await cancelPersonalSubscription("user", "team");
-    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith("personal-sub", { prorate: true });
+    // The final invoice bills Max Mode overage metered on a monthly personal plan.
+    expect(stripe.subscriptions.cancel).toHaveBeenCalledWith("personal-sub", {
+      prorate: true,
+      invoice_now: true,
+    });
     expect(state.updates).toBe(1);
   },
 );

@@ -80,10 +80,20 @@ export function breakdownFromLanguageModelUsage(usage: {
       details.cacheWriteTokens != null);
 
   if (hasDetails) {
+    const cacheRead = nonNegative(details?.cacheReadTokens);
+    const cacheWrite = nonNegative(details?.cacheWriteTokens);
+    const noCache = details?.noCacheTokens;
+    let input = nonNegative(noCache);
+    // OpenRouter reports noCache as `prompt - cacheRead`, leaving cache writes
+    // inside it. Never count more uncached input than the reported total leaves.
+    if (typeof usage.inputTokens === "number" && Number.isFinite(usage.inputTokens)) {
+      const uncachedFromTotal = Math.max(0, usage.inputTokens - cacheRead - cacheWrite);
+      input = noCache == null ? uncachedFromTotal : Math.min(input, uncachedFromTotal);
+    }
     return {
-      input: nonNegative(details?.noCacheTokens),
-      cacheRead: nonNegative(details?.cacheReadTokens),
-      cacheWrite: nonNegative(details?.cacheWriteTokens),
+      input,
+      cacheRead,
+      cacheWrite,
       output: nonNegative(usage.outputTokens),
     };
   }

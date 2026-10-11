@@ -150,7 +150,8 @@ export async function getCustomerPrimaryCardInfo(
 }
 
 // Count distinct users (excluding `excludeUserId`, typically the caller) that
-// have this card fingerprint on their billing record.
+// have this card fingerprint on their billing record. Removing a card keeps the
+// fingerprint (see `cardRemovedAt`), so removal never frees the card's slot.
 export async function countCardUsesByFingerprint(
   fingerprint: string,
   options: { excludeUserId?: string } = {},
@@ -256,6 +257,7 @@ export function claimCardVerification(
             paymentMethodFingerprint: fingerprint,
             cardFunding: funding,
             cardVerifiedAt: verifiedAt,
+            cardRemovedAt: null,
             updatedAt: verifiedAt,
           },
         })
@@ -311,5 +313,7 @@ export async function getBillingFingerprintUpdates({
     // must not erase the fingerprint that card-reuse checks rely on.
     paymentMethodFingerprint: fingerprint ?? undefined,
     cardFunding: fingerprint ? funding : undefined,
+    // A card on the customer again supersedes an earlier card removal.
+    cardRemovedAt: fingerprint ? null : undefined,
   };
 }

@@ -14,7 +14,12 @@ const state = vi.hoisted(() => ({
   inputTokens: 10,
   limitReached: false,
   failSettlement: false,
+  nextStep: false,
+  memory: false,
 }));
+const stepMessages = [
+  { role: "tool", content: [{ type: "tool-result", toolCallId: "call", output: "Result" }] },
+];
 vi.mock("@/lib/auth", () => ({
   auth: {
     api: {
@@ -23,6 +28,10 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
+vi.mock("next/server", async () => {
+  const actual = await vi.importActual<typeof import("next/server")>("next/server");
+  return { ...actual, after: (task: () => unknown) => void task() };
+});
 vi.mock("@/lib/chat", () => ({
   getChatById: async () => ({ id: "chat", title: "Existing", messages: [], projectId: null }),
   getChatGenerationContextById: async () => ({ id: "chat", title: "Existing", projectId: null }),
@@ -45,14 +54,21 @@ vi.mock("@/lib/chat", () => ({
   generateTitle: vi.fn(),
 }));
 vi.mock("@/lib/memory", () => ({
-  getUserMemoryState: async () => ({ profile: { autoMemory: false } }),
+  getUserMemoryState: async () => ({ profile: { autoMemory: state.memory } }),
   buildMemoryPrompt: () => null,
-  maybeAutoSaveMemories: vi.fn(),
+  maybeAutoSaveMemories: vi.fn(async () => {}),
 }));
 vi.mock("@/lib/project-context", () => ({ buildProjectPrompt: async () => null }));
 vi.mock("@/lib/chat-tools", () => ({ createChatTools: () => ({}) }));
 vi.mock("@/lib/platform-capabilities.server", () => ({
-  platformCapabilities: { features: { memory: false, webSearch: false } },
+  platformCapabilities: {
+    features: {
+      get memory() {
+        return state.memory;
+      },
+      webSearch: false,
+    },
+  },
 }));
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: async () => ({ allowed: true }) }));
 vi.mock("@/lib/usage", async () => {
@@ -101,10 +117,20 @@ vi.mock("ai", async () => {
       toUIMessageStream: () =>
         new ReadableStream({
           async start(controller) {
+            const streamStep = async () => {
+              await options.onStepStart();
+              if (state.output)
+                await options.onChunk({
+                  chunk: { type: "text-delta", id: "text", text: "Partial answer" },
+                });
+            };
+            await streamStep();
             if (state.usage)
               await options.onStepFinish({
                 usage: { inputTokens: state.inputTokens, outputTokens: 2 },
+                response: { messages: stepMessages },
               });
+            if (state.nextStep) await streamStep();
             if (state.mode === "stopped") {
               const { POST } = await import("@/app/api/chat/stop/route");
               await POST(
@@ -137,7 +163,11 @@ vi.mock("ai", async () => {
 });
 
 const { POST } = await import("../src/app/api/chat/route");
-const { clearChatGenerationState, replaceLastChatMessage } = await import("@/lib/chat");
+const { streamText } = await import("ai");
+const { clearChatGenerationState, replaceLastChatMessage, updateChat } = await import("@/lib/chat");
+const { maybeAutoSaveMemories } = await import("@/lib/memory");
+const { GUEST_MAX_OUTPUT_TOKENS, GUEST_MAX_PROMPT_TOKENS } =
+  await import("../src/app/api/chat/_lib/usage-estimate");
 const { clearChatGeneration, isCurrentChatGeneration } = await import("@/lib/chat-generation");
 
 beforeEach(() => {
@@ -154,22 +184,31 @@ beforeEach(() => {
   state.inputTokens = 10;
   state.limitReached = false;
   state.failSettlement = false;
+  state.nextStep = false;
+  state.memory = false;
 });
 
-async function run() {
+function chatRequest(text = "Hello") {
   const messages: UIMessage[] = [
-    { id: "user-message", role: "user", parts: [{ type: "text", text: "Hello" }] },
+    { id: "user-message", role: "user", parts: [{ type: "text", text }] },
   ];
-  const response = await POST(
-    new Request("http://localhost/api/chat", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ id: "chat", model: "gpt-5.6-luna", messages }),
-    }),
-  );
+  return new Request("http://localhost/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ id: "chat", model: "gpt-5.6-luna", messages }),
+  });
+}
+
+async function run() {
+  const response = await POST(chatRequest());
   expect(response.status).toBe(200);
   await response.text();
 }
+
+// Reservation = prompt estimate + 1,024 output buffer (multiplier mocked to 1).
+const promptEstimate = () => state.consumed - 1_024;
+// "Partial answer" is 14 chars ≈ 4 output tokens, weighted 5×.
+const streamedOutputAmount = 20;
 
 test("cross-site chat requests cannot consume usage", async () => {
   const response = await POST(
@@ -221,12 +260,28 @@ test("stopping before any output refunds the entire reservation", async () => {
   expect(state.reported).toBe(0);
 });
 
-test("aborted output with no provider usage never retains the full reservation", async () => {
+test("aborted output with no provider usage still bills the unfinished step", async () => {
   state.usage = false;
   await run();
-  expect(state.consumed - state.refunded).toBe(1);
-  expect(state.reported).toBe(1);
+  const retained = promptEstimate() + streamedOutputAmount;
+  expect(retained).toBeGreaterThan(1);
+  expect(state.consumed - state.refunded).toBe(retained);
+  expect(state.reported).toBe(retained);
 });
+
+test.each(["stopped", "replaced"] as const)(
+  "a %s tool-loop step bills its prompt on top of the finished steps",
+  async (mode) => {
+    state.mode = mode;
+    state.nextStep = true;
+    await run();
+    const stepMessageTokens = Math.ceil(JSON.stringify(stepMessages).length / 4);
+    const retained = 20 + promptEstimate() + stepMessageTokens + streamedOutputAmount;
+    expect(state.consumed - state.refunded).toBe(retained);
+    expect(state.reported).toBe(retained);
+    if (mode === "replaced") clearChatGeneration("chat", "new-generation");
+  },
+);
 
 test("normal completion settles once and finalizes the owned transcript", async () => {
   state.mode = "finished";
@@ -263,4 +318,33 @@ test("a failed settlement keeps the streamed answer in the transcript", async ()
   state.failSettlement = true;
   await run();
   expect(clearChatGenerationState).toHaveBeenCalledOnce();
+});
+
+test("guests cannot send oversized prompts for one request unit", async () => {
+  state.guest = true;
+  const response = await POST(chatRequest("x".repeat(4 * GUEST_MAX_PROMPT_TOKENS)));
+  expect(response.status).toBe(413);
+  expect(await response.json()).toMatchObject({ reason: "guest_prompt_too_long" });
+  expect(state.consumed).toBe(0);
+  expect(streamText).not.toHaveBeenCalled();
+  expect(updateChat).not.toHaveBeenCalled();
+});
+
+test("guest output is capped and skips unbilled memory extraction", async () => {
+  state.mode = "finished";
+  state.memory = true;
+  state.guest = true;
+  await run();
+  expect(streamText).toHaveBeenLastCalledWith(
+    expect.objectContaining({ maxOutputTokens: GUEST_MAX_OUTPUT_TOKENS }),
+  );
+  expect(maybeAutoSaveMemories).not.toHaveBeenCalled();
+
+  state.guest = false;
+  state.activeGenerationId = null;
+  await run();
+  expect(streamText).toHaveBeenLastCalledWith(
+    expect.objectContaining({ maxOutputTokens: undefined }),
+  );
+  expect(maybeAutoSaveMemories).toHaveBeenCalledOnce();
 });

@@ -3,13 +3,17 @@ import { beforeEach, expect, test, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   list: vi.fn(),
   retrieve: vi.fn(),
+  disputes: vi.fn(),
   execute: vi.fn(),
   insert: vi.fn(),
 }));
 
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/stripe", () => ({
-  stripe: { checkout: { sessions: { list: mocks.list, retrieve: mocks.retrieve } } },
+  stripe: {
+    checkout: { sessions: { list: mocks.list, retrieve: mocks.retrieve } },
+    disputes: { list: mocks.disputes },
+  },
 }));
 
 const { findPaidLifetimePurchase, saveLifetimePlan } = await import("./lifetime-plan");
@@ -48,6 +52,7 @@ const database = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.disputes.mockResolvedValue({ data: [{ status: "needs_response" }] });
   mocks.insert.mockReturnValue({
     values: (values: object) => ({
       onConflictDoUpdate: () => ({ returning: async () => [values] }),
@@ -84,6 +89,31 @@ test("returns nothing when every lifetime session is unpaid or reversed", async 
 
   await expect(findPaidLifetimePurchase("cus_1")).resolves.toBeNull();
 });
+
+test.each(["won", "warning_closed"])(
+  "a purchase whose dispute closed as %s still stands",
+  async (status) => {
+    mocks.disputes.mockResolvedValue({ data: [{ status }] });
+    mocks.list.mockResolvedValue({
+      data: [charged("cs_disputed", { id: "ch_disputed", disputed: true })],
+    });
+
+    await expect(findPaidLifetimePurchase("cus_1")).resolves.toMatchObject({
+      checkoutSessionId: "cs_disputed",
+    });
+    expect(mocks.disputes).toHaveBeenCalledWith({ charge: "ch_disputed", limit: 100 });
+  },
+);
+
+test.each(["lost", "warning_under_review", "under_review"])(
+  "a purchase with a %s dispute stays reversed",
+  async (status) => {
+    mocks.disputes.mockResolvedValue({ data: [{ status: "won" }, { status }] });
+    mocks.list.mockResolvedValue({ data: [charged("cs_disputed", { disputed: true })] });
+
+    await expect(findPaidLifetimePurchase("cus_1")).resolves.toBeNull();
+  },
+);
 
 test("a recovered discounted purchase is restored under the user lock", async () => {
   mocks.list.mockResolvedValue({ data: [discounted] });
