@@ -1,4 +1,4 @@
-import type { UIMessage } from "ai";
+import { isToolUIPart, type UIMessage } from "ai";
 
 export const CHAT_INITIAL_MESSAGE_COUNT = 5;
 export const CHAT_OLDER_MESSAGE_COUNT = 20;
@@ -146,6 +146,26 @@ export function selectModelContextMessages(
     selected.pop();
   }
   return selected;
+}
+
+/**
+ * Shorten the tool results of earlier turns, which every later request resends.
+ * Tool calls of the turn being answered (after the last user message) are kept.
+ */
+export function compactEarlierToolOutputs(messages: UIMessage[], maxChars: number): UIMessage[] {
+  const lastUserIndex = messages.findLastIndex((message) => message.role === "user");
+  return messages.map((message, index) => {
+    if (index >= lastUserIndex || message.role !== "assistant") return message;
+    let compacted = false;
+    const parts = message.parts.map((part) => {
+      if (!isToolUIPart(part) || part.state !== "output-available") return part;
+      const output = JSON.stringify(part.output) ?? "";
+      if (output.length <= maxChars) return part;
+      compacted = true;
+      return { ...part, output: `${output.slice(0, maxChars)}… [truncated]` };
+    });
+    return compacted ? { ...message, parts } : message;
+  });
 }
 
 export function mergeServerWindow(current: UIMessage[], serverWindow: UIMessage[]): UIMessage[] {

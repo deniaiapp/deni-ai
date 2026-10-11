@@ -12,9 +12,15 @@ const state = vi.hoisted(() => ({
   reported: 0,
   settled: 0,
   inputTokens: 10,
+  cacheReadTokens: undefined as number | undefined,
   limitReached: false,
   failSettlement: false,
+  // The first call ended (its usage was reported) even when its step did not finish.
+  callEnded: false,
   nextStep: false,
+  // The next step's provider call is rejected before its stream starts.
+  nextStepRejected: false,
+  upstreamError: false,
   memory: false,
   storedMessages: [] as UIMessage[],
 }));
@@ -53,6 +59,7 @@ vi.mock("@/lib/chat", () => ({
     return stopped;
   },
   replaceLastChatMessage: vi.fn(),
+  restoreStoppedRegeneration: vi.fn(async () => true),
   clearChatGenerationState: vi.fn(async () => {
     state.activeGenerationId = null;
     return "chat";
@@ -111,6 +118,13 @@ vi.mock("@/app/api/chat/_lib/model", async () => {
     }),
   };
 });
+// Attachments are referenced by URL only; nothing is downloaded in these tests.
+vi.mock("@/lib/chat-attachment-download", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/chat-attachment-download")>(
+    "@/lib/chat-attachment-download",
+  );
+  return { ...actual, fitBinaryAttachmentsToBudget: vi.fn(async (messages) => messages) };
+});
 vi.mock("@/lib/constants", async () => {
   const actual = await vi.importActual<typeof import("@/lib/constants")>("@/lib/constants");
   return { ...actual, getEffectiveTokenMultiplier: () => 1 };
@@ -123,20 +137,30 @@ vi.mock("ai", async () => {
       toUIMessageStream: () =>
         new ReadableStream({
           async start(controller) {
-            const streamStep = async () => {
+            const usage = {
+              inputTokens: state.inputTokens,
+              inputTokenDetails: {
+                noCacheTokens: undefined,
+                cacheReadTokens: state.cacheReadTokens,
+                cacheWriteTokens: undefined,
+              },
+              outputTokens: 2,
+            };
+            const streamStep = async (started = true) => {
               await options.onStepStart();
+              // A call the provider rejects never starts its stream.
+              if (!started) return;
+              await options.onChunk({ chunk: { type: "start-step", request: {}, warnings: [] } });
               if (state.output)
                 await options.onChunk({
                   chunk: { type: "text-delta", id: "text", text: "Partial answer" },
                 });
             };
             await streamStep();
+            if (state.usage || state.callEnded) await options.onLanguageModelCallEnd({ usage });
             if (state.usage)
-              await options.onStepFinish({
-                usage: { inputTokens: state.inputTokens, outputTokens: 2 },
-                response: { messages: stepMessages },
-              });
-            if (state.nextStep) await streamStep();
+              await options.onStepFinish({ usage, response: { messages: stepMessages } });
+            if (state.nextStep) await streamStep(!state.nextStepRejected);
             if (state.mode === "stopped") {
               const { POST } = await import("@/app/api/chat/stop/route");
               await POST(
@@ -160,6 +184,8 @@ vi.mock("ai", async () => {
               controller.enqueue({ type: "text-delta", id: "text", delta: "Partial answer" });
               controller.enqueue({ type: "text-end", id: "text" });
             }
+            if (state.upstreamError || state.nextStepRejected)
+              controller.enqueue({ type: "error", errorText: "Service unavailable" });
             controller.enqueue({ type: state.mode === "finished" ? "finish" : "abort" });
             controller.close();
           },
@@ -170,10 +196,16 @@ vi.mock("ai", async () => {
 
 const { POST } = await import("../src/app/api/chat/route");
 const { streamText } = await import("ai");
-const { clearChatGenerationState, replaceLastChatMessage, updateChat } = await import("@/lib/chat");
+const { clearChatGenerationState, replaceLastChatMessage, restoreStoppedRegeneration, updateChat } =
+  await import("@/lib/chat");
+const { fitBinaryAttachmentsToBudget } = await import("@/lib/chat-attachment-download");
 const { maybeAutoSaveMemories } = await import("@/lib/memory");
-const { GUEST_MAX_OUTPUT_TOKENS, GUEST_MAX_PROMPT_TOKENS } =
-  await import("../src/app/api/chat/_lib/usage-estimate");
+const {
+  GUEST_MAX_OUTPUT_TOKENS,
+  GUEST_MAX_PROMPT_TOKENS,
+  GUEST_TOOL_OUTPUT_CHARS,
+  URL_PDF_TOKEN_ESTIMATE,
+} = await import("../src/app/api/chat/_lib/usage-estimate");
 const { clearChatGeneration, isCurrentChatGeneration } = await import("@/lib/chat-generation");
 
 beforeEach(() => {
@@ -188,26 +220,34 @@ beforeEach(() => {
   state.reported = 0;
   state.settled = 0;
   state.inputTokens = 10;
+  state.cacheReadTokens = undefined;
   state.limitReached = false;
   state.failSettlement = false;
+  state.callEnded = false;
   state.nextStep = false;
+  state.nextStepRejected = false;
+  state.upstreamError = false;
   state.memory = false;
   state.storedMessages = [];
 });
 
-function chatRequest(text = "Hello") {
-  const messages: UIMessage[] = [
-    { id: "user-message", role: "user", parts: [{ type: "text", text }] },
-  ];
+function messagesRequest(messages: UIMessage[], body: Record<string, unknown> = {}) {
   return new Request("http://localhost/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id: "chat", model: "gpt-5.6-luna", messages }),
+    body: JSON.stringify({ id: "chat", model: "gpt-5.6-luna", messages, ...body }),
   });
 }
 
-async function run() {
-  const response = await POST(chatRequest());
+function chatRequest(text = "Hello", parts: UIMessage["parts"] = [], model?: string) {
+  return messagesRequest(
+    [{ id: "user-message", role: "user", parts: [{ type: "text", text }, ...parts] }],
+    model ? { model } : {},
+  );
+}
+
+async function run(request = chatRequest()) {
+  const response = await POST(request);
   expect(response.status).toBe(200);
   await response.text();
 }
@@ -290,6 +330,59 @@ test.each(["stopped", "replaced"] as const)(
   },
 );
 
+test("a later step the provider rejects before streaming is not billed", async () => {
+  state.mode = "finished";
+  state.nextStep = true;
+  state.nextStepRejected = true;
+  await run();
+  // Only the finished first step; the rejected request was never billed upstream.
+  expect(state.consumed - state.refunded).toBe(20);
+  expect(state.reported).toBe(20);
+});
+
+test("a stop during a step's tool calls bills the call's reported usage", async () => {
+  state.usage = false;
+  state.callEnded = true;
+  await run();
+  expect(state.consumed - state.refunded).toBe(20);
+  expect(state.reported).toBe(20);
+});
+
+test("a cut-off step bills the prompt the provider last read from cache at the cache-read weight", async () => {
+  // Its own model keeps this chat's cache record out of the other tests.
+  const request = () => chatRequest("Hello", [], "gpt-6-luna");
+  state.mode = "finished";
+  state.inputTokens = 1_000;
+  state.cacheReadTokens = 1_000;
+  await run(request());
+  // 1,000 cache reads at 0.1 plus 2 output tokens at 5.
+  expect(state.consumed - state.refunded).toBe(110);
+
+  state.mode = "stopped";
+  state.usage = false;
+  state.consumed = 0;
+  state.refunded = 0;
+  await run(request());
+  // The cut-off prompt is within what the provider read from cache last time.
+  expect(state.consumed - state.refunded).toBe(
+    Math.ceil(promptEstimate() * 0.1 + streamedOutputAmount),
+  );
+});
+
+test("a stopped step bills its prompt text but not the reserved attachment floors", async () => {
+  state.usage = false;
+  await run(
+    chatRequest("Summarize this", [
+      { type: "file", mediaType: "application/pdf", url: "https://example.com/report.pdf" },
+    ]),
+  );
+  const retained = state.consumed - state.refunded;
+  expect(retained).toBeGreaterThan(streamedOutputAmount);
+  expect(retained).toBeLessThanOrEqual(
+    promptEstimate() - URL_PDF_TOKEN_ESTIMATE + streamedOutputAmount,
+  );
+});
+
 test("normal completion settles once and finalizes the owned transcript", async () => {
   state.mode = "finished";
   await run();
@@ -337,6 +430,57 @@ test("guests cannot send oversized prompts for one request unit", async () => {
   expect(updateChat).not.toHaveBeenCalled();
 });
 
+test("guests cannot send several PDFs by URL for one request unit", async () => {
+  state.guest = true;
+  const pdf = (name: string) => ({
+    type: "file" as const,
+    mediaType: "application/pdf",
+    url: `https://example.com/${name}.pdf`,
+  });
+  const response = await POST(chatRequest("Summarize", [pdf("a"), pdf("b")]));
+  expect(response.status).toBe(413);
+  expect(state.consumed).toBe(0);
+  expect(streamText).not.toHaveBeenCalled();
+});
+
+test("a guest image counts per file, not by its encoded size", async () => {
+  state.guest = true;
+  state.mode = "finished";
+  // A ~96KB image sent inline when no upload storage is configured.
+  const url = `data:image/png;base64,${"A".repeat(4 * GUEST_MAX_PROMPT_TOKENS + 4)}`;
+  await run(chatRequest("What is this?", [{ type: "file", mediaType: "image/png", url }]));
+  expect(streamText).toHaveBeenCalledOnce();
+});
+
+test("guests resend earlier tool results shortened", async () => {
+  state.guest = true;
+  state.mode = "finished";
+  const output = { content: "x".repeat(4 * GUEST_MAX_PROMPT_TOKENS) };
+  await run(
+    messagesRequest([
+      { id: "question", role: "user", parts: [{ type: "text", text: "Read this page" }] },
+      {
+        id: "answer",
+        role: "assistant",
+        parts: [
+          {
+            type: "tool-browse",
+            toolCallId: "call",
+            state: "output-available",
+            input: { url: "https://example.com" },
+            output,
+          },
+          { type: "text", text: "It says x." },
+        ],
+      },
+      { id: "follow-up", role: "user", parts: [{ type: "text", text: "Thanks" }] },
+    ]),
+  );
+  const prompt = JSON.stringify(vi.mocked(streamText).mock.lastCall?.[0].messages);
+  expect(prompt).toContain("[truncated]");
+  expect(prompt.length).toBeLessThan(GUEST_TOOL_OUTPUT_CHARS * 2);
+});
+
 test("guest output is capped and skips unbilled memory extraction", async () => {
   state.mode = "finished";
   state.memory = true;
@@ -368,31 +512,42 @@ async function stopChat() {
   expect(response.status).toBe(200);
 }
 
-test.each(["stop request", "client disconnect"] as const)(
-  "a %s that arrives before the generation registers cancels it",
-  async (kind) => {
-    const controller = new AbortController();
-    // The stop is handled while the request is still preparing, so it finds
-    // no active generation; then the request registers its own.
-    vi.mocked(updateChat).mockImplementationOnce(async (_id, _user, _messages, _title, options) => {
-      await new Promise((resolve) => setTimeout(resolve, 2));
-      if (kind === "stop request") await stopChat();
-      else controller.abort();
-      state.activeGenerationId = options?.nextGenerationId ?? null;
-      return "chat";
-    });
+test("a stop request that arrives before the generation registers cancels it", async () => {
+  // The stop is handled while the request is still preparing, so it finds
+  // no active generation; then the request registers its own.
+  vi.mocked(updateChat).mockImplementationOnce(async (_id, _user, _messages, _title, options) => {
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    await stopChat();
+    state.activeGenerationId = options?.nextGenerationId ?? null;
+    return "chat";
+  });
 
-    const response = await POST(new Request(chatRequest(), { signal: controller.signal }));
+  const response = await POST(chatRequest());
 
-    expect(response.status).toBe(499);
-    expect(streamText).not.toHaveBeenCalled();
-    expect(state.consumed).toBe(0);
-    // Rolled back to the question without the pending answer.
-    expect(vi.mocked(updateChat).mock.lastCall?.[2]).toEqual([
-      expect.objectContaining({ id: "user-message", role: "user" }),
-    ]);
-  },
-);
+  expect(response.status).toBe(499);
+  expect(streamText).not.toHaveBeenCalled();
+  expect(state.consumed).toBe(0);
+  // Rolled back to the question without the pending answer.
+  expect(vi.mocked(updateChat).mock.lastCall?.[2]).toEqual([
+    expect.objectContaining({ id: "user-message", role: "user" }),
+  ]);
+});
+
+test("a client disconnect before the generation registers does not cancel it", async () => {
+  const controller = new AbortController();
+  state.mode = "finished";
+  // Leaving the chat aborts the request while attachments are being prepared.
+  vi.mocked(fitBinaryAttachmentsToBudget).mockImplementationOnce(async (messages) => {
+    controller.abort();
+    return messages;
+  });
+
+  await run(new Request(chatRequest(), { signal: controller.signal }));
+
+  expect(vi.mocked(fitBinaryAttachmentsToBudget).mock.lastCall?.[2].aborted).toBe(false);
+  expect(streamText).toHaveBeenCalledOnce();
+  expect(clearChatGenerationState).toHaveBeenCalledOnce();
+});
 
 test("an earlier stop does not cancel a request sent after it", async () => {
   await stopChat();
@@ -443,5 +598,51 @@ test.each([false, true])(
       question,
       pending ? { ...answer, metadata: {} } : answer,
     ]);
+  },
+);
+
+const question: UIMessage = {
+  id: "user-message",
+  role: "user",
+  parts: [{ type: "text", text: "Hello" }],
+};
+const answer: UIMessage = {
+  id: "answer",
+  role: "assistant",
+  parts: [{ type: "text", text: "Original answer" }],
+};
+const regenerateRequest = () =>
+  messagesRequest([question], { trigger: "regenerate-message", messageId: "answer" });
+
+test("a regenerate that fails upstream before any output keeps the stored answer", async () => {
+  state.storedMessages = [question, answer];
+  state.mode = "finished";
+  state.output = false;
+  state.usage = false;
+  state.upstreamError = true;
+  await run(regenerateRequest());
+
+  expect(vi.mocked(updateChat).mock.lastCall?.[2]).toEqual([question, answer]);
+  expect(vi.mocked(updateChat).mock.lastCall?.[4]).toMatchObject({ nextGenerationId: null });
+  expect(clearChatGenerationState).not.toHaveBeenCalled();
+  expect(state.refunded).toBe(state.consumed);
+});
+
+test.each([false, true])(
+  "a regenerate stopped after registering restores the stored answer only without output (output: %s)",
+  async (output) => {
+    state.storedMessages = [question, answer];
+    state.output = output;
+    state.usage = false;
+    await run(regenerateRequest());
+
+    if (output) {
+      expect(restoreStoppedRegeneration).not.toHaveBeenCalled();
+    } else {
+      expect(restoreStoppedRegeneration).toHaveBeenCalledWith("chat", "user", expect.any(String), [
+        question,
+        answer,
+      ]);
+    }
   },
 );

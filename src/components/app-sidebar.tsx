@@ -204,7 +204,8 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isDeleteAllDialogOpen) {
+      // Autofill and some extensions dispatch a plain `keydown` Event with no `key`.
+      if (isDeleteAllDialogOpen || typeof event.key !== "string") {
         return;
       }
 

@@ -41,8 +41,8 @@ export function isCurrentChatGeneration(chatId: string, generationId: string) {
 
 // A stop can reach the server before its request has registered a generation,
 // when there is nothing to stop yet. Remember it briefly so that request stops
-// itself once it registers. Per instance; a cross-instance stop relies on the
-// request's own abort signal and the database ownership poll.
+// itself once it registers. Per instance; another instance sees a stop only once
+// the generation has registered, through the database ownership poll.
 const STOP_REQUEST_TTL_MS = 60_000;
 const stopRequests = new Map<string, number>();
 
@@ -64,4 +64,30 @@ export function isChatStopRequestedSince(chatId: string, startedAt: number, now 
   return (
     requestedAt !== undefined && requestedAt > startedAt && now - requestedAt <= STOP_REQUEST_TTL_MS
   );
+}
+
+// A provider call cut off mid-stream reports no usage, so its prompt is
+// estimated. The prompt cache reads the provider last reported for a chat show
+// how much of that prompt it reads from cache, so the estimate bills that much
+// at the cache-read weight instead of as uncached input. Per instance and kept
+// only as long as a provider cache is commonly retained; without a recent
+// report the estimate stays uncached.
+const PROMPT_CACHE_READ_TTL_MS = 5 * 60_000;
+const promptCacheReads = new Map<string, { tokens: number; recordedAt: number }>();
+
+/** Record the cache reads of a finished provider call for this chat and model. */
+export function recordPromptCacheReads(key: string, tokens: number, now = Date.now()) {
+  for (const [entryKey, entry] of promptCacheReads) {
+    if (now - entry.recordedAt <= PROMPT_CACHE_READ_TTL_MS) break;
+    promptCacheReads.delete(entryKey);
+  }
+  // Re-insert so the map stays ordered by time for the pruning above.
+  promptCacheReads.delete(key);
+  promptCacheReads.set(key, { tokens, recordedAt: now });
+}
+
+/** Cache reads of the last provider call for this chat and model, if recent. */
+export function getRecentPromptCacheReads(key: string, now = Date.now()) {
+  const entry = promptCacheReads.get(key);
+  return entry && now - entry.recordedAt <= PROMPT_CACHE_READ_TTL_MS ? entry.tokens : 0;
 }

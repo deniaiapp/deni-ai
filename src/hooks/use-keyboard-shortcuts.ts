@@ -30,6 +30,8 @@ export function useKeyboardShortcuts({
     }
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Autofill and some extensions dispatch a plain `keydown` Event with no `key`.
+      if (typeof e.key !== "string") return;
       const isCtrlOrCmd = e.ctrlKey || e.metaKey;
       // With Shift (or Caps Lock) held, `key` is the upper-case letter.
       const key = e.key.toLowerCase();

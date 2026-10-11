@@ -52,6 +52,18 @@ test("model images render a click-to-load placeholder instead of fetching", () =
   expect(html).toContain("Image blocked: x");
 });
 
+test("an image whose markdown is still streaming shows the loading skeleton", () => {
+  // Messages render in Streamdown's default streaming mode, which completes
+  // unfinished images with a placeholder src.
+  for (const markdown of ["Here is ![a chart](https://exa", "Here is ![a cha"]) {
+    const html = renderToStaticMarkup(createElement(MessageResponse, null, markdown));
+
+    expect(html).toContain('data-incomplete="true"');
+    expect(html).not.toContain("Image blocked");
+    expect(html).not.toContain("<img");
+  }
+});
+
 test("model HTML cannot clobber document properties with name or id", () => {
   const html = renderToStaticMarkup(
     createElement(

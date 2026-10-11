@@ -14,6 +14,7 @@ import { createDeniOpenRouter } from "@/lib/openrouter-provider";
 import { isModelProviderAvailable } from "@/lib/platform-capabilities";
 import { platformCapabilities } from "@/lib/platform-capabilities.server";
 import { getUsageSummary, type UsageCategory, UsageLimitError } from "@/lib/usage";
+import { capGuestReasoningEffort } from "./usage-estimate";
 
 const openaiEffortOptions = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 const googleThinkingLevels = ["minimal", "low", "medium", "high"] as const;
@@ -233,7 +234,7 @@ export async function resolveChatModelContext({
 
   const resolvedReasoningEffort = resolveReasoningEffort(
     selectedModel?.efforts ?? false,
-    reasoningEffort,
+    isAnonymous ? capGuestReasoningEffort(selectedModel.efforts, reasoningEffort) : reasoningEffort,
   );
   const openaiReasoningEffort =
     (providerId === "openai" || providerId === "deni") &&

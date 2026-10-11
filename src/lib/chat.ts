@@ -193,6 +193,43 @@ export async function stopActiveChatGeneration(id: string, userId: string) {
   return stopped ? generationId : undefined;
 }
 
+/**
+ * Put back the transcript a stopped regenerate replaced, when it stopped before
+ * any answer content. Applies only while no generation is active and the stored
+ * tail is still that regenerate's empty answer, so a newer generation or a newer
+ * transcript is never overwritten.
+ */
+export async function restoreStoppedRegeneration(
+  id: string,
+  userId: string,
+  responseMessageId: string,
+  messages: UIMessage[],
+) {
+  const [restored] = await db
+    .update(chats)
+    .set({
+      messages: JSON.parse(stringifyForJsonb(messages)) as UIMessage[],
+      updated_at: new Date(),
+    })
+    .where(
+      and(
+        eq(chats.id, id),
+        eq(chats.uid, userId),
+        isNull(chats.activeGenerationId),
+        sql`jsonb_typeof(${chats.messages}) = 'array'
+          AND ${chats.messages}->-1->>'id' = ${responseMessageId}
+          AND NOT EXISTS (
+            SELECT 1
+            FROM jsonb_array_elements(COALESCE(${chats.messages}->-1->'parts', '[]'::jsonb)) AS part
+            WHERE part->>'type' <> 'step-start'
+          )`,
+      ),
+    )
+    .returning({ id: chats.id });
+
+  return Boolean(restored);
+}
+
 export async function clearChatGenerationState(
   id: string,
   userId: string,

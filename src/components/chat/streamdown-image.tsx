@@ -51,6 +51,14 @@ export function classifyStreamdownImageSource(
 
 const DefaultImage = defaultComponents.img;
 
+/**
+ * remend's `INCOMPLETE_IMAGE_PLACEHOLDER`: while a message streams, an unfinished
+ * `![alt](...` arrives with this src, and Streamdown's image renders only a
+ * loading skeleton for it (no `<img>`, no request). remend is not a direct
+ * dependency and Streamdown does not re-export the constant.
+ */
+const INCOMPLETE_IMAGE_SRC = "streamdown:incomplete-image";
+
 function subscribeNever() {
   return () => {};
 }
@@ -71,7 +79,11 @@ export function StreamdownImage(props: StreamdownImageProps) {
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
   const source = classifyStreamdownImageSource(props.src, appOrigin);
 
-  if (source.kind === "inline" || (source.kind === "external" && loadedSrc === props.src)) {
+  if (
+    props.src === INCOMPLETE_IMAGE_SRC ||
+    source.kind === "inline" ||
+    (source.kind === "external" && loadedSrc === props.src)
+  ) {
     return <DefaultImage {...props} />;
   }
 

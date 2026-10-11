@@ -3,14 +3,25 @@ import { QueryClient } from "@tanstack/react-query";
 import type { UIMessage, UIMessageChunk } from "ai";
 import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-const harness = vi.hoisted(() => ({
-  slots: [] as unknown[],
-  cursor: 0,
-  effects: [] as Array<() => void | (() => void)>,
-  query: new URLSearchParams(),
-  pageFetch: vi.fn(),
-  invalidate: vi.fn(),
-}));
+const harness = vi.hoisted(() => {
+  const pageFetch = vi.fn();
+  const invalidate = vi.fn();
+  return {
+    slots: [] as unknown[],
+    cursor: 0,
+    effects: [] as Array<() => void>,
+    query: new URLSearchParams(),
+    pageFetch,
+    invalidate,
+    // `useUtils` returns the same object on every render.
+    utils: {
+      chat: { getChatPage: { fetch: pageFetch, invalidate } },
+      billing: { usage: { invalidate } },
+    },
+  };
+});
+
+type EffectSlot = { deps?: readonly unknown[]; cleanup: void | (() => void) };
 
 // Run the real hooks and AI SDK with deterministic scheduling and no network.
 vi.mock("react", async (importOriginal) => ({
@@ -34,8 +45,21 @@ vi.mock("react", async (importOriginal) => ({
       },
     ] as const;
   },
-  useEffect(effect: () => void | (() => void)) {
-    harness.effects.push(effect);
+  useEffect(effect: () => void | (() => void), deps?: readonly unknown[]) {
+    const index = harness.cursor++;
+    const previous = harness.slots[index] as EffectSlot | undefined;
+    // Like React, re-run (after the previous cleanup) only when a dependency changed.
+    if (
+      previous?.deps &&
+      deps?.length === previous.deps.length &&
+      deps.every((dep, depIndex) => Object.is(dep, previous.deps?.[depIndex]))
+    ) {
+      return;
+    }
+    harness.effects.push(() => {
+      previous?.cleanup?.();
+      harness.slots[index] = { deps, cleanup: effect() } satisfies EffectSlot;
+    });
   },
   useCallback<T>(callback: T) {
     return callback;
@@ -49,18 +73,14 @@ vi.mock("react", async (importOriginal) => ({
 }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => harness.query }));
 vi.mock("@/lib/trpc/react", () => ({
-  trpc: {
-    useUtils: () => ({
-      chat: { getChatPage: { fetch: harness.pageFetch, invalidate: harness.invalidate } },
-      billing: { usage: { invalidate: harness.invalidate } },
-    }),
-  },
+  trpc: { useUtils: () => harness.utils },
 }));
 
 import { groupMessages, useChatBranches } from "./use-chat-branches";
 import { useChatPageSync } from "./use-chat-page-sync";
 import { useInitialMessage } from "./use-initial-message";
-import { trackChatCreation } from "@/lib/chat-creation";
+import { useKeyboardShortcuts } from "./use-keyboard-shortcuts";
+import { ensureChatCreated, trackChatCreation } from "@/lib/chat-creation";
 import { mergeMessageWindow, sliceLatestMessages, sliceOlderMessages } from "@/lib/chat-messages";
 import { models } from "@/lib/constants";
 
@@ -74,7 +94,10 @@ beforeEach(() => {
   vi.stubGlobal("sessionStorage", { getItem: () => null, removeItem: vi.fn() });
 });
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 function render<T>(callback: () => T): T {
   harness.cursor = 0;
@@ -291,6 +314,44 @@ test("recovery reads past the page cached moments ago with the pending answer", 
   expect(current.at(-1)).toEqual(complete.at(-1));
 });
 
+test("a failed recovery read is retried even though the saved status stops changing", async () => {
+  vi.useFakeTimers();
+  const { complete, pending } = pendingConversation();
+  harness.pageFetch
+    .mockRejectedValueOnce(new Error("Service Unavailable"))
+    .mockResolvedValue(sliceLatestMessages(complete));
+  let current = sliceLatestMessages(pending).messages;
+  const setMessages = vi.fn((update: UIMessage[] | ((previous: UIMessage[]) => UIMessage[])) => {
+    current = typeof update === "function" ? update(current) : update;
+  });
+  // Every poll after the answer is saved deserializes the same timestamp.
+  const poll = () =>
+    render(() =>
+      useChatPageSync({
+        id: "chat",
+        status: "ready",
+        isWaitingForResponse: true,
+        activeGenerationId: null,
+        statusUpdatedAt: new Date("2026-10-08T00:00:00Z"),
+        isStatusSuccess: true,
+        setMessages,
+      }),
+    );
+
+  poll();
+  await vi.waitFor(() => expect(vi.getTimerCount()).toBe(1));
+  poll();
+  expect(harness.pageFetch).toHaveBeenCalledOnce();
+  expect(setMessages).not.toHaveBeenCalled();
+
+  // The scheduled retry updates state, which re-renders the hook.
+  await vi.advanceTimersByTimeAsync(1000);
+  poll();
+  await vi.waitFor(() => expect(setMessages).toHaveBeenCalledOnce());
+  expect(harness.pageFetch).toHaveBeenCalledTimes(2);
+  expect(current.at(-1)).toEqual(complete.at(-1));
+});
+
 test("a stale server page does not replace a newer local question", async () => {
   const { complete, pending } = pendingConversation();
   const stale = sliceLatestMessages(complete.slice(0, -2)).messages;
@@ -308,12 +369,24 @@ test("an assistant-only server window recovers the matching pending message", as
   expect(await recoverPending(pending, sliceLatestMessages(complete).messages)).toEqual(complete);
 });
 
-const storedPrompt = JSON.stringify({ text: "Stored prompt", webSearch: false });
+const storedFile = {
+  type: "file" as const,
+  filename: "report.pdf",
+  mediaType: "application/pdf",
+  url: "https://files.example/report.pdf",
+};
 
-function sendStoredPrompt(id: string) {
+function sendStoredPrompt(
+  id: string,
+  sendMessage: Parameters<typeof useInitialMessage>[0]["sendMessage"],
+) {
+  const storedPrompt = JSON.stringify({
+    text: "Stored prompt",
+    files: [storedFile],
+    webSearch: false,
+  });
   vi.stubGlobal("sessionStorage", { getItem: () => storedPrompt, removeItem: vi.fn() });
   const onDraft = vi.fn();
-  const sendMessage = vi.fn(async () => undefined);
   render(() =>
     useInitialMessage({
       id,
@@ -324,10 +397,35 @@ function sendStoredPrompt(id: string) {
       onDraft,
     }),
   );
-  return { onDraft, sendMessage };
+  return { onDraft };
 }
 
-test("the home page prompt is sent only after its chat row exists", async () => {
+/** A chat whose transport waits for the row, like ChatInterface's. */
+function chatWaitingForRow(id: string) {
+  const posted: UIMessage[][] = [];
+  const chat = new Chat({
+    id,
+    transport: {
+      sendMessages: async (options) => {
+        if (!(await ensureChatCreated(id))) {
+          throw new Error("Chat not found");
+        }
+        posted.push(options.messages);
+        return new ReadableStream<UIMessageChunk>({
+          start(controller) {
+            controller.enqueue({ type: "start", messageId: "answer" });
+            controller.enqueue({ type: "finish", finishReason: "stop" });
+            controller.close();
+          },
+        });
+      },
+      reconnectToStream: async () => null,
+    },
+  });
+  return { chat, posted };
+}
+
+test("the home page prompt shows at once but is posted only after its chat row exists", async () => {
   let createRow!: () => void;
   void trackChatCreation(
     "new-chat",
@@ -337,23 +435,50 @@ test("the home page prompt is sent only after its chat row exists", async () => 
       }),
     0,
   );
-  const { sendMessage } = sendStoredPrompt("new-chat");
-  await Promise.resolve();
-  expect(sendMessage).not.toHaveBeenCalled();
+  const { chat, posted } = chatWaitingForRow("new-chat");
+  sendStoredPrompt("new-chat", chat.sendMessage);
+  await vi.waitFor(() => expect(chat.messages).toHaveLength(1));
+  expect(posted).toEqual([]);
 
   createRow();
-  await vi.waitFor(() => expect(sendMessage).toHaveBeenCalledOnce());
-  expect(sendMessage).toHaveBeenCalledWith(
-    { text: "Stored prompt", files: undefined },
-    expect.objectContaining({ body: expect.objectContaining({ id: "new-chat" }) }),
-  );
+  await vi.waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0][0].parts).toEqual([storedFile, { type: "text", text: "Stored prompt" }]);
 });
 
-test("a chat that cannot be created hands the home page prompt back", async () => {
+test("a chat that cannot be created keeps the home page prompt and its attachments", async () => {
   void trackChatCreation("broken-chat", async () => Promise.reject(new Error("down")), 0);
-  const { onDraft, sendMessage } = sendStoredPrompt("broken-chat");
-  await vi.waitFor(() => expect(onDraft).toHaveBeenCalledExactlyOnceWith("Stored prompt"));
-  expect(sendMessage).not.toHaveBeenCalled();
+  const { chat, posted } = chatWaitingForRow("broken-chat");
+  const { onDraft } = sendStoredPrompt("broken-chat", chat.sendMessage);
+
+  // ChatInterface shows this error, and the prompt keeps its file in the transcript.
+  await vi.waitFor(() => expect(chat.status).toBe("error"));
+  expect(chat.error?.message).toBe("Chat not found");
+  expect(posted).toEqual([]);
+  expect(onDraft).not.toHaveBeenCalled();
+  expect(chat.messages).toHaveLength(1);
+  expect(chat.messages[0]).toMatchObject({
+    role: "user",
+    parts: [storedFile, { type: "text", text: "Stored prompt" }],
+  });
+});
+
+test("a keydown without a key, as autofill dispatches, is ignored by the chat shortcuts", () => {
+  const listeners: Array<(event: KeyboardEvent) => void> = [];
+  vi.stubGlobal("window", {
+    addEventListener: (_type: string, listener: (event: KeyboardEvent) => void) =>
+      listeners.push(listener),
+    removeEventListener: vi.fn(),
+  });
+  const onFocusComposer = vi.fn();
+  render(() => useKeyboardShortcuts({ onFocusComposer }));
+  const [handleKeyDown] = listeners;
+
+  expect(() => handleKeyDown(new Event("keydown") as KeyboardEvent)).not.toThrow();
+  expect(onFocusComposer).not.toHaveBeenCalled();
+
+  const slash = { key: "/", target: null, preventDefault: vi.fn() };
+  handleKeyDown(slash as unknown as KeyboardEvent);
+  expect(onFocusComposer).toHaveBeenCalledOnce();
 });
 
 test.each([
