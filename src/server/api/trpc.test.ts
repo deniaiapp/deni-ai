@@ -16,6 +16,12 @@ vi.mock("@/server/api/root", async () => {
       failingQuery: publicProcedure.query(() => {
         throw new Error('Failed query: select "secret" from "chats"\nparams: private-value');
       }),
+      cardDeclined: publicProcedure.mutation(() => {
+        throw Object.assign(new Error("Your card was declined."), {
+          type: "StripeCardError",
+          statusCode: 402,
+        });
+      }),
       intentional: publicProcedure.query(() => {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -78,6 +84,18 @@ test("intentional server errors keep their message", async () => {
   const { status, text } = await get("intentional");
   expect(status).toBe(500);
   expect(JSON.parse(text).error.json.message).toBe("Could not create the post.");
+});
+
+test("Stripe card declines keep their customer-facing message", async () => {
+  const { POST } = await import("@/app/api/trpc/[trpc]/route");
+  const response = await POST(
+    new Request("http://localhost/api/trpc/cardDeclined", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: "{}",
+    }),
+  );
+  expect(JSON.parse(await response.text()).error.json.message).toBe("Your card was declined.");
 });
 
 test("development keeps the original message for debugging", async () => {

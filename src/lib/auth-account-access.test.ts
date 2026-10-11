@@ -180,6 +180,38 @@ test("a squatter's password does not survive the owner's sign-up and verificatio
   expect((await signIn("owner-password-2")).status).toBe(200);
 }, 30_000);
 
+test("a sign-up form never voids the password of an account already in use", async () => {
+  expect((await signUp("owner-password-1")).status).toBe(200);
+  const [user] = mocks.db.user;
+  const now = new Date();
+
+  // Linked to another sign-in method (e.g. OAuth with an unverified address).
+  mocks.db.account.push({
+    id: "github-account",
+    userId: user.id,
+    providerId: "github",
+    accountId: "gh-1",
+    createdAt: now,
+    updatedAt: now,
+  });
+  expect((await signUp("someone-else-1")).status).toBe(200);
+  expect(credentialAccounts()).toHaveLength(1);
+
+  // Signed in to through that method: its sessions stay as well.
+  mocks.db.account = mocks.db.account.filter((account) => account.providerId === "credential");
+  mocks.db.session.push({
+    id: "live-session",
+    userId: user.id,
+    token: "live-token",
+    expiresAt: new Date(Date.now() + 60_000),
+    createdAt: now,
+    updatedAt: now,
+  });
+  expect((await signUp("someone-else-2")).status).toBe(200);
+  expect(credentialAccounts()).toHaveLength(1);
+  expect(mocks.db.session).toHaveLength(1);
+}, 30_000);
+
 test("repeating a sign-up with the same password keeps that password", async () => {
   expect((await signUp("owner-password-1")).status).toBe(200);
   expect((await signUp("owner-password-1")).status).toBe(200);

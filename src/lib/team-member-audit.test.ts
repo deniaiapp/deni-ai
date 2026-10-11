@@ -195,6 +195,7 @@ test("guests cannot send team invitations", async () => {
     assertCanSendTeamInvitation({
       user: { id: "guest", isAnonymous: true },
       email: "victim@example.com",
+      organizationId: "team",
     }),
   ).rejects.toMatchObject({
     body: { code: "YOU_ARE_NOT_ALLOWED_TO_INVITE_USERS_TO_THIS_ORGANIZATION" },
@@ -202,35 +203,83 @@ test("guests cannot send team invitations", async () => {
 });
 
 test("repeated invitation resends to one inbox are throttled", async () => {
-  const send = (inviter: string) =>
-    assertCanSendTeamInvitation({ user: { id: inviter }, email: " Flooded@Example.com " });
+  handler.membership.mockResolvedValue([{ role: "admin" }]);
+  const send = (inviter: string, organizationId = "resend-team") =>
+    assertCanSendTeamInvitation({
+      user: { id: inviter },
+      email: " Flooded@Example.com ",
+      organizationId,
+    });
   for (let attempt = 0; attempt < 5; attempt++) {
     await expect(send("resend-inviter")).resolves.toBeUndefined();
   }
   await expect(send("resend-inviter")).rejects.toMatchObject({
     body: { code: "TOO_MANY_REQUESTS" },
   });
-  // Another account (or team) cannot reopen the same inbox.
+  // Another admin of the same team cannot reopen the same inbox.
   await expect(send("second-inviter")).rejects.toMatchObject({
     body: { code: "TOO_MANY_REQUESTS" },
   });
-  // Other recipients are unaffected.
+  // Other recipients and other teams keep their own budgets.
   await expect(
-    assertCanSendTeamInvitation({ user: { id: "second-inviter" }, email: "other@example.com" }),
+    assertCanSendTeamInvitation({
+      user: { id: "second-inviter" },
+      email: "other@example.com",
+      organizationId: "resend-team",
+    }),
   ).resolves.toBeUndefined();
+  await expect(send("third-inviter", "other-team")).resolves.toBeUndefined();
+});
+
+test("requests the endpoint will refuse never spend a recipient's budget", async () => {
+  handler.membership.mockResolvedValue([]);
+  for (let attempt = 0; attempt < 10; attempt++) {
+    await expect(
+      assertCanSendTeamInvitation({
+        user: { id: "stranger" },
+        email: "protected@example.com",
+        organizationId: "victim-team",
+      }),
+    ).resolves.toBeUndefined();
+  }
+  handler.membership.mockResolvedValue([{ role: "member" }]);
+  await expect(
+    assertCanSendTeamInvitation({
+      user: { id: "plain-member" },
+      email: "protected@example.com",
+      organizationId: "victim-team",
+    }),
+  ).resolves.toBeUndefined();
+
+  handler.membership.mockResolvedValue([{ role: "owner" }]);
+  for (let attempt = 0; attempt < 5; attempt++) {
+    await expect(
+      assertCanSendTeamInvitation({
+        user: { id: "real-owner" },
+        email: "protected@example.com",
+        organizationId: "victim-team",
+      }),
+    ).resolves.toBeUndefined();
+  }
 });
 
 test("one inviter can fill a team but not mail without bound", async () => {
+  handler.membership.mockResolvedValue([{ role: "owner" }]);
   for (let invitee = 0; invitee < 50; invitee++) {
     await expect(
       assertCanSendTeamInvitation({
         user: { id: "bulk-inviter" },
         email: `invitee${invitee}@example.com`,
+        organizationId: "bulk-team",
       }),
     ).resolves.toBeUndefined();
   }
   await expect(
-    assertCanSendTeamInvitation({ user: { id: "bulk-inviter" }, email: "one-more@example.com" }),
+    assertCanSendTeamInvitation({
+      user: { id: "bulk-inviter" },
+      email: "one-more@example.com",
+      organizationId: "bulk-team",
+    }),
   ).rejects.toMatchObject({ body: { code: "TOO_MANY_REQUESTS" } });
 });
 

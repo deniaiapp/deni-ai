@@ -171,8 +171,13 @@ async function revokeContestedSignupPassword(
   // The same password again (a repeated sign-up) changes nothing.
   if (await ctx.context.password.verify({ hash: credential.password, password })) return;
 
+  // Only a pending sign-up is contested. An account with another sign-in method,
+  // or one someone has signed in to, is in use, and this form proves nothing
+  // against it (a squatter cannot sign in while verification is required).
+  if (existing.accounts.some((account) => account.providerId !== "credential")) return;
+  if ((await ctx.context.internalAdapter.listSessions(existing.user.id)).length) return;
+
   await ctx.context.internalAdapter.deleteAccount(credential.id);
-  await ctx.context.internalAdapter.deleteUserSessions(existing.user.id);
 }
 
 /** twoFactor()'s default `twoFactorCookieMaxAge`, in seconds. */
@@ -239,8 +244,12 @@ export const auth = betterAuth({
         const session = await getSessionFromCtx(ctx);
         // Without a session the endpoint itself rejects the request.
         if (session) {
-          const body = ctx.body as { email?: unknown } | undefined;
-          await assertCanSendTeamInvitation({ user: session.user, email: body?.email });
+          const body = ctx.body as { email?: unknown; organizationId?: unknown } | undefined;
+          await assertCanSendTeamInvitation({
+            user: session.user,
+            email: body?.email,
+            organizationId: body?.organizationId ?? session.session.activeOrganizationId,
+          });
         }
         return;
       }

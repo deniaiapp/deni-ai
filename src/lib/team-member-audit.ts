@@ -27,6 +27,17 @@ const INVITATIONS_PER_INVITER = 50;
 // Bounds resends to one inbox, whichever teams or accounts send them.
 const INVITATIONS_PER_RECIPIENT = 5;
 
+async function canInviteToTeam(userId: string, organizationId: string) {
+  const [membership] = await db
+    .select({ role: member.role })
+    .from(member)
+    .where(and(eq(member.userId, userId), eq(member.organizationId, organizationId)))
+    .limit(1);
+  return Boolean(
+    membership?.role.split(",").some((role) => ["owner", "admin"].includes(role.trim())),
+  );
+}
+
 /**
  * Runs before `/organization/invite-member`. Its resend branch emails again and
  * returns before the invitation limit and every invitation hook, so this is the
@@ -35,9 +46,11 @@ const INVITATIONS_PER_RECIPIENT = 5;
 export async function assertCanSendTeamInvitation({
   user,
   email,
+  organizationId,
 }: {
   user: { id: string; isAnonymous?: boolean | null };
   email: unknown;
+  organizationId: unknown;
 }) {
   // Guests have placeholder addresses and must not mail people from the app's sender.
   if (user.isAnonymous) {
@@ -46,11 +59,16 @@ export async function assertCanSendTeamInvitation({
       code: "YOU_ARE_NOT_ALLOWED_TO_INVITE_USERS_TO_THIS_ORGANIZATION",
     });
   }
+  // This runs before the endpoint's own permission checks. Count only senders
+  // it will accept, so strangers cannot spend a team's budget for an address.
+  if (typeof organizationId !== "string" || !(await canInviteToTeam(user.id, organizationId))) {
+    return;
+  }
   const limits = [{ key: `team-invite:inviter:${user.id}`, maxRequests: INVITATIONS_PER_INVITER }];
   if (typeof email === "string") {
     limits.push({
       // Capped: the key outlives the request, and no valid address is this long.
-      key: `team-invite:recipient:${email.trim().toLowerCase().slice(0, 320)}`,
+      key: `team-invite:recipient:${organizationId}:${email.trim().toLowerCase().slice(0, 320)}`,
       maxRequests: INVITATIONS_PER_RECIPIENT,
     });
   }
@@ -131,8 +149,8 @@ const departingOrganizations = new Map<string, string[]>();
 /**
  * Account deletion drops memberships through the `member.user_id` cascade, so no
  * organization hook runs. Capture the user's teams before the row goes and
- * reconcile their seats after. No `member_removed` event is written: the audit
- * log's actor references the deleted user and would be cascaded away with it.
+ * reconcile their seats after. No `member_removed` event is written for the
+ * departure itself; earlier entries keep their actor as a deleted user.
  */
 export const accountDeletionSeatHooks = {
   before: async (user: { id: string }) => {

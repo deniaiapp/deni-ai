@@ -16,13 +16,15 @@ export type Context = Awaited<ReturnType<typeof createContext>>;
 /**
  * True for an error tRPC wrapped from an unexpected throw (database, Stripe, ...):
  * its message is the original one, e.g. drizzle's "Failed query: <SQL> params: <values>".
- * TRPCErrors thrown on purpose set their own message.
+ * TRPCErrors thrown on purpose set their own message, and Stripe card errors
+ * ("Your card was declined.") are written for the customer, so both pass through.
  */
 function isUnexpectedTRPCError(error: TRPCError) {
   return (
     error.code === "INTERNAL_SERVER_ERROR" &&
     error.cause !== undefined &&
-    error.message === error.cause.message
+    error.message === error.cause.message &&
+    (error.cause as { type?: unknown }).type !== "StripeCardError"
   );
 }
 
