@@ -279,6 +279,12 @@ export function useLocalizeError() {
           "Too many requests",
         ),
         ...mapKeys(
+          t(
+            "A Max Mode invoice is unpaid. Pay it or update your payment method in the billing portal, then try again.",
+          ),
+          "A Max Mode invoice is unpaid. Pay it or update your payment method in the billing portal, then try again.",
+        ),
+        ...mapKeys(
           t("A question and an answer are required."),
           "A question and an answer are required.",
         ),

@@ -63,7 +63,12 @@ type BillingRecord = typeof billing.$inferSelect;
 
 const ACTIVE_SUB_STATUSES = new Set(["trialing", "active", "past_due"]);
 
-const billingEnabledProcedure = protectedProcedure.use(({ next }) => {
+const billingEnabledProcedure = protectedProcedure.use(({ ctx, next }) => {
+  // Guest sessions must not reach team billing, matching billing.ts; guests
+  // can no longer create teams, but older guest-owned teams may still exist.
+  if (ctx.session?.user?.isAnonymous) {
+    throw new TRPCError({ code: "FORBIDDEN", message: "Sign in before using billing." });
+  }
   if (isBillingDisabled) {
     throw new TRPCError({
       code: "PRECONDITION_FAILED",
