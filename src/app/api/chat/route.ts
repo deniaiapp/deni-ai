@@ -9,6 +9,7 @@ import {
   safeValidateUIMessages,
   stepCountIs,
   streamText,
+  wrapLanguageModel,
   type LanguageModelUsage,
   type ModelMessage,
   type SystemModelMessage,
@@ -318,11 +319,20 @@ export async function POST(req: Request) {
       attachmentCache,
     }) > GUEST_MAX_PROMPT_TOKENS
   ) {
+    // Say which limit was hit: a new chat does not help when a file is too large.
+    const textFits =
+      estimatePromptTextTokens({ modelMessages, systemPrompt: persistentMemory ?? "" }) <=
+      GUEST_MAX_PROMPT_TOKENS;
     return NextResponse.json(
-      {
-        error: "Conversations this long are not available for guest sessions.",
-        reason: "guest_prompt_too_long",
-      },
+      textFits
+        ? {
+            error: "Attachments this large are not available for guest sessions.",
+            reason: "guest_attachment_too_large",
+          }
+        : {
+            error: "Conversations this long are not available for guest sessions.",
+            reason: "guest_prompt_too_long",
+          },
       { status: 413 },
     );
   }
@@ -370,7 +380,7 @@ export async function POST(req: Request) {
   let finishedStepCount = 0;
   let finishedStepMessageTokens = 0;
   let stepInFlight = false;
-  let stepStreamStarted = false;
+  let stepAccepted = false;
   let stepCallUsage: LanguageModelUsage | undefined;
   let stepPromptTokens = 0;
   let stepOutputChars = 0;
@@ -392,7 +402,7 @@ export async function POST(req: Request) {
     if (stepCallUsage) {
       return calculateChatUsageAmount(baseModel, stepCallUsage, { proMode, fastMode });
     }
-    if (!hasAssistantOutput || !stepInFlight) return 0;
+    if (!hasAssistantOutput || !stepInFlight || !stepAccepted) return 0;
     const cacheReadTokens = Math.min(
       Math.max(promptCacheReadTokens, reportedPromptTokens),
       stepPromptTokens,
@@ -479,6 +489,17 @@ export async function POST(req: Request) {
 
     try {
       if (!(await ownsCurrentGeneration())) {
+        // A stop (possibly from another instance) already released the row. Put
+        // back the answer a regenerate replaced, unless a newer generation or
+        // transcript has taken its place or the new answer has output.
+        if (isRegenerate) {
+          await restoreStoppedRegeneration(
+            id,
+            userId,
+            responseMessageId,
+            regenerateRollbackMessages,
+          );
+        }
         return;
       }
       await updateChat(
@@ -651,7 +672,22 @@ export async function POST(req: Request) {
 
     const generationSignal = generationAbortController.signal;
     result = streamText({
-      model: model,
+      // The provider has accepted a call once its stream opens. A rejection
+      // (429, 503, a context-window error) throws before that, including every
+      // retry, and is not billed even if a stop lands during the retry backoff.
+      model:
+        typeof model === "string"
+          ? model
+          : wrapLanguageModel({
+              model,
+              middleware: {
+                wrapStream: async ({ doStream }) => {
+                  const call = await doStream();
+                  stepAccepted = true;
+                  return call;
+                },
+              },
+            }),
       experimental_download: createChatAttachmentDownload(generationSignal, attachmentCache),
       messages: requestMessages,
       abortSignal: generationSignal,
@@ -659,11 +695,11 @@ export async function POST(req: Request) {
       maxOutputTokens: isAnonymous ? GUEST_MAX_OUTPUT_TOKENS : undefined,
       tools,
       // Runs right before the provider call, once attachments are downloaded.
-      // The call counts from here, including prefill and hidden reasoning before
-      // its first streamed part, unless the provider rejects it.
+      // The call counts once the provider accepts it, including prefill and
+      // hidden reasoning before its first streamed part.
       onStepStart: () => {
         stepInFlight = true;
-        stepStreamStarted = false;
+        stepAccepted = false;
         stepCallUsage = undefined;
         stepPromptTokens = Math.max(
           basePromptTokens + finishedStepMessageTokens,
@@ -673,12 +709,7 @@ export async function POST(req: Request) {
       },
       onChunk: ({ chunk }) => {
         if (chunk.type === "start-step") {
-          stepStreamStarted = true;
-        } else if (chunk.type === "error") {
-          // An error before the step's stream started is the provider rejecting
-          // the call (for example 429, 503 or a context-window error), which it
-          // does not bill. A stop surfaces as an abort, not as this error.
-          if (!stepStreamStarted && !generationSignal.aborted) stepInFlight = false;
+          stepAccepted = true;
         } else if (chunk.type === "text-delta" || chunk.type === "reasoning-delta") {
           stepOutputChars += chunk.text.length;
         } else if (chunk.type === "tool-input-delta") {

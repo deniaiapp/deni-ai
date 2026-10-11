@@ -24,6 +24,7 @@ const state = vi.hoisted(() => ({
   nextStepRejected: false,
   // The next step's provider call is accepted but streams nothing before the stop.
   nextStepSilent: false,
+  nextStepBackoff: false,
   upstreamError: false,
   memory: false,
   storedMessages: [] as UIMessage[],
@@ -120,7 +121,16 @@ vi.mock("@/app/api/chat/_lib/model", async () => {
     ChatRouteError,
     addOpenRouterCacheControl: vi.fn(),
     resolveChatModelContext: async () => ({
-      model: {},
+      model: {
+        specificationVersion: "v4",
+        provider: "test",
+        modelId: "test-model",
+        supportedUrls: {},
+        doGenerate: async () => {
+          throw new Error("Not used");
+        },
+        doStream: async () => ({ stream: new ReadableStream() }),
+      },
       providerOptions: {},
       usageCategory: "basic",
       usageUnit: state.guest ? "requests" : "tokens",
@@ -156,7 +166,9 @@ vi.mock("ai", async () => {
               },
               outputTokens: 2,
             };
-            const streamStep = async (call: "streamed" | "rejected" | "silent" = "streamed") => {
+            const streamStep = async (
+              call: "streamed" | "rejected" | "silent" | "backoff" = "streamed",
+            ) => {
               await options.onStepStart();
               // A call the provider rejects surfaces as an error before its stream starts.
               if (call === "rejected") {
@@ -165,6 +177,10 @@ vi.mock("ai", async () => {
                 });
                 return;
               }
+              // Still waiting to retry a rejected call: nothing was accepted yet.
+              if (call === "backoff") return;
+              // The provider accepts the call when its stream opens.
+              await options.model.doStream({ prompt: [] });
               // An accepted call can still be reading the prompt or reasoning.
               if (call === "silent") return;
               await options.onChunk({ chunk: { type: "start-step", request: {}, warnings: [] } });
@@ -179,7 +195,13 @@ vi.mock("ai", async () => {
               await options.onStepFinish({ usage, response: { messages: stepMessages } });
             if (state.nextStep)
               await streamStep(
-                state.nextStepRejected ? "rejected" : state.nextStepSilent ? "silent" : "streamed",
+                state.nextStepRejected
+                  ? "rejected"
+                  : state.nextStepBackoff
+                    ? "backoff"
+                    : state.nextStepSilent
+                      ? "silent"
+                      : "streamed",
               );
             if (state.mode === "stopped") {
               const { POST } = await import("@/app/api/chat/stop/route");
@@ -256,6 +278,7 @@ beforeEach(() => {
   state.nextStep = false;
   state.nextStepRejected = false;
   state.nextStepSilent = false;
+  state.nextStepBackoff = false;
   state.upstreamError = false;
   state.memory = false;
   state.storedMessages = [];
@@ -384,6 +407,15 @@ test("a later step stopped before its first stream part bills its prompt", async
   const retained = 20 + Math.ceil(promptEstimate() + stepMessageTokens - state.inputTokens * 0.9);
   expect(state.consumed - state.refunded).toBe(retained);
   expect(state.reported).toBe(retained);
+});
+
+test("a stop while the SDK waits to retry a rejected call does not bill that call", async () => {
+  // The provider rejected the step's call; no error part arrives before the stop.
+  state.nextStep = true;
+  state.nextStepBackoff = true;
+  await run();
+  expect(state.consumed - state.refunded).toBe(20);
+  expect(state.reported).toBe(20);
 });
 
 test("a stop during a step's tool calls bills the call's reported usage", async () => {
@@ -562,10 +594,11 @@ test("a guest PDF counts by the size downloaded before the check", async () => {
   expect(streamText).toHaveBeenCalledOnce();
 
   // A long one no longer passes as a flat per-file estimate.
+  // The file, not the conversation, is over the limit, and the error says so.
   downloaded(1_000_000);
   const response = await POST(chatRequest("Summarize", [pdf]));
   expect(response.status).toBe(413);
-  expect(await response.json()).toMatchObject({ reason: "guest_prompt_too_long" });
+  expect(await response.json()).toMatchObject({ reason: "guest_attachment_too_large" });
   expect(streamText).toHaveBeenCalledOnce();
 });
 
@@ -814,3 +847,23 @@ test.each([false, true])(
     }
   },
 );
+
+test("a regenerate another instance stopped as it registered restores the stored answer", async () => {
+  state.storedMessages = [question, answer];
+  // The other instance recorded the stop, then found and cleared this generation
+  // before its rollback ran, so the rollback no longer owns the row.
+  vi.mocked(updateChat).mockImplementationOnce(async () => {
+    state.stopRequestedAt = new Date(Date.now() + 1);
+    state.activeGenerationId = null;
+    return { id: "chat", stopRequestedAt: state.stopRequestedAt };
+  });
+
+  const response = await POST(regenerateRequest());
+
+  expect(response.status).toBe(499);
+  expect(streamText).not.toHaveBeenCalled();
+  expect(restoreStoppedRegeneration).toHaveBeenCalledWith("chat", "user", expect.any(String), [
+    question,
+    answer,
+  ]);
+});

@@ -75,6 +75,10 @@ export function useLocalizedChatError() {
         return t(
           "Conversations this long are not available for guest sessions. Start a new chat or log in to continue.",
         );
+      case "Attachments this large are not available for guest sessions.":
+        return t(
+          "Files this large are not available for guest sessions. Remove the attachment or log in to send it.",
+        );
       default:
         return text;
     }
