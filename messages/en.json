@@ -78,6 +78,7 @@
   "xuRzAb": "Select an export file to import",
   "dIaUGd": "JSON files up to 25 MB.",
   "kdTF_d": "Choose file",
+  "aD7RTw": "{count, plural, one {# attached file could not be imported: it belongs to another account or no longer exists.} other {# attached files could not be imported: they belong to another account or no longer exist.}}",
   "Op0P1R": "{count, plural, one {# warning} other {# warnings}}",
   "FZD0B-": "Memory added.",
   "AK_4jn": "Failed to add memory.",
@@ -1363,6 +1364,7 @@
   "5v77BA": "Choose two different models.",
   "fVdxF9": "Start a new comparison to continue.",
   "KVdiy7": "Ask both models…",
+  "Q2Zlth": "The saved comparison was deleted, so this was saved as a new comparison.",
   "ZNDeJ8": "Comparison saved.",
   "05QRmC": "This comparison is too large to save.",
   "zcwzDW": "Could not save this comparison. Please try again.",
@@ -2113,5 +2115,6 @@
   "AGmER5": "Non-reasoning Grok 4.20 variant tuned for fast responses and tool use.",
   "5Q9dIr": "Fast Grok model optimized for accurate tool calling, deep research, and low hallucination.",
   "pgECOQ": "Cost-efficient Grok model with strong reasoning, native tool use, and real-time search.",
-  "JmAR6C": "Flagship Grok reasoning model with native tool use and real-time search."
+  "JmAR6C": "Flagship Grok reasoning model with native tool use and real-time search.",
+  "0fC_HP": "[An attached file could not be imported.]"
 }
