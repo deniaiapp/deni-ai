@@ -36,3 +36,12 @@ jobs:
       - run: pnpm test:core
         env:
           APP_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      - run: pnpm build
+        env:
+          BETTER_AUTH_SECRET: build-placeholder-secret-not-used-at-runtime
+          BETTER_AUTH_URL: http://localhost:3000
+      - run: sh scripts/smoke-standalone.sh
+        env:
+          APP_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          BETTER_AUTH_SECRET: smoke-test-secret-not-used-in-production
+          BETTER_AUTH_URL: http://127.0.0.1:3100

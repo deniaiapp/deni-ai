@@ -16,3 +16,5 @@ coverage
 .vscode
 .idea
 worker
+dist
+.vinext

@@ -1,11 +1,11 @@
 import assert from "node:assert/strict";
-import Module from "node:module";
 import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { attachmentDisposition } from "../lib/download";
 import { userWorkspacePrefix } from "../lib/paths";
 import * as workspacePaths from "../lib/paths";
+import { mockModules } from "./module-mocks";
 
 async function main() {
   for (const name of ["資料.txt", "日本語.zip", 'a"b\\c.txt', "a\r\nb.txt", "😀.txt"]) {
@@ -74,14 +74,12 @@ async function main() {
       },
     },
   };
-  type Loader = (request: string, parent: NodeModule | null, isMain: boolean) => unknown;
-  const runtime = Module as unknown as { _load: Loader };
-  const original = runtime._load;
-  runtime._load = function (request, parent, isMain) {
+  const restoreModules = mockModules((request, parentPath) => {
     if (request === "server-only") return {};
     if (request === "./store")
       return {
         readStore: async () => store,
+        findUserIdByStripeCustomer: async () => "test",
         mutateStore: (_id: string, fn: (value: typeof store) => unknown) => {
           const next = lock.then(() => fn(store));
           lock = next.catch(() => undefined);
@@ -95,7 +93,7 @@ async function main() {
         proPriceId: () => "price_test",
         stripeConfigured: () => true,
       };
-    if (request === "./paths" && parent?.filename.endsWith("workspace.ts"))
+    if (request === "./paths" && parentPath?.endsWith("workspace.ts"))
       return {
         ...workspacePaths,
         userDataDir: () => root,
@@ -121,9 +119,12 @@ async function main() {
         deleteUserObject: async (_id: string, key: string) => {
           objects.delete(key);
         },
+        deleteUserObjects: async (_id: string, keys: string[]) => {
+          for (const key of keys) objects.delete(key);
+        },
       };
-    return original.call(this, request, parent, isMain);
-  };
+    return undefined;
+  });
   try {
     const { checkoutUrl } = await import("../lib/checkout");
     const { cancelUserSubscription } = await import("../lib/billing");
@@ -178,7 +179,7 @@ async function main() {
       "verified Unicode downloads, checkout reuse, cancellation failures, and workspace synchronization",
     );
   } finally {
-    runtime._load = original;
+    restoreModules();
     assert.ok(path.resolve(root).startsWith(path.resolve(tmpdir()) + path.sep));
     await rm(root, { recursive: true, force: true });
   }

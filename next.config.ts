@@ -1,39 +1,13 @@
 import type { NextConfig } from "next";
-import createNextIntlPlugin from "next-intl/plugin";
 
-const withNextIntl = createNextIntlPlugin({
-  experimental: {
-    srcPath: ["./app", "./components", "./lib"],
-    extract: {},
-    messages: {
-      path: "./messages",
-      format: "po",
-      locales: ["en", "ja"],
-      sourceLocale: "en",
-    },
-  },
-});
-
-const playwrightTrace = [
-  "./node_modules/playwright/**/*",
-  "./node_modules/playwright-core/**/*",
-];
-
+// Read by vinext. next-intl is wired up in vite-plugins/next-intl.ts instead of
+// createNextIntlPlugin(), which does not run under vinext.
 const nextConfig: NextConfig = {
   output: "standalone",
   serverExternalPackages: ["playwright", "playwright-core", "stripe", "discord.js"],
   experimental: {
     optimizePackageImports: ["@phosphor-icons/react"],
   },
-  outputFileTracingIncludes: {
-    "/api/chat": playwrightTrace,
-    "/api/computer/:path*": playwrightTrace,
-    "/api/handoffs": playwrightTrace,
-    "/api/account": playwrightTrace,
-  },
-  outputFileTracingExcludes: {
-    "/*": ["./.deni/**/*"],
-  },
 };
 
-export default withNextIntl(nextConfig);
+export default nextConfig;

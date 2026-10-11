@@ -1,20 +1,17 @@
 import dotenv from "dotenv";
 import { mkdtemp, rm } from "node:fs/promises";
-import Module from "node:module";
 import os from "node:os";
 import path from "node:path";
 import type { UIMessage } from "ai";
+import { mockModules } from "./module-mocks";
 
 dotenv.config({ path: ".env", quiet: true });
 dotenv.config({ path: ".env.local", override: true, quiet: true });
 
-type NodeLoader = (request: string, parent: NodeModule | null, isMain: boolean) => unknown;
-const moduleRuntime = Module as unknown as { _load: NodeLoader };
-const originalLoad = moduleRuntime._load;
-moduleRuntime._load = function load(request: string, parent: NodeModule | null, isMain: boolean) {
+mockModules((request) => {
   if (request === "server-only") return {};
-  return originalLoad.call(this, request, parent, isMain);
-};
+  return undefined;
+});
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);

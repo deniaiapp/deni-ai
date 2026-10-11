@@ -28,26 +28,23 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_SUPPORT_EMAIL=$NEXT_PUBLIC_SUPPORT_EMAIL
 
 COPY . .
-# .next/cacheをビルド間で保持し、Turbopackが前回の結果を再利用できるようにする
-RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
-  pnpm build
+# vinext buildはoutput: "standalone"でdist/standaloneに自己完結したサーバーを出力する
+RUN pnpm build
 
 FROM node:${NODE_VERSION} AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PORT=3000
-ENV HOSTNAME=0.0.0.0
+# vinextのサーバーはHOSTNAMEではなくHOSTを読む
+ENV HOST=0.0.0.0
 
-RUN mkdir -p .next .deni scripts \
-  && chown node:node .next .deni scripts
+RUN mkdir -p .deni scripts \
+  && chown node:node .deni scripts
 
-# Next.js standalone（出力設定）が有効な場合、runner側でpnpmは不要になります
-COPY --from=builder --chown=node:node /app/public ./public
-COPY --from=builder --chown=node:node /app/.next/standalone ./
-COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+# standaloneにはpublic、ビルド成果物、実行時に必要なnode_modulesが含まれる
+COPY --from=builder --chown=node:node /app/dist/standalone ./
 COPY --from=builder --chown=node:node /app/scripts/docker-entrypoint.sh ./entrypoint.sh
 
 RUN sed -i 's/\r$//' ./entrypoint.sh && chmod +x ./entrypoint.sh

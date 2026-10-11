@@ -49,3 +49,5 @@ next-env.d.ts
 d1-proxy/.wrangler-*/
 d1-proxy/.dev.vars
 .deni/local.sqlite*
+/dist/
+.vinext/
