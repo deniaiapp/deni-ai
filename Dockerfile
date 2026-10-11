@@ -2,27 +2,21 @@
 
 ARG NODE_VERSION=24-bookworm-slim
 
-# pnpmのセットアップは一度だけ行い、レイヤーキャッシュで使い回す
-FROM node:${NODE_VERSION} AS base
+FROM node:${NODE_VERSION} AS builder
 WORKDIR /app
 
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 
-# Corepackを最新に更新してからpnpm@12を有効化
-RUN npm install -g corepack@latest \
-  && corepack enable && corepack prepare pnpm@12 --activate
-
-FROM base AS deps
-
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-# pnpmストアをBuildKitキャッシュに置き、lockfile変更時も差分だけ取得する
+# Corepackを最新に更新し、packageManagerで指定したpnpmをこのレイヤーに入れておく
+RUN npm install -g corepack@latest \
+  && corepack enable && corepack install
+# pnpmストアをBuildKitキャッシュに置き、lockfile変更時も差分だけ取得する。
+# devDependenciesも必要なので、NODE_ENV=productionより前に実行する
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile --store-dir /pnpm/store
 
-FROM base AS builder
-
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV NODE_ENV=production
 # Imported at build time; the database is only contacted at runtime.
 ENV BETTER_AUTH_SECRET=build-placeholder-secret-not-used-at-runtime
@@ -33,7 +27,6 @@ ARG NEXT_PUBLIC_SUPPORT_EMAIL=""
 ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_SUPPORT_EMAIL=$NEXT_PUBLIC_SUPPORT_EMAIL
 
-COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # .next/cacheをビルド間で保持し、Turbopackが前回の結果を再利用できるようにする
 RUN --mount=type=cache,id=next-cache,target=/app/.next/cache \
