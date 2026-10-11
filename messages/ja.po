@@ -1995,9 +1995,9 @@ msgid "Delete {name}"
 msgstr "{name}を削除"
 
 #: app/components/discord-settings.tsx
-msgctxt "feHA11"
-msgid "Commands in the DM: /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
-msgstr "DM のコマンド: /teammate で話す相手を選び、/reset で会話をリセットし、/unlink で連携を解除します。承認が必要な操作には「承認」「拒否」ボタンが表示されます。"
+msgctxt "qqy7Oh"
+msgid "Commands in the DM: /help lists everything you can do from Discord, /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Files you attach are saved to the workspace, and actions that need approval show Approve and Deny buttons."
+msgstr "DM のコマンド: /help で Discord からできることの一覧を表示し、/teammate で話す相手を選び、/reset で会話をリセットし、/unlink で連携を解除します。添付したファイルはワークスペースに保存され、承認が必要な操作には「承認」「拒否」ボタンが表示されます。"
 
 #: app/components/discord-settings.tsx
 msgctxt "p7E89o"
@@ -3360,9 +3360,9 @@ msgid "Back to Deni Run home"
 msgstr "Deni Run のホームに戻る"
 
 #: app/privacy/page.tsx
-msgctxt "7Q7uOl"
-msgid "Last updated: October 10, 2026"
-msgstr "最終更新日: 2026年10月10日"
+msgctxt "vlvrrr"
+msgid "Last updated: October 11, 2026"
+msgstr "最終更新日: 2026年10月11日"
 
 #: app/privacy/page.tsx
 msgctxt "zFZQnj"
@@ -3410,9 +3410,9 @@ msgid "Discord data."
 msgstr "Discord のデータ。"
 
 #: app/privacy/page.tsx
-msgctxt "Q09cnv"
-msgid "Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, and which teammate you are talking to. The messages you send to the Deni Run bot in a direct message and the replies are saved in that teammate’s conversation in your workspace, like any other message. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent."
-msgstr "アプリの「プラグイン」から Discord を連携した場合に限り、Discord のユーザー ID とユーザー名、連携を作成したセッションの言語、話し相手のチームメイトを保存します。Deni Run のボットにダイレクトメッセージで送ったメッセージと返信は、他のメッセージと同じように、あなたのワークスペースのそのチームメイトの会話に保存されます。読み取るのはボット宛てのダイレクトメッセージだけで、サーバーのチャンネルは読みません。また、ボットは特権インテント「メッセージ内容」を要求しません。"
+msgctxt "qdNvnc"
+msgid "Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, which teammate or group you are talking to, and whether you want notifications there. The messages you send to the Deni Run bot in a direct message and the replies are saved in that conversation in your workspace, like any other message, and files you attach are saved in your workspace inbox. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent."
+msgstr "アプリの「プラグイン」から Discord を連携した場合に限り、Discord のユーザー ID とユーザー名、連携を作成したセッションの言語、話し相手のチームメイトまたはグループ、Discord で通知を受け取るかどうかを保存します。Deni Run のボットにダイレクトメッセージで送ったメッセージと返信は、他のメッセージと同じように、あなたのワークスペースのその会話に保存されます。添付したファイルはワークスペースの受信フォルダに保存されます。読み取るのはボット宛てのダイレクトメッセージだけで、サーバーのチャンネルは読みません。また、ボットは特権インテント「メッセージ内容」を要求しません。"
 
 #: app/privacy/page.tsx
 msgctxt "qorkWG"
@@ -3505,9 +3505,9 @@ msgid "Google and GitHub: sign-in and the plugins you connect. We send them only
 msgstr "Google と GitHub: ログインと、接続したプラグイン。ログインや、メール送信など依頼された操作の実行に必要なリクエストのみを送信します。"
 
 #: app/privacy/page.tsx
-msgctxt "daoL2n"
-msgid "Discord: if you link it, Discord carries the direct messages you and the bot exchange, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
-msgstr "Discord: 連携した場合、あなたとボットがやり取りするダイレクトメッセージは Discord を経由し、Discord 自身の利用規約とプライバシーポリシーが適用されます。Discord に処理されたくない内容は送らないでください。メッセージ内容はあなたへの回答にのみ使い、AI モデルの学習には使いません。"
+msgctxt "vx7Nra"
+msgid "Discord: if you link it, Discord carries the direct messages you and the bot exchange, including files and screenshots you request and notifications about background work if you keep them on, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
+msgstr "Discord: 連携した場合、あなたとボットがやり取りするダイレクトメッセージ（あなたが求めたファイルやスクリーンショット、通知をオンにしている場合のバックグラウンド作業の通知を含みます）は Discord を経由し、Discord 自身の利用規約とプライバシーポリシーが適用されます。Discord に処理されたくない内容は送らないでください。メッセージ内容はあなたへの回答にのみ使い、AI モデルの学習には使いません。"
 
 #: app/privacy/page.tsx
 msgctxt "A54dst"
@@ -3641,9 +3641,9 @@ msgid "Computer sessions, files, and memory stay scoped to your account. You can
 msgstr "コンピューターのセッション、ファイル、メモリはあなたのアカウント内に限定されます。これらのデータは<link>アカウント</link>からエクスポートまたは削除できます。アカウントを削除すると、このサービスに保存されたログイン情報も削除されます。"
 
 #: app/terms/page.tsx
-msgctxt "BJc6Mq"
-msgid "If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can give your teammates tasks, including approving actions with the Approve button. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink."
-msgstr "Discord アカウントを連携した場合、そのアカウントを誰が使えるかはあなたの責任です。そのアカウントからダイレクトメッセージを送れる人は、チームメイトにタスクを依頼でき、「承認」ボタンで操作を承認することもできます。Discord の利用には Discord 自身の利用規約とプライバシーポリシーが適用されます。連携は「プラグイン」または /unlink でいつでも解除できます。"
+msgctxt "bXXNWc"
+msgid "If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can use your workspace much as you can in the app, except account and billing settings: give your teammates tasks, approve actions with the Approve button, change teammates, groups, skills, routines, and plugins, and read or delete workspace files. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink."
+msgstr "Discord アカウントを連携した場合、そのアカウントを誰が使えるかはあなたの責任です。そのアカウントからダイレクトメッセージを送れる人は、アカウントと請求の設定を除き、アプリとほぼ同じようにワークスペースを使えます。チームメイトへのタスクの依頼、「承認」ボタンでの操作の承認、チームメイト・グループ・スキル・ルーティン・プラグインの変更、ワークスペースのファイルの閲覧や削除ができます。Discord の利用には Discord 自身の利用規約とプライバシーポリシーが適用されます。連携は「プラグイン」または /unlink でいつでも解除できます。"
 
 #: app/terms/page.tsx
 msgctxt "PR34Xj"
@@ -3864,6 +3864,11 @@ msgstr "MCP接続名は必須です"
 msgctxt "MonAal"
 msgid "MCP connection not found"
 msgstr "MCP接続が見つかりません"
+
+#: lib/localize-error.ts
+msgctxt "yENvEN"
+msgid "An MCP connection with this name already exists"
+msgstr "同じ名前の MCP 接続がすでにあります"
 
 #: lib/localize-error.ts
 msgctxt "oGclRw"

@@ -255,6 +255,15 @@ export type Store = {
   pluginAlwaysAllow?: Record<string, boolean>;
   /** Rolling summaries of the history each thread no longer sends to the model, by thread id. */
   historySummaries?: Record<string, HistorySummary>;
+  /** Discord preferences of the linked account. The link itself lives in discord_links. */
+  discord?: DiscordPrefs;
+};
+
+export type DiscordPrefs = {
+  /** Group conversation plain DMs go to. Null or a deleted group means the chosen teammate's DM. */
+  threadId?: string | null;
+  /** DM the person when background work finishes, fails, or needs them. On unless turned off. */
+  notify?: boolean;
 };
 
 export type HistorySummary = {

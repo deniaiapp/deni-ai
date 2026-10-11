@@ -179,7 +179,22 @@ Teammates can be reached from Discord direct messages through one shared bot.
 3. Run `pnpm db:migrate` to create the `discord_links` and `discord_link_codes` tables.
 4. In the app open **Plugins**, choose **Create link code** on the Discord card, and send the code to the bot in a direct message (or use `/link`). The code works once and expires after 10 minutes.
 
-After linking, a plain direct message goes to the chosen teammate and the reply comes back in the same conversation, which is also visible in the web app. `/teammate` lists teammates or switches to one, `/reset` starts a new conversation with the current teammate, and `/unlink` disconnects the account.
+After linking, a plain direct message goes to the chosen teammate (or group) and the reply comes back in the same conversation, which is also visible in the web app. Files attached to a message are saved under `/inbox/discord/` in the workspace and the teammate is told where they are. Everything in the app except account and billing settings is available as a slash command; `/help` lists them in the person's language:
+
+| Command | What it does |
+| --- | --- |
+| `/teammate`, `/model`, `/effort`, `/reset` | Choose who you talk to, the model and reasoning level, and start a conversation over |
+| `/team` | List, create, edit, and delete teammates; view and forget their memory |
+| `/group` | List, create, edit, and delete groups; `talk` sends plain messages to a group (`@name` or `@everyone` picks who answers) |
+| `/tasks` | Running and recent tasks with Stop and Retry; `stop` cancels the current conversation's task |
+| `/files` | Browse, download (folders as zip), and delete workspace files; get deliverables |
+| `/skill`, `/routine` | Manage skills and scheduled routines, including the default timezone |
+| `/computer` | Status and screenshots, close the browser, pause the sandbox |
+| `/plugins`, `/mcp` | Plugin status, disconnect, and always-allow rules; add, test, enable, and delete MCP servers |
+| `/notify`, `/inbox` | Turn background-work notifications on or off, and read unread ones |
+| `/unlink` | Disconnect the Discord account |
+
+Routine results are also sent as a direct message while `/notify` is on (the default); chat replies are not, because they already arrive in the conversation. Connecting Gmail, Drive, or GitHub needs a browser sign-in, and controlling the browser needs the app, so those commands reply with a link built from `BETTER_AUTH_URL` (or `NEXT_PUBLIC_APP_URL`). Notifications are sent through Discord's REST API from whichever instance creates them, so set `DISCORD_BOT_TOKEN` on the scheduler or worker instance too.
 
 Commands that need approval, file deletion, and plugin writes arrive as a message with **Approve** and **Deny** buttons; the task resumes after you answer. A step that needs the browser (login, 2FA, CAPTCHA) cannot be done in Discord, so the bot asks you to finish it in the app. Only direct messages are served, never server channels, because a teammate's answer can contain private data.
 

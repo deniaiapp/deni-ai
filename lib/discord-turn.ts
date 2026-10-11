@@ -13,7 +13,8 @@ import { getApiKey } from "./config";
 import { releaseBrowserTakeover } from "./browser-workspaces";
 import { setComputer } from "./computer";
 import { hasPendingWorkflowWait } from "./chat-run-state";
-import { translateError, translatorFor } from "./i18n-server";
+import { discordErrorText, discordTranslator as translatorFor } from "./discord-i18n";
+import { translateError } from "./i18n-server";
 import {
   checkpointJob,
   claimJob,
@@ -26,6 +27,8 @@ import {
   transitionJob,
 } from "./jobs";
 import { getDeniModel } from "./llm";
+import { groupContext, groupRecipients } from "./group-chat";
+import { discordTargetGroup, groupMembers } from "./groups";
 import { compactMessagesForModel, mergeThreadMessages } from "./messages";
 import { messagesWithReplyContext } from "./message-actions";
 import { parseRunMode } from "./model";
@@ -123,6 +126,16 @@ function pickBot(store: Store, botId: string | null) {
   return thread ? { bot, thread } : null;
 }
 
+/** The group plain DMs go to, if the person chose one with /group talk and it still exists. */
+function pickGroup(store: Store) {
+  const thread = discordTargetGroup(store);
+  return thread ? { thread, members: groupMembers(store, thread) } : null;
+}
+
+// Matches the web group chat, so a teammate behaves the same wherever the group message came from.
+const groupNote = (name: string) =>
+  `\nYou are speaking as ${name} in a group chat. Respond only as yourself, from your role. Other teammates may answer in parallel; do not impersonate them or start extra handoffs for this group message.`;
+
 type TurnInput = {
   userId: string;
   locale: string;
@@ -170,15 +183,17 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
 
   try {
     const { model, providerOptions, tokenMultiplier } = await getDeniModel(userId, runMode);
-    const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: true, locale });
+    const group = thread.kind === "group";
+    const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: !group, locale });
     const result = streamText({
       model,
-      instructions: buildInstructions(
-        bot,
-        store.skills,
-        store.bots.map((item) => ({ id: item.id, name: item.name, job: item.job })),
-      ),
-      messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(messages))),
+      instructions:
+        buildInstructions(
+          bot,
+          store.skills,
+          store.bots.map((item) => ({ id: item.id, name: item.name, job: item.job })),
+        ) + (group ? groupNote(bot.name) : ""),
+      messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(group ? groupContext(messages, bot.id) : messages))),
       tools,
       toolApproval: deniToolApproval({ userId, jobId: job.id, locale }),
       stopWhen: isLoopFinished(),
@@ -260,37 +275,56 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
     return { kind: "reply", botName: bot.name, text };
   } catch (error) {
     await fail(error);
-    return { kind: "notice", text: translateError(locale, error) || tr("The model call failed") };
+    return { kind: "notice", text: discordErrorText(locale, error) || tr("The model call failed") };
   }
 }
 
-/** Handle a plain Discord message from a linked user. */
-export async function runDiscordMessage(options: {
-  userId: string;
-  discordMessageId: string;
-  text: string;
-  botId: string | null;
-  locale: string;
-}): Promise<TurnOutcome> {
-  const { userId, locale } = options;
+type Preflight = { ok: true; store: Store } | { ok: false; outcome: TurnOutcome };
+
+/** Checks every turn shares: rate limit, an API key, and remaining tokens. */
+async function preflight(userId: string, locale: string): Promise<Preflight> {
   const tr = translatorFor(locale);
   try {
     await assertRateLimit(userId, "discord-chat", 20);
   } catch (error) {
-    if (error instanceof RateLimitError) return { kind: "notice", text: tr("Too many requests. Wait a moment and try again.") };
+    if (error instanceof RateLimitError) return { ok: false, outcome: { kind: "notice", text: tr("Too many requests. Wait a moment and try again.") } };
     throw error;
   }
   const store = await readStore(userId);
-  const target = pickBot(store, options.botId);
-  if (!target) return { kind: "notice", text: tr("Create a teammate in the app first, then message again.") };
-  const { bot, thread } = target;
-  if (!(await getApiKey(userId))) return { kind: "notice", text: tr("Add an OpenRouter API key in the app before using Discord.") };
+  if (!(await getApiKey(userId))) return { ok: false, outcome: { kind: "notice", text: tr("Add an OpenRouter API key in the app before using Discord.") } };
   try {
     await assertCanUseTokens(userId);
   } catch (error) {
-    return { kind: "notice", text: translateError(locale, error) };
+    return { ok: false, outcome: { kind: "notice", text: discordErrorText(locale, error) } };
   }
+  return { ok: true, store };
+}
 
+/** The latest approval request this job is waiting on, in a DM or a group thread. */
+function pendingRequestFor(persisted: UIMessage[], jobId: string) {
+  return persisted.findLast(
+    (message) =>
+      message.role === "assistant" &&
+      pendingApprovalParts(message).length > 0 &&
+      (message.metadata as { jobId?: unknown } | undefined)?.jobId === jobId,
+  );
+}
+
+/**
+ * One teammate's answer to one Discord message in a DM or group thread: continue a task parked
+ * for takeover, re-show a pending approval, or start a new job and run it.
+ */
+async function runBotTurn(options: {
+  userId: string;
+  locale: string;
+  store: Store;
+  bot: Bot;
+  thread: Thread;
+  incoming: UIMessage;
+  idempotencyKey: string;
+}): Promise<TurnOutcome> {
+  const { userId, locale, store, bot, thread, incoming, idempotencyKey } = options;
+  const tr = translatorFor(locale);
   const active = (await listJobs(userId, { threadId: thread.id, limit: 20, summary: true })).find(
     (job) => job.botId === bot.id && job.kind === "chat" && ACTIVE.includes(job.status),
   );
@@ -298,7 +332,7 @@ export async function runDiscordMessage(options: {
     // Only a Discord-started job can be answered with these buttons; the web chat owns the rest.
     const full = await getJob(userId, active.id);
     const persisted = await loadMessages(userId, thread.id);
-    const pending = persisted.findLast((message) => message.role === "assistant" && pendingApprovalParts(message).length);
+    const pending = pendingRequestFor(persisted, active.id);
     if (full?.payload.source !== "discord" || !pending) {
       return { kind: "notice", text: tr("A task is waiting for your approval in the app.") };
     }
@@ -308,13 +342,7 @@ export async function runDiscordMessage(options: {
     return { kind: "notice", text: tr("{name} is still working on your last message.", { name: bot.name }) };
   }
 
-  const idempotencyKey = `discord:${options.discordMessageId}`;
   if (await getJobByIdempotencyKey(userId, idempotencyKey)) return { kind: "none" };
-  const incoming: UIMessage = {
-    id: `discord_${options.discordMessageId}`,
-    role: "user",
-    parts: [{ type: "text", text: options.text }],
-  };
   const messages = mergeThreadMessages(await loadMessages(userId, thread.id), [incoming]);
   const runMode = parseRunMode(store.config.runMode);
   const hash = createHash("sha256").update(idempotencyKey).digest("hex").slice(0, 12);
@@ -355,17 +383,107 @@ export async function runDiscordMessage(options: {
   return executeTurn({ userId, locale, store, bot, thread, job: claimed.job, messages, requestMessage: incoming, assistantId: `${created.id}_assistant_${hash}`, runMode });
 }
 
-/** /reset: later turns with the current teammate start fresh. The history stays in the app. */
+function incomingMessage(discordMessageId: string, text: string): UIMessage {
+  return { id: `discord_${discordMessageId}`, role: "user", parts: [{ type: "text", text }] };
+}
+
+/** Handle a plain Discord message from a linked user, sent to the chosen teammate's DM thread. */
+export async function runDiscordMessage(options: {
+  userId: string;
+  discordMessageId: string;
+  text: string;
+  botId: string | null;
+  locale: string;
+}): Promise<TurnOutcome> {
+  const { userId, locale } = options;
+  const tr = translatorFor(locale);
+  const checked = await preflight(userId, locale);
+  if (!checked.ok) return checked.outcome;
+  const target = pickBot(checked.store, options.botId);
+  if (!target) return { kind: "notice", text: tr("Create a teammate in the app first, then message again.") };
+  return runBotTurn({
+    userId,
+    locale,
+    store: checked.store,
+    bot: target.bot,
+    thread: target.thread,
+    incoming: incomingMessage(options.discordMessageId, options.text),
+    idempotencyKey: `discord:${options.discordMessageId}`,
+  });
+}
+
+/**
+ * A plain message while a group is chosen: @name or @everyone picks who answers, like the web
+ * group chat, and each teammate answers in parallel with its own job.
+ */
+async function runDiscordGroupMessage(
+  options: { userId: string; discordMessageId: string; text: string; locale: string },
+  store: Store,
+  group: NonNullable<ReturnType<typeof pickGroup>>,
+): Promise<TurnOutcome[]> {
+  const { userId, locale } = options;
+  let recipients: Bot[];
+  try {
+    recipients = groupRecipients(options.text, group.members);
+  } catch (error) {
+    return [{ kind: "notice", text: discordErrorText(locale, error) }];
+  }
+  const incoming = incomingMessage(options.discordMessageId, options.text);
+  const tr = translatorFor(locale);
+  return Promise.all(
+    recipients.map(async (bot) => {
+      // One message can wake every member, so each turn is counted like a web chat turn.
+      try {
+        await assertRateLimit(userId, "chat", 40);
+      } catch (error) {
+        if (error instanceof RateLimitError) return { kind: "notice", text: `${bot.name}: ${tr("Too many requests. Wait a moment and try again.")}` } as TurnOutcome;
+        throw error;
+      }
+      return runBotTurn({ userId, locale, store, bot, thread: group.thread, incoming, idempotencyKey: `discord:${options.discordMessageId}:${bot.id}` }).catch(
+        (error): TurnOutcome => {
+          reportError(error, "discord group turn");
+          return { kind: "notice", text: `${bot.name}: ${discordErrorText(locale, error)}` };
+        },
+      );
+    }),
+  );
+}
+
+/** Route a plain Discord message to the chosen group, or else to the chosen teammate. */
+export async function runDiscordConversation(options: {
+  userId: string;
+  discordMessageId: string;
+  text: string;
+  botId: string | null;
+  locale: string;
+}): Promise<{ group: string | null; outcomes: TurnOutcome[] }> {
+  const group = pickGroup(await readStore(options.userId));
+  if (!group) return { group: null, outcomes: [await runDiscordMessage(options)] };
+  const checked = await preflight(options.userId, options.locale);
+  if (!checked.ok) return { group: group.thread.title, outcomes: [checked.outcome] };
+  const current = pickGroup(checked.store) ?? group;
+  return { group: current.thread.title, outcomes: await runDiscordGroupMessage(options, checked.store, current) };
+}
+
+/** /reset: later turns in the current conversation start fresh. The history stays in the app. */
 export async function resetDiscordConversation(options: { userId: string; botId: string | null; locale: string }) {
   const tr = translatorFor(options.locale);
-  const target = pickBot(await readStore(options.userId), options.botId);
+  const store = await readStore(options.userId);
+  const group = pickGroup(store);
+  const teammate = group ? null : pickBot(store, options.botId);
+  const target = group ? { name: group.thread.title, thread: group.thread } : teammate ? { name: teammate.bot.name, thread: teammate.thread } : null;
   if (!target) return tr("Create a teammate in the app first, then message again.");
-  const { bot, thread } = target;
-  const result = await resetThreadContext(options.userId, thread.id);
-  if (result === "busy") return tr("{name} is still working or waiting for you. Finish or stop that task, then reset.", { name: bot.name });
-  if (result === "unchanged") return tr("The conversation with {name} is already fresh.", { name: bot.name });
+  const result = await resetThreadContext(options.userId, target.thread.id);
+  const name = { name: target.name };
   if (result === "missing") return tr("Create a teammate in the app first, then message again.");
-  return tr("Started a new conversation with {name}. Earlier messages stay in the app but are no longer sent.", { name: bot.name });
+  if (group) {
+    if (result === "busy") return tr("A teammate in the group {name} is still working or waiting for you. Finish or stop that task, then reset.", name);
+    if (result === "unchanged") return tr("The conversation in the group {name} is already fresh.", name);
+    return tr("Started a new conversation in the group {name}. Earlier messages stay in the app but are no longer sent.", name);
+  }
+  if (result === "busy") return tr("{name} is still working or waiting for you. Finish or stop that task, then reset.", name);
+  if (result === "unchanged") return tr("The conversation with {name} is already fresh.", name);
+  return tr("Started a new conversation with {name}. Earlier messages stay in the app but are no longer sent.", name);
 }
 
 /** Apply an Approve/Deny button press to every request of that round and resume the job. */
@@ -386,7 +504,9 @@ export async function runDiscordApproval(options: {
   const thread = store.threads.find((item) => item.id === job.threadId);
   if (!bot || !thread) return stale;
   const persisted = await loadMessages(userId, thread.id);
-  const target = persisted.findLast((message) => message.role === "assistant" && pendingApprovalParts(message).length);
+  // In a group several teammates can wait at once, so only this job's own request counts there.
+  const target = pendingRequestFor(persisted, job.id)
+    ?? (thread.kind === "dm" ? persisted.findLast((message) => message.role === "assistant" && pendingApprovalParts(message).length) : undefined);
   if (!target || approvalRound(target) !== options.round) return stale;
 
   const responded = {

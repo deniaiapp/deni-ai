@@ -94,6 +94,14 @@ export async function saveMcpConnection(options: {
   const headers = validateHeaders(options.headers);
   const transport = options.transport ?? "streamable-http";
   const now = new Date();
+  // Names identify connections in Discord commands, so they are unique per account ignoring case.
+  const taken = await db
+    .select({ id: mcpConnections.id, name: mcpConnections.name })
+    .from(mcpConnections)
+    .where(eq(mcpConnections.userId, options.userId));
+  if (taken.some((row) => row.id !== options.id && row.name.trim().toLowerCase() === name.toLowerCase())) {
+    throw new Error("An MCP connection with this name already exists");
+  }
   if (options.id) {
     const existing = await getMcpRow(options.userId, options.id);
     if (!existing) throw new Error("MCP connection not found");
@@ -127,6 +135,16 @@ export async function saveMcpConnection(options: {
     })
     .returning();
   return row ? publicConnection(row) : null;
+}
+
+/** On or off without touching the stored test result, which saveMcpConnection resets. */
+export async function setMcpConnectionEnabled(userId: string, id: string, enabled: boolean) {
+  const rows = await db
+    .update(mcpConnections)
+    .set({ enabled, updatedAt: new Date() })
+    .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.id, id)))
+    .returning({ id: mcpConnections.id });
+  return rows.length > 0;
 }
 
 export async function deleteMcpConnection(userId: string, id: string) {

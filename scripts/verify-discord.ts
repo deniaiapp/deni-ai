@@ -7,6 +7,8 @@ import { mockModules } from "./module-mocks";
 
 dotenv.config({ path: ".env", quiet: true });
 dotenv.config({ path: ".env.local", override: true, quiet: true });
+// Never reach the real object storage configured for development; use the local workspace.
+for (const key of Object.keys(process.env)) if (key.startsWith("S3_")) delete process.env[key];
 
 mockModules((request) => {
   if (request === "server-only") return {};
@@ -141,6 +143,7 @@ async function main() {
   const script: { text?: string; tool?: { name: string; args: unknown } }[] = [];
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).startsWith("https://cdn.discord.test/")) return new Response(new Uint8Array([1, 2, 3, 255]));
     if (!String(input).includes("/chat/completions")) return realFetch(input, init);
     const step = script.shift();
     if (!step) throw new Error("model called more often than scripted");
@@ -202,7 +205,65 @@ async function main() {
   assert(kept.some((message) => message.parts.some((part) => part.type === "text" && part.text === "clean the build folder")), "reset deleted the history");
   await jobs.createJob({ userId: e2e, threadId: "dm_ops", botId: "ops", kind: "chat", idempotencyKey: "busy-job", payload: { source: "discord" } });
   assert((await reset()).includes("still working or waiting"), "reset ran while a task was queued");
+
+  // Groups: with a group chosen, @name picks who answers and every reply lands in the group thread.
+  await store.mutateStore(e2e, (next) => {
+    next.threads.push({ id: "grp_leads", kind: "group", title: "Leads", botIds: ["chief", "research"], createdAt: "", updatedAt: "", lastPreview: "" });
+  });
+  await link.setDiscordPrefs(e2e, { threadId: "grp_leads" });
+  const talk = (id: string, text: string) => turn.runDiscordConversation({ userId: e2e, discordMessageId: id, text, botId: "ops", locale: "en" });
+  script.push({ text: "On it." }, { text: "On it." });
+  const everyone = await talk("m200", "@everyone status?");
+  const repliers = everyone.outcomes.map((outcome) => (outcome.kind === "reply" ? outcome.botName : outcome.kind));
+  assert(everyone.group === "Leads" && repliers.sort().join() === "Chief,Research", `group replies: ${JSON.stringify(everyone)}`);
+  assert(requests.slice(-2).every((body) => body.includes("in a group chat")), "group instructions missing");
+  const leads = await store.loadMessages(e2e, "grp_leads");
+  assert(leads.filter((message) => message.role === "user").length === 1 && leads.filter((message) => message.role === "assistant").length === 2, "group thread not stored");
+  script.push({ text: "Research here." });
+  const mentioned = await talk("m201", "@Research only you");
+  assert(mentioned.outcomes.length === 1 && mentioned.outcomes[0].kind === "reply" && mentioned.outcomes[0].botName === "Research", `mention: ${JSON.stringify(mentioned)}`);
+  assert((await talk("m202", "@Nobody hi")).outcomes[0].kind === "notice", "unknown mention ran a turn");
+  assert((await reset()).includes("Leads"), "reset did not apply to the group");
+  await link.setDiscordPrefs(e2e, { threadId: "grp_deleted" });
+  assert((await talk("m203", "hello")).group === null, "a missing group must fall back to the teammate");
+  await link.talkToTeammate(e2e, "research");
+  assert((await link.getDiscordPrefs(e2e)).threadId === null && (await link.getDiscordLinkByUser(e2e)) === null, "talkToTeammate prefs");
   assert(script.length === 0, "unused scripted model responses");
+
+  // Attachments: saved under /inbox/discord with safe names; oversized files are skipped unread.
+  const { saveDiscordAttachments, attachmentFileName, ATTACHMENT_LIMIT } = await import("../lib/discord-attachments");
+  const { readWorkspaceBytes, deleteWorkspaceContents } = await import("../lib/workspace");
+  for (const hostile of ["../../etc/passwd", "..\\..\\boot.ini", ".env", "a/b:c*d"]) {
+    const safe = attachmentFileName(hostile);
+    assert(!/[\\/]/.test(safe) && !safe.startsWith("."), `unsafe file name from ${hostile}: ${safe}`);
+  }
+  assert(attachmentFileName("") === "file" && attachmentFileName("請求書.pdf") === "請求書.pdf", "file name fallback");
+  const received = await saveDiscordAttachments(e2e, [
+    { name: "report.pdf", url: "https://cdn.discord.test/report.pdf", size: 4, contentType: "application/pdf" },
+    { name: "huge.bin", url: "https://cdn.discord.test/huge.bin", size: ATTACHMENT_LIMIT + 1, contentType: null },
+  ]);
+  assert(received.saved.length === 1 && /^\/inbox\/discord\/.+-1-report\.pdf$/.test(received.saved[0]), `saved: ${received.saved}`);
+  assert(received.skipped.length === 1 && received.skipped[0].reason === "size", "oversized file not skipped");
+  const bytes = await readWorkspaceBytes(e2e, received.saved[0]);
+  assert(Buffer.compare(Buffer.from(bytes.data), Buffer.from([1, 2, 3, 255])) === 0, "attachment bytes changed");
+  await deleteWorkspaceContents(e2e);
+
+  // The bot's strings must never become patterns that rewrite unrelated errors in the web app.
+  const { translateMessage } = await import("../lib/i18n-server");
+  const { discordTranslator, discordErrorText } = await import("../lib/discord-i18n");
+  for (const unrelated of ["Retry later", "Unexpected token < in JSON at position 0", "Edit conflict", "Sandbox not found in region"]) {
+    assert(translateMessage("ja", unrelated) === unrelated, `shared dictionary rewrote: ${unrelated} -> ${translateMessage("ja", unrelated)}`);
+  }
+  assert(discordTranslator("ja")("Retry {number}", { number: 2 }) !== "Retry 2", "the bot's own strings are not translated");
+  assert(discordTranslator("ja")("Too many requests. Wait a moment and try again.").startsWith("リクエスト"), "shared strings no longer reach the bot");
+  assert(discordErrorText("ja", new Error("Write the time as HH:MM, for example 09:30.")) !== "Write the time as HH:MM, for example 09:30.", "the bot's own errors are not translated");
+
+  // /help lists every registered command, each defined once.
+  const { commandDefinitions, helpText } = bot.discordCommandsForTests;
+  const names = commandDefinitions().map((command) => command.name);
+  assert(new Set(names).size === names.length, `duplicate commands: ${names}`);
+  const help = helpText("ja", (key: string) => key);
+  assert(names.every((name) => help.includes(`/${name}`)), "help is missing commands");
   globalThis.fetch = realFetch;
 
   console.log("discord verification passed");

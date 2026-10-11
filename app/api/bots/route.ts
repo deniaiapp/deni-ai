@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
-import { createId, nowIso } from "@/lib/ids";
-import { mutateStore } from "@/lib/store";
-import type { Bot, Thread } from "@/lib/types";
 import { limitOrResponse } from "@/lib/rate-limit";
-import { assertCanCreateTeammate, isUsageLimitError, usageLimitPayload } from "@/lib/usage";
-import { validAvatarIcon } from "@/lib/avatar";
+import { createTeammate } from "@/lib/teammates";
+import { usageLimitPayload } from "@/lib/usage";
 import { getExtracted } from "next-intl/server";
 import { localizeUsageLimit } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
-
-const ACCENTS = ["#d4a574", "#8fad86", "#7f9bb8", "#c97b7b", "#c4b36a", "#b08bb8"];
 
 export async function POST(req: Request) {
   const t = await getExtracted();
@@ -25,49 +20,11 @@ export async function POST(req: Request) {
     instructions?: string;
     icon?: string | null;
   };
-  const name = body.name?.trim();
-  if (body.icon !== undefined && !validAvatarIcon(body.icon)) return NextResponse.json({ error: t("Invalid icon") }, { status: 400 });
-  if (!name) {
-    return NextResponse.json({ error: t("Name is required.") }, { status: 400 });
+  const result = await createTeammate(userId, body);
+  if (!result.ok) {
+    if (result.reason === "invalid_icon") return NextResponse.json({ error: t("Invalid icon") }, { status: 400 });
+    if (result.reason === "name_required") return NextResponse.json({ error: t("Name is required.") }, { status: 400 });
+    return NextResponse.json({ ...usageLimitPayload(result.error), error: await localizeUsageLimit(userId, result.error) }, { status: 402 });
   }
-  try {
-    await assertCanCreateTeammate(userId);
-  } catch (error) {
-    if (isUsageLimitError(error)) {
-      return NextResponse.json({ ...usageLimitPayload(error), error: await localizeUsageLimit(userId, error) }, { status: 402 });
-    }
-    throw error;
-  }
-  const at = nowIso();
-  const bot: Bot = {
-    id: createId("bot"),
-    name,
-    icon: body.icon || null,
-    job: body.job?.trim() || "Teammate",
-    instructions:
-      body.instructions?.trim() ||
-      `You are Deni Run's teammate "${name}". Complete the assigned work on the computer.`,
-    accent: ACCENTS[Math.floor(Math.random() * ACCENTS.length)],
-    createdAt: at,
-    updatedAt: at,
-    memory: [],
-  };
-  const thread: Thread = {
-    id: `dm_${bot.id}`,
-    kind: "dm",
-    title: bot.name,
-    botIds: [bot.id],
-    createdAt: at,
-    updatedAt: at,
-    lastPreview: "Send me a task",
-    pinned: false,
-    unread: false,
-    hidden: false,
-    section: null,
-  };
-  await mutateStore(userId, (store) => {
-    store.bots.push(bot);
-    store.threads.push(thread);
-  });
-  return NextResponse.json({ bot, thread });
+  return NextResponse.json({ bot: result.bot, thread: result.thread });
 }

@@ -3,6 +3,7 @@ import "server-only";
 import { and, desc, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { appNotifications } from "@/db/schema";
+import { pushNotificationToDiscord } from "./discord-push";
 import { createId } from "./ids";
 import type { AppNotification, NotificationKind } from "./types";
 
@@ -37,7 +38,11 @@ export async function createNotification(options: {
       readAt: null,
     })
     .returning();
-  return row ? mapNotification(row) : null;
+  const notification = row ? mapNotification(row) : null;
+  // Background results also reach the linked Discord account. Nobody waits for Discord, and
+  // the push never throws, so a slow or failing Discord cannot hold up or break the caller.
+  if (notification) void pushNotificationToDiscord(options.userId, notification);
+  return notification;
 }
 
 export async function listNotifications(userId: string, options?: { unreadOnly?: boolean; limit?: number }) {

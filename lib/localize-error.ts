@@ -24,6 +24,7 @@ export async function localizeError(error: unknown, fallback?: string): Promise<
     "MCP URL must use http or https": () => t("MCP URL must use http or https"),
     "MCP connection name is required": () => t("MCP connection name is required"),
     "MCP connection not found": () => t("MCP connection not found"),
+    "An MCP connection with this name already exists": () => t("An MCP connection with this name already exists"),
     "MCP connection is not available": () => t("MCP connection is not available"),
     "MCP tool name is invalid": () => t("MCP tool name is invalid"),
     "MCP request failed": () => t("MCP request failed"),

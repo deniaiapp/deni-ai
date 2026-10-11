@@ -1995,9 +1995,9 @@ msgid "Delete {name}"
 msgstr "Delete {name}"
 
 #: app/components/discord-settings.tsx
-msgctxt "feHA11"
-msgid "Commands in the DM: /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
-msgstr "Commands in the DM: /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
+msgctxt "qqy7Oh"
+msgid "Commands in the DM: /help lists everything you can do from Discord, /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Files you attach are saved to the workspace, and actions that need approval show Approve and Deny buttons."
+msgstr "Commands in the DM: /help lists everything you can do from Discord, /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Files you attach are saved to the workspace, and actions that need approval show Approve and Deny buttons."
 
 #: app/components/discord-settings.tsx
 msgctxt "p7E89o"
@@ -3360,9 +3360,9 @@ msgid "Back to Deni Run home"
 msgstr "Back to Deni Run home"
 
 #: app/privacy/page.tsx
-msgctxt "7Q7uOl"
-msgid "Last updated: October 10, 2026"
-msgstr "Last updated: October 10, 2026"
+msgctxt "vlvrrr"
+msgid "Last updated: October 11, 2026"
+msgstr "Last updated: October 11, 2026"
 
 #: app/privacy/page.tsx
 msgctxt "zFZQnj"
@@ -3410,9 +3410,9 @@ msgid "Discord data."
 msgstr "Discord data."
 
 #: app/privacy/page.tsx
-msgctxt "Q09cnv"
-msgid "Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, and which teammate you are talking to. The messages you send to the Deni Run bot in a direct message and the replies are saved in that teammate’s conversation in your workspace, like any other message. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent."
-msgstr "Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, and which teammate you are talking to. The messages you send to the Deni Run bot in a direct message and the replies are saved in that teammate’s conversation in your workspace, like any other message. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent."
+msgctxt "qdNvnc"
+msgid "Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, which teammate or group you are talking to, and whether you want notifications there. The messages you send to the Deni Run bot in a direct message and the replies are saved in that conversation in your workspace, like any other message, and files you attach are saved in your workspace inbox. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent."
+msgstr "Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, which teammate or group you are talking to, and whether you want notifications there. The messages you send to the Deni Run bot in a direct message and the replies are saved in that conversation in your workspace, like any other message, and files you attach are saved in your workspace inbox. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent."
 
 #: app/privacy/page.tsx
 msgctxt "qorkWG"
@@ -3505,9 +3505,9 @@ msgid "Google and GitHub: sign-in and the plugins you connect. We send them only
 msgstr "Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email."
 
 #: app/privacy/page.tsx
-msgctxt "daoL2n"
-msgid "Discord: if you link it, Discord carries the direct messages you and the bot exchange, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
-msgstr "Discord: if you link it, Discord carries the direct messages you and the bot exchange, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
+msgctxt "vx7Nra"
+msgid "Discord: if you link it, Discord carries the direct messages you and the bot exchange, including files and screenshots you request and notifications about background work if you keep them on, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
+msgstr "Discord: if you link it, Discord carries the direct messages you and the bot exchange, including files and screenshots you request and notifications about background work if you keep them on, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
 
 #: app/privacy/page.tsx
 msgctxt "A54dst"
@@ -3641,9 +3641,9 @@ msgid "Computer sessions, files, and memory stay scoped to your account. You can
 msgstr "Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service."
 
 #: app/terms/page.tsx
-msgctxt "BJc6Mq"
-msgid "If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can give your teammates tasks, including approving actions with the Approve button. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink."
-msgstr "If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can give your teammates tasks, including approving actions with the Approve button. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink."
+msgctxt "bXXNWc"
+msgid "If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can use your workspace much as you can in the app, except account and billing settings: give your teammates tasks, approve actions with the Approve button, change teammates, groups, skills, routines, and plugins, and read or delete workspace files. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink."
+msgstr "If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can use your workspace much as you can in the app, except account and billing settings: give your teammates tasks, approve actions with the Approve button, change teammates, groups, skills, routines, and plugins, and read or delete workspace files. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink."
 
 #: app/terms/page.tsx
 msgctxt "PR34Xj"
@@ -3864,6 +3864,11 @@ msgstr "MCP connection name is required"
 msgctxt "MonAal"
 msgid "MCP connection not found"
 msgstr "MCP connection not found"
+
+#: lib/localize-error.ts
+msgctxt "yENvEN"
+msgid "An MCP connection with this name already exists"
+msgstr "An MCP connection with this name already exists"
 
 #: lib/localize-error.ts
 msgctxt "oGclRw"

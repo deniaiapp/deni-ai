@@ -19,7 +19,8 @@ export const scopes = {
 // (comma separated, empty for none) to override; remove "gmail,drive" below to re-enable.
 const disabledPlugins = () => new Set((process.env.DISABLED_PLUGINS ?? "gmail,drive").split(",").map((item) => item.trim()).filter(Boolean));
 const provider = (kind: PluginKind) => kind === "github" ? "github" : "google";
-const actions: Record<PluginKind, WriteAction[]> = { gmail: ["send"], drive: ["create", "update"], github: ["createIssue", "createPR", "comment"] };
+/** Write actions each plugin supports; anything else is refused on save and at run time. */
+export const pluginWriteActions: Record<PluginKind, WriteAction[]> = { gmail: ["send"], drive: ["create", "update"], github: ["createIssue", "createPR", "comment"] };
 
 export async function pluginStatus(userId: string) {
   const rows = await db.select({ id: account.id, providerId: account.providerId, scope: account.scope }).from(account).where(eq(account.userId, userId));
@@ -28,12 +29,12 @@ export async function pluginStatus(userId: string) {
   return pluginKinds.filter((kind) => !disabled.has(kind)).map((kind) => {
     const row = rows.find((item) => item.providerId === provider(kind) && item.scope?.split(/[,\s]+/).includes(scopes[kind].read));
     const granted = row?.scope?.split(/[,\s]+/).includes(scopes[kind].write) ?? false;
-    return { kind, connected: Boolean(row), writeAccess: granted, alwaysAllow: actions[kind].filter((action) => store.pluginAlwaysAllow?.[`${kind}:${action}`]) };
+    return { kind, connected: Boolean(row), writeAccess: granted, alwaysAllow: pluginWriteActions[kind].filter((action) => store.pluginAlwaysAllow?.[`${kind}:${action}`]) };
   });
 }
 
 export async function setPluginAlwaysAllow(userId: string, kind: PluginKind, action: WriteAction, enabled: boolean) {
-  if (!actions[kind].includes(action)) throw new Error("Invalid plugin operation");
+  if (!pluginWriteActions[kind].includes(action)) throw new Error("Invalid plugin operation");
   if (enabled && !(await pluginStatus(userId)).find((item) => item.kind === kind)?.writeAccess) throw new Error("Connect write access first");
   await mutateStore(userId, (store) => {
     store.pluginAlwaysAllow ??= {};
@@ -108,7 +109,7 @@ export async function disconnectPlugin(userId: string, kind: PluginKind) {
       .where(eq(account.id, row.id));
   }
   await mutateStore(userId, (store) => {
-    for (const action of actions[kind]) delete store.pluginAlwaysAllow?.[`${kind}:${action}`];
+    for (const action of pluginWriteActions[kind]) delete store.pluginAlwaysAllow?.[`${kind}:${action}`];
   });
   return pluginStatus(userId);
 }
@@ -141,7 +142,7 @@ export type PluginOperation = "search" | "read" | WriteAction;
 export async function runPlugin(userId: string, kind: PluginKind, action: PluginOperation, input: { query?: string; id?: string; repo?: string; title?: string; body?: string; to?: string; subject?: string; head?: string; base?: string; mimeType?: string }) {
   if (disabledPlugins().has(kind)) throw new Error(`${kind} is temporarily disabled.`);
   if (Object.values(input).some((value) => value && value.length > 20_000)) throw new Error("Input too large");
-  if (action !== "search" && action !== "read" && !actions[kind].includes(action)) throw new Error("Unsupported plugin operation");
+  if (action !== "search" && action !== "read" && !pluginWriteActions[kind].includes(action)) throw new Error("Unsupported plugin operation");
   if (kind === "gmail") {
     const base = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
     if (action === "search") { const url = new URL(base); url.searchParams.set("q", input.query ?? ""); url.searchParams.set("maxResults", "20"); return api(userId, kind, url); }

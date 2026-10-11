@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
-import { cancelJob, getJob, listJobEvents, retryJob } from "@/lib/jobs";
-import { releaseBrowserTakeover } from "@/lib/browser-workspaces";
-import { setComputer } from "@/lib/computer";
-import { runBackgroundJob } from "@/lib/job-runner";
+import { getJob, listJobEvents } from "@/lib/jobs";
+import { cancelAndReleaseJob, retryAndRunJob } from "@/lib/job-actions";
 import { getExtracted, getLocale } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -31,27 +29,17 @@ export async function POST(req: Request, context: Context) {
   const { id } = await context.params;
   const body = (await req.json().catch(() => ({}))) as { action?: string; reviewed?: boolean };
   if (body.action === "cancel") {
-    const before = await getJob(userId, id);
-    const job = await cancelJob(userId, id, await getLocale());
+    const job = await cancelAndReleaseJob(userId, id, await getLocale());
     if (!job) return NextResponse.json({ error: t("This job cannot be cancelled") }, { status: 409 });
-    // A job parked for takeover or approval has no running handler to clean up after it, so
-    // release its workspace here; otherwise the computer keeps showing "Your help is needed".
-    if (before?.status === "waiting_takeover" || before?.status === "waiting_approval") {
-      await releaseBrowserTakeover(userId, id).catch(() => undefined);
-      await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId: id }).catch(() => undefined);
-    }
     return NextResponse.json({ job });
   }
   if (body.action === "retry") {
-    const job = await retryJob(userId, id, { reviewed: body.reviewed === true });
-    if (!job) return NextResponse.json({ error: t("Job not found") }, { status: 404 });
-    if (job.status !== "queued") {
-      return NextResponse.json({ error: t("This job cannot be retried"), job }, { status: 409 });
+    const retried = await retryAndRunJob(userId, id, { reviewed: body.reviewed === true });
+    if (!retried.ok && retried.reason === "not_found") return NextResponse.json({ error: t("Job not found") }, { status: 404 });
+    if (!retried.ok) {
+      return NextResponse.json({ error: t("This job cannot be retried"), job: retried.job }, { status: 409 });
     }
-    void runBackgroundJob(userId, job.id).catch((error) => {
-      console.error("[jobs] retry failed", error);
-    });
-    return NextResponse.json({ job }, { status: 202 });
+    return NextResponse.json({ job: retried.job }, { status: 202 });
   }
   if (body.action === "resume") {
     const current = await getJob(userId, id);

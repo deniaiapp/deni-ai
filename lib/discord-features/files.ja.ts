@@ -1,0 +1,23 @@
+/** Japanese strings for lib/discord-features/files.ts. Keys must match the English text exactly. */
+export const ja: Record<string, string> = {
+  "{path} is {size}, which is over Discord's 10 MB limit.": "{path} は {size} で、Discord の上限 10 MB を超えています。",
+  "Nothing to send at {path}.": "{path} には送信できるファイルがありません。",
+  "{path} has more than {max} files, too many to zip here.": "{path} には {max} 個を超えるファイルがあり、ここでは zip にできません。",
+  "{path} as a zip ({size}, files: {count}).": "{path} を zip にしました ({size}、ファイル {count} 個)。",
+  "Nothing found at {path}.": "{path} には何も見つかりません。",
+  "{path} is a file ({size}). Use /files get to download it.": "{path} はファイルです ({size})。/files get でダウンロードできます。",
+  "This folder is empty.": "このフォルダは空です。",
+  "Use /files get with a path to download a file, or a folder as a zip.": "/files get にパスを指定すると、ファイルをダウンロードできます (フォルダは zip になります)。",
+  "The whole workspace cannot be deleted from Discord. Name a file or folder inside it.": "Discord からワークスペース全体は削除できません。中のファイルかフォルダを指定してください。",
+  "Delete the folder {path} and everything in it (files: {count})? This cannot be undone.": "フォルダ {path} と中身をすべて削除しますか (ファイル {count} 個)? 元に戻せません。",
+  "Delete {path}? This cannot be undone.": "{path} を削除しますか? 元に戻せません。",
+  "That file or folder is no longer there.": "そのファイルまたはフォルダはもうありません。",
+  "Deleted {path}.": "{path} を削除しました。",
+  "No deliverables yet. Files your teammates hand over show up here.": "成果物はまだありません。チームメイトが仕上げたファイルがここに表示されます。",
+  "The latest {count} of {total} deliverables:": "成果物 {total} 件のうち最新の {count} 件:",
+  "Recent deliverables:": "最近の成果物:",
+  "Choose one below to get the file.": "下から選ぶとファイルを受け取れます。",
+  "Choose a deliverable": "成果物を選択",
+  "That deliverable no longer exists.": "その成果物はもう存在しません。",
+  "The file for {title} is no longer in the workspace.": "{title} のファイルはもうワークスペースにありません。",
+};

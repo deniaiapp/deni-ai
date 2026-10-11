@@ -37,7 +37,7 @@ export default async function PrivacyPage() {
           {t("Back to Deni Run home")}
         </Link>
         <h1 className="text-2xl font-semibold text-foreground">{t("Privacy Policy")}</h1>
-        <p className="text-xs text-muted-foreground">{t("Last updated: October 10, 2026")}</p>
+        <p className="text-xs text-muted-foreground">{t("Last updated: October 11, 2026")}</p>
         <p>
           {t("This policy explains what data Deni Run (run.deniai.app, “Deni Run”, “we”) collects when you use the service, why we collect it, who receives it, how we protect it, and how you can delete it. Deni Run is a web application where AI teammates complete tasks for you on a private, isolated computer (browser, files, and terminal).")}
         </p>
@@ -57,7 +57,7 @@ export default async function PrivacyPage() {
           </p>
           <p>
             <strong className="font-medium text-foreground">{t("Discord data.")}</strong>{" "}
-            {t("Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, and which teammate you are talking to. The messages you send to the Deni Run bot in a direct message and the replies are saved in that teammate’s conversation in your workspace, like any other message. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent.")}
+            {t("Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, which teammate or group you are talking to, and whether you want notifications there. The messages you send to the Deni Run bot in a direct message and the replies are saved in that conversation in your workspace, like any other message, and files you attach are saved in your workspace inbox. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent.")}
           </p>
           <p>
             <strong className="font-medium text-foreground">{t("Technical data.")}</strong>{" "}
@@ -100,7 +100,7 @@ export default async function PrivacyPage() {
           </p>
           <ul className="list-disc space-y-1 pl-5">
             <li>{t("Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email.")}</li>
-            <li>{t("Discord: if you link it, Discord carries the direct messages you and the bot exchange, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models.")}</li>
+            <li>{t("Discord: if you link it, Discord carries the direct messages you and the bot exchange, including files and screenshots you request and notifications about background work if you keep them on, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models.")}</li>
             <li>{t("Stripe: billing. Receives your email address and payment details.")}</li>
             <li>{t("OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data.")}</li>
             <li>{t("Steel: cloud browser sessions, which load the websites your teammate visits.")}</li>

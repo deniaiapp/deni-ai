@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { nowIso } from "@/lib/ids";
+import { applyGroupEdits } from "@/lib/groups";
 import { slimMessagesForClient } from "@/lib/messages";
 import { deleteGroupThread, loadMessages, mutateStore } from "@/lib/store";
 import { validAvatarIcon } from "@/lib/avatar";
@@ -30,19 +31,8 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const thread = await mutateStore(userId, (store) => {
     const item = store.threads.find((entry) => entry.id === id);
     if (!item) return null;
-    if (body.title !== undefined || body.icon !== undefined || body.botIds !== undefined) {
-      if (item.kind !== "group") throw new Error(t("Use the teammate profile to edit a DM."));
-      if (body.title !== undefined) item.title = body.title;
-      if (body.icon !== undefined) item.icon = body.icon || null;
-      if (body.botIds) {
-        const ids = [...new Set(body.botIds)];
-        if (ids.length < 2 || ids.some((id) => !store.bots.some((bot) => bot.id === id))) throw new Error(t("Choose at least two valid teammates."));
-        item.botIds = ids;
-        for (const routine of store.routines) if (routine.threadId === item.id && !ids.includes(routine.botId)) {
-          routine.enabled = false; routine.nextRunAt = null; routine.revision = (routine.revision ?? 0) + 1;
-        }
-      }
-    }
+    const edited = applyGroupEdits(store, item, body);
+    if (!edited.ok) throw new Error(edited.reason === "not_group" ? t("Use the teammate profile to edit a DM.") : t("Choose at least two valid teammates."));
     if (typeof body.pinned === "boolean") item.pinned = body.pinned;
     if (typeof body.unread === "boolean") item.unread = body.unread;
     if (typeof body.hidden === "boolean") item.hidden = body.hidden;

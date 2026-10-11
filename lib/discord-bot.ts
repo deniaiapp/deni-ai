@@ -3,43 +3,58 @@ import "server-only";
 import {
   ActionRowBuilder,
   type AutocompleteInteraction,
-  ApplicationIntegrationType,
   ButtonBuilder,
   ButtonStyle,
   Client,
   Events,
   GatewayIntentBits,
-  InteractionContextType,
+  MessageFlags,
   Partials,
-  SlashCommandBuilder,
-  type SlashCommandOptionsOnlyBuilder,
   type ButtonInteraction,
   type ChatInputCommandInteraction,
   type Message,
+  type ModalSubmitInteraction,
+  type RepliableInteraction,
 } from "discord.js";
+import { saveDiscordAttachments, type IncomingAttachment } from "./discord-attachments";
+import { features } from "./discord-features";
 import {
   describeLinkedAccount,
   getDiscordLinkByDiscordId,
   looksLikeLinkCode,
   redeemDiscordLinkCode,
-  setDiscordLinkBot,
+  talkToTeammate,
   unlinkDiscord,
+  type DiscordLink,
 } from "./discord-link";
 import {
   discordComponentId,
   parseDiscordComponentId,
   resetDiscordConversation,
   runDiscordApproval,
-  runDiscordMessage,
+  runDiscordConversation,
   type TurnOutcome,
 } from "./discord-turn";
-import { translatorFor } from "./i18n-server";
+import {
+  type ComponentInteraction,
+  dmCommand,
+  type DiscordFeature,
+  type FeatureContext,
+  MESSAGE_LIMIT,
+  parseCustomId,
+  respond,
+  splitForDiscord,
+  updateMessage,
+} from "./discord-ui";
+import { discordErrorText, discordTranslator as translatorFor } from "./discord-i18n";
+import type { Translate } from "./i18n-server";
 import { assertRateLimit, RateLimitError } from "./rate-limit";
 import { reportError } from "./report";
 import { joinRunMode, parseRunMode, RUN_MODES, splitRunMode, type RunLevel } from "./model";
 import { mutateStore, readStore } from "./store";
 
-const MESSAGE_LIMIT = 1_900;
+export { splitForDiscord } from "./discord-ui";
+
 const TYPING_INTERVAL_MS = 8_000;
 
 const g = globalThis as typeof globalThis & { __deniDiscord?: Client };
@@ -48,21 +63,6 @@ type Sendable = {
   send(options: string | { content: string; components?: ActionRowBuilder<ButtonBuilder>[] }): Promise<unknown>;
   sendTyping(): Promise<unknown>;
 };
-
-/** Split on paragraph, line, then word boundaries so a long reply never exceeds Discord's limit. */
-export function splitForDiscord(text: string, limit = MESSAGE_LIMIT) {
-  const chunks: string[] = [];
-  let rest = text.trim();
-  while (rest.length > limit) {
-    const window = rest.slice(0, limit);
-    const cut = Math.max(window.lastIndexOf("\n\n"), window.lastIndexOf("\n"), window.lastIndexOf(" "));
-    const at = cut > limit / 2 ? cut : limit;
-    chunks.push(rest.slice(0, at).trimEnd());
-    rest = rest.slice(at).trimStart();
-  }
-  if (rest) chunks.push(rest);
-  return chunks;
-}
 
 // Discord rejects messages over 2,000 characters; leave room for the buttons' row.
 const APPROVAL_LIMIT = MESSAGE_LIMIT + 90;
@@ -92,13 +92,15 @@ export function approvalPrompt(outcome: Extract<TurnOutcome, { kind: "approval" 
   return { content: `${outcome.text}\n**${tools}**\n${note}`, components: [] as ActionRowBuilder<ButtonBuilder>[] };
 }
 
-async function deliver(channel: Sendable, outcome: TurnOutcome, locale: string) {
+/** In a group several teammates answer, so each reply is labeled with who wrote it. */
+async function deliver(channel: Sendable, outcome: TurnOutcome, locale: string, labeled = false) {
   if (outcome.kind === "none") return;
   if (outcome.kind === "approval") {
     await channel.send(approvalPrompt(outcome, locale));
     return;
   }
-  for (const chunk of splitForDiscord(outcome.text)) await channel.send(chunk);
+  const text = labeled && (outcome.kind === "reply" || outcome.kind === "takeover") ? `**${outcome.botName}**\n${outcome.text}` : outcome.text;
+  for (const chunk of splitForDiscord(text)) await channel.send(chunk);
 }
 
 /** Keep Discord's "typing…" indicator alive while a long agent run is in flight. */
@@ -128,6 +130,8 @@ function bilingual(key: string, params?: Record<string, string | number>) {
   return `${translatorFor("en")(key, params)}\n${translatorFor("ja")(key, params)}`;
 }
 
+const LINK_FIRST = "Link your account first: open the app, go to Discord settings, create a code, and send it to me here.";
+
 async function tryLink(code: string, discord: { id: string; username: string }) {
   try {
     await assertRateLimit(`discord:${discord.id}`, "discord-link", 5, 10 * 60_000);
@@ -145,17 +149,46 @@ async function linkedMessage(userId: string, discordId: string) {
   return translatorFor(linked?.locale)("Linked to {account}. Send a message to talk to your teammate. If this is not your account, send /unlink.", { account });
 }
 
+/** Uploads per person: a burst limit and a daily one, counted per file before anything is downloaded. */
+async function withinUploadLimit(userId: string) {
+  try {
+    await assertRateLimit(userId, "discord-upload", 10, 10 * 60_000);
+    await assertRateLimit(userId, "discord-upload-day", 50, 24 * 60 * 60_000);
+    return true;
+  } catch (error) {
+    if (error instanceof RateLimitError) return false;
+    throw error;
+  }
+}
+
+/** Files sent in a DM go to the workspace inbox; the teammate is told where they are. */
+async function receiveAttachments(message: Message, link: DiscordLink, tr: Translate) {
+  if (!message.attachments.size) return { note: "", notice: "" };
+  const accepted: IncomingAttachment[] = [];
+  const limited: string[] = [];
+  for (const item of message.attachments.values()) {
+    if (limited.length || !(await withinUploadLimit(link.userId))) limited.push(item.name);
+    else accepted.push({ name: item.name, url: item.url, size: item.size, contentType: item.contentType });
+  }
+  const { saved, skipped } = await saveDiscordAttachments(link.userId, accepted);
+  const named = (reasons: string[]) => skipped.filter((item) => reasons.includes(item.reason)).map((item) => item.name).join(", ");
+  const notices = [
+    named(["size", "count"]) ? tr("Could not save: {files}. Files must be 10 MB or smaller, at most 10 per message.", { files: named(["size", "count"]) }) : "",
+    named(["download"]) ? tr("Could not download from Discord, so these were not saved: {files}. Send them again.", { files: named(["download"]) }) : "",
+    limited.length ? tr("Upload limit reached, so these were not saved: {files}. Try again later.", { files: limited.join(", ") }) : "",
+  ];
+  const note = saved.length ? `\n\n[${tr("Attached files saved in the workspace")}: ${saved.join(", ")}]` : "";
+  return { note, notice: notices.filter(Boolean).join("\n"), saved };
+}
+
 async function handleMessage(message: Message) {
   if (message.author.bot || message.guildId || !message.channel.isDMBased()) return;
   const channel = message.channel as unknown as Sendable;
   const text = message.content.trim();
-  if (!text) {
-    if (message.attachments.size) await channel.send(bilingual("Attachments are not supported in Discord yet. Send your request as text."));
-    return;
-  }
+  if (!text && !message.attachments.size) return;
   const link = await getDiscordLinkByDiscordId(message.author.id);
   if (!link) {
-    if (looksLikeLinkCode(text)) {
+    if (text && looksLikeLinkCode(text)) {
       const result = await tryLink(text, { id: message.author.id, username: message.author.username });
       if (result.ok) {
         await channel.send(await linkedMessage(result.userId, message.author.id));
@@ -164,20 +197,31 @@ async function handleMessage(message: Message) {
       }
       return;
     }
-    await channel.send(bilingual("Link your account first: open the app, go to Discord settings, create a code, and send it to me here."));
+    await channel.send(bilingual(LINK_FIRST));
     return;
   }
-  const outcome = await serialize(message.author.id, () =>
+  const tr = translatorFor(link.locale);
+  // A message with only files runs no turn, so it is counted like a command instead.
+  if (!text && !(await withinCommandLimit(message.author.id))) {
+    await channel.send(tr("Too many requests. Wait a moment and try again."));
+    return;
+  }
+  const attachments = await receiveAttachments(message, link, tr);
+  if (attachments.notice) await channel.send(attachments.notice);
+  if (!text) {
+    // Files alone are only stored; the next message says what to do with them.
+    if (attachments.saved?.length) await channel.send(tr("Saved to the workspace: {files}. Send a message to say what to do with them.", { files: attachments.saved.join(", ") }));
+    return;
+  }
+  const result = await serialize(message.author.id, () =>
     withTyping(channel, () =>
-      runDiscordMessage({ userId: link.userId, discordMessageId: message.id, text, botId: link.botId, locale: link.locale }),
+      runDiscordConversation({ userId: link.userId, discordMessageId: message.id, text: `${text}${attachments.note}`, botId: link.botId, locale: link.locale }),
     ),
   );
-  await deliver(channel, outcome, link.locale);
+  for (const outcome of result.outcomes) await deliver(channel, outcome, link.locale, Boolean(result.group));
 }
 
-async function handleButton(interaction: ButtonInteraction) {
-  const parsed = parseDiscordComponentId(interaction.customId);
-  if (!parsed || interaction.guildId || !interaction.channel?.isDMBased()) return;
+async function handleApprovalButton(interaction: ButtonInteraction, parsed: NonNullable<ReturnType<typeof parseDiscordComponentId>>) {
   // Discord drops an interaction that is not acknowledged within 3 seconds, and the database may be remote.
   await interaction.deferUpdate();
   // The sender's own link decides whose workspace this touches, so another account's job is never found.
@@ -200,77 +244,7 @@ async function handleButton(interaction: ButtonInteraction) {
   await deliver(channel, outcome, link.locale);
 }
 
-async function handleCommand(interaction: ChatInputCommandInteraction) {
-  // Acknowledge first: the lookups below can outlast Discord's 3 second window on a remote database.
-  await interaction.deferReply();
-  const discord = { id: interaction.user.id, username: interaction.user.username };
-  const link = await getDiscordLinkByDiscordId(discord.id);
-  const tr = translatorFor(link?.locale ?? interaction.locale?.split("-")[0]);
-  if (interaction.commandName === "link") {
-    const result = await tryLink(interaction.options.getString("code", true), discord);
-    if (result.ok) {
-      await interaction.editReply({ content: await linkedMessage(result.userId, discord.id) });
-    } else {
-      await interaction.editReply({ content: tr(result.reason === "rate" ? "Too many requests. Wait a moment and try again." : "That code is invalid or expired. Create a new one in the app.") });
-    }
-    return;
-  }
-  if (!link) {
-    await interaction.editReply({ content: bilingual("Link your account first: open the app, go to Discord settings, create a code, and send it to me here.") });
-    return;
-  }
-  if (interaction.commandName === "unlink") {
-    await unlinkDiscord(link.userId);
-    await interaction.editReply({ content: tr("Unlinked. This Discord account no longer reaches your workspace.") });
-    return;
-  }
-  if (interaction.commandName === "reset") {
-    // Queued behind a reply in flight, so the divider lands after it instead of being refused.
-    const content = await serialize(discord.id, () => resetDiscordConversation({ userId: link.userId, botId: link.botId, locale: link.locale }));
-    await interaction.editReply({ content });
-    return;
-  }
-  if (interaction.commandName === "teammate") {
-    const store = await readStore(link.userId);
-    const typed = interaction.options.getString("name")?.trim();
-    const wanted = typed?.toLowerCase();
-    const current = store.bots.find((bot) => bot.id === link.botId) ?? store.bots[0];
-    if (!wanted) {
-      const list = store.bots.map((bot) => `${bot.id === current?.id ? "• **" : "• "}${bot.name}${bot.id === current?.id ? "**" : ""} — ${bot.job}`).join("\n");
-      await interaction.editReply({ content: list || tr("Create a teammate in the app first, then message again.") });
-      return;
-    }
-    // Autocomplete submits the teammate id; typed text is matched by name.
-    const match = store.bots.find((bot) => bot.id === typed || bot.name.toLowerCase() === wanted);
-    if (!match) {
-      await interaction.editReply({ content: tr("No teammate with that name. Run /teammate to see the list.") });
-      return;
-    }
-    await setDiscordLinkBot(link.userId, match.id);
-    await interaction.editReply({ content: tr("Now talking to {name}.", { name: match.name }) });
-    return;
-  }
-  if (interaction.commandName === "model" || interaction.commandName === "effort") {
-    // The run mode is the account's shared setting, so the web app and Discord stay in step.
-    const picked = interaction.options.getString(interaction.commandName === "model" ? "family" : "level");
-    const current = splitRunMode(parseRunMode((await readStore(link.userId)).config.runMode));
-    if (picked) {
-      const next = joinRunMode(
-        interaction.commandName === "model" ? picked === "plus" : current.plus,
-        interaction.commandName === "effort" ? (picked as RunLevel) : current.level,
-      );
-      await mutateStore(link.userId, (store) => {
-        store.config.runMode = next;
-      });
-      await interaction.editReply({ content: tr("Now using {mode}. {cost}", runModeParams(next, tr)) });
-      return;
-    }
-    const mode = joinRunMode(current.plus, current.level);
-    await interaction.editReply({ content: tr("Current setting: {mode}. {cost}", runModeParams(mode, tr)) });
-  }
-}
-
-function runModeParams(mode: ReturnType<typeof parseRunMode>, tr: ReturnType<typeof translatorFor>) {
+function runModeParams(mode: ReturnType<typeof parseRunMode>, tr: Translate) {
   const { label, tokenMultiplier, effort } = RUN_MODES[mode];
   return {
     mode: `${label} (${effort})`,
@@ -278,33 +252,247 @@ function runModeParams(mode: ReturnType<typeof parseRunMode>, tr: ReturnType<typ
   };
 }
 
-/** Suggest teammates while typing /teammate. Only a linked account sees its own workspace's list. */
-async function handleAutocomplete(interaction: AutocompleteInteraction) {
-  const link = await getDiscordLinkByDiscordId(interaction.user.id);
-  if (!link || interaction.commandName !== "teammate") {
-    await interaction.respond([]);
-    return;
-  }
-  const query = interaction.options.getFocused().trim().toLowerCase();
-  const { bots } = await readStore(link.userId);
-  const choices = bots
-    .filter((bot) => !query || bot.name.toLowerCase().includes(query) || bot.job.toLowerCase().includes(query))
-    .slice(0, 25)
-    .map((bot) => ({ name: `${bot.name} — ${bot.job}`.slice(0, 100), value: bot.id.slice(0, 100) }));
-  await interaction.respond(choices);
+/** The chat commands: who you talk to, how hard they think, and starting over. */
+const core: DiscordFeature = {
+  commands: [
+    dmCommand("help", "List what you can do here", "ここでできることの一覧"),
+    dmCommand("reset", "Start a new conversation with your teammate", "チームメイトとの会話をリセット"),
+    dmCommand("teammate", "Show or choose the teammate you talk to", "話すチームメイトを表示・選択").addStringOption((option) =>
+      option.setName("name").setDescription("Teammate name").setDescriptionLocalization("ja", "チームメイトの名前").setAutocomplete(true),
+    ),
+    dmCommand("model", "Show or choose the model family", "モデルを表示・選択").addStringOption((option) =>
+      option.setName("family").setDescription("Run is faster and cheaper, Run+ is stronger").setDescriptionLocalization("ja", "Run は速く安い、Run+ はより強力").addChoices({ name: "Run", value: "run" }, { name: "Run+", value: "plus" }),
+    ),
+    dmCommand("effort", "Show or choose how hard the model thinks", "考える深さを表示・選択").addStringOption((option) =>
+      option.setName("level").setDescription("Reasoning effort").setDescriptionLocalization("ja", "推論の深さ").addChoices({ name: "Default (medium)", value: "default" }, { name: "High", value: "high" }, { name: "xhigh", value: "xhigh" }, { name: "Max", value: "max" }),
+    ),
+    dmCommand("unlink", "Disconnect this Discord account", "この Discord アカウントの連携を解除"),
+  ],
+  async command(interaction, { link, tr }) {
+    if (interaction.commandName === "help") {
+      await respond(interaction, helpText(link.locale, tr));
+      return;
+    }
+    if (interaction.commandName === "unlink") {
+      await unlinkDiscord(link.userId);
+      await respond(interaction, tr("Unlinked. This Discord account no longer reaches your workspace."));
+      return;
+    }
+    if (interaction.commandName === "reset") {
+      // Queued behind a reply in flight, so the divider lands after it instead of being refused.
+      const content = await serialize(interaction.user.id, () => resetDiscordConversation({ userId: link.userId, botId: link.botId, locale: link.locale }));
+      await respond(interaction, content);
+      return;
+    }
+    if (interaction.commandName === "teammate") {
+      const store = await readStore(link.userId);
+      const typed = interaction.options.getString("name")?.trim();
+      const wanted = typed?.toLowerCase();
+      const group = store.discord?.threadId ? store.threads.find((item) => item.id === store.discord?.threadId && item.kind === "group") : undefined;
+      const current = group ? undefined : (store.bots.find((bot) => bot.id === link.botId) ?? store.bots[0]);
+      if (!wanted) {
+        const list = store.bots.map((bot) => `${bot.id === current?.id ? "• **" : "• "}${bot.name}${bot.id === current?.id ? "**" : ""} — ${bot.job}`).join("\n");
+        const header = group ? `${tr("Now talking in the group {name}.", { name: group.title })}\n` : "";
+        await respond(interaction, `${header}${list || tr("Create a teammate in the app first, then message again.")}`);
+        return;
+      }
+      // Autocomplete submits the teammate id; typed text is matched by name.
+      const match = store.bots.find((bot) => bot.id === typed || bot.name.toLowerCase() === wanted);
+      if (!match) {
+        await respond(interaction, tr("No teammate with that name. Run /teammate to see the list."));
+        return;
+      }
+      await talkToTeammate(link.userId, match.id);
+      await respond(interaction, tr("Now talking to {name}.", { name: match.name }));
+      return;
+    }
+    if (interaction.commandName === "model" || interaction.commandName === "effort") {
+      // The run mode is the account's shared setting, so the web app and Discord stay in step.
+      const picked = interaction.options.getString(interaction.commandName === "model" ? "family" : "level");
+      const current = splitRunMode(parseRunMode((await readStore(link.userId)).config.runMode));
+      if (picked) {
+        const next = joinRunMode(
+          interaction.commandName === "model" ? picked === "plus" : current.plus,
+          interaction.commandName === "effort" ? (picked as RunLevel) : current.level,
+        );
+        await mutateStore(link.userId, (store) => {
+          store.config.runMode = next;
+        });
+        await respond(interaction, tr("Now using {mode}. {cost}", runModeParams(next, tr)));
+        return;
+      }
+      const mode = joinRunMode(current.plus, current.level);
+      await respond(interaction, tr("Current setting: {mode}. {cost}", runModeParams(mode, tr)));
+    }
+  },
+  /** Suggest teammates while typing /teammate. Only a linked account sees its own workspace's list. */
+  async autocomplete(interaction, { link }) {
+    const query = interaction.options.getFocused().trim().toLowerCase();
+    const { bots } = await readStore(link.userId);
+    await interaction.respond(
+      bots
+        .filter((bot) => !query || bot.name.toLowerCase().includes(query) || bot.job.toLowerCase().includes(query))
+        .slice(0, 25)
+        .map((bot) => ({ name: `${bot.name} — ${bot.job}`.slice(0, 100), value: bot.id.slice(0, 100) })),
+    );
+  },
+};
+
+const linkCommand = dmCommand("link", "Link this Discord account to your workspace", "この Discord アカウントをワークスペースに連携").addStringOption((option) =>
+  option.setName("code").setDescription("Code from the app's Discord settings").setDescriptionLocalization("ja", "アプリの Discord 設定で作成したコード").setRequired(true),
+);
+
+const allFeatures = [core, ...features];
+
+function featureForCommand(name: string) {
+  return allFeatures.find((feature) => feature.commands.some((command) => command.name === name));
+}
+
+function featureForPrefix(prefix: string) {
+  return prefix ? allFeatures.find((feature) => feature.prefix === prefix) : undefined;
+}
+
+/** Every command with its subcommands, described in the person's language. */
+function helpText(locale: string, tr: Translate) {
+  const describe = (item: { description: string; description_localizations?: Record<string, string | null> | null }) =>
+    (locale === "ja" ? item.description_localizations?.ja : null) ?? item.description;
+  const lines = [linkCommand, ...allFeatures.flatMap((feature) => feature.commands)].map((command) => {
+    const json = command.toJSON();
+    const subcommands = (json.options ?? []).filter((option) => option.type === 1);
+    const head = `**/${json.name}** — ${describe(json)}`;
+    return subcommands.length ? `${head}\n${subcommands.map((option) => `  · \`${option.name}\` ${describe(option)}`).join("\n")}` : head;
+  });
+  return `${lines.join("\n")}\n\n${tr("Any other message goes to your teammate. Files you attach are saved to the workspace.")}`;
 }
 
 function commandDefinitions() {
-  const dm = (builder: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder) =>
-    builder.setContexts(InteractionContextType.BotDM).setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall);
-  return [
-    dm(new SlashCommandBuilder().setName("link").setDescription("Link this Discord account to your workspace").addStringOption((option) => option.setName("code").setDescription("Code from the app's Discord settings").setRequired(true))),
-    dm(new SlashCommandBuilder().setName("reset").setDescription("Start a new conversation with your teammate")),
-    dm(new SlashCommandBuilder().setName("teammate").setDescription("Show or choose the teammate you talk to").addStringOption((option) => option.setName("name").setDescription("Teammate name").setAutocomplete(true))),
-    dm(new SlashCommandBuilder().setName("model").setDescription("Show or choose the model family").addStringOption((option) => option.setName("family").setDescription("Run is faster and cheaper, Run+ is stronger").addChoices({ name: "Run", value: "run" }, { name: "Run+", value: "plus" }))),
-    dm(new SlashCommandBuilder().setName("effort").setDescription("Show or choose how hard the model thinks").addStringOption((option) => option.setName("level").setDescription("Reasoning effort").addChoices({ name: "Default (medium)", value: "default" }, { name: "High", value: "high" }, { name: "xhigh", value: "xhigh" }, { name: "Max", value: "max" }))),
-    dm(new SlashCommandBuilder().setName("unlink").setDescription("Disconnect this Discord account")),
-  ].map((command) => command.toJSON());
+  return [linkCommand, ...allFeatures.flatMap((feature) => feature.commands)].map((command) => command.toJSON());
+}
+
+/** What the person may see of an error: never a server path from a file system message. */
+export function publicErrorText(locale: string | undefined, error: unknown) {
+  if ((error as { code?: unknown } | null)?.code === "ENOENT") return translatorFor(locale)("File not found");
+  return discordErrorText(locale, error).slice(0, 500);
+}
+
+/** Tell the person what went wrong instead of letting Discord show "interaction failed". */
+async function answerError(interaction: RepliableInteraction, locale: string | undefined, error: unknown) {
+  reportError(error, "discord interaction");
+  const content = translatorFor(locale)("Something went wrong: {error}", { error: publicErrorText(locale, error) || "error" });
+  try {
+    if (interaction.deferred || interaction.replied) await interaction.followUp({ content });
+    else await interaction.reply({ content });
+  } catch {
+    // The interaction may have expired; nothing else to do.
+  }
+}
+
+/**
+ * Commands, buttons, and form submits share one window per Discord account (a link maps one
+ * account to one user), so a loop cannot flood the workspace. Keyed by the Discord id, it runs
+ * alongside the link lookup and costs no extra round trip before the 3-second deadline.
+ */
+async function withinCommandLimit(discordUserId: string) {
+  try {
+    await assertRateLimit(`discord:${discordUserId}`, "discord-command", 60);
+    return true;
+  } catch (error) {
+    if (error instanceof RateLimitError) return false;
+    throw error;
+  }
+}
+
+async function handleCommand(interaction: ChatInputCommandInteraction) {
+  const feature = featureForCommand(interaction.commandName);
+  // A modal must be the first answer; everything else is acknowledged before the database is read.
+  if (!feature?.opensModal?.(interaction)) await interaction.deferReply();
+  const discord = { id: interaction.user.id, username: interaction.user.username };
+  const [link, allowed] = await Promise.all([getDiscordLinkByDiscordId(discord.id), withinCommandLimit(discord.id)]);
+  const tr = translatorFor(link?.locale ?? interaction.locale?.split("-")[0]);
+  try {
+    if (interaction.commandName === "link") {
+      const result = await tryLink(interaction.options.getString("code", true), discord);
+      if (result.ok) await respond(interaction, await linkedMessage(result.userId, discord.id));
+      else await respond(interaction, tr(result.reason === "rate" ? "Too many requests. Wait a moment and try again." : "That code is invalid or expired. Create a new one in the app."));
+      return;
+    }
+    if (!link) {
+      await respond(interaction, bilingual(LINK_FIRST));
+      return;
+    }
+    if (!allowed) {
+      await respond(interaction, tr("Too many requests. Wait a moment and try again."));
+      return;
+    }
+    await feature?.command?.(interaction, { link, tr });
+  } catch (error) {
+    await answerError(interaction, link?.locale, error);
+  }
+}
+
+async function handleAutocomplete(interaction: AutocompleteInteraction) {
+  const link = await getDiscordLinkByDiscordId(interaction.user.id);
+  const feature = featureForCommand(interaction.commandName);
+  if (!link || !feature?.autocomplete) {
+    await interaction.respond([]);
+    return;
+  }
+  await feature.autocomplete(interaction, { link, tr: translatorFor(link.locale) });
+}
+
+async function handleComponent(interaction: ComponentInteraction) {
+  if (interaction.guildId || !interaction.channel?.isDMBased()) return;
+  if (interaction.isButton()) {
+    const approval = parseDiscordComponentId(interaction.customId);
+    if (approval) {
+      await handleApprovalButton(interaction, approval);
+      return;
+    }
+  }
+  const { prefix, args } = parseCustomId(interaction.customId);
+  const feature = featureForPrefix(prefix);
+  if (!feature?.component) return;
+  const [link, allowed] = await Promise.all([getDiscordLinkByDiscordId(interaction.user.id), withinCommandLimit(interaction.user.id)]);
+  if (!link) {
+    await updateMessage(interaction, `${interaction.message.content}\n\n${bilingual(LINK_FIRST)}`);
+    return;
+  }
+  const ctx: FeatureContext = { link, tr: translatorFor(link.locale) };
+  if (!allowed) {
+    await interaction.reply({ content: ctx.tr("Too many requests. Wait a moment and try again."), flags: MessageFlags.Ephemeral });
+    return;
+  }
+  try {
+    if (args[0] === "cancel") {
+      await updateMessage(interaction, `${interaction.message.content}\n\n${ctx.tr("Cancelled.")}`);
+      return;
+    }
+    await feature.component(interaction, ctx, args);
+  } catch (error) {
+    await answerError(interaction, link.locale, error);
+  }
+}
+
+async function handleModal(interaction: ModalSubmitInteraction) {
+  if (interaction.guildId) return;
+  const { prefix, args } = parseCustomId(interaction.customId);
+  const feature = featureForPrefix(prefix);
+  if (!feature?.modal) return;
+  const [link, allowed] = await Promise.all([getDiscordLinkByDiscordId(interaction.user.id), withinCommandLimit(interaction.user.id)]);
+  if (!link) {
+    await interaction.reply({ content: bilingual(LINK_FIRST) });
+    return;
+  }
+  const ctx: FeatureContext = { link, tr: translatorFor(link.locale) };
+  if (!allowed) {
+    await interaction.reply({ content: ctx.tr("Too many requests. Wait a moment and try again."), flags: MessageFlags.Ephemeral });
+    return;
+  }
+  try {
+    await feature.modal(interaction, ctx, args);
+  } catch (error) {
+    await answerError(interaction, link.locale, error);
+  }
 }
 
 function guard<T extends unknown[]>(context: string, handler: (...args: T) => Promise<void>) {
@@ -335,7 +523,8 @@ export function startDiscordBot() {
     guard("interaction", async (interaction) => {
       if (interaction.isAutocomplete()) await handleAutocomplete(interaction);
       else if (interaction.isChatInputCommand()) await handleCommand(interaction);
-      else if (interaction.isButton()) await handleButton(interaction);
+      else if (interaction.isButton() || interaction.isStringSelectMenu()) await handleComponent(interaction);
+      else if (interaction.isModalSubmit()) await handleModal(interaction);
     }),
   );
   client.on(Events.Error, (error) => reportError(error, "discord client"));
@@ -344,3 +533,6 @@ export function startDiscordBot() {
     reportError(error, "discord login");
   });
 }
+
+/** Command names and help text, exported for tests. */
+export const discordCommandsForTests = { commandDefinitions, helpText };

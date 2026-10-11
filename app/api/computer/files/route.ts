@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import {
-  collectWorkspaceFiles,
   deleteWorkspaceContents,
   deleteWorkspacePath,
   deleteWorkspacePaths,
@@ -9,16 +8,13 @@ import {
   readWorkspaceBytes,
   readWorkspaceFile,
   writeWorkspaceFile,
+  zipWorkspaceFiles,
 } from "@/lib/workspace";
-import { createZip } from "@/lib/zip";
 import { attachmentDisposition } from "@/lib/download";
 import { getExtracted } from "next-intl/server";
 import { localizeError } from "@/lib/localize-error";
 
 export const dynamic = "force-dynamic";
-
-const MAX_ZIP_FILES = 100;
-const MAX_ZIP_UNCOMPRESSED_BYTES = 50_000_000;
 
 function downloadName(path: string) {
   return path.replace(/^\/+/, "").split("/").at(-1) || "file";
@@ -79,41 +75,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: t("Unsupported action") }, { status: 400 });
   }
   try {
-    const listed = await collectWorkspaceFiles(userId, body.paths ?? []);
-    if (listed.length === 0) {
-      return NextResponse.json({ error: t("No files to download") }, { status: 400 });
+    const zip = await zipWorkspaceFiles(userId, body.paths ?? []);
+    if (!zip.ok) {
+      const error = zip.reason === "empty"
+        ? t("No files to download")
+        : zip.reason === "too_many"
+          ? t("Too many files to download (maximum {max})", { max: String(zip.max) })
+          : t("Files are too large to download together (maximum {max} bytes)", { max: String(zip.max) });
+      return NextResponse.json({ error }, { status: 400 });
     }
-    if (listed.length > MAX_ZIP_FILES) {
-      return NextResponse.json(
-        { error: t("Too many files to download (maximum {max})", { max: String(MAX_ZIP_FILES) }) },
-        { status: 400 },
-      );
-    }
-    const listedBytes = listed.reduce((total, item) => total + item.size, 0);
-    if (listedBytes > MAX_ZIP_UNCOMPRESSED_BYTES) {
-      return NextResponse.json(
-        {
-          error: t("Files are too large to download together (maximum {max} bytes)", { max: String(MAX_ZIP_UNCOMPRESSED_BYTES) }),
-        },
-        { status: 400 },
-      );
-    }
-    const entries = [];
-    let totalBytes = 0;
-    for (const item of listed) {
-      const file = await readWorkspaceBytes(userId, item.path);
-      totalBytes += file.data.byteLength;
-      if (totalBytes > MAX_ZIP_UNCOMPRESSED_BYTES) {
-        throw new Error(
-          t("Files are too large to download together (maximum {max} bytes)", { max: String(MAX_ZIP_UNCOMPRESSED_BYTES) }),
-        );
-      }
-      entries.push({ name: item.path, data: file.data });
-    }
-    const zip = createZip(entries);
     const label =
       body.paths?.length === 1 ? downloadName(body.paths[0] ?? "workspace") : "workspace";
-    return new NextResponse(new Uint8Array(zip), {
+    return new NextResponse(new Uint8Array(zip.data), {
       headers: {
         "Content-Type": "application/zip",
         "Content-Disposition": attachmentDisposition(`${label}.zip`),

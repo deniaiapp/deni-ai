@@ -5,6 +5,8 @@ import { and, eq, gt, lt, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { discordLinkCodes, discordLinks, user } from "@/db/schema";
 import { resolveServerLocale } from "./i18n-server";
+import { mutateStore, readStore } from "./store";
+import type { DiscordPrefs } from "./types";
 
 export const LINK_CODE_TTL_MS = 10 * 60_000;
 // No 0/O/1/I/L so a code read off a screen cannot be mistyped.
@@ -92,6 +94,7 @@ export async function redeemDiscordLinkCode(rawCode: string, discord: { id: stri
       target: discordLinks.userId,
       set: { discordUserId: discord.id, discordUsername: discord.username, locale: redeemed.locale, botId: null },
     });
+  await setDiscordPrefs(redeemed.userId, { threadId: null });
   return redeemed.userId;
 }
 
@@ -115,4 +118,21 @@ export async function setDiscordLinkBot(userId: string, botId: string | null) {
 
 export async function setDiscordLinkLocale(userId: string, locale: string) {
   await db.update(discordLinks).set({ locale: resolveServerLocale(locale) }).where(eq(discordLinks.userId, userId));
+}
+
+export async function getDiscordPrefs(userId: string): Promise<Required<DiscordPrefs>> {
+  const prefs = (await readStore(userId)).discord;
+  return { threadId: prefs?.threadId ?? null, notify: prefs?.notify ?? true };
+}
+
+export async function setDiscordPrefs(userId: string, patch: DiscordPrefs) {
+  await mutateStore(userId, (store) => {
+    store.discord = { ...store.discord, ...patch };
+  });
+}
+
+/** Plain DMs go to this teammate from now on, leaving any group conversation. */
+export async function talkToTeammate(userId: string, botId: string | null) {
+  await setDiscordLinkBot(userId, botId);
+  await setDiscordPrefs(userId, { threadId: null });
 }

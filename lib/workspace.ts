@@ -21,6 +21,7 @@ import {
   putUserObject,
 } from "./storage";
 import { WORKSPACE_README } from "./seed";
+import { createZip } from "./zip";
 
 const MAX_FILE_SIZE = 1_000_000;
 const MAX_DOWNLOAD_FILE_SIZE = 10_000_000;
@@ -202,6 +203,22 @@ export async function writeWorkspaceFile(userId: string, rel: string, content: s
   return { path: `/${normalized}`, bytes: Buffer.byteLength(content) };
 }
 
+/** Binary-safe write, for files people send in (images, PDFs, archives). */
+export async function writeWorkspaceBytes(userId: string, rel: string, data: Uint8Array, contentType = "application/octet-stream") {
+  const normalized = normalizePath(rel);
+  if (!normalized) throw new Error("A file path is required");
+  if (data.byteLength > MAX_DOWNLOAD_FILE_SIZE) throw new Error("File is too large to upload");
+  const root = await ensureWorkspace(userId);
+  if (root) {
+    const abs = jailPath(normalized, root);
+    await mkdir(path.dirname(abs), { recursive: true });
+    await writeFile(abs, data);
+  } else {
+    await putUserObject(userId, `workspace/${normalized}`, data, contentType);
+  }
+  return { path: `/${normalized}`, bytes: data.byteLength };
+}
+
 export async function makeWorkspaceDir(userId: string, rel: string) {
   const normalized = normalizePath(rel);
   if (!normalized) throw new Error("A directory path is required");
@@ -286,6 +303,59 @@ export async function collectWorkspaceFiles(userId: string, rels: string[]) {
     }
   }
   return files;
+}
+
+/** Workspace-relative form of a path, "" for the root. Throws when it leaves the workspace. */
+export function normalizeWorkspacePath(rel: string) {
+  return normalizePath(rel);
+}
+
+/** The file or folder at rel (the root for ""), or null when nothing is there. */
+export async function findWorkspaceEntry(userId: string, rel: string): Promise<WorkspaceNode | null> {
+  const normalized = normalizePath(rel);
+  if (!normalized) return { name: "", path: "/", type: "dir" };
+  const parent = path.posix.dirname(normalized);
+  const siblings = await listWorkspace(userId, parent, 0).catch((error: NodeJS.ErrnoException) => {
+    // A missing parent, or a parent that is a file, means nothing is at rel.
+    if (error.code === "ENOENT" || error.code === "ENOTDIR") return [];
+    throw error;
+  });
+  return siblings.find((node) => node.path === `/${normalized}`) ?? null;
+}
+
+/** The web's zip download caps. Other callers may only tighten them. */
+export const WORKSPACE_ZIP_MAX_FILES = 100;
+export const WORKSPACE_ZIP_MAX_BYTES = 50_000_000;
+
+export type WorkspaceZip =
+  | { ok: true; data: Buffer; files: number }
+  | { ok: false; reason: "empty" }
+  | { ok: false; reason: "too_many" | "too_large"; max: number };
+
+/** Zip the files under rels (the whole workspace when empty), refusing anything over the caps. */
+export async function zipWorkspaceFiles(
+  userId: string,
+  rels: string[],
+  limits: { maxFiles?: number; maxBytes?: number } = {},
+): Promise<WorkspaceZip> {
+  const maxFiles = Math.min(limits.maxFiles ?? WORKSPACE_ZIP_MAX_FILES, WORKSPACE_ZIP_MAX_FILES);
+  const maxBytes = Math.min(limits.maxBytes ?? WORKSPACE_ZIP_MAX_BYTES, WORKSPACE_ZIP_MAX_BYTES);
+  const listed = await collectWorkspaceFiles(userId, rels);
+  if (listed.length === 0) return { ok: false, reason: "empty" };
+  if (listed.length > maxFiles) return { ok: false, reason: "too_many", max: maxFiles };
+  if (listed.reduce((total, item) => total + item.size, 0) > maxBytes) {
+    return { ok: false, reason: "too_large", max: maxBytes };
+  }
+  const entries: { name: string; data: Buffer }[] = [];
+  let totalBytes = 0;
+  for (const item of listed) {
+    const file = await readWorkspaceBytes(userId, item.path);
+    // Files can grow between the listing and the read.
+    totalBytes += file.data.byteLength;
+    if (totalBytes > maxBytes) return { ok: false, reason: "too_large", max: maxBytes };
+    entries.push({ name: item.path, data: file.data });
+  }
+  return { ok: true, data: createZip(entries), files: entries.length };
 }
 
 export async function deleteWorkspacePaths(userId: string, rels: string[]) {
