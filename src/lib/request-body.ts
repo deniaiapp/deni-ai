@@ -1,5 +1,8 @@
 export class RequestBodyTooLargeError extends Error {}
 
+/** Body cap of /api/chat. The comparison save limits in src/lib/trpc/limits.ts derive from it. */
+export const CHAT_BODY_LIMIT = 16 * 1024 * 1024;
+
 /** Keep RPC parsing lazy, so unauthenticated requests never require buffering a large body. */
 export function limitRequestBody(request: Request, maxBytes: number) {
   const length = Number(request.headers.get("content-length"));

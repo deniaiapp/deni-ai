@@ -1,3 +1,5 @@
+import type { SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, expect, test, vi } from "vitest";
 import type { Context } from "../trpc";
 
@@ -17,7 +19,9 @@ const state = vi.hoisted(() => ({
   committed: [] as unknown[][],
   largestStatement: 0,
   failOnBatch: null as number | null,
+  attachments: [] as { id: string; userId: string }[],
 }));
+const dialect = new PgDialect();
 
 function payload(count: number) {
   return Array.from({ length: count }, (_, index) => ({
@@ -49,6 +53,17 @@ const caller = (session: Context["session"] = { session: { userId: "user-1" } } 
     db: {
       // Statements outside a transaction commit immediately.
       ...driver(state.committed),
+      // The importing user's attachment rows among the ids looked up.
+      select: () => ({
+        from: () => ({
+          where: async (condition: SQL) => {
+            const { params } = dialect.sqlToQuery(condition);
+            return state.attachments.filter(
+              (row) => params.includes(row.id) && row.userId === params.at(-1),
+            );
+          },
+        }),
+      }),
       transaction: async (run: (tx: unknown) => Promise<unknown>) => {
         const pending: unknown[][] = [];
         const result = await run(driver(pending));
@@ -66,6 +81,7 @@ beforeEach(() => {
   state.committed = [];
   state.failOnBatch = null;
   state.largestStatement = 0;
+  state.attachments = [];
 });
 
 test("imports more tiny chats than one statement can bind", async () => {
@@ -151,4 +167,48 @@ test("a small payload cannot fan out into more rows or parts than the import cap
     }),
   ).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
   expect(state.committed).toEqual([]);
+});
+
+test("an imported export keeps only the importing user's own attachments", async () => {
+  const mine = "m".repeat(32);
+  const theirs = "t".repeat(32);
+  state.attachments = [
+    { id: mine, userId: "user-1" },
+    { id: theirs, userId: "someone-else" },
+  ];
+  const file = (url: string) => ({ type: "file", mediaType: "image/png", filename: "a.png", url });
+
+  const result = await caller().import({
+    payload: [
+      {
+        title: "Exported",
+        messages: [
+          {
+            id: "q",
+            role: "user",
+            parts: [
+              { type: "text", text: "look" },
+              file(`/api/attachments/${mine}`),
+              // Exported by another account of this deployment: every request of
+              // the imported chat would be rejected for it.
+              file(`/api/attachments/${theirs}`),
+              file("https://example.com/a.png"),
+            ],
+          },
+        ],
+      },
+    ],
+  });
+
+  expect(result).toMatchObject({ success: true, importedChats: 1, importedMessages: 1 });
+  expect(result.warnings).toEqual([
+    "1 attached file(s) could not be imported: they belong to another account or no longer exist",
+  ]);
+  const [[chat]] = state.committed as { messages: { parts: unknown[] }[] }[][];
+  expect(chat?.messages[0]?.parts).toEqual([
+    { type: "text", text: "look" },
+    file(`/api/attachments/${mine}`),
+    { type: "text", text: "[An attached file could not be imported.]" },
+    file("https://example.com/a.png"),
+  ]);
 });

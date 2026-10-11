@@ -1,6 +1,7 @@
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 import { chats } from "@/db/schema";
+import { omitUnownedAttachmentParts } from "@/lib/attachments";
 import { MigrationPayloadTooLargeError, normalizeMigrationPayload } from "@/lib/migration";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { protectedProcedure, router } from "../trpc";
@@ -63,9 +64,22 @@ export const migrationRouter = router({
         };
       }
 
+      // A deni-ai export of another account carries app URLs of that account's
+      // files, which would make every request of the imported chat fail.
+      const { conversations: importable, omitted } = await omitUnownedAttachmentParts(
+        conversations,
+        ctx.userId,
+        ctx.db,
+      );
+      if (omitted > 0) {
+        warnings.push(
+          `${omitted} attached file(s) could not be imported: they belong to another account or no longer exist`,
+        );
+      }
+
       const now = new Date();
       // normalizeMigrationPayload already returns fresh JSON copies of the messages.
-      const values = conversations.map((conversation) => ({
+      const values = importable.map((conversation) => ({
         uid: ctx.userId,
         title: conversation.title,
         messages: conversation.messages,

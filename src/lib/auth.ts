@@ -37,6 +37,7 @@ import { checkSignupLimits, recordSignupRisk } from "@/lib/signup-risk";
 import { isEmailConfigured, sendEmail } from "@/lib/email";
 import { readEmailChangeToken } from "@/lib/email-change-token";
 import { deletePersonalStripeCustomers } from "@/lib/account-deletion-billing";
+import { accountDeletionAttachmentHooks } from "@/lib/attachments";
 import { reassignTeamProjectsOnAccountDeletion } from "@/lib/project-access";
 import {
   checkSignupEmail,
@@ -644,7 +645,18 @@ export const auth = betterAuth({
         },
       },
       // Covers every deletion path, including guest cleanup after account linking.
-      delete: accountDeletionSeatHooks,
+      delete: {
+        before: async (user) => {
+          await accountDeletionSeatHooks.before(user);
+          // After the billing step, which can still block the deletion.
+          await accountDeletionAttachmentHooks.before(user);
+        },
+        after: async (user) => {
+          // Never throws, so it runs whatever the seat updates do.
+          await accountDeletionAttachmentHooks.after(user);
+          await accountDeletionSeatHooks.after(user);
+        },
+      },
     },
     session: {
       create: {

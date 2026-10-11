@@ -207,3 +207,49 @@ test("bounds the cache even when stored files are empty", async () => {
   await request([0]);
   expect(fetchMock).toHaveBeenCalledTimes(1);
 });
+
+test("caches a stored file under its stable key, not its per-request signed URL", async () => {
+  const fetchMock = vi.fn(async () => new Response("private notes"));
+  vi.stubGlobal("fetch", fetchMock);
+  const request = (signature: string) => {
+    const url = `https://app.ufs.sh/f/stable-key?signature=${signature}`;
+    return inlineTextAttachments(
+      [
+        userMessage([
+          { type: "file", mediaType: "text/plain", filename: "notes.txt", url },
+          { type: "file", mediaType: "text/plain", filename: "again.txt", url },
+        ]),
+      ],
+      new Map([[url, "attachment:user:stable-id"]]),
+    );
+  };
+
+  const [first] = await request("first");
+  const [second] = await request("second");
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(textAt(first, 0)).toContain("private notes");
+  expect(textAt(second, 1)).toContain("private notes");
+});
+
+test("a URL spelled like a stable key never reads that file's cached text", async () => {
+  const fetchMock = vi.fn(async () => new Response("secret"));
+  vi.stubGlobal("fetch", fetchMock);
+  const url = "https://app.ufs.sh/f/victim?signature=s";
+  await inlineTextAttachments(
+    [userMessage([{ type: "file", mediaType: "text/plain", filename: "a.txt", url }])],
+    new Map([[url, "attachment:victim:victim-id"]]),
+  );
+
+  const [message] = await inlineTextAttachments([
+    userMessage([
+      {
+        type: "file",
+        mediaType: "text/plain",
+        filename: "a.txt",
+        url: "attachment:victim:victim-id",
+      },
+    ]),
+  ]);
+  expect(textAt(message, 0)).not.toContain("secret");
+  expect(textAt(message, 0)).toContain("could not be read");
+});

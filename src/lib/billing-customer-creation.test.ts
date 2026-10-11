@@ -1,5 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
-import { getTableName } from "drizzle-orm";
+import { getTableName, type SQL } from "drizzle-orm";
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, expect, test, vi } from "vitest";
 import { billingRouter } from "@/server/api/routers/billing";
 import { organizationRouter } from "@/server/api/routers/organization";
@@ -7,6 +8,7 @@ import { organizationRouter } from "@/server/api/routers/organization";
 const state = vi.hoisted(() => ({
   locked: 0,
   rows: [] as Record<string, unknown>[],
+  billingLookups: [] as SQL[],
   customers: new Map<string, { id: string }>(),
   search: vi.fn(),
   create: vi.fn(),
@@ -47,8 +49,9 @@ function database() {
     execute: async () => {},
     select: () => ({
       from: (table: Parameters<typeof getTableName>[0]) => ({
-        where: () => {
+        where: (condition: SQL) => {
           const name = getTableName(table);
+          if (name === "billing") state.billingLookups.push(condition);
           if (name === "user")
             expect(scope.getStore(), "profile uses an unlocked pooled read").not.toBe(true);
           const rows =
@@ -103,6 +106,7 @@ const context = (db: ReturnType<typeof database>) =>
 beforeEach(() => {
   state.locked = 0;
   state.rows = [];
+  state.billingLookups = [];
   state.customers.clear();
   state.search.mockReset().mockImplementation(async () => {
     expect(scope.getStore(), "Stripe search runs outside a transaction").not.toBe(true);
@@ -149,4 +153,25 @@ test("team search errors do not create another customer", async () => {
   ).rejects.toThrow("Stripe search unavailable");
   expect(state.create).not.toHaveBeenCalled();
   expect(state.rows).toHaveLength(0);
+});
+
+test("a team row whose billing contact left is found by organization and reused", async () => {
+  state.rows = [
+    { id: "team-row", userId: null, organizationId: "team", stripeCustomerId: "team-customer" },
+  ];
+  const status = await organizationRouter
+    .createCaller(context(database()))
+    .teamBillingStatus({ organizationId: "team" });
+
+  expect(status.stripeCustomerId).toBe("team-customer");
+  expect(state.rows).toHaveLength(1);
+  expect(state.search).not.toHaveBeenCalled();
+  expect(state.create).not.toHaveBeenCalled();
+  const dialect = new PgDialect();
+  for (const condition of state.billingLookups) {
+    const query = dialect.sqlToQuery(condition);
+    expect(query.sql).toBe('"billing"."organization_id" = $1');
+    expect(query.params).toEqual(["team"]);
+  }
+  expect(state.billingLookups.length).toBeGreaterThan(0);
 });

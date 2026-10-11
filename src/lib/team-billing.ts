@@ -189,7 +189,8 @@ export async function recordTeamAuditEvent({
   metadata,
 }: {
   organizationId: string;
-  actorUserId: string;
+  /** Null when no existing user acted, e.g. a webhook for a team whose payer deleted their account. */
+  actorUserId: string | null;
   targetUserId?: string | null;
   action: string;
   metadata?: Record<string, unknown>;

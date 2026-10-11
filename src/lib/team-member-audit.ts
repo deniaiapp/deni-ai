@@ -3,8 +3,17 @@ import { APIError } from "better-auth/api";
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { member } from "@/db/schema";
+import {
+  deletePersonalBillingRecords,
+  takeDetachedTeamBillingContacts,
+} from "@/lib/account-deletion-billing";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { recordTeamAuditEvent, updateTeamSeatCount } from "@/lib/team-billing";
+import {
+  findTeamBillingContactOrganizations,
+  redirectTeamBillingEmail,
+  releaseTeamBillingContact,
+} from "@/lib/team-billing-contact";
 
 const auditActor = new AsyncLocalStorage<string>();
 
@@ -132,6 +141,9 @@ export async function withTeamLeaveAudit(
   const response = await run();
   // Only the authenticated framework mutation can authorize a successful leave.
   if (response.ok && membership) {
+    // First: it never throws, so a failed audit write cannot keep a former
+    // member as the team's billing contact.
+    await releaseTeamBillingContact(organizationId, userId);
     await recordTeamAuditEvent({
       organizationId,
       actorUserId: userId,
@@ -144,34 +156,72 @@ export async function withTeamLeaveAudit(
   return response;
 }
 
-const departingOrganizations = new Map<string, string[]>();
+type Departure = {
+  organizationIds: string[];
+  billingContactOrganizationIds: string[];
+  email: string | null;
+};
+const departures = new Map<string, Departure>();
 
 /**
  * Account deletion drops memberships through the `member.user_id` cascade, so no
  * organization hook runs. Capture the user's teams before the row goes and
  * reconcile their seats after. No `member_removed` event is written for the
  * departure itself; earlier entries keep their actor as a deleted user.
+ *
+ * Team billing rows outlive the user (`billing.user_id` is SET NULL, and a
+ * self-service deletion clears it earlier); invoices that may still go to the
+ * departing user move to a current owner, for every team they belonged to or
+ * were the billing contact of.
  */
 export const accountDeletionSeatHooks = {
-  before: async (user: { id: string }) => {
+  before: async (user: { id: string; email?: string | null }) => {
+    // Unlike the reads below this must succeed: a personal billing row may not
+    // lose its user, so the user row cannot be deleted while one remains.
+    await deletePersonalBillingRecords(user.id);
+    const departure: Departure = {
+      organizationIds: [],
+      billingContactOrganizationIds: [],
+      email: user.email ?? null,
+    };
     try {
       const memberships = await db
         .select({ organizationId: member.organizationId })
         .from(member)
         .where(eq(member.userId, user.id));
-      departingOrganizations.set(
-        user.id,
-        memberships.map((membership) => membership.organizationId),
-      );
+      departure.organizationIds = memberships.map((membership) => membership.organizationId);
     } catch (error) {
       // Sessions and accounts are already gone here; never abort the deletion.
       console.error("[team-billing] Failed to read memberships before account deletion:", error);
     }
+    // Self-service deletion already cleared these rows' contact; other deletion
+    // paths leave that to the FK, so read them before it does.
+    departure.billingContactOrganizationIds = takeDetachedTeamBillingContacts(user.id);
+    try {
+      departure.billingContactOrganizationIds.push(
+        ...(await findTeamBillingContactOrganizations(user.id)),
+      );
+    } catch (error) {
+      console.error(
+        "[team-billing] Failed to read billing contacts before account deletion:",
+        error,
+      );
+    }
+    departures.set(user.id, departure);
   },
   after: async (user: { id: string }) => {
-    const organizationIds = departingOrganizations.get(user.id) ?? [];
-    departingOrganizations.delete(user.id);
-    for (const organizationId of organizationIds) {
+    const departure = departures.get(user.id);
+    departures.delete(user.id);
+    if (!departure) return;
+    // Never throws, so it runs first.
+    const teams = new Set([
+      ...departure.organizationIds,
+      ...departure.billingContactOrganizationIds,
+    ]);
+    for (const organizationId of teams) {
+      await redirectTeamBillingEmail(organizationId, { userId: user.id, email: departure.email });
+    }
+    for (const organizationId of departure.organizationIds) {
       await updateTeamSeatCount(organizationId);
     }
   },
@@ -187,6 +237,9 @@ export const teamMemberAuditHooks = {
     assertTeamRole(newRole, MEMBER_ROLES);
   },
   afterRemoveMember: async ({ member, organization }: MemberChange) => {
+    // First: it never throws, so a failed audit write cannot keep a removed
+    // member as the team's billing contact.
+    await releaseTeamBillingContact(organization.id, member.userId);
     await recordTeamAuditEvent({
       organizationId: organization.id,
       actorUserId: requireAuditActor(),

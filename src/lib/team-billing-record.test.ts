@@ -7,7 +7,7 @@ vi.mock("@/db/drizzle", () => ({ db: {} }));
 
 type Record = {
   id: string;
-  userId: string;
+  userId: string | null;
   organizationId: string;
   stripeCustomerId: string;
   status: string;
@@ -178,4 +178,25 @@ test("a deletion webhook cannot recreate a deleted team's billing row", async ()
   );
   expect(saved).toBeUndefined();
   expect(records).toEqual([]);
+});
+
+test("a team row whose billing contact left is reused, never duplicated", async () => {
+  records = [
+    {
+      id: "team-row",
+      userId: null,
+      organizationId: "team",
+      stripeCustomerId: "customer",
+      status: "active",
+      stripeSubscriptionId: "sub",
+    },
+  ];
+  const saved = await saveTeamBillingRecord(database(), "new-owner", "team", {
+    stripeCustomerId: "customer",
+    status: "canceled",
+  });
+  expect(records).toHaveLength(1);
+  expect(saved).toMatchObject({ id: "team-row", status: "canceled" });
+  // Opening team billing does not make an admin the billing contact.
+  expect(saved.userId).toBeNull();
 });

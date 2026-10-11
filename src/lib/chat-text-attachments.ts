@@ -6,6 +6,7 @@ import {
   MAX_TEXT_ATTACHMENT_BYTES,
   textMediaTypeForName,
 } from "@/lib/attachment-types";
+import { isStoredFileUrl, uploadThingFileHostname } from "@/lib/stored-files";
 
 /** Characters of one file sent to the model; longer files are cut with a notice. */
 const MAX_INLINE_CHARS = 400_000;
@@ -17,7 +18,10 @@ const MAX_CONCURRENT_FETCHES = 4;
 const FETCH_TIMEOUT_MS = 10_000;
 /** Text uploads are stored as UTF-8 and capped after conversion; allow a little slack. */
 const MAX_FETCH_BYTES = MAX_TEXT_ATTACHMENT_BYTES + 1024;
-/** Decoded text by stored URL: stored files never change, and history is re-sent every turn. */
+/**
+ * Decoded text by stored file (its cache key, else its URL): stored files never
+ * change, and history is re-sent every turn.
+ */
 const MAX_CACHED_CHARS = 2_000_000;
 /** Larger files are not worth the memory; they are fetched again when needed. */
 const MAX_CACHED_FILE_CHARS = 200_000;
@@ -33,53 +37,33 @@ const CACHE_ENTRY_OVERHEAD_CHARS = 64;
 const textCache = new Map<string, string>();
 let cachedChars = 0;
 
-function cacheCost(url: string, text: string) {
-  return url.length + text.length + CACHE_ENTRY_OVERHEAD_CHARS;
+function cacheCost(key: string, text: string) {
+  return key.length + text.length + CACHE_ENTRY_OVERHEAD_CHARS;
 }
 
-function cacheText(url: string, text: string) {
+function cacheText(key: string, text: string) {
   if (text.length > MAX_CACHED_FILE_CHARS) return;
-  const previous = textCache.get(url);
-  if (previous !== undefined) cachedChars -= cacheCost(url, previous);
-  textCache.delete(url);
-  textCache.set(url, text);
-  cachedChars += cacheCost(url, text);
-  for (const [oldestUrl, oldest] of textCache) {
+  const previous = textCache.get(key);
+  if (previous !== undefined) cachedChars -= cacheCost(key, previous);
+  textCache.delete(key);
+  textCache.set(key, text);
+  cachedChars += cacheCost(key, text);
+  for (const [oldestKey, oldest] of textCache) {
     if (cachedChars <= MAX_CACHED_CHARS && textCache.size <= MAX_CACHED_ENTRIES) break;
-    textCache.delete(oldestUrl);
-    cachedChars -= cacheCost(oldestUrl, oldest);
-  }
-}
-
-/** UploadThing app id from the server token, or `null` when uploads are not configured. */
-function storedAttachmentHostname(): string | null {
-  const token = env.UPLOADTHING_TOKEN;
-  if (!token) return null;
-  try {
-    const decoded: unknown = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
-    const appId =
-      typeof decoded === "object" && decoded !== null && "appId" in decoded ? decoded.appId : null;
-    return typeof appId === "string" && /^[a-z0-9]+$/i.test(appId)
-      ? `${appId.toLowerCase()}.ufs.sh`
-      : null;
-  } catch {
-    return null;
+    textCache.delete(oldestKey);
+    cachedChars -= cacheCost(oldestKey, oldest);
   }
 }
 
 /**
- * Only files this app stored are fetched. Message parts come from the client,
- * so any other URL (including another UploadThing app's) would let a user make
- * the server request hosts of their choosing.
+ * Only files this app stored are fetched: signed URLs of private files (see
+ * `resolveAttachmentFileParts`) and public URLs of files uploaded before
+ * storage became private. Message parts come from the client, so any other URL
+ * (including another UploadThing app's) would let a user make the server
+ * request hosts of their choosing.
  */
 function isStoredAttachmentUrl(url: URL) {
-  const hostname = storedAttachmentHostname();
-  return (
-    hostname !== null &&
-    url.protocol === "https:" &&
-    url.hostname === hostname &&
-    url.pathname.startsWith("/f/")
-  );
+  return isStoredFileUrl(url, uploadThingFileHostname(env.UPLOADTHING_TOKEN));
 }
 
 function readDataUrl(url: string): Uint8Array | null {
@@ -149,16 +133,16 @@ async function readAttachmentBytes(url: string): Promise<Uint8Array | null> {
   }
 }
 
-async function readAttachmentText(url: string): Promise<string | null> {
-  const cached = textCache.get(url);
+async function readAttachmentText(url: string, cacheKey: string): Promise<string | null> {
+  const cached = textCache.get(cacheKey);
   if (cached !== undefined) {
-    cacheText(url, cached);
+    cacheText(cacheKey, cached);
     return cached;
   }
   const bytes = await readAttachmentBytes(url);
   const text = bytes ? decodeTextAttachment(bytes) : null;
   // data: URLs already travel with the request; only fetched files are worth keeping.
-  if (text !== null && !url.startsWith("data:")) cacheText(url, text);
+  if (text !== null && !url.startsWith("data:")) cacheText(cacheKey, text);
   return text;
 }
 
@@ -220,8 +204,16 @@ async function mapWithConcurrency<T, R>(
  *
  * The newest attachments win when a request carries more than fits: older
  * ones are shortened or left out rather than failing the whole request.
+ *
+ * `cacheKeys` gives a stable key for URLs that change on every request
+ * (signed URLs of stored files, see `resolveAttachmentFileParts`); other URLs
+ * are their own key, under a prefix of their own: message parts come from the
+ * client, and a URL spelled like a stable key must not read that file's text.
  */
-export async function inlineTextAttachments(messages: UIMessage[]): Promise<UIMessage[]> {
+export async function inlineTextAttachments(
+  messages: UIMessage[],
+  cacheKeys: ReadonlyMap<string, string> = new Map(),
+): Promise<UIMessage[]> {
   const refs: { message: number; part: number; file: FilePart }[] = [];
   messages.forEach((message, messageIndex) => {
     if (message.role !== "user") return;
@@ -236,10 +228,11 @@ export async function inlineTextAttachments(messages: UIMessage[]): Promise<UIMe
   const read = newestFirst.slice(0, MAX_ATTACHMENTS_PER_REQUEST);
   const texts = new Map<string, Promise<string | null>>();
   const loaded = await mapWithConcurrency(read, MAX_CONCURRENT_FETCHES, (ref) => {
-    let text = texts.get(ref.file.url);
+    const key = cacheKeys.get(ref.file.url) ?? `url:${ref.file.url}`;
+    let text = texts.get(key);
     if (!text) {
-      text = readAttachmentText(ref.file.url);
-      texts.set(ref.file.url, text);
+      text = readAttachmentText(ref.file.url, key);
+      texts.set(key, text);
     }
     return text;
   });

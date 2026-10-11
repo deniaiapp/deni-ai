@@ -31,6 +31,9 @@ test("image sources are only loaded without a click when nothing leaves the brow
     "new/abc",
     "//evil.example/p.png",
     "https://deniai.app/new/abc",
+    // Stored attachments: a model must not make the browser fetch the user's files.
+    "/api/attachments/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "https://deniai.app/api/attachments/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "javascript:alert(1)",
     undefined,
   ]) {

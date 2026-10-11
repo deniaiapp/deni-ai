@@ -2,7 +2,8 @@
  * Email domain policy for all non-guest sign-up paths, including OAuth.
  *
  * Allowlist model:
- *  1. Known major consumer mail providers (exact domain match)
+ *  1. Known major consumer mail providers (exact domain match), excluding
+ *     forwarding-alias services such as duck.com
  *  2. Educational domains only under TLDs / SLDs with **restricted
  *     registration** (real schools / universities), not open `.edu.<cc>`
  *     namespaces that are routinely sold as throwaway mail
@@ -65,7 +66,8 @@ export const ALLOWED_EMAIL_PROVIDERS: ReadonlySet<string> = new Set([
   "fastmail.com",
   "fastmail.fm",
   "hey.com",
-  "duck.com",
+  // Not duck.com: DuckDuckGo Email Protection mints unlimited forwarding
+  // addresses that all reach one inbox. Existing accounts still sign in.
   "tutanota.com",
   "tuta.com",
   "tutamail.com",

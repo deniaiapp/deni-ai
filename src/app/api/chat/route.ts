@@ -33,6 +33,14 @@ import {
   mergeStoredAndClientMessages,
   selectModelContextMessages,
 } from "@/lib/chat-messages";
+import {
+  ForeignAttachmentError,
+  linkChatAttachments,
+  resolveAttachmentFileParts,
+  rewriteMigratedAttachmentUrls,
+  withStableAttachmentUrls,
+  type ResolvedAttachments,
+} from "@/lib/attachments";
 import { inlineTextAttachments } from "@/lib/chat-text-attachments";
 import {
   prepareBinaryAttachments,
@@ -64,7 +72,7 @@ import {
 import { calculateChatUsageAmount, resolveFinalChatUsageAmount } from "@/lib/chat-usage-amount";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { guardMutationRequest } from "@/lib/mutation-request";
-import { readRequestJson, RequestBodyTooLargeError } from "@/lib/request-body";
+import { CHAT_BODY_LIMIT, readRequestJson, RequestBodyTooLargeError } from "@/lib/request-body";
 import {
   classifyUpstreamError,
   extractChatRequestErrorText,
@@ -133,7 +141,7 @@ export async function POST(req: Request) {
 
   let body: unknown;
   try {
-    body = await readRequestJson(req, 16 * 1024 * 1024);
+    body = await readRequestJson(req, CHAT_BODY_LIMIT);
   } catch (error) {
     return NextResponse.json(
       {
@@ -219,7 +227,13 @@ export async function POST(req: Request) {
   }
 
   const storedMessages = Array.isArray(chat.messages) ? (chat.messages as UIMessage[]) : [];
-  const messages = mergeStoredAndClientMessages(storedMessages, validatedMessages.data);
+  // A tab loaded before the private-storage migration still sends the old
+  // public URLs of the user's files, which no longer serve them: read and save
+  // those files by their app URLs instead.
+  const messages = await rewriteMigratedAttachmentUrls(
+    mergeStoredAndClientMessages(storedMessages, validatedMessages.data),
+    userId,
+  );
 
   let memoryState: Awaited<ReturnType<typeof getUserMemoryState>>;
   let modelContext: Awaited<ReturnType<typeof resolveChatModelContext>>;
@@ -283,16 +297,30 @@ export async function POST(req: Request) {
   const contextMessages = selectModelContextMessages(messages, {
     regenerate: trigger === "regenerate-message",
   });
+  // Stored attachments are private: sign short-lived URLs of the user's own
+  // files for the server to download. The model receives their bytes or text,
+  // never a URL, and `messages` (saved below) keeps the app URLs.
+  let resolvedAttachments: ResolvedAttachments;
+  try {
+    resolvedAttachments = await resolveAttachmentFileParts(
+      isAnonymous
+        ? compactEarlierToolOutputs(contextMessages, GUEST_TOOL_OUTPUT_CHARS)
+        : contextMessages,
+      userId,
+    );
+  } catch (error) {
+    if (error instanceof ForeignAttachmentError) {
+      return NextResponse.json({ error: "Invalid or oversized attachment" }, { status: 400 });
+    }
+    console.error("Chat attachment resolution failed", error);
+    return NextResponse.json({ error: GENERIC_CHAT_REQUEST_ERROR }, { status: 500 });
+  }
   let modelMessages: ModelMessage[];
   try {
     modelMessages = await convertToModelMessages(
       await fitBinaryAttachmentsToBudget(
         prepareBinaryAttachments(
-          await inlineTextAttachments(
-            isAnonymous
-              ? compactEarlierToolOutputs(contextMessages, GUEST_TOOL_OUTPUT_CHARS)
-              : contextMessages,
-          ),
+          await inlineTextAttachments(resolvedAttachments.messages, resolvedAttachments.cacheKeys),
         ),
         attachmentCache,
         // Not the request signal: like the generation, a download outlives a
@@ -551,6 +579,8 @@ export async function POST(req: Request) {
       const { stopRequestedAt } = await updateChat(id, userId, pendingMessages, undefined, {
         nextGenerationId: generationId,
       });
+      // The saved messages now hold their uploads: deleting this chat deletes them.
+      await linkChatAttachments(id, userId, messages);
       // A stop that arrived after this request but before this registration found
       // no generation to stop. One handled by this instance is remembered in
       // memory; one handled by another instance is on the chat row. A client
@@ -639,7 +669,8 @@ export async function POST(req: Request) {
       // A recent report applies only while this prompt still starts with the one
       // it was for; an edited or branched transcript can be smaller.
       promptFingerprints = fingerprintPromptPrefixes({
-        modelMessages,
+        // Signed attachment URLs change every request; the files behind them do not.
+        modelMessages: withStableAttachmentUrls(modelMessages, resolvedAttachments.cacheKeys),
         systemPrompt,
         toolNames: Object.keys(tools),
       });

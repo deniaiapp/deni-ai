@@ -139,6 +139,14 @@ export async function canCompareModels(userId: string): Promise<boolean> {
   return tier === "pro" || tier === "max";
 }
 
+/** The plan tier a (non-guest) user's limits follow, including team and lifetime plans. */
+export async function getSubscriptionTier(
+  userId: string,
+  now = new Date(),
+): Promise<SubscriptionTier> {
+  return (await loadTierInfo(userId, now, db)).tier;
+}
+
 async function getTierInfo(
   userId: string,
   now: Date,

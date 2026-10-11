@@ -5,11 +5,22 @@ import { appRouter } from "@/server/api/root";
 import { createContext } from "@/server/api/trpc";
 import { guardMutationRequest } from "@/lib/mutation-request";
 import { limitRequestBody, RequestBodyTooLargeError } from "@/lib/request-body";
-import { TRPC_MAX_BATCH_SIZE } from "@/lib/trpc/limits";
+import { TRPC_MAX_BATCH_SIZE, trpcBodyLimit } from "@/lib/trpc/limits";
+
+const ENDPOINT = "/api/trpc";
+
+const trimSlashes = (path: string) => path.replace(/^\/|\/$/g, "");
+
+/** The procedures a request calls, read from its URL the way tRPC's fetch adapter does. */
+function procedurePaths(req: Request) {
+  const url = new URL(req.url);
+  const path = trimSlashes(trimSlashes(url.pathname).slice(trimSlashes(ENDPOINT).length));
+  return url.searchParams.get("batch") === "1" ? path.split(",") : [path];
+}
 
 const handler = (req: Request) =>
   fetchRequestHandler({
-    endpoint: "/api/trpc",
+    endpoint: ENDPOINT,
     req,
     router: appRouter,
     createContext,
@@ -29,8 +40,8 @@ export async function POST(req: Request) {
   const rejected = guardMutationRequest(req, "application/json");
   if (rejected) return rejected;
   try {
-    // Imports accept 25 MB of JSON; reserve space for the RPC envelope.
-    const limited = limitRequestBody(req, 30 * 1024 * 1024);
+    // Per procedure: imports and comparison transcripts get more than the default.
+    const limited = limitRequestBody(req, trpcBodyLimit(procedurePaths(req)));
     const response = await handler(limited.request);
     return limited.isTooLarge()
       ? Response.json({ error: "Request body is too large" }, { status: 413 })

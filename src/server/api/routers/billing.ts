@@ -33,7 +33,6 @@ import {
 } from "@/lib/lifetime-plan";
 import { disableMaxMode, enableMaxMode, getMaxModeStatus } from "@/lib/max-mode";
 import { attachMaxModeMeteredItems } from "@/lib/max-mode-stripe";
-import { checkRateLimit } from "@/lib/rate-limit";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
 import { stripe } from "@/lib/stripe";
 import { createBillingPortalSession } from "@/lib/stripe-portal";
@@ -53,7 +52,14 @@ import {
   pickLicensedSubscription,
 } from "@/lib/stripe-subscriptions";
 import { getUsageSummary } from "@/lib/usage";
-import { type ProtectedContext, protectedProcedure, router } from "../trpc";
+import {
+  type ProtectedContext,
+  protectedProcedure,
+  rateLimited,
+  router,
+  TRPC_RATE_LIMITS,
+  type TRPCRateLimit,
+} from "../trpc";
 
 const planIdSchema = z.enum([
   "plus_monthly",
@@ -81,6 +87,10 @@ const billingEnabledProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next();
 });
+
+/** Per-user budget for a read that calls Stripe on every call. */
+const stripeRead = (name: string, limit: TRPCRateLimit = TRPC_RATE_LIMITS.stripeRead) =>
+  rateLimited(`billing.${name}`, limit);
 
 function deriveModeFromPrice(price: Stripe.Price | null | undefined): "subscription" | "payment" {
   if (!price) {
@@ -456,22 +466,12 @@ async function reuseOpenCheckoutSession({
 }
 
 export const billingRouter = router({
-  accountDeletionStatus: protectedProcedure.query(async ({ ctx }) => {
-    // Every call reads Stripe, and batched requests fan out per call.
-    const rateCheck = await checkRateLimit({
-      key: `account-deletion-status:${ctx.userId}`,
-      windowMs: 60_000,
-      maxRequests: 10,
-    });
-    if (!rateCheck.allowed) {
-      throw new TRPCError({
-        code: "TOO_MANY_REQUESTS",
-        message: "Too many requests. Please try again later.",
-      });
-    }
-    return getAccountDeletionStatus(ctx.userId);
-  }),
-  plans: billingEnabledProcedure.query(async ({ ctx }) => {
+  // Every call reads Stripe, and batched requests fan out per call. Only the
+  // delete dialog fetches it, once per open, hence the tighter budget.
+  accountDeletionStatus: protectedProcedure
+    .use(stripeRead("accountDeletionStatus", { windowMs: 60_000, maxRequests: 10 }))
+    .query(async ({ ctx }) => getAccountDeletionStatus(ctx.userId)),
+  plans: billingEnabledProcedure.use(stripeRead("plans")).query(async ({ ctx }) => {
     const individualPlans = billingPlans.filter((p) => !isTeamPlan(p.id));
     const billingRecord = await ensureBillingRecord(ctx, ctx.userId);
     const flashOfferActive = isFlashOfferActive(billingRecord.flashOfferEndsAt);
@@ -509,7 +509,7 @@ export const billingRouter = router({
    * App-wide flash offer promo for card-verified users who have never paid.
    * Read-only: unlike `plans`, it never creates a billing record or starts the timer.
    */
-  flashOffer: protectedProcedure.query(async ({ ctx }) => {
+  flashOffer: protectedProcedure.use(stripeRead("flashOffer")).query(async ({ ctx }) => {
     if (isBillingDisabled || ctx.session?.user?.isAnonymous) return null;
 
     const [record] = await ctx.db
@@ -566,7 +566,7 @@ export const billingRouter = router({
       isUpTo: Math.min(...percents) !== percentOff,
     };
   }),
-  status: billingEnabledProcedure.query(async ({ ctx }) => {
+  status: billingEnabledProcedure.use(stripeRead("status")).query(async ({ ctx }) => {
     const [subscription, teamRecords] = await Promise.all([
       syncSubscription(ctx, ctx.userId),
       ctx.db
@@ -784,6 +784,7 @@ export const billingRouter = router({
   // Read-only receipt. Purchases are recorded only by the Stripe webhook and the
   // live-subscription sync, never from a client-supplied (replayable) session id.
   getCheckoutSession: billingEnabledProcedure
+    .use(stripeRead("getCheckoutSession"))
     .input(
       z.object({
         sessionId: z.string().min(1),
@@ -1014,6 +1015,7 @@ export const billingRouter = router({
     return summary;
   }),
   estimatePlanChange: billingEnabledProcedure
+    .use(stripeRead("estimatePlanChange"))
     .input(
       z.object({
         planId: planIdSchema,
@@ -1088,9 +1090,10 @@ export const billingRouter = router({
       };
     }),
   // Max Mode endpoints
-  maxModeStatus: protectedProcedure.query(async ({ ctx }) => {
-    return getMaxModeStatus(ctx.userId);
-  }),
+  // Reads Stripe prices and subscriptions; the team Max Mode editor refetches it per edit.
+  maxModeStatus: protectedProcedure
+    .use(stripeRead("maxModeStatus", TRPC_RATE_LIMITS.stripeReadPerEdit))
+    .query(async ({ ctx }) => getMaxModeStatus(ctx.userId)),
   enableMaxMode: billingEnabledProcedure.mutation(async ({ ctx }) => {
     const result = await enableMaxMode(ctx.userId);
     if (!result.success) {

@@ -46,7 +46,14 @@ import {
   withTeamBillingLock,
 } from "@/lib/team-billing-record";
 import { getUsageLimitConfig } from "@/lib/usage";
-import { type ProtectedContext, protectedProcedure, router } from "../trpc";
+import {
+  type ProtectedContext,
+  protectedProcedure,
+  rateLimited,
+  router,
+  TRPC_RATE_LIMITS,
+  type TRPCRateLimit,
+} from "../trpc";
 import { historyBefore, historyCursorSchema, historyCursorTimestamp } from "../history-pagination";
 
 import type Stripe from "stripe";
@@ -77,6 +84,10 @@ const billingEnabledProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next();
 });
+
+/** Per-user budget for a read that calls Stripe on every call. */
+const stripeRead = (name: string, limit: TRPCRateLimit = TRPC_RATE_LIMITS.stripeRead) =>
+  rateLimited(`organization.${name}`, limit);
 
 function deriveModeFromPrice(price: Stripe.Price | null | undefined): "subscription" | "payment" {
   if (!price) {
@@ -405,7 +416,7 @@ async function reuseOpenTeamCheckoutSession({
 }
 
 export const organizationRouter = router({
-  teamPlans: billingEnabledProcedure.query(async () => {
+  teamPlans: billingEnabledProcedure.use(stripeRead("teamPlans")).query(async () => {
     const teamPlans = billingPlans.filter((p) => isTeamPlan(p.id));
     const plans = (
       await Promise.all(
@@ -436,6 +447,7 @@ export const organizationRouter = router({
   // team has a live paid plan (afterAcceptInvitation -> cancelPersonalSubscription).
   // The accept dialog asks this first so it can warn before the user joins.
   invitationBillingImpact: protectedProcedure
+    .use(stripeRead("invitationBillingImpact"))
     .input(z.object({ invitationId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       const noImpact = { cancelsPersonalSubscription: false };
@@ -501,6 +513,7 @@ export const organizationRouter = router({
     }),
 
   teamBillingStatus: billingEnabledProcedure
+    .use(stripeRead("teamBillingStatus"))
     .input(z.object({ organizationId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       await verifyOrgOwnerOrAdmin(ctx, input.organizationId);
@@ -520,7 +533,9 @@ export const organizationRouter = router({
       };
     }),
 
+  // Refetched after every saved Max Mode field, so it gets the per-edit budget.
   teamMaxModeSettings: billingEnabledProcedure
+    .use(stripeRead("teamMaxModeSettings", TRPC_RATE_LIMITS.stripeReadPerEdit))
     .input(z.object({ organizationId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       await verifyOrgOwnerOrAdmin(ctx, input.organizationId);
@@ -982,6 +997,7 @@ export const organizationRouter = router({
       return { sessionId: session.id, clientSecret: session.client_secret };
     }),
   getTeamCheckoutSession: billingEnabledProcedure
+    .use(stripeRead("getTeamCheckoutSession"))
     .input(
       z.object({
         organizationId: z.string().min(1),
@@ -1029,6 +1045,7 @@ export const organizationRouter = router({
     }),
 
   estimateTeamPlanChange: billingEnabledProcedure
+    .use(stripeRead("estimateTeamPlanChange"))
     .input(
       z.object({
         organizationId: z.string().min(1),

@@ -1,5 +1,14 @@
 import { beforeEach, expect, test, vi } from "vitest";
+import {
+  deletePersonalBillingRecords,
+  takeDetachedTeamBillingContacts,
+} from "@/lib/account-deletion-billing";
 import { recordTeamAuditEvent, updateTeamSeatCount } from "@/lib/team-billing";
+import {
+  findTeamBillingContactOrganizations,
+  redirectTeamBillingEmail,
+  releaseTeamBillingContact,
+} from "@/lib/team-billing-contact";
 import {
   accountDeletionSeatHooks,
   assertCanSendTeamInvitation,
@@ -24,6 +33,15 @@ vi.mock("@/lib/team-billing", () => ({
   recordTeamAuditEvent: vi.fn(),
   updateTeamSeatCount: vi.fn(),
 }));
+vi.mock("@/lib/account-deletion-billing", () => ({
+  deletePersonalBillingRecords: vi.fn(),
+  takeDetachedTeamBillingContacts: vi.fn(),
+}));
+vi.mock("@/lib/team-billing-contact", () => ({
+  findTeamBillingContactOrganizations: vi.fn(),
+  redirectTeamBillingEmail: vi.fn(),
+  releaseTeamBillingContact: vi.fn(),
+}));
 vi.mock("better-auth/next-js", () => ({
   toNextJsHandler: () => ({ POST: handler.post, GET: vi.fn() }),
 }));
@@ -35,6 +53,8 @@ beforeEach(() => {
   handler.session.mockResolvedValue({ session: { userId: "real-actor" } });
   handler.membership.mockResolvedValue([{ role: "member" }]);
   handler.where.mockReturnValue({ limit: handler.membership });
+  vi.mocked(findTeamBillingContactOrganizations).mockResolvedValue([]);
+  vi.mocked(takeDetachedTeamBillingContacts).mockReturnValue([]);
 });
 
 test("client-controlled audit mutations are not exposed", () => {
@@ -307,4 +327,102 @@ test("a failed membership lookup never aborts an account deletion", async () => 
 
   expect(updateTeamSeatCount).not.toHaveBeenCalled();
   consoleError.mockRestore();
+});
+
+test("leaving or being removed from a team clears the member as its billing contact", async () => {
+  handler.post.mockResolvedValue(new Response(null, { status: 200 }));
+  await POST(
+    new Request("http://localhost/api/auth/organization/leave", {
+      method: "POST",
+      body: JSON.stringify({ organizationId: "team" }),
+    }),
+  );
+  expect(releaseTeamBillingContact).toHaveBeenCalledWith("team", "real-actor");
+
+  await withTeamAuditActor("owner", async () => {
+    await teamMemberAuditHooks.beforeRemoveMember();
+    await teamMemberAuditHooks.afterRemoveMember(change);
+  });
+  expect(releaseTeamBillingContact).toHaveBeenCalledWith("team", "target");
+});
+
+test("a failed audit write never keeps a departed member as the billing contact", async () => {
+  vi.mocked(recordTeamAuditEvent).mockRejectedValue(new Error("audit insert failed"));
+  handler.post.mockResolvedValue(new Response(null, { status: 200 }));
+  await expect(
+    POST(
+      new Request("http://localhost/api/auth/organization/leave", {
+        method: "POST",
+        body: JSON.stringify({ organizationId: "team" }),
+      }),
+    ),
+  ).rejects.toThrow("audit insert failed");
+  expect(releaseTeamBillingContact).toHaveBeenCalledWith("team", "real-actor");
+
+  await expect(
+    withTeamAuditActor("owner", () => teamMemberAuditHooks.afterRemoveMember(change)),
+  ).rejects.toThrow("audit insert failed");
+  expect(releaseTeamBillingContact).toHaveBeenCalledWith("team", "target");
+});
+
+test("a rejected leave keeps the team's billing contact", async () => {
+  handler.post.mockResolvedValue(new Response(null, { status: 403 }));
+  await POST(
+    new Request("http://localhost/api/auth/organization/leave", {
+      method: "POST",
+      body: JSON.stringify({ organizationId: "team" }),
+    }),
+  );
+  expect(releaseTeamBillingContact).not.toHaveBeenCalled();
+});
+
+test("account deletion removes personal billing and moves team invoices to an owner", async () => {
+  handler.where.mockResolvedValue([{ organizationId: "team-a" }]);
+  vi.mocked(findTeamBillingContactOrganizations).mockResolvedValue(["team-a"]);
+  const departing = { id: "former-owner", email: "former@example.com" };
+
+  await accountDeletionSeatHooks.before(departing);
+  // Personal rows must go before the user row; team rows stay for the FK's SET NULL.
+  expect(deletePersonalBillingRecords).toHaveBeenCalledWith("former-owner");
+  expect(findTeamBillingContactOrganizations).toHaveBeenCalledWith("former-owner");
+  expect(redirectTeamBillingEmail).not.toHaveBeenCalled();
+  await accountDeletionSeatHooks.after(departing);
+
+  expect(redirectTeamBillingEmail).toHaveBeenCalledTimes(1);
+  expect(redirectTeamBillingEmail).toHaveBeenCalledWith("team-a", {
+    userId: "former-owner",
+    email: "former@example.com",
+  });
+  expect(updateTeamSeatCount).toHaveBeenCalledWith("team-a");
+});
+
+test("account deletion checks the invoices of every team the user belonged to or billed", async () => {
+  // A member's address can be on the customer without them being the row's contact,
+  // and a self-service deletion has already cleared the contact it found.
+  handler.where.mockResolvedValue([{ organizationId: "member-team" }]);
+  vi.mocked(takeDetachedTeamBillingContacts).mockReturnValue(["detached-team"]);
+  vi.mocked(findTeamBillingContactOrganizations).mockResolvedValue(["member-team"]);
+  const departing = { id: "former-admin", email: "former@example.com" };
+
+  await accountDeletionSeatHooks.before(departing);
+  expect(takeDetachedTeamBillingContacts).toHaveBeenCalledWith("former-admin");
+  await accountDeletionSeatHooks.after(departing);
+
+  const former = { userId: "former-admin", email: "former@example.com" };
+  expect(redirectTeamBillingEmail).toHaveBeenCalledTimes(2);
+  expect(redirectTeamBillingEmail).toHaveBeenCalledWith("member-team", former);
+  expect(redirectTeamBillingEmail).toHaveBeenCalledWith("detached-team", former);
+  // Seats only change for teams the user was still a member of.
+  expect(updateTeamSeatCount).toHaveBeenCalledTimes(1);
+  expect(updateTeamSeatCount).toHaveBeenCalledWith("member-team");
+});
+
+test("an account whose personal billing row cannot be removed is not deleted", async () => {
+  vi.mocked(deletePersonalBillingRecords).mockRejectedValue(new Error("database unavailable"));
+  const departing = { id: "personal-delete-fails" };
+
+  await expect(accountDeletionSeatHooks.before(departing)).rejects.toThrow("database unavailable");
+  await accountDeletionSeatHooks.after(departing);
+  expect(updateTeamSeatCount).not.toHaveBeenCalled();
+  expect(redirectTeamBillingEmail).not.toHaveBeenCalled();
 });

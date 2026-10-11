@@ -60,7 +60,7 @@ beforeEach(() => {
   mocks.set.mockReturnValue({ where: mocks.where });
   mocks.select.mockReturnValue({ from: () => ({ where: mocks.where }) });
   mocks.transaction.mockImplementation(async (run: (tx: unknown) => unknown) =>
-    run({ delete: mocks.delete }),
+    run({ delete: mocks.delete, update: mocks.update }),
   );
   mocks.delete.mockReturnValue({ where: mocks.where });
   mocks.where.mockImplementation(() => ({
@@ -173,6 +173,16 @@ test("rejects saving without an eligible plan", async () => {
   expect(mocks.insert).not.toHaveBeenCalled();
 });
 
+test("checks the plan before reading the transcript, whose body cap is large", async () => {
+  mocks.eligible = false;
+  // Invalid input would be BAD_REQUEST if it were parsed first.
+  const unparsed = { leftMessages: "not read" } as never;
+  await expect(caller().saveComparisonSession(unparsed)).rejects.toMatchObject({
+    code: "FORBIDDEN",
+  });
+  await expect(caller().saveComparison(unparsed)).rejects.toMatchObject({ code: "FORBIDDEN" });
+});
+
 test("rejects unknown or identical models, incomplete answers, and mismatched questions", async () => {
   for (const invalid of [
     { ...input(), leftModel: "unknown" },
@@ -257,7 +267,8 @@ test("deleting all conversations also deletes the owner's saved comparisons", as
   expect(mocks.delete).toHaveBeenCalledWith(modelComparisons);
   expect(mocks.delete).toHaveBeenCalledWith(chats);
   expectOwnerFilter();
-  const chatFilter = new PgDialect().sqlToQuery(mocks.where.mock.calls[1][0] as SQL);
+  // The chats' attachments are marked for deletion first (see chat-delete.test.ts), then the chats.
+  const chatFilter = new PgDialect().sqlToQuery(mocks.where.mock.calls[2][0] as SQL);
   expect(chatFilter.sql).toContain('"chats"."user_id"');
   expect(chatFilter.params).toEqual(["owner"]);
 });

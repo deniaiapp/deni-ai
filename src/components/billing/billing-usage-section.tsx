@@ -8,6 +8,7 @@ import { Badge } from "../ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Progress } from "../ui/progress";
 import { Spinner } from "../ui/spinner";
+import { AttachmentStorageUsage } from "./attachment-storage-usage";
 
 export type UsageItem = {
   category: "basic" | "premium";
@@ -129,6 +130,7 @@ export function BillingUsageSection({
               item={premiumUsage}
               maxModeEnabled={maxModeEnabled}
             />
+            <AttachmentStorageUsage />
           </div>
         )}
       </CardContent>

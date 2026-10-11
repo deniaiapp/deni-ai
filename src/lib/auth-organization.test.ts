@@ -90,12 +90,33 @@ test("a guest session cannot send or resend invitation emails", AUTH_IMPORT_TIME
 });
 
 test(
-  "account deletion reconciles team seats on every deletion path",
+  "account deletion reconciles team seats and deletes stored files on every deletion path",
   AUTH_IMPORT_TIMEOUT,
   async () => {
     const { auth } = await loadAuth();
     const { accountDeletionSeatHooks } = await import("./team-member-audit");
+    const { accountDeletionAttachmentHooks } = await import("./attachments");
+    const calls: string[] = [];
+    const record = (name: string) => async () => {
+      calls.push(name);
+    };
+    vi.spyOn(accountDeletionSeatHooks, "before").mockImplementation(record("seats before"));
+    vi.spyOn(accountDeletionSeatHooks, "after").mockImplementation(record("seats after"));
+    vi.spyOn(accountDeletionAttachmentHooks, "before").mockImplementation(record("files before"));
+    vi.spyOn(accountDeletionAttachmentHooks, "after").mockImplementation(record("files after"));
+    const hooks = auth.options.databaseHooks.user.delete;
+    const user = { id: "user", email: "user@example.com" } as never;
 
-    expect(auth.options.databaseHooks.user.delete).toBe(accountDeletionSeatHooks);
+    await hooks.before(user);
+    await hooks.after(user);
+    // Files are read after the billing step that can block the deletion, and
+    // deleted once the user row (and with it the attachment rows) is gone.
+    expect(calls).toEqual(["seats before", "files before", "files after", "seats after"]);
+
+    // A blocked deletion reads no files.
+    calls.length = 0;
+    vi.mocked(accountDeletionSeatHooks.before).mockRejectedValueOnce(new Error("billing"));
+    await expect(hooks.before(user)).rejects.toThrow("billing");
+    expect(calls).toEqual([]);
   },
 );

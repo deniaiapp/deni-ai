@@ -579,6 +579,16 @@ export function useLocalizeError() {
           format: ([, status]) =>
             t("Verification hasn't been authorized yet (status: {status}).", { status }),
         },
+        {
+          // storageQuotaExceededMessage in src/lib/attachment-quota.ts
+          pattern:
+            /^Attachment storage is full \((.+) of (.+) used\)\. Delete chats with attachments or upgrade your plan\.$/,
+          format: ([, used, limit]) =>
+            t(
+              "Attachment storage is full ({used} of {limit} used). Delete chats with attachments or upgrade your plan.",
+              { used, limit },
+            ),
+        },
       ],
       byTrpcCode: {
         ...mapKeys(t("You need to sign in to do that"), "UNAUTHORIZED"),

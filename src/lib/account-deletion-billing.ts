@@ -156,20 +156,6 @@ async function isTeamOwner(userId: string) {
   return Boolean(ownership);
 }
 
-async function hasRunningTeamSubscription(userId: string) {
-  const records = await db
-    .select({ customerId: billing.stripeCustomerId })
-    .from(billing)
-    .where(and(eq(billing.userId, userId), isNotNull(billing.organizationId)));
-  if (!records.length) return false;
-  if (!env.STRIPE_SECRET_KEY?.trim())
-    throw new Error("Stripe is unavailable; account deletion cannot be completed.");
-  const all = (
-    await Promise.all(records.map((record) => getSubscriptions(record.customerId)))
-  ).flat();
-  return classifyDeletionSubscriptions(all).state !== "ready";
-}
-
 /**
  * Why a personal customer's cards must stay attached: a running subscription
  * ("active"), or one still due to invoice before it ends, including metered
@@ -212,13 +198,38 @@ async function hasUnbilledMeterUsage(hosts: Stripe.Subscription[]) {
 /** Preview for the deletion dialog; `deletePersonalStripeCustomers` rechecks everything. */
 export async function getAccountDeletionStatus(userId: string): Promise<AccountDeletionStatus> {
   if (await isTeamOwner(userId)) return { state: "teamOwner", periodEnd: null };
+  // A team subscription belongs to its organization and keeps running after a
+  // former owner or billing contact leaves, so only personal billing is checked.
   const customerIds = await getPersonalCustomerIds(userId, { includeOrphans: false });
   const all = (await Promise.all([...customerIds].map(getSubscriptions))).flat();
-  if (await hasRunningTeamSubscription(userId)) return { state: "active", periodEnd: null };
   return personalDeletionStatus(userId, customerIds, all);
 }
 
-/** Run in better-auth's beforeDelete hook, before the billing row is cascaded away. */
+/**
+ * Personal billing rows are deleted with their user. `billing.user_id` is
+ * SET NULL so team rows outlive their billing contact, and a personal row may
+ * not lose its user, so every account deletion path (the user delete database
+ * hook) removes them right before the user row.
+ */
+export async function deletePersonalBillingRecords(userId: string) {
+  await db.delete(billing).where(and(eq(billing.userId, userId), isNull(billing.organizationId)));
+}
+
+// Teams whose billing contact an account deletion cleared, for its user delete hooks.
+const detachedTeamBillingContacts = new Map<string, Set<string>>();
+
+/**
+ * The teams `deletePersonalStripeCustomers` stopped naming this user as their
+ * billing contact. Their rows no longer reference the user, so the user delete
+ * hooks cannot find them on their own.
+ */
+export function takeDetachedTeamBillingContacts(userId: string): string[] {
+  const organizationIds = detachedTeamBillingContacts.get(userId);
+  detachedTeamBillingContacts.delete(userId);
+  return [...(organizationIds ?? [])];
+}
+
+/** Run in better-auth's beforeDelete hook, before the personal billing row is deleted. */
 export async function deletePersonalStripeCustomers(userId: string) {
   // Check again at deletion time; bypassing the UI or an in-flight transfer
   // must not leave an organization without its owner.
@@ -235,14 +246,14 @@ export async function deletePersonalStripeCustomers(userId: string) {
       message:
         "Wait for usage billing to finish and pay outstanding invoices before deleting your account.",
     });
-  if (status.state === "active" || (await hasRunningTeamSubscription(userId))) {
+  if (status.state === "active") {
     throw new APIError("BAD_REQUEST", {
       message: "Cancel your active subscription before deleting your account.",
     });
   }
   // Freeze new reservations under the same account lock before Stripe I/O.
   // Retry remains possible if Stripe or the later account deletion fails.
-  await db.transaction(
+  const detached = await db.transaction(
     async (tx) => {
       await tx.execute(sql`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`);
       if (await hasPendingUsage(userId, customerIds, tx))
@@ -251,9 +262,25 @@ export async function deletePersonalStripeCustomers(userId: string) {
         .update(billing)
         .set({ deletionPending: true })
         .where(and(eq(billing.userId, userId), isNull(billing.organizationId)));
+      // Team rows outlive their billing contact. Clear it here, before Stripe and
+      // before better-auth removes sessions and accounts, rather than leave it to
+      // the FK: on a database without the SET NULL migration, user_id is still
+      // NOT NULL with ON DELETE CASCADE, so this fails the deletion instead of
+      // letting the cascade delete the team's billing row.
+      return tx
+        .update(billing)
+        .set({ userId: null, updatedAt: new Date() })
+        .where(and(eq(billing.userId, userId), isNotNull(billing.organizationId)))
+        .returning({ organizationId: billing.organizationId });
     },
     { isolationLevel: "read committed" },
   );
+  // Merged, so a retry after a later failure still redirects these teams' invoices.
+  const organizationIds = detachedTeamBillingContacts.get(userId) ?? new Set<string>();
+  for (const { organizationId } of detached) {
+    if (organizationId) organizationIds.add(organizationId);
+  }
+  if (organizationIds.size) detachedTeamBillingContacts.set(userId, organizationIds);
   if (status.state === "cancelPending") {
     // Immediate deletion forfeits remaining access, with no proration or refund.
     for (const sub of subscriptions) {
