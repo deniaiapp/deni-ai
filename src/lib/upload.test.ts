@@ -63,6 +63,16 @@ test("files are uploaded as private, tagged with their row id, and only their ke
   expect(await uploaded.text()).toBe("xyz");
 });
 
+test("a file can be stored to download under its name rather than to show", async () => {
+  const file = new File(["{}"], "deni-ai-export-2026-10-11.json", { type: "application/json" });
+  expect(await uploadPrivateFile(file, "export-id", { contentDisposition: "attachment" })).toBe(
+    "file-key",
+  );
+  const [uploaded, options] = mocks.uploadFiles.mock.calls[0]!;
+  expect(options).toEqual({ acl: "private", contentDisposition: "attachment" });
+  expect(uploaded).toMatchObject({ name: "deni-ai-export-2026-10-11.json", customId: "export-id" });
+});
+
 test("a failed upload returns null", async () => {
   mocks.uploadFiles.mockResolvedValueOnce({ data: null, error: { code: "UPLOAD_FAILED" } });
   expect(await uploadPrivateFile(new File(["x"], "a.png"), "id")).toBeNull();

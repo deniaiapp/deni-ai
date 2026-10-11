@@ -17,6 +17,7 @@ import { nanoid } from "nanoid";
 import { db } from "@/db/drizzle";
 import { attachment, chats } from "@/db/schema";
 import { env } from "@/env";
+import { collectAccountExportFiles } from "@/lib/account-export-jobs";
 import { fitsStorageLimit, getStorageLimitBytes } from "@/lib/attachment-quota";
 import { ATTACHMENT_URL_PREFIX, parseAppAttachmentUrl } from "@/lib/attachment-url";
 import { rewriteLegacyAttachmentUrls } from "@/lib/legacy-attachment-migration";
@@ -463,21 +464,24 @@ export type AccountStoredFiles = { keys: string[]; customIds: string[] };
 
 /**
  * Every file an account has in storage, read before its user row is deleted
- * (that cascades the rows recording them). Anything else stored per account
- * (for example data export files) belongs here too, so deleting the account
+ * (that cascades the rows recording them): attachments and data export files.
+ * Anything else stored per account belongs here too, so deleting the account
  * deletes it: add its keys to the result.
  */
 export async function collectAccountStoredFiles(
   userId: string,
   database: Pick<typeof db, "select"> = db,
 ): Promise<AccountStoredFiles> {
-  const rows = await database
-    .select(deletingColumns)
-    .from(attachment)
-    .where(eq(attachment.userId, userId));
+  const [rows, exports] = await Promise.all([
+    database.select(deletingColumns).from(attachment).where(eq(attachment.userId, userId)),
+    collectAccountExportFiles(userId, database),
+  ]);
   return {
-    keys: rows.flatMap(({ storageKey }) => (storageKey ? [storageKey] : [])),
-    customIds: rows.flatMap(({ id, storageKey }) => (storageKey ? [] : [id])),
+    keys: [...rows.flatMap(({ storageKey }) => (storageKey ? [storageKey] : [])), ...exports.keys],
+    customIds: [
+      ...rows.flatMap(({ id, storageKey }) => (storageKey ? [] : [id])),
+      ...exports.customIds,
+    ],
   };
 }
 
@@ -487,8 +491,8 @@ const departingFiles = new Map<string, AccountStoredFiles>();
 /**
  * Better Auth `databaseHooks.user.delete` steps for every account deletion
  * (Delete account, a guest removed after linking an account). Deleting the
- * user cascades its attachment rows, the only record of its files, so their
- * keys are read before and the files deleted once the user row is gone.
+ * user cascades its attachment and export rows, the only record of its files,
+ * so their keys are read before and the files deleted once the user row is gone.
  * Neither step throws: storage cleanup must never block an account deletion.
  * A file whose deletion fails stays in storage with no row (logged).
  */

@@ -18,6 +18,10 @@ const mocks = vi.hoisted(() => ({
     ],
   ),
   tier: vi.fn(async (_userId: string) => "free" as "free" | "plus" | "pro" | "max"),
+  exportFiles: vi.fn(async (_userId: string, _database?: unknown) => ({
+    keys: [] as string[],
+    customIds: [] as string[],
+  })),
 }));
 
 vi.mock("@/db/drizzle", () => ({
@@ -37,6 +41,7 @@ vi.mock("@/lib/upload", () => ({
   signAttachmentUrl: mocks.sign,
 }));
 vi.mock("@/lib/usage", () => ({ getSubscriptionTier: mocks.tier }));
+vi.mock("@/lib/account-export-jobs", () => ({ collectAccountExportFiles: mocks.exportFiles }));
 
 const {
   accountDeletionAttachmentHooks,
@@ -265,6 +270,8 @@ beforeEach(() => {
   mocks.deleteStoredFiles.mockClear();
   mocks.tier.mockReset();
   mocks.tier.mockResolvedValue("free");
+  mocks.exportFiles.mockReset();
+  mocks.exportFiles.mockResolvedValue({ keys: [], customIds: [] });
 });
 
 test("concurrent uploads cannot reserve more than the quota", async () => {
@@ -943,10 +950,13 @@ test("account deletion collects every stored file of the account", async () => {
     { id: DELETING, storageKey: "key-deleting", status: "deleting" },
     { id: THEIRS, userId: "someone-else", storageKey: "key-theirs" },
   ]);
+  // Data export files are stored per account too.
+  mocks.exportFiles.mockResolvedValue({ keys: ["export-key"], customIds: ["export-unsaved"] });
   expect(await collectAccountStoredFiles("user", database)).toEqual({
-    keys: ["key-mine", "key-deleting"],
-    customIds: [PENDING],
+    keys: ["key-mine", "key-deleting", "export-key"],
+    customIds: [PENDING, "export-unsaved"],
   });
+  expect(mocks.exportFiles).toHaveBeenCalledExactlyOnceWith("user", database);
 });
 
 test("deleting an account deletes its stored files once the user row is gone", async () => {

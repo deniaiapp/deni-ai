@@ -30,8 +30,14 @@ export function isStorageConfigured(): boolean {
  *
  * `customId` is stored with the file (the attachment row id), so a file whose key
  * never reached the database can still be deleted with `deleteStoredFiles(ids, "customId")`.
+ * `contentDisposition: "attachment"` makes its signed URL download the file
+ * under its name instead of showing it (data exports).
  */
-export async function uploadPrivateFile(file: File, customId: string): Promise<string | null> {
+export async function uploadPrivateFile(
+  file: File,
+  customId: string,
+  { contentDisposition }: { contentDisposition?: "inline" | "attachment" } = {},
+): Promise<string | null> {
   if (!utapi) return null;
 
   try {
@@ -40,7 +46,10 @@ export async function uploadPrivateFile(file: File, customId: string): Promise<s
       lastModified: file.lastModified,
       customId,
     });
-    const response = await utapi.uploadFiles(stored, { acl: "private" });
+    const response = await utapi.uploadFiles(
+      stored,
+      contentDisposition ? { acl: "private", contentDisposition } : { acl: "private" },
+    );
 
     if (response.error) {
       console.error("[upload] UploadThing error:", response.error);

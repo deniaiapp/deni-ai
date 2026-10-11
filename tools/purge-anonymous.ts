@@ -19,13 +19,20 @@ const RETENTION_DAYS = 7;
 const cutoff = new Date(Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000);
 const purged = and(eq(schema.user.isAnonymous, true), lt(schema.user.createdAt, cutoff));
 
-// Deleting a user cascades its attachment rows, the only record of its stored
-// files: read them first, and delete the files once the users are gone.
-const files = await db
-  .select({ id: schema.attachment.id, storageKey: schema.attachment.storageKey })
-  .from(schema.attachment)
-  .innerJoin(schema.user, eq(schema.attachment.userId, schema.user.id))
-  .where(purged);
+// Deleting a user cascades its attachment and data export rows, the only record
+// of its stored files: read them first, and delete the files once the users are gone.
+const files = [
+  ...(await db
+    .select({ id: schema.attachment.id, storageKey: schema.attachment.storageKey })
+    .from(schema.attachment)
+    .innerJoin(schema.user, eq(schema.attachment.userId, schema.user.id))
+    .where(purged)),
+  ...(await db
+    .select({ id: schema.accountExport.id, storageKey: schema.accountExport.storageKey })
+    .from(schema.accountExport)
+    .innerJoin(schema.user, eq(schema.accountExport.userId, schema.user.id))
+    .where(purged)),
+];
 
 // Checked before any user is deleted: once the rows are gone, nothing records
 // these files, so a run that cannot delete them must not delete the users.
@@ -46,7 +53,7 @@ console.log(
 if (files.length > 0) {
   const utapi = new UTApi({ token });
   // A key is recorded once the upload finished; before that, the file can only
-  // be found by its custom id (the attachment id).
+  // be found by its custom id (the attachment or export id).
   const keys = files.flatMap(({ storageKey }) => (storageKey ? [storageKey] : []));
   const customIds = files.flatMap(({ id, storageKey }) => (storageKey ? [] : [id]));
   const deletedKeys = new Set(await deleteFilesInBatches(utapi, keys, "fileKey"));

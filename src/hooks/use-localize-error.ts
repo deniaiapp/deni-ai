@@ -439,6 +439,7 @@ export function useLocalizeError() {
           t("This checkout session is not a personal plan purchase."),
           "This checkout session is not a personal plan purchase.",
         ),
+        ...mapKeys(t("This export is no longer available."), "This export is no longer available."),
         ...mapKeys(
           t("This one-time plan has already been purchased."),
           "This one-time plan has already been purchased.",
