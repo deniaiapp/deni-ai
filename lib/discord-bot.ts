@@ -28,6 +28,7 @@ import {
 import {
   discordComponentId,
   parseDiscordComponentId,
+  resetDiscordConversation,
   runDiscordApproval,
   runDiscordMessage,
   type TurnOutcome,
@@ -223,6 +224,12 @@ async function handleCommand(interaction: ChatInputCommandInteraction) {
     await interaction.editReply({ content: tr("Unlinked. This Discord account no longer reaches your workspace.") });
     return;
   }
+  if (interaction.commandName === "reset") {
+    // Queued behind a reply in flight, so the divider lands after it instead of being refused.
+    const content = await serialize(discord.id, () => resetDiscordConversation({ userId: link.userId, botId: link.botId, locale: link.locale }));
+    await interaction.editReply({ content });
+    return;
+  }
   if (interaction.commandName === "teammate") {
     const store = await readStore(link.userId);
     const typed = interaction.options.getString("name")?.trim();
@@ -292,6 +299,7 @@ function commandDefinitions() {
     builder.setContexts(InteractionContextType.BotDM).setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall);
   return [
     dm(new SlashCommandBuilder().setName("link").setDescription("Link this Discord account to your workspace").addStringOption((option) => option.setName("code").setDescription("Code from the app's Discord settings").setRequired(true))),
+    dm(new SlashCommandBuilder().setName("reset").setDescription("Start a new conversation with your teammate")),
     dm(new SlashCommandBuilder().setName("teammate").setDescription("Show or choose the teammate you talk to").addStringOption((option) => option.setName("name").setDescription("Teammate name").setAutocomplete(true))),
     dm(new SlashCommandBuilder().setName("model").setDescription("Show or choose the model family").addStringOption((option) => option.setName("family").setDescription("Run is faster and cheaper, Run+ is stronger").addChoices({ name: "Run", value: "run" }, { name: "Run+", value: "plus" }))),
     dm(new SlashCommandBuilder().setName("effort").setDescription("Show or choose how hard the model thinks").addStringOption((option) => option.setName("level").setDescription("Reasoning effort").addChoices({ name: "Default (medium)", value: "default" }, { name: "High", value: "high" }, { name: "xhigh", value: "xhigh" }, { name: "Max", value: "max" }))),

@@ -29,6 +29,7 @@ import { createNotification } from "./notifications";
 import { getJob, transitionJob } from "./jobs";
 import { nextCron } from "./cron";
 import { translateError, translatorFor, type Translate } from "./i18n-server";
+import { lookBack } from "./history";
 export { nextCron } from "./cron";
 
 export type AgentContext = {
@@ -84,6 +85,7 @@ ${hasExaApiKey() ? "Use webSearch to find current information and sources before
 
 # Memory
 Use remember to save preferences, facts, and methods that should persist.
+Long conversations are trimmed to save tokens, and the person can reset a conversation. The older messages are kept: call conversationHistory when the person refers to something you cannot see.
 Current memory:
 ${memory}
 
@@ -371,6 +373,16 @@ export function createDeniTools(ctx: AgentContext) {
         });
         return { saved: true };
       },
+    }),
+    conversationHistory: tool({
+      description:
+        "Look back at earlier parts of this conversation that are no longer in your context: older messages left out to save tokens, and everything before the person reset the conversation. summary gives an overview, search finds messages by keywords, read opens one message in full. Use it only when you need something from before.",
+      inputSchema: z.object({
+        action: z.enum(["summary", "search", "read"]),
+        query: z.string().optional().describe("Keywords separated by spaces, for search"),
+        messageId: z.string().optional().describe("Message id from search results, for read"),
+      }),
+      execute: async (input) => lookBack({ userId: ctx.userId, threadId: ctx.threadId, bot: ctx.bot, ...input }),
     }),
     saveSkill: tool({
       description: "Save a successful procedure as a reusable skill.",

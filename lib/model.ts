@@ -2,6 +2,10 @@ export const DENI_MODEL_ID = "anthropic/claude-sonnet-5.5";
 export const DENI_REASONING_EFFORT = "medium";
 export const DENI_MODEL_LABEL = "Run Default";
 
+/** Summarizes history the model no longer sees. Haiku 5.5 costs 1/20 of Sonnet 5.5 per token. */
+export const SUMMARY_MODEL_ID = "anthropic/claude-haiku-5.5";
+export const SUMMARY_TOKEN_MULTIPLIER = 0.05;
+
 export const RUN_MODE_IDS = ["default", "high", "xhigh", "max", "plus-default", "plus-high", "plus-xhigh", "plus-max"] as const;
 export type RunMode = (typeof RUN_MODE_IDS)[number];
 export type ReasoningEffort = "medium" | "high" | "xhigh" | "max";

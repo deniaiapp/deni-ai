@@ -179,7 +179,7 @@ Teammates can be reached from Discord direct messages through one shared bot.
 3. Run `pnpm db:migrate` to create the `discord_links` and `discord_link_codes` tables.
 4. In the app open **Plugins**, choose **Create link code** on the Discord card, and send the code to the bot in a direct message (or use `/link`). The code works once and expires after 10 minutes.
 
-After linking, a plain direct message goes to the chosen teammate and the reply comes back in the same conversation, which is also visible in the web app. `/teammate` lists teammates or switches to one, and `/unlink` disconnects the account.
+After linking, a plain direct message goes to the chosen teammate and the reply comes back in the same conversation, which is also visible in the web app. `/teammate` lists teammates or switches to one, `/reset` starts a new conversation with the current teammate, and `/unlink` disconnects the account.
 
 Commands that need approval, file deletion, and plugin writes arrive as a message with **Approve** and **Deny** buttons; the task resumes after you answer. A step that needs the browser (login, 2FA, CAPTCHA) cannot be done in Discord, so the bot asks you to finish it in the app. Only direct messages are served, never server channels, because a teammate's answer can contain private data.
 

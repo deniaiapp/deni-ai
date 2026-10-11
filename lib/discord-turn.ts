@@ -33,6 +33,7 @@ import { createNotification } from "./notifications";
 import { assertRateLimit, RateLimitError } from "./rate-limit";
 import { reportError } from "./report";
 import { loadMessages, readStore, saveMessages } from "./store";
+import { resetThreadContext } from "./thread-context";
 import type { AgentJob, Bot, Store, Thread } from "./types";
 import { assertCanUseTokens, recordTokenUsage } from "./usage";
 
@@ -352,6 +353,19 @@ export async function runDiscordMessage(options: {
   const claimed = await claimJob(userId, created.id);
   if (!claimed?.claimed || claimed.job.status !== "running") return { kind: "none" };
   return executeTurn({ userId, locale, store, bot, thread, job: claimed.job, messages, requestMessage: incoming, assistantId: `${created.id}_assistant_${hash}`, runMode });
+}
+
+/** /reset: later turns with the current teammate start fresh. The history stays in the app. */
+export async function resetDiscordConversation(options: { userId: string; botId: string | null; locale: string }) {
+  const tr = translatorFor(options.locale);
+  const target = pickBot(await readStore(options.userId), options.botId);
+  if (!target) return tr("Create a teammate in the app first, then message again.");
+  const { bot, thread } = target;
+  const result = await resetThreadContext(options.userId, thread.id);
+  if (result === "busy") return tr("{name} is still working or waiting for you. Finish or stop that task, then reset.", { name: bot.name });
+  if (result === "unchanged") return tr("The conversation with {name} is already fresh.", { name: bot.name });
+  if (result === "missing") return tr("Create a teammate in the app first, then message again.");
+  return tr("Started a new conversation with {name}. Earlier messages stay in the app but are no longer sent.", { name: bot.name });
 }
 
 /** Apply an Approve/Deny button press to every request of that round and resume the job. */

@@ -137,12 +137,14 @@ async function main() {
   // End to end with a stubbed model: reply, approval round trip, and takeover continuation.
   process.env.OPENROUTER_API_KEY = "test-key";
   const completions: ("text" | "tool")[] = [];
+  const requests: string[] = [];
   const script: { text?: string; tool?: { name: string; args: unknown } }[] = [];
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (!String(input).includes("/chat/completions")) return realFetch(input, init);
     const step = script.shift();
     if (!step) throw new Error("model called more often than scripted");
+    requests.push(String(init?.body ?? ""));
     completions.push(step.tool ? "tool" : "text");
     const chunk = (delta: object, finish: string | null) =>
       `data: ${JSON.stringify({ id: "gen-1", object: "chat.completion.chunk", created: 0, model: "stub", choices: [{ index: 0, delta, finish_reason: finish }] })}\n\n`;
@@ -186,6 +188,20 @@ async function main() {
   const resumedTakeover = await say("m103", "done, I logged in");
   assert(resumedTakeover.kind === "reply" && resumedTakeover.text === "Thanks, continuing.", `takeover: ${JSON.stringify(resumedTakeover)}`);
   assert((await jobs.getJob(e2e, waiting.id))?.status === "completed", "takeover job did not continue");
+
+  // /reset: the next turn only sends what follows the divider, and the history stays stored.
+  const reset = (botId: string | null = "ops") => turn.resetDiscordConversation({ userId: e2e, botId, locale: "en" });
+  assert((await reset()).startsWith("Started a new conversation with Operations"), "reset was not confirmed");
+  assert((await reset()).includes("already fresh"), "a second reset added another divider");
+  script.push({ text: "Fresh start." });
+  const fresh = await say("m104", "what did we talk about?");
+  assert(fresh.kind === "reply" && fresh.text === "Fresh start.", `after reset: ${JSON.stringify(fresh)}`);
+  const sent = requests.at(-1) ?? "";
+  assert(sent.includes("what did we talk about?") && !sent.includes("clean the build folder"), "the model saw messages from before the reset");
+  const kept = await store.loadMessages(e2e, "dm_ops");
+  assert(kept.some((message) => message.parts.some((part) => part.type === "text" && part.text === "clean the build folder")), "reset deleted the history");
+  await jobs.createJob({ userId: e2e, threadId: "dm_ops", botId: "ops", kind: "chat", idempotencyKey: "busy-job", payload: { source: "discord" } });
+  assert((await reset()).includes("still working or waiting"), "reset ran while a task was queued");
   assert(script.length === 0, "unused scripted model responses");
   globalThis.fetch = realFetch;
 

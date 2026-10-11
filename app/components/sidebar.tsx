@@ -16,6 +16,7 @@ import {
   MessageSquare,
   Pencil,
   Pin,
+  RotateCcw,
   Trash2,
   Loader2,
   Plug,
@@ -57,6 +58,7 @@ export type TeammateMenuAction =
   | "new-section"
   | "remove-section"
   | "unread"
+  | "reset"
   | "edit"
   | "duplicate"
   | "hide"
@@ -369,6 +371,10 @@ function TeammateRow({
         <ContextMenuItem onSelect={() => onAction("unread")}>
           <MessageSquare />
           {thread.unread ? t("Mark as Read") : t("Mark as Unread")}
+        </ContextMenuItem>
+        <ContextMenuItem onSelect={() => onAction("reset")}>
+          <RotateCcw />
+          {t("Reset conversation")}
         </ContextMenuItem>
         <ContextMenuItem onSelect={() => onAction("edit")}>
           <Pencil />

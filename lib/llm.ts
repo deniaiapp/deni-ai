@@ -1,6 +1,6 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { getApiKey } from "./config";
-import { parseRunMode, RUN_MODES, type RunMode } from "./model";
+import { parseRunMode, RUN_MODES, SUMMARY_MODEL_ID, SUMMARY_TOKEN_MULTIPLIER, type RunMode } from "./model";
 import { readStore } from "./store";
 
 export async function getDeniModel(userId: string, runMode?: RunMode) {
@@ -29,4 +29,13 @@ export async function getDeniModel(userId: string, runMode?: RunMode) {
       },
     },
   };
+}
+
+/** A small, cheap model for housekeeping such as summarizing old conversation history. */
+export async function getSummaryModel(userId: string) {
+  const apiKey = await getApiKey(userId);
+  if (!apiKey) {
+    throw new Error("OPENROUTER_API_KEY is missing");
+  }
+  return { model: createOpenRouter({ apiKey })(SUMMARY_MODEL_ID), tokenMultiplier: SUMMARY_TOKEN_MULTIPLIER };
 }

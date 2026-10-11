@@ -397,8 +397,33 @@ export function Workspace() {
     [threads, patchThread],
   );
 
+  const resetConversation = useCallback(
+    async (thread: Thread) => {
+      setActionError(null);
+      setActionBusyId(thread.id);
+      try {
+        const response = await fetch(`/api/threads/${encodeURIComponent(thread.id)}/reset`, { method: "POST" });
+        const data = (await response.json().catch(() => ({}))) as { error?: string; messages?: UIMessage[] };
+        if (!response.ok) throw new Error(data.error || t("Could not reset the conversation."));
+        const nextMessages = data.messages ?? [];
+        setMessagesByThread((current) => cacheThreadMessages(current, thread.id, nextMessages));
+        if (activeThreadRef.current === thread.id) setMessages(nextMessages);
+        syncChatSessionMessages(thread.id, nextMessages);
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : t("Could not reset the conversation."));
+      } finally {
+        setActionBusyId(null);
+      }
+    },
+    [t],
+  );
+
   const handleTeammateAction = useCallback(
     async (thread: Thread, bot: Bot, action: TeammateMenuAction) => {
+      if (action === "reset") {
+        await resetConversation(thread);
+        return;
+      }
       if (action === "pin") {
         patchThread(thread.id, { pinned: !thread.pinned });
         return;
@@ -523,6 +548,7 @@ export function Workspace() {
       canUpgrade,
       openTeammatePaywall,
       patchThread,
+      resetConversation,
       routines,
       t,
       teammateLimitReached,
@@ -648,6 +674,8 @@ export function Workspace() {
             }}
             onBusyChange={handleChatBusyChange}
             onActiveJobChange={setActiveJobId}
+            onResetConversation={() => void resetConversation(activeThread)}
+            resetting={actionBusyId === activeThread.id}
             chat={activeChat!}
             backgroundJobs={jobsByThread[activeThread.id] ?? []}
             onJobsChange={(nextJobs) => updateThreadJobs(activeThread.id, nextJobs)}

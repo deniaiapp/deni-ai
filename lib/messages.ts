@@ -89,7 +89,102 @@ export function slimMessagesForClient(messages: UIMessage[]): UIMessage[] {
   });
 }
 
-export function compactMessagesForModel(messages: UIMessage[]): UIMessage[] {
+const CONTEXT_RESET = "context-reset";
+
+/**
+ * A divider stored in the thread. The conversation above it stays visible to the person, but
+ * the model only ever sees what comes after the latest one.
+ */
+export function contextResetMessage(id: string): UIMessage {
+  return { id, role: "system", parts: [], metadata: { kind: CONTEXT_RESET, at: new Date().toISOString() } };
+}
+
+export function isContextReset(message: UIMessage) {
+  return message.role === "system" && (message.metadata as { kind?: unknown } | undefined)?.kind === CONTEXT_RESET;
+}
+
+// History is trimmed once it passes the limit, down to the target. The gap between the two
+// keeps the cut in place for many turns, so the cached prompt prefix keeps being reused.
+// Instructions, tool definitions, and recent tool output come on top, so a request stays
+// around 200k tokens.
+export const HISTORY_TOKEN_LIMIT = 180_000;
+export const HISTORY_TOKEN_TARGET = 100_000;
+const TRIMMED_NOTE = "[Earlier messages in this conversation were left out to save tokens. Call conversationHistory for a summary of them or to search them.]";
+
+/** Rough count: about four ASCII characters per token, and one token per other character. */
+function estimateTokens(text: string) {
+  const other = text.replace(/[\x00-\x7f]/g, "").length;
+  return Math.ceil((text.length - other) / 4) + other;
+}
+
+function json(value: unknown) {
+  try {
+    return JSON.stringify(value) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+// Measured as if every message were old, so a message weighs the same on every turn and the
+// cut point does not drift as it ages out of the recent window.
+function messageTokens(message: UIMessage) {
+  let total = 4;
+  for (const part of message.parts) {
+    if (part.type === "text") total += estimateTokens(part.text);
+    else if (part.type === "reasoning") total += estimateTokens(truncateString(part.text, MAX_REASONING_MODEL));
+    else if (isToolPart(part)) {
+      const tool = part as { input?: unknown; output?: unknown };
+      total += estimateTokens(json(tool.input)) + estimateTokens(json(slimJson(tool.output, MAX_TOOL_MODEL_OLD)));
+    } else total += estimateTokens(json(part).slice(0, 4_000));
+  }
+  return total;
+}
+
+/**
+ * What the model sees of a thread: everything after the latest reset, trimmed to a token
+ * budget. Turns are only dropped whole, from the front, so the window always opens on a user
+ * message and always keeps the newest one. Each cut depends only on the messages before it,
+ * so it stays put as the conversation grows.
+ */
+function contextWindow(messages: UIMessage[]) {
+  const positions: number[] = [];
+  for (let index = messages.findLastIndex(isContextReset) + 1; index < messages.length; index++) {
+    if (messages[index].role !== "system") positions.push(index);
+  }
+  const weights = positions.map((position) => messageTokens(messages[position]));
+  let start = 0;
+  let total = 0;
+  for (let index = 0; index < positions.length; index++) {
+    total += weights[index];
+    if (total <= HISTORY_TOKEN_LIMIT) continue;
+    let rest = total;
+    for (let cut = start + 1; cut <= index; cut++) {
+      rest -= weights[cut - 1];
+      if (messages[positions[cut]].role !== "user") continue;
+      start = cut;
+      total = rest;
+      if (rest <= HISTORY_TOKEN_TARGET) break;
+    }
+  }
+  return { positions: positions.slice(start), trimmed: start > 0 };
+}
+
+/** Index of the first message the model sees; everything before it is reachable only through conversationHistory. */
+export function modelContextStart(messages: UIMessage[]) {
+  return contextWindow(messages).positions[0] ?? messages.length;
+}
+
+export function modelContextMessages(messages: UIMessage[]): UIMessage[] {
+  const { positions, trimmed } = contextWindow(messages);
+  const scoped = positions.map((position) => messages[position]);
+  if (!trimmed) return scoped;
+  const [first, ...rest] = scoped;
+  return [{ ...first, parts: [{ type: "text", text: TRIMMED_NOTE }, ...first.parts] }, ...rest];
+}
+
+/** Slim tool output and reasoning for the model, after cutting the thread to its context window. */
+export function compactMessagesForModel(thread: UIMessage[]): UIMessage[] {
+  const messages = modelContextMessages(thread);
   const startRecent = Math.max(0, messages.length - RECENT_COUNT);
   return mapMessageParts(messages, (part, messageIndex) => {
     const recent = messageIndex >= startRecent;

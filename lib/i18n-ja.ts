@@ -238,4 +238,7 @@ export const ja: Record<string, string> = {
   "Now using {mode}. {cost}": "{mode} に切り替えました。{cost}",
   "Current setting: {mode}. {cost}": "現在の設定: {mode}。{cost}",
   "{multiplier}× tokens": "トークン消費 {multiplier}倍",
+  "{name} is still working or waiting for you. Finish or stop that task, then reset.": "{name} さんは作業中か、あなたの対応を待っています。そのタスクを終えるか停止してから、リセットしてください。",
+  "The conversation with {name} is already fresh.": "{name} さんとの会話はすでに新しい状態です。",
+  "Started a new conversation with {name}. Earlier messages stay in the app but are no longer sent.": "{name} さんとの会話をリセットしました。これまでのメッセージはアプリに残りますが、今後は送信されません。",
 };

@@ -31,7 +31,7 @@ export function DiscordCard({ status, onStatusChange }: { status: DiscordStatus 
 
   if (!status?.configured) return null;
   const current = status;
-  const hint = t("Commands in the DM: /teammate chooses who you talk to, /unlink disconnects. Actions that need approval show Approve and Deny buttons.");
+  const hint = t("Commands in the DM: /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Actions that need approval show Approve and Deny buttons.");
 
   async function createCode() {
     setBusy(true);

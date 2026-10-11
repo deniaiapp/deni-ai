@@ -125,6 +125,11 @@ function normalizeStore(store: Store) {
   store.usage.tokens ??= 0;
   store.usage.browserMs ??= 0;
   store.usage.computerMs ??= 0;
+  if (store.historySummaries) {
+    // Drop summaries of deleted conversations, whichever route deleted them.
+    const live = new Set(store.threads.map((thread) => thread.id));
+    for (const id of Object.keys(store.historySummaries)) if (!live.has(id)) delete store.historySummaries[id];
+  }
   for (const thread of store.threads) {
     thread.pinned ??= false;
     thread.unread ??= false;

@@ -253,6 +253,15 @@ export type Store = {
   notifications?: AppNotification[];
   mcpConnections?: McpConnection[];
   pluginAlwaysAllow?: Record<string, boolean>;
+  /** Rolling summaries of the history each thread no longer sends to the model, by thread id. */
+  historySummaries?: Record<string, HistorySummary>;
+};
+
+export type HistorySummary = {
+  /** Last message the summary covers; anything after it is folded in on the next request. */
+  throughMessageId: string;
+  text: string;
+  updatedAt: string;
 };
 
 export type WorkspaceNode = {

@@ -93,6 +93,7 @@ msgstr "This task is already running or this message has already been submitted.
 
 #: app/api/chat/route.ts
 #: app/api/threads/[id]/reactions/route.ts
+#: app/api/threads/[id]/reset/route.ts
 #: app/api/threads/[id]/route.ts
 msgctxt "eePQiZ"
 msgid "Conversation not found."
@@ -385,6 +386,11 @@ msgstr "Invalid reaction"
 msgctxt "UhsO-i"
 msgid "Message not found"
 msgstr "Message not found"
+
+#: app/api/threads/[id]/reset/route.ts
+msgctxt "OatSux"
+msgid "Stop or finish the current task before resetting the conversation."
+msgstr "Stop or finish the current task before resetting the conversation."
 
 #: app/api/threads/[id]/route.ts
 msgctxt "rDFiEI"
@@ -963,6 +969,17 @@ msgid "Waiting for your help…"
 msgstr "Waiting for your help…"
 
 #: app/components/chat-thread.tsx
+msgctxt "J_0YT8"
+msgid "Earlier messages stay here but are no longer sent to the model."
+msgstr "Earlier messages stay here but are no longer sent to the model."
+
+#: app/components/chat-thread.tsx
+#: app/components/sidebar.tsx
+msgctxt "1q491N"
+msgid "Reset conversation"
+msgstr "Reset conversation"
+
+#: app/components/chat-thread.tsx
 msgctxt "40zwh7"
 msgid "@everyone to ask everyone · @name to ask a teammate"
 msgstr "@everyone to ask everyone · @name to ask a teammate"
@@ -1077,6 +1094,11 @@ msgstr "Hide preview"
 msgctxt "pM1vUw"
 msgid "Request revision"
 msgstr "Request revision"
+
+#: app/components/chat-thread.tsx
+msgctxt "vU7nR3"
+msgid "New conversation · earlier messages are not sent"
+msgstr "New conversation · earlier messages are not sent"
 
 #: app/components/chat-thread.tsx
 msgctxt "W-q5ue"
@@ -1410,6 +1432,21 @@ msgstr "Saved a memory"
 msgctxt "OoZnj6"
 msgid "Couldn't save a memory"
 msgstr "Couldn't save a memory"
+
+#: app/components/chat-thread.tsx
+msgctxt "0HItSl"
+msgid "Looking back at the conversation"
+msgstr "Looking back at the conversation"
+
+#: app/components/chat-thread.tsx
+msgctxt "MUp6P6"
+msgid "Looked back at the conversation"
+msgstr "Looked back at the conversation"
+
+#: app/components/chat-thread.tsx
+msgctxt "Hdp29v"
+msgid "Couldn't look back at the conversation"
+msgstr "Couldn't look back at the conversation"
 
 #: app/components/chat-thread.tsx
 msgctxt "nFuHdT"
@@ -1958,9 +1995,9 @@ msgid "Delete {name}"
 msgstr "Delete {name}"
 
 #: app/components/discord-settings.tsx
-msgctxt "E-Jff3"
-msgid "Commands in the DM: /teammate chooses who you talk to, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
-msgstr "Commands in the DM: /teammate chooses who you talk to, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
+msgctxt "feHA11"
+msgid "Commands in the DM: /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
+msgstr "Commands in the DM: /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
 
 #: app/components/discord-settings.tsx
 msgctxt "p7E89o"
@@ -3188,6 +3225,11 @@ msgstr "Could not delete group."
 msgctxt "354mCs"
 msgid "Could not update group."
 msgstr "Could not update group."
+
+#: app/components/workspace.tsx
+msgctxt "HtRP6Y"
+msgid "Could not reset the conversation."
+msgstr "Could not reset the conversation."
 
 #: app/components/workspace.tsx
 msgctxt "u7zDdn"

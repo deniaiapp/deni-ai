@@ -93,6 +93,7 @@ msgstr "このタスクはすでに実行中か、このメッセージはすで
 
 #: app/api/chat/route.ts
 #: app/api/threads/[id]/reactions/route.ts
+#: app/api/threads/[id]/reset/route.ts
 #: app/api/threads/[id]/route.ts
 msgctxt "eePQiZ"
 msgid "Conversation not found."
@@ -385,6 +386,11 @@ msgstr "リアクションが正しくありません"
 msgctxt "UhsO-i"
 msgid "Message not found"
 msgstr "メッセージが見つかりません"
+
+#: app/api/threads/[id]/reset/route.ts
+msgctxt "OatSux"
+msgid "Stop or finish the current task before resetting the conversation."
+msgstr "実行中または待機中のタスクを終えるか停止してから、会話をリセットしてください。"
 
 #: app/api/threads/[id]/route.ts
 msgctxt "rDFiEI"
@@ -963,6 +969,17 @@ msgid "Waiting for your help…"
 msgstr "あなたの操作を待っています…"
 
 #: app/components/chat-thread.tsx
+msgctxt "J_0YT8"
+msgid "Earlier messages stay here but are no longer sent to the model."
+msgstr "これまでのメッセージは画面に残りますが、今後はモデルに送信されません。"
+
+#: app/components/chat-thread.tsx
+#: app/components/sidebar.tsx
+msgctxt "1q491N"
+msgid "Reset conversation"
+msgstr "会話をリセット"
+
+#: app/components/chat-thread.tsx
 msgctxt "40zwh7"
 msgid "@everyone to ask everyone · @name to ask a teammate"
 msgstr "@everyone で全員に、@名前 で特定のチームメイトに依頼できます"
@@ -1077,6 +1094,11 @@ msgstr "プレビューを隠す"
 msgctxt "pM1vUw"
 msgid "Request revision"
 msgstr "修正を依頼"
+
+#: app/components/chat-thread.tsx
+msgctxt "vU7nR3"
+msgid "New conversation · earlier messages are not sent"
+msgstr "新しい会話 · これより前のメッセージは送信されません"
 
 #: app/components/chat-thread.tsx
 msgctxt "W-q5ue"
@@ -1410,6 +1432,21 @@ msgstr "メモリを保存しました"
 msgctxt "OoZnj6"
 msgid "Couldn't save a memory"
 msgstr "メモリを保存できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "0HItSl"
+msgid "Looking back at the conversation"
+msgstr "会話を振り返り中"
+
+#: app/components/chat-thread.tsx
+msgctxt "MUp6P6"
+msgid "Looked back at the conversation"
+msgstr "会話を振り返りました"
+
+#: app/components/chat-thread.tsx
+msgctxt "Hdp29v"
+msgid "Couldn't look back at the conversation"
+msgstr "会話を振り返れませんでした"
 
 #: app/components/chat-thread.tsx
 msgctxt "nFuHdT"
@@ -1958,9 +1995,9 @@ msgid "Delete {name}"
 msgstr "{name}を削除"
 
 #: app/components/discord-settings.tsx
-msgctxt "E-Jff3"
-msgid "Commands in the DM: /teammate chooses who you talk to, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
-msgstr "DM のコマンド: /teammate で話す相手を選び、/unlink で連携を解除します。承認が必要な操作には「承認」「拒否」ボタンが表示されます。"
+msgctxt "feHA11"
+msgid "Commands in the DM: /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Actions that need approval show Approve and Deny buttons."
+msgstr "DM のコマンド: /teammate で話す相手を選び、/reset で会話をリセットし、/unlink で連携を解除します。承認が必要な操作には「承認」「拒否」ボタンが表示されます。"
 
 #: app/components/discord-settings.tsx
 msgctxt "p7E89o"
@@ -3188,6 +3225,11 @@ msgstr "グループを削除できませんでした。"
 msgctxt "354mCs"
 msgid "Could not update group."
 msgstr "グループを更新できませんでした。"
+
+#: app/components/workspace.tsx
+msgctxt "HtRP6Y"
+msgid "Could not reset the conversation."
+msgstr "会話をリセットできませんでした。"
 
 #: app/components/workspace.tsx
 msgctxt "u7zDdn"

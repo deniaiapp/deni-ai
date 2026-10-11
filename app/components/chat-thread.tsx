@@ -24,6 +24,7 @@ import {
   DownloadIcon,
   FolderIcon,
   GlobeIcon,
+  HistoryIcon,
   SearchIcon,
   SendIcon,
   SparklesIcon,
@@ -85,6 +86,7 @@ import {
 } from "@/lib/message-actions";
 import { createReactionState, type ReactionMap } from "@/lib/reaction-state";
 import { messageAuthor, type MessageAuthor } from "@/lib/group-chat";
+import { isContextReset } from "@/lib/messages";
 import { RUN_MODES, type RunMode } from "@/lib/model";
 import type {
   AgentJob,
@@ -169,6 +171,8 @@ export function ChatThread({
   onRunModeChange,
   onBusyChange,
   onActiveJobChange,
+  onResetConversation,
+  resetting = false,
   backgroundJobs,
   onJobsChange,
   chat,
@@ -180,6 +184,8 @@ export function ChatThread({
   onRunModeChange: (mode: RunMode) => void | Promise<void>;
   onBusyChange: (busy: boolean) => void;
   onActiveJobChange?: (jobId: string | null) => void;
+  onResetConversation?: () => void;
+  resetting?: boolean;
   backgroundJobs?: AgentJob[];
   onJobsChange?: (jobs: AgentJob[]) => void;
   chat: Chat<UIMessage>;
@@ -639,6 +645,19 @@ export function ChatThread({
           <span className="text-xs tracking-tighter text-warning-300">
             {t("Waiting for your help…")}
           </span>
+        ) : onResetConversation ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="xs"
+            icon={RotateCcwIcon}
+            loading={resetting}
+            disabled={busy || messages.length === 0 || isContextReset(messages[messages.length - 1])}
+            title={t("Earlier messages stay here but are no longer sent to the model.")}
+            onClick={onResetConversation}
+          >
+            {t("Reset conversation")}
+          </Button>
         ) : null}
       </motion.header>
 
@@ -706,6 +725,8 @@ export function ChatThread({
             </ConversationEmptyState>
           ) : (
             messages.map((message, index) => {
+              if (isContextReset(message))
+                return <ContextResetDivider key={message.id} />;
               const author = messageAuthor(message);
               const memberState = author ? groupStatuses[author.id] : undefined;
               const groupReplyActive =
@@ -1099,6 +1120,20 @@ function collectHandoffIds(messages: UIMessage[]) {
     }
   }
   return [...new Set(ids)];
+}
+
+function ContextResetDivider() {
+  const t = useExtracted();
+  return (
+    <div role="separator" className="flex items-center gap-3 py-1 text-[11px] text-muted-foreground">
+      <span className="h-px flex-1 bg-foreground/10" />
+      <span className="flex items-center gap-1.5">
+        <RotateCcwIcon size={11} />
+        {t("New conversation · earlier messages are not sent")}
+      </span>
+      <span className="h-px flex-1 bg-foreground/10" />
+    </div>
+  );
 }
 
 function EmptyState({ bot }: { bot: Bot }) {
@@ -1504,6 +1539,8 @@ function toolStepIcon(name: string): LucideIcon {
       return WrenchIcon;
     case "remember":
       return BookOpenIcon;
+    case "conversationHistory":
+      return HistoryIcon;
     case "saveSkill":
     case "listSkills":
     case "readSkill":
@@ -1759,6 +1796,7 @@ function useToolDisplayLabel() {
     stopSandbox: [t("Stopping the computer"), t("Stopped the computer"), t("Couldn't stop the computer")],
     webSearch: [t("Searching the web"), t("Searched the web"), t("Couldn't search the web")],
     remember: [t("Saving a memory"), t("Saved a memory"), t("Couldn't save a memory")],
+    conversationHistory: [t("Looking back at the conversation"), t("Looked back at the conversation"), t("Couldn't look back at the conversation")],
     saveSkill: [t("Saving a skill"), t("Saved a skill"), t("Couldn't save a skill")],
     listSkills: [t("Checking saved skills"), t("Checked saved skills"), t("Couldn't check saved skills")],
     readSkill: [t("Reading a skill"), t("Read a skill"), t("Couldn't read a skill")],

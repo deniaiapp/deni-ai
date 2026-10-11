@@ -79,6 +79,20 @@ export async function getJobByIdempotencyKey(userId: string, idempotencyKey: str
   return rows[0] ? mapJob(rows[0]) : null;
 }
 
+/** Whether any job in the thread is still running or parked waiting for the person. */
+export async function hasActiveThreadJob(userId: string, threadId: string) {
+  const rows = await db
+    .select({ id: agentJobs.id })
+    .from(agentJobs)
+    .where(and(
+      eq(agentJobs.userId, userId),
+      eq(agentJobs.threadId, threadId),
+      inArray(agentJobs.status, ["queued", "running", "finalizing", "waiting_approval", "waiting_takeover"]),
+    ))
+    .limit(1);
+  return rows.length > 0;
+}
+
 export async function listJobs(userId: string, options?: { threadId?: string; limit?: number; summary?: boolean }) {
   const conditions = [eq(agentJobs.userId, userId)];
   if (options?.threadId) conditions.push(eq(agentJobs.threadId, options.threadId));

@@ -1,0 +1,141 @@
+import dotenv from "dotenv";
+import { mkdtemp, rm } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import type { UIMessage } from "ai";
+import type { HistoryRequest } from "../lib/history";
+import { mockModules } from "./module-mocks";
+
+dotenv.config({ path: ".env", quiet: true });
+dotenv.config({ path: ".env.local", override: true, quiet: true });
+
+mockModules((request) => (request === "server-only" ? {} : undefined));
+
+function assert(condition: boolean, message: string) {
+  if (!condition) throw new Error(message);
+}
+
+let tempDir = "";
+
+// conversationHistory: the model can summarize, search, and open the part of a thread it no
+// longer receives, and the summary is built once and then only extended with new messages.
+async function main() {
+  tempDir = await mkdtemp(path.join(os.tmpdir(), "deni-history-"));
+  delete process.env.D1_PROXY_URL;
+  process.env.LOCAL_DB_PATH = path.join(tempDir, "test.sqlite");
+  process.env.APP_ENCRYPTION_KEY ||= "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
+  process.env.OPENROUTER_API_KEY = "test-key";
+
+  const { db } = await import("../db");
+  const { user } = await import("../db/schema");
+  const store = await import("../lib/store");
+  const { lookBack } = await import("../lib/history");
+  const { resetThreadContext } = await import("../lib/thread-context");
+  const { createDeniTools } = await import("../lib/agent");
+  const { SUMMARY_MODEL_ID, SUMMARY_TOKEN_MULTIPLIER } = await import("../lib/model");
+  const { HISTORY_TOKEN_LIMIT } = await import("../lib/messages");
+
+  const calls: { model: string; body: string }[] = [];
+  const replies: string[] = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (!String(input).includes("/chat/completions")) return realFetch(input, init);
+    const body = String(init?.body ?? "");
+    calls.push({ model: JSON.parse(body).model, body });
+    const content = replies.shift();
+    if (content === undefined) throw new Error("summary model called more often than expected");
+    return Response.json({
+      id: "gen-1",
+      object: "chat.completion",
+      created: 0,
+      model: SUMMARY_MODEL_ID,
+      choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
+      usage: { prompt_tokens: 1_000, completion_tokens: 200, total_tokens: 1_200 },
+    });
+  }) as typeof fetch;
+
+  const userId = "h1";
+  await db.insert(user).values({ id: userId, name: userId, email: "h1@example.com", emailVerified: true });
+  const initial = await store.readStore(userId);
+  const thread = initial.threads.find((item) => item.kind === "dm" && item.botIds[0] === "ops");
+  assert(Boolean(thread), "seeded ops DM missing");
+  const threadId = thread!.id;
+  const bot = initial.bots.find((item) => item.id === "ops")!;
+  const ask = (request: HistoryRequest) => lookBack({ userId, threadId, bot, ...request }) as Promise<Record<string, unknown>>;
+
+  assert("conversationHistory" in createDeniTools({ userId, bot, threadId }), "tool not registered");
+
+  // Nothing is hidden yet: no model call.
+  await store.saveMessages(userId, threadId, [{ id: "hello", role: "user", parts: [{ type: "text", text: "hello" }] }]);
+  const empty = await ask({ action: "summary" });
+  assert(empty.summary === null && calls.length === 0, `empty summary: ${JSON.stringify(empty)}`);
+
+  // Each turn is 1/15 of the budget, so 30 turns push the early ones out of the window.
+  const pad = "x".repeat(Math.ceil(HISTORY_TOKEN_LIMIT / 30) * 4);
+  const turn = (index: number, note = ""): UIMessage[] => [
+    { id: `u${index}`, role: "user", parts: [{ type: "text", text: `request ${index} ${note} ${pad}` }] },
+    { id: `a${index}`, role: "assistant", parts: [{ type: "text", text: `done ${index} ${pad}` }] },
+  ];
+  const turns = (from: number, to: number) => Array.from({ length: to - from }, (_, offset) => turn(from + offset, from + offset === 1 ? "the invoice number is INV-4471" : from + offset === 29 ? "latest topic ZEBRA" : "")).flat();
+  await store.saveMessages(userId, threadId, turns(1, 30));
+
+  // Search finds hidden messages only; read opens one in full.
+  const found = await ask({ action: "search", query: "inv-4471" });
+  const results = found.results as { messageId: string; excerpt: string }[];
+  assert(results.length === 1 && results[0].messageId === "u1" && results[0].excerpt.includes("INV-4471"), `search: ${JSON.stringify(found)}`);
+  const visible = await ask({ action: "search", query: "ZEBRA" });
+  assert((visible.results as unknown[]).length === 0, "search returned a message the model already sees");
+  const opened = await ask({ action: "read", messageId: "u1" });
+  assert(String(opened.text).includes("INV-4471") && opened.from === "Person", `read: ${JSON.stringify(opened).slice(0, 200)}`);
+  assert(typeof (await ask({ action: "read", messageId: "nope" })).error === "string", "unknown message opened");
+  assert(typeof (await ask({ action: "search" })).error === "string", "search without a query");
+
+  // The first summary covers the hidden part, uses the cheap model, and is billed at its rate.
+  const tokensBefore = (await store.readStore(userId)).usage?.tokens ?? 0;
+  replies.push("- Invoice INV-4471 was discussed.");
+  const first = await ask({ action: "summary" });
+  assert(first.summary === "- Invoice INV-4471 was discussed." && calls.length === 1, `first summary: ${JSON.stringify(first)}`);
+  assert(calls[0].model === SUMMARY_MODEL_ID, `summary model: ${calls[0].model}`);
+  assert(calls[0].body.includes("INV-4471") && !calls[0].body.includes("ZEBRA"), "summary input must be the hidden part only");
+  const tokensAfter = (await store.readStore(userId)).usage?.tokens ?? 0;
+  assert(tokensAfter - tokensBefore === Math.round(1_200 * SUMMARY_TOKEN_MULTIPLIER), `billed ${tokensAfter - tokensBefore} tokens`);
+
+  // Asking again reuses the stored summary.
+  const again = await ask({ action: "summary" });
+  assert(again.summary === first.summary && calls.length === 1, "summary was rebuilt without new hidden messages");
+
+  // After more turns push more out, only the newly hidden messages are sent, with the summary so far.
+  await store.saveMessages(userId, threadId, turns(30, 45));
+  replies.push("- Invoice INV-4471 was discussed.\n- More requests followed.");
+  const extended = await ask({ action: "summary" });
+  assert(calls.length === 2 && String(extended.summary).includes("More requests"), `extended: ${JSON.stringify(extended)}`);
+  assert(calls[1].body.includes("Summary so far") && calls[1].body.includes("Invoice INV-4471 was discussed") && !calls[1].body.includes("request 1 the invoice"), "summary was not extended incrementally");
+
+  // A reset hides the rest of the thread; it is folded into the same summary.
+  assert((await resetThreadContext(userId, threadId)) === "reset", "reset refused");
+  replies.push("- Everything up to the reset.");
+  await ask({ action: "summary" });
+  assert(calls.length === 3 && calls[2].body.includes("request 44"), "messages before the reset were not summarized");
+  assert((await ask({ action: "search", query: "zebra" }) as { results: unknown[] }).results.length === 1, "pre-reset messages not searchable");
+
+  // A summary for a conversation that no longer exists is dropped.
+  await store.mutateStore(userId, (next) => {
+    next.historySummaries = { ...next.historySummaries, gone: { throughMessageId: "x", text: "old", updatedAt: "" } };
+  });
+  const pruned = await store.readStore(userId);
+  assert(!pruned.historySummaries?.gone && Boolean(pruned.historySummaries?.[threadId]), "summaries were not pruned to live threads");
+
+  assert(replies.length === 0, "unused scripted summaries");
+  globalThis.fetch = realFetch;
+  console.log("history verification passed");
+}
+
+main()
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(async () => {
+    if (tempDir) await rm(tempDir, { recursive: true, force: true }).catch(() => undefined);
+    process.exit();
+  });
