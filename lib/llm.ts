@@ -12,6 +12,8 @@ export async function getDeniModel(userId: string, runMode?: RunMode) {
   const extraBody = {
     reasoning: { effort: mode.effort },
     reasoning_effort: mode.effort,
+    // Anthropic automatic prompt caching: the breakpoint follows the growing conversation.
+    cache_control: { type: "ephemeral" },
   };
   const openrouter = createOpenRouter({
     apiKey,

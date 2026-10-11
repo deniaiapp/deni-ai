@@ -83,7 +83,7 @@ export function emptyStore(): Store {
       apiKey: "",
       timezone: defaultTimezone(),
       model: DENI_MODEL_ID,
-      runMode: "max",
+      runMode: "default",
     },
     bots,
     threads: seedThreads(bots),

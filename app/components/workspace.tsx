@@ -122,7 +122,7 @@ export function Workspace() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [sectionThread, setSectionThread] = useState<Thread | null>(null);
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
-  const [runMode, setRunMode] = useState<RunMode>("max");
+  const [runMode, setRunMode] = useState<RunMode>("default");
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const markNotificationRead = useCallback(async (id?: string) => {
     await fetch("/api/notifications", {

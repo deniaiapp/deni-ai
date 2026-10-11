@@ -237,6 +237,5 @@ export const ja: Record<string, string> = {
   "Now talking to {name}.": "{name} さんと話しています。",
   "Now using {mode}. {cost}": "{mode} に切り替えました。{cost}",
   "Current setting: {mode}. {cost}": "現在の設定: {mode}。{cost}",
-  "Standard token use.": "トークン消費は標準です。",
   "{multiplier}× tokens": "トークン消費 {multiplier}倍",
 };

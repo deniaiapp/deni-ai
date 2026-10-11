@@ -2804,8 +2804,8 @@ msgstr "Hand work to named teammates and let them finish it on an isolated compu
 
 #: app/components/setup-screen.tsx
 msgctxt "b99Plc"
-msgid "Get a key at openrouter.ai. Run uses openai/gpt-6-luna; Run+ uses openai/gpt-6-sol and consumes 20× the matching Run mode’s tokens. Pick a mode in the workspace. This screen is skipped when an environment variable is set."
-msgstr "Get a key at openrouter.ai. Run uses openai/gpt-6-luna; Run+ uses openai/gpt-6-sol and consumes 20× the matching Run mode’s tokens. Pick a mode in the workspace. This screen is skipped when an environment variable is set."
+msgid "Get a key at openrouter.ai. Run uses anthropic/claude-sonnet-5.5; Run+ uses anthropic/claude-opus-5.5. Each mode counts tokens at 1× to 2.6×, shown in the mode menu. Pick a mode in the workspace. This screen is skipped when an environment variable is set."
+msgstr "Get a key at openrouter.ai. Run uses anthropic/claude-sonnet-5.5; Run+ uses anthropic/claude-opus-5.5. Each mode counts tokens at 1× to 2.6×, shown in the mode menu. Pick a mode in the workspace. This screen is skipped when an environment variable is set."
 
 #: app/components/setup-screen.tsx
 msgctxt "YtxGgO"
@@ -3066,8 +3066,8 @@ msgstr "Name specialists, keep memory on each one, and hand work off instead of 
 
 #: app/components/upgrade-screen.tsx
 msgctxt "xqhm1T"
-msgid "200M tokens / month"
-msgstr "200M tokens / month"
+msgid "150M tokens / month"
+msgstr "150M tokens / month"
 
 #: app/components/upgrade-screen.tsx
 msgctxt "bgBjJu"

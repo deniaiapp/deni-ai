@@ -159,9 +159,9 @@ Workspace files and screenshots use the configured S3-compatible bucket (Cloudfl
 
 Usage is metered per account and month (UTC):
 
-| | Free | Pro ($20/mo) |
+| | Free | Pro ($8/mo) |
 | --- | --- | --- |
-| Tokens | 10M | 200M |
+| Tokens | 10M | 150M |
 | Browser minutes (Steel) | 30 | 600 |
 | Computer minutes (E2B) | 30 | 600 |
 | Teammates | 5 | 25 |

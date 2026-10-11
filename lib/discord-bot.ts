@@ -267,7 +267,7 @@ function runModeParams(mode: ReturnType<typeof parseRunMode>, tr: ReturnType<typ
   const { label, tokenMultiplier, effort } = RUN_MODES[mode];
   return {
     mode: `${label} (${effort})`,
-    cost: tokenMultiplier === 1 ? tr("Standard token use.") : tr("{multiplier}× tokens", { multiplier: tokenMultiplier }),
+    cost: tr("{multiplier}× tokens", { multiplier: tokenMultiplier }),
   };
 }
 

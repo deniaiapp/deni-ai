@@ -1882,7 +1882,7 @@ function RunModePicker({
             >
               <span className="flex min-w-0 flex-col">
                 <span>{levelLabels[id]}</span>
-                <span className="text-[11px] text-muted-foreground">{mode.tokenMultiplier === 1 ? t("Default") : t("{multiplier}× tokens", { multiplier: String(mode.tokenMultiplier) })}</span>
+                <span className="text-[11px] text-muted-foreground">{t("{multiplier}× tokens", { multiplier: String(mode.tokenMultiplier) })}</span>
               </span>
             </DropdownMenuItem>
           );

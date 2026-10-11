@@ -65,7 +65,7 @@ export function SetupScreen({ onReady }: { onReady: () => void }) {
             aria-invalid={error ? true : undefined}
           />
           <p className="text-xs text-muted-foreground">
-            {t("Get a key at openrouter.ai. Run uses openai/gpt-6-luna; Run+ uses openai/gpt-6-sol and consumes 20× the matching Run mode’s tokens. Pick a mode in the workspace. This screen is skipped when an environment variable is set.")}
+            {t("Get a key at openrouter.ai. Run uses anthropic/claude-sonnet-5.5; Run+ uses anthropic/claude-opus-5.5. Each mode counts tokens at 1× to 2.6×, shown in the mode menu. Pick a mode in the workspace. This screen is skipped when an environment variable is set.")}
           </p>
           {error ? <p className="text-xs text-destructive-400">{error}</p> : null}
         </div>

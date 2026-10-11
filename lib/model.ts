@@ -1,6 +1,6 @@
-export const DENI_MODEL_ID = "openai/gpt-6-luna";
-export const DENI_REASONING_EFFORT = "max";
-export const DENI_MODEL_LABEL = "Run max";
+export const DENI_MODEL_ID = "anthropic/claude-sonnet-5.5";
+export const DENI_REASONING_EFFORT = "medium";
+export const DENI_MODEL_LABEL = "Run Default";
 
 export const RUN_MODE_IDS = ["default", "high", "xhigh", "max", "plus-default", "plus-high", "plus-xhigh", "plus-max"] as const;
 export type RunMode = (typeof RUN_MODE_IDS)[number];
@@ -22,64 +22,64 @@ export const RUN_MODES: Record<
     modelId: DENI_MODEL_ID,
     label: "Run Default",
     effort: "medium",
-    tokenMultiplier: 0.5,
-    hint: "0.5× tokens",
+    tokenMultiplier: 1,
+    hint: "Default",
   },
   high: {
     id: "high",
     modelId: DENI_MODEL_ID,
     label: "Run High",
     effort: "high",
-    tokenMultiplier: 0.8,
-    hint: "0.8× tokens",
+    tokenMultiplier: 1.2,
+    hint: "1.2× tokens",
   },
   xhigh: {
     id: "xhigh",
     modelId: DENI_MODEL_ID,
     label: "Run xhigh",
     effort: "xhigh",
-    tokenMultiplier: 0.9,
-    hint: "0.9× tokens",
+    tokenMultiplier: 1.4,
+    hint: "1.4× tokens",
   },
   max: {
     id: "max",
     modelId: DENI_MODEL_ID,
     label: "Run Max",
     effort: "max",
-    tokenMultiplier: 1,
-    hint: "Default",
+    tokenMultiplier: 1.6,
+    hint: "1.6× tokens",
   },
   "plus-default": {
     id: "plus-default",
-    modelId: "openai/gpt-6-sol",
+    modelId: "anthropic/claude-opus-5.5",
     label: "Run+ Default",
     effort: "medium",
-    tokenMultiplier: 10,
-    hint: "10× tokens",
+    tokenMultiplier: 2,
+    hint: "2× tokens",
   },
   "plus-high": {
     id: "plus-high",
-    modelId: "openai/gpt-6-sol",
+    modelId: "anthropic/claude-opus-5.5",
     label: "Run+ High",
     effort: "high",
-    tokenMultiplier: 16,
-    hint: "16× tokens",
+    tokenMultiplier: 2.2,
+    hint: "2.2× tokens",
   },
   "plus-xhigh": {
     id: "plus-xhigh",
-    modelId: "openai/gpt-6-sol",
+    modelId: "anthropic/claude-opus-5.5",
     label: "Run+ xhigh",
     effort: "xhigh",
-    tokenMultiplier: 18,
-    hint: "18× tokens",
+    tokenMultiplier: 2.4,
+    hint: "2.4× tokens",
   },
   "plus-max": {
     id: "plus-max",
-    modelId: "openai/gpt-6-sol",
+    modelId: "anthropic/claude-opus-5.5",
     label: "Run+ Max",
     effort: "max",
-    tokenMultiplier: 20,
-    hint: "20× tokens",
+    tokenMultiplier: 2.6,
+    hint: "2.6× tokens",
   },
 };
 
@@ -88,7 +88,7 @@ export function parseRunMode(value: unknown): RunMode {
   if (typeof value === "string" && (RUN_MODE_IDS as readonly string[]).includes(value)) {
     return value as RunMode;
   }
-  return "max";
+  return "default";
 }
 
 export const RUN_LEVELS = ["default", "high", "xhigh", "max"] as const;

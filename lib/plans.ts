@@ -25,7 +25,7 @@ export const PLANS: Record<PlanId, Plan> = {
     id: "pro",
     name: "Pro",
     priceUsd: 8,
-    tokens: 200_000_000,
+    tokens: 150_000_000,
     browserMinutes: 600,
     computerMinutes: 600,
     teammates: 25,

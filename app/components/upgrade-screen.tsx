@@ -71,7 +71,7 @@ export function UpgradeScreen({
       body: t("Name specialists, keep memory on each one, and hand work off instead of stretching a single bot."),
     },
     {
-      title: t("200M tokens / month"),
+      title: t("150M tokens / month"),
       body: t("Longer threads, more handoffs, and routines that can finish without stopping mid-task."),
     },
     {
