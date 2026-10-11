@@ -1,9 +1,11 @@
+import * as Sentry from "@sentry/nextjs";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 
 import { appRouter } from "@/server/api/root";
 import { createContext } from "@/server/api/trpc";
 import { guardMutationRequest } from "@/lib/mutation-request";
 import { limitRequestBody, RequestBodyTooLargeError } from "@/lib/request-body";
+import { TRPC_MAX_BATCH_SIZE } from "@/lib/trpc/limits";
 
 const handler = (req: Request) =>
   fetchRequestHandler({
@@ -11,6 +13,14 @@ const handler = (req: Request) =>
     req,
     router: appRouter,
     createContext,
+    maxBatchSize: TRPC_MAX_BATCH_SIZE,
+    // tRPC turns these into a response itself, so Next's onRequestError never sees them.
+    onError({ error, path }) {
+      if (error.code !== "INTERNAL_SERVER_ERROR") return;
+      const cause = error.cause ?? error;
+      console.error(`[trpc] ${path ?? "unknown"} failed:`, cause);
+      Sentry.captureException(cause, { tags: { trpcPath: path ?? "unknown" } });
+    },
   });
 
 export { handler as GET };

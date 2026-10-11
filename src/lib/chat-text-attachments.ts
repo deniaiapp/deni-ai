@@ -3,6 +3,7 @@ import { env } from "@/env";
 import {
   decodeTextAttachment,
   isTextMediaType,
+  MAX_TEXT_ATTACHMENT_BYTES,
   textMediaTypeForName,
 } from "@/lib/attachment-types";
 
@@ -14,8 +15,8 @@ const MAX_TOTAL_INLINE_CHARS = 400_000;
 const MAX_ATTACHMENTS_PER_REQUEST = 20;
 const MAX_CONCURRENT_FETCHES = 4;
 const FETCH_TIMEOUT_MS = 10_000;
-/** Text uploads are capped at 2 MB; allow a little slack for encodings. */
-const MAX_FETCH_BYTES = 2 * 1024 * 1024 + 1024;
+/** Text uploads are stored as UTF-8 and capped after conversion; allow a little slack. */
+const MAX_FETCH_BYTES = MAX_TEXT_ATTACHMENT_BYTES + 1024;
 /** Decoded text by stored URL: stored files never change, and history is re-sent every turn. */
 const MAX_CACHED_CHARS = 2_000_000;
 /** Larger files are not worth the memory; they are fetched again when needed. */

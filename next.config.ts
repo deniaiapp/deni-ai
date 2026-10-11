@@ -83,12 +83,14 @@ const nextConfig: NextConfig = {
       },
     ];
 
+    // Locale lives in the URL (/ja/*), so these pages need no locale Vary. The
+    // proxy overrides this with `private, no-store` on the redirects it picks from
+    // the locale cookie or Accept-Language, and app routes under /ja redirect.
     const marketingCacheHeaders = [
       {
         key: "Cache-Control",
         value: "public, s-maxage=3600, stale-while-revalidate=86400",
       },
-      { key: "Vary", value: "x-locale" },
     ];
 
     const legalCacheHeaders = [
@@ -96,7 +98,6 @@ const nextConfig: NextConfig = {
         key: "Cache-Control",
         value: "public, s-maxage=86400, stale-while-revalidate=604800",
       },
-      { key: "Vary", value: "x-locale" },
     ];
 
     return [

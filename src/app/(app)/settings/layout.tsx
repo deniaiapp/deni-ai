@@ -1,8 +1,10 @@
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import SettingsWrapper from "@/components/settings-wrapper";
 import { Spinner } from "@/components/ui/spinner";
 import { getSession } from "@/lib/get-session";
+import { RETURN_TO_HEADER, signInPath } from "@/lib/sign-in-redirect";
 
 function SettingsLayoutFallback() {
   return (
@@ -16,7 +18,8 @@ async function AuthenticatedSettingsLayout({ children }: { children: React.React
   const session = await getSession();
 
   if (!session?.session) {
-    redirect("/auth/sign-in");
+    // Keep team invite links (?invitationId=) through sign-in.
+    redirect(signInPath((await headers()).get(RETURN_TO_HEADER)));
   }
 
   if (session.user?.isAnonymous) {

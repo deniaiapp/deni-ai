@@ -4,9 +4,9 @@ import { db } from "@/db/drizzle";
 import { adCampaign } from "@/db/schema";
 import { isAllowedAdClickOrigin } from "@/lib/ad-origin";
 import { auth } from "@/lib/auth";
-import { adEligible, recordAdEvent, verifyAdDelivery } from "@/lib/ads";
+import { adDeliveryStatus, adEligible, recordAdEvent } from "@/lib/ads";
 import { isFreeAdViewer } from "@/lib/usage";
-import { anonymousAdViewerId } from "@/lib/ad-ip";
+import { allowGuestAdBilling, anonymousAdViewerId } from "@/lib/ad-ip";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -30,11 +30,13 @@ export async function GET(request: Request) {
     .limit(1);
   if (!ad || ad.userId === viewerId) return new Response(null, { status: 404 });
   // Never send a viewer to a newly edited URL that was not shown in their ad.
-  if (!verifyAdDelivery(url.searchParams.get("token") ?? "", id, viewerId, ad.url))
-    return new Response(null, { status: 403 });
+  const delivery = adDeliveryStatus(url.searchParams.get("token") ?? "", id, viewerId, ad.url);
+  if (delivery === "invalid") return new Response(null, { status: 403 });
   const destination = new URL(ad.url);
   if (destination.protocol !== "https:") return new Response(null, { status: 404 });
-  await recordAdEvent(id, viewerId, "click", isGuest);
+  // A card left open past its billing window still opens the advertiser's site, unbilled.
+  if (delivery === "valid" && (!isGuest || (await allowGuestAdBilling(request.headers, "click"))))
+    await recordAdEvent(id, viewerId, "click", isGuest);
   return new Response(null, {
     status: 303,
     headers: {

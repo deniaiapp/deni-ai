@@ -1,11 +1,13 @@
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, expect, test, vi } from "vitest";
-import { POST } from "./route";
+import { GET, POST } from "./route";
 
 const state = vi.hoisted(() => ({
   rows: [] as Record<string, unknown>[],
   review: vi.fn(),
+  retrieve: vi.fn(),
+  rateLimit: vi.fn(),
   locks: 0,
 }));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
@@ -25,7 +27,10 @@ vi.mock("@/lib/ad-checkout", () => ({
   activatePaidAd: vi.fn(),
   releaseExpiredAdCheckout: vi.fn(),
 }));
-vi.mock("@/lib/stripe", () => ({ stripe: {} }));
+vi.mock("@/lib/stripe", () => ({
+  stripe: { checkout: { sessions: { retrieve: state.retrieve } } },
+}));
+vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: state.rateLimit }));
 vi.mock("@/lib/ads", () => ({ adPlans: ["cpm", "cpc", "fixed"] }));
 vi.mock("@/db/drizzle", () => {
   let tail = Promise.resolve();
@@ -50,7 +55,14 @@ vi.mock("@/db/drizzle", () => {
       expect(statement.sql).toContain("FOR UPDATE");
       state.locks++;
     },
-    select: () => ({ from: () => ({ where: async () => [{ total: state.rows.length }] }) }),
+    select: () => ({
+      from: () => ({
+        where: () =>
+          Object.assign(Promise.resolve([{ total: state.rows.length }]), {
+            orderBy: async () => state.rows.map((row) => ({ ...row })),
+          }),
+      }),
+    }),
     insert: () => ({
       values: (values: Record<string, unknown>) => ({
         returning: async () => {
@@ -98,6 +110,52 @@ beforeEach(() => {
   state.locks = 0;
   state.review.mockReset();
   state.review.mockResolvedValue({ approved: true, reason: "Approved" });
+  state.retrieve.mockReset();
+  state.rateLimit.mockReset().mockResolvedValue({ allowed: true });
+});
+
+function awaitingPayment(count: number, expiresInHours: (index: number) => number) {
+  return Array.from({ length: count }, (_, i) => ({
+    id: String(i),
+    status: "approved",
+    stripeSessionId: `session-${i}`,
+    checkoutExpiresAt: new Date(Date.now() + expiresInHours(i) * 3_600_000),
+  }));
+}
+async function paymentStates() {
+  const { campaigns } = (await (await GET()).json()) as {
+    campaigns: { id: string; paymentState: string | null }[];
+  };
+  return Object.fromEntries(campaigns.map((ad) => [ad.id, ad.paymentState]));
+}
+
+test("the campaign list confirms only the newest unpaid checkouts with Stripe", async () => {
+  state.rows = awaitingPayment(5, (i) => i + 1);
+  state.retrieve.mockResolvedValue({ status: "complete", payment_status: "unpaid" });
+  expect(await paymentStates()).toEqual({
+    "0": "open",
+    "1": "open",
+    "2": "unknown",
+    "3": "unknown",
+    "4": "unknown",
+  });
+  expect(state.retrieve.mock.calls.map(([id]) => id).sort()).toEqual([
+    "session-2",
+    "session-3",
+    "session-4",
+  ]);
+  expect(state.rateLimit).toHaveBeenCalledWith({
+    key: "ad-reconcile:advertiser",
+    windowMs: 60_000,
+    maxRequests: 10,
+  });
+});
+
+test("a rate-limited campaign list serves stored checkout state without Stripe", async () => {
+  state.rows = awaitingPayment(2, (i) => (i === 0 ? 1 : -1));
+  state.rateLimit.mockResolvedValue({ allowed: false, retryAfter: 60 });
+  expect(await paymentStates()).toEqual({ "0": "open", "1": "unknown" });
+  expect(state.retrieve).not.toHaveBeenCalled();
 });
 
 test("parallel submissions at nine campaigns reserve only the tenth before AI review", async () => {

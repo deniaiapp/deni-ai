@@ -4,10 +4,16 @@ import { anonymousAdViewerId } from "@/lib/ad-ip";
 import { signAdDelivery } from "@/lib/ads";
 import { POST } from "./route";
 
-const mocks = vi.hoisted(() => ({ session: vi.fn(), freeViewer: vi.fn(), record: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  session: vi.fn(),
+  freeViewer: vi.fn(),
+  record: vi.fn(),
+  rateLimit: vi.fn(),
+}));
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: mocks.session } } }));
 vi.mock("@/lib/usage", () => ({ isFreeAdViewer: mocks.freeViewer }));
+vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: mocks.rateLimit }));
 vi.mock("@/lib/ads", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/ads")>()),
   recordAdEvent: mocks.record,
@@ -32,12 +38,22 @@ beforeEach(() => {
   vi.resetAllMocks();
   mocks.session.mockResolvedValue(null);
   mocks.freeViewer.mockResolvedValue(true);
+  mocks.rateLimit.mockResolvedValue({ allowed: true });
 });
 
 test("records unauthenticated IP views at guest weight", async () => {
   expect((await POST(request())).status).toBe(204);
   expect(mocks.record).toHaveBeenCalledWith(id, viewer, "view", true);
   expect(mocks.freeViewer).not.toHaveBeenCalled();
+  expect(mocks.rateLimit).toHaveBeenCalledWith(
+    expect.objectContaining({ key: `ad-guest-view:${viewer}` }),
+  );
+});
+
+test("accepts but does not bill guest views over the network cap", async () => {
+  mocks.rateLimit.mockResolvedValue({ allowed: false, retryAfter: 60 });
+  expect((await POST(request())).status).toBe(204);
+  expect(mocks.record).not.toHaveBeenCalled();
 });
 
 test.each([{ ip: "192.0.2.2" }, { token: "forged-token" }, { token: "" }])(
@@ -95,6 +111,7 @@ test("keeps signed-in account tracking", async () => {
   const token = signAdDelivery(id, "user", "https://example.com");
   expect((await POST(request({ token }))).status).toBe(204);
   expect(mocks.record).toHaveBeenCalledWith(id, "user", "view", false);
+  expect(mocks.rateLimit).not.toHaveBeenCalled();
 });
 
 test("does not let paid accounts fall back to IP billing", async () => {

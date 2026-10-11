@@ -5,6 +5,8 @@ import type { Context } from "../trpc";
 
 const mocks = vi.hoisted(() => ({
   eligible: true,
+  transaction: vi.fn(),
+  delete: vi.fn(),
   insert: vi.fn(),
   values: vi.fn(),
   update: vi.fn(),
@@ -18,7 +20,7 @@ vi.mock("@/lib/auth", () => ({ auth: {} }));
 vi.mock("@/lib/usage", () => ({ canCompareModels: async () => mocks.eligible }));
 
 import { chatRouter } from "./chat";
-import { modelComparisons } from "@/db/schema";
+import { chats, modelComparisons } from "@/db/schema";
 import { models } from "@/lib/constants";
 import { comparisonSettingsSchema } from "@/lib/comparison-settings";
 
@@ -43,6 +45,7 @@ const caller = () =>
       insert: mocks.insert,
       update: mocks.update,
       select: mocks.select,
+      transaction: mocks.transaction,
     } as unknown as Context["db"],
     session: { session: { userId: "owner" } } as Context["session"],
   });
@@ -56,6 +59,10 @@ beforeEach(() => {
   mocks.update.mockReturnValue({ set: mocks.set });
   mocks.set.mockReturnValue({ where: mocks.where });
   mocks.select.mockReturnValue({ from: () => ({ where: mocks.where }) });
+  mocks.transaction.mockImplementation(async (run: (tx: unknown) => unknown) =>
+    run({ delete: mocks.delete }),
+  );
+  mocks.delete.mockReturnValue({ where: mocks.where });
   mocks.where.mockImplementation(() => ({
     returning: async () => mocks.rows,
     limit: async () => mocks.rows,
@@ -207,4 +214,50 @@ test("the list selects summaries only and filters by owner", async () => {
   expect(mocks.select.mock.calls[0][0]).not.toHaveProperty("leftMessages");
   expect(mocks.select.mock.calls[0][0]).not.toHaveProperty("rightMessages");
   expectOwnerFilter();
+});
+
+test("text Postgres rejects in tool output does not block saving a comparison", async () => {
+  const toolOutput = `Result\u0000 ${"😀".slice(0, 1)}`;
+  const history = [
+    { id: "q", role: "user", parts: [{ type: "text", text: "Compare\u0000 this" }] },
+    {
+      id: "a",
+      role: "assistant",
+      parts: [
+        {
+          type: "tool-search",
+          toolCallId: "call",
+          state: "output-available",
+          input: { query: "q" },
+          output: { results: [{ text: toolOutput }] },
+        },
+        { type: "text", text: "Answer" },
+      ],
+    },
+  ];
+  await caller().saveComparisonSession({
+    ...input(),
+    leftMessages: history,
+    rightMessages: history,
+  });
+  const saved = mocks.values.mock.calls[0][0];
+  expect(saved.title).toBe("Compare this");
+  for (const transcript of [saved.leftMessages, saved.rightMessages]) {
+    const json = JSON.stringify(transcript);
+    expect(json).not.toContain("\\u0000");
+    expect(json).not.toMatch(/\\ud[89a-f]/i);
+    expect(json).toContain("Result \uFFFD");
+  }
+});
+
+test("deleting all conversations also deletes the owner's saved comparisons", async () => {
+  mocks.rows = [{ id: "chat" }];
+  expect(await caller().deleteAllChats()).toEqual({ deletedCount: 1 });
+  expect(mocks.transaction).toHaveBeenCalledOnce();
+  expect(mocks.delete).toHaveBeenCalledWith(modelComparisons);
+  expect(mocks.delete).toHaveBeenCalledWith(chats);
+  expectOwnerFilter();
+  const chatFilter = new PgDialect().sqlToQuery(mocks.where.mock.calls[1][0] as SQL);
+  expect(chatFilter.sql).toContain('"chats"."user_id"');
+  expect(chatFilter.params).toEqual(["owner"]);
 });

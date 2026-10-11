@@ -3,12 +3,28 @@ import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { securityActivity } from "@/db/schema";
 import { buildAccountExport } from "@/lib/account-export";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { recordSecurityActivity } from "@/lib/security-activity";
 import { protectedProcedure, router } from "../trpc";
 import { historyBefore, historyCursorSchema, historyCursorTimestamp } from "../history-pagination";
 
+const EXPORT_INTERVAL_MS = 60_000;
+const EXPORT_THROTTLED = "Please wait a minute before exporting again.";
+
 export const accountRouter = router({
   exportData: protectedProcedure.mutation(async ({ ctx }) => {
+    // Claimed atomically before any work: the activity row below is written only
+    // after the export, so concurrent calls (one batched request) all pass that check.
+    const slot = await checkRateLimit({
+      key: `account-export:${ctx.userId}`,
+      windowMs: EXPORT_INTERVAL_MS,
+      maxRequests: 1,
+    });
+    if (!slot.allowed) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: EXPORT_THROTTLED });
+    }
+
+    // Still checked so the interval holds across instances without shared Redis.
     const [lastExport] = await ctx.db
       .select({ createdAt: securityActivity.createdAt })
       .from(securityActivity)
@@ -18,11 +34,8 @@ export const accountRouter = router({
       .orderBy(desc(securityActivity.createdAt))
       .limit(1);
 
-    if (lastExport && Date.now() - lastExport.createdAt.getTime() < 60_000) {
-      throw new TRPCError({
-        code: "TOO_MANY_REQUESTS",
-        message: "Please wait a minute before exporting again.",
-      });
+    if (lastExport && Date.now() - lastExport.createdAt.getTime() < EXPORT_INTERVAL_MS) {
+      throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: EXPORT_THROTTLED });
     }
 
     const payload = await buildAccountExport(ctx.userId);

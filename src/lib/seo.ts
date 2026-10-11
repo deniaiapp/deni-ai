@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { absoluteUrl, hreflangLanguages } from "@/lib/locale-path";
+import { absoluteUrl, hreflangLanguages, URL_LOCALE_HEADER } from "@/lib/locale-path";
 
 /** Shared homepage SERP copy. Keep title ~50–60 chars and description ~150–160. */
 export const HOME_TITLE = "Deni AI (Deni Chat) — Free GPT, Claude & Gemini";
@@ -16,7 +16,7 @@ export const HOME_DESCRIPTION_JA =
 export const HOME_ALTERNATE_NAMES = ["Deni Chat", "denichat", "deniai.app"] as const;
 
 export async function publicAlternates(path: string): Promise<Metadata["alternates"]> {
-  const urlLocale = (await headers()).get("x-deni-url-locale") === "ja" ? "ja" : "en";
+  const urlLocale = (await headers()).get(URL_LOCALE_HEADER) === "ja" ? "ja" : "en";
   return {
     canonical: absoluteUrl(path, urlLocale),
     languages: hreflangLanguages(path),

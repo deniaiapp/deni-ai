@@ -1,10 +1,11 @@
 import type { UIMessage } from "ai";
-import { and, desc, eq, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, isNull } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import {
   billing,
   chats,
   memoryItem,
+  modelComparisons,
   projectFiles,
   projects,
   resetCreditBalance,
@@ -42,6 +43,27 @@ function simplifyMessages(raw: unknown): Array<{ role: string; text: string }> {
   return out;
 }
 
+/**
+ * Transcripts are read this many rows at a time and reduced to their text right
+ * away, so the raw JSONB (tool output, reasoning, files) of only one page is in
+ * memory at once.
+ */
+export const EXPORT_TRANSCRIPT_PAGE_SIZE = 100;
+
+async function collectPages<Row extends { id: string }, Item>(
+  loadPage: (afterId: string | undefined) => Promise<Row[]>,
+  toItem: (row: Row) => Item,
+): Promise<Item[]> {
+  const items: Item[] = [];
+  let afterId: string | undefined;
+  for (;;) {
+    const rows = await loadPage(afterId);
+    for (const row of rows) items.push(toItem(row));
+    if (rows.length < EXPORT_TRANSCRIPT_PAGE_SIZE) return items;
+    afterId = rows[rows.length - 1].id;
+  }
+}
+
 export async function buildAccountExport(userId: string) {
   const [
     profileRow,
@@ -49,7 +71,8 @@ export async function buildAccountExport(userId: string) {
     memories,
     projectRows,
     fileRows,
-    chatRows,
+    chatItems,
+    comparisonItems,
     usageRows,
     billingRow,
     resetCreditRow,
@@ -82,20 +105,56 @@ export async function buildAccountExport(userId: string) {
       .from(projects)
       .where(and(eq(projects.userId, userId), currentProjectAccessWhere(userId))),
     db.select().from(projectFiles).where(eq(projectFiles.userId, userId)),
-    db
-      .select({
-        id: chats.id,
-        title: chats.title,
-        projectId: chats.projectId,
-        pinned: chats.pinned,
-        folder: chats.folder,
-        tags: chats.tags,
-        createdAt: chats.created_at,
-        updatedAt: chats.updated_at,
-        messages: chats.messages,
-      })
-      .from(chats)
-      .where(eq(chats.uid, userId)),
+    collectPages(
+      (afterId) =>
+        db
+          .select({
+            id: chats.id,
+            title: chats.title,
+            projectId: chats.projectId,
+            pinned: chats.pinned,
+            folder: chats.folder,
+            tags: chats.tags,
+            createdAt: chats.created_at,
+            updatedAt: chats.updated_at,
+            messages: chats.messages,
+          })
+          .from(chats)
+          .where(and(eq(chats.uid, userId), afterId ? gt(chats.id, afterId) : undefined))
+          .orderBy(chats.id)
+          .limit(EXPORT_TRANSCRIPT_PAGE_SIZE),
+      (chat) => ({ ...chat, messages: simplifyMessages(chat.messages) }),
+    ),
+    collectPages(
+      (afterId) =>
+        db
+          .select({
+            id: modelComparisons.id,
+            title: modelComparisons.title,
+            leftModel: modelComparisons.leftModel,
+            rightModel: modelComparisons.rightModel,
+            leftName: modelComparisons.leftName,
+            rightName: modelComparisons.rightName,
+            createdAt: modelComparisons.createdAt,
+            updatedAt: modelComparisons.updatedAt,
+            leftMessages: modelComparisons.leftMessages,
+            rightMessages: modelComparisons.rightMessages,
+          })
+          .from(modelComparisons)
+          .where(
+            and(
+              eq(modelComparisons.uid, userId),
+              afterId ? gt(modelComparisons.id, afterId) : undefined,
+            ),
+          )
+          .orderBy(modelComparisons.id)
+          .limit(EXPORT_TRANSCRIPT_PAGE_SIZE),
+      (comparison) => ({
+        ...comparison,
+        leftMessages: simplifyMessages(comparison.leftMessages),
+        rightMessages: simplifyMessages(comparison.rightMessages),
+      }),
+    ),
     db.select().from(usageQuota).where(eq(usageQuota.userId, userId)),
     db
       .select({
@@ -181,17 +240,8 @@ export async function buildAccountExport(userId: string) {
         files,
       };
     }),
-    chats: chatRows.map((chat) => ({
-      id: chat.id,
-      title: chat.title,
-      projectId: chat.projectId,
-      pinned: chat.pinned,
-      folder: chat.folder,
-      tags: chat.tags,
-      createdAt: chat.createdAt,
-      updatedAt: chat.updatedAt,
-      messages: simplifyMessages(chat.messages),
-    })),
+    chats: chatItems,
+    comparisons: comparisonItems,
     usage: usageRows.map((row) => ({
       category: row.category,
       planTier: row.planTier,

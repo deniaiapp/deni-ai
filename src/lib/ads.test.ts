@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
-import { describe, test } from "vitest";
-import { adCharge, eventKey, pickAd, signAdDelivery, verifyAdDelivery } from "./ads";
+import { afterEach, describe, test, vi } from "vitest";
+import {
+  AD_DELIVERY_TTL_MS,
+  adCharge,
+  adDeliveryStatus,
+  eventKey,
+  pickAd,
+  signAdDelivery,
+  verifyAdDelivery,
+} from "./ads";
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("ad billing deduplication", () => {
   test("views are unique per account, campaign and ten-minute window", () => {
@@ -15,6 +27,20 @@ describe("ad billing deduplication", () => {
     assert.equal(verifyAdDelivery(token, "other", "viewer"), false);
     assert.equal(verifyAdDelivery(token, "ad", "other"), false);
     assert.equal(verifyAdDelivery(token + "x", "ad", "viewer"), false);
+  });
+  test("delivery tokens bill for an hour and then only prove the ad was shown", () => {
+    vi.useFakeTimers({ now: 0 });
+    const token = signAdDelivery("ad", "viewer", "https://example.com");
+    vi.setSystemTime(AD_DELIVERY_TTL_MS - 1);
+    assert.equal(AD_DELIVERY_TTL_MS, 60 * 60_000);
+    assert.equal(adDeliveryStatus(token, "ad", "viewer", "https://example.com"), "valid");
+    vi.setSystemTime(AD_DELIVERY_TTL_MS);
+    assert.equal(adDeliveryStatus(token, "ad", "viewer", "https://example.com"), "expired");
+    assert.equal(verifyAdDelivery(token, "ad", "viewer", "https://example.com"), false);
+    // Expiry never relaxes the signature, viewer or destination checks.
+    assert.equal(adDeliveryStatus(token, "ad", "viewer", "https://example.com/new"), "invalid");
+    assert.equal(adDeliveryStatus(token, "ad", "other", "https://example.com"), "invalid");
+    assert.equal(adDeliveryStatus(`${token}x`, "ad", "viewer", "https://example.com"), "invalid");
   });
   test("normal views cost ¥200 per 1,000 and guest views cost half", () => {
     let normal = 0;

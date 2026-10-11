@@ -1,4 +1,4 @@
-import { and, eq, gt, isNull, ne, or, sql } from "drizzle-orm";
+import { and, eq, gt, isNull, ne, sql } from "drizzle-orm";
 import { headers } from "next/headers";
 import { z } from "zod";
 import { db } from "@/db/drizzle";
@@ -6,6 +6,7 @@ import { adCampaign } from "@/db/schema";
 import { env } from "@/env";
 import { isAllowedAdOrigin } from "@/lib/ad-origin";
 import { auth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { stripe } from "@/lib/stripe";
 import { readRequestJson, RequestBodyTooLargeError } from "@/lib/request-body";
 
@@ -23,6 +24,14 @@ export async function POST(request: Request) {
   }
   const input = z.object({ id: z.string().uuid() }).safeParse(body);
   if (!input.success) return new Response(null, { status: 400 });
+  // Every attempt calls Stripe on the platform's shared account.
+  const limit = await checkRateLimit({
+    key: `ad-checkout:${session.session.userId}`,
+    windowMs: 60_000,
+    maxRequests: 10,
+  });
+  if (!limit.allowed)
+    return Response.json({ error: "Too many checkout attempts" }, { status: 429 });
 
   try {
     const result = await resolveCheckout(input.data.id, session.session.userId);
@@ -65,9 +74,11 @@ async function resolveCheckout(id: string, userId: string) {
       .limit(1);
     if (!ad || ad.status !== "approved" || ad.stripeSessionId !== initial.stripeSessionId)
       return null;
-    if (previous?.status === "open") return { url: previous.url };
 
     const now = new Date();
+    // Only a running paid campaign occupies the fixed slot. An unpaid checkout must
+    // not hold it, or anyone could renew free reservations forever; when two fixed
+    // checkouts are both paid, activatePaidAd keeps the first and refunds the other.
     if (ad.plan === "fixed") {
       const [occupied] = await tx
         .select({ id: adCampaign.id })
@@ -76,18 +87,17 @@ async function resolveCheckout(id: string, userId: string) {
           and(
             ne(adCampaign.id, ad.id),
             eq(adCampaign.plan, "fixed"),
-            or(
-              and(eq(adCampaign.status, "active"), gt(adCampaign.endsAt, now)),
-              and(eq(adCampaign.status, "approved"), gt(adCampaign.checkoutExpiresAt, now)),
-            ),
+            eq(adCampaign.status, "active"),
+            gt(adCampaign.endsAt, now),
           ),
         )
         .limit(1);
       if (occupied) return null;
     }
+    if (previous?.status === "open") return { url: previous.url };
 
     // Persist the reservation before Stripe I/O. Concurrent requests for this
-    // campaign reuse its expiry and idempotency key; other fixed campaigns wait.
+    // campaign reuse its expiry and idempotency key.
     // Keep an uncertain/failed creation reserved so retries recover the same session.
     const expiresAt =
       !previous && ad.checkoutExpiresAt && ad.checkoutExpiresAt > now
@@ -171,7 +181,7 @@ async function resolveCheckout(id: string, userId: string) {
 
 /**
  * A definitive Stripe rejection (4xx other than an in-flight idempotent request)
- * means no session exists, so the fixed slot must not stay reserved for hours.
+ * means no session exists, so the reservation must not stay for hours.
  * Timeouts and 5xx are uncertain: the session may exist, so the reservation stays
  * and a retry reuses its idempotency key.
  */

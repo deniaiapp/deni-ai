@@ -4,8 +4,9 @@ import type { Context } from "../trpc";
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: {} }));
 
-const { migrationRouter } = await import("./migration");
-const { normalizeMigrationPayload } = await import("@/lib/migration");
+const { migrationRouter, IMPORT_RATE_LIMIT } = await import("./migration");
+const { MAX_IMPORT_CONVERSATIONS, MAX_IMPORT_ITEMS, normalizeMigrationPayload } =
+  await import("@/lib/migration");
 
 /** postgres.js rejects statements with this many bind parameters (MAX_PARAMETERS_EXCEEDED). */
 const DRIVER_MAX_PARAMETERS = 65_534;
@@ -43,7 +44,7 @@ function driver(pending: unknown[][]) {
   };
 }
 
-const caller = () =>
+const caller = (session: Context["session"] = { session: { userId: "user-1" } } as never) =>
   migrationRouter.createCaller({
     db: {
       // Statements outside a transaction commit immediately.
@@ -55,8 +56,11 @@ const caller = () =>
         return result;
       },
     } as unknown as Context["db"],
-    session: { session: { userId: "user-1" } } as Context["session"],
+    session,
   });
+
+const userSession = (userId: string, isAnonymous = false) =>
+  ({ session: { userId }, user: { id: userId, isAnonymous } }) as unknown as Context["session"];
 
 beforeEach(() => {
   state.committed = [];
@@ -96,4 +100,55 @@ test("strips NUL characters that Postgres rejects from imported titles and messa
   expect(conversations[0].title).toBe("Badtitle");
   expect(JSON.stringify(conversations[0].messages)).not.toContain("\\u0000");
   expect(JSON.stringify(conversations[0].messages)).toContain("Helloworld");
+});
+
+test("strips lone surrogates that Postgres jsonb rejects from imported titles and messages", () => {
+  const halfEmoji = "😀".slice(0, 1);
+  const { conversations } = normalizeMigrationPayload([
+    { title: `Title ${halfEmoji}`, messages: [{ role: "user", content: `Cut ${halfEmoji}` }] },
+  ]);
+
+  expect(conversations[0].title).toBe("Title \uFFFD");
+  expect(JSON.stringify(conversations[0].messages)).not.toMatch(/\\ud[89a-f]/i);
+  expect(JSON.stringify(conversations[0].messages)).toContain("Cut \uFFFD");
+});
+
+test("guest sessions cannot import", async () => {
+  await expect(
+    caller(userSession("guest", true)).import({ payload: payload(1) }),
+  ).rejects.toMatchObject({ code: "FORBIDDEN" });
+  expect(state.committed).toEqual([]);
+});
+
+test("imports are rate limited per user", async () => {
+  const limited = caller(userSession("rate-limited"));
+  for (let index = 0; index < IMPORT_RATE_LIMIT.maxRequests; index++) {
+    await expect(limited.import({ payload: payload(1) })).resolves.toMatchObject({
+      success: true,
+    });
+  }
+  await expect(limited.import({ payload: payload(1) })).rejects.toMatchObject({
+    code: "TOO_MANY_REQUESTS",
+  });
+  // Another account keeps its own allowance.
+  await expect(
+    caller(userSession("other-user")).import({ payload: payload(1) }),
+  ).resolves.toMatchObject({ success: true });
+});
+
+test("a small payload cannot fan out into more rows or parts than the import caps", async () => {
+  await expect(
+    caller(userSession("many-chats")).import({ payload: payload(MAX_IMPORT_CONVERSATIONS + 1) }),
+  ).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+  await expect(
+    caller(userSession("many-parts")).import({
+      payload: [
+        {
+          title: "Parts",
+          messages: [{ role: "user", parts: Array.from({ length: MAX_IMPORT_ITEMS }, () => "a") }],
+        },
+      ],
+    }),
+  ).rejects.toMatchObject({ code: "PAYLOAD_TOO_LARGE" });
+  expect(state.committed).toEqual([]);
 });

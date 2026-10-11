@@ -137,8 +137,14 @@ export async function POST(request: Request) {
       console.warn(`[upload-attachment] binary content in text file (size: ${submittedFile.size})`);
       return NextResponse.json({ error: "Unsupported attachment type." }, { status: 415 });
     }
-    // Always stored as UTF-8, whatever encoding the file arrived in.
-    uploadedFile = new File([text], submittedFile.name, { type: textType });
+    // Always stored as UTF-8, whatever encoding the file arrived in. Re-encoding can
+    // grow it (Shift_JIS kana and kanji, UTF-16 CJK), and the chat reader caps the
+    // stored file, so the limit applies to the UTF-8 bytes as well.
+    const utf8 = new TextEncoder().encode(text);
+    if (utf8.byteLength > MAX_TEXT_ATTACHMENT_BYTES) {
+      return NextResponse.json({ error: "Text file is too large (max 2 MB)." }, { status: 413 });
+    }
+    uploadedFile = new File([utf8], submittedFile.name, { type: textType });
   }
 
   let url: string | null = null;

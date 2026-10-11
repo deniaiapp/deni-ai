@@ -15,6 +15,7 @@ import type { db as Db } from "@/db/drizzle";
 import { chats, modelComparisons, projects } from "@/db/schema";
 import { models } from "@/lib/constants";
 import { comparisonSettingsSchema, normalizeComparisonSettings } from "@/lib/comparison-settings";
+import { toJsonbSafe, toPostgresText } from "@/lib/jsonb";
 import { protectedProcedure, router } from "../trpc";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -185,16 +186,21 @@ export const chatRouter = router({
       if (JSON.stringify(questions(left.data)) !== JSON.stringify(questions(right.data))) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Comparison questions must match." });
       }
+      // Tool output (search results, truncated page text) can carry text Postgres rejects.
       const values = {
-        title: questions(left.data)[0].trim().slice(0, 80),
+        title: toPostgresText(questions(left.data)[0].trim().slice(0, 80)),
         leftModel: leftModel.value,
         rightModel: rightModel.value,
         leftName: leftModel.name,
         rightName: rightModel.name,
         leftSettings: normalizeComparisonSettings(leftModel, input.leftSettings),
         rightSettings: normalizeComparisonSettings(rightModel, input.rightSettings),
-        leftMessages: left.data.map((message) => ({ ...message, metadata: undefined })),
-        rightMessages: right.data.map((message) => ({ ...message, metadata: undefined })),
+        leftMessages: toJsonbSafe(
+          left.data.map((message) => ({ ...message, metadata: undefined })),
+        ),
+        rightMessages: toJsonbSafe(
+          right.data.map((message) => ({ ...message, metadata: undefined })),
+        ),
       };
       if (input.id) {
         const [saved] = await ctx.db
@@ -227,12 +233,16 @@ export const chatRouter = router({
           message: "A question and an answer are required.",
         });
       }
-      const messages = validated.data.map((message) => ({ ...message, metadata: undefined }));
-      const title = messages[0].parts
-        .flatMap((part) => (part.type === "text" ? [part.text] : []))
-        .join(" ")
-        .trim()
-        .slice(0, 80);
+      const messages = toJsonbSafe(
+        validated.data.map((message) => ({ ...message, metadata: undefined })),
+      );
+      const title = toPostgresText(
+        messages[0].parts
+          .flatMap((part) => (part.type === "text" ? [part.text] : []))
+          .join(" ")
+          .trim()
+          .slice(0, 80),
+      );
       const [saved] = await ctx.db
         .insert(chats)
         .values({
@@ -388,16 +398,7 @@ export const chatRouter = router({
       z
         .object({
           id: z.string().min(1),
-          title: z.string().nullable(),
-          messages: z.array(
-            z.object({
-              id: z.uuid(),
-              role: z.enum(["user", "assistant"]),
-              parts: z.json(),
-              attachments: z.json(),
-              createdAt: z.date(),
-            }),
-          ),
+          title: z.string().max(500).nullable(),
           pinned: z.boolean(),
           folder: z.string().trim().max(80).nullable(),
           projectId: z.string().trim().min(1).nullable(),
@@ -448,11 +449,12 @@ export const chatRouter = router({
       }
       return deletedChat[0];
     }),
+  /** Also removes saved comparisons: they hold full conversation transcripts too. */
   deleteAllChats: protectedProcedure.mutation(async ({ ctx }) => {
-    const deletedChats = await ctx.db
-      .delete(chats)
-      .where(eq(chats.uid, ctx.userId))
-      .returning({ id: chats.id });
+    const deletedChats = await ctx.db.transaction(async (tx) => {
+      await tx.delete(modelComparisons).where(eq(modelComparisons.uid, ctx.userId));
+      return tx.delete(chats).where(eq(chats.uid, ctx.userId)).returning({ id: chats.id });
+    });
 
     return { deletedCount: deletedChats.length };
   }),

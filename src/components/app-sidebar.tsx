@@ -184,7 +184,7 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
 
   const deleteAllChats = trpc.chat.deleteAllChats.useMutation({
     onSuccess: async () => {
-      await utils.chat.getChats.invalidate();
+      await Promise.all([utils.chat.getChats.invalidate(), utils.chat.getComparisons.invalidate()]);
       setIsDeleteAllDialogOpen(false);
       if (pathname?.startsWith("/chat/")) {
         push("/chat");

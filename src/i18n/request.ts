@@ -1,54 +1,7 @@
 import { cookies, headers } from "next/headers";
 import { getRequestConfig } from "next-intl/server";
-import { type AppLocale, defaultLocale, locales } from "@/i18n/locales";
-
-const getPreferredLocaleFromHeader = (acceptLanguage: string | null): AppLocale | null => {
-  if (!acceptLanguage) {
-    return null;
-  }
-
-  const candidates = acceptLanguage
-    .split(",")
-    .map((entry, index) => {
-      const [rawTag, ...params] = entry.trim().split(";");
-      if (!rawTag) {
-        return null;
-      }
-
-      let quality = 1;
-      for (const param of params) {
-        const [key, value] = param.trim().split("=");
-        if (key === "q") {
-          const parsed = Number.parseFloat(value ?? "");
-          if (!Number.isNaN(parsed)) {
-            quality = parsed;
-          }
-        }
-      }
-
-      return {
-        tag: rawTag.toLowerCase(),
-        quality,
-        index,
-      };
-    })
-    .filter(
-      (candidate): candidate is { tag: string; quality: number; index: number } =>
-        candidate !== null && candidate.tag !== "*",
-    )
-    .sort((a, b) => b.quality - a.quality || a.index - b.index);
-
-  for (const candidate of candidates) {
-    const matched = locales.find(
-      (locale) => candidate.tag === locale || candidate.tag.startsWith(`${locale}-`),
-    );
-    if (matched) {
-      return matched;
-    }
-  }
-
-  return null;
-};
+import { getPreferredLocaleFromHeader } from "@/i18n/accept-language";
+import { defaultLocale, locales } from "@/i18n/locales";
 
 export default getRequestConfig(async () => {
   const store = await cookies();

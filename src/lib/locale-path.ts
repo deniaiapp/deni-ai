@@ -2,9 +2,18 @@ import { PUBLIC_SITE_ORIGIN, publicPages } from "@/lib/public-pages";
 
 export const JA_PREFIX = "/ja";
 
+/** Request header the proxy sets on /ja rewrites; it strips any client-sent copy. */
+export const URL_LOCALE_HEADER = "x-deni-url-locale";
+
+// Unlocalized routes: /ja copies redirect here instead of rendering under the
+// public /ja/* cache rule.
 const APP_PATH_PREFIXES = [
   "/chat",
   "/settings",
+  "/projects",
+  "/compare",
+  "/new",
+  "/flixa/authorize",
   "/api",
   "/auth",
   "/account",

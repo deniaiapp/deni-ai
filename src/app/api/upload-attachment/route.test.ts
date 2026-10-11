@@ -99,6 +99,18 @@ test("limits text files to 2 MB", async () => {
   expect((await uploadNamed(large, "big.txt")).status).toBe(413);
 });
 
+test("applies the 2 MB text limit to the stored UTF-8 bytes", async () => {
+  // Half-width katakana "ｱ" is one byte in Shift_JIS and three in UTF-8.
+  const sjisKana = new Uint8Array(1024 * 1024).fill(0xb1);
+  expect((await uploadNamed(sjisKana, "data.csv")).status).toBe(413);
+  expect(mocks.uploadFile).not.toHaveBeenCalled();
+
+  const fits = new Uint8Array(512 * 1024).fill(0xb1);
+  expect((await uploadNamed(fits, "data.csv")).status).toBe(200);
+  const stored = mocks.uploadFile.mock.calls[0]?.[0] as File;
+  expect(stored.size).toBe(3 * 512 * 1024);
+});
+
 test("rate-limits uploads per account", async () => {
   mocks.allowed = false;
   const response = await upload(PNG, "image/png");

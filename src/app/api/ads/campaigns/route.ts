@@ -15,6 +15,7 @@ import { activatePaidAd, releaseExpiredAdCheckout } from "@/lib/ad-checkout";
 import { adPlans } from "@/lib/ads";
 import { isAllowedAdOrigin } from "@/lib/ad-origin";
 import { auth } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { stripe } from "@/lib/stripe";
 import { readRequestJson, RequestBodyTooLargeError } from "@/lib/request-body";
 
@@ -28,6 +29,9 @@ const inputSchema = z
   .refine((input) => input.plan !== "fixed" || input.budgetYen === 3000)
   .refine(hasOnlyOppositeVariant);
 
+/** Checkouts confirmed with Stripe per list request, newest first; webhooks settle the rest. */
+const MAX_RECONCILED_CHECKOUTS = 3;
+
 export async function GET() {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.session || session.user.isAnonymous) return new Response(null, { status: 401 });
@@ -39,30 +43,46 @@ export async function GET() {
 
   // Stripe Checkout can finish before its webhook reaches us. Confirm only the
   // signed-in advertiser's own sessions with Stripe and reconcile them here too.
+  // Bound the lookups: they share the platform's Stripe rate limit.
   const paymentStates = new Map<string, "open" | "paid" | "unknown">();
-  if (env.STRIPE_SECRET_KEY) {
+  const checked = new Set<string>();
+  const pending = campaigns
+    .filter((ad) => ad.status === "approved" && ad.stripeSessionId)
+    .sort((a, b) => (b.checkoutExpiresAt?.getTime() ?? 0) - (a.checkoutExpiresAt?.getTime() ?? 0))
+    .slice(0, MAX_RECONCILED_CHECKOUTS);
+  if (
+    env.STRIPE_SECRET_KEY &&
+    pending.length &&
+    (
+      await checkRateLimit({
+        key: `ad-reconcile:${session.session.userId}`,
+        windowMs: 60_000,
+        maxRequests: 10,
+      })
+    ).allowed
+  ) {
     await Promise.all(
-      campaigns
-        .filter((ad) => ad.status === "approved" && ad.stripeSessionId)
-        .map(async (ad) => {
-          try {
-            if (!ad.stripeSessionId) return;
-            const checkout = await stripe.checkout.sessions.retrieve(ad.stripeSessionId);
-            if (checkout.status === "complete" && checkout.payment_status === "paid") {
-              await activatePaidAd(checkout);
-              paymentStates.set(ad.id, "paid");
-            } else if (checkout.status === "expired") {
-              await releaseExpiredAdCheckout(checkout);
-            } else {
-              paymentStates.set(ad.id, checkout.status === "open" ? "open" : "unknown");
-            }
-          } catch (error) {
-            console.error("Ad payment reconciliation failed", { campaignId: ad.id, error });
-            paymentStates.set(ad.id, "unknown");
+      pending.map(async (ad) => {
+        checked.add(ad.id);
+        try {
+          if (!ad.stripeSessionId) return;
+          const checkout = await stripe.checkout.sessions.retrieve(ad.stripeSessionId);
+          if (checkout.status === "complete" && checkout.payment_status === "paid") {
+            await activatePaidAd(checkout);
+            paymentStates.set(ad.id, "paid");
+          } else if (checkout.status === "expired") {
+            await releaseExpiredAdCheckout(checkout);
+          } else {
+            paymentStates.set(ad.id, checkout.status === "open" ? "open" : "unknown");
           }
-        }),
+        } catch (error) {
+          console.error("Ad payment reconciliation failed", { campaignId: ad.id, error });
+          paymentStates.set(ad.id, "unknown");
+        }
+      }),
     );
   }
+  const now = new Date();
   const refreshed = await db
     .select()
     .from(adCampaign)
@@ -74,7 +94,11 @@ export async function GET() {
         ...ad,
         paymentState:
           ad.status === "approved" && ad.stripeSessionId
-            ? (paymentStates.get(ad.id) ?? "unknown")
+            ? (paymentStates.get(ad.id) ??
+              // Unchecked sessions may resume; checkout confirms them with Stripe first.
+              (!checked.has(ad.id) && ad.checkoutExpiresAt && ad.checkoutExpiresAt > now
+                ? "open"
+                : "unknown"))
             : null,
       })),
     },
