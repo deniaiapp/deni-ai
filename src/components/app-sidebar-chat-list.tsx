@@ -736,7 +736,8 @@ export function AppSidebarChatList({
     );
   }
 
-  if (errorMessage) {
+  // A failed refetch (rate limited, offline) keeps the chats already loaded.
+  if (errorMessage && chats.length === 0) {
     return (
       <div className="px-3 py-4 text-sm text-destructive">
         {t("Error")}: {errorMessage}

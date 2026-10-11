@@ -250,17 +250,18 @@ test("a current team owner is still blocked from deleting their account", async 
   expect(stripe.customers.del).not.toHaveBeenCalled();
 });
 
-test("team billing rows outlive their contact while personal rows keep their user", () => {
+test("team billing rows outlive their contact, and no user deletion fails on billing", () => {
   const config = getTableConfig(billing);
   const [userReference] = config.foreignKeys;
   expect(billing.userId.notNull).toBe(false);
   expect(userReference?.reference().columns.map((column) => column.name)).toEqual(["user_id"]);
   // The deleted user's team row survives with user_id NULL instead of cascading.
   expect(userReference?.onDelete).toBe("set null");
-  const personalCheck = config.checks.find((check) => check.name === "billing_personal_user_check");
-  expect(new PgDialect().sqlToQuery(personalCheck!.value).sql).toBe(
-    '"billing"."organization_id" IS NOT NULL OR "billing"."user_id" IS NOT NULL',
-  );
+  // Code from before this schema deletes users without removing their personal
+  // row first. The migration lands before the code, so that deletion must only
+  // orphan the row: a CHECK requiring personal rows to keep their user would
+  // fail it after better-auth removed the sessions and accounts.
+  expect(config.checks).toEqual([]);
 });
 
 test("account deletion removes the personal billing row explicitly, never a team row", async () => {

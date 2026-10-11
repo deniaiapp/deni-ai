@@ -25,6 +25,11 @@ vi.mock("@/lib/upload", () => ({
 import { attachment, chats, modelComparisons } from "@/db/schema";
 import { chatRouter } from "./chat";
 
+const ATTACHMENTS = [
+  { id: "a1", storageKey: "key-1" },
+  { id: "a2", storageKey: "key-2" },
+];
+
 const dialect = new PgDialect();
 const TABLE_NAMES = new Map<unknown, string>([
   [attachment, "attachment"],
@@ -35,11 +40,13 @@ const TABLE_NAMES = new Map<unknown, string>([
 /**
  * Records each write with its filter; `results` are the rows each table's
  * write returns (attachment rows for the update that marks them for deletion).
- * `references` are the other chats found to reference the deleted chat's files.
+ * `files` are the deleted chat's stored files, and `references` the URLs of
+ * them that other chats of the owner hold (newest chat first).
  */
 function createCaller(
   results: Map<unknown, unknown[]>,
-  references: { id: string; chatId: string }[] = [],
+  references: { chatId: string; url: string }[] = [],
+  files: { id: string; storageKey: string }[] = ATTACHMENTS,
 ) {
   const filters: { op: string; table: string; sql: string; params: unknown[]; set?: unknown }[] =
     [];
@@ -57,12 +64,26 @@ function createCaller(
         where: (condition: SQL) => write("update", table, condition, values),
       }),
     }),
-    // The lookup of other chats referencing the deleted chat's files.
+    // The deleted chat's stored files, then the other chats referencing them.
     select: () => ({
-      from: () => ({
-        innerJoin: () => ({
-          where: () => ({
+      from: (table: unknown) => ({
+        where: async () => {
+          expect(table).toBe(attachment);
+          return files;
+        },
+        crossJoinLateral: () => ({
+          where: (condition: SQL) => ({
             orderBy: async () => {
+              expect(table).toBe(chats);
+              // One lookup for the URLs of every file, in one read of each chat.
+              expect(dialect.sqlToQuery(condition).params).toEqual([
+                "owner",
+                "chat",
+                ...files.flatMap(({ id }) => [
+                  `/api/attachments/${id}`,
+                  `http://localhost:3000/api/attachments/${id}`,
+                ]),
+              ]);
               mocks.events.push("find references");
               return references;
             },
@@ -91,11 +112,6 @@ beforeEach(() => {
   mocks.events = [];
   mocks.deleteStoredFiles.mockClear();
 });
-
-const ATTACHMENTS = [
-  { id: "a1", storageKey: "key-1" },
-  { id: "a2", storageKey: "key-2" },
-];
 
 test("deleting a chat deletes its attachments and their files", async () => {
   const { caller, filters } = createCaller(
@@ -135,8 +151,8 @@ test("a file another chat of the owner references moves to that chat instead", a
     ]),
     // Newest chat first: a1 is kept by "copy".
     [
-      { id: "a1", chatId: "copy" },
-      { id: "a1", chatId: "older-copy" },
+      { chatId: "copy", url: "/api/attachments/a1" },
+      { chatId: "older-copy", url: "http://localhost:3000/api/attachments/a1" },
     ],
   );
 
@@ -174,7 +190,8 @@ test("a file that could not be deleted keeps its row for the storage cleanup", a
 });
 
 test("a chat that is not the user's deletes nothing", async () => {
-  const { caller } = createCaller(new Map());
+  // None of the owner's files is tied to it, so no other chat is read either.
+  const { caller } = createCaller(new Map(), [], []);
 
   await expect(caller.deleteChat({ id: "someone-elses" })).rejects.toMatchObject({
     code: "NOT_FOUND",

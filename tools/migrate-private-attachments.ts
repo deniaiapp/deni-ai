@@ -15,7 +15,10 @@
  * imported transcript), or already recorded for another account, is left
  * public and listed for manual review. One referenced by several chats of one
  * account is tied to the first; deleting that chat keeps it for the others
- * (`markChatAttachmentsForDeletion` ties it to one of them).
+ * (`markChatAttachmentsForDeletion` ties it to one of them, which it finds by
+ * the public URL until this tool rewrites them). A file UploadThing no longer
+ * lists, or whose row was deleted or is being deleted since, is not recorded
+ * (again): the chats referencing it are left as they are and it is listed.
  *
  * Needs DATABASE_URL and UPLOADTHING_TOKEN. Run once the private-storage
  * release is deployed (see SETUP.md, "Attachment storage").
@@ -105,7 +108,7 @@ for (let after = ""; ;) {
   after = page.at(-1)!.id;
 }
 
-// 2. Files already recorded: reusable by their own owner, a conflict for anyone else.
+// 2. Files already recorded: reusable by their own owner while ready, a conflict for anyone else.
 const recordedOwner = new Map<string, string>();
 for (const batch of chunks([...owners.keys()], 500)) {
   const rows = await db
@@ -124,11 +127,15 @@ const conflicts = new Set(
 const sizes = await listFileSizes();
 const bytesByUser = new Map<string, number>();
 let totalBytes = 0;
-let missing = 0;
+// Not in a listing that succeeded: a row would record a file that is gone.
+const missing = new Set<string>();
 for (const [key, users] of owners) {
   if (conflicts.has(key) || recordedOwner.has(key)) continue;
   const size = sizes?.get(key);
-  if (sizes && size === undefined) missing++;
+  if (sizes && size === undefined) {
+    missing.add(key);
+    continue;
+  }
   totalBytes += size ?? 0;
   const [user] = users;
   if (user) bytesByUser.set(user, (bytesByUser.get(user) ?? 0) + (size ?? 0));
@@ -140,7 +147,7 @@ console.log(
     `Chats with public attachment URLs: ${candidates.length}${ownerlessChats ? ` (+${ownerlessChats} without an owner, skipped)` : ""}`,
     `Files: ${owners.size} (${recordedOwner.size} already recorded, ${conflicts.size} left public for review)`,
     sizes
-      ? `New storage counted against quotas: ${(totalBytes / MiB).toFixed(1)} MiB across ${bytesByUser.size} account(s)${missing ? `; ${missing} file(s) not found in UploadThing (recorded as 0 bytes)` : ""}`
+      ? `New storage counted against quotas: ${(totalBytes / MiB).toFixed(1)} MiB across ${bytesByUser.size} account(s)${missing.size ? `; ${missing.size} file(s) not found in UploadThing (left as they are)` : ""}`
       : "New storage counted against quotas: unknown (UploadThing listing failed; sizes recorded as 0)",
   ].join("\n"),
 );
@@ -152,6 +159,9 @@ if (largest.length > 0) {
 if (conflicts.size > 0) {
   console.log(`Left public (referenced by several accounts): ${[...conflicts].join(", ")}`);
 }
+if (missing.size > 0) {
+  console.log(`Not found in UploadThing (chats left as they are): ${[...missing].join(", ")}`);
+}
 
 if (!apply) {
   console.log("[dry run] Nothing was changed. Pass --apply to migrate.");
@@ -162,10 +172,12 @@ if (!apply) {
 let migratedChats = 0;
 let rewrittenParts = 0;
 let failedChats = 0;
+// Recorded for another account, or deleted or marked for deletion, since the scan.
+const unavailable = new Set<string>();
 for (const candidate of candidates) {
   if (migratedChats >= limit) break;
   try {
-    const rewritten = await db.transaction(async (tx) => {
+    const { rewritten, skipped } = await db.transaction(async (tx) => {
       // Locked, so a save of this chat cannot land between this read and the
       // write below and be lost. A save can still follow the commit with the
       // old URLs, from a tab loaded before this run: the chat route rewrites
@@ -176,38 +188,51 @@ for (const candidate of candidates) {
         .from(chats)
         .where(eq(chats.id, candidate.chatId))
         .for("update");
-      if (!chat || chat.uid !== candidate.userId) return 0;
+      const none = { rewritten: 0, skipped: [] as string[] };
+      if (!chat || chat.uid !== candidate.userId) return none;
       const found = [...findLegacyAttachments(chat.messages, hostname)].filter(
-        ([key]) => !conflicts.has(key),
+        ([key]) => !conflicts.has(key) && !missing.has(key),
       );
-      if (found.length === 0) return 0;
+      if (found.length === 0) return none;
 
-      await tx
-        .insert(attachment)
-        .values(
-          found.map(([key, mediaType]) => ({
-            id: nanoid(32),
-            userId: candidate.userId,
-            chatId: candidate.chatId,
-            storageKey: key,
-            mediaType,
-            sizeBytes: sizes?.get(key) ?? 0,
-            status: "ready" as const,
-          })),
-        )
-        .onConflictDoNothing({ target: attachment.storageKey });
-      const rows = await tx
-        .select({ id: attachment.id, userId: attachment.userId, storageKey: attachment.storageKey })
+      // A file recorded at the scan is never recorded again: its row is reused
+      // while ready, and one deleted (or being deleted) since keeps its chats as
+      // they are rather than pointing them at a file that is gone.
+      const unrecorded = found.filter(([key]) => !recordedOwner.has(key));
+      if (unrecorded.length > 0) {
+        await tx
+          .insert(attachment)
+          .values(
+            unrecorded.map(([key, mediaType]) => ({
+              id: nanoid(32),
+              userId: candidate.userId,
+              chatId: candidate.chatId,
+              storageKey: key,
+              mediaType,
+              sizeBytes: sizes?.get(key) ?? 0,
+              status: "ready" as const,
+            })),
+          )
+          .onConflictDoNothing({ target: attachment.storageKey });
+      }
+      // Only the owner's ready rows: a file recorded for someone else, or
+      // deleted or marked for deletion, since the scan is left as it is.
+      const own = await tx
+        .select({ id: attachment.id, storageKey: attachment.storageKey })
         .from(attachment)
         .where(
-          inArray(
-            attachment.storageKey,
-            found.map(([key]) => key),
+          and(
+            inArray(
+              attachment.storageKey,
+              found.map(([key]) => key),
+            ),
+            eq(attachment.userId, candidate.userId),
+            eq(attachment.status, "ready"),
           ),
         );
-      // Recorded for someone else since the scan: left as is.
-      const own = rows.filter((row) => row.userId === candidate.userId && row.storageKey);
-      if (own.length === 0) return 0;
+      const ownKeys = new Set(own.map((row) => row.storageKey));
+      const skipped = found.flatMap(([key]) => (ownKeys.has(key) ? [] : [key]));
+      if (own.length === 0) return { ...none, skipped };
       // A reused row no longer tied to a chat would expire; tie it to this one.
       await tx
         .update(attachment)
@@ -224,7 +249,7 @@ for (const candidate of candidates) {
 
       const idsByKey = new Map(own.map((row) => [row.storageKey!, row.id]));
       const result = rewriteLegacyAttachmentUrls(chat.messages, hostname, idsByKey);
-      if (result.rewritten === 0) return 0;
+      if (result.rewritten === 0) return { ...none, skipped };
       // Last, so a failure here rolls everything back and the file stays public.
       for (const batch of chunks([...idsByKey.keys()], STORAGE_BATCH_SIZE)) {
         const { success } = await utapi.updateACL(batch, "private");
@@ -235,8 +260,9 @@ for (const candidate of candidates) {
         .update(chats)
         .set({ messages: result.messages })
         .where(eq(chats.id, candidate.chatId));
-      return result.rewritten;
+      return { rewritten: result.rewritten, skipped };
     });
+    for (const key of skipped) unavailable.add(key);
     if (rewritten > 0) {
       migratedChats++;
       rewrittenParts += rewritten;
@@ -250,6 +276,11 @@ for (const candidate of candidates) {
 console.log(
   `Migrated ${migratedChats} chat(s), ${rewrittenParts} file part(s).${failedChats ? ` ${failedChats} chat(s) failed; rerun to retry.` : ""}`,
 );
+if (unavailable.size > 0) {
+  console.log(
+    `Recorded for another account, or deleted or being deleted, since the scan (chats left as they are): ${[...unavailable].join(", ")}`,
+  );
+}
 if (migratedChats >= limit && candidates.length > migratedChats) {
   console.log("Stopped at --limit; rerun to continue.");
 }

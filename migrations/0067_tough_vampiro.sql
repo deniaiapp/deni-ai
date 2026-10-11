@@ -35,5 +35,4 @@ CREATE INDEX "attachment_chat_id_idx" ON "attachment" USING btree ("chat_id");--
 CREATE INDEX "attachment_status_created_idx" ON "attachment" USING btree ("status","created_at");--> statement-breakpoint
 CREATE UNIQUE INDEX "attachment_storage_key_idx" ON "attachment" USING btree ("storage_key");--> statement-breakpoint
 ALTER TABLE "billing" ADD CONSTRAINT "billing_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-CREATE INDEX "billing_organization_idx" ON "billing" USING btree ("organization_id","created_at","id") WHERE organization_id IS NOT NULL;--> statement-breakpoint
-ALTER TABLE "billing" ADD CONSTRAINT "billing_personal_user_check" CHECK ("billing"."organization_id" IS NOT NULL OR "billing"."user_id" IS NOT NULL);
+CREATE INDEX "billing_organization_idx" ON "billing" USING btree ("organization_id","created_at","id") WHERE organization_id IS NOT NULL;

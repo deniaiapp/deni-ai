@@ -2,7 +2,6 @@ import { sql } from "drizzle-orm";
 import {
   boolean,
   bigint,
-  check,
   index,
   integer,
   pgTable,
@@ -19,9 +18,10 @@ export const billing = pgTable(
     id: text("id")
       .primaryKey()
       .default(sql`gen_random_uuid()`),
-    // Personal rows always name their user (see the check below). A team row
-    // belongs to its organization; this is only its billing contact, and it is
-    // cleared when that member leaves the team or deletes their account.
+    // Personal rows always name their user: every write passes one, and account
+    // deletion deletes them before the user row. A team row belongs to its
+    // organization; this is only its billing contact, and it is cleared when
+    // that member leaves the team or deletes their account.
     userId: text("user_id").references(() => user.id, { onDelete: "set null" }),
     organizationId: text("organization_id"),
     stripeCustomerId: text("stripe_customer_id").notNull(),
@@ -85,11 +85,10 @@ export const billing = pgTable(
     trialPaymentMethodFingerprintIdx: index("billing_trial_payment_method_fingerprint_idx").on(
       table.trialPaymentMethodFingerprint,
     ),
-    // Account deletion removes personal rows explicitly before the user row; the
-    // FK's SET NULL is only for team rows.
-    personalUserCheck: check(
-      "billing_personal_user_check",
-      sql`${table.organizationId} IS NOT NULL OR ${table.userId} IS NOT NULL`,
-    ),
+    // No CHECK that personal rows keep their user: a deployment still running
+    // code from before this schema relies on the old cascade and deletes the
+    // user without removing the personal row first. SET NULL then only leaves
+    // that row orphaned (never matched by a user id), where a CHECK would fail
+    // the deletion after better-auth already removed the sessions and accounts.
   }),
 );

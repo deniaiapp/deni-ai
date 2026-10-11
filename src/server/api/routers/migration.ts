@@ -1,4 +1,5 @@
 import { TRPCError } from "@trpc/server";
+import { getExtracted } from "next-intl/server";
 import { z } from "zod";
 import { chats } from "@/db/schema";
 import { omitUnownedAttachmentParts } from "@/lib/attachments";
@@ -60,22 +61,22 @@ export const migrationRouter = router({
           importedChats: 0,
           importedMessages: 0,
           warnings,
+          omittedAttachments: 0,
           error: "No conversations found to import",
         };
       }
 
       // A deni-ai export of another account carries app URLs of that account's
-      // files, which would make every request of the imported chat fail.
+      // files, which would make every request of the imported chat fail. The
+      // notice replacing them is saved in the chat, so it is written in the
+      // importing user's language; the import page reports the count.
+      const t = await getExtracted();
       const { conversations: importable, omitted } = await omitUnownedAttachmentParts(
         conversations,
         ctx.userId,
+        t("[An attached file could not be imported.]"),
         ctx.db,
       );
-      if (omitted > 0) {
-        warnings.push(
-          `${omitted} attached file(s) could not be imported: they belong to another account or no longer exist`,
-        );
-      }
 
       const now = new Date();
       // normalizeMigrationPayload already returns fresh JSON copies of the messages.
@@ -109,6 +110,7 @@ export const migrationRouter = router({
           0,
         ),
         warnings,
+        omittedAttachments: omitted,
       };
     }),
 });

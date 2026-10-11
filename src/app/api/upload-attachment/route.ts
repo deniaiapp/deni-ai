@@ -8,6 +8,7 @@ import {
 import { storageQuotaExceededMessage } from "@/lib/attachment-quota";
 import { attachmentUrl } from "@/lib/attachment-url";
 import {
+  abandonAttachmentReservation,
   getStorageLimitForUser,
   markAttachmentReady,
   releaseAttachmentReservation,
@@ -194,18 +195,28 @@ async function storeAttachment(file: File, userId: string, isAnonymous: boolean)
     );
   }
 
-  const release = () =>
-    releaseAttachmentReservation(reservation.id).catch((error: unknown) => {
+  /**
+   * Give the quota back. The reservation is dropped only when `deleted` (what
+   * `deleteStoredFiles` reports gone) includes `stored`, the file's custom id
+   * or key: until then it is the file's only record, so it is marked for the
+   * storage-cleanup cron to delete the file by its custom id instead. If even
+   * that fails, the pending row expires and is cleaned up the same way.
+   */
+  const release = async (deleted: readonly string[], stored: string) => {
+    try {
+      if (deleted.includes(stored)) await releaseAttachmentReservation(reservation.id);
+      else await abandonAttachmentReservation(reservation.id);
+    } catch (error) {
       console.error("[upload-attachment] failed to release a storage reservation", error);
-    });
+    }
+  };
 
   // Tagged with the reservation id: if the key below is never recorded (crash,
   // timeout), dropping the abandoned reservation still deletes the file.
   const key = await uploadPrivateFile(file, reservation.id);
   if (!key) {
     // A request can fail after the file was stored (for example, a lost response).
-    await deleteStoredFiles([reservation.id], "customId");
-    await release();
+    await release(await deleteStoredFiles([reservation.id], "customId"), reservation.id);
     return NextResponse.json({ error: UPLOAD_FAILED }, { status: 502 });
   }
 
@@ -216,8 +227,7 @@ async function storeAttachment(file: File, userId: string, isAnonymous: boolean)
     console.error("[upload-attachment] failed to record a stored attachment", error);
   }
   if (!ready) {
-    await deleteStoredFiles([key]);
-    await release();
+    await release(await deleteStoredFiles([key]), key);
     return NextResponse.json({ error: UPLOAD_FAILED }, { status: 500 });
   }
 

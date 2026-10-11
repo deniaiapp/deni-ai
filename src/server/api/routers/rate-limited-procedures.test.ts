@@ -76,7 +76,52 @@ test.each([
     () =>
       organization.estimateTeamPlanChange({ organizationId: "org", planId: "pro_team_monthly" }),
   ],
-  ["chat.getChats", 60, () => chat.getChats()],
+  // Refetched after every sent message and every sidebar delete, pin, edit or move.
+  ["chat.getChats", 120, () => chat.getChats()],
+  // Stripe-backed mutations: one click each.
+  [
+    "billing.createCheckoutSession",
+    10,
+    () => billing.createCheckoutSession({ planId: "pro_monthly" }),
+  ],
+  ["billing.createPortalSession", 10, () => billing.createPortalSession()],
+  ["billing.changePlan", 10, () => billing.changePlan({ planId: "max_monthly" })],
+  ["billing.cancelSubscription", 10, () => billing.cancelSubscription()],
+  ["billing.resumeSubscription", 10, () => billing.resumeSubscription()],
+  ["billing.enableMaxMode", 10, () => billing.enableMaxMode()],
+  ["billing.removeVerifiedCard", 10, () => billing.removeVerifiedCard()],
+  [
+    "organization.createTeamCheckoutSession",
+    10,
+    () =>
+      organization.createTeamCheckoutSession({ organizationId: "org", planId: "pro_team_monthly" }),
+  ],
+  [
+    "organization.createTeamPortalSession",
+    10,
+    () => organization.createTeamPortalSession({ organizationId: "org" }),
+  ],
+  [
+    "organization.changeTeamPlan",
+    10,
+    () => organization.changeTeamPlan({ organizationId: "org", planId: "max_team_monthly" }),
+  ],
+  [
+    "organization.cancelTeamSubscription",
+    10,
+    () => organization.cancelTeamSubscription({ organizationId: "org" }),
+  ],
+  [
+    "organization.resumeTeamSubscription",
+    10,
+    () => organization.resumeTeamSubscription({ organizationId: "org" }),
+  ],
+  [
+    "organization.updateTeamMaxModeEnabled",
+    10,
+    () => organization.updateTeamMaxModeEnabled({ organizationId: "org", enabled: true }),
+  ],
+  ["organization.syncSeatCount", 10, () => organization.syncSeatCount({ organizationId: "org" })],
 ])("%s is limited to %i calls a minute per user", async (name, maxRequests, call) => {
   await expect(call()).rejects.toMatchObject({
     code: "TOO_MANY_REQUESTS",
@@ -86,5 +131,19 @@ test.each([
     key: `trpc:${name}:user-1`,
     windowMs: 60_000,
     maxRequests,
+  });
+});
+
+// Each verification intent is a $1 authorization its client secret can attempt
+// with any card, so creating and confirming them is budgeted per hour.
+test.each([
+  ["billing.createCardSetupIntent", () => billing.createCardSetupIntent()],
+  ["billing.confirmCardSetup", () => billing.confirmCardSetup({ paymentIntentId: "pi_1" })],
+])("%s is limited to 10 calls an hour per user", async (name, call) => {
+  await expect(call()).rejects.toMatchObject({ code: "TOO_MANY_REQUESTS" });
+  expect(mocks.checkRateLimit).toHaveBeenCalledExactlyOnceWith({
+    key: `trpc:${name}:user-1`,
+    windowMs: 60 * 60_000,
+    maxRequests: 10,
   });
 });

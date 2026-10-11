@@ -123,14 +123,14 @@ test("an address the team set for its invoices is kept", async () => {
   expect(stripe.customers.update).not.toHaveBeenCalled();
 });
 
-test("a customer created for the departing member moves from their older address", async () => {
-  // They changed their email after the team customer was created.
-  state.customer = { ...state.customer, email: "old-address@example.com" };
+test("an address the team chose stays when the customer's creator leaves", async () => {
+  // The departing member created the customer; an owner later pointed its
+  // invoices at an accounts inbox in the billing portal.
+  state.customer = { ...state.customer, email: "billing@corp.example" };
   await releaseTeamBillingContact("team", "former");
 
-  expect(stripe.customers.update).toHaveBeenCalledWith("cus_team", {
-    email: "owner@example.com",
-  });
+  expect(state.rows[0]?.userId).toBeNull();
+  expect(stripe.customers.update).not.toHaveBeenCalled();
 });
 
 test("invoices move even when the departing member is not the row's billing contact", async () => {
@@ -195,8 +195,7 @@ test("a Stripe failure never fails the membership change", async () => {
 });
 
 test("a deleted account's team invoices move to an owner when one remains", async () => {
-  const former = { userId: "former", email: "former@example.com" };
-  await redirectTeamBillingEmail("team", former);
+  await redirectTeamBillingEmail("team", "former@example.com");
   expect(stripe.customers.update).toHaveBeenCalledWith("cus_team", {
     email: "owner@example.com",
   });
@@ -204,7 +203,13 @@ test("a deleted account's team invoices move to an owner when one remains", asyn
   vi.clearAllMocks();
   state.owner = null;
   const consoleWarn = vi.spyOn(console, "warn").mockImplementation(() => {});
-  await redirectTeamBillingEmail("team", former);
+  await redirectTeamBillingEmail("team", "former@example.com");
   expect(stripe.customers.update).not.toHaveBeenCalled();
   consoleWarn.mockRestore();
+});
+
+test("a departing member without a known address changes no invoice address", async () => {
+  await redirectTeamBillingEmail("team", null);
+  expect(stripe.customers.retrieve).not.toHaveBeenCalled();
+  expect(stripe.customers.update).not.toHaveBeenCalled();
 });

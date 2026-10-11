@@ -5,6 +5,10 @@ import type { Context } from "../trpc";
 
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: {} }));
+// The request's locale is not read here: messages stay in their English source.
+vi.mock("next-intl/server", () => ({
+  getExtracted: async () => (message: string) => message,
+}));
 
 const { migrationRouter, IMPORT_RATE_LIMIT } = await import("./migration");
 const { MAX_IMPORT_CONVERSATIONS, MAX_IMPORT_ITEMS, normalizeMigrationPayload } =
@@ -200,15 +204,47 @@ test("an imported export keeps only the importing user's own attachments", async
     ],
   });
 
-  expect(result).toMatchObject({ success: true, importedChats: 1, importedMessages: 1 });
-  expect(result.warnings).toEqual([
-    "1 attached file(s) could not be imported: they belong to another account or no longer exist",
-  ]);
+  // A count the import page words in the user's language, not a warning in English.
+  expect(result).toMatchObject({
+    success: true,
+    importedChats: 1,
+    importedMessages: 1,
+    omittedAttachments: 1,
+    warnings: [],
+  });
   const [[chat]] = state.committed as { messages: { parts: unknown[] }[] }[][];
   expect(chat?.messages[0]?.parts).toEqual([
     { type: "text", text: "look" },
     file(`/api/attachments/${mine}`),
     { type: "text", text: "[An attached file could not be imported.]" },
     file("https://example.com/a.png"),
+  ]);
+});
+
+test("a file part without a URL is left out instead of failing the whole import", async () => {
+  const result = await caller().import({
+    payload: [
+      {
+        title: "AI SDK v4",
+        messages: [
+          {
+            role: "user",
+            parts: [
+              { type: "text", text: "look" },
+              { type: "file", mimeType: "image/png", data: "iVBORw0KGgo=" },
+            ],
+          },
+          // Nothing usable left: reported like any other unusable message.
+          { role: "user", parts: [{ type: "file", url: 42 }] },
+        ],
+      },
+      { title: "Plain", messages: [{ role: "user", content: "hi" }] },
+    ],
+  });
+
+  expect(result).toMatchObject({ success: true, importedChats: 2, omittedAttachments: 0 });
+  const [chats] = state.committed as { messages: { parts: unknown[] }[] }[][];
+  expect(chats?.[0]?.messages.map((message) => message.parts)).toEqual([
+    [{ type: "text", text: "look" }],
   ]);
 });

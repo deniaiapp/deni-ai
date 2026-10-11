@@ -9,8 +9,11 @@ const mocks = vi.hoisted(() => ({
   uploadFile: vi.fn(
     async (_file: File, _customId: string): Promise<string | null> => "storage-key",
   ),
+  // Reports every file as deleted unless a test says otherwise.
   deleteStoredFiles: vi.fn(
-    async (_keys: readonly string[], _keyType?: "fileKey" | "customId") => {},
+    async (keys: readonly string[], _keyType?: "fileKey" | "customId"): Promise<string[]> => [
+      ...keys,
+    ],
   ),
   limit: vi.fn(async (_userId: string, _isAnonymous: boolean) => 100 * 1024 * 1024),
   reserve: vi.fn(
@@ -25,6 +28,7 @@ const mocks = vi.hoisted(() => ({
   ),
   markReady: vi.fn(async (_id: string, _key: string) => true),
   release: vi.fn(async (_id: string) => {}),
+  abandon: vi.fn(async (_id: string) => {}),
 }));
 
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
@@ -43,6 +47,7 @@ vi.mock("@/lib/attachments", () => ({
   reserveAttachmentStorage: mocks.reserve,
   markAttachmentReady: mocks.markReady,
   releaseAttachmentReservation: mocks.release,
+  abandonAttachmentReservation: mocks.abandon,
 }));
 
 import { POST } from "./route";
@@ -66,6 +71,7 @@ beforeEach(() => {
     mocks.reserve,
     mocks.markReady,
     mocks.release,
+    mocks.abandon,
   ]) {
     mock.mockClear();
   }
@@ -250,6 +256,7 @@ test("a failed upload gives the quota back instead of falling back to an inline 
   expect(response.status).toBe(502);
   expect(await response.json()).toEqual({ error: "Attachment upload failed." });
   expect(mocks.release).toHaveBeenCalledWith(ATTACHMENT_ID);
+  expect(mocks.abandon).not.toHaveBeenCalled();
   expect(mocks.markReady).not.toHaveBeenCalled();
   // The request may have failed after the file was stored.
   expect(mocks.deleteStoredFiles).toHaveBeenCalledExactlyOnceWith([ATTACHMENT_ID], "customId");
@@ -261,6 +268,27 @@ test("a stored file whose record cannot be saved is deleted again", async () => 
   expect(response.status).toBe(500);
   expect(mocks.deleteStoredFiles).toHaveBeenCalledWith(["storage-key"]);
   expect(mocks.release).toHaveBeenCalledWith(ATTACHMENT_ID);
+  expect(mocks.abandon).not.toHaveBeenCalled();
+});
+
+test("a file that could not be deleted again keeps its reservation for the cleanup", async () => {
+  vi.spyOn(console, "error").mockImplementation(() => {});
+  // The upload failed after storing the file, and UploadThing is still failing.
+  mocks.uploadFile.mockResolvedValueOnce(null);
+  mocks.deleteStoredFiles.mockResolvedValueOnce([]);
+  expect((await upload(PNG, "image/png")).status).toBe(502);
+  // Dropping the row would leave the file untracked: it is marked for deletion
+  // instead, which gives the quota back and lets the cron delete the file by id.
+  expect(mocks.release).not.toHaveBeenCalled();
+  expect(mocks.abandon).toHaveBeenCalledExactlyOnceWith(ATTACHMENT_ID);
+
+  mocks.abandon.mockClear();
+  mocks.markReady.mockRejectedValueOnce(new Error("database unavailable"));
+  mocks.deleteStoredFiles.mockResolvedValueOnce([]);
+  expect((await upload(PNG, "image/png")).status).toBe(500);
+  expect(mocks.deleteStoredFiles).toHaveBeenLastCalledWith(["storage-key"]);
+  expect(mocks.release).not.toHaveBeenCalled();
+  expect(mocks.abandon).toHaveBeenCalledExactlyOnceWith(ATTACHMENT_ID);
 });
 
 test("without storage configured, small files are returned inline with no quota", async () => {

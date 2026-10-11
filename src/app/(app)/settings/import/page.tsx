@@ -16,7 +16,8 @@ type ImportResult = {
   importedChats: number;
   importedMessages: number;
   warnings: string[];
-  error?: string;
+  /** Attached files replaced by a notice: another account's, or deleted. */
+  omittedAttachments: number;
 };
 
 export default function ImportSettingsPage() {
@@ -39,7 +40,7 @@ export default function ImportSettingsPage() {
         );
         utils.chat.invalidate();
       } else {
-        toast.error(result.error || t("No conversations found to import."));
+        toast.error(t("No conversations found to import."));
       }
     },
     onError: (error) => {
@@ -126,10 +127,18 @@ export default function ImportSettingsPage() {
                 ) : (
                   <>
                     <AlertTriangle className="size-4 text-amber-600" />
-                    {lastResult.error || t("No conversations found to import.")}
+                    {t("No conversations found to import.")}
                   </>
                 )}
               </div>
+              {lastResult.omittedAttachments > 0 ? (
+                <p className="text-xs text-muted-foreground">
+                  {t(
+                    "{count, plural, one {# attached file could not be imported: it belongs to another account or no longer exists.} other {# attached files could not be imported: they belong to another account or no longer exist.}}",
+                    { count: lastResult.omittedAttachments },
+                  )}
+                </p>
+              ) : null}
               {lastResult.warnings.length > 0 ? (
                 <div className="text-xs text-muted-foreground space-y-1">
                   <p className="font-medium">

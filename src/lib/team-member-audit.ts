@@ -170,15 +170,20 @@ const departures = new Map<string, Departure>();
  * departure itself; earlier entries keep their actor as a deleted user.
  *
  * Team billing rows outlive the user (`billing.user_id` is SET NULL, and a
- * self-service deletion clears it earlier); invoices that may still go to the
- * departing user move to a current owner, for every team they belonged to or
- * were the billing contact of.
+ * self-service deletion clears it earlier); invoices still sent to the
+ * departing user's address move to a current owner, for every team they
+ * belonged to or were the billing contact of.
  */
 export const accountDeletionSeatHooks = {
   before: async (user: { id: string; email?: string | null }) => {
-    // Unlike the reads below this must succeed: a personal billing row may not
-    // lose its user, so the user row cannot be deleted while one remains.
-    await deletePersonalBillingRecords(user.id);
+    try {
+      await deletePersonalBillingRecords(user.id);
+    } catch (error) {
+      // Sessions and accounts are already gone here, so failing now would leave
+      // an account nobody can sign in to. The FK's SET NULL keeps the row
+      // instead, orphaned and never matched by a user id again.
+      console.error("[billing] Failed to delete personal billing before account deletion:", error);
+    }
     const departure: Departure = {
       organizationIds: [],
       billingContactOrganizationIds: [],
@@ -219,7 +224,7 @@ export const accountDeletionSeatHooks = {
       ...departure.billingContactOrganizationIds,
     ]);
     for (const organizationId of teams) {
-      await redirectTeamBillingEmail(organizationId, { userId: user.id, email: departure.email });
+      await redirectTeamBillingEmail(organizationId, departure.email);
     }
     for (const organizationId of departure.organizationIds) {
       await updateTeamSeatCount(organizationId);

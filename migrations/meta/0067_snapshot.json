@@ -1,5 +1,5 @@
 {
-  "id": "d164e35a-b356-448f-922e-beca68a737a5",
+  "id": "a7c21b87-5426-4a00-9d8b-4a19350a66cd",
   "prevId": "1741b8cc-c967-4a06-883b-5381de88248e",
   "version": "7",
   "dialect": "postgresql",
@@ -2213,12 +2213,7 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
-      "checkConstraints": {
-        "billing_personal_user_check": {
-          "name": "billing_personal_user_check",
-          "value": "\"billing\".\"organization_id\" IS NOT NULL OR \"billing\".\"user_id\" IS NOT NULL"
-        }
-      },
+      "checkConstraints": {},
       "isRLSEnabled": false
     },
     "public.chats": {

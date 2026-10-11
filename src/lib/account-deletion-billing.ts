@@ -207,9 +207,9 @@ export async function getAccountDeletionStatus(userId: string): Promise<AccountD
 
 /**
  * Personal billing rows are deleted with their user. `billing.user_id` is
- * SET NULL so team rows outlive their billing contact, and a personal row may
- * not lose its user, so every account deletion path (the user delete database
- * hook) removes them right before the user row.
+ * SET NULL so team rows outlive their billing contact, which would leave a
+ * personal row behind without a user, so every account deletion path (the
+ * user delete database hook) removes them right before the user row.
  */
 export async function deletePersonalBillingRecords(userId: string) {
   await db.delete(billing).where(and(eq(billing.userId, userId), isNull(billing.organizationId)));

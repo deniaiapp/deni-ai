@@ -2,6 +2,7 @@ import type { ModelMessage, UIMessage } from "ai";
 import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, expect, test, vi } from "vitest";
+import { chats } from "@/db/schema";
 
 /** UploadThing app `app`: its public file URLs are `https://app.ufs.sh/f/<key>`. */
 const TOKEN = Buffer.from(JSON.stringify({ appId: "app" })).toString("base64");
@@ -44,6 +45,7 @@ vi.mock("@/lib/usage", () => ({ getSubscriptionTier: mocks.tier }));
 vi.mock("@/lib/account-export-jobs", () => ({ collectAccountExportFiles: mocks.exportFiles }));
 
 const {
+  abandonAttachmentReservation,
   accountDeletionAttachmentHooks,
   attachmentIdFromUrl,
   cleanUpAttachmentStorage,
@@ -55,7 +57,6 @@ const {
   linkChatAttachments,
   markAttachmentReady,
   markChatAttachmentsForDeletion,
-  OMITTED_IMPORTED_ATTACHMENT_TEXT,
   omitUnownedAttachmentParts,
   PENDING_ATTACHMENT_TTL_MS,
   purgeDeletingAttachments,
@@ -110,8 +111,36 @@ const pick = (row: Row, fields: Record<string, unknown>) =>
 /** A chat of `chatRows`, for the lookup of chats that reference an attachment. */
 type ChatRow = { id: string; uid: string; updatedAt: Date; messages: UIMessage[] };
 
+/**
+ * Only the lookup of `markChatAttachmentsForDeletion`: the URLs among `in (...)`
+ * that the owner's other chats hold in a part, newest chat first. Each chat is
+ * read once (`reads` counts them), whatever the number of URLs.
+ */
+function findChatReferences(chatRows: ChatRow[], condition: SQL, reads: { count: number }) {
+  const { sql: text, params } = dialect.sqlToQuery(condition);
+  const param = (pattern: RegExp) => params[Number(pattern.exec(text)?.[1]) - 1];
+  const uid = param(/"chats"\."user_id" = \$(\d+)/);
+  const excluded = param(/"chats"\."id" <> \$(\d+)/);
+  const [, list = ""] = /refs\.url #>> '\{\}' in \(([^)]*)\)/.exec(text) ?? [];
+  const urls = new Set(
+    [...list.matchAll(/\$(\d+)/g)].map(([, index]) => params[Number(index) - 1]),
+  );
+  return chatRows
+    .filter((chat) => chat.uid === uid && chat.id !== excluded)
+    .toSorted((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    .flatMap((chat) => {
+      reads.count++;
+      return chat.messages.flatMap((message) =>
+        message.parts.flatMap((part) =>
+          "url" in part && urls.has(part.url) ? [{ chatId: chat.id, url: part.url }] : [],
+        ),
+      );
+    });
+}
+
 /** In-memory attachment table. Every query yields, so unlocked work would interleave. */
 function createDatabase(initial: Partial<Row>[] = [], chatRows: ChatRow[] = []) {
+  const chatReads = { count: 0 };
   const rows: Row[] = initial.map((row, index) => ({
     id: `row-${index}`,
     userId: "user",
@@ -126,7 +155,18 @@ function createDatabase(initial: Partial<Row>[] = [], chatRows: ChatRow[] = []) 
   const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
   const operations = {
     select: (fields: Record<string, unknown>) => ({
-      from: () => ({
+      from: (table: unknown) => ({
+        crossJoinLateral: () => {
+          expect(table).toBe(chats);
+          return {
+            where: (condition: SQL) => ({
+              orderBy: async () => {
+                await tick();
+                return findChatReferences(chatRows, condition, chatReads);
+              },
+            }),
+          };
+        },
         where: (condition: SQL) => {
           const result = (async () => {
             await tick();
@@ -149,42 +189,6 @@ function createDatabase(initial: Partial<Row>[] = [], chatRows: ChatRow[] = []) 
             }),
           });
         },
-        // Only the join of `markChatAttachmentsForDeletion`: the other chats of
-        // the owner whose messages hold a part with the attachment's app URL.
-        innerJoin: (_table: unknown, on: SQL) => ({
-          where: (condition: SQL) => ({
-            orderBy: async () => {
-              await tick();
-              const { sql: text, params } = dialect.sqlToQuery(on);
-              const [, index] = /"chats"\."id" <> \$(\d+)/.exec(text) ?? [];
-              const excluded = params[Number(index) - 1];
-              const prefixes = params.filter(
-                (param): param is string =>
-                  typeof param === "string" && param.endsWith("/api/attachments/"),
-              );
-              return rows
-                .filter((row) => matches(row, condition))
-                .flatMap((row) =>
-                  chatRows
-                    .filter(
-                      (chat) =>
-                        chat.uid === row.userId &&
-                        chat.id !== excluded &&
-                        chat.messages.some((message) =>
-                          message.parts.some(
-                            (part) =>
-                              "url" in part &&
-                              prefixes.some((prefix) => part.url === prefix + row.id),
-                          ),
-                        ),
-                    )
-                    .map((chat) => ({ id: row.id, chatId: chat.id, updatedAt: chat.updatedAt })),
-                )
-                .toSorted((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
-                .map(({ id, chatId }) => ({ id, chatId }));
-            },
-          }),
-        }),
       }),
     }),
     insert: () => ({
@@ -259,7 +263,7 @@ function createDatabase(initial: Partial<Row>[] = [], chatRows: ChatRow[] = []) 
       }
     },
   };
-  return { rows, database: database as never };
+  return { rows, chatReads, database: database as never };
 }
 
 beforeEach(() => {
@@ -353,6 +357,35 @@ test("a finished upload records its key; a failed one gives the quota back", asy
   await releaseAttachmentReservation(failed.id, database);
   expect(rows.map((row) => row.id)).toEqual([stored.id]);
   expect(await markAttachmentReady(failed.id, "key-3", database)).toBe(false);
+});
+
+test("a failed upload whose file may remain keeps its row for the cleanup", async () => {
+  const { rows, database } = createDatabase();
+  const reservation = await reserveAttachmentStorage(
+    { userId: "user", mediaType: "image/png", sizeBytes: MiB, limitBytes: 10 * MiB },
+    database,
+  );
+  if (!reservation.ok) throw new Error("expected a reservation");
+
+  await abandonAttachmentReservation(reservation.id, database);
+  // The quota is given back at once, but the row stays as the file's record.
+  expect(rows).toMatchObject([{ id: reservation.id, status: "deleting", storageKey: null }]);
+  expect(await getStorageUsageBytes("user", database)).toBe(0);
+  expect(await cleanUpAttachmentStorage({}, database)).toEqual({
+    marked: 0,
+    deleted: 1,
+    failed: 0,
+  });
+  // No key was recorded: the file is deleted by the custom id it was uploaded under.
+  expect(mocks.deleteStoredFiles).toHaveBeenLastCalledWith([reservation.id], "customId");
+  expect(rows).toEqual([]);
+
+  // A recorded file is never touched.
+  const { rows: stored, database: storedDatabase } = createDatabase([
+    { id: MINE, storageKey: "key-mine" },
+  ]);
+  await abandonAttachmentReservation(MINE, storedDatabase);
+  expect(stored).toMatchObject([{ id: MINE, status: "ready" }]);
 });
 
 test("only the owner's stored files resolve to a storage key", async () => {
@@ -603,6 +636,8 @@ test("an import keeps only app attachment URLs of the importing user's files", a
     { id: THEIRS, userId: "someone-else", storageKey: "key-theirs" },
   ]);
   const plain = { title: "Plain", messages: [userMessage("q", [{ type: "text", text: "hi" }])] };
+  // Imported messages are not validated: a file part can lack a URL.
+  const malformed = { type: "file", mediaType: "image/png", data: "AAAA" } as never;
   const conversations = [
     {
       title: "Exported",
@@ -613,15 +648,17 @@ test("an import keeps only app attachment URLs of the importing user's files", a
           file(`/api/attachments/${THEIRS}`),
           file(`http://localhost:3000/api/attachments/${MISSING}`),
           file("https://example.com/a.png"),
+          malformed,
         ]),
       ],
     },
     plain,
   ];
 
-  const result = await omitUnownedAttachmentParts(conversations, "user", database);
+  // The caller passes the notice in the importing user's language.
+  const notice = { type: "text", text: "[Notice]" };
+  const result = await omitUnownedAttachmentParts(conversations, "user", notice.text, database);
 
-  const notice = { type: "text", text: OMITTED_IMPORTED_ATTACHMENT_TEXT };
   expect(result.omitted).toBe(2);
   expect(result.conversations[0]).toMatchObject({ title: "Exported" });
   expect(result.conversations[0]?.messages[0]?.parts).toEqual([
@@ -630,15 +667,23 @@ test("an import keeps only app attachment URLs of the importing user's files", a
     notice,
     notice,
     file("https://example.com/a.png"),
+    malformed,
   ]);
   expect(result.conversations[1]).toEqual(plain);
 
   // Nothing to check, nothing looked up.
   const select = vi.fn();
-  expect(await omitUnownedAttachmentParts([plain], "user", { select } as never)).toEqual({
-    conversations: [plain],
-    omitted: 0,
-  });
+  expect(
+    await omitUnownedAttachmentParts([plain], "user", notice.text, { select } as never),
+  ).toEqual({ conversations: [plain], omitted: 0 });
+  expect(
+    await omitUnownedAttachmentParts(
+      [{ title: "Malformed", messages: [userMessage("q", [malformed])] }],
+      "user",
+      notice.text,
+      { select } as never,
+    ),
+  ).toMatchObject({ omitted: 0 });
   expect(select).not.toHaveBeenCalled();
 });
 
@@ -871,6 +916,66 @@ test("deleting a chat keeps a file another chat of its owner still references", 
     chatId: "older-copy",
     status: "ready",
   });
+});
+
+test("deleting a chat keeps a migrated file another chat still references by its public URL", async () => {
+  // The migration tool recorded the file for the first chat it rewrote; the
+  // owner's later chat still has the public URL until a rerun reaches it.
+  const chatRows: ChatRow[] = [
+    {
+      id: "unmigrated",
+      uid: "user",
+      updatedAt: new Date(1),
+      messages: [userMessage("q", [file("https://app.ufs.sh/f/key-mine")])],
+    },
+    {
+      id: "theirs",
+      uid: "someone-else",
+      updatedAt: new Date(2),
+      messages: [userMessage("q", [file("https://app.ufs.sh/f/key-sent")])],
+    },
+  ];
+  const { rows, database } = createDatabase(
+    [
+      { id: MINE, storageKey: "key-mine", chatId: "migrated" },
+      { id: SENT, storageKey: "key-sent", chatId: "migrated" },
+    ],
+    chatRows,
+  );
+
+  expect(await markChatAttachmentsForDeletion(database, "user", "migrated")).toEqual([
+    { id: SENT, storageKey: "key-sent" },
+  ]);
+  expect(rows.find((row) => row.id === MINE)).toMatchObject({
+    chatId: "unmigrated",
+    status: "ready",
+  });
+
+  // Once that chat is rewritten (or saved by the chat route), it reads as any stored file.
+  const [rewritten] = await rewriteMigratedAttachmentUrls(chatRows[0]!.messages, "user", database);
+  expect(rewritten?.parts).toEqual([file(`/api/attachments/${MINE}`)]);
+});
+
+test("deleting a chat reads each other chat of its owner once, whatever its file count", async () => {
+  const ids = Array.from({ length: 10 }, (_, index) => `${index}`.padStart(32, "f"));
+  const chatRows: ChatRow[] = Array.from({ length: 20 }, (_, index) => ({
+    id: `chat-${index}`,
+    uid: "user",
+    updatedAt: new Date(index),
+    messages: [userMessage("q", [{ type: "text", text: "hi" }])],
+  }));
+  const { chatReads, database } = createDatabase(
+    ids.map((id) => ({ id, storageKey: `key-${id}`, chatId: "deleted" })),
+    chatRows,
+  );
+
+  expect(await markChatAttachmentsForDeletion(database, "user", "deleted")).toHaveLength(10);
+  expect(chatReads.count).toBe(20);
+
+  // A chat with no stored file reads no other chat.
+  chatReads.count = 0;
+  expect(await markChatAttachmentsForDeletion(database, "user", "empty")).toEqual([]);
+  expect(chatReads.count).toBe(0);
 });
 
 test("the storage cleanup deletes abandoned uploads and long-untied files, oldest first", async () => {

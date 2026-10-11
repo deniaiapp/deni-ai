@@ -71,8 +71,20 @@ export const TRPC_RATE_LIMITS = {
   stripeRead: { windowMs: 60_000, maxRequests: 30 },
   /** Stripe-backed reads that the team Max Mode editor refetches after every saved field. */
   stripeReadPerEdit: { windowMs: 60_000, maxRequests: 60 },
-  /** chat.getChats returns every chat; it is refetched after each sent message (30 a minute). */
-  chatList: { windowMs: 60_000, maxRequests: 60 },
+  /** Stripe-backed mutations, each one click (checkout, portal, plan change, cancel, ...). */
+  stripeWrite: { windowMs: 60_000, maxRequests: 10 },
+  /**
+   * Card verification: each intent is a $1 authorization its client secret can
+   * attempt with any card, so the budget is per hour. Reopening the dialog
+   * reuses an intent still waiting for a card; each authorized card uses one up.
+   */
+  cardVerification: { windowMs: 60 * 60_000, maxRequests: 10 },
+  /**
+   * chat.getChats returns every chat. It is refetched after each sent message
+   * (30 a minute) and after each sidebar delete, pin, edit or move, which
+   * have no confirmation step.
+   */
+  chatList: { windowMs: 60_000, maxRequests: 120 },
 } as const satisfies Record<string, TRPCRateLimit>;
 
 /**

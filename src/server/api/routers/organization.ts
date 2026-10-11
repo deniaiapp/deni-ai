@@ -89,6 +89,10 @@ const billingEnabledProcedure = protectedProcedure.use(({ ctx, next }) => {
 const stripeRead = (name: string, limit: TRPCRateLimit = TRPC_RATE_LIMITS.stripeRead) =>
   rateLimited(`organization.${name}`, limit);
 
+/** Per-user budget for a mutation that calls Stripe. */
+const stripeWrite = (name: string) =>
+  rateLimited(`organization.${name}`, TRPC_RATE_LIMITS.stripeWrite);
+
 function deriveModeFromPrice(price: Stripe.Price | null | undefined): "subscription" | "payment" {
   if (!price) {
     return "subscription";
@@ -757,6 +761,7 @@ export const organizationRouter = router({
     }),
 
   updateTeamMaxModeEnabled: billingEnabledProcedure
+    .use(stripeWrite("updateTeamMaxModeEnabled"))
     .input(z.object({ organizationId: z.string().min(1), enabled: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const subscription = await getOwnedTeamBillingRecord(ctx, input.organizationId);
@@ -888,6 +893,7 @@ export const organizationRouter = router({
     }),
 
   createTeamCheckoutSession: billingEnabledProcedure
+    .use(stripeWrite("createTeamCheckoutSession"))
     .input(
       z.object({
         planId: teamPlanIdSchema,
@@ -1031,6 +1037,7 @@ export const organizationRouter = router({
     }),
 
   createTeamPortalSession: billingEnabledProcedure
+    .use(stripeWrite("createTeamPortalSession"))
     .input(z.object({ organizationId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       await verifyOrgOwner(ctx, input.organizationId);
@@ -1108,6 +1115,7 @@ export const organizationRouter = router({
     }),
 
   changeTeamPlan: billingEnabledProcedure
+    .use(stripeWrite("changeTeamPlan"))
     .input(
       z.object({
         organizationId: z.string().min(1),
@@ -1201,6 +1209,7 @@ export const organizationRouter = router({
     }),
 
   cancelTeamSubscription: billingEnabledProcedure
+    .use(stripeWrite("cancelTeamSubscription"))
     .input(z.object({ organizationId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       await verifyOrgOwnerOrAdmin(ctx, input.organizationId);
@@ -1246,6 +1255,7 @@ export const organizationRouter = router({
     }),
 
   resumeTeamSubscription: billingEnabledProcedure
+    .use(stripeWrite("resumeTeamSubscription"))
     .input(z.object({ organizationId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       await verifyOrgOwnerOrAdmin(ctx, input.organizationId);
@@ -1297,6 +1307,7 @@ export const organizationRouter = router({
     }),
 
   syncSeatCount: billingEnabledProcedure
+    .use(stripeWrite("syncSeatCount"))
     .input(z.object({ organizationId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       await verifyOrgOwner(ctx, input.organizationId);

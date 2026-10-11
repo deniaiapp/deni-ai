@@ -389,10 +389,7 @@ test("account deletion removes personal billing and moves team invoices to an ow
   await accountDeletionSeatHooks.after(departing);
 
   expect(redirectTeamBillingEmail).toHaveBeenCalledTimes(1);
-  expect(redirectTeamBillingEmail).toHaveBeenCalledWith("team-a", {
-    userId: "former-owner",
-    email: "former@example.com",
-  });
+  expect(redirectTeamBillingEmail).toHaveBeenCalledWith("team-a", "former@example.com");
   expect(updateTeamSeatCount).toHaveBeenCalledWith("team-a");
 });
 
@@ -408,21 +405,25 @@ test("account deletion checks the invoices of every team the user belonged to or
   expect(takeDetachedTeamBillingContacts).toHaveBeenCalledWith("former-admin");
   await accountDeletionSeatHooks.after(departing);
 
-  const former = { userId: "former-admin", email: "former@example.com" };
   expect(redirectTeamBillingEmail).toHaveBeenCalledTimes(2);
-  expect(redirectTeamBillingEmail).toHaveBeenCalledWith("member-team", former);
-  expect(redirectTeamBillingEmail).toHaveBeenCalledWith("detached-team", former);
+  expect(redirectTeamBillingEmail).toHaveBeenCalledWith("member-team", "former@example.com");
+  expect(redirectTeamBillingEmail).toHaveBeenCalledWith("detached-team", "former@example.com");
   // Seats only change for teams the user was still a member of.
   expect(updateTeamSeatCount).toHaveBeenCalledTimes(1);
   expect(updateTeamSeatCount).toHaveBeenCalledWith("member-team");
 });
 
-test("an account whose personal billing row cannot be removed is not deleted", async () => {
+test("a personal billing row that cannot be removed never blocks the account deletion", async () => {
+  // Sessions and accounts are already gone; the FK's SET NULL orphans the row instead.
   vi.mocked(deletePersonalBillingRecords).mockRejectedValue(new Error("database unavailable"));
-  const departing = { id: "personal-delete-fails" };
+  handler.where.mockResolvedValue([{ organizationId: "team-a" }]);
+  const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+  const departing = { id: "personal-delete-fails", email: "former@example.com" };
 
-  await expect(accountDeletionSeatHooks.before(departing)).rejects.toThrow("database unavailable");
+  await expect(accountDeletionSeatHooks.before(departing)).resolves.toBeUndefined();
+  expect(consoleError).toHaveBeenCalled();
   await accountDeletionSeatHooks.after(departing);
-  expect(updateTeamSeatCount).not.toHaveBeenCalled();
-  expect(redirectTeamBillingEmail).not.toHaveBeenCalled();
+  expect(updateTeamSeatCount).toHaveBeenCalledWith("team-a");
+  expect(redirectTeamBillingEmail).toHaveBeenCalledWith("team-a", "former@example.com");
+  consoleError.mockRestore();
 });

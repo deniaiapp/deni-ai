@@ -33,6 +33,11 @@ vi.mock("@/lib/stripe", () => ({
     customers: { search: state.search, create: state.create },
     prices: { list: async () => ({ data: [] }) },
     paymentIntents: {
+      // No open verification intent to reuse, so each caller creates one.
+      list: async () => {
+        expect(scope.getStore()).not.toBe(true);
+        return { data: [] };
+      },
       create: async () => {
         expect(scope.getStore()).not.toBe(true);
         return { id: "intent", client_secret: "secret" };

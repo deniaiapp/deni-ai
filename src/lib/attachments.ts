@@ -1,25 +1,12 @@
 import type { ModelMessage, UIMessage } from "ai";
-import {
-  and,
-  asc,
-  desc,
-  eq,
-  inArray,
-  isNotNull,
-  isNull,
-  lt,
-  ne,
-  or,
-  sql,
-  type SQL,
-} from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, lt, ne, sql, type SQL } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db/drizzle";
 import { attachment, chats } from "@/db/schema";
 import { env } from "@/env";
 import { collectAccountExportFiles } from "@/lib/account-export-jobs";
 import { fitsStorageLimit, getStorageLimitBytes } from "@/lib/attachment-quota";
-import { ATTACHMENT_URL_PREFIX, parseAppAttachmentUrl } from "@/lib/attachment-url";
+import { attachmentUrl, parseAppAttachmentUrl } from "@/lib/attachment-url";
 import { rewriteLegacyAttachmentUrls } from "@/lib/legacy-attachment-migration";
 import { storedFileKey, uploadThingFileHostname } from "@/lib/stored-files";
 import {
@@ -237,13 +224,30 @@ export async function markAttachmentReady(
   return rows.length > 0;
 }
 
-/** Give back the quota of an upload that failed. */
+/** Give back the quota of a failed upload whose file, if any, is deleted. */
 export async function releaseAttachmentReservation(
   id: string,
   database: AttachmentDatabase = db,
 ): Promise<void> {
   await database
     .delete(attachment)
+    .where(and(eq(attachment.id, id), eq(attachment.status, "pending")));
+}
+
+/**
+ * Give back the quota of an upload that failed after its file may have been
+ * stored, when deleting that file failed too. The reservation is the only
+ * record of the file, so it is marked `deleting` instead of dropped: the
+ * storage-cleanup cron deletes the file by its custom id (the reservation id),
+ * then the row.
+ */
+export async function abandonAttachmentReservation(
+  id: string,
+  database: AttachmentDatabase = db,
+): Promise<void> {
+  await database
+    .update(attachment)
+    .set({ status: "deleting" })
     .where(and(eq(attachment.id, id), eq(attachment.status, "pending")));
 }
 
@@ -265,9 +269,12 @@ export async function findReadyAttachmentKey(
 
 type MessagePart = UIMessage["parts"][number];
 
-/** The attachment id of a file part that points at an app attachment URL. */
+/**
+ * The attachment id of a file part that points at an app attachment URL.
+ * Saved and imported messages are not validated: a malformed part has no id.
+ */
 function attachmentPartId(part: MessagePart): string | null {
-  return part.type === "file" || part.type === "reasoning-file"
+  return (part.type === "file" || part.type === "reasoning-file") && typeof part.url === "string"
     ? attachmentIdFromUrl(part.url)
     : null;
 }
@@ -319,21 +326,79 @@ export async function linkChatAttachments(
 }
 
 /**
- * Whether a chat's saved messages reference the attachment by its app URL,
- * relative or absolute on the app's origin, in any part.
+ * The URLs a saved chat can reference each file by, mapped to its attachment
+ * id: its app URL, relative or absolute on the app's origin, and, for a file
+ * recorded by the migration tool, its public storage URL
+ * (`https://<appId>.ufs.sh/f/<key>`), which the owner's chats the tool has not
+ * rewritten yet still carry.
  */
-function chatReferencesAttachment(): SQL {
+function attachmentReferenceUrls(
+  files: readonly { id: string; storageKey: string | null }[],
+): Map<string, string> {
   const origin = appOrigin();
-  const prefixes = [
-    ATTACHMENT_URL_PREFIX,
-    ...(origin ? [`${origin}${ATTACHMENT_URL_PREFIX}`] : []),
-  ];
-  return or(
-    ...prefixes.map(
-      (prefix) =>
-        sql`${chats.messages} @> jsonb_build_array(jsonb_build_object('parts', jsonb_build_array(jsonb_build_object('url', ${prefix}::text || ${attachment.id}))))`,
-    ),
-  )!;
+  const hostname = uploadThingFileHostname(env.UPLOADTHING_TOKEN);
+  const ids = new Map<string, string>();
+  for (const { id, storageKey } of files) {
+    ids.set(attachmentUrl(id), id);
+    if (origin) ids.set(`${origin}${attachmentUrl(id)}`, id);
+    if (hostname && storageKey) ids.set(`https://${hostname}/f/${storageKey}`, id);
+  }
+  return ids;
+}
+
+/**
+ * Tie each stored file of `chatId` that another chat of its owner still
+ * references to the most recently updated of those chats, so deleting the
+ * chat keeps it. `chats.messages` has no index to search: each of the owner's
+ * other chats is read once, for the URLs of all of the chat's files together.
+ */
+async function keepFilesReferencedElsewhere(
+  database: Pick<typeof db, "select" | "update">,
+  userId: string,
+  chatId: string,
+): Promise<void> {
+  const files = await database
+    .select({ id: attachment.id, storageKey: attachment.storageKey })
+    .from(attachment)
+    .where(
+      and(
+        eq(attachment.userId, userId),
+        eq(attachment.chatId, chatId),
+        eq(attachment.status, "ready"),
+      ),
+    );
+  if (files.length === 0) return;
+  const idsByUrl = attachmentReferenceUrls(files);
+  const url = sql<string>`refs.url #>> '{}'`;
+  const references = await database
+    .select({ chatId: chats.id, url })
+    .from(chats)
+    .crossJoinLateral(
+      sql`jsonb_path_query(${chats.messages}, 'lax $[*].parts[*].url') as refs(url)`,
+    )
+    .where(and(eq(chats.uid, userId), ne(chats.id, chatId), inArray(url, [...idsByUrl.keys()])))
+    .orderBy(desc(chats.updated_at));
+  // Newest chat first: each file moves to the first chat listed for it.
+  const keptBy = new Map<string, string[]>();
+  const kept = new Set<string>();
+  for (const reference of references) {
+    const id = idsByUrl.get(reference.url);
+    if (id === undefined || kept.has(id)) continue;
+    kept.add(id);
+    keptBy.set(reference.chatId, [...(keptBy.get(reference.chatId) ?? []), id]);
+  }
+  for (const [otherChatId, ids] of keptBy) {
+    await database
+      .update(attachment)
+      .set({ chatId: otherChatId })
+      .where(
+        and(
+          inArray(attachment.id, ids),
+          eq(attachment.userId, userId),
+          eq(attachment.chatId, chatId),
+        ),
+      );
+  }
 }
 
 /**
@@ -345,51 +410,16 @@ function chatReferencesAttachment(): SQL {
  *
  * A file has one chat, but other chats of its owner can reference it too (a
  * re-imported export, a legacy file the migration tool found in several
- * chats). Deleting one chat keeps such a file and ties it to the most recently
- * updated of those chats instead.
+ * chats, by its public URL until the tool reaches them). Deleting one chat
+ * keeps such a file and ties it to the most recently updated of those chats
+ * instead.
  */
 export async function markChatAttachmentsForDeletion(
   database: Pick<typeof db, "select" | "update">,
   userId: string,
   chatId?: string,
 ): Promise<DeletingAttachment[]> {
-  if (chatId !== undefined) {
-    const references = await database
-      .select({ id: attachment.id, chatId: chats.id })
-      .from(attachment)
-      .innerJoin(
-        chats,
-        and(eq(chats.uid, attachment.userId), ne(chats.id, chatId), chatReferencesAttachment()),
-      )
-      .where(
-        and(
-          eq(attachment.userId, userId),
-          eq(attachment.chatId, chatId),
-          eq(attachment.status, "ready"),
-        ),
-      )
-      .orderBy(desc(chats.updated_at));
-    // Newest chat first: each file moves to the first chat listed for it.
-    const keptBy = new Map<string, string[]>();
-    const kept = new Set<string>();
-    for (const reference of references) {
-      if (kept.has(reference.id)) continue;
-      kept.add(reference.id);
-      keptBy.set(reference.chatId, [...(keptBy.get(reference.chatId) ?? []), reference.id]);
-    }
-    for (const [otherChatId, ids] of keptBy) {
-      await database
-        .update(attachment)
-        .set({ chatId: otherChatId })
-        .where(
-          and(
-            inArray(attachment.id, ids),
-            eq(attachment.userId, userId),
-            eq(attachment.chatId, chatId),
-          ),
-        );
-    }
-  }
+  if (chatId !== undefined) await keepFilesReferencedElsewhere(database, userId, chatId);
   return database
     .update(attachment)
     .set({ status: "deleting" })
@@ -572,21 +602,20 @@ export async function rewriteMigratedAttachmentUrls(
 /** Ids per lookup when checking imported attachment URLs. */
 const IMPORT_LOOKUP_BATCH_SIZE = 1000;
 
-/** Replaces an imported file part whose stored file the importing user does not have. */
-export const OMITTED_IMPORTED_ATTACHMENT_TEXT = "[An attached file could not be imported.]";
-
 /**
  * Settings → Import saves transcripts as they are, file parts included, and a
  * deni-ai export carries app attachment URLs, which only work for the account
  * that owns the file. One exported by another account of this deployment would
  * make every request of the imported chat fail (`ForeignAttachmentError`).
  * Replace each file part whose app attachment URL is not a file of the
- * importing user (someone else's, or deleted) with a text notice; `omitted`
- * counts them. Other URLs are kept as they were.
+ * importing user (someone else's, or deleted) with a text part, `notice` (the
+ * caller localizes it: it is saved in the chat); `omitted` counts them. Other
+ * URLs are kept as they were.
  */
 export async function omitUnownedAttachmentParts<T extends { messages: UIMessage[] }>(
   conversations: T[],
   userId: string,
+  notice: string,
   database: Pick<typeof db, "select"> = db,
 ): Promise<{ conversations: T[]; omitted: number }> {
   const ids = new Set<string>();
@@ -624,7 +653,7 @@ export async function omitUnownedAttachmentParts<T extends { messages: UIMessage
         const id = attachmentPartId(part);
         if (!id || owned.has(id)) return part;
         omitted++;
-        return { type: "text", text: OMITTED_IMPORTED_ATTACHMENT_TEXT };
+        return { type: "text", text: notice };
       }),
     })),
   }));

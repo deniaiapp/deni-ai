@@ -17,30 +17,29 @@ export async function findTeamBillingContactOrganizations(userId: string): Promi
   return rows.flatMap((row) => (row.organizationId ? [row.organizationId] : []));
 }
 
-type FormerMember = { userId: string; email: string | null | undefined };
-
 /**
- * When a team's invoices may still go to a former member, send them to a current
- * owner instead: the customer's address is theirs, or the customer was created
- * for them (it then keeps their address from that time, which may since have
- * changed). An address the team set itself (an accounts inbox, say) on a customer
- * someone else created stays. Best-effort: the membership change or account
- * deletion has already happened.
+ * When a team's invoices still go to a former member's address, send them to a
+ * current owner instead. Any other address stays, including one the team chose
+ * in the billing portal (an accounts inbox, say) on a customer the former
+ * member created: who created the customer says nothing about who reads its
+ * invoices now. Best-effort: the membership change or account deletion has
+ * already happened.
  */
-export async function redirectTeamBillingEmail(organizationId: string, former: FormerMember) {
+export async function redirectTeamBillingEmail(
+  organizationId: string,
+  formerEmail: string | null | undefined,
+) {
   if (isBillingDisabled) return;
+  const departingEmail = formerEmail?.trim().toLowerCase();
+  if (!departingEmail) return;
   try {
     const record = await findTeamBillingRecord(db, organizationId);
     if (!record) return;
     const customer = await stripe.customers.retrieve(record.stripeCustomerId);
     // Only the organization's own customer: a legacy row can reference a personal one.
     if (customer.deleted || customer.metadata?.organizationId !== organizationId) return;
-    const formerEmail = former.email?.trim().toLowerCase();
     const customerEmail = customer.email?.trim().toLowerCase();
-    const sentToFormer =
-      (Boolean(formerEmail) && customerEmail === formerEmail) ||
-      customer.metadata.userId === former.userId;
-    if (!sentToFormer) return;
+    if (customerEmail !== departingEmail) return;
     // The last owner cannot leave or be removed, and owners cannot delete their
     // account, so one remains; guests are skipped for their placeholder addresses.
     const [owner] = await db
@@ -90,7 +89,7 @@ export async function releaseTeamBillingContact(organizationId: string, userId: 
       .from(user)
       .where(eq(user.id, userId))
       .limit(1);
-    await redirectTeamBillingEmail(organizationId, { userId, email: former?.email });
+    await redirectTeamBillingEmail(organizationId, former?.email);
   } catch (error) {
     console.error("[team-billing] Failed to update the team billing email:", error);
   }

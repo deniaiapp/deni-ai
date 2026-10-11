@@ -515,6 +515,12 @@ function normalizePartsArray(rawParts: unknown[]): UIMessage["parts"] {
       continue;
     }
 
+    // A file part without a URL (for example AI SDK v4's `{ mimeType, data }`)
+    // cannot be read or shown.
+    if ((type === "file" || type === "reasoning-file") && typeof rawPart.url !== "string") {
+      continue;
+    }
+
     parts.push(rawPart as UIMessage["parts"][number]);
   }
 

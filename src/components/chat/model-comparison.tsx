@@ -31,6 +31,7 @@ import { ChatComposerModelPicker } from "@/components/chat/chat-composer-model-p
 import { Spinner } from "@/components/ui/spinner";
 import { useAvailableModels } from "@/hooks/use-available-models";
 import { getComparisonTurns } from "@/lib/comparison-conversation";
+import { saveComparisonSession } from "@/lib/comparison-session-save";
 import { createModelComparisonTransport } from "@/lib/model-comparison-transport";
 import { isBodyTooLargeError } from "@/lib/trpc/limits";
 import { trpc } from "@/lib/trpc/react";
@@ -516,34 +517,43 @@ function useModelComparison(
   async function saveWholeComparison() {
     if (saveLock.current || submitLock.current || !comparison) return;
     saveLock.current = true;
+    const previousId = sessionId;
+    const transcript = {
+      leftModel: comparison.leftModel,
+      rightModel: comparison.rightModel,
+      leftSettings: normalizeComparisonSettings(
+        models.find((model) => model.value === comparison.leftModel),
+        leftSettings,
+        webToolsAvailable,
+      ),
+      rightSettings: normalizeComparisonSettings(
+        models.find((model) => model.value === comparison.rightModel),
+        rightSettings,
+        webToolsAvailable,
+      ),
+      leftMessages: left.messages as unknown as Record<string, unknown>[],
+      rightMessages: right.messages as unknown as Record<string, unknown>[],
+    };
     await Promise.resolve()
       .then(() =>
-        saveSession.mutateAsync({
-          id: sessionId,
-          leftModel: comparison.leftModel,
-          rightModel: comparison.rightModel,
-          leftSettings: normalizeComparisonSettings(
-            models.find((model) => model.value === comparison.leftModel),
-            leftSettings,
-            webToolsAvailable,
-          ),
-          rightSettings: normalizeComparisonSettings(
-            models.find((model) => model.value === comparison.rightModel),
-            rightSettings,
-            webToolsAvailable,
-          ),
-          leftMessages: left.messages as unknown as Record<string, unknown>[],
-          rightMessages: right.messages as unknown as Record<string, unknown>[],
-        }),
+        saveComparisonSession((id) => saveSession.mutateAsync({ id, ...transcript }), previousId),
       )
       .then(
-        (id) => {
+        ({ id, recreated }) => {
+          // Deleted in another tab or on another device: saved as a new comparison.
+          if (recreated && previousId) {
+            void utils.chat.getComparison.invalidate({ id: previousId }, { refetchType: "none" });
+          }
           setSessionId(id);
           setDirty(false);
           window.history.replaceState(null, "", `/compare/${id}`);
           void utils.chat.getComparisons.invalidate();
           void utils.chat.getComparison.invalidate({ id });
-          toast.success(t("Comparison saved."));
+          toast.success(
+            recreated
+              ? t("The saved comparison was deleted, so this was saved as a new comparison.")
+              : t("Comparison saved."),
+          );
         },
         (error: unknown) =>
           // Retrying a body over the cap can never succeed.
