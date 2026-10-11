@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
 import Module from "node:module";
 
-dotenv.config({ path: ".env" });
-dotenv.config({ path: ".env.local", override: true });
+dotenv.config({ path: ".env", quiet: true });
+dotenv.config({ path: ".env.local", override: true, quiet: true });
 process.env.DENI_SCHEDULER = "true";
 
 // `server-only` is a Next.js compile-time guard. The standalone worker is already a

@@ -5,8 +5,8 @@ import os from "node:os";
 import path from "node:path";
 import type { UIMessage } from "ai";
 
-dotenv.config({ path: ".env" });
-dotenv.config({ path: ".env.local", override: true });
+dotenv.config({ path: ".env", quiet: true });
+dotenv.config({ path: ".env.local", override: true, quiet: true });
 
 type NodeLoader = (request: string, parent: NodeModule | null, isMain: boolean) => unknown;
 const moduleRuntime = Module as unknown as { _load: NodeLoader };

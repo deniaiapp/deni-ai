@@ -16,8 +16,8 @@ import dotenv from "dotenv";
 import postgres from "postgres";
 import { remoteExecutor } from "../db/remote-executor";
 
-dotenv.config({ path: ".env" });
-dotenv.config({ path: ".env.local", override: true });
+dotenv.config({ path: ".env", quiet: true });
+dotenv.config({ path: ".env.local", override: true, quiet: true });
 
 type Kind = "text" | "int" | "bool" | "ts" | "json";
 type Column = readonly [name: string, kind: Kind];
