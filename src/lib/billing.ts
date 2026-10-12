@@ -1,3 +1,5 @@
+import type { FlashOfferLimit } from "@/lib/billing-offers";
+
 export type IndividualPlanId =
   | "plus_monthly"
   | "plus_yearly"
@@ -31,7 +33,7 @@ export type ClientPlan = {
   interval: string | null;
   intervalCount: number;
   isTeamPlan: boolean;
-  limitedTimeOfferEndsAt?: string | null;
+  limitedTimeOffer?: FlashOfferLimit | null;
 };
 
 export const billingPlans: BillingPlan[] = [

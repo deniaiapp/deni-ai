@@ -111,7 +111,7 @@ function BillingPageContent() {
     >
       {flashOffer && (
         <BillingFlashOfferBanner
-          endsAt={flashOffer.endsAt}
+          limit={flashOffer.limit}
           percentOff={flashOffer.percentOff}
           isUpTo={flashOffer.isUpTo}
           onViewOffer={showYearlyPlans}

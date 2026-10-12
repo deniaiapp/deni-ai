@@ -299,7 +299,12 @@ To hide billing in the client:
 NEXT_PUBLIC_BILLING_DISABLED=1
 ```
 
-Optional flash offer coupon: `STRIPE_FLASH_OFFER_COUPON_ID`. For 24 hours after a user first opens billing, the coupon discounts yearly and lifetime plans, and the billing page shows an offer banner with a countdown. Verifying a card grants a one-time 48-hour offer from that moment (tracked by `billing.card_offer_granted_at`, so removing and re-verifying a card does not grant another), and users with an active offer who have verified a card also see a dismissible offer strip at the top of the app. Without the coupon (or if it is invalid), no offer is shown.
+Optional flash offer coupon: `STRIPE_FLASH_OFFER_COUPON_ID`. The coupon discounts yearly and lifetime plans for accounts that have never paid, in one of two modes set by `FLASH_OFFER_SPOTS` in `src/lib/billing-offers.ts`:
+
+- **Spots** (a number, currently 2): every never-paid account gets the offer until the coupon's `times_redeemed` in Stripe reaches that number, then it ends for everyone. The billing page banner, the plan cards and a dismissible strip at the top of the app show the spots left instead of a countdown. Each completed checkout with the coupon (subscription or one-time) uses one spot. The count is checked when checkout opens, so a buyer who opened checkout before the last spot was taken can still finish with the discount.
+- **Timers** (`null`): for 24 hours after a user first opens billing, the billing page shows the offer with a countdown. Verifying a card grants a one-time 48-hour offer from that moment (tracked by `billing.card_offer_granted_at`, so removing and re-verifying a card does not grant another), and users with an active offer who have verified a card also see the strip.
+
+Without the coupon (or if it is invalid), no offer is shown.
 
 Dispute handling is automatic when those extra webhook events are enabled. On `charge.dispute.created` the app emails admins and cancels the related subscription (immediately for fraud, otherwise at period end). Evidence is not submitted automatically; contest from the Stripe Dashboard if needed. On `radar.early_fraud_warning.created` it refunds as fraud only when the payment is still actionable, 3D Secure did not authenticate it, and the account has no post-payment service use. Alerts go to `ADMIN_EMAILS` / `BLOG_ADMIN_EMAILS` when Cloudflare email is configured.
 
