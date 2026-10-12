@@ -11,10 +11,18 @@ export async function register() {
   Sentry.init(getSentryOptions());
   const { installAbortDiagnostics } = await import("@/lib/abort-diagnostics");
   installAbortDiagnostics();
-  // `next dev` would spend provider tokens on every restart; use the cron route there.
+  // `next dev` would spend provider tokens on every restart and run billing and
+  // storage jobs against the development database; use the cron routes there.
   if (process.env.NODE_ENV === "production") {
     const { startModelHealthScheduler } = await import("@/lib/model-health-scheduler");
     startModelHealthScheduler();
+    // Vercel (which sets `VERCEL` at runtime) can suspend a function instance
+    // mid-run, leaving a billing job's per-user row lock held until its
+    // connection drops; deployments there schedule the cron routes instead.
+    if (!process.env.VERCEL) {
+      const { startBackgroundJobScheduler } = await import("@/lib/background-job-scheduler");
+      startBackgroundJobScheduler();
+    }
   }
 }
 
