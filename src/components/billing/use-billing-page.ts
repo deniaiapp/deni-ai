@@ -204,11 +204,12 @@ export function useBillingPage() {
   const proLifetime = allPlans.find((p) => p.id === "pro_lifetime");
 
   const offerPercents = allPlans.map(getOfferPercentOff).filter((percent) => percent > 0);
-  const flashOfferEndsAt = allPlans.find((p) => getOfferPercentOff(p) > 0)?.limitedTimeOfferEndsAt;
+  const flashOfferLimit = allPlans.find((p) => getOfferPercentOff(p) > 0)?.limitedTimeOffer;
+  const flashOfferEndsAt = flashOfferLimit?.kind === "timer" ? flashOfferLimit.endsAt : null;
   const flashOffer =
-    flashOfferEndsAt && !isOnTeamPlan && !hasActiveSubscription
+    flashOfferLimit && !isOnTeamPlan && !hasActiveSubscription
       ? {
-          endsAt: flashOfferEndsAt,
+          limit: flashOfferLimit,
           percentOff: Math.max(...offerPercents),
           isUpTo: Math.min(...offerPercents) !== Math.max(...offerPercents),
         }

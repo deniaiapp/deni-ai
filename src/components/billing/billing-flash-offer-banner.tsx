@@ -2,18 +2,19 @@
 
 import { Zap } from "lucide-react";
 import { useExtracted } from "next-intl";
+import type { FlashOfferLimit } from "@/lib/billing-offers";
 import { BILLING_PLANS_SECTION_ID } from "./billing-utils";
 import { OfferCountdown } from "./offer-countdown";
 import { Button } from "../ui/button";
 import { Card, CardContent } from "../ui/card";
 
 export function BillingFlashOfferBanner({
-  endsAt,
+  limit,
   percentOff,
   isUpTo,
   onViewOffer,
 }: {
-  endsAt: string;
+  limit: FlashOfferLimit;
   percentOff: number;
   isUpTo: boolean;
   onViewOffer: () => void;
@@ -42,12 +43,24 @@ export function BillingFlashOfferBanner({
         <div className="flex items-center justify-between gap-4 sm:justify-end">
           <div className="sm:text-right">
             <p className="text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-              {t("Ends in")}
+              {limit.kind === "timer"
+                ? t("Ends in")
+                : t("{spots, plural, one {First buyer only} other {First # buyers only}}", {
+                    spots: limit.spots,
+                  })}
             </p>
-            <OfferCountdown
-              endsAt={endsAt}
-              className="font-mono text-xl font-semibold text-amber-700 dark:text-amber-300"
-            />
+            {limit.kind === "timer" ? (
+              <OfferCountdown
+                endsAt={limit.endsAt}
+                className="font-mono text-xl font-semibold text-amber-700 dark:text-amber-300"
+              />
+            ) : (
+              <p className="text-xl font-semibold text-amber-700 tabular-nums dark:text-amber-300">
+                {t("{spotsLeft, plural, one {# spot left} other {# spots left}}", {
+                  spotsLeft: limit.spotsLeft,
+                })}
+              </p>
+            )}
           </div>
           <Button
             onClick={() => {

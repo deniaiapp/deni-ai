@@ -12,6 +12,8 @@ const state = vi.hoisted(() => ({
   createdSession: vi.fn(),
   expiredSession: vi.fn(),
   couponId: null as string | null,
+  couponRedeemed: 0,
+  offerSpots: null as number | null,
   duringUpdate: undefined as (() => void) | undefined,
   duringRetrieve: undefined as (() => void) | undefined,
   duringList: undefined as (() => void) | undefined,
@@ -20,10 +22,18 @@ const state = vi.hoisted(() => ({
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/lib/billing-config", () => ({ isBillingDisabled: false }));
-vi.mock("@/lib/billing-offers", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@/lib/billing-offers")>()),
-  getFlashOfferCouponId: () => state.couponId,
-}));
+// The procedure budgets are covered elsewhere; these tests call checkout more often.
+vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: async () => ({ allowed: true }) }));
+vi.mock("@/lib/billing-offers", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/billing-offers")>();
+  return {
+    ...actual,
+    getFlashOfferCouponId: () => state.couponId,
+    getFlashOfferLimit: (
+      ...[record, timesRedeemed, options]: Parameters<typeof actual.getFlashOfferLimit>
+    ) => actual.getFlashOfferLimit(record, timesRedeemed, { spots: state.offerSpots, ...options }),
+  };
+});
 vi.mock("@/lib/billing-card-usage", () => ({
   claimCardVerification: vi.fn(),
   getBillingFingerprintUpdates: async () => ({ paymentMethodFingerprint: null }),
@@ -40,6 +50,14 @@ vi.mock("@/lib/stripe", () => ({
             recurring: lookup_keys[0].endsWith("_lifetime") ? null : { interval: "month" },
           },
         ],
+      }),
+    },
+    coupons: {
+      retrieve: async (id: string) => ({
+        id,
+        valid: true,
+        percent_off: 25,
+        times_redeemed: state.couponRedeemed,
       }),
     },
     subscriptions: {
@@ -198,6 +216,8 @@ beforeEach(() => {
   state.createdSession.mockResolvedValue({ id: "cs_new", client_secret: "secret" });
   state.expiredSession.mockResolvedValue({});
   state.couponId = null;
+  state.couponRedeemed = 0;
+  state.offerSpots = null;
   state.duringUpdate = undefined;
   state.duringRetrieve = undefined;
   state.duringList = undefined;
@@ -323,6 +343,28 @@ test.each([
   expect(params.discounts).toEqual(current ? [{ coupon: current }] : undefined);
   expect(params.metadata).toMatchObject({ flashOfferCoupon: current ?? "none" });
   expect(state.record.checkoutSessionId).toBe("cs_new");
+});
+
+test.each([
+  ["while spots are open, a never-paid account gets the offer without a timer", 1, null, true],
+  ["once every spot is taken, checkout is full price", 2, null, false],
+  ["an account that paid before gets no spot", 0, new Date(), false],
+])("%s", async (_, redeemed, firstPaidAt, discounted) => {
+  Object.assign(state.record, freeRecord, {
+    checkoutSessionId: null,
+    firstPaidAt,
+    flashOfferEndsAt: new Date(Date.now() - 60_000),
+  });
+  state.subscriptions = [];
+  state.couponId = "coupon_flash";
+  state.offerSpots = 2;
+  state.couponRedeemed = redeemed;
+
+  await caller().createCheckoutSession({ planId: "pro_lifetime" });
+
+  const [params] = state.createdSession.mock.calls[0];
+  expect(params.discounts).toEqual(discounted ? [{ coupon: "coupon_flash" }] : undefined);
+  expect(params.allow_promotion_codes).toBe(discounted ? undefined : true);
 });
 
 test("an open session for another plan is expired before a new one is created", async () => {

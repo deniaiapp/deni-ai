@@ -1048,6 +1048,8 @@
   "paS9Ok": "期間限定オファー：{percent}%オフ",
   "SBo5IB": "年額プランと買い切りプランが対象です。割引はチェックアウト時に自動で適用されます。",
   "zbC5Ep": "終了まで",
+  "jC9PEb": "{spots, plural, one {先着#名限定} other {先着#名限定}}",
+  "sK4bAP": "{spotsLeft, plural, one {残り#名} other {残り#名}}",
   "a4g52T": "オファーを見る",
   "Lwzsib": "利用制限に達した後も、従量課金で Deni AI を引き続きご利用いただけます。",
   "V52jNn": "有効",

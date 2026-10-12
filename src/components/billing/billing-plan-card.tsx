@@ -1,6 +1,6 @@
 "use client";
 
-import { Clock, ShieldCheck, Sparkles } from "lucide-react";
+import { Clock, ShieldCheck, Sparkles, Users } from "lucide-react";
 import { useExtracted, useLocale } from "next-intl";
 import type { ClientPlan, IndividualPlanId } from "@/lib/billing";
 import { useBillingPlanCopy } from "@/lib/billing-plan-copy";
@@ -61,7 +61,7 @@ export function PlanCard({
   const planCopy = useBillingPlanCopy(plan.id);
   const mode = plan.mode ?? "subscription";
   const offerPercentOff = getOfferPercentOff(plan);
-  const offerEndsAt = offerPercentOff > 0 ? plan.limitedTimeOfferEndsAt : null;
+  const offer = offerPercentOff > 0 ? plan.limitedTimeOffer : null;
   const canChange =
     status.hasActiveSubscription && !cancelDate && !status.isCurrent && mode === "subscription";
   // Switching subscription plans needs a renewing subscription; a one-time plan
@@ -119,7 +119,7 @@ export function PlanCard({
       className={cn(
         "flex flex-col",
         interval === "yearly" && "border-foreground/20 bg-muted/20",
-        offerEndsAt && "border-amber-500/50 ring-2 ring-amber-500/25 dark:ring-amber-500/25",
+        offer && "border-amber-500/50 ring-2 ring-amber-500/25 dark:ring-amber-500/25",
         status.isCurrent && "border-foreground ring-1 ring-foreground/10",
       )}
     >
@@ -130,7 +130,7 @@ export function PlanCard({
               <CardTitle className="text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
                 {tierName}
               </CardTitle>
-              {offerEndsAt ? (
+              {offer ? (
                 <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300">
                   {t("{percent}% off", { percent: offerPercentOff.toString() })}
                 </Badge>
@@ -224,11 +224,30 @@ export function PlanCard({
             {mode === "payment" && (
               <p className="text-sm font-medium text-foreground">{t("One-time purchase")}</p>
             )}
-            {offerEndsAt && (
+            {offer && (
               <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300">
-                <Clock className="size-4" />
-                <span>{t("Offer ends in")}</span>
-                <OfferCountdown endsAt={offerEndsAt} className="font-mono font-semibold" />
+                {offer.kind === "timer" ? (
+                  <>
+                    <Clock className="size-4" />
+                    <span>{t("Offer ends in")}</span>
+                    <OfferCountdown endsAt={offer.endsAt} className="font-mono font-semibold" />
+                  </>
+                ) : (
+                  <>
+                    <Users className="size-4" />
+                    <span>
+                      {t("{spots, plural, one {First buyer only} other {First # buyers only}}", {
+                        spots: offer.spots,
+                      })}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span className="font-semibold">
+                      {t("{spotsLeft, plural, one {# spot left} other {# spots left}}", {
+                        spotsLeft: offer.spotsLeft,
+                      })}
+                    </span>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -238,7 +257,7 @@ export function PlanCard({
               <div>
                 <div className="text-sm font-medium">{getPlanFitCopy(plan.id)}</div>
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {offerEndsAt
+                  {offer
                     ? t("Limited-time price. Applied automatically at checkout.")
                     : interval === "yearly" && savingsPercent > 0
                       ? t("Lock in the lower monthly equivalent for the year.")

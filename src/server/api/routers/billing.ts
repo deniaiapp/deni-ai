@@ -22,7 +22,7 @@ import { getAccountDeletionStatus, getCardRemovalBlocker } from "@/lib/account-d
 import {
   createFlashOfferEndAt,
   getFlashOfferCouponId,
-  isFlashOfferActive,
+  getFlashOfferLimit,
   isFlashOfferPlan,
 } from "@/lib/billing-offers";
 import {
@@ -193,6 +193,24 @@ async function getFlashOfferCoupon() {
     console.warn("Failed to load flash offer coupon", error);
     return null;
   }
+}
+
+/** The flash offer coupon and limit a personal billing record can use now, or null. */
+async function resolveFlashOffer(
+  record: Pick<BillingRecord, "firstPaidAt" | "flashOfferEndsAt"> | null | undefined,
+) {
+  // Skip the Stripe read when no offer can apply whatever the coupon's count is.
+  if (!getFlashOfferLimit(record, 0)) {
+    return null;
+  }
+
+  const coupon = await getFlashOfferCoupon();
+  if (!coupon?.valid) {
+    return null;
+  }
+
+  const limit = getFlashOfferLimit(record, coupon.times_redeemed);
+  return limit ? { coupon, limit } : null;
 }
 
 function applyCouponToAmount(
@@ -498,18 +516,16 @@ export const billingRouter = router({
   plans: billingEnabledProcedure.use(stripeRead("plans")).query(async ({ ctx }) => {
     const individualPlans = billingPlans.filter((p) => !isTeamPlan(p.id));
     const billingRecord = await ensureBillingRecord(ctx, ctx.userId);
-    const flashOfferActive = isFlashOfferActive(billingRecord.flashOfferEndsAt);
-    const flashOfferEndsAt = flashOfferActive
-      ? (billingRecord.flashOfferEndsAt?.toISOString() ?? null)
-      : null;
-    const flashOfferCoupon = flashOfferEndsAt ? await getFlashOfferCoupon() : null;
-    const prices = await getPricesForPlans(individualPlans);
+    const [flashOffer, prices] = await Promise.all([
+      resolveFlashOffer(billingRecord),
+      getPricesForPlans(individualPlans),
+    ]);
     const plans = individualPlans.map((plan, index) => {
       const price = prices[index];
       const mode = deriveModeFromPrice(price);
       const discountedAmount =
-        flashOfferEndsAt && isFlashOfferPlan(plan.id)
-          ? applyCouponToAmount(price.unit_amount, flashOfferCoupon, price.currency)
+        flashOffer && isFlashOfferPlan(plan.id)
+          ? applyCouponToAmount(price.unit_amount, flashOffer.coupon, price.currency)
           : price.unit_amount;
       return {
         id: plan.id,
@@ -523,14 +539,16 @@ export const billingRouter = router({
         intervalCount: price.recurring?.interval_count ?? 1,
         isTeamPlan: false,
         // Only advertise the offer when the coupon actually lowers this price.
-        limitedTimeOfferEndsAt: discountedAmount !== price.unit_amount ? flashOfferEndsAt : null,
+        limitedTimeOffer:
+          flashOffer && discountedAmount !== price.unit_amount ? flashOffer.limit : null,
       };
     });
 
     return { plans };
   }),
   /**
-   * App-wide flash offer promo for card-verified users who have never paid.
+   * App-wide flash offer promo for users who have never paid: every such user
+   * while spots are open, else card-verified users with a running timer.
    * Read-only: unlike `plans`, it never creates a billing record or starts the timer.
    */
   flashOffer: protectedProcedure.use(stripeRead("flashOffer")).query(async ({ ctx }) => {
@@ -546,14 +564,10 @@ export const billingRouter = router({
       .from(billing)
       .where(and(eq(billing.userId, ctx.userId), isNull(billing.organizationId)))
       .limit(1);
-    if (
-      !record?.cardVerifiedAt ||
-      record.firstPaidAt ||
-      ACTIVE_SUB_STATUSES.has(record.status ?? "") ||
-      !isFlashOfferActive(record.flashOfferEndsAt)
-    ) {
-      return null;
-    }
+    if (record?.firstPaidAt || ACTIVE_SUB_STATUSES.has(record?.status ?? "")) return null;
+    const limit = getFlashOfferLimit(record, 0);
+    // Timer offers are only advertised app-wide after card verification.
+    if (!limit || (limit.kind === "timer" && !record?.cardVerifiedAt)) return null;
 
     const [teamRecord] = await ctx.db
       .select({ id: billing.id })
@@ -569,23 +583,23 @@ export const billingRouter = router({
       .limit(1);
     if (teamRecord) return null;
 
-    const coupon = await getFlashOfferCoupon();
-    if (!coupon?.valid) return null;
+    const offer = await resolveFlashOffer(record);
+    if (!offer) return null;
     const offerPlans = billingPlans.filter((p) => !isTeamPlan(p.id) && isFlashOfferPlan(p.id));
     const prices = await getPricesForPlans(offerPlans);
     const percents = prices
       .map((price) => {
-        const amount = applyCouponToAmount(price.unit_amount, coupon, price.currency);
+        const amount = applyCouponToAmount(price.unit_amount, offer.coupon, price.currency);
         return amount != null && price.unit_amount
           ? Math.round((1 - amount / price.unit_amount) * 100)
           : 0;
       })
       .filter((percent) => percent > 0);
-    if (percents.length === 0 || !record.flashOfferEndsAt) return null;
+    if (percents.length === 0) return null;
 
     const percentOff = Math.max(...percents);
     return {
-      endsAt: record.flashOfferEndsAt.toISOString(),
+      ...offer.limit,
       percentOff,
       isUpTo: Math.min(...percents) !== percentOff,
     };
@@ -672,11 +686,9 @@ export const billingRouter = router({
 
       const price = await getPriceForPlan(plan);
       const mode = deriveModeFromPrice(price);
-      const couponId = getFlashOfferCouponId();
-      const flashOfferActive = isFlashOfferActive(billingRecord.flashOfferEndsAt);
-      const flashOfferEligible = Boolean(couponId && isFlashOfferPlan(plan.id) && flashOfferActive);
+      const flashOffer = isFlashOfferPlan(plan.id) ? await resolveFlashOffer(billingRecord) : null;
       // Recorded on the session so a reused session always matches the current offer.
-      const offerCouponId = flashOfferEligible ? couponId! : "none";
+      const offerCouponId = flashOffer ? flashOffer.coupon.id : "none";
 
       // Guards run before any reuse: a stored open session must not outlive them.
       // Ended subscriptions keep `cancel_at_period_end`, so they are skipped.
@@ -771,7 +783,7 @@ export const billingRouter = router({
                   },
                 }
               : undefined,
-          discounts: flashOfferEligible ? [{ coupon: couponId! }] : undefined,
+          discounts: flashOffer ? [{ coupon: flashOffer.coupon.id }] : undefined,
           payment_method_options: checkoutCardPaymentMethodOptions,
           payment_intent_data:
             mode === "payment"
@@ -783,7 +795,7 @@ export const billingRouter = router({
                   },
                 }
               : undefined,
-          allow_promotion_codes: flashOfferEligible ? undefined : true,
+          allow_promotion_codes: flashOffer ? undefined : true,
           return_url: `${new URL(env.NEXT_PUBLIC_BETTER_AUTH_URL).origin}/settings/billing/checkout/{CHECKOUT_SESSION_ID}`,
         },
         customCheckoutRequestOptions,

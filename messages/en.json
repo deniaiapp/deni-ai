@@ -1048,6 +1048,8 @@
   "paS9Ok": "Limited-time offer: {percent}% off",
   "SBo5IB": "Yearly and lifetime plans. The discount is applied automatically at checkout.",
   "zbC5Ep": "Ends in",
+  "jC9PEb": "{spots, plural, one {First buyer only} other {First # buyers only}}",
+  "sK4bAP": "{spotsLeft, plural, one {# spot left} other {# spots left}}",
   "a4g52T": "View offer",
   "Lwzsib": "Continue using Deni AI after reaching your limits with pay-per-use pricing.",
   "V52jNn": "Enabled",

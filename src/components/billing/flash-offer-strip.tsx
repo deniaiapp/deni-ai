@@ -31,16 +31,16 @@ function getDismissedSnapshot() {
   }
 }
 
-function dismissOffer(endsAt: string) {
+function dismissOffer(offerKey: string) {
   try {
-    window.localStorage.setItem(DISMISSED_KEY, endsAt);
+    window.localStorage.setItem(DISMISSED_KEY, offerKey);
   } catch {
     // Storage may be unavailable (private mode); the strip just stays visible.
   }
   window.dispatchEvent(new Event(DISMISSED_EVENT));
 }
 
-/** App-wide flash offer strip for card-verified users who have not paid yet. */
+/** App-wide flash offer strip for users who have not paid yet. */
 export function FlashOfferStrip() {
   const t = useExtracted();
   const pathname = usePathname();
@@ -54,13 +54,19 @@ export function FlashOfferStrip() {
     enabled: features.billing && Boolean(user) && !user?.isAnonymous,
     staleTime: 5 * 60_000,
   });
-  const dismissedEndsAt = useSyncExternalStore(
+  const dismissedOfferKey = useSyncExternalStore(
     subscribeDismissed,
     getDismissedSnapshot,
     () => null,
   );
   const offer = offerQuery.data;
-  const offerEndsAt = offer?.endsAt;
+  const offerEndsAt = offer?.kind === "timer" ? offer.endsAt : null;
+  // A dismissed strip returns for a new timer, or once another spot is taken.
+  const offerKey = offer
+    ? offer.kind === "timer"
+      ? offer.endsAt
+      : `spots:${offer.spotsLeft.toString()}`
+    : null;
 
   // Refetch at expiry so the strip disappears without a reload.
   useEffect(() => {
@@ -72,7 +78,7 @@ export function FlashOfferStrip() {
     return () => clearTimeout(timeout);
   }, [offerEndsAt, utils]);
 
-  if (!offer || onBillingRoute || dismissedEndsAt === offer.endsAt) return null;
+  if (!offer || !offerKey || onBillingRoute || dismissedOfferKey === offerKey) return null;
 
   const percent = offer.percentOff.toString();
 
@@ -88,13 +94,27 @@ export function FlashOfferStrip() {
         <span className="hidden text-muted-foreground sm:inline">
           {t("Yearly and lifetime plans")}
         </span>
-        <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-          {t("Ends in")}
-          <OfferCountdown
-            endsAt={offer.endsAt}
-            className="font-mono font-semibold text-amber-700 dark:text-amber-300"
-          />
-        </span>
+        {offer.kind === "timer" ? (
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            {t("Ends in")}
+            <OfferCountdown
+              endsAt={offer.endsAt}
+              className="font-mono font-semibold text-amber-700 dark:text-amber-300"
+            />
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+            {t("{spots, plural, one {First buyer only} other {First # buyers only}}", {
+              spots: offer.spots,
+            })}
+            <span aria-hidden="true">·</span>
+            <span className="font-semibold text-amber-700 tabular-nums dark:text-amber-300">
+              {t("{spotsLeft, plural, one {# spot left} other {# spots left}}", {
+                spotsLeft: offer.spotsLeft,
+              })}
+            </span>
+          </span>
+        )}
       </div>
       <Button
         size="sm"
@@ -109,7 +129,7 @@ export function FlashOfferStrip() {
         variant="ghost"
         size="icon"
         className="size-6"
-        onClick={() => dismissOffer(offer.endsAt)}
+        onClick={() => dismissOffer(offerKey)}
         aria-label={t("Dismiss")}
       >
         <X className="size-3.5" />
