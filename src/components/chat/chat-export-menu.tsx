@@ -39,7 +39,8 @@ export function ChatExportMenu({ chatId, messages, chatTitle }: ChatExportMenuPr
   const resolveMessages = (requireFullTranscript = false) =>
     resolveExportMessages(
       messages,
-      () => utils.chat.getChatTranscript.fetch({ id: chatId }),
+      // staleTime 0: a cached transcript would miss messages sent since the last export.
+      () => utils.chat.getChatTranscript.fetch({ id: chatId }, { staleTime: 0 }),
       requireFullTranscript,
     );
 

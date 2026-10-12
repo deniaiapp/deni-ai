@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useExtracted, useLocale } from "next-intl";
+import { useState } from "react";
 import type { BillingPlanId, ClientPlan } from "@/lib/billing";
 import { isMaxTeamPlan } from "@/lib/billing";
 import { formatAppDate } from "@/lib/format-date";
 import { usePlanIntervalLabel, useTierLabel } from "./billing-utils";
+import { SubscriptionCancelDialog } from "./subscription-shredder";
 import { Button } from "../ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Spinner } from "../ui/spinner";
@@ -45,6 +47,7 @@ export function BillingCurrentPlanCard({
   const locale = useLocale();
   const getTierLabel = useTierLabel();
   const getPlanIntervalLabel = usePlanIntervalLabel();
+  const [isCancelConfirmOpen, setIsCancelConfirmOpen] = useState(false);
 
   return (
     <Card>
@@ -112,10 +115,10 @@ export function BillingCurrentPlanCard({
                   size="sm"
                   className="text-muted-foreground"
                   disabled={cancelPending}
-                  onClick={onCancel}
+                  onClick={() => setIsCancelConfirmOpen(true)}
                 >
                   {cancelPending && <Spinner className="size-4 mr-1" />}
-                  {t("Cancel")}
+                  {t("Cancel subscription")}
                 </Button>
               )}
               {cancelDate && (
@@ -128,6 +131,14 @@ export function BillingCurrentPlanCard({
           )}
         </div>
       </CardHeader>
+      <SubscriptionCancelDialog
+        open={isCancelConfirmOpen}
+        onOpenChange={setIsCancelConfirmOpen}
+        description={t(
+          "Your plan stays active until the end of the current billing period. You can resume it any time before then.",
+        )}
+        onConfirm={onCancel}
+      />
     </Card>
   );
 }

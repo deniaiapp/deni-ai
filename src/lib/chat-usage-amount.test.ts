@@ -46,3 +46,14 @@ test("Pro and Fast mode multipliers are preserved", () => {
     30_500 * getEffectiveTokenMultiplier(model, 30_000, options),
   );
 });
+
+test("an OpenRouter cache write is charged once and sized by the reported prompt", () => {
+  const usage = {
+    inputTokens: 100_000,
+    outputTokens: 0,
+    inputTokenDetails: { noCacheTokens: 100_000, cacheReadTokens: 0, cacheWriteTokens: 100_000 },
+  };
+  expect(calculateChatUsageAmount(model, usage)).toBe(
+    125_000 * getEffectiveTokenMultiplier(model, 100_000),
+  );
+});

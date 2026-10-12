@@ -136,7 +136,19 @@ export function useChatBranches({ messages, setMessages, regenerate }: UseChatBr
       void Promise.resolve()
         .then(() => regenerate(options))
         .then(() => {
-          setMessages((prev) => mergePendingBranch(prev, pending));
+          setMessages((prev) => {
+            const lastMsg = prev.at(-1);
+            // The SDK drops the original answer before sending. When the request
+            // fails or is stopped before a new answer starts, put the transcript back
+            // instead of leaving the question unanswered.
+            if (
+              lastMsg?.role !== "assistant" ||
+              messages.some((message) => message.id === lastMsg.id)
+            ) {
+              return messages;
+            }
+            return mergePendingBranch(prev, pending);
+          });
         })
         .finally(() => {
           setPendingBranch(null);

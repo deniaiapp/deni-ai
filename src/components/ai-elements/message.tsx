@@ -13,6 +13,7 @@ import { Streamdown } from "streamdown";
 import { streamdownLinkSafety } from "@/components/chat/streamdown-link-safety";
 import { streamdownOverrideComponents } from "@/components/chat/streamdown-overrides";
 import { useStreamdownPlugins } from "@/components/chat/streamdown-plugins";
+import { streamdownRehypePlugins } from "@/components/chat/streamdown-rehype-plugins";
 import { streamdownRemarkPlugins } from "@/components/chat/streamdown-remark-plugins";
 
 export type MessageProps = HTMLAttributes<HTMLDivElement> & {
@@ -280,6 +281,7 @@ export const MessageResponse = memo(
         className={cn("size-full [&>*:first-child]:mt-0 [&>*:last-child]:mb-0", className)}
         plugins={plugins}
         components={streamdownOverrideComponents}
+        rehypePlugins={streamdownRehypePlugins}
         remarkPlugins={streamdownRemarkPlugins}
         linkSafety={streamdownLinkSafety}
         {...props}

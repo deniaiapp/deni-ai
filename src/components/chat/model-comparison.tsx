@@ -19,6 +19,7 @@ import {
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
 import { Composer, type ComposerMessage } from "@/components/chat/composer";
 import { ComparisonSettingsControls } from "@/components/chat/comparison-settings";
+import { SavedComparisonsList } from "@/components/chat/saved-comparisons-list";
 import {
   comparisonSettingsSchema,
   normalizeComparisonSettings,
@@ -30,7 +31,9 @@ import { ChatComposerModelPicker } from "@/components/chat/chat-composer-model-p
 import { Spinner } from "@/components/ui/spinner";
 import { useAvailableModels } from "@/hooks/use-available-models";
 import { getComparisonTurns } from "@/lib/comparison-conversation";
+import { saveComparisonSession } from "@/lib/comparison-session-save";
 import { createModelComparisonTransport } from "@/lib/model-comparison-transport";
+import { isBodyTooLargeError } from "@/lib/trpc/limits";
 import { trpc } from "@/lib/trpc/react";
 
 function Answer({
@@ -91,54 +94,6 @@ export function SavedModelComparison({ id }: { id: string }) {
       </div>
     );
   return <ModelComparison key={id} initialComparison={saved.data} />;
-}
-
-function SavedComparisonsList({
-  history,
-  activeId,
-  locked,
-}: {
-  history: {
-    isPending: boolean;
-    isError: boolean;
-    data?: inferRouterOutputs<AppRouter>["chat"]["getComparisons"];
-  };
-  activeId: string | undefined;
-  locked: boolean;
-}) {
-  const t = useExtracted();
-
-  return (
-    <details className="text-sm">
-      <summary className="cursor-pointer">{t("Saved comparisons")}</summary>
-      <div className="max-h-48 overflow-y-auto space-y-2 py-2">
-        {history.isPending ? (
-          <p>{t("Loading…")}</p>
-        ) : history.isError ? (
-          <p role="alert">{t("Could not load saved comparisons.")}</p>
-        ) : !history.data?.length ? (
-          <p>{t("No saved comparisons yet.")}</p>
-        ) : (
-          history.data?.map((entry) => (
-            <Link
-              key={entry.id}
-              href={`/compare/${entry.id}`}
-              aria-current={activeId === entry.id ? "page" : undefined}
-              className="block rounded-md border px-3 py-2 hover:bg-muted"
-              onClick={(event) => {
-                if (locked) event.preventDefault();
-              }}
-            >
-              <span className="block truncate">{entry.title}</span>
-              <span className="text-xs text-muted-foreground">
-                {entry.leftName} / {entry.rightName}
-              </span>
-            </Link>
-          ))
-        )}
-      </div>
-    </details>
-  );
 }
 
 function ComparisonAccessNotice({
@@ -562,36 +517,51 @@ function useModelComparison(
   async function saveWholeComparison() {
     if (saveLock.current || submitLock.current || !comparison) return;
     saveLock.current = true;
+    const previousId = sessionId;
+    const transcript = {
+      leftModel: comparison.leftModel,
+      rightModel: comparison.rightModel,
+      leftSettings: normalizeComparisonSettings(
+        models.find((model) => model.value === comparison.leftModel),
+        leftSettings,
+        webToolsAvailable,
+      ),
+      rightSettings: normalizeComparisonSettings(
+        models.find((model) => model.value === comparison.rightModel),
+        rightSettings,
+        webToolsAvailable,
+      ),
+      leftMessages: left.messages as unknown as Record<string, unknown>[],
+      rightMessages: right.messages as unknown as Record<string, unknown>[],
+    };
     await Promise.resolve()
       .then(() =>
-        saveSession.mutateAsync({
-          id: sessionId,
-          leftModel: comparison.leftModel,
-          rightModel: comparison.rightModel,
-          leftSettings: normalizeComparisonSettings(
-            models.find((model) => model.value === comparison.leftModel),
-            leftSettings,
-            webToolsAvailable,
-          ),
-          rightSettings: normalizeComparisonSettings(
-            models.find((model) => model.value === comparison.rightModel),
-            rightSettings,
-            webToolsAvailable,
-          ),
-          leftMessages: left.messages as unknown as Record<string, unknown>[],
-          rightMessages: right.messages as unknown as Record<string, unknown>[],
-        }),
+        saveComparisonSession((id) => saveSession.mutateAsync({ id, ...transcript }), previousId),
       )
       .then(
-        (id) => {
+        ({ id, recreated }) => {
+          // Deleted in another tab or on another device: saved as a new comparison.
+          if (recreated && previousId) {
+            void utils.chat.getComparison.invalidate({ id: previousId }, { refetchType: "none" });
+          }
           setSessionId(id);
           setDirty(false);
           window.history.replaceState(null, "", `/compare/${id}`);
           void utils.chat.getComparisons.invalidate();
           void utils.chat.getComparison.invalidate({ id });
-          toast.success(t("Comparison saved."));
+          toast.success(
+            recreated
+              ? t("The saved comparison was deleted, so this was saved as a new comparison.")
+              : t("Comparison saved."),
+          );
         },
-        () => toast.error(t("Could not save this comparison. Please try again.")),
+        (error: unknown) =>
+          // Retrying a body over the cap can never succeed.
+          toast.error(
+            isBodyTooLargeError(error)
+              ? t("This comparison is too large to save.")
+              : t("Could not save this comparison. Please try again."),
+          ),
       )
       .finally(() => {
         saveLock.current = false;
@@ -630,7 +600,13 @@ function useModelComparison(
         }
         router.push(`/chat/${savedId}`);
       })
-      .catch(() => toast.error(t("Could not save this answer. Please try again.")))
+      .catch((error: unknown) =>
+        toast.error(
+          isBodyTooLargeError(error)
+            ? t("This answer is too large to save as a chat.")
+            : t("Could not save this answer. Please try again."),
+        ),
+      )
       .finally(() => {
         saveLock.current = false;
       });
@@ -830,7 +806,15 @@ export function ModelComparison({
             />
           )}
         </div>
-        <SavedComparisonsList history={history} activeId={sessionId} locked={running || saving} />
+        <SavedComparisonsList
+          history={history}
+          activeId={sessionId}
+          locked={running || saving}
+          onDeleted={(id) => {
+            // Leave a deleted comparison instead of saving into a row that is gone.
+            if (id === sessionId) reset();
+          }}
+        />
         {(eligible || comparison) && <ComparisonModelGrid state={state} />}
       </header>
       <Conversation className="min-h-0">

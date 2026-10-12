@@ -210,6 +210,10 @@ export function useInitialMessage(params: {
       const parsedProMode = Boolean(storedData.proMode && sendSelected?.supportsProMode);
       const parsedFastMode = Boolean(storedData.fastMode && sendSelected?.supportsFastMode);
 
+      // The chat row may still be in creation. The chat transport waits for it
+      // (and retries a failed creation) before posting, so send right away: if
+      // creation still fails, the chat keeps the prompt and its attachments and
+      // shows its error, and the stored copy is already gone.
       Promise.resolve(
         sendMessageRef.current(
           {

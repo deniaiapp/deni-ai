@@ -31,6 +31,7 @@ export function withTeamBillingLock<T>(
   );
 }
 
+/** Found by organization alone, so a row without a billing contact is reused. */
 export async function findTeamBillingRecord(
   database: Pick<Transaction, "select">,
   organizationId: string,
@@ -44,16 +45,20 @@ export async function findTeamBillingRecord(
   return record;
 }
 
-/** Team identity is the organization, never whichever admin opened settings. */
+/**
+ * Team identity is the organization, never whichever admin opened settings.
+ * `userId` only names the billing contact of a row created here; an existing
+ * row keeps its contact, including none after that member left the team.
+ */
 export function saveTeamBillingRecord(
   database: Database,
-  userId: string,
+  userId: string | null,
   organizationId: string,
   updates: TeamBillingUpdates & { stripeCustomerId: string },
 ): Promise<typeof billing.$inferSelect>;
 export function saveTeamBillingRecord(
   database: Database,
-  userId: string,
+  userId: string | null,
   organizationId: string,
   updates: TeamBillingUpdates & { stripeCustomerId: string },
   expectedSubscriptionId: string | null | undefined,
@@ -61,7 +66,7 @@ export function saveTeamBillingRecord(
 ): Promise<typeof billing.$inferSelect | undefined>;
 export function saveTeamBillingRecord(
   database: Database,
-  userId: string,
+  userId: string | null,
   organizationId: string,
   updates: TeamBillingUpdates & { stripeCustomerId: string },
   expectedSubscriptionId?: string | null,

@@ -139,6 +139,14 @@ export async function canCompareModels(userId: string): Promise<boolean> {
   return tier === "pro" || tier === "max";
 }
 
+/** The plan tier a (non-guest) user's limits follow, including team and lifetime plans. */
+export async function getSubscriptionTier(
+  userId: string,
+  now = new Date(),
+): Promise<SubscriptionTier> {
+  return (await loadTierInfo(userId, now, db)).tier;
+}
+
 async function getTierInfo(
   userId: string,
   now: Date,
@@ -164,12 +172,15 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
       currentPeriodEnd: billing.currentPeriodEnd,
       maxModeEnabled: billing.maxModeEnabled,
       paymentMethodFingerprint: billing.paymentMethodFingerprint,
+      cardRemovedAt: billing.cardRemovedAt,
     })
     .from(billing)
     .where(and(eq(billing.userId, userId), isNull(billing.organizationId)))
     .limit(1);
 
-  const hasVerifiedPaymentMethod = Boolean(record?.paymentMethodFingerprint);
+  // A removed card keeps its fingerprint for reuse limits but no longer verifies.
+  const hasVerifiedPaymentMethod =
+    Boolean(record?.paymentMethodFingerprint) && !record?.cardRemovedAt;
 
   // 2. Check if user belongs to any org with an active team plan
   const teamRecords = await database

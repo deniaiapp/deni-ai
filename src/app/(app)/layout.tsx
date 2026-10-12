@@ -1,9 +1,11 @@
 import { Suspense } from "react";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { RuntimeAppProviders } from "@/components/runtime-app-providers";
 import { Spinner } from "@/components/ui/spinner";
 import { getSession } from "@/lib/get-session";
+import { RETURN_TO_HEADER, signInPath } from "@/lib/sign-in-redirect";
 
 /** Content-area only — AppShell (sidebar) stays visible while auth resolves. */
 function AppContentFallback() {
@@ -17,7 +19,8 @@ function AppContentFallback() {
 async function RequireAuth({ children }: { children: React.ReactNode }) {
   const session = await getSession();
   if (!session?.session) {
-    redirect("/auth/sign-in?redirectTo=/chat");
+    // Return to the requested page (e.g. a Flixa device code), not always /chat.
+    redirect(signInPath((await headers()).get(RETURN_TO_HEADER)));
   }
   return children;
 }

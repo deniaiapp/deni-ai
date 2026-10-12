@@ -9,6 +9,8 @@ import {
   safeValidateUIMessages,
   stepCountIs,
   streamText,
+  wrapLanguageModel,
+  type LanguageModelUsage,
   type ModelMessage,
   type SystemModelMessage,
   type UIMessage,
@@ -22,26 +24,41 @@ import {
   getChatById,
   isChatGenerationActive,
   replaceLastChatMessage,
+  restoreStoppedRegeneration,
   updateChat,
 } from "@/lib/chat";
-import { mergeStoredAndClientMessages } from "@/lib/chat-messages";
+import {
+  compactEarlierToolOutputs,
+  getContinuedAssistantMessage,
+  mergeStoredAndClientMessages,
+  selectModelContextMessages,
+} from "@/lib/chat-messages";
+import {
+  ForeignAttachmentError,
+  linkChatAttachments,
+  resolveAttachmentFileParts,
+  rewriteMigratedAttachmentUrls,
+  withStableAttachmentUrls,
+  type ResolvedAttachments,
+} from "@/lib/attachments";
 import { inlineTextAttachments } from "@/lib/chat-text-attachments";
 import {
   prepareBinaryAttachments,
   createChatAttachmentDownload,
+  fitBinaryAttachmentsToBudget,
+  type ChatAttachmentCache,
 } from "@/lib/chat-attachment-download";
 import { isComparisonConversation } from "@/lib/comparison-conversation";
 import {
   clearChatGeneration,
+  getRecentPromptUsage,
+  isChatStopRequestedSince,
   isCurrentChatGeneration,
+  recordPromptUsage,
   startChatGeneration,
 } from "@/lib/chat-generation";
 import { createChatTools } from "@/lib/chat-tools";
-import {
-  getEffectiveTokenMultiplier,
-  getModelContextWindow,
-  getModelDefinition,
-} from "@/lib/constants";
+import { getModelContextWindow, getModelDefinition } from "@/lib/constants";
 import { buildMemoryPrompt, getUserMemoryState, maybeAutoSaveMemories } from "@/lib/memory";
 import { platformCapabilities } from "@/lib/platform-capabilities.server";
 import { buildProjectPrompt } from "@/lib/project-context";
@@ -55,7 +72,7 @@ import {
 import { calculateChatUsageAmount, resolveFinalChatUsageAmount } from "@/lib/chat-usage-amount";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { guardMutationRequest } from "@/lib/mutation-request";
-import { readRequestJson, RequestBodyTooLargeError } from "@/lib/request-body";
+import { CHAT_BODY_LIMIT, readRequestJson, RequestBodyTooLargeError } from "@/lib/request-body";
 import {
   classifyUpstreamError,
   extractChatRequestErrorText,
@@ -67,6 +84,17 @@ import { authorLabels } from "@/app/(home)/models/models-author-labels";
 import { addOpenRouterCacheControl, ChatRouteError, resolveChatModelContext } from "./_lib/model";
 import { buildChatSystemPrompt } from "./_lib/prompt";
 import { ChatRequestSchema, setPendingState } from "./_lib/schema";
+import {
+  estimateGuestPromptTokens,
+  estimatePromptInputTokens,
+  estimatePromptTextTokens,
+  estimateTokenReservation,
+  estimateUrlAttachmentTokens,
+  fingerprintPromptPrefixes,
+  GUEST_MAX_OUTPUT_TOKENS,
+  GUEST_MAX_PROMPT_TOKENS,
+  GUEST_TOOL_OUTPUT_CHARS,
+} from "./_lib/usage-estimate";
 
 const tokenCountFormatter = new Intl.NumberFormat("en-US");
 
@@ -100,48 +128,9 @@ function formatChatStreamError(error: unknown, modelId: string): string {
   return `${modelName} exceeded its context window. Start a new chat or trim earlier messages/files.`;
 }
 
-/** Uncapped prompt-size estimate (chars/4). Used for long-context preflight. */
-function estimatePromptInputTokens({
-  modelMessages,
-  systemPrompt,
-}: {
-  modelMessages: unknown;
-  systemPrompt: string;
-}): number {
-  const serializedMessages = JSON.stringify(modelMessages);
-  return Math.ceil((serializedMessages.length + systemPrompt.length) / 4);
-}
-
-/**
- * Reserve at least the estimated prompt before streaming starts, so a request
- * whose input alone exceeds the remaining quota is rejected up front. Long-context
- * sessions (>200K estimated input on OpenAI 1M models) also hold the 2× premium.
- * Settlement reconciles to the provider-reported usage afterwards.
- */
-function estimateTokenReservation({
-  modelMessages,
-  systemPrompt,
-  modelId,
-  proMode = false,
-  fastMode = false,
-}: {
-  modelMessages: unknown;
-  systemPrompt: string;
-  modelId: string;
-  proMode?: boolean;
-  fastMode?: boolean;
-}) {
-  const estimatedPromptTokens = estimatePromptInputTokens({ modelMessages, systemPrompt });
-  const effectiveMultiplier = getEffectiveTokenMultiplier(modelId, estimatedPromptTokens, {
-    proMode,
-    fastMode,
-  });
-  const baseUnits = Math.max(512, estimatedPromptTokens + 1_024);
-
-  return Math.ceil(baseUnits * effectiveMultiplier);
-}
-
 export async function POST(req: Request) {
+  // Arrival time; a stop that arrives later applies to this request.
+  const requestStartedAt = Date.now();
   const rejected = guardMutationRequest(req, "application/json");
   if (rejected) return rejected;
   const headersList = await headers();
@@ -152,7 +141,7 @@ export async function POST(req: Request) {
 
   let body: unknown;
   try {
-    body = await readRequestJson(req, 16 * 1024 * 1024);
+    body = await readRequestJson(req, CHAT_BODY_LIMIT);
   } catch (error) {
     return NextResponse.json(
       {
@@ -190,6 +179,7 @@ export async function POST(req: Request) {
   const {
     id: requestId,
     messages: rawMessages = [],
+    trigger,
     model: baseModel,
     webSearch = false,
     reasoningEffort = "high",
@@ -237,7 +227,13 @@ export async function POST(req: Request) {
   }
 
   const storedMessages = Array.isArray(chat.messages) ? (chat.messages as UIMessage[]) : [];
-  const messages = mergeStoredAndClientMessages(storedMessages, validatedMessages.data);
+  // A tab loaded before the private-storage migration still sends the old
+  // public URLs of the user's files, which no longer serve them: read and save
+  // those files by their app URLs instead.
+  const messages = await rewriteMigratedAttachmentUrls(
+    mergeStoredAndClientMessages(storedMessages, validatedMessages.data),
+    userId,
+  );
 
   let memoryState: Awaited<ReturnType<typeof getUserMemoryState>>;
   let modelContext: Awaited<ReturnType<typeof resolveChatModelContext>>;
@@ -297,10 +293,40 @@ export async function POST(req: Request) {
   });
 
   // Models accept images and PDFs as files, not text files, so inline those.
+  const attachmentCache: ChatAttachmentCache = new Map();
+  const contextMessages = selectModelContextMessages(messages, {
+    regenerate: trigger === "regenerate-message",
+  });
+  // Stored attachments are private: sign short-lived URLs of the user's own
+  // files for the server to download. The model receives their bytes or text,
+  // never a URL, and `messages` (saved below) keeps the app URLs.
+  let resolvedAttachments: ResolvedAttachments;
+  try {
+    resolvedAttachments = await resolveAttachmentFileParts(
+      isAnonymous
+        ? compactEarlierToolOutputs(contextMessages, GUEST_TOOL_OUTPUT_CHARS)
+        : contextMessages,
+      userId,
+    );
+  } catch (error) {
+    if (error instanceof ForeignAttachmentError) {
+      return NextResponse.json({ error: "Invalid or oversized attachment" }, { status: 400 });
+    }
+    console.error("Chat attachment resolution failed", error);
+    return NextResponse.json({ error: GENERIC_CHAT_REQUEST_ERROR }, { status: 500 });
+  }
   let modelMessages: ModelMessage[];
   try {
     modelMessages = await convertToModelMessages(
-      prepareBinaryAttachments(await inlineTextAttachments(messages)),
+      await fitBinaryAttachmentsToBudget(
+        prepareBinaryAttachments(
+          await inlineTextAttachments(resolvedAttachments.messages, resolvedAttachments.cacheKeys),
+        ),
+        attachmentCache,
+        // Not the request signal: like the generation, a download outlives a
+        // client disconnect. The helper bounds it with its own timeout.
+        new AbortController().signal,
+      ),
     );
   } catch {
     return NextResponse.json({ error: "Invalid or oversized attachment" }, { status: 400 });
@@ -310,17 +336,56 @@ export async function POST(req: Request) {
     ? buildMemoryPrompt(memoryState)
     : null;
 
-  const responseMessageId = generateId();
+  // Guest usage is one request regardless of size, so reject oversized prompts
+  // before anything is reserved or written. URL files are already downloaded,
+  // so PDFs count by their real size.
+  if (
+    isAnonymous &&
+    estimateGuestPromptTokens({
+      modelMessages,
+      systemPrompt: persistentMemory ?? "",
+      attachmentCache,
+    }) > GUEST_MAX_PROMPT_TOKENS
+  ) {
+    // Say which limit was hit: a new chat does not help when a file is too large.
+    const textFits =
+      estimatePromptTextTokens({ modelMessages, systemPrompt: persistentMemory ?? "" }) <=
+      GUEST_MAX_PROMPT_TOKENS;
+    return NextResponse.json(
+      textFits
+        ? {
+            error: "Attachments this large are not available for guest sessions.",
+            reason: "guest_attachment_too_large",
+          }
+        : {
+            error: "Conversations this long are not available for guest sessions.",
+            reason: "guest_prompt_too_long",
+          },
+      { status: 413 },
+    );
+  }
+
+  // A questionnaire answer continues its assistant message in place, so the
+  // transcript never holds a second copy of that message's tool calls.
+  const continuedMessage = getContinuedAssistantMessage(messages, trigger);
+  const responseMessageId = continuedMessage?.id ?? generateId();
   const generationId = generateId();
   const shouldGenerateTitle = chat.title === "New Chat";
   const pendingAssistantMessage = setPendingState(
-    {
-      id: responseMessageId,
-      role: "assistant",
-      parts: [],
-    } as UIMessage,
+    continuedMessage ??
+      ({
+        id: responseMessageId,
+        role: "assistant",
+        parts: [],
+      } as UIMessage),
     true,
   );
+  const pendingMessages = [
+    ...(continuedMessage ? messages.slice(0, -1) : messages),
+    pendingAssistantMessage,
+  ];
+  // Parts the continued message already had are not output of this request.
+  const previousPartCount = pendingAssistantMessage.parts.length;
 
   let generationAbortController: AbortController | undefined;
   let pendingStateRolledBack = false;
@@ -331,15 +396,67 @@ export async function POST(req: Request) {
   let trailingPersistTimer: ReturnType<typeof setTimeout> | undefined;
   let hasAssistantOutput = false;
   let consumedUsageAmount = 0;
+  let finalUsageAmount = 0;
+  // Provider usage arrives when a model call ends, and is added once its step
+  // finishes. A stop during the step's tool calls keeps the call's reported usage.
+  // A call the provider accepted but that was cut off before it ended (stop,
+  // replacement, disconnect, upstream error) reports none but was billed by the
+  // provider, so it is estimated from its prompt plus the output streamed so
+  // far. A call the provider rejected before streaming was not billed, so it is
+  // not counted.
+  let basePromptTokens = 0;
+  let finishedStepCount = 0;
+  let finishedStepMessageTokens = 0;
+  let stepInFlight = false;
+  let stepAccepted = false;
+  let stepCallUsage: LanguageModelUsage | undefined;
+  let stepPromptTokens = 0;
+  let stepOutputChars = 0;
+  // The prompt estimate counts text only. The input the provider reported for
+  // the last call whose prompt this one starts with (attachments included),
+  // plus the messages added since, is a lower bound too, so the larger of the
+  // two is billed.
+  let reportedPromptTokens = 0;
+  let reportedStepMessageTokens = 0;
+  // The provider reads part of the prompt from cache: at least what it last
+  // reported reading for this chat, and commonly all of the reported prompt it
+  // was just sent. That much is billed at the cache-read weight, as finishing
+  // the call would have been.
+  const promptCacheKey = `${userId}:${id}:${baseModel}${proMode ? ":pro" : ""}`;
+  const recentPromptUsage = getRecentPromptUsage(promptCacheKey);
+  let promptCacheReadTokens = recentPromptUsage.cacheReadTokens;
+  let promptFingerprints: string[] = [];
+  const resolveUnfinishedStepAmount = () => {
+    if (stepCallUsage) {
+      return calculateChatUsageAmount(baseModel, stepCallUsage, { proMode, fastMode });
+    }
+    if (!hasAssistantOutput || !stepInFlight || !stepAccepted) return 0;
+    const cacheReadTokens = Math.min(
+      Math.max(promptCacheReadTokens, reportedPromptTokens),
+      stepPromptTokens,
+    );
+    return calculateChatUsageAmount(
+      baseModel,
+      {
+        inputTokens: stepPromptTokens,
+        inputTokenDetails: {
+          noCacheTokens: stepPromptTokens - cacheReadTokens,
+          cacheReadTokens,
+          cacheWriteTokens: undefined,
+        },
+        outputTokens: Math.ceil(stepOutputChars / 4),
+      },
+      { proMode, fastMode },
+    );
+  };
+  const resolveUsageAmount = () => {
+    if (usageUnit !== "tokens") return hasAssistantOutput ? 1 : 0;
+    return Math.max(finalUsageAmount + resolveUnfinishedStepAmount(), hasAssistantOutput ? 1 : 0);
+  };
   const modelReservationId = `${generationId}:model`;
   const persistObservedUsage = async () => {
     if (!usageConsumed) return;
-    const amount =
-      usageUnit === "tokens"
-        ? Math.max(finalUsageAmount, hasAssistantOutput ? 1 : 0)
-        : hasAssistantOutput
-          ? 1
-          : 0;
+    const amount = resolveUsageAmount();
     try {
       await recordObservedUsage({ userId, reservationId: modelReservationId, amount });
     } catch (error) {
@@ -351,7 +468,6 @@ export async function POST(req: Request) {
       void persistObservedUsage();
     }, 30_000);
   };
-  let finalUsageAmount = 0;
 
   const ownsCurrentGeneration = async () => {
     return (
@@ -361,13 +477,7 @@ export async function POST(req: Request) {
   };
 
   const refundConsumedUsage = async () => {
-    if (
-      !usageConsumed ||
-      usageRefunded ||
-      hasAssistantOutput ||
-      (usageUnit === "tokens" && finalUsageAmount > 0)
-    )
-      return;
+    if (!usageConsumed || usageRefunded || resolveUsageAmount() > 0) return;
     try {
       await settleUsageReservation({ userId, reservationId: modelReservationId, amount: 0 });
       usageRefunded = true;
@@ -381,16 +491,22 @@ export async function POST(req: Request) {
   const settleUsage = () => {
     usageSettlement ??= (async () => {
       if (!usageConsumed) return;
-      const amount =
-        usageUnit === "tokens"
-          ? Math.max(finalUsageAmount, hasAssistantOutput ? 1 : 0)
-          : hasAssistantOutput
-            ? 1
-            : 0;
+      const amount = resolveUsageAmount();
       await settleUsageReservation({ userId, reservationId: modelReservationId, amount });
     })();
     return usageSettlement;
   };
+
+  // A regenerate request omits the answer it replaces, so a regenerate that
+  // fails or is stopped without output restores the stored transcript instead of
+  // deleting that answer. A pending tail belonged to the generation it replaced.
+  const isRegenerate = trigger === "regenerate-message";
+  const regenerateRollbackMessages = storedMessages.map((message, index) =>
+    index === storedMessages.length - 1 &&
+    (message.metadata as { pending?: unknown } | undefined)?.pending
+      ? setPendingState(message, false)
+      : message,
+  );
 
   const rollbackPendingAssistantState = async () => {
     if (isComparison || pendingStateRolledBack) {
@@ -401,11 +517,26 @@ export async function POST(req: Request) {
 
     try {
       if (!(await ownsCurrentGeneration())) {
+        // A stop (possibly from another instance) already released the row. Put
+        // back the answer a regenerate replaced, unless a newer generation or
+        // transcript has taken its place or the new answer has output.
+        if (isRegenerate) {
+          await restoreStoppedRegeneration(
+            id,
+            userId,
+            responseMessageId,
+            regenerateRollbackMessages,
+          );
+        }
         return;
       }
-      await updateChat(id, userId, messages, undefined, {
-        expectedGenerationId: generationId,
-      });
+      await updateChat(
+        id,
+        userId,
+        isRegenerate ? regenerateRollbackMessages : messages,
+        undefined,
+        { expectedGenerationId: generationId },
+      );
     } catch (error) {
       console.error("Failed to rollback pending chat response", error);
     }
@@ -445,9 +576,24 @@ export async function POST(req: Request) {
       req.signal.addEventListener("abort", abortComparison, { once: true });
       if (req.signal.aborted) abortComparison();
     } else {
-      await updateChat(id, userId, [...messages, pendingAssistantMessage], undefined, {
+      const { stopRequestedAt } = await updateChat(id, userId, pendingMessages, undefined, {
         nextGenerationId: generationId,
       });
+      // The saved messages now hold their uploads: deleting this chat deletes them.
+      await linkChatAttachments(id, userId, messages);
+      // A stop that arrived after this request but before this registration found
+      // no generation to stop. One handled by this instance is remembered in
+      // memory; one handled by another instance is on the chat row. A client
+      // disconnect is not a stop: the generation survives it and the client
+      // recovers the answer from the saved pending message.
+      if (
+        isChatStopRequestedSince(id, requestStartedAt) ||
+        (stopRequestedAt !== null && stopRequestedAt.getTime() > requestStartedAt)
+      ) {
+        await rollbackPendingAssistantState();
+        clearGenerationLock();
+        return new Response(null, { status: 499 });
+      }
     }
     projectPrompt = isComparison ? null : await buildProjectPrompt(chat.projectId, userId);
     if (usageUnit === "requests") {
@@ -516,9 +662,29 @@ export async function POST(req: Request) {
 
   try {
     if (usageUnit === "tokens") {
-      consumedUsageAmount = estimateTokenReservation({
-        modelMessages,
+      // Attachment floors are only reserved: a cut-off call is billed at its
+      // prompt text or the input the provider reported for it, so they can never
+      // make stopping cost more.
+      basePromptTokens = estimatePromptTextTokens({ modelMessages, systemPrompt });
+      // A recent report applies only while this prompt still starts with the one
+      // it was for; an edited or branched transcript can be smaller.
+      promptFingerprints = fingerprintPromptPrefixes({
+        // Signed attachment URLs change every request; the files behind them do not.
+        modelMessages: withStableAttachmentUrls(modelMessages, resolvedAttachments.cacheKeys),
         systemPrompt,
+        toolNames: Object.keys(tools),
+      });
+      const reportedPrompt = recentPromptUsage.prompt;
+      if (
+        reportedPrompt &&
+        promptFingerprints[reportedPrompt.messageCount] === reportedPrompt.fingerprint
+      ) {
+        reportedPromptTokens = reportedPrompt.inputTokens;
+      }
+      consumedUsageAmount = estimateTokenReservation({
+        estimatedPromptTokens:
+          estimatePromptInputTokens({ modelMessages, systemPrompt }) +
+          estimateUrlAttachmentTokens(modelMessages),
         modelId: baseModel,
         proMode,
         fastMode,
@@ -535,16 +701,87 @@ export async function POST(req: Request) {
       usageRefunded = false;
     }
 
+    const generationSignal = generationAbortController.signal;
     result = streamText({
-      model: model,
-      experimental_download: createChatAttachmentDownload(generationAbortController.signal),
+      // The provider has accepted a call once its stream opens. A rejection
+      // (429, 503, a context-window error) throws before that, including every
+      // retry, and is not billed even if a stop lands during the retry backoff.
+      model:
+        typeof model === "string"
+          ? model
+          : wrapLanguageModel({
+              model,
+              middleware: {
+                wrapStream: async ({ doStream }) => {
+                  const call = await doStream();
+                  stepAccepted = true;
+                  return call;
+                },
+              },
+            }),
+      experimental_download: createChatAttachmentDownload(generationSignal, attachmentCache),
       messages: requestMessages,
-      abortSignal: generationAbortController.signal,
+      abortSignal: generationSignal,
       stopWhen: stepCountIs(isAnonymous ? GUEST_MAX_STEPS : MAX_STEPS),
+      maxOutputTokens: isAnonymous ? GUEST_MAX_OUTPUT_TOKENS : undefined,
       tools,
+      // Runs right before the provider call, once attachments are downloaded.
+      // The call counts once the provider accepts it, including prefill and
+      // hidden reasoning before its first streamed part.
+      onStepStart: () => {
+        stepInFlight = true;
+        stepAccepted = false;
+        stepCallUsage = undefined;
+        stepPromptTokens = Math.max(
+          basePromptTokens + finishedStepMessageTokens,
+          reportedPromptTokens + finishedStepMessageTokens - reportedStepMessageTokens,
+        );
+        stepOutputChars = 0;
+      },
+      onChunk: ({ chunk }) => {
+        if (chunk.type === "start-step") {
+          stepAccepted = true;
+        } else if (chunk.type === "text-delta" || chunk.type === "reasoning-delta") {
+          stepOutputChars += chunk.text.length;
+        } else if (chunk.type === "tool-input-delta") {
+          stepOutputChars += chunk.delta.length;
+        }
+      },
+      // Runs before the step's tool calls; the step finishes after them.
+      onLanguageModelCallEnd: ({ usage }) => {
+        stepCallUsage = usage;
+        promptCacheReadTokens = usage.inputTokenDetails?.cacheReadTokens ?? 0;
+        if (usage.inputTokens !== undefined) {
+          reportedPromptTokens = usage.inputTokens;
+          reportedStepMessageTokens = finishedStepMessageTokens;
+        }
+        recordPromptUsage(promptCacheKey, {
+          cacheReadTokens: promptCacheReadTokens,
+          // Only the first call's prompt is this request's own, which a later
+          // request can start with; later calls add this request's tool steps.
+          prompt:
+            finishedStepCount === 0 &&
+            usage.inputTokens !== undefined &&
+            promptFingerprints.length > 0
+              ? {
+                  inputTokens: usage.inputTokens,
+                  messageCount: modelMessages.length,
+                  fingerprint: promptFingerprints[modelMessages.length],
+                }
+              : undefined,
+        });
+      },
       // onFinish is not called by the SDK after an abort. Keep the usage of
       // completed steps so stopped/replaced generations still get reconciled.
-      onStepFinish: async ({ usage }) => {
+      onStepFinish: async ({ usage, response }) => {
+        finishedStepCount++;
+        stepInFlight = false;
+        stepCallUsage = undefined;
+        // Later steps resend this step's assistant and tool messages.
+        finishedStepMessageTokens += estimatePromptInputTokens({
+          modelMessages: response.messages,
+          systemPrompt: "",
+        });
         finalUsageAmount += calculateChatUsageAmount(baseModel, usage, { proMode, fastMode });
         await persistObservedUsage();
       },
@@ -610,7 +847,7 @@ export async function POST(req: Request) {
 
   const queuePartialPersist = (message: UIMessage, force: boolean = false) => {
     const pendingMessage = setPendingState(message, true);
-    if (pendingMessage.parts.length > 0) {
+    if (pendingMessage.parts.length > previousPartCount) {
       if (!hasAssistantOutput) {
         hasAssistantOutput = true;
         void persistObservedUsage();
@@ -645,7 +882,9 @@ export async function POST(req: Request) {
   };
 
   const stream = createUIMessageStream<UIMessage>({
-    originalMessages: messages,
+    // Ends with the pending message, so the SDK builds the response from it
+    // instead of copying an earlier trailing assistant message's parts.
+    originalMessages: pendingMessages,
     execute: async ({ writer }) => {
       try {
         writer.write({
@@ -663,7 +902,11 @@ export async function POST(req: Request) {
 
         writer.merge(clientStream);
 
+        // No start chunk reaches this branch (sendStart: false), so seed it with
+        // the pending message; otherwise partial saves would carry an empty ID.
+        // The SDK mutates the seed, so it gets a copy.
         for await (const message of readUIMessageStream<UIMessage>({
+          message: structuredClone(pendingAssistantMessage),
           stream: persistenceStream,
         })) {
           // In-memory only: this runs for every chunk. The database ownership check
@@ -692,7 +935,7 @@ export async function POST(req: Request) {
       try {
         await partialPersistPromise;
         hasAssistantOutput ||= updatedMessages.some(
-          (message) => message.id === responseMessageId && message.parts.length > 0,
+          (message) => message.id === responseMessageId && message.parts.length > previousPartCount,
         );
         // Accounting belongs to this request, not to the current chat-row owner.
         // Stopping/replacing the generation must only suppress transcript writes.
@@ -708,8 +951,45 @@ export async function POST(req: Request) {
         // The chosen transcript is saved explicitly by saveComparison later.
         if (isComparison) return;
 
+        // A regenerate that ends without answer content (an upstream error, or a
+        // stop before the first token) puts back the answer it replaced.
+        const restoresReplacedAnswer =
+          isRegenerate &&
+          !updatedMessages.some(
+            (message) =>
+              message.id === responseMessageId &&
+              message.parts.some((part) => part.type !== "step-start"),
+          );
+
         if (!(await ownsCurrentGeneration())) {
           pendingStateRolledBack = true;
+          if (restoresReplacedAnswer) {
+            try {
+              // Only while no newer generation or transcript replaced this one.
+              await restoreStoppedRegeneration(
+                id,
+                userId,
+                responseMessageId,
+                regenerateRollbackMessages,
+              );
+            } catch (error) {
+              console.error("Failed to restore the replaced chat response", error);
+            }
+          }
+          return;
+        }
+
+        if (restoresReplacedAnswer) {
+          pendingStateRolledBack = true;
+          try {
+            await updateChat(id, userId, regenerateRollbackMessages, undefined, {
+              expectedGenerationId: generationId,
+              nextGenerationId: null,
+            });
+          } catch (error) {
+            // Also thrown when a newer generation took over the chat meanwhile.
+            console.error("Failed to restore the replaced chat response", error);
+          }
           return;
         }
 
@@ -748,7 +1028,12 @@ export async function POST(req: Request) {
         // Memory extraction can take seconds and must not keep the chat SSE
         // open. Schedule it after the response finishes so the client can end
         // the request immediately while work continues on the backend.
-        if (platformCapabilities.features.memory && memoryState.profile.autoMemory) {
+        // Guests pay one request per turn, so they get no extra unbilled model call.
+        if (
+          !isAnonymous &&
+          platformCapabilities.features.memory &&
+          memoryState.profile.autoMemory
+        ) {
           after(() =>
             maybeAutoSaveMemories({
               userId,

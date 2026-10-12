@@ -70,7 +70,8 @@ async function attachPageContent(result: SearchHit, signal: AbortSignal): Promis
       signal,
     };
     const page = await fetchPageMarkdown(result.url, pageOptions).catch((error: unknown) => {
-      if (isAbortError(error)) throw error;
+      // A markdown.new timeout still falls back; only the search's own deadline or cancel stops.
+      if (signal.aborted) throw error;
       return fetchPageText(result.url, { ...pageOptions, allowReaderFallback: false });
     });
 

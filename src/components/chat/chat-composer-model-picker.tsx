@@ -22,7 +22,12 @@ import { useState } from "react";
 import Openai from "@/components/openai";
 import { useAvailableModels } from "@/hooks/use-available-models";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { type ModelHealthStatus, useModelHealth } from "@/hooks/use-model-health";
+import {
+  getModelHealthStatus,
+  type ModelHealth,
+  type ModelHealthStatus,
+  useModelHealth,
+} from "@/hooks/use-model-health";
 import { formatModelDeprecationDate } from "@/lib/constants";
 import { translateModelDescription, useModelDescriptionCopy } from "@/lib/model-description-copy";
 import { cn } from "@/lib/utils";
@@ -453,7 +458,7 @@ function ModelPickerList({
   activeModels,
   legacyModels,
   selectedValue,
-  providerHealth,
+  modelHealth,
   legacyOpen,
   onLegacyOpenChange,
   modelDescriptionLabels,
@@ -463,7 +468,7 @@ function ModelPickerList({
   activeModels: ModelOption[];
   legacyModels: ModelOption[];
   selectedValue: string;
-  providerHealth: Record<string, ModelHealthStatus>;
+  modelHealth: ModelHealth;
   legacyOpen: boolean;
   onLegacyOpenChange: (open: boolean) => void;
   modelDescriptionLabels: ModelDescriptionLabels;
@@ -483,7 +488,7 @@ function ModelPickerList({
       key={m.value}
       model={m}
       isSelected={m.value === selectedValue}
-      status={providerHealth[getModelProvider(m)]}
+      status={getModelHealthStatus(modelHealth, m.value, getModelProvider(m))}
       modelDescriptionLabels={modelDescriptionLabels}
       modelDescriptionCopy={modelDescriptionCopy}
       onSelect={() => onSelect(m.value)}
@@ -544,7 +549,7 @@ export function ChatComposerModelPicker({
   className,
 }: ChatComposerModelPickerProps) {
   const { shouldVerifyCard, isAnonymous } = useAvailableModels();
-  const providerHealth = useModelHealth();
+  const modelHealth = useModelHealth();
   const isMobile = useIsMobile();
   const t = useExtracted();
   const modelDescriptionLabels: ModelDescriptionLabels = {
@@ -606,7 +611,11 @@ export function ChatComposerModelPicker({
   const triggerLabel = (
     <ModelPickerTriggerLabel
       selectedModel={selectedModel}
-      status={selectedModel ? providerHealth[getModelProvider(selectedModel)] : undefined}
+      status={
+        selectedModel
+          ? getModelHealthStatus(modelHealth, selectedModel.value, getModelProvider(selectedModel))
+          : undefined
+      }
     />
   );
   const pickerBody = (
@@ -642,7 +651,7 @@ export function ChatComposerModelPicker({
               activeModels={activeModels}
               legacyModels={legacyModels}
               selectedValue={model}
-              providerHealth={providerHealth}
+              modelHealth={modelHealth}
               legacyOpen={legacyModelsOpen}
               onLegacyOpenChange={setLegacyModelsOpen}
               modelDescriptionLabels={modelDescriptionLabels}

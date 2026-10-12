@@ -11,8 +11,9 @@ vi.mock("next-intl", () => ({
 vi.mock("@/hooks/use-available-models", () => ({
   useAvailableModels: () => ({ shouldVerifyCard: false }),
 }));
-vi.mock("@/hooks/use-model-health", () => ({
-  useModelHealth: () => ({}),
+vi.mock("@/hooks/use-model-health", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/hooks/use-model-health")>()),
+  useModelHealth: () => ({ byModel: {}, byProvider: {} }),
 }));
 vi.mock("@/lib/model-description-copy", () => ({
   useModelDescriptionCopy: () => ({}),

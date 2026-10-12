@@ -32,6 +32,7 @@ test.each(oauthContexts)("OAuth domain allowlist applies to %j", async (ctx) => 
     "person@company.example",
     "person@outlook.com.catpost.site",
     "person@school.edu.kg",
+    "person@duck.com",
   ]) {
     await expect(beforeCreate(newUser(email), ctx as never)).rejects.toMatchObject({
       body: { code: "EMAIL_DOMAIN_NOT_ALLOWED" },
@@ -77,4 +78,37 @@ test("alias restrictions remain specific to email registration", async () => {
   await expect(beforeCreate(user, null)).rejects.toMatchObject({
     body: { code: "EMAIL_ALIAS_NOT_ALLOWED" },
   });
+});
+
+test("duck.com is rejected for every new registration path", async () => {
+  const beforeCreate = auth.options.databaseHooks.user.create.before;
+  // `null`: email / magic-link sign-up; the rest: provider-verified identities.
+  for (const ctx of [null, { path: "/sign-up/email" }, ...oauthContexts]) {
+    await expect(beforeCreate(newUser("person@duck.com"), ctx as never)).rejects.toMatchObject({
+      body: { code: "EMAIL_DOMAIN_NOT_ALLOWED" },
+    });
+  }
+});
+
+test("existing duck.com accounts keep updating, but nobody can switch to duck.com", async () => {
+  const beforeUpdate = auth.options.databaseHooks.user.update.before;
+  // What Better Auth writes for an existing user on sign-in / verification:
+  // OAuth linking and magic links (emailVerified), 2FA, last login method.
+  for (const data of [
+    { emailVerified: true },
+    { twoFactorEnabled: true },
+    { lastLoginMethod: "github" },
+    { name: "Renamed", image: null },
+  ]) {
+    await expect(beforeUpdate(data as never)).resolves.toBeUndefined();
+  }
+  // Moving off duck.com is allowed; moving onto it is not.
+  await expect(
+    beforeUpdate({ email: "person@outlook.com", emailVerified: true }),
+  ).resolves.toBeUndefined();
+  for (const email of ["person@duck.com", "Person@DUCK.com"]) {
+    await expect(beforeUpdate({ email, emailVerified: true })).rejects.toMatchObject({
+      body: { code: "EMAIL_DOMAIN_NOT_ALLOWED" },
+    });
+  }
 });

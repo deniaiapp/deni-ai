@@ -33,15 +33,17 @@ export function AuthLinkError() {
     ),
     USER_NOT_FOUND: t("The account this link was sent for no longer exists."),
   };
+  // `code` comes from the URL. Own keys only, so `?error=__proto__` falls back to
+  // the generic message instead of rendering an inherited object and crashing.
+  const description = Object.hasOwn(descriptions, code)
+    ? descriptions[code]
+    : t("Something went wrong. Please try again. (Error: {code})", { code });
 
   return (
     <Alert variant="destructive" className="mb-4">
       <AlertCircleIcon />
       <AlertTitle>{t("We couldn't complete that request")}</AlertTitle>
-      <AlertDescription>
-        {descriptions[code] ??
-          t("Something went wrong. Please try again. (Error: {code})", { code })}
-      </AlertDescription>
+      <AlertDescription>{description}</AlertDescription>
       <AlertAction>
         <Button
           type="button"

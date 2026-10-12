@@ -138,6 +138,9 @@ export function buildMemoryPrompt({
   ].join("\n");
 }
 
+// Bound the unbilled extraction call no matter how large a single message is.
+const MAX_MEMORY_TRANSCRIPT_CHARS = 8_000;
+
 function getLatestUserText(messages: UIMessage[]) {
   const latestUserMessages: UIMessage[] = [];
   for (const message of messages) {
@@ -159,7 +162,8 @@ function getLatestUserText(messages: UIMessage[]) {
       }
     }
   }
-  return texts.join("\n");
+  // Keep the most recent text, which is what the extraction cares about.
+  return texts.join("\n").slice(-MAX_MEMORY_TRANSCRIPT_CHARS);
 }
 
 function normalizeMemoryText(value: string) {

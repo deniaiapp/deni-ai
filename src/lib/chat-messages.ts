@@ -1,4 +1,4 @@
-import type { UIMessage } from "ai";
+import { isToolUIPart, type UIMessage } from "ai";
 
 export const CHAT_INITIAL_MESSAGE_COUNT = 5;
 export const CHAT_OLDER_MESSAGE_COUNT = 20;
@@ -91,6 +91,81 @@ export function mergeStoredAndClientMessages(
   }
 
   return client.length >= stored.length ? client : stored;
+}
+
+/**
+ * The assistant message a request continues in place. After a questionnaire
+ * answer the client resends that message last, and the answer belongs to it.
+ * A regenerate always starts a new message.
+ */
+export function getContinuedAssistantMessage(
+  messages: UIMessage[],
+  trigger: string | undefined,
+): UIMessage | undefined {
+  const last = messages.at(-1);
+  return trigger !== "regenerate-message" && last?.role === "assistant" && last.id
+    ? last
+    : undefined;
+}
+
+function getBranchGroupId(message: UIMessage): string | undefined {
+  const groupId = (message.metadata as { branchGroupId?: unknown } | undefined)?.branchGroupId;
+  return typeof groupId === "string" && groupId ? groupId : undefined;
+}
+
+function getToolCallIds(message: UIMessage): string[] {
+  return message.parts.flatMap((part) =>
+    "toolCallId" in part && typeof part.toolCallId === "string" ? [part.toolCallId] : [],
+  );
+}
+
+/**
+ * The transcript the model sees. Regenerated alternatives stay stored for the
+ * branch picker, but only the last one (the branch shown by default) is sent,
+ * and a regenerate also drops the alternatives of the answer it replaces so
+ * the prompt ends with the user turn. Older questionnaire continuations were
+ * saved as a second assistant message repeating the first one's tool calls,
+ * so the first copy is skipped to keep tool call IDs unique.
+ */
+export function selectModelContextMessages(
+  messages: UIMessage[],
+  { regenerate = false }: { regenerate?: boolean } = {},
+): UIMessage[] {
+  const selected = messages.filter((message, index) => {
+    const next = messages[index + 1];
+    if (message.role !== "assistant" || next?.role !== "assistant") return true;
+    const groupId = getBranchGroupId(message);
+    if (groupId && getBranchGroupId(next) === groupId) return false;
+    const toolCallIds = getToolCallIds(message);
+    const nextToolCallIds = new Set(getToolCallIds(next));
+    return !(toolCallIds.length > 0 && toolCallIds.every((id) => nextToolCallIds.has(id)));
+  });
+  while (regenerate) {
+    const last = selected.at(-1);
+    if (last?.role !== "assistant" || !getBranchGroupId(last)) break;
+    selected.pop();
+  }
+  return selected;
+}
+
+/**
+ * Shorten the tool results of earlier turns, which every later request resends.
+ * Tool calls of the turn being answered (after the last user message) are kept.
+ */
+export function compactEarlierToolOutputs(messages: UIMessage[], maxChars: number): UIMessage[] {
+  const lastUserIndex = messages.findLastIndex((message) => message.role === "user");
+  return messages.map((message, index) => {
+    if (index >= lastUserIndex || message.role !== "assistant") return message;
+    let compacted = false;
+    const parts = message.parts.map((part) => {
+      if (!isToolUIPart(part) || part.state !== "output-available") return part;
+      const output = JSON.stringify(part.output) ?? "";
+      if (output.length <= maxChars) return part;
+      compacted = true;
+      return { ...part, output: `${output.slice(0, maxChars)}… [truncated]` };
+    });
+    return compacted ? { ...message, parts } : message;
+  });
 }
 
 export function mergeServerWindow(current: UIMessage[], serverWindow: UIMessage[]): UIMessage[] {

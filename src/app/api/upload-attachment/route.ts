@@ -5,9 +5,19 @@ import {
   MAX_TEXT_ATTACHMENT_BYTES,
   textMediaTypeForName,
 } from "@/lib/attachment-types";
+import { storageQuotaExceededMessage } from "@/lib/attachment-quota";
+import { attachmentUrl } from "@/lib/attachment-url";
+import {
+  abandonAttachmentReservation,
+  getStorageLimitForUser,
+  markAttachmentReady,
+  releaseAttachmentReservation,
+  reserveAttachmentStorage,
+  type StorageReservation,
+} from "@/lib/attachments";
 import { auth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { uploadFile } from "@/lib/upload";
+import { deleteStoredFiles, isStorageConfigured, uploadPrivateFile } from "@/lib/upload";
 import { guardMutationRequest } from "@/lib/mutation-request";
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
@@ -137,43 +147,116 @@ export async function POST(request: Request) {
       console.warn(`[upload-attachment] binary content in text file (size: ${submittedFile.size})`);
       return NextResponse.json({ error: "Unsupported attachment type." }, { status: 415 });
     }
-    // Always stored as UTF-8, whatever encoding the file arrived in.
-    uploadedFile = new File([text], submittedFile.name, { type: textType });
+    // Always stored as UTF-8, whatever encoding the file arrived in. Re-encoding can
+    // grow it (Shift_JIS kana and kanji, UTF-16 CJK), and the chat reader caps the
+    // stored file, so the limit applies to the UTF-8 bytes as well.
+    const utf8 = new TextEncoder().encode(text);
+    if (utf8.byteLength > MAX_TEXT_ATTACHMENT_BYTES) {
+      return NextResponse.json({ error: "Text file is too large (max 2 MB)." }, { status: 413 });
+    }
+    uploadedFile = new File([utf8], submittedFile.name, { type: textType });
   }
 
-  let url: string | null = null;
+  if (!isStorageConfigured()) return inlineAttachment(uploadedFile);
+  return storeAttachment(uploadedFile, session.session.userId, Boolean(session.user.isAnonymous));
+}
+
+const UPLOAD_FAILED = "Attachment upload failed.";
+
+/**
+ * Store the file privately, counted against the user's storage quota. The quota
+ * is reserved (a pending row with the file's size) before the upload, so
+ * concurrent uploads cannot pass it, and given back if the upload fails.
+ * A failed upload is an error: falling back to an inline data URL here would
+ * bypass the quota.
+ */
+async function storeAttachment(file: File, userId: string, isAnonymous: boolean) {
+  let reservation: StorageReservation;
   try {
-    url = await uploadFile(uploadedFile);
+    reservation = await reserveAttachmentStorage({
+      userId,
+      mediaType: file.type,
+      sizeBytes: file.size,
+      limitBytes: await getStorageLimitForUser(userId, isAnonymous),
+    });
   } catch (error) {
-    console.error("Attachment upload failed", error);
+    console.error("[upload-attachment] storage reservation failed", error);
+    return NextResponse.json({ error: UPLOAD_FAILED }, { status: 500 });
+  }
+  if (!reservation.ok) {
+    return NextResponse.json(
+      {
+        error: storageQuotaExceededMessage(reservation.usedBytes, reservation.limitBytes),
+        reason: "storage_quota_exceeded",
+        usedBytes: reservation.usedBytes,
+        limitBytes: reservation.limitBytes,
+      },
+      { status: 413 },
+    );
   }
 
-  // When UploadThing is not configured (or the upload failed), fall back to an
-  // inline base64 data URL so attachments still work. Keep the fallback smaller
-  // than maxBytes so chat history / response payloads stay within limits.
-  const maxDataUrlBytes = 512 * 1024;
-  if (!url) {
-    if (uploadedFile.size > maxDataUrlBytes) {
-      console.error(
-        `[upload-attachment] storage unavailable and file exceeds inline fallback (size: ${uploadedFile.size})`,
-      );
-      return NextResponse.json(
-        {
-          error:
-            "Attachment upload failed. Inline fallback is limited to 512KB when storage is unavailable.",
-        },
-        { status: 500 },
-      );
-    }
+  /**
+   * Give the quota back. The reservation is dropped only when `deleted` (what
+   * `deleteStoredFiles` reports gone) includes `stored`, the file's custom id
+   * or key: until then it is the file's only record, so it is marked for the
+   * storage-cleanup cron to delete the file by its custom id instead. If even
+   * that fails, the pending row expires and is cleaned up the same way.
+   */
+  const release = async (deleted: readonly string[], stored: string) => {
     try {
-      const arrayBuffer = await uploadedFile.arrayBuffer();
-      const base64 = Buffer.from(arrayBuffer).toString("base64");
-      url = `data:${uploadedFile.type};base64,${base64}`;
+      if (deleted.includes(stored)) await releaseAttachmentReservation(reservation.id);
+      else await abandonAttachmentReservation(reservation.id);
     } catch (error) {
-      console.error("Attachment base64 fallback failed", error);
-      return NextResponse.json({ error: "Attachment upload failed." }, { status: 500 });
+      console.error("[upload-attachment] failed to release a storage reservation", error);
     }
+  };
+
+  // Tagged with the reservation id: if the key below is never recorded (crash,
+  // timeout), dropping the abandoned reservation still deletes the file.
+  const key = await uploadPrivateFile(file, reservation.id);
+  if (!key) {
+    // A request can fail after the file was stored (for example, a lost response).
+    await release(await deleteStoredFiles([reservation.id], "customId"), reservation.id);
+    return NextResponse.json({ error: UPLOAD_FAILED }, { status: 502 });
   }
 
-  return NextResponse.json({ url, mediaType: uploadedFile.type });
+  let ready = false;
+  try {
+    ready = await markAttachmentReady(reservation.id, key);
+  } catch (error) {
+    console.error("[upload-attachment] failed to record a stored attachment", error);
+  }
+  if (!ready) {
+    await release(await deleteStoredFiles([key]), key);
+    return NextResponse.json({ error: UPLOAD_FAILED }, { status: 500 });
+  }
+
+  return NextResponse.json({ url: attachmentUrl(reservation.id), mediaType: file.type });
+}
+
+// Without UploadThing (local development), attachments travel inline as base64
+// data URLs: nothing is stored, so there is no quota. Keep the fallback small so
+// chat history and response payloads stay within limits.
+const MAX_DATA_URL_BYTES = 512 * 1024;
+
+async function inlineAttachment(file: File) {
+  if (file.size > MAX_DATA_URL_BYTES) {
+    console.error(
+      `[upload-attachment] storage unavailable and file exceeds inline fallback (size: ${file.size})`,
+    );
+    return NextResponse.json(
+      {
+        error:
+          "Attachment upload failed. Inline fallback is limited to 512KB when storage is unavailable.",
+      },
+      { status: 500 },
+    );
+  }
+  try {
+    const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
+    return NextResponse.json({ url: `data:${file.type};base64,${base64}`, mediaType: file.type });
+  } catch (error) {
+    console.error("Attachment base64 fallback failed", error);
+    return NextResponse.json({ error: UPLOAD_FAILED }, { status: 500 });
+  }
 }

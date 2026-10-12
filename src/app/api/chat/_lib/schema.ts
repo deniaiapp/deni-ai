@@ -14,6 +14,8 @@ export const ChatRequestSchema = z.object({
     )
     .transform((value) => value as unknown as UIMessage[])
     .optional(),
+  // Sent by the AI SDK transport ("submit-message" or "regenerate-message").
+  trigger: z.string().max(64).optional(),
   model: z.string(),
   comparison: z.boolean().optional(),
   webSearch: z.boolean().optional(),

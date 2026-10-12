@@ -15,11 +15,10 @@ import {
   type CardFunding,
   claimCardVerification,
   grantCardVerificationFlashOffer,
-  getBillingFingerprintUpdates,
 } from "@/lib/billing-card-usage";
 import { isBillingDisabled } from "@/lib/billing-config";
 import { unchangedBillingSnapshot } from "@/lib/billing-snapshot";
-import { getAccountDeletionStatus } from "@/lib/account-deletion-billing";
+import { getAccountDeletionStatus, getCardRemovalBlocker } from "@/lib/account-deletion-billing";
 import {
   createFlashOfferEndAt,
   getFlashOfferCouponId,
@@ -28,10 +27,7 @@ import {
 } from "@/lib/billing-offers";
 import {
   findPaidLifetimePurchase,
-  grantsSubscriptionAccess,
   resolveSubscriptionStatus,
-  isPaidCheckoutPaymentCurrent,
-  isLifetimePlanId,
   isPaidLifetimeRecord,
   saveLifetimePlan,
 } from "@/lib/lifetime-plan";
@@ -56,7 +52,14 @@ import {
   pickLicensedSubscription,
 } from "@/lib/stripe-subscriptions";
 import { getUsageSummary } from "@/lib/usage";
-import { type ProtectedContext, protectedProcedure, router } from "../trpc";
+import {
+  type ProtectedContext,
+  protectedProcedure,
+  rateLimited,
+  router,
+  TRPC_RATE_LIMITS,
+  type TRPCRateLimit,
+} from "../trpc";
 
 const planIdSchema = z.enum([
   "plus_monthly",
@@ -84,6 +87,34 @@ const billingEnabledProcedure = protectedProcedure.use(({ ctx, next }) => {
   }
   return next();
 });
+
+/** Per-user budget for a read that calls Stripe on every call. */
+const stripeRead = (name: string, limit: TRPCRateLimit = TRPC_RATE_LIMITS.stripeRead) =>
+  rateLimited(`billing.${name}`, limit);
+
+/** Per-user budget for a mutation that calls Stripe. */
+const stripeWrite = (name: string, limit: TRPCRateLimit = TRPC_RATE_LIMITS.stripeWrite) =>
+  rateLimited(`billing.${name}`, limit);
+
+const CARD_VERIFICATION_AMOUNT = 100;
+
+/**
+ * The customer's newest card verification intent that is still waiting for a
+ * card, created the way `createCardSetupIntent` creates one now.
+ */
+async function findOpenCardVerificationIntent(customerId: string, userId: string) {
+  const intents = await stripe.paymentIntents.list({ customer: customerId, limit: 10 });
+  return intents.data.find(
+    (intent) =>
+      intent.status === "requires_payment_method" &&
+      intent.metadata?.purpose === "free_tier_verification" &&
+      intent.metadata?.userId === userId &&
+      intent.amount === CARD_VERIFICATION_AMOUNT &&
+      intent.currency === "usd" &&
+      intent.capture_method === "manual" &&
+      intent.payment_method_options?.card?.request_three_d_secure === requestThreeDSecure,
+  );
+}
 
 function deriveModeFromPrice(price: Stripe.Price | null | undefined): "subscription" | "payment" {
   if (!price) {
@@ -405,14 +436,23 @@ async function syncSubscription(ctx: ProtectedContext, userId: string) {
   return updated ?? (await ensureBillingRecord(ctx, userId));
 }
 
+/**
+ * Returns the stored session when it is still open for exactly this checkout:
+ * same plan, price and flash offer state. Any other open session of the user is
+ * expired, so a stale tab cannot still pay for another plan or an outdated price.
+ */
 async function reuseOpenCheckoutSession({
   checkoutSessionId,
   userId,
   planId,
+  priceId,
+  offerCouponId,
 }: {
   checkoutSessionId: string | null | undefined;
   userId: string;
   planId: string;
+  priceId: string;
+  offerCouponId: string;
 }) {
   if (!checkoutSessionId) {
     return null;
@@ -425,17 +465,24 @@ async function reuseOpenCheckoutSession({
       customCheckoutRequestOptions,
     );
 
-    if (
-      session.status !== "open" ||
-      session.ui_mode !== "elements" ||
-      session.client_reference_id !== userId ||
-      session.metadata?.planId !== planId ||
-      !session.client_secret
-    ) {
+    if (session.status !== "open" || session.client_reference_id !== userId) {
       return null;
     }
 
-    return session;
+    if (
+      session.ui_mode === "elements" &&
+      session.metadata?.planId === planId &&
+      session.metadata?.priceId === priceId &&
+      session.metadata?.flashOfferCoupon === offerCouponId &&
+      session.client_secret
+    ) {
+      return session;
+    }
+
+    await stripe.checkout.sessions
+      .expire(session.id, {}, customCheckoutRequestOptions)
+      .catch((error) => console.warn("Failed to expire stale checkout session", error));
+    return null;
   } catch (error) {
     console.warn("Failed to reuse checkout session", error);
     return null;
@@ -443,10 +490,12 @@ async function reuseOpenCheckoutSession({
 }
 
 export const billingRouter = router({
-  accountDeletionStatus: protectedProcedure.query(({ ctx }) =>
-    getAccountDeletionStatus(ctx.userId),
-  ),
-  plans: billingEnabledProcedure.query(async ({ ctx }) => {
+  // Every call reads Stripe, and batched requests fan out per call. Only the
+  // delete dialog fetches it, once per open, hence the tighter budget.
+  accountDeletionStatus: protectedProcedure
+    .use(stripeRead("accountDeletionStatus", { windowMs: 60_000, maxRequests: 10 }))
+    .query(async ({ ctx }) => getAccountDeletionStatus(ctx.userId)),
+  plans: billingEnabledProcedure.use(stripeRead("plans")).query(async ({ ctx }) => {
     const individualPlans = billingPlans.filter((p) => !isTeamPlan(p.id));
     const billingRecord = await ensureBillingRecord(ctx, ctx.userId);
     const flashOfferActive = isFlashOfferActive(billingRecord.flashOfferEndsAt);
@@ -484,7 +533,7 @@ export const billingRouter = router({
    * App-wide flash offer promo for card-verified users who have never paid.
    * Read-only: unlike `plans`, it never creates a billing record or starts the timer.
    */
-  flashOffer: protectedProcedure.query(async ({ ctx }) => {
+  flashOffer: protectedProcedure.use(stripeRead("flashOffer")).query(async ({ ctx }) => {
     if (isBillingDisabled || ctx.session?.user?.isAnonymous) return null;
 
     const [record] = await ctx.db
@@ -541,7 +590,7 @@ export const billingRouter = router({
       isUpTo: Math.min(...percents) !== percentOff,
     };
   }),
-  status: billingEnabledProcedure.query(async ({ ctx }) => {
+  status: billingEnabledProcedure.use(stripeRead("status")).query(async ({ ctx }) => {
     const [subscription, teamRecords] = await Promise.all([
       syncSubscription(ctx, ctx.userId),
       ctx.db
@@ -602,6 +651,7 @@ export const billingRouter = router({
     };
   }),
   createCheckoutSession: billingEnabledProcedure
+    .use(stripeWrite("createCheckoutSession"))
     .input(
       z.object({
         planId: planIdSchema,
@@ -625,31 +675,23 @@ export const billingRouter = router({
       const couponId = getFlashOfferCouponId();
       const flashOfferActive = isFlashOfferActive(billingRecord.flashOfferEndsAt);
       const flashOfferEligible = Boolean(couponId && isFlashOfferPlan(plan.id) && flashOfferActive);
+      // Recorded on the session so a reused session always matches the current offer.
+      const offerCouponId = flashOfferEligible ? couponId! : "none";
 
-      const reusableSession = await reuseOpenCheckoutSession({
-        checkoutSessionId: billingRecord.checkoutSessionId,
-        userId: ctx.userId,
-        planId: plan.id,
-      });
-
-      if (reusableSession) {
-        return {
-          sessionId: reusableSession.id,
-          clientSecret: reusableSession.client_secret,
-        };
-      }
+      // Guards run before any reuse: a stored open session must not outlive them.
+      // Ended subscriptions keep `cancel_at_period_end`, so they are skipped.
+      const planSubscriptions = (
+        await listCustomerSubscriptions(billingRecord.stripeCustomerId)
+      ).filter(
+        (sub) =>
+          !isMaxModeOnlySubscription(sub) &&
+          sub.status !== "canceled" &&
+          sub.status !== "incomplete_expired",
+      );
 
       if (mode === "subscription") {
-        const existingSubs = await stripe.subscriptions.list({
-          customer: billingRecord.stripeCustomerId,
-          status: "all",
-          limit: 10,
-        });
-
-        const activeSub = existingSubs.data.find(
-          (sub) =>
-            !isMaxModeOnlySubscription(sub) &&
-            (ACTIVE_SUB_STATUSES.has(sub.status) || sub.cancel_at_period_end === true),
+        const activeSub = planSubscriptions.find(
+          (sub) => ACTIVE_SUB_STATUSES.has(sub.status) || sub.cancel_at_period_end === true,
         );
 
         if (activeSub) {
@@ -658,17 +700,45 @@ export const billingRouter = router({
             message: "You already have an active subscription. Use Change plan or cancel first.",
           });
         }
+      } else {
+        // A one-time plan does not end a renewing subscription, which would keep billing.
+        const renewingSub = planSubscriptions.find(
+          (sub) =>
+            ACTIVE_SUB_STATUSES.has(sub.status) && !sub.cancel_at_period_end && !sub.cancel_at,
+        );
+        if (renewingSub) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Cancel your subscription before buying a one-time plan.",
+          });
+        }
+
+        // A later subscription replaces a lifetime plan on the row, and the webhook
+        // may not have recorded a fresh purchase yet, so also ask Stripe.
+        const alreadyPurchased =
+          (billingRecord.planId === plan.id && billingRecord.status === "paid") ||
+          (await findPaidLifetimePurchase(billingRecord.stripeCustomerId))?.planId === plan.id;
+        if (alreadyPurchased) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "This one-time plan has already been purchased.",
+          });
+        }
       }
 
-      if (
-        mode === "payment" &&
-        billingRecord.planId === plan.id &&
-        billingRecord.status === "paid"
-      ) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "This one-time plan has already been purchased.",
-        });
+      const reusableSession = await reuseOpenCheckoutSession({
+        checkoutSessionId: billingRecord.checkoutSessionId,
+        userId: ctx.userId,
+        planId: plan.id,
+        priceId: price.id,
+        offerCouponId,
+      });
+
+      if (reusableSession) {
+        return {
+          sessionId: reusableSession.id,
+          clientSecret: reusableSession.client_secret,
+        };
       }
 
       const session = await stripe.checkout.sessions.create(
@@ -689,6 +759,8 @@ export const billingRouter = router({
           metadata: {
             userId: ctx.userId,
             planId: plan.id,
+            priceId: price.id,
+            flashOfferCoupon: offerCouponId,
           },
           subscription_data:
             mode === "subscription"
@@ -734,7 +806,10 @@ export const billingRouter = router({
 
       return { sessionId: session.id, clientSecret: session.client_secret };
     }),
+  // Read-only receipt. Purchases are recorded only by the Stripe webhook and the
+  // live-subscription sync, never from a client-supplied (replayable) session id.
   getCheckoutSession: billingEnabledProcedure
+    .use(stripeRead("getCheckoutSession"))
     .input(
       z.object({
         sessionId: z.string().min(1),
@@ -756,189 +831,20 @@ export const billingRouter = router({
 
       return summarizeCheckoutSession(session);
     }),
-  confirmCheckout: billingEnabledProcedure
-    .input(
-      z.object({
-        sessionId: z.string().min(1),
-      }),
-    )
-    .mutation(async ({ ctx, input }) => {
-      const session = await stripe.checkout.sessions.retrieve(input.sessionId, {
-        expand: ["subscription", "payment_intent.latest_charge", "line_items"],
-      });
+  createPortalSession: billingEnabledProcedure
+    .use(stripeWrite("createPortalSession"))
+    .mutation(async ({ ctx }) => {
+      const subscription = await syncSubscription(ctx, ctx.userId);
 
-      if (!session.client_reference_id || session.client_reference_id !== ctx.userId) {
-        throw new TRPCError({
-          code: "UNAUTHORIZED",
-          message: "Session does not belong to the current user.",
-        });
-      }
+      const portal = await createBillingPortalSession(
+        subscription.stripeCustomerId,
+        "/settings/billing",
+      );
 
-      // Team and ad checkouts share client_reference_id; they must never be bound
-      // to the personal billing row.
-      if (session.metadata?.organizationId || session.metadata?.adCampaignId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "This checkout session is not a personal plan purchase.",
-        });
-      }
-
-      const billingRecord = await ensureBillingRecord(ctx, ctx.userId);
-      const subscription =
-        session.subscription && typeof session.subscription !== "string" && session.subscription;
-
-      const paymentIntent = session.payment_intent;
-
-      const linePrice =
-        session.line_items?.data.at(0)?.price ??
-        (subscription && typeof subscription !== "string" && "items" in subscription
-          ? subscription.items.data.at(0)?.price
-          : undefined);
-
-      const plan =
-        getPlanFromPrice(linePrice ?? null) ??
-        findPlanById((session.metadata?.planId as string) ?? "");
-
-      const resolvedMode =
-        deriveModeFromPrice(linePrice ?? null) ??
-        (session.mode === "payment" ? "payment" : "subscription");
-
-      const updates: Partial<BillingRecord> = {
-        stripeCustomerId:
-          (session.customer as string | null | undefined) ?? billingRecord.stripeCustomerId,
-        planId: plan?.id ?? billingRecord.planId,
-        priceId: linePrice?.id ?? billingRecord.priceId,
-        mode: resolvedMode,
-        checkoutSessionId: session.id,
-      };
-
-      if (subscription) {
-        const fingerprintUpdates = await getBillingFingerprintUpdates({
-          customerId:
-            (session.customer as string | null | undefined) ?? billingRecord.stripeCustomerId,
-        });
-        updates.stripeSubscriptionId = subscription.id;
-        updates.status = resolveSubscriptionStatus(subscription);
-        updates.currentPeriodEnd = getSubscriptionPeriodEndDate(subscription);
-        updates.firstPaidAt = billingRecord.firstPaidAt ?? new Date();
-        updates.flashOfferEndsAt = null;
-        updates.paymentMethodFingerprint = fingerprintUpdates.paymentMethodFingerprint;
-        if (fingerprintUpdates.cardFunding) {
-          updates.cardFunding = fingerprintUpdates.cardFunding;
-        }
-      } else if (!isPaidCheckoutPaymentCurrent(session)) {
-        // A refunded or disputed one-time payment keeps its "succeeded"/"paid"
-        // status, so replaying the session must not restore the revoked plan.
-      } else if (
-        paymentIntent &&
-        typeof paymentIntent !== "string" &&
-        paymentIntent.status === "succeeded"
-      ) {
-        const fingerprintUpdates = await getBillingFingerprintUpdates({
-          customerId:
-            (session.customer as string | null | undefined) ?? billingRecord.stripeCustomerId,
-        });
-        updates.status = "paid";
-        updates.mode = "payment";
-        updates.firstPaidAt = billingRecord.firstPaidAt ?? new Date();
-        updates.flashOfferEndsAt = null;
-        updates.paymentMethodFingerprint = fingerprintUpdates.paymentMethodFingerprint;
-        if (fingerprintUpdates.cardFunding) {
-          updates.cardFunding = fingerprintUpdates.cardFunding;
-        }
-      } else if (session.payment_status === "paid") {
-        const fingerprintUpdates = await getBillingFingerprintUpdates({
-          customerId:
-            (session.customer as string | null | undefined) ?? billingRecord.stripeCustomerId,
-        });
-        updates.status = "paid";
-        updates.firstPaidAt = billingRecord.firstPaidAt ?? new Date();
-        updates.flashOfferEndsAt = null;
-        updates.paymentMethodFingerprint = fingerprintUpdates.paymentMethodFingerprint;
-        if (fingerprintUpdates.cardFunding) {
-          updates.cardFunding = fingerprintUpdates.cardFunding;
-        }
-      }
-
-      const grantsAccess = updates.status === "paid" || grantsSubscriptionAccess(updates.status);
-      // An unpaid session must not change the plan: the row's current status would
-      // otherwise vouch for whatever plan that session was opened for. A subscription
-      // that grants nothing (e.g. incomplete) must not replace a paid lifetime plan.
-      if (!updates.status || (!grantsAccess && isPaidLifetimeRecord(billingRecord))) {
-        return {
-          planId: billingRecord.planId ?? null,
-          status: billingRecord.status ?? null,
-          mode: billingRecord.mode ?? null,
-          currentPeriodEnd: billingRecord.currentPeriodEnd ?? null,
-        };
-      }
-
-      // A refund can land between the session fetch above and the write; recheck
-      // the live charge under the same user lock that reversal handling takes.
-      if (!subscription && updates.status === "paid" && isLifetimePlanId(plan?.id)) {
-        const saved = await saveLifetimePlan(ctx.db, {
-          userId: ctx.userId,
-          customerId: updates.stripeCustomerId ?? "",
-          purchase: {
-            planId: plan.id,
-            priceId: updates.priceId ?? null,
-            checkoutSessionId: session.id,
-          },
-          extra: updates,
-        });
-        if (!saved) {
-          return {
-            planId: billingRecord.planId ?? null,
-            status: billingRecord.status ?? null,
-            mode: billingRecord.mode ?? null,
-            currentPeriodEnd: billingRecord.currentPeriodEnd ?? null,
-          };
-        }
-        return {
-          planId: saved.planId ?? null,
-          status: saved.status ?? null,
-          mode: saved.mode ?? null,
-          currentPeriodEnd: saved.currentPeriodEnd ?? null,
-        };
-      }
-
-      const [saved] = await ctx.db
-        .insert(billing)
-        .values([
-          {
-            userId: ctx.userId,
-            stripeCustomerId: updates.stripeCustomerId ?? "",
-            ...updates,
-          },
-        ])
-        .onConflictDoUpdate({
-          target: billing.userId,
-          targetWhere: sql`organization_id IS NULL`,
-          set: {
-            ...updates,
-            updatedAt: new Date(),
-          },
-        })
-        .returning();
-
-      return {
-        planId: saved.planId ?? null,
-        status: saved.status ?? null,
-        mode: saved.mode ?? null,
-        currentPeriodEnd: saved.currentPeriodEnd ?? null,
-      };
+      return { url: portal.url };
     }),
-  createPortalSession: billingEnabledProcedure.mutation(async ({ ctx }) => {
-    const subscription = await syncSubscription(ctx, ctx.userId);
-
-    const portal = await createBillingPortalSession(
-      subscription.stripeCustomerId,
-      "/settings/billing",
-    );
-
-    return { url: portal.url };
-  }),
   changePlan: billingEnabledProcedure
+    .use(stripeWrite("changePlan"))
     .input(
       z.object({
         planId: planIdSchema,
@@ -1029,106 +935,110 @@ export const billingRouter = router({
         currentPeriodEnd: saved.currentPeriodEnd ?? null,
       };
     }),
-  cancelSubscription: billingEnabledProcedure.mutation(async ({ ctx }) => {
-    const subscriptionState = await syncSubscription(ctx, ctx.userId);
-    if (!subscriptionState.stripeSubscriptionId) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "No active subscription to cancel.",
+  cancelSubscription: billingEnabledProcedure
+    .use(stripeWrite("cancelSubscription"))
+    .mutation(async ({ ctx }) => {
+      const subscriptionState = await syncSubscription(ctx, ctx.userId);
+      if (!subscriptionState.stripeSubscriptionId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No active subscription to cancel.",
+        });
+      }
+
+      const canceled = await stripe.subscriptions.update(subscriptionState.stripeSubscriptionId, {
+        cancel_at_period_end: true,
       });
-    }
 
-    const canceled = await stripe.subscriptions.update(subscriptionState.stripeSubscriptionId, {
-      cancel_at_period_end: true,
-    });
+      const updates: Partial<BillingRecord> = {
+        status: canceled.cancel_at_period_end ? "canceled" : canceled.status,
+        currentPeriodEnd:
+          getSubscriptionPeriodEndDate(canceled) ?? subscriptionState.currentPeriodEnd,
+      };
 
-    const updates: Partial<BillingRecord> = {
-      status: canceled.cancel_at_period_end ? "canceled" : canceled.status,
-      currentPeriodEnd:
-        getSubscriptionPeriodEndDate(canceled) ?? subscriptionState.currentPeriodEnd,
-    };
-
-    const [savedSnapshot] = await ctx.db
-      .insert(billing)
-      .values({
-        userId: ctx.userId,
-        stripeCustomerId: subscriptionState.stripeCustomerId,
-        stripeSubscriptionId: subscriptionState.stripeSubscriptionId,
-        ...updates,
-      })
-      .onConflictDoUpdate({
-        target: billing.userId,
-        targetWhere: sql`organization_id IS NULL`,
-        set: {
+      const [savedSnapshot] = await ctx.db
+        .insert(billing)
+        .values({
+          userId: ctx.userId,
+          stripeCustomerId: subscriptionState.stripeCustomerId,
+          stripeSubscriptionId: subscriptionState.stripeSubscriptionId,
           ...updates,
-          updatedAt: new Date(),
-        },
-        setWhere: unchangedBillingSnapshot(subscriptionState),
-      })
-      .returning();
-    const saved = savedSnapshot ?? (await ensureBillingRecord(ctx, ctx.userId));
+        })
+        .onConflictDoUpdate({
+          target: billing.userId,
+          targetWhere: sql`organization_id IS NULL`,
+          set: {
+            ...updates,
+            updatedAt: new Date(),
+          },
+          setWhere: unchangedBillingSnapshot(subscriptionState),
+        })
+        .returning();
+      const saved = savedSnapshot ?? (await ensureBillingRecord(ctx, ctx.userId));
 
-    return {
-      planId: saved.planId ?? null,
-      status: saved.status ?? null,
-      mode: saved.mode ?? null,
-      currentPeriodEnd: saved.currentPeriodEnd ?? null,
-    };
-  }),
-  resumeSubscription: billingEnabledProcedure.mutation(async ({ ctx }) => {
-    const subscriptionState = await syncSubscription(ctx, ctx.userId);
-    if (!subscriptionState.stripeSubscriptionId) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "No subscription to resume.",
+      return {
+        planId: saved.planId ?? null,
+        status: saved.status ?? null,
+        mode: saved.mode ?? null,
+        currentPeriodEnd: saved.currentPeriodEnd ?? null,
+      };
+    }),
+  resumeSubscription: billingEnabledProcedure
+    .use(stripeWrite("resumeSubscription"))
+    .mutation(async ({ ctx }) => {
+      const subscriptionState = await syncSubscription(ctx, ctx.userId);
+      if (!subscriptionState.stripeSubscriptionId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No subscription to resume.",
+        });
+      }
+
+      const resumed = await stripe.subscriptions.update(subscriptionState.stripeSubscriptionId, {
+        cancel_at_period_end: false,
       });
-    }
 
-    const resumed = await stripe.subscriptions.update(subscriptionState.stripeSubscriptionId, {
-      cancel_at_period_end: false,
-    });
+      const price = getLicensedPrice(resumed) ?? resumed.items.data.at(0)?.price ?? null;
+      const plan =
+        getPlanFromPrice(price) ??
+        findPlanById(resumed.metadata?.planId ?? "") ??
+        (subscriptionState.planId ? findPlanById(subscriptionState.planId) : null);
 
-    const price = getLicensedPrice(resumed) ?? resumed.items.data.at(0)?.price ?? null;
-    const plan =
-      getPlanFromPrice(price) ??
-      findPlanById(resumed.metadata?.planId ?? "") ??
-      (subscriptionState.planId ? findPlanById(subscriptionState.planId) : null);
+      const updates: Partial<BillingRecord> = {
+        status: resumed.status,
+        currentPeriodEnd: getSubscriptionPeriodEndDate(resumed),
+        stripeSubscriptionId: resumed.id,
+        priceId: price?.id ?? subscriptionState.priceId,
+        planId: plan?.id ?? subscriptionState.planId,
+        mode: deriveModeFromPrice(price),
+      };
 
-    const updates: Partial<BillingRecord> = {
-      status: resumed.status,
-      currentPeriodEnd: getSubscriptionPeriodEndDate(resumed),
-      stripeSubscriptionId: resumed.id,
-      priceId: price?.id ?? subscriptionState.priceId,
-      planId: plan?.id ?? subscriptionState.planId,
-      mode: deriveModeFromPrice(price),
-    };
-
-    const [savedSnapshot] = await ctx.db
-      .insert(billing)
-      .values({
-        userId: ctx.userId,
-        stripeCustomerId: subscriptionState.stripeCustomerId,
-        ...updates,
-      })
-      .onConflictDoUpdate({
-        target: billing.userId,
-        targetWhere: sql`organization_id IS NULL`,
-        set: {
+      const [savedSnapshot] = await ctx.db
+        .insert(billing)
+        .values({
+          userId: ctx.userId,
+          stripeCustomerId: subscriptionState.stripeCustomerId,
           ...updates,
-          updatedAt: new Date(),
-        },
-        setWhere: unchangedBillingSnapshot(subscriptionState),
-      })
-      .returning();
-    const saved = savedSnapshot ?? (await ensureBillingRecord(ctx, ctx.userId));
+        })
+        .onConflictDoUpdate({
+          target: billing.userId,
+          targetWhere: sql`organization_id IS NULL`,
+          set: {
+            ...updates,
+            updatedAt: new Date(),
+          },
+          setWhere: unchangedBillingSnapshot(subscriptionState),
+        })
+        .returning();
+      const saved = savedSnapshot ?? (await ensureBillingRecord(ctx, ctx.userId));
 
-    return {
-      planId: saved.planId ?? null,
-      status: saved.status ?? null,
-      mode: saved.mode ?? null,
-      currentPeriodEnd: saved.currentPeriodEnd ?? null,
-    };
-  }),
+      return {
+        planId: saved.planId ?? null,
+        status: saved.status ?? null,
+        mode: saved.mode ?? null,
+        currentPeriodEnd: saved.currentPeriodEnd ?? null,
+      };
+    }),
   usage: protectedProcedure.query(async ({ ctx }) => {
     const summary = await getUsageSummary({
       userId: ctx.userId,
@@ -1137,6 +1047,7 @@ export const billingRouter = router({
     return summary;
   }),
   estimatePlanChange: billingEnabledProcedure
+    .use(stripeRead("estimatePlanChange"))
     .input(
       z.object({
         planId: planIdSchema,
@@ -1211,19 +1122,22 @@ export const billingRouter = router({
       };
     }),
   // Max Mode endpoints
-  maxModeStatus: protectedProcedure.query(async ({ ctx }) => {
-    return getMaxModeStatus(ctx.userId);
-  }),
-  enableMaxMode: billingEnabledProcedure.mutation(async ({ ctx }) => {
-    const result = await enableMaxMode(ctx.userId);
-    if (!result.success) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: result.error ?? "Failed to enable Max Mode.",
-      });
-    }
-    return { success: true };
-  }),
+  // Reads Stripe prices and subscriptions; the team Max Mode editor refetches it per edit.
+  maxModeStatus: protectedProcedure
+    .use(stripeRead("maxModeStatus", TRPC_RATE_LIMITS.stripeReadPerEdit))
+    .query(async ({ ctx }) => getMaxModeStatus(ctx.userId)),
+  enableMaxMode: billingEnabledProcedure
+    .use(stripeWrite("enableMaxMode"))
+    .mutation(async ({ ctx }) => {
+      const result = await enableMaxMode(ctx.userId);
+      if (!result.success) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: result.error ?? "Failed to enable Max Mode.",
+        });
+      }
+      return { success: true };
+    }),
   disableMaxMode: billingEnabledProcedure.mutation(async ({ ctx }) => {
     const result = await disableMaxMode(ctx.userId);
     if (!result.success) {
@@ -1235,41 +1149,50 @@ export const billingRouter = router({
     return { success: true };
   }),
   // ---- Free-tier card verification (manual-capture auth, then cancel) ----
-  createCardSetupIntent: billingEnabledProcedure.mutation(async ({ ctx }) => {
-    const billingRecord = await ensureBillingRecord(ctx, ctx.userId);
-    // $1.00 (USD has cents → amount=100) authorization. We never capture —
-    // the bank auth itself is the verification, and we cancel immediately to
-    // release the hold.
-    const intent = await stripe.paymentIntents.create({
-      customer: billingRecord.stripeCustomerId,
-      amount: 100,
-      currency: "usd",
-      allowed_payment_method_types: ["card"],
-      capture_method: "manual",
-      setup_future_usage: "off_session",
-      description: "Card verification (released immediately, never charged)",
-      payment_method_options: {
-        card: {
-          request_three_d_secure: requestThreeDSecure,
+  createCardSetupIntent: billingEnabledProcedure
+    .use(stripeWrite("createCardSetupIntent", TRPC_RATE_LIMITS.cardVerification))
+    .mutation(async ({ ctx }) => {
+      const billingRecord = await ensureBillingRecord(ctx, ctx.userId);
+      // Reopening the dialog continues the intent it left waiting for a card
+      // (a declined card leaves it there too) instead of opening another one.
+      const open = await findOpenCardVerificationIntent(billingRecord.stripeCustomerId, ctx.userId);
+      if (open?.client_secret) {
+        return { clientSecret: open.client_secret, paymentIntentId: open.id };
+      }
+      // $1.00 (USD has cents → amount=100) authorization. We never capture —
+      // the bank auth itself is the verification, and we cancel immediately to
+      // release the hold.
+      const intent = await stripe.paymentIntents.create({
+        customer: billingRecord.stripeCustomerId,
+        amount: CARD_VERIFICATION_AMOUNT,
+        currency: "usd",
+        allowed_payment_method_types: ["card"],
+        capture_method: "manual",
+        setup_future_usage: "off_session",
+        description: "Card verification (released immediately, never charged)",
+        payment_method_options: {
+          card: {
+            request_three_d_secure: requestThreeDSecure,
+          },
         },
-      },
-      metadata: {
-        userId: ctx.userId,
-        purpose: "free_tier_verification",
-      },
-    });
-    if (!intent.client_secret) {
-      throw new TRPCError({
-        code: "INTERNAL_SERVER_ERROR",
-        message: "Stripe did not return a client secret for the verification intent.",
+        metadata: {
+          userId: ctx.userId,
+          purpose: "free_tier_verification",
+        },
       });
-    }
-    return {
-      clientSecret: intent.client_secret,
-      paymentIntentId: intent.id,
-    };
-  }),
+      if (!intent.client_secret) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Stripe did not return a client secret for the verification intent.",
+        });
+      }
+      return {
+        clientSecret: intent.client_secret,
+        paymentIntentId: intent.id,
+      };
+    }),
   confirmCardSetup: billingEnabledProcedure
+    .use(stripeWrite("confirmCardSetup", TRPC_RATE_LIMITS.cardVerification))
     .input(z.object({ paymentIntentId: z.string().min(1) }))
     .mutation(async ({ ctx, input }) => {
       const billingRecord = await ensureBillingRecord(ctx, ctx.userId);
@@ -1379,39 +1302,50 @@ export const billingRouter = router({
         cardVerifiedAt: saved?.cardVerifiedAt?.toISOString() ?? null,
       };
     }),
-  removeVerifiedCard: billingEnabledProcedure.mutation(async ({ ctx }) => {
-    const billingRecord = await ensureBillingRecord(ctx, ctx.userId);
-    // Refuse to remove if there's an active subscription depending on the card.
-    if (billingRecord.stripeSubscriptionId && ACTIVE_SUB_STATUSES.has(billingRecord.status ?? "")) {
-      throw new TRPCError({
-        code: "BAD_REQUEST",
-        message: "Cancel your subscription before removing the card.",
-      });
-    }
-    try {
-      const paymentMethods = await stripe.customers.listPaymentMethods(
-        billingRecord.stripeCustomerId,
-        { type: "card", limit: 10 },
-      );
-      await Promise.all(
-        paymentMethods.data.map((pm) =>
-          stripe.paymentMethods.detach(pm.id).catch((err) => {
-            console.warn("[billing] Failed to detach payment method", err);
-          }),
-        ),
-      );
-    } catch (err) {
-      console.warn("[billing] Failed to list payment methods on removal", err);
-    }
-    await ctx.db
-      .update(billing)
-      .set({
-        paymentMethodFingerprint: null,
-        cardFunding: null,
-        cardVerifiedAt: null,
-        updatedAt: new Date(),
-      })
-      .where(and(eq(billing.userId, ctx.userId), isNull(billing.organizationId)));
-    return { removed: true };
-  }),
+  removeVerifiedCard: billingEnabledProcedure
+    .use(stripeWrite("removeVerifiedCard"))
+    .mutation(async ({ ctx }) => {
+      const billingRecord = await ensureBillingRecord(ctx, ctx.userId);
+      // Ask Stripe, not the row: a subscription canceling at period end (stored as
+      // "canceled"), the Max Mode meter host and open invoices still bill the card.
+      const blocker = await getCardRemovalBlocker(billingRecord.stripeCustomerId);
+      if (blocker === "active") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Cancel your subscription before removing the card.",
+        });
+      }
+      if (blocker === "billingPending") {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message:
+            "Wait for your subscription to end and pay outstanding invoices before removing the card.",
+        });
+      }
+      try {
+        const paymentMethods = await stripe.customers.listPaymentMethods(
+          billingRecord.stripeCustomerId,
+          { type: "card", limit: 10 },
+        );
+        await Promise.all(
+          paymentMethods.data.map((pm) =>
+            stripe.paymentMethods.detach(pm.id).catch((err) => {
+              console.warn("[billing] Failed to detach payment method", err);
+            }),
+          ),
+        );
+      } catch (err) {
+        console.warn("[billing] Failed to list payment methods on removal", err);
+      }
+      await ctx.db
+        .update(billing)
+        .set({
+          // Keep the fingerprint: removing a card must not free its reuse slot.
+          cardVerifiedAt: null,
+          cardRemovedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(billing.userId, ctx.userId), isNull(billing.organizationId)));
+      return { removed: true };
+    }),
 });

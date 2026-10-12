@@ -12,6 +12,9 @@ export const chats = pgTable(
     uid: text("user_id").references(() => user.id, { onDelete: "cascade" }),
     projectId: text("project_id").references(() => projects.id, { onDelete: "set null" }),
     activeGenerationId: text("active_generation_id"),
+    // Arrival time of the latest stop request, so a request that arrived before
+    // it stops itself when it registers its generation on any instance.
+    stopRequestedAt: timestamp("stop_requested_at"),
     title: text("title"),
     messages: jsonb("messages").default(sql`'[]'`),
     pinned: boolean("pinned").default(false).notNull(),

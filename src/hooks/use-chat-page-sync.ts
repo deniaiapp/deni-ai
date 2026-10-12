@@ -1,7 +1,11 @@
 import type { ChatStatus, UIMessage } from "ai";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { isChatCreationPending } from "@/lib/chat-creation";
 import { mergeServerWindow } from "@/lib/chat-messages";
 import { trpc } from "@/lib/trpc/react";
+
+/** Delay before re-reading the page after a failed recovery fetch (`fetch` does not retry). */
+const RECOVERY_RETRY_DELAY_MS = 1000;
 
 export function useChatPageSync(params: {
   id: string;
@@ -24,10 +28,13 @@ export function useChatPageSync(params: {
   const utils = trpc.useUtils();
   const lastRecoveredStatusRef = useRef<number | null>(null);
   const previousStatusRef = useRef(status);
+  const [recoveryRetry, setRecoveryRetry] = useState(0);
+
+  // Each poll deserializes a new Date; keying the effect on it would cancel an
+  // in-flight recovery every second and the guard below would never retry it.
+  const recoveredAt = statusUpdatedAt?.getTime() ?? null;
 
   useEffect(() => {
-    const recoveredAt = statusUpdatedAt?.getTime() ?? null;
-
     if (
       !isWaitingForResponse ||
       !isStatusSuccess ||
@@ -40,10 +47,15 @@ export function useChatPageSync(params: {
 
     lastRecoveredStatusRef.current = recoveredAt;
     let cancelled = false;
+    let settled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
 
+    // The pane loaded this page (with the pending answer) moments ago, so a
+    // cached read would still be fresh and return that same pending snapshot.
     void utils.chat.getChatPage
-      .fetch({ id })
+      .fetch({ id }, { staleTime: 0 })
       .then((chat) => {
+        settled = true;
         if (cancelled || !chat?.messages) {
           return;
         }
@@ -73,21 +85,34 @@ export function useChatPageSync(params: {
         });
       })
       .catch(() => {
+        settled = true;
         if (!cancelled) {
           lastRecoveredStatusRef.current = null;
+          // Once the answer is saved the polls stop changing, so nothing else
+          // re-runs this effect for the same status.
+          retryTimer = setTimeout(
+            () => setRecoveryRetry((count) => count + 1),
+            RECOVERY_RETRY_DELAY_MS,
+          );
         }
       });
 
     return () => {
       cancelled = true;
+      clearTimeout(retryTimer);
+      // A recovery cut short by a re-run (or a Strict Mode remount) may start again.
+      if (!settled && lastRecoveredStatusRef.current === recoveredAt) {
+        lastRecoveredStatusRef.current = null;
+      }
     };
   }, [
     activeGenerationId,
     id,
     isStatusSuccess,
     isWaitingForResponse,
+    recoveredAt,
+    recoveryRetry,
     setMessages,
-    statusUpdatedAt,
     utils,
   ]);
 
@@ -103,6 +128,11 @@ export function useChatPageSync(params: {
     }
 
     void utils.billing.usage.invalidate();
-    void utils.chat.getChatPage.invalidate({ id });
+    // A request also settles when the chat's row could not be created. The
+    // server has no page for it then, and refetching would replace the seeded
+    // page with null, unmounting the prompt, its attachments and the error.
+    if (!isChatCreationPending(id)) {
+      void utils.chat.getChatPage.invalidate({ id });
+    }
   }, [id, status, utils]);
 }

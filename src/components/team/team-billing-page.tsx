@@ -7,6 +7,7 @@ import { SubscriptionShredder } from "@/components/billing/subscription-shredder
 import type { SubscriptionReceiptData } from "@/components/billing/subscription-receipt";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TeamBillingCard } from "./team-billing-card";
+import { TeamChangePlanDialog } from "./team-change-plan-dialog";
 import { TeamMaxModeCard } from "./team-max-mode-card";
 import { useTeamSettingsContext } from "./team-settings-context";
 
@@ -23,6 +24,11 @@ export function TeamBillingPage() {
     teamPlans,
     createTeamCheckout,
     changeTeamPlan,
+    pendingTeamPlanId,
+    teamPlanEstimateQuery,
+    isChangePlanDialogOpen,
+    hasAgreedToTeamPlanChange,
+    setHasAgreedToTeamPlanChange,
     cancelSub,
     resumeSub,
     updateTeamMaxMode,
@@ -30,6 +36,8 @@ export function TeamBillingPage() {
     updateMemberMaxModePolicy,
     handleSubscribe,
     handleChangePlan,
+    handleChangePlanDialogOpenChange,
+    confirmChangePlan,
     handleManage,
     handleCancel,
     confirmCancel,
@@ -80,8 +88,8 @@ export function TeamBillingPage() {
         plans={teamPlans}
         checkoutPending={createTeamCheckout.isPending}
         checkoutPlanId={createTeamCheckout.variables?.planId}
-        changePending={changeTeamPlan.isPending}
-        changePlanId={changeTeamPlan.variables?.planId}
+        changePending={changeTeamPlan.isPending || teamPlanEstimateQuery.isFetching}
+        changePlanId={pendingTeamPlanId ?? changeTeamPlan.variables?.planId}
         cancelPending={cancelSub.isPending || shredOpen}
         resumePending={resumeSub.isPending}
         onSubscribe={handleSubscribe}
@@ -89,6 +97,20 @@ export function TeamBillingPage() {
         onManage={handleManage}
         onCancel={handleCancel}
         onResume={handleResume}
+      />
+
+      <TeamChangePlanDialog
+        open={isChangePlanDialogOpen}
+        onOpenChange={handleChangePlanDialogOpenChange}
+        planId={pendingTeamPlanId}
+        seatCount={
+          teamPlanEstimateQuery.data?.memberCount ?? teamBillingQuery.data?.memberCount ?? 0
+        }
+        estimate={teamPlanEstimateQuery}
+        hasAgreed={hasAgreedToTeamPlanChange}
+        onHasAgreedChange={setHasAgreedToTeamPlanChange}
+        isPending={changeTeamPlan.isPending}
+        onConfirm={confirmChangePlan}
       />
 
       <TeamMaxModeCard

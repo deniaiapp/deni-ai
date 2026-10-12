@@ -1,6 +1,7 @@
 "use client";
 
 import { CheckCircle2, Code2, KeyRound, Loader2, ShieldCheck, XCircle } from "lucide-react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useExtracted } from "next-intl";
 import { Suspense, useState } from "react";
@@ -9,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { authClient } from "@/lib/auth-client";
+import { signInPath } from "@/lib/sign-in-redirect";
 
 type Status = "idle" | "selectingKey" | "success" | "error";
 
@@ -105,6 +107,10 @@ function FlixaAuthorizeContent() {
   };
 
   if (isAnonymous) {
+    // Come back to this approval (with its device code) after signing in.
+    const signInHref = signInPath(
+      code ? `/flixa/authorize?${new URLSearchParams({ code }).toString()}` : "/flixa/authorize",
+    );
     return (
       <div className="flex flex-1 items-center justify-center">
         <Card className="w-full max-w-md">
@@ -119,6 +125,11 @@ function FlixaAuthorizeContent() {
               )}
             </CardDescription>
           </CardHeader>
+          <CardContent className="flex justify-center">
+            <Button render={<Link href={signInHref} />} nativeButton={false}>
+              {t("Log in")}
+            </Button>
+          </CardContent>
         </Card>
       </div>
     );

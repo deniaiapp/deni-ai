@@ -3,6 +3,7 @@ import { safeValidateUIMessages } from "ai";
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { getAccessibleProject } from "@/lib/project-access";
+import { markChatAttachmentsForDeletion, purgeDeletingAttachments } from "@/lib/attachments";
 import { canCompareModels } from "@/lib/usage";
 import { isComparisonConversation } from "@/lib/comparison-conversation";
 import {
@@ -15,7 +16,8 @@ import type { db as Db } from "@/db/drizzle";
 import { chats, modelComparisons, projects } from "@/db/schema";
 import { models } from "@/lib/constants";
 import { comparisonSettingsSchema, normalizeComparisonSettings } from "@/lib/comparison-settings";
-import { protectedProcedure, router } from "../trpc";
+import { toJsonbSafe, toPostgresText } from "@/lib/jsonb";
+import { protectedProcedure, rateLimited, router, TRPC_RATE_LIMITS } from "../trpc";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -109,6 +111,21 @@ async function loadChatPage(
   };
 }
 
+/**
+ * Saving a comparison requires Pro or Max. Checked before `.input()`, so the
+ * transcript body, which may be far over the usual cap (src/lib/trpc/limits.ts),
+ * is read only for users allowed to save it.
+ */
+const comparisonSaveProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  if (!(await canCompareModels(ctx.userId))) {
+    throw new TRPCError({
+      code: "FORBIDDEN",
+      message: "Model comparison requires Pro or Max.",
+    });
+  }
+  return next();
+});
+
 export const chatRouter = router({
   getComparisons: protectedProcedure.query(async ({ ctx }) => {
     return ctx.db
@@ -140,7 +157,7 @@ export const chatRouter = router({
         rightMessages: await loadValidatedMessages(row.rightMessages),
       };
     }),
-  saveComparisonSession: protectedProcedure
+  saveComparisonSession: comparisonSaveProcedure
     .input(
       z.object({
         id: z.string().min(1).optional(),
@@ -153,12 +170,6 @@ export const chatRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      if (!(await canCompareModels(ctx.userId))) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Model comparison requires Pro or Max.",
-        });
-      }
       const leftModel = models.find((model) => model.value === input.leftModel);
       const rightModel = models.find((model) => model.value === input.rightModel);
       if (!leftModel || !rightModel || leftModel.value === rightModel.value) {
@@ -185,16 +196,21 @@ export const chatRouter = router({
       if (JSON.stringify(questions(left.data)) !== JSON.stringify(questions(right.data))) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Comparison questions must match." });
       }
+      // Tool output (search results, truncated page text) can carry text Postgres rejects.
       const values = {
-        title: questions(left.data)[0].trim().slice(0, 80),
+        title: toPostgresText(questions(left.data)[0].trim().slice(0, 80)),
         leftModel: leftModel.value,
         rightModel: rightModel.value,
         leftName: leftModel.name,
         rightName: rightModel.name,
         leftSettings: normalizeComparisonSettings(leftModel, input.leftSettings),
         rightSettings: normalizeComparisonSettings(rightModel, input.rightSettings),
-        leftMessages: left.data.map((message) => ({ ...message, metadata: undefined })),
-        rightMessages: right.data.map((message) => ({ ...message, metadata: undefined })),
+        leftMessages: toJsonbSafe(
+          left.data.map((message) => ({ ...message, metadata: undefined })),
+        ),
+        rightMessages: toJsonbSafe(
+          right.data.map((message) => ({ ...message, metadata: undefined })),
+        ),
       };
       if (input.id) {
         const [saved] = await ctx.db
@@ -211,15 +227,9 @@ export const chatRouter = router({
         .returning({ id: modelComparisons.id });
       return saved.id;
     }),
-  saveComparison: protectedProcedure
+  saveComparison: comparisonSaveProcedure
     .input(z.object({ messages: z.array(z.record(z.string(), z.unknown())).min(2).max(200) }))
     .mutation(async ({ ctx, input }) => {
-      if (!(await canCompareModels(ctx.userId))) {
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: "Model comparison requires Pro or Max.",
-        });
-      }
       const validated = await safeValidateUIMessages<UIMessage>({ messages: input.messages });
       if (!validated.success || !isComparisonConversation(validated.data, true)) {
         throw new TRPCError({
@@ -227,12 +237,16 @@ export const chatRouter = router({
           message: "A question and an answer are required.",
         });
       }
-      const messages = validated.data.map((message) => ({ ...message, metadata: undefined }));
-      const title = messages[0].parts
-        .flatMap((part) => (part.type === "text" ? [part.text] : []))
-        .join(" ")
-        .trim()
-        .slice(0, 80);
+      const messages = toJsonbSafe(
+        validated.data.map((message) => ({ ...message, metadata: undefined })),
+      );
+      const title = toPostgresText(
+        messages[0].parts
+          .flatMap((part) => (part.type === "text" ? [part.text] : []))
+          .join(" ")
+          .trim()
+          .slice(0, 80),
+      );
       const [saved] = await ctx.db
         .insert(chats)
         .values({
@@ -243,23 +257,42 @@ export const chatRouter = router({
         .returning({ id: chats.id });
       return saved.id;
     }),
-  getChats: protectedProcedure.query(async ({ ctx }) => {
-    const userChats = await ctx.db
-      .select({
-        id: chats.id,
-        title: chats.title,
-        projectId: chats.projectId,
-        pinned: chats.pinned,
-        folder: chats.folder,
-        tags: chats.tags,
-        created_at: chats.created_at,
-        updated_at: chats.updated_at,
-      })
-      .from(chats)
-      .where(eq(chats.uid, ctx.userId))
-      .orderBy(desc(chats.updated_at), desc(chats.id));
-    return userChats;
-  }),
+  /**
+   * Deletes one saved comparison; open to every plan, like reading it. Both of
+   * its conversations live only in this row: comparison runs never write chats
+   * or attachments, and a chat saved with Continue this chat (saveComparison)
+   * is an ordinary chat the user chose to keep, so it stays.
+   */
+  deleteComparison: protectedProcedure
+    .input(z.object({ id: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      const [deleted] = await ctx.db
+        .delete(modelComparisons)
+        .where(and(eq(modelComparisons.id, input.id), eq(modelComparisons.uid, ctx.userId)))
+        .returning({ id: modelComparisons.id });
+      if (!deleted) throw new TRPCError({ code: "NOT_FOUND", message: "Comparison not found." });
+      return deleted;
+    }),
+  // Reads every chat of the user, unpaginated.
+  getChats: protectedProcedure
+    .use(rateLimited("chat.getChats", TRPC_RATE_LIMITS.chatList))
+    .query(async ({ ctx }) => {
+      const userChats = await ctx.db
+        .select({
+          id: chats.id,
+          title: chats.title,
+          projectId: chats.projectId,
+          pinned: chats.pinned,
+          folder: chats.folder,
+          tags: chats.tags,
+          created_at: chats.created_at,
+          updated_at: chats.updated_at,
+        })
+        .from(chats)
+        .where(eq(chats.uid, ctx.userId))
+        .orderBy(desc(chats.updated_at), desc(chats.id));
+      return userChats;
+    }),
   createChat: protectedProcedure
     .input(
       z
@@ -388,16 +421,7 @@ export const chatRouter = router({
       z
         .object({
           id: z.string().min(1),
-          title: z.string().nullable(),
-          messages: z.array(
-            z.object({
-              id: z.uuid(),
-              role: z.enum(["user", "assistant"]),
-              parts: z.json(),
-              attachments: z.json(),
-              createdAt: z.date(),
-            }),
-          ),
+          title: z.string().max(500).nullable(),
           pinned: z.boolean(),
           folder: z.string().trim().max(80).nullable(),
           projectId: z.string().trim().min(1).nullable(),
@@ -429,6 +453,10 @@ export const chatRouter = router({
       }
       return updatedChat[0].id;
     }),
+  /**
+   * Also deletes the chat's attachments, giving their storage quota back. A file
+   * whose deletion fails keeps its row, marked, for the storage-cleanup cron.
+   */
   deleteChat: protectedProcedure
     .input(
       z.object({
@@ -436,23 +464,42 @@ export const chatRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const deletedChat = await ctx.db
-        .delete(chats)
-        .where(and(eq(chats.id, input.id), eq(chats.uid, ctx.userId)))
-        .returning();
-      if (!deletedChat[0]) {
-        throw new TRPCError({
-          code: "NOT_FOUND",
-          message: "Chat not found",
-        });
-      }
-      return deletedChat[0];
+      const { deletedChat, attachments } = await ctx.db.transaction(async (tx) => {
+        // Before the chat, whose deletion would untie them.
+        const attachments = await markChatAttachmentsForDeletion(tx, ctx.userId, input.id);
+        const [deletedChat] = await tx
+          .delete(chats)
+          .where(and(eq(chats.id, input.id), eq(chats.uid, ctx.userId)))
+          .returning();
+        if (!deletedChat) {
+          throw new TRPCError({
+            code: "NOT_FOUND",
+            message: "Chat not found",
+          });
+        }
+        return { deletedChat, attachments };
+      });
+      // Only once committed. Never throws.
+      await purgeDeletingAttachments(attachments, ctx.db);
+      return deletedChat;
     }),
+  /**
+   * Also removes saved comparisons, which hold full conversation transcripts
+   * too, and every chat's attachments.
+   */
   deleteAllChats: protectedProcedure.mutation(async ({ ctx }) => {
-    const deletedChats = await ctx.db
-      .delete(chats)
-      .where(eq(chats.uid, ctx.userId))
-      .returning({ id: chats.id });
+    const { deletedChats, attachments } = await ctx.db.transaction(async (tx) => {
+      await tx.delete(modelComparisons).where(eq(modelComparisons.uid, ctx.userId));
+      // Before the chats, whose deletion would untie them.
+      const attachments = await markChatAttachmentsForDeletion(tx, ctx.userId);
+      const deletedChats = await tx
+        .delete(chats)
+        .where(eq(chats.uid, ctx.userId))
+        .returning({ id: chats.id });
+      return { deletedChats, attachments };
+    });
+    // Only once committed. Never throws.
+    await purgeDeletingAttachments(attachments, ctx.db);
 
     return { deletedCount: deletedChats.length };
   }),

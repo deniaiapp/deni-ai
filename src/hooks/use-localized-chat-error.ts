@@ -71,6 +71,19 @@ export function useLocalizedChatError() {
         return t(
           "Fast, Pro, and Deep Research are not available for guest sessions. Log in to use them.",
         );
+      case "Conversations this long are not available for guest sessions.":
+        return t(
+          "Conversations this long are not available for guest sessions. Start a new chat or log in to continue.",
+        );
+      case "Attachments this large are not available for guest sessions.":
+        return t(
+          "Files this large are not available for guest sessions. Remove the attachment or log in to send it.",
+        );
+      // Also another account's attachment (src/app/api/chat/route.ts).
+      case "Invalid or oversized attachment":
+        return t(
+          "An attachment in this chat can't be used. It may be too large, unsupported, or unavailable.",
+        );
       default:
         return text;
     }

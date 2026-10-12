@@ -17,13 +17,16 @@ function destinationHash(url: string) {
   return createHash("sha256").update(url).digest("hex");
 }
 
+/** How long a delivery stays billable: a long streamed answer plus time to read it. */
+export const AD_DELIVERY_TTL_MS = 60 * 60_000;
+
 export function signAdDelivery(id: string, userId: string, url: string) {
   const payload = Buffer.from(
     JSON.stringify({
       id,
       userId,
       destination: destinationHash(url),
-      expires: Date.now() + 15 * 60_000,
+      expires: Date.now() + AD_DELIVERY_TTL_MS,
     }),
   ).toString("base64url");
   const signature = createHmac("sha256", env.BETTER_AUTH_SECRET)
@@ -32,32 +35,46 @@ export function signAdDelivery(id: string, userId: string, url: string) {
   return `${payload}.${signature}`;
 }
 
-export function verifyAdDelivery(token: string, id: string, userId: string, url?: string) {
+/** "expired": issued by us for this ad, viewer and destination, but no longer billable. */
+export function adDeliveryStatus(
+  token: string,
+  id: string,
+  userId: string,
+  url?: string,
+): "valid" | "expired" | "invalid" {
   const [payload, signature] = token.split(".");
-  if (!payload || !signature || token.length > 1000) return false;
+  if (!payload || !signature || token.length > 1000) return "invalid";
   const expected = createHmac("sha256", env.BETTER_AUTH_SECRET).update(payload).digest("base64url");
   if (
     signature.length !== expected.length ||
     !timingSafeEqual(Buffer.from(signature), Buffer.from(expected))
   )
-    return false;
+    return "invalid";
   try {
     const data: unknown = JSON.parse(Buffer.from(payload, "base64url").toString());
-    return (
-      typeof data === "object" &&
-      data !== null &&
-      "id" in data &&
-      data.id === id &&
-      "userId" in data &&
-      data.userId === userId &&
-      (url === undefined || ("destination" in data && data.destination === destinationHash(url))) &&
-      "expires" in data &&
-      typeof data.expires === "number" &&
-      data.expires > Date.now()
-    );
+    if (
+      !(
+        typeof data === "object" &&
+        data !== null &&
+        "id" in data &&
+        data.id === id &&
+        "userId" in data &&
+        data.userId === userId &&
+        (url === undefined ||
+          ("destination" in data && data.destination === destinationHash(url))) &&
+        "expires" in data &&
+        typeof data.expires === "number"
+      )
+    )
+      return "invalid";
+    return data.expires > Date.now() ? "valid" : "expired";
   } catch {
-    return false;
+    return "invalid";
   }
+}
+
+export function verifyAdDelivery(token: string, id: string, userId: string, url?: string) {
+  return adDeliveryStatus(token, id, userId, url) === "valid";
 }
 
 export const adPlans = ["cpm", "cpc", "fixed"] as const;

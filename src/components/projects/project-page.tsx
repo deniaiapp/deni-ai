@@ -141,6 +141,8 @@ export function ProjectPage({ projectId, initialProjectName }: ProjectPageProps)
   });
 
   const canManage = project?.canManage ?? false;
+  // Only the creator moves a project between teams or makes it personal again.
+  const canShare = project?.canShare ?? false;
   const organizations = orgsQuery.data ?? [];
 
   const startNewChat = useNewChat();
@@ -250,7 +252,7 @@ export function ProjectPage({ projectId, initialProjectName }: ProjectPageProps)
             </p>
           </div>
 
-          {canManage && organizations.length > 0 ? (
+          {canShare && organizations.length > 0 ? (
             <div className="space-y-2">
               <Label htmlFor="proj-share">{t("Team sharing")}</Label>
               <Select

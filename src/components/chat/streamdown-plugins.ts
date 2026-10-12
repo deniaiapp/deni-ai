@@ -12,8 +12,19 @@ export const streamdownPlugins: PluginConfig = {
   mermaid: lazyMermaid,
 };
 
+/**
+ * Runs on every render of every message (and each streamed chunk), so it must
+ * stay linear. In the inline branch a backslash may only start a `\\.` escape:
+ * letting `[^$\n]` match it too gives each escape two parses, so a line such as
+ * `$env:Path = "C:\Windows;C:\Tools;..."` backtracks exponentially and freezes
+ * the tab.
+ */
 const MATH_SYNTAX =
-  /(?:\$\$[\s\S]+?\$\$|\$(?!\s)(?:\\.|[^$\n])+\$(?!\w)|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\])/;
+  /(?:\$\$[\s\S]+?\$\$|\$(?!\s)(?:\\.|[^$\n\\])+\$(?!\w)|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\])/;
+
+export function hasMathSyntax(content: string) {
+  return MATH_SYNTAX.test(content);
+}
 
 let mathPluginPromise: Promise<MathPlugin> | null = null;
 
@@ -23,7 +34,7 @@ function loadMathPlugin() {
 }
 
 export function useStreamdownPlugins(content: string) {
-  const hasMath = MATH_SYNTAX.test(content);
+  const hasMath = hasMathSyntax(content);
   const [math, setMath] = useState<MathPlugin | null>(null);
 
   useEffect(() => {

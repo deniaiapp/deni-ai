@@ -128,3 +128,97 @@ test("still rejects a short block page", async () => {
     fetchPageText("https://probe.example/", { allowReaderFallback: false }),
   ).rejects.toThrow();
 });
+
+/** Direct fetch that never answers and rejects the way node:http does when its signal aborts. */
+function hangUntilAborted(_url: string, init?: { signal?: AbortSignal }) {
+  return new Promise<Response>((_resolve, reject) => {
+    init?.signal?.addEventListener("abort", () => {
+      const error = new Error("The operation was aborted");
+      error.name = "AbortError";
+      reject(error);
+    });
+  });
+}
+
+const readerPage = `Title: Reader title\n\nMarkdown Content:\n${"Readable reader text. ".repeat(10)}`;
+
+test("a direct-fetch timeout falls back to the reader", async () => {
+  vi.mocked(fetchSafePublicHttpUrl).mockImplementation(hangUntilAborted);
+  const fetch = vi.fn(async () => new Response(readerPage, { status: 200 }));
+  vi.stubGlobal("fetch", fetch);
+  const page = await fetchPageText("https://probe.example/", { timeoutMs: 20 });
+  expect(fetch).toHaveBeenCalledWith("https://r.jina.ai/https://probe.example/", expect.anything());
+  expect(page.source).toBe("reader");
+  expect(page.content).toContain("Readable reader text.");
+});
+
+test("a direct-fetch timeout without the reader reports a timeout", async () => {
+  vi.mocked(fetchSafePublicHttpUrl).mockImplementation(hangUntilAborted);
+  await expect(
+    fetchPageText("https://probe.example/", { timeoutMs: 20, allowReaderFallback: false }),
+  ).rejects.toThrow("timed out");
+});
+
+test("a caller cancel skips the reader", async () => {
+  vi.mocked(fetchSafePublicHttpUrl).mockImplementation(hangUntilAborted);
+  const fetch = vi.fn(async () => new Response(readerPage, { status: 200 }));
+  vi.stubGlobal("fetch", fetch);
+  const controller = new AbortController();
+  const pending = fetchPageText("https://probe.example/", { signal: controller.signal });
+  setTimeout(() => controller.abort(), 10);
+  await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  expect(fetch).not.toHaveBeenCalled();
+});
+
+// "日本語" in Shift_JIS and EUC-JP.
+const SJIS_NIHONGO = [0x93, 0xfa, 0x96, 0x7b, 0x8c, 0xea];
+const EUCJP_NIHONGO = [0xc6, 0xfc, 0xcb, 0xdc, 0xb8, 0xec];
+
+function encodedHtml(head: string, body: number[]) {
+  const ascii = (value: string) => [...new TextEncoder().encode(value)];
+  return new Uint8Array([
+    ...ascii(`<html><head>${head}<title>`),
+    ...body,
+    ...ascii("</title></head><body><article>"),
+    ...Array.from({ length: 30 }, () => body).flat(),
+    ...ascii("</article></body></html>"),
+  ]);
+}
+
+test("decodes text in the charset from Content-Type", async () => {
+  const { response } = streamed([new Uint8Array(SJIS_NIHONGO)], {
+    "content-type": "text/plain; charset=Shift_JIS",
+  });
+  expect(await readBoundedResponseText(response)).toBe("日本語");
+});
+
+test("decodes HTML in the charset its meta tag declares", async () => {
+  const { response } = streamed(
+    [
+      encodedHtml(
+        '<meta http-equiv="Content-Type" content="text/html; charset=EUC-JP">',
+        EUCJP_NIHONGO,
+      ),
+    ],
+    { "content-type": "text/html" },
+  );
+  expect(await readBoundedResponseText(response)).toContain("<title>日本語</title>");
+});
+
+test("falls back to UTF-8 for an unknown charset", async () => {
+  const { response } = streamed([new TextEncoder().encode("日本語")], {
+    "content-type": "text/plain; charset=not-a-charset",
+  });
+  expect(await readBoundedResponseText(response)).toBe("日本語");
+});
+
+test("a Shift_JIS page is read directly without garbling", async () => {
+  vi.mocked(fetchSafePublicHttpUrl).mockResolvedValue(
+    new Response(encodedHtml('<meta charset="Shift_JIS">', SJIS_NIHONGO), {
+      headers: { "content-type": "text/html" },
+    }),
+  );
+  const page = await fetchPageText("https://probe.example/", { allowReaderFallback: false });
+  expect(page.title).toBe("日本語");
+  expect(page.content).toBe("日本語".repeat(30));
+});

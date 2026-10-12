@@ -3,7 +3,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useExtracted } from "next-intl";
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useState } from "react";
 import { toast } from "sonner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { authClient } from "@/lib/auth-client";
@@ -48,7 +48,13 @@ export function useTeamSettings() {
   const [respondingInvitationId, setRespondingInvitationId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingOrg, setIsDeletingOrg] = useState(false);
+  const [pendingTeamPlanId, setPendingTeamPlanId] = useState<TeamPlanId | null>(null);
+  const [hasAgreedToTeamPlanChange, setHasAgreedToTeamPlanChange] = useState(false);
   const currentUserId = session.data?.user?.id ?? null;
+  // An invitation link only points at the invitation. Joining always takes an explicit
+  // Accept click: accepting can cancel the invitee's personal subscription, so a page
+  // load (or a link someone else sent) must never do it.
+  const linkedInvitationId = searchParams.get("invitationId");
 
   const { data: organizationsData, isLoading: organizationsLoading } = useQuery({
     queryKey: ["team", "organizations", currentUserId],
@@ -68,7 +74,33 @@ export function useTeamSettings() {
       return (result.data ?? []) as ReceivedInvitation[];
     },
   });
-  const myPendingInvitations = (myInvitationsData ?? []).filter((inv) => inv.status === "pending");
+  const { data: linkedInvitation } = useQuery({
+    queryKey: ["team", "linked-invitation", currentUserId, linkedInvitationId],
+    enabled: !session.isPending && Boolean(currentUserId) && Boolean(linkedInvitationId),
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    retry: false,
+    queryFn: async (): Promise<ReceivedInvitation | null> => {
+      // Unlike listUserInvitations, this also works before the email is verified.
+      const result = await authClient.organization.getInvitation({
+        query: { id: linkedInvitationId ?? "" },
+      });
+      if (result.error || !result.data) {
+        toast.error(localizeError(result.error, t("Invitation not found")));
+        return null;
+      }
+      const { id, organizationId, organizationName, role, status, expiresAt } = result.data;
+      return { id, organizationId, organizationName, role, status, expiresAt };
+    },
+  });
+  const listedPendingInvitations = (myInvitationsData ?? []).filter(
+    (inv) => inv.status === "pending",
+  );
+  const myPendingInvitations =
+    linkedInvitation?.status === "pending" &&
+    !listedPendingInvitations.some((inv) => inv.id === linkedInvitation.id)
+      ? [linkedInvitation, ...listedPendingInvitations]
+      : listedPendingInvitations;
   const activeOrganizationId = session.data?.session?.activeOrganizationId ?? null;
   const organizations = organizationsData ?? [];
   const activeOrg =
@@ -118,6 +150,21 @@ export function useTeamSettings() {
   const teamPlansQuery = trpc.organization.teamPlans.useQuery(undefined, {
     enabled: features.billing && Boolean(activeOrg?.id) && isAdmin,
   });
+  const teamPlanEstimateQuery = trpc.organization.estimateTeamPlanChange.useQuery(
+    { organizationId: activeOrg?.id ?? "", planId: pendingTeamPlanId ?? "pro_team_monthly" },
+    {
+      enabled: features.billing && Boolean(activeOrg?.id) && pendingTeamPlanId !== null,
+      // The owner confirms this exact charge, so every open fetches a fresh preview.
+      staleTime: 0,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      retry: false,
+    },
+  );
+  const isChangePlanDialogOpen =
+    pendingTeamPlanId !== null &&
+    !teamPlanEstimateQuery.isFetching &&
+    (teamPlanEstimateQuery.data !== undefined || teamPlanEstimateQuery.error !== null);
 
   async function selectOrg(org: Organization, options?: { persistActive?: boolean }) {
     setSelectedOrgId(org.id);
@@ -126,31 +173,6 @@ export function useTeamSettings() {
       await session.refetch();
     }
   }
-
-  useEffect(() => {
-    if (session.isPending) {
-      return;
-    }
-
-    async function init() {
-      const invitationId = searchParams.get("invitationId");
-      if (invitationId) {
-        window.history.replaceState({}, "", window.location.pathname);
-        const result = await authClient.organization.acceptInvitation({ invitationId });
-        if (result.error) {
-          console.error("Failed to accept invitation", result.error);
-          toast.error(t("Failed to accept invitation"));
-        } else {
-          toast.success(t("Invitation accepted"));
-          await queryClient.invalidateQueries({
-            queryKey: ["team", "organizations", currentUserId],
-          });
-          await session.refetch();
-        }
-      }
-    }
-    init();
-  }, [currentUserId, searchParams, queryClient, session, t]);
 
   async function handleCreateOrg() {
     if (!newOrgName.trim()) return;
@@ -195,22 +217,28 @@ export function useTeamSettings() {
     if (!inviteEmail.trim() || !activeOrg) return;
     await runWithLoading(setIsInviting, async () => {
       try {
-        await authClient.organization.inviteMember({
+        const result = await authClient.organization.inviteMember({
           email: inviteEmail.trim(),
           role: inviteRole as "member" | "admin",
           organizationId: activeOrg.id,
         });
+        // better-auth returns API errors instead of throwing; keep the dialog open
+        // so the address can be corrected.
+        if (result.error) {
+          toast.error(localizeError(result.error, t("Failed to send invitation")));
+          return;
+        }
         toast.success(t("Invitation sent"));
         await queryClient.invalidateQueries({
           queryKey: ["team", "organization", currentUserId, activeOrg.id],
         });
+        setIsInviteDialogOpen(false);
+        setInviteEmail("");
+        setInviteRole("member");
       } catch (error) {
         console.error("Failed to invite", error);
         toast.error(t("Failed to send invitation"));
       }
-      setIsInviteDialogOpen(false);
-      setInviteEmail("");
-      setInviteRole("member");
     });
   }
 
@@ -359,7 +387,11 @@ export function useTeamSettings() {
 
   async function handleCancelInvitation(invitationId: string) {
     try {
-      await authClient.organization.cancelInvitation({ invitationId });
+      const result = await authClient.organization.cancelInvitation({ invitationId });
+      if (result.error) {
+        toast.error(localizeError(result.error, t("Failed to cancel invitation")));
+        return;
+      }
       toast.success(t("Invitation cancelled"));
       if (activeOrg) {
         await queryClient.invalidateQueries({
@@ -369,6 +401,19 @@ export function useTeamSettings() {
     } catch (error) {
       console.error("Failed to cancel invitation", error);
       toast.error(t("Failed to cancel invitation"));
+    }
+  }
+
+  function clearLinkedInvitation(invitationId: string) {
+    queryClient.setQueryData<ReceivedInvitation | null>(
+      ["team", "linked-invitation", currentUserId, linkedInvitationId],
+      (current) => (current?.id === invitationId ? null : current),
+    );
+    // Drop the handled link so a reload does not look up an answered invitation.
+    if (invitationId === linkedInvitationId) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("invitationId");
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
     }
   }
 
@@ -383,6 +428,7 @@ export function useTeamSettings() {
             return;
           }
           toast.success(t("Invitation accepted"));
+          clearLinkedInvitation(invitationId);
           await Promise.all([
             queryClient.invalidateQueries({ queryKey: ["team", "organizations", currentUserId] }),
             queryClient.invalidateQueries({ queryKey: ["team", "my-invitations", currentUserId] }),
@@ -407,6 +453,7 @@ export function useTeamSettings() {
             return;
           }
           toast.success(t("Invitation declined"));
+          clearLinkedInvitation(invitationId);
           await queryClient.invalidateQueries({
             queryKey: ["team", "my-invitations", currentUserId],
           });
@@ -465,12 +512,24 @@ export function useTeamSettings() {
     }
   }
 
-  async function handleChangePlan(planId: TeamPlanId) {
-    if (!activeOrg) return;
+  // "Switch" only opens the confirmation: the change is invoiced for every seat at once.
+  function handleChangePlan(planId: TeamPlanId) {
+    setHasAgreedToTeamPlanChange(false);
+    setPendingTeamPlanId(planId);
+  }
+
+  function handleChangePlanDialogOpenChange(open: boolean) {
+    if (changeTeamPlan.isPending || open) return;
+    setPendingTeamPlanId(null);
+    setHasAgreedToTeamPlanChange(false);
+  }
+
+  async function confirmChangePlan() {
+    if (!activeOrg || !pendingTeamPlanId) return;
     try {
       await changeTeamPlan.mutateAsync({
         organizationId: activeOrg.id,
-        planId,
+        planId: pendingTeamPlanId,
       });
       toast.success(t("Team plan updated."));
       await Promise.all([
@@ -484,6 +543,9 @@ export function useTeamSettings() {
     } catch (error) {
       console.error("Failed to change team plan", error);
       toast.error(localizeError(error, t("Failed to change team plan.")));
+    } finally {
+      setPendingTeamPlanId(null);
+      setHasAgreedToTeamPlanChange(false);
     }
   }
 
@@ -627,6 +689,8 @@ export function useTeamSettings() {
       toast.error(t("Enter a whole number or leave the field blank."));
       return;
     }
+    // Focusing and leaving the field must not save (or audit-log) an unchanged value.
+    if (parsedLimit === (category === "basic" ? maxModeLimitBasic : maxModeLimitPremium)) return;
 
     await updateDefaultPolicy({
       maxModeEnabled,
@@ -655,6 +719,7 @@ export function useTeamSettings() {
       toast.error(t("Enter a whole number or leave the field blank."));
       return;
     }
+    if (parsedLimit === (category === "basic" ? maxModeLimitBasic : maxModeLimitPremium)) return;
 
     await updateMemberPolicy({
       userId,
@@ -722,6 +787,11 @@ export function useTeamSettings() {
     teamPlans,
     createTeamCheckout,
     changeTeamPlan,
+    pendingTeamPlanId,
+    teamPlanEstimateQuery,
+    isChangePlanDialogOpen,
+    hasAgreedToTeamPlanChange,
+    setHasAgreedToTeamPlanChange,
     cancelSub,
     resumeSub,
     updateTeamMaxMode,
@@ -764,6 +834,8 @@ export function useTeamSettings() {
     handleDeleteOrg,
     handleSubscribe,
     handleChangePlan,
+    handleChangePlanDialogOpenChange,
+    confirmChangePlan,
     handleManage,
     handleCancel,
     confirmCancel,

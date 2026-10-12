@@ -1,8 +1,15 @@
-import { expect, test } from "vitest";
-import { anonymousAdViewerId } from "./ad-ip";
+import { beforeEach, expect, test, vi } from "vitest";
+import { allowGuestAdBilling, anonymousAdViewerId } from "./ad-ip";
 import { adCharge, eventKey, signAdDelivery, verifyAdDelivery } from "./ads";
 
+const rateLimit = vi.hoisted(() => vi.fn());
+vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: rateLimit }));
+
 const identity = (ip: string) => anonymousAdViewerId(new Headers({ "x-forwarded-for": ip }));
+
+beforeEach(() => {
+  rateLimit.mockReset().mockResolvedValue({ allowed: true });
+});
 
 test("hashes the first forwarded IP without exposing it", () => {
   const id = identity(" 192.0.2.1, 10.0.0.1 ");
@@ -16,6 +23,38 @@ test("canonicalizes IPv6 and IPv4-mapped IPv6", () => {
   expect(identity("2001:0DB8:0000:0000:0000:0000:0000:0001")).toBe(identity("2001:db8::1"));
   expect(identity("::ffff:192.0.2.1")).toBe(identity("192.0.2.1"));
   expect(identity("::ffff:c000:201")).toBe(identity("192.0.2.1"));
+});
+
+test("treats one IPv6 /64 as one viewer so rotating addresses cannot evade deduplication", () => {
+  expect(identity("2001:db8:1:2::1")).toBe(identity("2001:db8:1:2:ffff:ffff:ffff:ffff"));
+  expect(identity("2001:db8:1:2::1")).toBe(identity("2001:0db8:0001:0002:0:0:0:abcd"));
+  expect(identity("2001:db8:1:2::1")).not.toBe(identity("2001:db8:1:3::1"));
+  expect(identity("2001:db8:1:2::1")).not.toContain("2001");
+});
+
+test("caps billable guest events per network and kind across campaigns", async () => {
+  const network = identity("2001:db8:1:2::1");
+  expect(
+    await allowGuestAdBilling(new Headers({ "x-forwarded-for": "2001:db8:1:2::9" }), "click"),
+  ).toBe(true);
+  expect(rateLimit).toHaveBeenLastCalledWith({
+    key: `ad-guest-click:${network}`,
+    windowMs: 86_400_000,
+    maxRequests: 20,
+  });
+  await allowGuestAdBilling(new Headers({ "x-forwarded-for": "2001:db8:1:2::1" }), "view");
+  expect(rateLimit).toHaveBeenLastCalledWith({
+    key: `ad-guest-view:${network}`,
+    windowMs: 3_600_000,
+    maxRequests: 120,
+  });
+  rateLimit.mockResolvedValue({ allowed: false, retryAfter: 60 });
+  expect(await allowGuestAdBilling(new Headers({ "x-forwarded-for": "192.0.2.1" }), "view")).toBe(
+    false,
+  );
+  rateLimit.mockClear();
+  expect(await allowGuestAdBilling(new Headers(), "click")).toBe(true);
+  expect(rateLimit).not.toHaveBeenCalled();
 });
 
 test("uses x-real-ip only when x-forwarded-for is absent and rejects invalid addresses", () => {

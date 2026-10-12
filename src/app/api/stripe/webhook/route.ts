@@ -1,8 +1,8 @@
-import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { db } from "@/db/drizzle";
-import { billing } from "@/db/schema";
+import { billing, user } from "@/db/schema";
 import { env } from "@/env";
 import { findPlanByLookupKey, isTeamPlan } from "@/lib/billing";
 import { activatePaidAd, pauseReversedAdCharge, releaseExpiredAdCheckout } from "@/lib/ad-checkout";
@@ -13,7 +13,9 @@ import {
   resolveSubscriptionStatus,
   isLifetimePlanId,
   isPaidLifetimeRecord,
+  isSettledDispute,
   saveLifetimePlan,
+  restoreDisputedLifetimeCharge,
   revokeReversedLifetimeCharge,
 } from "@/lib/lifetime-plan";
 import { syncMaxModeMeterPeriod } from "@/lib/max-mode";
@@ -35,30 +37,39 @@ import {
   cancelOrgMembersPersonalSubscriptions,
   getTeamBilling,
   recordTeamAuditEvent,
+  updateTeamSeatCount,
 } from "@/lib/team-billing";
 
-type SubscriptionPayload = {
-  userId: string;
+/**
+ * A team subscription belongs to its organization: its row is found by
+ * organization, and `userId` is only an existing user to credit, if any. A
+ * personal subscription always has its user.
+ */
+type BillingOwner =
+  | { organizationId: string; userId: string | null }
+  | { organizationId: null; userId: string };
+
+type SubscriptionPayload = BillingOwner & {
   customerId: string;
   subscriptionId: string;
   lookupKey: string | null | undefined;
   priceId: string | null | undefined;
   status: string | null;
   currentPeriodEnd: number | null;
-  organizationId?: string | null;
 };
 
 async function saveSubscription(payload: SubscriptionPayload) {
   const plan = findPlanByLookupKey(payload.lookupKey ?? undefined);
-  const organizationId = payload.organizationId ?? null;
+  const organizationId = payload.organizationId;
   const fingerprintUpdates = await getBillingFingerprintUpdates({
     customerId: payload.customerId,
     subscriptionId: payload.subscriptionId,
   });
 
-  const whereClause = organizationId
-    ? eq(billing.organizationId, organizationId)
-    : and(eq(billing.userId, payload.userId), isNull(billing.organizationId));
+  const whereClause =
+    payload.organizationId === null
+      ? and(eq(billing.userId, payload.userId), isNull(billing.organizationId))
+      : eq(billing.organizationId, payload.organizationId);
 
   const [existingRecord] = await db
     .select({
@@ -83,7 +94,7 @@ async function saveSubscription(payload: SubscriptionPayload) {
 
   // A subscription that grants nothing (incomplete, ended, ...) must not replace a
   // paid lifetime plan, and an ended one hands the row back to that lifetime plan.
-  if (!organizationId && !grantsSubscriptionAccess(payload.status)) {
+  if (payload.organizationId === null && !grantsSubscriptionAccess(payload.status)) {
     if (isPaidLifetimeRecord(existingRecord)) {
       return;
     }
@@ -117,13 +128,14 @@ async function saveSubscription(payload: SubscriptionPayload) {
         : (existingRecord?.firstPaidAt ?? new Date()),
     paymentMethodFingerprint: fingerprintUpdates.paymentMethodFingerprint,
     cardFunding: fingerprintUpdates.cardFunding,
+    cardRemovedAt: fingerprintUpdates.cardRemovedAt,
   };
 
-  if (organizationId) {
+  if (payload.organizationId !== null) {
     await saveTeamBillingRecord(
       db,
       payload.userId,
-      organizationId,
+      payload.organizationId,
       updates,
       grantsSubscriptionAccess(payload.status) ? undefined : payload.subscriptionId,
     );
@@ -152,23 +164,13 @@ async function saveSubscription(payload: SubscriptionPayload) {
       });
 }
 
-async function clearPlanData({
-  userId,
-  customerId,
-  organizationId,
-  subscriptionId,
-}: {
-  userId: string;
-  customerId: string;
-  organizationId?: string | null;
-  subscriptionId: string;
-}) {
-  const orgId = organizationId ?? null;
-  if (orgId) {
+async function clearPlanData(owner: BillingOwner & { customerId: string; subscriptionId: string }) {
+  const { customerId, subscriptionId } = owner;
+  if (owner.organizationId !== null) {
     const saved = await saveTeamBillingRecord(
       db,
-      userId,
-      orgId,
+      owner.userId,
+      owner.organizationId,
       {
         stripeCustomerId: customerId,
         stripeSubscriptionId: null,
@@ -185,6 +187,7 @@ async function clearPlanData({
     return Boolean(saved);
   }
 
+  const { userId } = owner;
   // The subscription ended; a lifetime plan bought earlier takes over again.
   const lifetime = await findPaidLifetimePurchase(customerId);
   if (lifetime) {
@@ -270,24 +273,44 @@ async function savePaidLifetimeCheckout(
       flashOfferEndsAt: null,
       paymentMethodFingerprint: fingerprintUpdates.paymentMethodFingerprint,
       ...(fingerprintUpdates.cardFunding ? { cardFunding: fingerprintUpdates.cardFunding } : {}),
+      cardRemovedAt: fingerprintUpdates.cardRemovedAt,
     },
   });
 }
 
 const METER_HOST_STATUSES = new Set(["trialing", "active", "past_due"]);
+/**
+ * A live meter host whose invoices are not being paid. Ended hosts are left to
+ * customer.subscription.deleted, which knows whether a replacement took over.
+ */
+const UNPAID_METER_HOST_STATUSES = new Set(["past_due", "unpaid", "paused", "incomplete"]);
+
+function hasMeteredMaxModeItems(subscription: Stripe.Subscription) {
+  return subscription.items.data.some((item) => isMeteredMaxModePrice(item.price));
+}
+
+function meterItemsCondition(subscription: Stripe.Subscription) {
+  const itemIds = subscription.items.data.map((item) => item.id);
+  if (itemIds.length === 0) return null;
+  return or(
+    inArray(billing.stripeMeteredBasicItemId, itemIds),
+    inArray(billing.stripeMeteredPremiumItemId, itemIds),
+  );
+}
 
 /**
- * The monthly Max Mode meter subscription can be canceled from the Customer
- * Portal. Meter events only invoice through a live subscription carrying the
- * metered prices, so turn Max Mode off for the rows that relied on it instead of
+ * The Max Mode meters live on the monthly plan subscription or on a separate
+ * monthly subscription, and either can end (Customer Portal, dunning, disputes).
+ * Meter events only invoice through a live subscription carrying the metered
+ * prices, so turn Max Mode off for the rows that relied on it instead of
  * letting overage accrue unbilled.
  */
 async function disableMaxModeForEndedMeterSubscription(
   subscription: Stripe.Subscription,
   customerId: string,
 ) {
-  const itemIds = subscription.items.data.map((item) => item.id);
-  if (itemIds.length === 0) return;
+  const condition = meterItemsCondition(subscription);
+  if (!condition) return;
 
   // The app itself cancels duplicate meter hosts after attaching a new one; the
   // meters are still billable then, so leave Max Mode alone.
@@ -301,7 +324,7 @@ async function disableMaxModeForEndedMeterSubscription(
     (other) =>
       other.id !== subscription.id &&
       METER_HOST_STATUSES.has(other.status) &&
-      other.items.data.some((item) => isMeteredMaxModePrice(item.price)),
+      hasMeteredMaxModeItems(other),
   );
   if (meteredElsewhere) return;
 
@@ -313,15 +336,24 @@ async function disableMaxModeForEndedMeterSubscription(
       stripeMeteredPremiumItemId: null,
       updatedAt: new Date(),
     })
-    .where(
-      or(
-        inArray(billing.stripeMeteredBasicItemId, itemIds),
-        inArray(billing.stripeMeteredPremiumItemId, itemIds),
-      ),
-    );
+    .where(condition);
 }
 
-async function resolveUserIdFromCustomer(stripeCustomerId: string, metadataUserId?: string | null) {
+/**
+ * A Max-Mode-only host that stops being paid must not keep accruing overage.
+ * The item IDs stay, so enabling Max Mode again (refused while the host is
+ * unpaid) reuses the host once it recovers.
+ */
+async function suspendMaxModeForUnpaidMeterSubscription(subscription: Stripe.Subscription) {
+  const condition = meterItemsCondition(subscription);
+  if (!condition) return;
+  await db.update(billing).set({ maxModeEnabled: false, updatedAt: new Date() }).where(condition);
+}
+
+async function resolveUserIdFromCustomer(
+  stripeCustomerId: string,
+  metadataUserId?: string | null,
+): Promise<string | null> {
   if (metadataUserId) return metadataUserId;
 
   try {
@@ -333,17 +365,39 @@ async function resolveUserIdFromCustomer(stripeCustomerId: string, metadataUserI
     console.warn("Unable to load customer for userId resolution", error);
   }
 
+  // A team row whose billing contact left or was deleted has no user.
   const [record] = await db
     .select({ userId: billing.userId })
     .from(billing)
-    .where(eq(billing.stripeCustomerId, stripeCustomerId))
+    .where(and(eq(billing.stripeCustomerId, stripeCustomerId), isNotNull(billing.userId)))
     .limit(1);
 
   return record?.userId ?? null;
 }
 
 function resolveOrganizationId(metadata?: Stripe.Metadata | null): string | null {
-  return metadata?.organizationId ?? null;
+  // Empty metadata is no organization, as every truthiness check here assumes.
+  return metadata?.organizationId || null;
+}
+
+/**
+ * A team subscription is applied without a user: its payer or billing contact
+ * may since have deleted their account, which Stripe metadata still names, and
+ * team audit entries may not reference a missing user. Null for a personal
+ * subscription whose user is unknown.
+ */
+async function resolveBillingOwner(
+  organizationId: string | null,
+  userId: string | null | undefined,
+): Promise<BillingOwner | null> {
+  if (!organizationId) return userId ? { organizationId: null, userId } : null;
+  if (!userId) return { organizationId, userId: null };
+  const [existing] = await db
+    .select({ id: user.id })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return { organizationId, userId: existing?.id ?? null };
 }
 
 export async function POST(req: Request) {
@@ -387,15 +441,23 @@ export async function POST(req: Request) {
           break;
         }
 
-        if (isMaxModeOnlySubscription(subscription)) {
+        // A monthly plan subscription hosts the meters itself, so its end must
+        // turn Max Mode off too: a later checkout would not carry the meters.
+        const maxModeOnly = isMaxModeOnlySubscription(subscription);
+        if (maxModeOnly || hasMeteredMaxModeItems(subscription)) {
           await disableMaxModeForEndedMeterSubscription(subscription, customerId);
+        }
+        if (maxModeOnly) {
           break;
         }
 
-        const userId = await resolveUserIdFromCustomer(customerId, subscription.metadata?.userId);
         const organizationId = resolveOrganizationId(subscription.metadata);
+        const owner = await resolveBillingOwner(
+          organizationId,
+          await resolveUserIdFromCustomer(customerId, subscription.metadata?.userId),
+        );
 
-        if (!userId) {
+        if (!owner) {
           console.warn("[stripe:webhook] missing userId for deleted subscription", {
             subscriptionId: subscription.id,
           });
@@ -406,9 +468,8 @@ export async function POST(req: Request) {
         const previousTeamBilling = organizationId ? await getTeamBilling(organizationId) : null;
 
         const cleared = await clearPlanData({
-          userId,
+          ...owner,
           customerId,
-          organizationId,
           subscriptionId: subscription.id,
         });
 
@@ -421,7 +482,7 @@ export async function POST(req: Request) {
           try {
             await recordTeamAuditEvent({
               organizationId,
-              actorUserId: userId,
+              actorUserId: owner.userId,
               action: "subscription_expired",
               metadata: { planId: previousTeamBilling?.planId ?? null },
             });
@@ -468,6 +529,11 @@ export async function POST(req: Request) {
 
         await syncMaxModeMeterPeriod(subscription);
         if (isMaxModeOnlySubscription(subscription)) {
+          // A monthly plan's own status already gates Max Mode; a separate meter
+          // host's status does not reach the billing row, so act on it here.
+          if (UNPAID_METER_HOST_STATUSES.has(subscription.status)) {
+            await suspendMaxModeForUnpaidMeterSubscription(subscription);
+          }
           break;
         }
 
@@ -475,11 +541,14 @@ export async function POST(req: Request) {
           getLicensedPrice(subscription) ?? subscription.items?.data?.[0]?.price ?? null;
         const priceId = price?.id ?? null;
         const lookupKey = price?.lookup_key ?? null;
-        const userId = await resolveUserIdFromCustomer(customerId, subscription.metadata?.userId);
         const organizationId = resolveOrganizationId(subscription.metadata);
+        const owner = await resolveBillingOwner(
+          organizationId,
+          await resolveUserIdFromCustomer(customerId, subscription.metadata?.userId),
+        );
         const computedStatus = resolveSubscriptionStatus(subscription);
 
-        if (!userId) {
+        if (!owner) {
           console.warn("[stripe:webhook] missing userId for subscription", {
             subscriptionId: subscription.id,
           });
@@ -492,14 +561,13 @@ export async function POST(req: Request) {
         const previousTeamBilling = organizationId ? await getTeamBilling(organizationId) : null;
 
         await saveSubscription({
-          userId,
+          ...owner,
           customerId,
           subscriptionId: subscription.id,
           lookupKey,
           priceId,
           status: computedStatus,
           currentPeriodEnd: getSubscriptionPeriodEnd(subscription),
-          organizationId,
         });
 
         // When a team subscription becomes active, cancel all org members' personal subs
@@ -509,6 +577,8 @@ export async function POST(req: Request) {
           lookupKey &&
           isTeamPlan(findPlanByLookupKey(lookupKey)?.id ?? "")
         ) {
+          // Members who joined while checkout was open were never billed as seats.
+          await updateTeamSeatCount(organizationId);
           await cancelOrgMembersPersonalSubscriptions(organizationId);
         }
 
@@ -520,7 +590,7 @@ export async function POST(req: Request) {
           try {
             await recordTeamAuditEvent({
               organizationId,
-              actorUserId: userId,
+              actorUserId: owner.userId,
               action: "payment_failed",
               metadata: { planId: findPlanByLookupKey(lookupKey)?.id ?? null },
             });
@@ -549,7 +619,8 @@ export async function POST(req: Request) {
               ? await stripe.subscriptions.retrieve(session.subscription)
               : session.subscription;
 
-          let userId = session.metadata?.userId ?? subscription.metadata?.userId;
+          let userId: string | null | undefined =
+            session.metadata?.userId ?? subscription.metadata?.userId;
 
           if (!userId && typeof session.customer === "string") {
             userId = await resolveUserIdFromCustomer(session.customer, session.metadata?.userId);
@@ -557,28 +628,32 @@ export async function POST(req: Request) {
 
           const organizationId =
             resolveOrganizationId(session.metadata) ?? resolveOrganizationId(subscription.metadata);
+          const owner = await resolveBillingOwner(organizationId, userId);
 
-          if (userId) {
+          if (owner) {
             const computedStatus = resolveSubscriptionStatus(subscription);
 
             const price =
               subscription.items.data.at(0)?.price ?? session.line_items?.data.at(0)?.price ?? null;
             await saveSubscription({
-              userId,
+              ...owner,
               customerId: session.customer as string,
               subscriptionId: subscription.id,
               lookupKey: price?.lookup_key ?? null,
               priceId: price?.id ?? null,
               status: computedStatus,
               currentPeriodEnd: getSubscriptionPeriodEnd(subscription),
-              organizationId,
             });
 
             if (organizationId) {
               const plan = findPlanByLookupKey(price?.lookup_key ?? undefined);
+              // The checkout's quantity was the member count when it was opened.
+              if (subscription.status === "active" && isTeamPlan(plan?.id ?? "")) {
+                await updateTeamSeatCount(organizationId);
+              }
               await recordTeamAuditEvent({
                 organizationId,
-                actorUserId: userId,
+                actorUserId: owner.userId,
                 action: "subscription_purchased",
                 metadata: { planId: plan?.id ?? null },
               });
@@ -622,6 +697,15 @@ export async function POST(req: Request) {
         const dispute = event.data.object;
         if (typeof dispute !== "object" || dispute === null || dispute.object !== "dispute") {
           break;
+        }
+        // charge.dispute.created revoked the lifetime plan; a dispute decided in
+        // our favor (or an inquiry closed without one) gives it back.
+        if (isSettledDispute(dispute.status)) {
+          const charge =
+            typeof dispute.charge === "string"
+              ? await stripe.charges.retrieve(dispute.charge)
+              : dispute.charge;
+          await restoreDisputedLifetimeCharge(charge);
         }
         await handleChargeDisputeClosed(dispute);
         break;

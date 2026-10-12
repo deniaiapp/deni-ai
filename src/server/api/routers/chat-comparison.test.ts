@@ -73,3 +73,18 @@ test("only a user question followed by an assistant answer can be saved", async 
   ).rejects.toMatchObject({ code: "BAD_REQUEST" });
   expect(mocks.insert).not.toHaveBeenCalled();
 });
+
+test("Continue strips text Postgres rejects from the saved conversation and title", async () => {
+  const halfEmoji = "😀".slice(0, 1);
+  await caller().saveComparison({
+    messages: [
+      { ...messages[0], parts: [{ type: "text", text: `Question\u0000 ${halfEmoji}` }] },
+      { ...messages[1], parts: [{ type: "text", text: `Answer\u0000 ${halfEmoji}` }] },
+    ],
+  });
+  const saved = mocks.values.mock.calls[0][0];
+  expect(saved.title).toBe("Question \uFFFD");
+  expect(JSON.stringify(saved.messages)).not.toContain("\\u0000");
+  expect(JSON.stringify(saved.messages)).not.toMatch(/\\ud[89a-f]/i);
+  expect(saved.messages[1].parts[0].text).toBe("Answer \uFFFD");
+});

@@ -12,6 +12,9 @@ export function toSafeRedirectPath(value: string | null | undefined, fallback = 
   try {
     const parsed = new URL(candidate, REDIRECT_BASE);
     if (parsed.origin !== REDIRECT_BASE) return fallback;
+    // Dot segments are removed while parsing, so `/.//evil.example` keeps the
+    // origin above but normalizes to the protocol-relative `//evil.example`.
+    if (parsed.pathname.startsWith("//")) return fallback;
     return `${parsed.pathname}${parsed.search}${parsed.hash}`;
   } catch {
     return fallback;

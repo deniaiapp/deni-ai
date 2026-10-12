@@ -279,6 +279,12 @@ export function useLocalizeError() {
           "Too many requests",
         ),
         ...mapKeys(
+          t(
+            "A Max Mode invoice is unpaid. Pay it or update your payment method in the billing portal, then try again.",
+          ),
+          "A Max Mode invoice is unpaid. Pay it or update your payment method in the billing portal, then try again.",
+        ),
+        ...mapKeys(
           t("A question and an answer are required."),
           "A question and an answer are required.",
         ),
@@ -305,6 +311,10 @@ export function useLocalizeError() {
           "Blog administration is not enabled for this account.",
         ),
         ...mapKeys(t("Both conversations need an answer."), "Both conversations need an answer."),
+        ...mapKeys(
+          t("Cancel your subscription before buying a one-time plan."),
+          "Cancel your subscription before buying a one-time plan.",
+        ),
         ...mapKeys(
           t("Cancel your subscription before removing the card."),
           "Cancel your subscription before removing the card.",
@@ -429,6 +439,7 @@ export function useLocalizeError() {
           t("This checkout session is not a personal plan purchase."),
           "This checkout session is not a personal plan purchase.",
         ),
+        ...mapKeys(t("This export is no longer available."), "This export is no longer available."),
         ...mapKeys(
           t("This one-time plan has already been purchased."),
           "This one-time plan has already been purchased.",
@@ -446,6 +457,12 @@ export function useLocalizeError() {
         ...mapKeys(
           t("Verification intent does not belong to you."),
           "Verification intent does not belong to you.",
+        ),
+        ...mapKeys(
+          t(
+            "Wait for your subscription to end and pay outstanding invoices before removing the card.",
+          ),
+          "Wait for your subscription to end and pay outstanding invoices before removing the card.",
         ),
         ...mapKeys(
           t("You already have an active subscription. Use Change plan or cancel first."),
@@ -562,6 +579,16 @@ export function useLocalizeError() {
           pattern: /^Verification not yet authorized \(status: (.+)\)\.$/,
           format: ([, status]) =>
             t("Verification hasn't been authorized yet (status: {status}).", { status }),
+        },
+        {
+          // storageQuotaExceededMessage in src/lib/attachment-quota.ts
+          pattern:
+            /^Attachment storage is full \((.+) of (.+) used\)\. Delete chats with attachments or upgrade your plan\.$/,
+          format: ([, used, limit]) =>
+            t(
+              "Attachment storage is full ({used} of {limit} used). Delete chats with attachments or upgrade your plan.",
+              { used, limit },
+            ),
         },
       ],
       byTrpcCode: {

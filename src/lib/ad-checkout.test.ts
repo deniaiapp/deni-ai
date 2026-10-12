@@ -12,6 +12,7 @@ const state = vi.hoisted(() => ({
   create: vi.fn(),
   retrieve: vi.fn(),
   refund: vi.fn(),
+  rateLimit: vi.fn(),
   sessions: new Map<string, { id: string; url: string; expires_at: number }>(),
 }));
 vi.mock("@/db/drizzle", () => ({
@@ -33,6 +34,7 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 vi.mock("@/lib/ad-origin", () => ({ isAllowedAdOrigin: () => true }));
+vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: state.rateLimit }));
 vi.mock("@/lib/stripe", () => ({
   stripe: {
     checkout: {
@@ -151,6 +153,7 @@ beforeEach(() => {
   state.ads = [ad()];
   state.database = database();
   state.sessions.clear();
+  state.rateLimit.mockReset().mockResolvedValue({ allowed: true });
   state.retrieve.mockReset().mockImplementation(async () => {
     expect(scope.getStore(), "Stripe retrieve is outside the transaction").not.toBe(true);
     return { status: "expired" };
@@ -187,27 +190,46 @@ test("concurrent checkout requests reuse one reserved session", async () => {
   ).toBe(true);
 });
 
-test("another fixed campaign is excluded while Stripe creation is in flight", async () => {
+test("an unpaid fixed checkout does not hold the slot against other campaigns", async () => {
   state.ads.push(ad(second));
-  let release!: () => void;
-  let started!: () => void;
-  const ready = new Promise<void>((resolve) => {
-    started = resolve;
+  expect((await checkout()).status).toBe(200);
+  expect(state.ads[0].checkoutExpiresAt).toBeInstanceOf(Date);
+  // Renewing unpaid reservations must never lock other advertisers out of the slot.
+  expect((await checkout(second)).status).toBe(200);
+  expect(state.ads[1].stripeSessionId).toBe("checkout");
+});
+
+test("a running fixed campaign blocks new and resumed fixed checkouts", async () => {
+  state.ads.push({ ...ad(second), status: "active", endsAt: new Date(Date.now() + 60_000) });
+  expect((await checkout()).status).toBe(409);
+  state.ads[0].stripeSessionId = "existing";
+  state.retrieve.mockImplementation(async () => ({
+    status: "open",
+    url: "https://checkout.stripe.com/existing",
+  }));
+  expect((await checkout()).status).toBe(409);
+  expect(state.create).not.toHaveBeenCalled();
+});
+
+test("a later payment for a fixed slot that another checkout won is refunded", async () => {
+  expect((await checkout()).status).toBe(200);
+  state.ads.push({ ...ad(second), status: "active", endsAt: new Date(Date.now() + 60_000) });
+  state.ads[0].stripeSessionId = "paid-session";
+  await activatePaidAd(paidSession());
+  expect(state.ads[0].status).toBe("rejected");
+  expect(state.refund).toHaveBeenCalledOnce();
+});
+
+test("checkout attempts are rate limited per account before calling Stripe", async () => {
+  state.rateLimit.mockResolvedValue({ allowed: false, retryAfter: 30 });
+  expect((await checkout()).status).toBe(429);
+  expect(state.rateLimit).toHaveBeenCalledWith({
+    key: "ad-checkout:owner",
+    windowMs: 60_000,
+    maxRequests: 10,
   });
-  const pending = new Promise<void>((resolve) => {
-    release = resolve;
-  });
-  const create = state.create.getMockImplementation()!;
-  state.create.mockImplementation(async (...args) => {
-    started();
-    await pending;
-    return create(...args);
-  });
-  const firstRequest = checkout();
-  await ready;
-  expect((await checkout(second)).status).toBe(409);
-  release();
-  expect((await firstRequest).status).toBe(200);
+  expect(state.retrieve).not.toHaveBeenCalled();
+  expect(state.create).not.toHaveBeenCalled();
 });
 
 test("a timeout retains the reservation and retry uses the same creation key", async () => {

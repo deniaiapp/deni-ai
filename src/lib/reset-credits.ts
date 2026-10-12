@@ -43,7 +43,8 @@ async function getPaidResetTargetUserIds(
   const planCondition = getPaidPlanCondition(planTier);
   const [personalRows, teamRows] = await Promise.all([
     db
-      .select({ userId: billing.userId })
+      // Personal rows always have a user; select it from the join for its type.
+      .select({ userId: user.id })
       .from(billing)
       .innerJoin(user, eq(billing.userId, user.id))
       .where(

@@ -898,6 +898,11 @@ export const PromptInputTextarea = ({
         if (submitButton?.disabled) {
           return;
         }
+        // While a response is generating the submit button turns into Stop, so
+        // the form has no submit button left; Enter must not send a second message.
+        if (form?.querySelector('[data-generating="true"]')) {
+          return;
+        }
 
         form?.requestSubmit();
       }
@@ -1130,6 +1135,7 @@ export const PromptInputSubmit = ({
     <InputGroupButton
       aria-label={isGenerating ? t("Stop") : isUploading ? t("Uploading") : t("Submit")}
       className={cn(className)}
+      data-generating={isGenerating && onStop ? "true" : undefined}
       disabled={props.disabled || (!isGenerating && isUploading)}
       onClick={handleClick}
       size={size}

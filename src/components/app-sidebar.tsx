@@ -184,7 +184,7 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
 
   const deleteAllChats = trpc.chat.deleteAllChats.useMutation({
     onSuccess: async () => {
-      await utils.chat.getChats.invalidate();
+      await Promise.all([utils.chat.getChats.invalidate(), utils.chat.getComparisons.invalidate()]);
       setIsDeleteAllDialogOpen(false);
       if (pathname?.startsWith("/chat/")) {
         push("/chat");
@@ -204,7 +204,8 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isDeleteAllDialogOpen) {
+      // Autofill and some extensions dispatch a plain `keydown` Event with no `key`.
+      if (isDeleteAllDialogOpen || typeof event.key !== "string") {
         return;
       }
 

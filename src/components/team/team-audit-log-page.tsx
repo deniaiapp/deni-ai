@@ -104,6 +104,8 @@ export function TeamAuditLogPage() {
                 <div className="space-y-2">
                   {group.entries.map((entry) => {
                     const { icon: Icon } = getActionMeta(entry.action);
+                    // The actor's account may have been deleted since.
+                    const actorLabel = entry.actorName || entry.actorEmail || t("Deleted user");
                     const targetLabel = entry.targetName || entry.targetEmail || null;
                     const sentence = getActionSentence(entry.action, targetLabel, entry.metadata);
                     const changes = formatChanges(entry.action, entry.metadata);
@@ -111,10 +113,7 @@ export function TeamAuditLogPage() {
                     return (
                       <div key={entry.id} className="flex gap-3 rounded-xl border p-3">
                         <Avatar className="size-8 shrink-0">
-                          <AvatarImage
-                            src={entry.actorImage ?? undefined}
-                            alt={entry.actorName || entry.actorEmail}
-                          />
+                          <AvatarImage src={entry.actorImage ?? undefined} alt={actorLabel} />
                           <AvatarFallback className="text-xs">
                             {getInitials(entry.actorName, entry.actorEmail)}
                           </AvatarFallback>
@@ -122,9 +121,7 @@ export function TeamAuditLogPage() {
                         <div className="min-w-0 flex-1 space-y-1.5">
                           <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
                             <p className="text-sm">
-                              <span className="font-medium">
-                                {entry.actorName || entry.actorEmail}
-                              </span>{" "}
+                              <span className="font-medium">{actorLabel}</span>{" "}
                               <span className="text-muted-foreground">{sentence}</span>
                             </p>
                             <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">

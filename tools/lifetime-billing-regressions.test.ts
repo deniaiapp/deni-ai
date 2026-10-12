@@ -10,6 +10,8 @@ const state = vi.hoisted(() => ({
   checkoutSession: {} as Record<string, unknown>,
   completedSessions: [] as Record<string, unknown>[],
   createdSession: vi.fn(),
+  expiredSession: vi.fn(),
+  couponId: null as string | null,
   duringUpdate: undefined as (() => void) | undefined,
   duringRetrieve: undefined as (() => void) | undefined,
   duringList: undefined as (() => void) | undefined,
@@ -18,6 +20,10 @@ const state = vi.hoisted(() => ({
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/lib/billing-config", () => ({ isBillingDisabled: false }));
+vi.mock("@/lib/billing-offers", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/billing-offers")>()),
+  getFlashOfferCouponId: () => state.couponId,
+}));
 vi.mock("@/lib/billing-card-usage", () => ({
   claimCardVerification: vi.fn(),
   getBillingFingerprintUpdates: async () => ({ paymentMethodFingerprint: null }),
@@ -53,6 +59,7 @@ vi.mock("@/lib/stripe", () => ({
     checkout: {
       sessions: {
         create: state.createdSession,
+        expire: state.expiredSession,
         retrieve: async (id: string) =>
           state.completedSessions.find((session) => session.id === id) ?? state.checkoutSession,
         list: async () => {
@@ -189,6 +196,8 @@ beforeEach(() => {
   state.completedSessions = [];
   state.checkoutSession = {};
   state.createdSession.mockResolvedValue({ id: "cs_new", client_secret: "secret" });
+  state.expiredSession.mockResolvedValue({});
+  state.couponId = null;
   state.duringUpdate = undefined;
   state.duringRetrieve = undefined;
   state.duringList = undefined;
@@ -202,32 +211,131 @@ test("opening checkout does not touch the current plan", async () => {
   expect(state.record).toMatchObject({ ...lifetimeRecord, checkoutSessionId: "cs_new" });
 });
 
-test("an unpaid checkout session cannot change the plan", async () => {
-  state.checkoutSession = {
-    id: "cs_open",
-    client_reference_id: "user",
-    customer: "customer",
-    mode: "payment",
-    metadata: { userId: "user", planId: "pro_lifetime" },
-    subscription: null,
-    payment_intent: null,
-    payment_status: "unpaid",
-    line_items: { data: [{ price: { id: "price_pro_lifetime", lookup_key: "pro_lifetime" } }] },
-  };
-  await caller().confirmCheckout({ sessionId: "cs_open" });
-  expect(state.record).toMatchObject({ planId: "plus_monthly", status: "active" });
+test("clients cannot replay a checkout session into the plan", () => {
+  // Line items keep the price a session was opened with, so replaying an old
+  // session after a downgrade restored the higher plan. Only the webhook and the
+  // live-subscription sync record purchases.
+  expect(Object.keys(billingRouter._def.procedures)).not.toContain("confirmCheckout");
 });
 
-test("team checkout sessions cannot be confirmed as a personal plan", async () => {
-  state.checkoutSession = {
-    id: "cs_team",
+function openSession(metadata: Record<string, string>) {
+  return {
+    id: "cs_old",
+    status: "open",
+    ui_mode: "elements",
     client_reference_id: "user",
-    metadata: { userId: "user", planId: "max_team_monthly", organizationId: "team" },
+    client_secret: "old_secret",
+    metadata: { userId: "user", ...metadata },
   };
-  await expect(caller().confirmCheckout({ sessionId: "cs_team" })).rejects.toThrow(
-    "not a personal plan purchase",
+}
+
+const freeRecord = {
+  stripeSubscriptionId: null,
+  planId: null,
+  priceId: null,
+  status: "inactive",
+  checkoutSessionId: "cs_old",
+};
+
+test("a subscriber cannot buy a one-time plan that leaves the subscription billing", async () => {
+  await expect(caller().createCheckoutSession({ planId: "pro_lifetime" })).rejects.toThrow(
+    "Cancel your subscription before buying a one-time plan.",
   );
-  expect(state.record.planId).toBe("plus_monthly");
+  expect(state.createdSession).not.toHaveBeenCalled();
+});
+
+test("a lifetime plan behind a later subscription cannot be bought again", async () => {
+  state.subscriptions = [{ ...subscription("active", "plus_monthly"), cancel_at_period_end: true }];
+  state.completedSessions = [
+    {
+      id: "cs_lifetime",
+      mode: "payment",
+      payment_status: "paid",
+      metadata: { userId: "user", planId: "pro_lifetime" },
+      payment_intent: { metadata: {}, latest_charge: { refunded: false, disputed: false } },
+    },
+  ];
+  await expect(caller().createCheckoutSession({ planId: "pro_lifetime" })).rejects.toThrow(
+    "This one-time plan has already been purchased.",
+  );
+  expect(state.createdSession).not.toHaveBeenCalled();
+});
+
+test("a stored open session is not handed back once a guard refuses checkout", async () => {
+  state.record.checkoutSessionId = "cs_old";
+  state.checkoutSession = openSession({
+    planId: "max_monthly",
+    priceId: "price_max_monthly",
+    flashOfferCoupon: "none",
+  });
+  await expect(caller().createCheckoutSession({ planId: "max_monthly" })).rejects.toThrow(
+    "You already have an active subscription",
+  );
+  expect(state.createdSession).not.toHaveBeenCalled();
+});
+
+test("a subscription that ended after canceling at period end allows a new checkout", async () => {
+  Object.assign(state.record, freeRecord, { checkoutSessionId: null });
+  state.subscriptions = [
+    { ...subscription("canceled", "plus_monthly"), cancel_at_period_end: true },
+  ];
+  await expect(caller().createCheckoutSession({ planId: "max_monthly" })).resolves.toMatchObject({
+    sessionId: "cs_new",
+  });
+});
+
+test("a matching open session is reused", async () => {
+  Object.assign(state.record, freeRecord);
+  state.subscriptions = [];
+  state.checkoutSession = openSession({
+    planId: "plus_yearly",
+    priceId: "price_plus_yearly",
+    flashOfferCoupon: "none",
+  });
+  await expect(caller().createCheckoutSession({ planId: "plus_yearly" })).resolves.toEqual({
+    sessionId: "cs_old",
+    clientSecret: "old_secret",
+  });
+  expect(state.createdSession).not.toHaveBeenCalled();
+  expect(state.expiredSession).not.toHaveBeenCalled();
+});
+
+test.each([
+  ["a flash offer granted after it was opened", "none", "coupon_flash"],
+  ["an ended flash offer", "coupon_flash", null],
+])("an open session from before %s is expired and replaced", async (_, stored, current) => {
+  Object.assign(state.record, freeRecord, { flashOfferEndsAt: new Date(Date.now() + 60_000) });
+  state.subscriptions = [];
+  state.couponId = current;
+  if (!current) state.record.flashOfferEndsAt = new Date(Date.now() - 60_000);
+  state.checkoutSession = openSession({
+    planId: "plus_yearly",
+    priceId: "price_plus_yearly",
+    flashOfferCoupon: stored,
+  });
+
+  await expect(caller().createCheckoutSession({ planId: "plus_yearly" })).resolves.toMatchObject({
+    sessionId: "cs_new",
+  });
+
+  expect(state.expiredSession).toHaveBeenCalledWith("cs_old", {}, expect.anything());
+  const [params] = state.createdSession.mock.calls[0];
+  expect(params.discounts).toEqual(current ? [{ coupon: current }] : undefined);
+  expect(params.metadata).toMatchObject({ flashOfferCoupon: current ?? "none" });
+  expect(state.record.checkoutSessionId).toBe("cs_new");
+});
+
+test("an open session for another plan is expired before a new one is created", async () => {
+  Object.assign(state.record, freeRecord);
+  state.subscriptions = [];
+  state.checkoutSession = openSession({
+    planId: "pro_monthly",
+    priceId: "price_pro_monthly",
+    flashOfferCoupon: "none",
+  });
+  await caller().createCheckoutSession({ planId: "plus_monthly" });
+  expect(state.expiredSession).toHaveBeenCalledWith("cs_old", {}, expect.anything());
+  expect(state.createdSession).toHaveBeenCalledTimes(1);
 });
 
 test("an ended subscription never overwrites a paid lifetime plan", async () => {

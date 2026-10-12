@@ -89,8 +89,11 @@ export async function cancelPersonalSubscription(userId: string, organizationId:
     const subscription = await stripe.subscriptions.retrieve(record.stripeSubscriptionId);
     if (!ACTIVE_SUB_STATUSES.has(subscription.status)) return;
 
+    // A monthly plan hosts the Max Mode meters itself: without a final invoice
+    // the overage accrued this period would be dropped with the subscription.
     await stripe.subscriptions.cancel(record.stripeSubscriptionId, {
       prorate: true,
+      invoice_now: true,
     });
 
     await db
@@ -129,6 +132,15 @@ export async function cancelOrgMembersPersonalSubscriptions(organizationId: stri
   );
 }
 
+async function findItemSubscriptionId(itemId: string) {
+  try {
+    return (await stripe.subscriptionItems.retrieve(itemId)).subscription;
+  } catch (error) {
+    if ((error as { code?: unknown } | null)?.code === "resource_missing") return null;
+    throw error;
+  }
+}
+
 /**
  * Cancel an organization's team Stripe subscription immediately (with proration) and
  * remove its billing row. `billing.organizationId` has no DB-level foreign key/cascade,
@@ -144,12 +156,20 @@ export async function cancelTeamSubscriptionForDeletion(organizationId: string) 
   const subscriptionIds = new Set(
     records.flatMap((record) => (record.stripeSubscriptionId ? [record.stripeSubscriptionId] : [])),
   );
+  // Yearly plans keep the Max Mode meters on a separate monthly subscription.
+  for (const record of records) {
+    for (const itemId of [record.stripeMeteredBasicItemId, record.stripeMeteredPremiumItemId]) {
+      const subscriptionId = itemId ? await findItemSubscriptionId(itemId) : null;
+      if (subscriptionId) subscriptionIds.add(subscriptionId);
+    }
+  }
   for (const subscriptionId of subscriptionIds) {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     // unpaid, paused and incomplete subscriptions can still resume or complete
     // and charge a team that no longer exists; only ended ones are safe to drop.
     if (!TERMINAL_SUB_STATUSES.has(subscription.status)) {
-      await stripe.subscriptions.cancel(subscriptionId, { prorate: true });
+      // Invoice the Max Mode overage accrued this period instead of dropping it.
+      await stripe.subscriptions.cancel(subscriptionId, { prorate: true, invoice_now: true });
     }
   }
   await db.delete(billing).where(eq(billing.organizationId, organizationId));
@@ -169,7 +189,8 @@ export async function recordTeamAuditEvent({
   metadata,
 }: {
   organizationId: string;
-  actorUserId: string;
+  /** Null when no existing user acted, e.g. a webhook for a team whose payer deleted their account. */
+  actorUserId: string | null;
   targetUserId?: string | null;
   action: string;
   metadata?: Record<string, unknown>;

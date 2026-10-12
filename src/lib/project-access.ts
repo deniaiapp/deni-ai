@@ -1,10 +1,12 @@
-import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
 import type { db as Db } from "@/db/drizzle";
 import { member, organization, projects } from "@/db/schema";
 
 export type AccessibleProject = typeof projects.$inferSelect & {
   organizationName: string | null;
   canManage: boolean;
+  /** Whether the user may move the project to another team or make it personal. */
+  canShare: boolean;
 };
 
 /** Evaluate membership against the current project row in the same database statement. */
@@ -23,6 +25,34 @@ export function currentProjectManagementWhere(userId: string) {
         and ${member.userId} = ${userId}
         and (${projects.userId} = ${userId} or ${member.role} in ('owner', 'admin')))`,
   );
+}
+
+/**
+ * Only the creator may move a project out of its team or make it personal again,
+ * so a team admin cannot hand a team project to someone else (including a
+ * creator who has left the team). Pair with `currentProjectManagementWhere`.
+ */
+export function currentProjectSharingWhere(userId: string) {
+  return and(currentProjectManagementWhere(userId), eq(projects.userId, userId));
+}
+
+/**
+ * Hand a departing account's team projects to a current owner (or else admin) of
+ * each team, so deleting the creator's account does not cascade them away from
+ * the team. Personal projects, and a team project with no one to take it, are
+ * still deleted with the account.
+ */
+export async function reassignTeamProjectsOnAccountDeletion(database: typeof Db, userId: string) {
+  const successor = sql<string>`(select ${member.userId} from ${member}
+    where ${member.organizationId} = ${projects.organizationId}
+      and ${member.userId} <> ${userId}
+      and ${member.role} in ('owner', 'admin')
+    order by ${member.role} = 'owner' desc, ${member.createdAt} asc
+    limit 1)`;
+  await database
+    .update(projects)
+    .set({ userId: sql`coalesce(${successor}, ${projects.userId})` })
+    .where(and(eq(projects.userId, userId), isNotNull(projects.organizationId)));
 }
 
 export async function listUserMemberships(database: typeof Db, userId: string) {
@@ -80,7 +110,7 @@ export async function getAccessibleProject(
     if (project.userId !== userId) {
       return null;
     }
-    return { ...project, organizationName: null, canManage: true };
+    return { ...project, organizationName: null, canManage: true, canShare: true };
   }
 
   const [membership] = await database
@@ -101,6 +131,7 @@ export async function getAccessibleProject(
     ...project,
     organizationName: membership.organizationName,
     canManage: canManageWithRole(project, userId, membership.role),
+    canShare: project.userId === userId,
   };
 }
 
@@ -122,7 +153,7 @@ export function withProjectAccess(
     if (project.userId !== userId) {
       return null;
     }
-    return { ...project, organizationName: null, canManage: true };
+    return { ...project, organizationName: null, canManage: true, canShare: true };
   }
 
   const membership = memberships.find((entry) => entry.organizationId === project.organizationId);
@@ -134,5 +165,6 @@ export function withProjectAccess(
     ...project,
     organizationName: membership.organizationName,
     canManage: canManageWithRole(project, userId, membership.role),
+    canShare: project.userId === userId,
   };
 }

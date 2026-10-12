@@ -121,6 +121,28 @@ test("reverification of the same account does not occupy another slot", async ()
   expect((await claimCardVerification(mocked, claim)).eligible).toBe(true);
   expect(rows).toHaveLength(1);
 });
+test("verifying a card again clears an earlier card removal", async () => {
+  let conflictSet: Record<string, unknown> | undefined;
+  const transaction = {
+    execute: async () => {},
+    select: () => ({ from: () => ({ where: async () => [{ count: 0 }] }) }),
+    insert: () => ({
+      values: (values: Row) => ({
+        onConflictDoUpdate: ({ set }: { set: Record<string, unknown> }) => {
+          conflictSet = set;
+          return { returning: async () => [values] };
+        },
+      }),
+    }),
+  };
+  const mocked = {
+    transaction: async (run: (tx: typeof transaction) => Promise<unknown>) => run(transaction),
+  } as unknown as typeof db;
+
+  const claim = { userId: "a", customerId: "a", fingerprint: "card", funding: "credit" as const };
+  expect((await claimCardVerification(mocked, claim)).eligible).toBe(true);
+  expect(conflictSet).toMatchObject({ paymentMethodFingerprint: "card", cardRemovedAt: null });
+});
 test("card verification flash offer is granted once per never-paid account", async () => {
   const calls: { set: Record<string, unknown>; where: SQL }[] = [];
   const mocked = {

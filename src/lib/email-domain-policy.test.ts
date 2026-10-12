@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import {
+  ALLOWED_EMAIL_PROVIDERS,
   checkSignupEmail,
   isAliasLikeLocalPart,
+  isAllowedEmailProviderDomain,
   isRandomLookingLocalPart,
 } from "./email-domain-policy";
 
@@ -38,5 +40,33 @@ describe("signup local parts", () => {
       reason: "use_google_oauth",
     });
     expect(checkSignupEmail("taro1990@example.com")).toEqual({ ok: false, reason: "not_allowed" });
+  });
+});
+
+describe("duck.com forwarding addresses", () => {
+  test("are not an allowed provider", () => {
+    expect(ALLOWED_EMAIL_PROVIDERS.has("duck.com")).toBe(false);
+    expect(isAllowedEmailProviderDomain("duck.com")).toBe(false);
+    expect(isAllowedEmailProviderDomain("DUCK.COM")).toBe(false);
+  });
+
+  test.each(["person@duck.com", "Person@Duck.COM", " person@duck.com. ", "a1b2c3@duck.com"])(
+    "%s is rejected for email registration",
+    (email) => {
+      expect(checkSignupEmail(email)).toEqual({ ok: false, reason: "not_allowed" });
+    },
+  );
+
+  test.each(["google", "github"] as const)("are rejected for %s registration", (provider) => {
+    expect(checkSignupEmail("person@duck.com", provider)).toEqual({
+      ok: false,
+      reason: "not_allowed",
+    });
+  });
+
+  test("other privacy-focused mailboxes stay allowed", () => {
+    for (const email of ["person@proton.me", "person@hey.com", "person@tuta.com"]) {
+      expect(checkSignupEmail(email)).toEqual({ ok: true });
+    }
   });
 });

@@ -14,6 +14,7 @@ import { createDeniOpenRouter } from "@/lib/openrouter-provider";
 import { isModelProviderAvailable } from "@/lib/platform-capabilities";
 import { platformCapabilities } from "@/lib/platform-capabilities.server";
 import { getUsageSummary, type UsageCategory, UsageLimitError } from "@/lib/usage";
+import { capGuestReasoningEffort } from "./usage-estimate";
 
 const openaiEffortOptions = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
 const googleThinkingLevels = ["minimal", "low", "medium", "high"] as const;
@@ -231,10 +232,17 @@ export async function resolveChatModelContext({
   const resolvedModelId =
     useProMode && usesOpenRouter ? `${selectedModel.value}-pro` : selectedModel.value;
 
-  const resolvedReasoningEffort = resolveReasoningEffort(
+  // Resolve against the model first, then cap: an unsupported request (such as
+  // "minimal") falls back to the model's preferred effort, which may be above
+  // the guest limit.
+  const supportedReasoningEffort = resolveReasoningEffort(
     selectedModel?.efforts ?? false,
     reasoningEffort,
   );
+  const resolvedReasoningEffort =
+    isAnonymous && supportedReasoningEffort
+      ? capGuestReasoningEffort(selectedModel.efforts, supportedReasoningEffort)
+      : supportedReasoningEffort;
   const openaiReasoningEffort =
     (providerId === "openai" || providerId === "deni") &&
     resolvedReasoningEffort &&

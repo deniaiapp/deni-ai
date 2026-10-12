@@ -10,7 +10,54 @@ export const MAX_BROWSE_MAX_CHARS = 50_000;
 const MAX_RAW_HTML_CHARS = 2_000_000;
 export const MAX_PAGE_RESPONSE_BYTES = 2_000_000;
 
-/** Limit decoded response bytes, including chunked or compressed responses. */
+/** `charset` parameter of a Content-Type header, e.g. `text/html; charset=Shift_JIS`. */
+const CONTENT_TYPE_CHARSET = /;\s*charset\s*=\s*["']?([^\s;"']+)/i;
+/** `<meta charset="...">` or `<meta http-equiv="Content-Type" content="...; charset=...">`. */
+const META_CHARSET = /<meta\b[^>]*?\bcharset\s*=\s*["']?\s*([\w.:-]+)/i;
+const XML_DECLARATION_ENCODING = /^\s*<\?xml\b[^>]*?\bencoding\s*=\s*["']([\w.:-]+)/i;
+/** How much of an HTML or XML page is searched for a declared encoding. */
+const CHARSET_SNIFF_BYTES = 4096;
+
+function decoderFor(label: string | undefined) {
+  if (!label) return null;
+  try {
+    return new TextDecoder(label);
+  } catch {
+    // Unknown or unsupported label.
+    return null;
+  }
+}
+
+/**
+ * Pick the page's text encoding the way browsers do: byte-order mark, then the
+ * Content-Type charset, then (for HTML and XML) an in-document declaration,
+ * then UTF-8. Legacy encodings such as Shift_JIS and EUC-JP are still common
+ * on Japanese sites and decode to replacement characters as UTF-8.
+ */
+function pageTextDecoder(bytes: Uint8Array, contentType: string) {
+  if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return new TextDecoder();
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return new TextDecoder("utf-16le");
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return new TextDecoder("utf-16be");
+
+  const declared = decoderFor(CONTENT_TYPE_CHARSET.exec(contentType)?.[1]);
+  if (declared) return declared;
+
+  if (!contentType || /html|xml/i.test(contentType)) {
+    // The declaration itself is ASCII, so any single-byte reading finds it.
+    const head = new TextDecoder("latin1").decode(bytes.subarray(0, CHARSET_SNIFF_BYTES));
+    const label = (XML_DECLARATION_ENCODING.exec(head) ?? META_CHARSET.exec(head))?.[1];
+    // A declaration readable as ASCII cannot be UTF-16, so browsers treat that one as UTF-8.
+    const sniffed = label && /^utf-?16/i.test(label) ? null : decoderFor(label);
+    if (sniffed) return sniffed;
+  }
+
+  return new TextDecoder();
+}
+
+/**
+ * Limit response bytes, including chunked or compressed responses, then decode
+ * them in the page's charset.
+ */
 export async function readBoundedResponseText(response: Response): Promise<string> {
   const contentLength = response.headers.get("content-length");
   if (contentLength && Number(contentLength) > MAX_PAGE_RESPONSE_BYTES) {
@@ -20,8 +67,7 @@ export async function readBoundedResponseText(response: Response): Promise<strin
   if (!response.body) return "";
 
   const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  const chunks: string[] = [];
+  const chunks: Uint8Array[] = [];
   let totalBytes = 0;
   try {
     for (;;) {
@@ -32,13 +78,19 @@ export async function readBoundedResponseText(response: Response): Promise<strin
         await reader.cancel();
         throw new Error("Page response is too large.");
       }
-      chunks.push(decoder.decode(value, { stream: true }));
+      chunks.push(value);
     }
-    chunks.push(decoder.decode());
-    return chunks.join("");
   } finally {
     reader.releaseLock();
   }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return pageTextDecoder(bytes, response.headers.get("content-type") ?? "").decode(bytes);
 }
 const MAX_REDIRECTS = 5;
 const READER_TIMEOUT_MS = 20_000;
@@ -473,10 +525,16 @@ export async function fetchPageText(
       fetchDirect(requestUrl, maxChars, signal),
     );
   } catch (error) {
-    if (isAbortError(error)) {
+    // Only the caller's cancel stops here. The direct fetch's own timeout aborts
+    // the same way, and a slow or tarpitting site is what the reader is for.
+    if (options?.signal?.aborted) {
       throw error;
     }
-    directError = error instanceof Error ? error : new Error("Direct fetch failed");
+    directError = isAbortError(error)
+      ? new Error("Page fetch timed out.")
+      : error instanceof Error
+        ? error
+        : new Error("Direct fetch failed");
     if (!allowReaderFallback) {
       throw directError;
     }
@@ -489,11 +547,14 @@ export async function fetchPageText(
       (signal) => fetchViaReader(requestUrl, maxChars, signal),
     );
   } catch (readerError) {
-    if (isAbortError(readerError)) {
+    if (options?.signal?.aborted) {
       throw readerError;
     }
-    const readerMessage =
-      readerError instanceof Error ? readerError.message : "Reader fallback failed";
+    const readerMessage = isAbortError(readerError)
+      ? "Reader fallback timed out."
+      : readerError instanceof Error
+        ? readerError.message
+        : "Reader fallback failed";
     throw new Error(directError ? `${directError.message} ${readerMessage}` : readerMessage);
   }
 }

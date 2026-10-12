@@ -1,6 +1,6 @@
 import type { ReasoningUIPart, TextUIPart, UIMessage } from "ai";
 import { nanoid } from "nanoid";
-import { toJsonbSafe } from "@/lib/jsonb";
+import { toJsonbSafe, toPostgresText } from "@/lib/jsonb";
 
 export type MigrationExport = {
   format: "deni-ai-message-export";
@@ -38,6 +38,38 @@ export type MigrationImportResult = {
   conversations: NormalizedConversation[];
   warnings: string[];
 };
+
+/**
+ * Upper bounds for one import. The byte cap alone still lets a payload of tiny
+ * items fan out into millions of rows and objects, so these are checked before
+ * anything is normalized. Items are messages plus their parts (ChatGPT: nodes).
+ */
+export const MAX_IMPORT_CONVERSATIONS = 20_000;
+export const MAX_IMPORT_ITEMS = 200_000;
+
+export class MigrationPayloadTooLargeError extends Error {
+  constructor() {
+    super("The import has too many conversations or messages.");
+    this.name = "MigrationPayloadTooLargeError";
+  }
+}
+
+function assertImportSize(conversations: number, items: number) {
+  if (conversations > MAX_IMPORT_CONVERSATIONS || items > MAX_IMPORT_ITEMS) {
+    throw new MigrationPayloadTooLargeError();
+  }
+}
+
+function countMessageItems(messages: unknown): number {
+  if (!Array.isArray(messages)) return 0;
+  let count = messages.length;
+  for (const message of messages) {
+    if (!isRecord(message)) continue;
+    if (Array.isArray(message.parts)) count += message.parts.length;
+    else if (Array.isArray(message.content)) count += message.content.length;
+  }
+  return count;
+}
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -246,14 +278,15 @@ function parseUnixSeconds(value: unknown): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
+/** Throws MigrationPayloadTooLargeError when the payload exceeds the import caps. */
 export function normalizeMigrationPayload(payload: unknown): MigrationImportResult {
   const result = normalizeParsedPayload(payload);
-  // Exports can carry U+0000, which Postgres jsonb/text columns reject (22P05).
+  // Exports can carry U+0000 or lone surrogates, which Postgres rejects (22P05/22P02).
   return {
     ...result,
     conversations: result.conversations.map((conversation) => ({
       ...conversation,
-      title: conversation.title.replaceAll("\u0000", ""),
+      title: toPostgresText(conversation.title),
       messages: toJsonbSafe(conversation.messages),
     })),
   };
@@ -261,10 +294,21 @@ export function normalizeMigrationPayload(payload: unknown): MigrationImportResu
 
 function normalizeParsedPayload(payload: unknown): MigrationImportResult {
   if (isChatGptExport(payload)) {
+    assertImportSize(
+      payload.length,
+      payload.reduce((count, conversation) => count + Object.keys(conversation.mapping).length, 0),
+    );
     return normalizeChatGptExport(payload);
   }
 
   const { conversations: legacyConversations, warnings } = extractLegacyConversations(payload);
+  assertImportSize(
+    legacyConversations.length,
+    legacyConversations.reduce(
+      (count, conversation) => count + countMessageItems(conversation.messages),
+      0,
+    ),
+  );
   const normalized: NormalizedConversation[] = [];
   const allWarnings = [...warnings];
 
@@ -468,6 +512,12 @@ function normalizePartsArray(rawParts: unknown[]): UIMessage["parts"] {
     if (type === "reasoning") {
       const text = typeof rawPart.text === "string" ? rawPart.text : "";
       parts.push(createReasoningPart(text));
+      continue;
+    }
+
+    // A file part without a URL (for example AI SDK v4's `{ mimeType, data }`)
+    // cannot be read or shown.
+    if ((type === "file" || type === "reasoning-file") && typeof rawPart.url !== "string") {
       continue;
     }
 
