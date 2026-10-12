@@ -18,8 +18,8 @@ async function runCheck() {
 
 /**
  * Probes the monitored models in-process every 5 minutes. Meant for a long-running
- * server (Docker / Dokploy); with several replicas each one probes on its own, so
- * use `/api/cron/model-health` from an external scheduler instead.
+ * server (Docker / Dokploy); with several replicas each one probes on its own (a
+ * few extra tokens). Serverless hosts schedule `/api/cron/model-health` instead.
  */
 export function startModelHealthScheduler() {
   if (globalForScheduler.modelHealthSchedulerStarted) return;

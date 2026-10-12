@@ -73,3 +73,16 @@ test("persistent manual-review items produce a scheduler alert", async () => {
   expect(response.status).toBe(503);
   expect((await response.json()).requiresReview).toBe(1);
 });
+
+test("failed meter deliveries produce a scheduler alert", async () => {
+  state.retry.mockResolvedValue({ delivered: 0, failed: 2, requiresReview: 0 });
+  const response = await GET(request(`Bearer ${state.env.CRON_SECRET}`));
+  expect(response.status).toBe(503);
+  expect(await response.json()).toEqual({
+    delivered: 0,
+    failed: 2,
+    requiresReview: 0,
+    recovered: 0,
+    recoveryFailed: 0,
+  });
+});
