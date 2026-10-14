@@ -28,8 +28,11 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_SUPPORT_EMAIL=$NEXT_PUBLIC_SUPPORT_EMAIL
 
 COPY . .
-# vinext buildはoutput: "standalone"でdist/standaloneに自己完結したサーバーを出力する
-RUN pnpm build
+# vinext buildはoutput: "standalone"でdist/standaloneに自己完結したサーバーを出力する。
+# next/font/googleのフォントは.vinext/fontsにキャッシュされるので、毎回Googleから取り直さないよう
+# BuildKitキャッシュに置く
+RUN --mount=type=cache,id=vinext-fonts,target=/app/.vinext/fonts \
+  pnpm build
 
 FROM node:${NODE_VERSION} AS runner
 WORKDIR /app
