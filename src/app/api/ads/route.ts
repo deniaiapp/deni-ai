@@ -23,12 +23,20 @@ export async function GET(request: Request) {
   const excludeId = params.get("exclude");
   const locale = params.get("locale") === "ja" ? "ja" : "en";
   const viewerId = session?.session?.userId ?? anonymousAdViewerId(request.headers);
-  const ad = await chooseAd(
-    viewerId,
-    !session?.session || Boolean(session.user.isAnonymous),
-    excludeId,
-    locale,
-  );
+  let ad: Awaited<ReturnType<typeof chooseAd>>;
+  try {
+    ad = await chooseAd(
+      viewerId,
+      !session?.session || Boolean(session.user.isAnonymous),
+      excludeId,
+      locale,
+    );
+  } catch (error) {
+    // Ads are optional: a transient database failure (e.g. a pooler connect
+    // timeout) leaves the slot empty instead of failing the request.
+    console.warn("[ads] campaign lookup failed", error);
+    ad = null;
+  }
   const token = ad && viewerId ? signAdDelivery(ad.id, viewerId, ad.url) : "";
   return Response.json(
     {

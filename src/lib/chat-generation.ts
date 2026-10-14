@@ -5,8 +5,18 @@ type ActiveGeneration = {
 
 const activeGenerations = new Map<string, ActiveGeneration>();
 
+/**
+ * Abort with an AbortError, not a bare string: the AI SDK passes the reason
+ * through to the provider's response body, and a non-AbortError reason there
+ * surfaces as an unhandled "Failed to process successful response" API error.
+ */
+export function abortGeneration(abortController: AbortController, reason: "replaced" | "stopped") {
+  abortController.abort(new DOMException(reason, "AbortError"));
+}
+
 export function startChatGeneration(chatId: string, generationId: string) {
-  activeGenerations.get(chatId)?.abortController.abort("replaced");
+  const replacedGeneration = activeGenerations.get(chatId);
+  if (replacedGeneration) abortGeneration(replacedGeneration.abortController, "replaced");
 
   const abortController = new AbortController();
   activeGenerations.set(chatId, { generationId, abortController });
@@ -21,7 +31,7 @@ export function stopChatGeneration(chatId: string, generationId: string) {
     return false;
   }
 
-  activeGeneration.abortController.abort("stopped");
+  abortGeneration(activeGeneration.abortController, "stopped");
   activeGenerations.delete(chatId);
   return true;
 }
