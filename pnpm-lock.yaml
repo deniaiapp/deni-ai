@@ -170,6 +170,9 @@ overrides:
   '@uploadthing/shared>effect': ^3.20.0
   '@effect/platform>effect': ^3.20.0
 
+patchedDependencies:
+  uploadthing@7.7.4: 2c542fe78ae45389527c5ec14dddd28e09de35a5e51bf847d3425ea7502cd6cc
+
 importers:
 
   .:
@@ -347,7 +350,7 @@ importers:
         version: 8.11.2
       uploadthing:
         specifier: ^7.7.4
-        version: 7.7.4(express@5.2.1(supports-color@8.1.1))(next@16.4.0(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@types/node@26.6.4)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwindcss@4.3.3)
+        version: 7.7.4(patch_hash=2c542fe78ae45389527c5ec14dddd28e09de35a5e51bf847d3425ea7502cd6cc)(express@5.2.1(supports-color@8.1.1))(next@16.4.0(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@types/node@26.6.4)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwindcss@4.3.3)
       use-stick-to-bottom:
         specifier: ^1.1.6
         version: 1.1.6(react@19.3.0)
@@ -13416,7 +13419,7 @@ snapshots:
       escalade: 3.2.0
       picocolors: 1.1.1
 
-  uploadthing@7.7.4(express@5.2.1(supports-color@8.1.1))(next@16.4.0(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@types/node@26.6.4)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwindcss@4.3.3):
+  uploadthing@7.7.4(patch_hash=2c542fe78ae45389527c5ec14dddd28e09de35a5e51bf847d3425ea7502cd6cc)(express@5.2.1(supports-color@8.1.1))(next@16.4.0(@babel/core@7.29.7(supports-color@8.1.1))(@opentelemetry/api@1.9.1)(@types/node@26.6.4)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(tailwindcss@4.3.3):
     dependencies:
       '@effect/platform': 0.90.3(effect@3.22.2)
       '@standard-schema/spec': 1.0.0-beta.4

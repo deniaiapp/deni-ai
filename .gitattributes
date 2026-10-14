@@ -1,2 +1,5 @@
 # next-intl embeds these as JSON.parse("..."); CRLF breaks that wrapper on Windows.
 messages/*.json text eol=lf
+
+# pnpm applies these against LF package files; CRLF checkouts break the patch.
+patches/*.patch text eol=lf
