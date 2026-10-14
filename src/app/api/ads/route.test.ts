@@ -107,3 +107,13 @@ test("rejects unknown placements", async () => {
   expect((await GET(request("unknown"))).status).toBe(400);
   expect(mocks.session).not.toHaveBeenCalled();
 });
+
+test("serves no ad when the campaign lookup fails", async () => {
+  mocks.choose.mockRejectedValue(new Error("write CONNECT_TIMEOUT"));
+  const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  const response = await GET(request("home", "ja"));
+  expect(response.status).toBe(200);
+  expect(await response.json()).toEqual({ ad: null });
+  expect(warn).toHaveBeenCalled();
+  warn.mockRestore();
+});

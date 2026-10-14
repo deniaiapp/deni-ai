@@ -1,4 +1,4 @@
-const STATIC_CACHE = "deni-ai-static-v2";
+const STATIC_CACHE = "deni-ai-static-v3";
 const PAGE_CACHE = "deni-ai-pages-v1";
 const PRECACHE_URLS = [
   "/home",
@@ -69,7 +69,16 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (STATIC_DESTINATIONS.has(request.destination) || url.pathname.startsWith("/_next/static/")) {
+  // Build chunks go to the network (the browser's HTTP cache already keeps them
+  // as immutable) and fall back to this cache only offline. Serving them cache
+  // first could mix chunks from different deployments in one page, which breaks
+  // module imports (e.g. "useRefWithInit is not a function").
+  if (url.pathname.startsWith("/_next/static/")) {
+    event.respondWith(handleBuildAssetRequest(request));
+    return;
+  }
+
+  if (STATIC_DESTINATIONS.has(request.destination)) {
     event.respondWith(handleStaticRequest(request));
   }
 });
@@ -115,6 +124,26 @@ async function handleStaticRequest(request) {
   await cache.put(request, response.clone());
 
   return response;
+}
+
+async function handleBuildAssetRequest(request) {
+  try {
+    const response = await fetch(request);
+
+    if (response.ok) {
+      // Kept only for offline use, so the page does not wait for the write.
+      const copy = response.clone();
+
+      void caches
+        .open(STATIC_CACHE)
+        .then((cache) => cache.put(request, copy))
+        .catch(() => undefined);
+    }
+
+    return response;
+  } catch {
+    return (await caches.match(request)) ?? Response.error();
+  }
 }
 
 function isPublicPage(pathname) {

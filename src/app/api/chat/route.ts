@@ -50,6 +50,7 @@ import {
 } from "@/lib/chat-attachment-download";
 import { isComparisonConversation } from "@/lib/comparison-conversation";
 import {
+  abortGeneration,
   clearChatGeneration,
   getRecentPromptUsage,
   isChatStopRequestedSince,
@@ -542,7 +543,9 @@ export async function POST(req: Request) {
     }
   };
 
-  const abortComparison = () => generationAbortController?.abort("stopped");
+  const abortComparison = () => {
+    if (generationAbortController) abortGeneration(generationAbortController, "stopped");
+  };
 
   const clearGenerationLock = () => {
     if (usageWatch) {
@@ -647,8 +650,8 @@ export async function POST(req: Request) {
     generationWatch = setInterval(() => {
       void suppressTracing(() => isChatGenerationActive(id, userId, generationId))
         .then((isActive) => {
-          if (!isActive) {
-            generationAbortController?.abort("stopped");
+          if (!isActive && generationAbortController) {
+            abortGeneration(generationAbortController, "stopped");
           }
         })
         // A failed poll must not stop the generation; the next tick checks again.

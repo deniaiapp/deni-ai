@@ -1,10 +1,31 @@
 import { expect, test } from "vitest";
 import {
   getRecentPromptUsage,
+  isCurrentChatGeneration,
   isChatStopRequestedSince,
   recordChatStopRequest,
   recordPromptUsage,
+  startChatGeneration,
+  stopChatGeneration,
 } from "./chat-generation";
+
+// The AI SDK and Sentry treat only AbortError reasons as an abort; a bare string
+// reason surfaced as an unhandled "Failed to process successful response" error.
+test("replaced and stopped generations abort with an AbortError", () => {
+  const first = startChatGeneration("abort-reason", "first");
+  const second = startChatGeneration("abort-reason", "second");
+  expect(first.abortController.signal.reason).toMatchObject({
+    name: "AbortError",
+    message: "replaced",
+  });
+  expect(isCurrentChatGeneration("abort-reason", "second")).toBe(true);
+
+  expect(stopChatGeneration("abort-reason", "second")).toBe(true);
+  expect(second.abortController.signal.reason).toMatchObject({
+    name: "AbortError",
+    message: "stopped",
+  });
+});
 
 test("a stop that arrives before the generation registers still applies to it", () => {
   const requestArrivedAt = 1_000;
