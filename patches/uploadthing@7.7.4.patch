@@ -1,0 +1,80 @@
+diff --git a/server/index.cjs b/server/index.cjs
+index c35dfb4ed684e0e526ad964ac0ab851ae5296e42..7201d4b93dd0e639270b64c6fb33e71985cdf9ad 100644
+--- a/server/index.cjs
++++ b/server/index.cjs
+@@ -50,17 +50,7 @@ const uploadWithoutProgress = (file, presigned) => effect_Effect.gen(function* (
+ 		cause: e
+ 	})), effect_Effect.andThen((_) => _.json), effect_Effect.andThen(effect_Function.unsafeCoerce), effect_Effect.scoped);
+ 	yield* effect_Effect.logDebug(`File ${file.name} uploaded successfully`).pipe(effect_Effect.annotateLogs("json", json));
+-	return {
+-		...json,
+-		get url() {
+-			require_deprecations.logDeprecationWarning("`file.url` is deprecated and will be removed in uploadthing v9. Use `file.ufsUrl` instead.");
+-			return json.url;
+-		},
+-		get appUrl() {
+-			require_deprecations.logDeprecationWarning("`file.appUrl` is deprecated and will be removed in uploadthing v9. Use `file.ufsUrl` instead.");
+-			return json.appUrl;
+-		}
+-	};
++	return json;
+ });
+ 
+ //#endregion
+@@ -125,8 +115,14 @@ const uploadFile = (file, opts) => effect_Effect.gen(function* () {
+ 	})));
+ 	return {
+ 		key: presigned.key,
+-		url: response.url,
+-		appUrl: response.appUrl,
++		get url() {
++			require_deprecations.logDeprecationWarning("`file.url` is deprecated and will be removed in uploadthing v9. Use `file.ufsUrl` instead.");
++			return response.url;
++		},
++		get appUrl() {
++			require_deprecations.logDeprecationWarning("`file.appUrl` is deprecated and will be removed in uploadthing v9. Use `file.ufsUrl` instead.");
++			return response.appUrl;
++		},
+ 		ufsUrl: response.ufsUrl,
+ 		lastModified: file.lastModified ?? Date.now(),
+ 		name: file.name,
+diff --git a/server/index.js b/server/index.js
+index 08c7dbf7da916dd3118fb634e1b6928bf5e9486e..fe501e3eab4de5fd9ed890e686fe36b683c1b4d7 100644
+--- a/server/index.js
++++ b/server/index.js
+@@ -49,17 +49,7 @@ const uploadWithoutProgress = (file, presigned) => Effect.gen(function* () {
+ 		cause: e
+ 	})), Effect.andThen((_) => _.json), Effect.andThen(unsafeCoerce), Effect.scoped);
+ 	yield* Effect.logDebug(`File ${file.name} uploaded successfully`).pipe(Effect.annotateLogs("json", json));
+-	return {
+-		...json,
+-		get url() {
+-			logDeprecationWarning("`file.url` is deprecated and will be removed in uploadthing v9. Use `file.ufsUrl` instead.");
+-			return json.url;
+-		},
+-		get appUrl() {
+-			logDeprecationWarning("`file.appUrl` is deprecated and will be removed in uploadthing v9. Use `file.ufsUrl` instead.");
+-			return json.appUrl;
+-		}
+-	};
++	return json;
+ });
+ 
+ //#endregion
+@@ -124,8 +114,14 @@ const uploadFile = (file, opts) => Effect.gen(function* () {
+ 	})));
+ 	return {
+ 		key: presigned.key,
+-		url: response.url,
+-		appUrl: response.appUrl,
++		get url() {
++			logDeprecationWarning("`file.url` is deprecated and will be removed in uploadthing v9. Use `file.ufsUrl` instead.");
++			return response.url;
++		},
++		get appUrl() {
++			logDeprecationWarning("`file.appUrl` is deprecated and will be removed in uploadthing v9. Use `file.ufsUrl` instead.");
++			return response.appUrl;
++		},
+ 		ufsUrl: response.ufsUrl,
+ 		lastModified: file.lastModified ?? Date.now(),
+ 		name: file.name,
