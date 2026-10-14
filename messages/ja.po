@@ -4183,6 +4183,26 @@ msgctxt "qIXG-o"
 msgid "Your Deni Run sign-in code is {code}. It expires in {minutes} minutes. If you did not try to sign in, you can ignore this email."
 msgstr "Deni Run のログインコードは {code} です。有効期限は{minutes}分です。ログインしようとしていない場合は、このメールを無視してください。"
 
+#: lib/two-factor-delivery.ts
+msgctxt "8G7X1A"
+msgid "Your sign-in code"
+msgstr "ログインコード"
+
+#: lib/two-factor-delivery.ts
+msgctxt "YYMHZi"
+msgid "Enter this code to finish signing in to Deni Run."
+msgstr "Deni Run へのログインを完了するには、このコードを入力してください。"
+
+#: lib/two-factor-delivery.ts
+msgctxt "TcmnQ3"
+msgid "This code expires in {minutes} minutes."
+msgstr "このコードの有効期限は{minutes}分です。"
+
+#: lib/two-factor-delivery.ts
+msgctxt "kQAB5B"
+msgid "If you did not try to sign in, you can ignore this email."
+msgstr "ログインしようとしていない場合は、このメールを無視してください。"
+
 #: lib/two-factor-hooks.ts
 msgctxt "leNxAo"
 msgid "Unlock the passkey with your fingerprint, face, or screen lock PIN and try again."

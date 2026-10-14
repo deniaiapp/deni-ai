@@ -9,6 +9,7 @@ mockModules((request) => {
   if (request === "next/headers") return { headers: async () => new Headers() };
   if (request === "next-intl/server") {
     return {
+      getLocale: async () => "en",
       getExtracted: async () => (message: string, values?: Record<string, string>) =>
         message.replace(/\{(\w+)\}/g, (_, key: string) => values?.[key] ?? ""),
     };
