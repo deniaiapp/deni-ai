@@ -5,10 +5,17 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { twoFactor } from "better-auth/plugins";
+import { passkey } from "@better-auth/passkey";
 import { db } from "@/db";
 import * as authSchema from "@/db/auth-schema";
 import { isLocalAuthBypass, LOCAL_USER_EMAIL, LOCAL_USER_ID } from "./local-auth";
-import { oauthTwoFactorAfter } from "./oauth-two-factor";
+import { OTP_PERIOD_MINUTES, sendTwoFactorEmail } from "./two-factor-delivery";
+import {
+  assertPasskeySignInAllowed,
+  requireUserVerified,
+  twoFactorAfter,
+  twoFactorBefore,
+} from "./two-factor-hooks";
 
 const appUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL;
 
@@ -29,6 +36,7 @@ export const auth = betterAuth({
       account: authSchema.account,
       verification: authSchema.verification,
       twoFactor: authSchema.twoFactor,
+      passkey: authSchema.passkey,
       authRateLimit: authSchema.authRateLimit,
     },
   }),
@@ -64,6 +72,10 @@ export const auth = betterAuth({
     deleteUser: {
       enabled: true,
     },
+    additionalFields: {
+      // Written only by the two-factor setup route and hooks, never by updateUser from the client.
+      twoFactorMethod: { type: "string", required: false, input: false },
+    },
   },
   rateLimit: {
     enabled: true,
@@ -71,14 +83,41 @@ export const auth = betterAuth({
     max: 100,
     storage: "database",
     modelName: "authRateLimit",
+    customRules: {
+      // Each request sends an email; twoFactorBefore also limits per user.
+      "/two-factor/send-otp": { window: 60, max: 3 },
+    },
   },
   hooks: {
-    after: oauthTwoFactorAfter,
+    before: twoFactorBefore,
+    after: twoFactorAfter,
   },
   plugins: [
     twoFactor({
       issuer: "Deni Run",
       allowPasswordless: true,
+      otpOptions: {
+        period: OTP_PERIOD_MINUTES,
+        storeOTP: "hashed",
+        async sendOTP({ user, otp }) {
+          await sendTwoFactorEmail(user.email, otp);
+        },
+      },
+    }),
+    passkey({
+      rpName: "Deni Run",
+      authenticatorSelection: { residentKey: "required", userVerification: "required" },
+      registration: {
+        async afterVerification({ verification }) {
+          await requireUserVerified(verification.registrationInfo?.userVerified ?? false);
+        },
+      },
+      authentication: {
+        async afterVerification({ ctx, verification, clientData }) {
+          await requireUserVerified(verification.authenticationInfo.userVerified);
+          await assertPasskeySignInAllowed(ctx, clientData.id);
+        },
+      },
     }),
     nextCookies(),
   ],

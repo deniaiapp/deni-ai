@@ -7,7 +7,7 @@ import { Stagger, StaggerItem } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BackupCodesPanel } from "./auth-form";
+import { BackupCodesPanel, usePasskeyErrorMessage } from "./auth-form";
 import { authClient } from "@/lib/auth-client";
 import { supportEmail, supportMailto } from "@/lib/site";
 
@@ -15,6 +15,8 @@ export function AccountScreen() {
   const t = useExtracted();
   const { data: session, refetch } = authClient.useSession();
   const user = session?.user;
+  const usesAuthenticator = user?.twoFactorMethod !== "email" && user?.twoFactorMethod !== "passkey";
+  const passkeyError = usePasskeyErrorMessage();
   const [name, setName] = useState("");
   const [confirm, setConfirm] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
@@ -120,13 +122,18 @@ export function AccountScreen() {
         <section className="rounded-xl border border-foreground/10 bg-surface p-5">
           <h2 className="text-[0.925rem] font-semibold">{t("Two-factor authentication")}</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            {user?.twoFactorEnabled
-              ? t("An authenticator app is required after Google or GitHub sign-in.")
-              : t("Finish setup so this account can open the workspace.")}
+            {!user?.twoFactorEnabled
+              ? t("Finish setup so this account can open the workspace.")
+              : user.twoFactorMethod === "email"
+                ? t("A code sent to {email} is required after Google or GitHub sign-in.", { email: user.email })
+                : user.twoFactorMethod === "passkey"
+                  ? t("You confirm with a passkey after Google or GitHub sign-in. Add one on a second device in case you lose this one.")
+                  : t("An authenticator app is required after Google or GitHub sign-in.")}
           </p>
           {user?.twoFactorEnabled ? (
             <div className="mt-4 flex flex-col gap-3">
               <div className="flex flex-wrap gap-2">
+                {usesAuthenticator ? (
                 <Button
                   type="button"
                   variant="secondary"
@@ -147,6 +154,26 @@ export function AccountScreen() {
                 >
                   {t("Generate backup codes")}
                 </Button>
+                ) : null}
+                {user.twoFactorMethod === "passkey" ? (
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    loading={busy === "passkey-add"}
+                    onClick={() => {
+                      setBusy("passkey-add");
+                      setError("");
+                      setNotice("");
+                      void authClient.passkey.addPasskey().then(({ error: nextError }) => {
+                        if (nextError) setError(passkeyError(nextError, t("Could not add the passkey")));
+                        else setNotice(t("Passkey added."));
+                        setBusy(null);
+                      });
+                    }}
+                  >
+                    {t("Add a passkey")}
+                  </Button>
+                ) : null}
                 <Button
                   type="button"
                   variant="secondary"
@@ -166,14 +193,14 @@ export function AccountScreen() {
                     });
                   }}
                 >
-                  {t("Disable two-factor")}
+                  {t("Change two-factor method")}
                 </Button>
               </div>
               <BackupCodesPanel codes={backupCodes} />
             </div>
           ) : (
             <Button type="button" variant="secondary" className="mt-4" onClick={() => (window.location.href = "/two-factor/setup")}>
-              {t("Set up authenticator app")}
+              {t("Set up two-factor")}
             </Button>
           )}
         </section>

@@ -418,6 +418,28 @@ msgctxt "gGF2lC"
 msgid "Choose at least two teammates and a valid group name/icon."
 msgstr "チームメイトを2人以上と、有効なグループ名・アイコンを選んでください。"
 
+#: app/api/two-factor/method/route.ts
+#: lib/api-auth.ts
+msgctxt "WlyxAh"
+msgid "Unauthorized"
+msgstr "認証されていません"
+
+#: app/api/two-factor/method/route.ts
+#: lib/two-factor-hooks.ts
+msgctxt "--eGOh"
+msgid "Turn off two-factor authentication before choosing another method."
+msgstr "別の方法を選ぶ前に、二要素認証をオフにしてください。"
+
+#: app/api/two-factor/method/route.ts
+msgctxt "TPzkXL"
+msgid "Choose email."
+msgstr "メールを選んでください。"
+
+#: app/api/two-factor/method/route.ts
+msgctxt "hcuwhb"
+msgid "This sign-in method is not available right now."
+msgstr "この確認方法は現在利用できません。"
+
 #: app/components/account-menu.tsx
 #: app/components/account-screen.tsx
 #: app/components/landing.tsx
@@ -598,15 +620,25 @@ msgid "Two-factor authentication"
 msgstr "二要素認証"
 
 #: app/components/account-screen.tsx
+msgctxt "gqj6t6"
+msgid "Finish setup so this account can open the workspace."
+msgstr "このアカウントでワークスペースを開くには、設定を完了してください。"
+
+#: app/components/account-screen.tsx
+msgctxt "6ThU6H"
+msgid "A code sent to {email} is required after Google or GitHub sign-in."
+msgstr "GoogleまたはGitHubでのログイン後に、{email} に届くコードの入力が必要です。"
+
+#: app/components/account-screen.tsx
+msgctxt "dtmdY6"
+msgid "You confirm with a passkey after Google or GitHub sign-in. Add one on a second device in case you lose this one."
+msgstr "GoogleまたはGitHubでのログイン後に、パスキーで本人確認します。この端末をなくしたときのために、別の端末にもパスキーを追加してください。"
+
+#: app/components/account-screen.tsx
 #: app/components/auth-form.tsx
 msgctxt "P0s1jE"
 msgid "An authenticator app is required after Google or GitHub sign-in."
 msgstr "GoogleまたはGitHubでのログイン後に、認証アプリが必要です。"
-
-#: app/components/account-screen.tsx
-msgctxt "gqj6t6"
-msgid "Finish setup so this account can open the workspace."
-msgstr "このアカウントでワークスペースを開くには、設定を完了してください。"
 
 #: app/components/account-screen.tsx
 msgctxt "SFHRua"
@@ -624,6 +656,22 @@ msgid "Generate backup codes"
 msgstr "バックアップコードを生成"
 
 #: app/components/account-screen.tsx
+#: app/components/auth-form.tsx
+msgctxt "n4aD33"
+msgid "Could not add the passkey"
+msgstr "パスキーを追加できませんでした"
+
+#: app/components/account-screen.tsx
+msgctxt "sGjcve"
+msgid "Passkey added."
+msgstr "パスキーを追加しました。"
+
+#: app/components/account-screen.tsx
+msgctxt "Ck5euH"
+msgid "Add a passkey"
+msgstr "パスキーを追加"
+
+#: app/components/account-screen.tsx
 msgctxt "eH00wg"
 msgid "Could not disable two-factor"
 msgstr "二要素認証を無効にできませんでした"
@@ -634,14 +682,14 @@ msgid "Two-factor authentication is off."
 msgstr "二要素認証はオフになっています。"
 
 #: app/components/account-screen.tsx
-msgctxt "bfWH4i"
-msgid "Disable two-factor"
-msgstr "二要素認証を無効にする"
+msgctxt "d01K4R"
+msgid "Change two-factor method"
+msgstr "二要素認証の方法を変更"
 
 #: app/components/account-screen.tsx
-msgctxt "73Eqvi"
-msgid "Set up authenticator app"
-msgstr "認証アプリを設定"
+msgctxt "d1U9-h"
+msgid "Set up two-factor"
+msgstr "二要素認証を設定"
 
 #: app/components/account-screen.tsx
 msgctxt "SVwJTM"
@@ -723,14 +771,19 @@ msgid "Could not start sign-in"
 msgstr "ログインを開始できませんでした"
 
 #: app/components/auth-form.tsx
+msgctxt "5OERq7"
+msgid "Could not sign in with the passkey"
+msgstr "パスキーでログインできませんでした"
+
+#: app/components/auth-form.tsx
 msgctxt "pq85D4"
 msgid "Sign-in was cancelled or failed. Try again."
 msgstr "ログインがキャンセルされたか、失敗しました。もう一度お試しください。"
 
 #: app/components/auth-form.tsx
-msgctxt "wZpyBS"
-msgid "Continue with Google or GitHub, then set up an authenticator app."
-msgstr "GoogleまたはGitHubで続行し、そのあと認証アプリを設定します。"
+msgctxt "VhBfck"
+msgid "Continue with Google or GitHub, then confirm it is you once more."
+msgstr "GoogleまたはGitHubで続行し、そのあともう一度本人確認をします。"
 
 #: app/components/auth-form.tsx
 msgctxt "mXc8V6"
@@ -753,9 +806,54 @@ msgid "Continue with GitHub"
 msgstr "GitHubで続行"
 
 #: app/components/auth-form.tsx
+msgctxt "-tUDPN"
+msgid "Sign in with passkey"
+msgstr "パスキーでログイン"
+
+#: app/components/auth-form.tsx
 msgctxt "bokqOg"
 msgid "By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy</privacy> pages."
 msgstr "続行すると、<terms>利用規約</terms>と<privacy>プライバシー</privacy>に同意したものとみなされます。"
+
+#: app/components/auth-form.tsx
+msgctxt "ukRNxC"
+msgid "This device already has a passkey for Deni Run."
+msgstr "この端末には Deni Run のパスキーがすでにあります。"
+
+#: app/components/auth-form.tsx
+msgctxt "bmO9Cl"
+msgid "The passkey prompt was closed. Try again."
+msgstr "パスキーの確認画面が閉じられました。もう一度お試しください。"
+
+#: app/components/auth-form.tsx
+msgctxt "GAkHfG"
+msgid "Send a new code in {seconds}s"
+msgstr "{seconds}秒後にコードを再送できます"
+
+#: app/components/auth-form.tsx
+msgctxt "gdlGkp"
+msgid "Send a new code"
+msgstr "コードを再送する"
+
+#: app/components/auth-form.tsx
+msgctxt "qVTecu"
+msgid "Could not confirm with the passkey"
+msgstr "パスキーで確認できませんでした"
+
+#: app/components/auth-form.tsx
+msgctxt "wpt7x7"
+msgid "Confirm it is you with your fingerprint, face, or screen lock."
+msgstr "指紋、顔、または画面ロックで本人確認をしてください。"
+
+#: app/components/auth-form.tsx
+msgctxt "vVjHoV"
+msgid "Continue with passkey"
+msgstr "パスキーで続行"
+
+#: app/components/auth-form.tsx
+msgctxt "-zd1w3"
+msgid "Could not send a code"
+msgstr "コードを送信できませんでした"
 
 #: app/components/auth-form.tsx
 msgctxt "x2R8CB"
@@ -766,6 +864,11 @@ msgstr "コードが正しくありません"
 msgctxt "YgJbIQ"
 msgid "Enter a backup code from when you enabled two-factor authentication."
 msgstr "二要素認証を有効にしたときのバックアップコードを入力してください。"
+
+#: app/components/auth-form.tsx
+msgctxt "LNoDtB"
+msgid "We emailed you a 6-digit code. Check your inbox and spam folder."
+msgstr "6桁のコードをメールで送りました。受信トレイと迷惑メールフォルダを確認してください。"
 
 #: app/components/auth-form.tsx
 msgctxt "RKK2dE"
@@ -808,19 +911,24 @@ msgid "Could not start two-factor setup"
 msgstr "二要素認証の設定を開始できませんでした"
 
 #: app/components/auth-form.tsx
-msgctxt "Ac2ehz"
-msgid "Invalid authenticator code"
-msgstr "認証コードが正しくありません"
+msgctxt "-vrH74"
+msgid "Choose another method"
+msgstr "別の方法を選ぶ"
 
 #: app/components/auth-form.tsx
-msgctxt "io-wG_"
-msgid "Set up two-factor authentication"
-msgstr "二要素認証を設定"
+msgctxt "TV0Ha_"
+msgid "Verify and continue"
+msgstr "確認して続行"
 
 #: app/components/auth-form.tsx
-msgctxt "q-x1aG"
-msgid "Enable authenticator app"
-msgstr "認証アプリを有効にする"
+msgctxt "2ZZbWY"
+msgid "Enter your code"
+msgstr "コードを入力"
+
+#: app/components/auth-form.tsx
+msgctxt "vCm8XD"
+msgid "We sent a 6-digit code to {email}. Check your spam folder if it does not arrive."
+msgstr "{email} に6桁のコードを送りました。届かない場合は迷惑メールフォルダを確認してください。"
 
 #: app/components/auth-form.tsx
 msgctxt "dChb0Y"
@@ -833,9 +941,49 @@ msgid "Add Deni Run in your authenticator app, save the backup codes, then enter
 msgstr "認証アプリに Deni Run を追加し、バックアップコードを保存してから、6桁のコードを入力してください。"
 
 #: app/components/auth-form.tsx
-msgctxt "TV0Ha_"
-msgid "Verify and continue"
-msgstr "確認して続行"
+msgctxt "io-wG_"
+msgid "Set up two-factor authentication"
+msgstr "二要素認証を設定"
+
+#: app/components/auth-form.tsx
+msgctxt "4__exi"
+msgid "After Google or GitHub sign-in, you confirm it is you once more. Choose how."
+msgstr "GoogleまたはGitHubでのログイン後に、もう一度本人確認をします。方法を選んでください。"
+
+#: app/components/auth-form.tsx
+msgctxt "WYATYp"
+msgid "Passkey"
+msgstr "パスキー"
+
+#: app/components/auth-form.tsx
+msgctxt "ZHE-UV"
+msgid "Use your fingerprint, face, or screen lock. Nothing to type."
+msgstr "指紋、顔、または画面ロックで確認します。入力は不要です。"
+
+#: app/components/auth-form.tsx
+msgctxt "sy-pv5"
+msgid "Email"
+msgstr "メール"
+
+#: app/components/auth-form.tsx
+msgctxt "dC8Ht3"
+msgid "Get a 6-digit code at {email} each time."
+msgstr "ログインのたびに、{email} に6桁のコードが届きます。"
+
+#: app/components/auth-form.tsx
+msgctxt "izYqCA"
+msgid "Authenticator app"
+msgstr "認証アプリ"
+
+#: app/components/auth-form.tsx
+msgctxt "zSc39N"
+msgid "Use an app such as Google Authenticator or 1Password."
+msgstr "Google Authenticator や 1Password などのアプリを使います。"
+
+#: app/components/auth-form.tsx
+msgctxt "q-x1aG"
+msgid "Enable authenticator app"
+msgstr "認証アプリを有効にする"
 
 #: app/components/avatar-field.tsx
 msgctxt "MAGAzv"
@@ -2840,7 +2988,7 @@ msgid "Hand work to named teammates and let them finish it on an isolated comput
 msgstr "名前のあるチームメイトに仕事を任せ、隔離されたコンピューター(ブラウザ、ファイル、ターミナル)で完了させましょう。ワークスペースはあなたのアカウント専用です。"
 
 #: app/components/setup-screen.tsx
-msgctxt "b99Plc"
+msgctxt "X06UWo"
 msgid "Get a key at openrouter.ai. Run uses anthropic/claude-sonnet-5.5; Run+ uses anthropic/claude-opus-5.5. Each mode counts tokens at 1× to 2.6×, shown in the mode menu. Pick a mode in the workspace. This screen is skipped when an environment variable is set."
 msgstr "キーは openrouter.ai で取得できます。Run は anthropic/claude-sonnet-5.5 を、Run+ は anthropic/claude-opus-5.5 を使用します。トークンはモードごとに1倍〜2.6倍で計上され、倍率はモードメニューに表示されます。モードはワークスペースで選択します。環境変数が設定されている場合、この画面はスキップされます。"
 
@@ -3102,7 +3250,7 @@ msgid "Name specialists, keep memory on each one, and hand work off instead of s
 msgstr "専門家に名前を付け、それぞれにメモリを持たせ、1つのボットに無理をさせず仕事を引き継げます。"
 
 #: app/components/upgrade-screen.tsx
-msgctxt "xqhm1T"
+msgctxt "IWT2o2"
 msgid "150M tokens / month"
 msgstr "1.5億トークン/月"
 
@@ -3202,6 +3350,11 @@ msgid "Loading computer…"
 msgstr "コンピューターを読み込み中…"
 
 #: app/components/workspace.tsx
+msgctxt "HtRP6Y"
+msgid "Could not reset the conversation."
+msgstr "会話をリセットできませんでした。"
+
+#: app/components/workspace.tsx
 msgctxt "B12JBq"
 msgid "Delete {title}? The group conversation and its routines will be removed. Teammates and shared files will remain."
 msgstr "{title}を削除しますか?グループの会話とルーティンは削除されますが、チームメイトと共有ファイルは残ります。"
@@ -3225,11 +3378,6 @@ msgstr "グループを削除できませんでした。"
 msgctxt "354mCs"
 msgid "Could not update group."
 msgstr "グループを更新できませんでした。"
-
-#: app/components/workspace.tsx
-msgctxt "HtRP6Y"
-msgid "Could not reset the conversation."
-msgstr "会話をリセットできませんでした。"
 
 #: app/components/workspace.tsx
 msgctxt "u7zDdn"
@@ -3360,9 +3508,9 @@ msgid "Back to Deni Run home"
 msgstr "Deni Run のホームに戻る"
 
 #: app/privacy/page.tsx
-msgctxt "vlvrrr"
-msgid "Last updated: October 11, 2026"
-msgstr "最終更新日: 2026年10月11日"
+msgctxt "9hzHb_"
+msgid "Last updated: October 14, 2026"
+msgstr "最終更新日: 2026年10月14日"
 
 #: app/privacy/page.tsx
 msgctxt "zFZQnj"
@@ -3380,9 +3528,9 @@ msgid "Account data."
 msgstr "アカウントデータ。"
 
 #: app/privacy/page.tsx
-msgctxt "jcE7Bx"
-msgid "When you sign in with Google or GitHub we receive your name, email address, profile picture, and the provider account ID. We also store the session records and the two-factor authentication secret and backup codes needed to sign you in."
-msgstr "GoogleまたはGitHubでログインすると、お名前、メールアドレス、プロフィール画像、プロバイダーのアカウントIDを受け取ります。また、ログインに必要なセッション記録、二要素認証のシークレット、バックアップコードを保存します。"
+msgctxt "0ynyNL"
+msgid "When you sign in with Google or GitHub we receive your name, email address, profile picture, and the provider account ID. We also store the session records and what your two-factor method needs to sign you in: the authenticator secret and backup codes, or the public key of your passkey. Fingerprints and face data never leave your device."
+msgstr "GoogleまたはGitHubでログインすると、お名前、メールアドレス、プロフィール画像、プロバイダーのアカウントIDを受け取ります。また、ログインに必要なセッション記録と、選んだ二要素認証の方法に必要な情報(認証アプリのシークレットとバックアップコード、またはパスキーの公開鍵)を保存します。指紋や顔のデータが端末の外に送られることはありません。"
 
 #: app/privacy/page.tsx
 msgctxt "YsRzex"
@@ -3515,6 +3663,11 @@ msgid "Stripe: billing. Receives your email address and payment details."
 msgstr "Stripe: 請求。メールアドレスとお支払い情報を受け取ります。"
 
 #: app/privacy/page.tsx
+msgctxt "VU8epg"
+msgid "Resend: delivers sign-in codes if you choose email for two-factor. Receives your email address and the code."
+msgstr "Resend: 二要素認証でメールを選んだ場合に、ログインコードを届けます。メールアドレスとコードを受け取ります。"
+
+#: app/privacy/page.tsx
 msgctxt "6GHvNo"
 msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
 msgstr "OpenRouter と、その接続先のモデルプロバイダー: AIモデルへのリクエスト。メッセージ、ファイル、ページの内容に加え、Gmail や Google ドライブを接続している場合は、チームメイトがタスクのために取得したメールやファイルの内容を受け取ります。これらはそのタスクへの応答にのみ使用され、当社がモデルの学習に使用することはありません。Google のプロフィールデータは送信しません。"
@@ -3545,9 +3698,9 @@ msgid "5. How we protect data"
 msgstr "5. データの保護"
 
 #: app/privacy/page.tsx
-msgctxt "BRq0T-"
-msgid "Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires an authenticator-app second factor. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security."
-msgstr "アカウントはそれぞれ隔離されています。ワークスペースのファイル、ブラウザセッション、ターミナルのサンドボックスはユーザーIDに紐づけられ、他のアカウントとは共有されません。通信はHTTPSで暗号化されます。ログインには認証アプリによる二要素認証が必要です。データベースとストレージへのアクセスは、サービスのみが保持する認証情報で制限されます。完全に安全なシステムは存在しないため、絶対的な安全性を保証することはできません。"
+msgctxt "adCMZI"
+msgid "Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires a second factor: a passkey, an emailed code, or a code from an authenticator app. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security."
+msgstr "アカウントはそれぞれ隔離されています。ワークスペースのファイル、ブラウザセッション、ターミナルのサンドボックスはユーザーIDに紐づけられ、他のアカウントとは共有されません。通信はHTTPSで暗号化されます。ログインには二要素認証(パスキー、メールで届くコード、または認証アプリのコード)が必要です。データベースとストレージへのアクセスは、サービスのみが保持する認証情報で制限されます。完全に安全なシステムは存在しないため、絶対的な安全性を保証することはできません。"
 
 #: app/privacy/page.tsx
 msgctxt "DXkzgx"
@@ -3820,11 +3973,6 @@ msgctxt "iFsDVR"
 msgid "Loading"
 msgstr "読み込み中"
 
-#: lib/api-auth.ts
-msgctxt "WlyxAh"
-msgid "Unauthorized"
-msgstr "認証されていません"
-
 #: lib/localize-error.ts
 msgctxt "UxEkbJ"
 msgid "Invalid cron expression"
@@ -4059,3 +4207,43 @@ msgstr "チームメイトの上限に達しました({plan}プランで{limit}�
 msgctxt "GhZx8v"
 msgid "Too many requests. Wait a moment and try again."
 msgstr "リクエストが多すぎます。しばらく待ってからもう一度お試しください。"
+
+#: lib/two-factor-delivery.ts
+msgctxt "MGbK57"
+msgid "Your Deni Run sign-in code: {code}"
+msgstr "Deni Run のログインコード: {code}"
+
+#: lib/two-factor-delivery.ts
+msgctxt "qIXG-o"
+msgid "Your Deni Run sign-in code is {code}. It expires in {minutes} minutes. If you did not try to sign in, you can ignore this email."
+msgstr "Deni Run のログインコードは {code} です。有効期限は{minutes}分です。ログインしようとしていない場合は、このメールを無視してください。"
+
+#: lib/two-factor-hooks.ts
+msgctxt "leNxAo"
+msgid "Unlock the passkey with your fingerprint, face, or screen lock PIN and try again."
+msgstr "指紋、顔、または画面ロックのPINでパスキーを解除して、もう一度お試しください。"
+
+#: lib/two-factor-hooks.ts
+msgctxt "eO3_Cz"
+msgid "This account does not use a passkey. Sign in with Google or GitHub."
+msgstr "このアカウントはパスキーを使っていません。GoogleまたはGitHubでログインしてください。"
+
+#: lib/two-factor-hooks.ts
+msgctxt "QEr-WY"
+msgid "Add another passkey before removing your last one."
+msgstr "最後のパスキーを削除する前に、別のパスキーを追加してください。"
+
+#: lib/two-factor-hooks.ts
+msgctxt "s4OXJJ"
+msgid "This account does not use email codes."
+msgstr "このアカウントはメールのコードを使っていません。"
+
+#: lib/two-factor-hooks.ts
+msgctxt "kNjaYQ"
+msgid "Codes by email are not available right now. Contact support."
+msgstr "メールでのコード送信は現在利用できません。サポートにお問い合わせください。"
+
+#: lib/two-factor-hooks.ts
+msgctxt "0uT02k"
+msgid "Too many codes requested. Wait 15 minutes and try again."
+msgstr "コードのリクエストが多すぎます。15分待ってからもう一度お試しください。"

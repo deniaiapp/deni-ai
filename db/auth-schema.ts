@@ -17,6 +17,8 @@ export const user = sqliteTable("user", {
   createdAt: createdNow("created_at"),
   updatedAt: createdNow("updated_at").$onUpdate(() => new Date()),
   twoFactorEnabled: integer("two_factor_enabled", { mode: "boolean" }).default(false),
+  // "totp", "email" or "passkey". Null on accounts created before the other methods, which use TOTP.
+  twoFactorMethod: text("two_factor_method"),
 });
 
 export const session = sqliteTable(
@@ -94,6 +96,29 @@ export const twoFactor = sqliteTable(
   ],
 );
 
+export const passkey = sqliteTable(
+  "passkey",
+  {
+    id: text("id").primaryKey(),
+    name: text("name"),
+    publicKey: text("public_key").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    credentialID: text("credential_id").notNull(),
+    counter: integer("counter").notNull(),
+    deviceType: text("device_type").notNull(),
+    backedUp: integer("backed_up", { mode: "boolean" }).notNull(),
+    transports: text("transports"),
+    createdAt: timestampMs("created_at"),
+    aaguid: text("aaguid"),
+  },
+  (table) => [
+    index("passkey_userId_idx").on(table.userId),
+    uniqueIndex("passkey_credentialID_uidx").on(table.credentialID),
+  ],
+);
+
 export const authRateLimit = sqliteTable("auth_rate_limit", {
   id: text("id").primaryKey(),
   key: text("key").notNull().unique(),
@@ -105,6 +130,7 @@ export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
   accounts: many(account),
   twoFactors: many(twoFactor),
+  passkeys: many(passkey),
 }));
 
 export const sessionRelations = relations(session, ({ one }) => ({
@@ -117,6 +143,13 @@ export const sessionRelations = relations(session, ({ one }) => ({
 export const accountRelations = relations(account, ({ one }) => ({
   user: one(user, {
     fields: [account.userId],
+    references: [user.id],
+  }),
+}));
+
+export const passkeyRelations = relations(passkey, ({ one }) => ({
+  user: one(user, {
+    fields: [passkey.userId],
     references: [user.id],
   }),
 }));

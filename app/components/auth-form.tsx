@@ -3,9 +3,9 @@
 import { useExtracted } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
-import { Check, Copy, Download } from "lucide-react";
+import { Check, Copy, Download, Fingerprint, KeyRound, Loader2, Mail } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import QRCode from "react-qr-code";
 import { FadeIn } from "@/components/motion";
@@ -265,7 +265,10 @@ export function SocialAuth({
   mode: "sign-in" | "sign-up";
 }) {
   const t = useExtracted();
-  const [busy, setBusy] = useState<"google" | "github" | null>(null);
+  const router = useRouter();
+  const passkeySupported = usePasskeySupport();
+  const passkeyError = usePasskeyErrorMessage();
+  const [busy, setBusy] = useState<"google" | "github" | "passkey" | null>(null);
   const [localError, setLocalError] = useState("");
 
   async function signIn(provider: "google" | "github") {
@@ -282,6 +285,21 @@ export function SocialAuth({
     }
   }
 
+  // A passkey account signs in with the passkey alone; it is unlocked with a fingerprint, face,
+  // or PIN, so it already covers both factors.
+  async function signInWithPasskey() {
+    setBusy("passkey");
+    setLocalError("");
+    const { error: nextError } = await authClient.signIn.passkey();
+    if (nextError) {
+      setLocalError(passkeyError(nextError, t("Could not sign in with the passkey")));
+      setBusy(null);
+      return;
+    }
+    router.push("/");
+    router.refresh();
+  }
+
   const message =
     localError ||
     (error === "auth" ? t("Sign-in was cancelled or failed. Try again.") : error);
@@ -289,7 +307,7 @@ export function SocialAuth({
   return (
     <AuthCard
       title={title}
-      description={t("Continue with Google or GitHub, then set up an authenticator app.")}
+      description={t("Continue with Google or GitHub, then confirm it is you once more.")}
       footer={
         <p className="text-center text-xs text-muted-foreground">
           {mode === "sign-in" ? (
@@ -336,6 +354,20 @@ export function SocialAuth({
         {busy === "github" ? null : <GitHubIcon />}
         {t("Continue with GitHub")}
       </Button>
+      {mode === "sign-in" && passkeySupported ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="md"
+          className="w-full"
+          loading={busy === "passkey"}
+          disabled={busy !== null}
+          onClick={() => void signInWithPasskey()}
+        >
+          {busy === "passkey" ? null : <Fingerprint />}
+          {t("Sign in with passkey")}
+        </Button>
+      ) : null}
       {message ? <p className="text-center text-sm text-destructive-300">{message}</p> : null}
       <p className="text-center text-xs text-muted-foreground">
         {t.rich("By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy</privacy> pages.", {
@@ -355,24 +387,87 @@ export function SocialAuth({
   );
 }
 
-export function TwoFactorForm() {
+export type TwoFactorMethod = "totp" | "email" | "passkey";
+
+const RESEND_SECONDS = 30;
+
+function useResendCooldown() {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    if (seconds <= 0) return;
+    const timer = window.setTimeout(() => setSeconds((value) => value - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [seconds]);
+  const start = useCallback(() => setSeconds(RESEND_SECONDS), []);
+  return [seconds, start] as const;
+}
+
+const noSubscription = () => () => {};
+
+// WebAuthn exists only in the browser, so this is false during server rendering.
+function usePasskeySupport() {
+  return useSyncExternalStore(
+    noSubscription,
+    () => typeof window.PublicKeyCredential === "function",
+    () => false,
+  );
+}
+
+type PasskeyError = { code?: string; message?: string } | null | undefined;
+
+export function usePasskeyErrorMessage() {
+  const t = useExtracted();
+  return (error: PasskeyError, fallback: string) => {
+    if (!error) return fallback;
+    if (error.code === "ERROR_AUTHENTICATOR_PREVIOUSLY_REGISTERED") {
+      return t("This device already has a passkey for Deni Run.");
+    }
+    if (
+      error.code === "AUTH_CANCELLED" ||
+      error.code === "ERROR_CEREMONY_ABORTED" ||
+      error.code === "REGISTRATION_CANCELLED"
+    ) {
+      return t("The passkey prompt was closed. Try again.");
+    }
+    return error.message || fallback;
+  };
+}
+
+function ResendButton({
+  seconds,
+  busy,
+  onClick,
+}: {
+  seconds: number;
+  busy: boolean;
+  onClick: () => void;
+}) {
+  const t = useExtracted();
+  return (
+    <button
+      type="button"
+      className="text-center text-sm text-muted-foreground hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+      disabled={seconds > 0 || busy}
+      onClick={onClick}
+    >
+      {seconds > 0 ? t("Send a new code in {seconds}s", { seconds: String(seconds) }) : t("Send a new code")}
+    </button>
+  );
+}
+
+function PasskeyForm() {
   const t = useExtracted();
   const router = useRouter();
-  const [code, setCode] = useState("");
-  const [trustDevice, setTrustDevice] = useState(true);
-  const [useBackup, setUseBackup] = useState(false);
+  const passkeyError = usePasskeyErrorMessage();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function onSubmit(event: FormEvent) {
-    event.preventDefault();
+  async function signIn() {
     setBusy(true);
     setError("");
-    const result = useBackup
-      ? await authClient.twoFactor.verifyBackupCode({ code, trustDevice })
-      : await authClient.twoFactor.verifyTotp({ code, trustDevice });
-    if (result.error) {
-      setError(result.error.message || t("Invalid code"));
+    const { error: nextError } = await authClient.signIn.passkey();
+    if (nextError) {
+      setError(passkeyError(nextError, t("Could not confirm with the passkey")));
       setBusy(false);
       return;
     }
@@ -383,12 +478,77 @@ export function TwoFactorForm() {
   return (
     <AuthCard
       title={t("Two-factor authentication")}
-      description={
-        useBackup
-          ? t("Enter a backup code from when you enabled two-factor authentication.")
-          : t("Enter the 6-digit code from your authenticator app.")
-      }
+      description={t("Confirm it is you with your fingerprint, face, or screen lock.")}
     >
+      <Button type="button" size="md" className="w-full" loading={busy} onClick={() => void signIn()}>
+        {busy ? null : <Fingerprint />}
+        {t("Continue with passkey")}
+      </Button>
+      {error ? <p className="text-center text-sm text-destructive-300">{error}</p> : null}
+    </AuthCard>
+  );
+}
+
+export function TwoFactorForm({ method }: { method: TwoFactorMethod }) {
+  if (method === "passkey") return <PasskeyForm />;
+  return <CodeForm method={method} />;
+}
+
+function CodeForm({ method }: { method: "totp" | "email" }) {
+  const t = useExtracted();
+  const router = useRouter();
+  const [code, setCode] = useState("");
+  const [trustDevice, setTrustDevice] = useState(true);
+  const [useBackup, setUseBackup] = useState(false);
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [cooldown, startCooldown] = useResendCooldown();
+  const sentOnce = useRef(false);
+  const byEmail = method === "email";
+
+  const sendCode = useCallback(async () => {
+    setSending(true);
+    setError("");
+    const { error: nextError } = await authClient.twoFactor.sendOtp();
+    if (nextError) setError(nextError.message || t("Could not send a code"));
+    else startCooldown();
+    setSending(false);
+  }, [startCooldown, t]);
+
+  // Send once when the page opens; later codes come from the resend button.
+  useEffect(() => {
+    if (!byEmail || sentOnce.current) return;
+    sentOnce.current = true;
+    void sendCode();
+  }, [byEmail, sendCode]);
+
+  async function onSubmit(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError("");
+    const result = useBackup
+      ? await authClient.twoFactor.verifyBackupCode({ code, trustDevice })
+      : byEmail
+        ? await authClient.twoFactor.verifyOtp({ code, trustDevice })
+        : await authClient.twoFactor.verifyTotp({ code, trustDevice });
+    if (result.error) {
+      setError(result.error.message || t("Invalid code"));
+      setBusy(false);
+      return;
+    }
+    router.push("/");
+    router.refresh();
+  }
+
+  const description = useBackup
+    ? t("Enter a backup code from when you enabled two-factor authentication.")
+    : byEmail
+      ? t("We emailed you a 6-digit code. Check your inbox and spam folder.")
+      : t("Enter the 6-digit code from your authenticator app.");
+
+  return (
+    <AuthCard title={t("Two-factor authentication")} description={description}>
       <form className="flex flex-col gap-4" onSubmit={(event) => void onSubmit(event)}>
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="code">{useBackup ? t("Backup code") : t("One-time code")}</Label>
@@ -417,29 +577,100 @@ export function TwoFactorForm() {
           {t("Verify")}
         </Button>
       </form>
-      <button
-        type="button"
-        className="text-center text-sm text-muted-foreground hover:text-foreground"
-        onClick={() => {
-          setUseBackup((current) => !current);
-          setCode("");
-          setError("");
-        }}
-      >
-        {useBackup ? t("Use authenticator app") : t("Use a backup code")}
-      </button>
+      {byEmail ? (
+        <ResendButton seconds={cooldown} busy={sending} onClick={() => void sendCode()} />
+      ) : (
+        // Backup codes belong to the authenticator setup; email accounts have none.
+        <button
+          type="button"
+          className="text-center text-sm text-muted-foreground hover:text-foreground"
+          onClick={() => {
+            setUseBackup((current) => !current);
+            setCode("");
+            setError("");
+          }}
+        >
+          {useBackup ? t("Use authenticator app") : t("Use a backup code")}
+        </button>
+      )}
     </AuthCard>
   );
 }
 
-export function TwoFactorSetupForm() {
+function SignOutLink() {
+  const t = useExtracted();
+  return (
+    <button
+      type="button"
+      className="text-center text-sm text-muted-foreground hover:text-foreground"
+      onClick={() =>
+        void authClient.signOut({
+          fetchOptions: {
+            onSuccess: () => {
+              window.location.href = "/";
+            },
+          },
+        })
+      }
+    >
+      {t("Sign out")}
+    </button>
+  );
+}
+
+function MethodOption({
+  icon,
+  title,
+  description,
+  onClick,
+  loading,
+  disabled,
+}: {
+  icon: ReactNode;
+  title: string;
+  description: string;
+  onClick: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      className="flex w-full items-start gap-3 rounded-xl border border-foreground/10 p-3 text-left transition-colors hover:bg-foreground/5 disabled:pointer-events-none disabled:opacity-50"
+      onClick={onClick}
+      disabled={disabled}
+      aria-busy={loading}
+    >
+      <span className="mt-0.5 text-muted-foreground [&_svg]:size-4">
+        {loading ? <Loader2 className="animate-spin" /> : icon}
+      </span>
+      <span className="flex flex-col gap-0.5">
+        <span className="text-sm font-medium text-foreground">{title}</span>
+        <span className="text-xs text-muted-foreground">{description}</span>
+      </span>
+    </button>
+  );
+}
+
+export function TwoFactorSetupForm({
+  email,
+  emailAvailable,
+}: {
+  email: string;
+  emailAvailable: boolean;
+}) {
   const t = useExtracted();
   const router = useRouter();
+  const passkeySupported = usePasskeySupport();
+  const passkeyError = usePasskeyErrorMessage();
+  const [step, setStep] = useState<"choose" | "code" | "totp">("choose");
   const [totpUri, setTotpUri] = useState("");
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState<"enable" | "verify" | null>(null);
+  const [busy, setBusy] = useState<"enable" | "email" | "passkey" | "verify" | "resend" | null>(null);
+  const [cooldown, startCooldown] = useResendCooldown();
+  const offersEasierMethods = emailAvailable || passkeySupported;
 
   async function enable() {
     setBusy("enable");
@@ -452,20 +683,21 @@ export function TwoFactorSetupForm() {
       setBusy(null);
       return;
     }
-    if (data && "totpURI" in data) {
+    if (data && "totpURI" in data && data.totpURI) {
       setTotpUri(data.totpURI);
       setBackupCodes(data.backupCodes ?? []);
+      setCode("");
+      setStep("totp");
     }
     setBusy(null);
   }
 
-  async function verify(event: FormEvent) {
-    event.preventDefault();
-    setBusy("verify");
+  async function addPasskey() {
+    setBusy("passkey");
     setError("");
-    const { error: nextError } = await authClient.twoFactor.verifyTotp({ code });
+    const { error: nextError } = await authClient.passkey.addPasskey();
     if (nextError) {
-      setError(nextError.message || t("Invalid authenticator code"));
+      setError(passkeyError(nextError, t("Could not add the passkey")));
       setBusy(null);
       return;
     }
@@ -473,59 +705,163 @@ export function TwoFactorSetupForm() {
     router.refresh();
   }
 
-  if (!totpUri) {
+  async function startEmail() {
+    setBusy("email");
+    setError("");
+    const res = await fetch("/api/two-factor/method", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ method: "email" }),
+    });
+    if (!res.ok) {
+      const body = (await res.json().catch(() => null)) as { error?: string } | null;
+      setError(body?.error || t("Could not start two-factor setup"));
+      setBusy(null);
+      return;
+    }
+    const { error: nextError } = await authClient.twoFactor.sendOtp();
+    if (nextError) {
+      setError(nextError.message || t("Could not send a code"));
+      setBusy(null);
+      return;
+    }
+    setCode("");
+    setStep("code");
+    startCooldown();
+    setBusy(null);
+  }
+
+  async function resend() {
+    setBusy("resend");
+    setError("");
+    const { error: nextError } = await authClient.twoFactor.sendOtp();
+    if (nextError) setError(nextError.message || t("Could not send a code"));
+    else startCooldown();
+    setBusy(null);
+  }
+
+  async function verify(event: FormEvent) {
+    event.preventDefault();
+    setBusy("verify");
+    setError("");
+    const { error: nextError } =
+      step === "code"
+        ? await authClient.twoFactor.verifyOtp({ code })
+        : await authClient.twoFactor.verifyTotp({ code });
+    if (nextError) {
+      setError(nextError.message || t("Invalid code"));
+      setBusy(null);
+      return;
+    }
+    router.push("/");
+    router.refresh();
+  }
+
+  const backLink = (
+    <button
+      type="button"
+      className="text-center text-sm text-muted-foreground hover:text-foreground"
+      onClick={() => {
+        setStep("choose");
+        setCode("");
+        setError("");
+      }}
+    >
+      {t("Choose another method")}
+    </button>
+  );
+
+  const codeForm = (
+    <form className="flex flex-col gap-3" onSubmit={(event) => void verify(event)}>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="setup-code">{t("One-time code")}</Label>
+        <OneTimeCode id="setup-code" value={code} onChange={setCode} />
+      </div>
+      {error ? <p className="text-sm text-destructive-300">{error}</p> : null}
+      <Button type="submit" size="md" className="w-full" loading={busy === "verify"} disabled={code.length < 6}>
+        {t("Verify and continue")}
+      </Button>
+    </form>
+  );
+
+  if (step === "code") {
     return (
       <AuthCard
-        title={t("Set up two-factor authentication")}
-        description={t("An authenticator app is required after Google or GitHub sign-in.")}
+        title={t("Enter your code")}
+        description={t("We sent a 6-digit code to {email}. Check your spam folder if it does not arrive.", { email })}
       >
-        {error ? <p className="text-sm text-destructive-300">{error}</p> : null}
-        <Button type="button" size="md" className="w-full" loading={busy === "enable"} onClick={() => void enable()}>
-          {t("Enable authenticator app")}
-        </Button>
-        <button
-          type="button"
-          className="text-center text-sm text-muted-foreground hover:text-foreground"
-          onClick={() =>
-            void authClient.signOut({
-              fetchOptions: {
-                onSuccess: () => {
-                  window.location.href = "/";
-                },
-              },
-            })
-          }
-        >
-          {t("Sign out")}
-        </button>
+        {codeForm}
+        <ResendButton seconds={cooldown} busy={busy === "resend"} onClick={() => void resend()} />
+        {backLink}
       </AuthCard>
     );
   }
 
-  const secret = totpSecret(totpUri);
+  if (step === "totp") {
+    const secret = totpSecret(totpUri);
+    return (
+      <AuthCard
+        title={t("Scan the QR code")}
+        description={t("Add Deni Run in your authenticator app, save the backup codes, then enter a 6-digit code.")}
+      >
+        <div className="mx-auto rounded-xl bg-white p-3">
+          <QRCode value={totpUri} size={168} />
+        </div>
+        {secret ? (
+          <p className="break-all text-center font-mono text-xs text-muted-foreground">{secret}</p>
+        ) : null}
+        <BackupCodesPanel codes={backupCodes} />
+        {codeForm}
+        {offersEasierMethods ? backLink : null}
+      </AuthCard>
+    );
+  }
 
   return (
     <AuthCard
-      title={t("Scan the QR code")}
-      description={t("Add Deni Run in your authenticator app, save the backup codes, then enter a 6-digit code.")}
+      title={t("Set up two-factor authentication")}
+      description={
+        offersEasierMethods
+          ? t("After Google or GitHub sign-in, you confirm it is you once more. Choose how.")
+          : t("An authenticator app is required after Google or GitHub sign-in.")
+      }
+      footer={<SignOutLink />}
     >
-      <div className="mx-auto rounded-xl bg-white p-3">
-        <QRCode value={totpUri} size={168} />
-      </div>
-      {secret ? (
-        <p className="break-all text-center font-mono text-xs text-muted-foreground">{secret}</p>
+      {passkeySupported ? (
+        <MethodOption
+          icon={<Fingerprint />}
+          title={t("Passkey")}
+          description={t("Use your fingerprint, face, or screen lock. Nothing to type.")}
+          loading={busy === "passkey"}
+          disabled={busy !== null}
+          onClick={() => void addPasskey()}
+        />
       ) : null}
-      <BackupCodesPanel codes={backupCodes} />
-      <form className="flex flex-col gap-3" onSubmit={(event) => void verify(event)}>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="setup-code">{t("One-time code")}</Label>
-          <OneTimeCode id="setup-code" value={code} onChange={setCode} />
-        </div>
-        {error ? <p className="text-sm text-destructive-300">{error}</p> : null}
-        <Button type="submit" size="md" className="w-full" loading={busy === "verify"} disabled={code.length < 6}>
-          {t("Verify and continue")}
+      {emailAvailable ? (
+        <MethodOption
+          icon={<Mail />}
+          title={t("Email")}
+          description={t("Get a 6-digit code at {email} each time.", { email })}
+          loading={busy === "email"}
+          disabled={busy !== null}
+          onClick={() => void startEmail()}
+        />
+      ) : null}
+      {offersEasierMethods ? (
+        <MethodOption
+          icon={<KeyRound />}
+          title={t("Authenticator app")}
+          description={t("Use an app such as Google Authenticator or 1Password.")}
+          loading={busy === "enable"}
+          disabled={busy !== null}
+          onClick={() => void enable()}
+        />
+      ) : (
+        <Button type="button" size="md" className="w-full" loading={busy === "enable"} onClick={() => void enable()}>
+          {t("Enable authenticator app")}
         </Button>
-      </form>
+      )}
+      {error ? <p className="text-sm text-destructive-300">{error}</p> : null}
     </AuthCard>
   );
 }

@@ -418,6 +418,28 @@ msgctxt "gGF2lC"
 msgid "Choose at least two teammates and a valid group name/icon."
 msgstr "Choose at least two teammates and a valid group name/icon."
 
+#: app/api/two-factor/method/route.ts
+#: lib/api-auth.ts
+msgctxt "WlyxAh"
+msgid "Unauthorized"
+msgstr "Unauthorized"
+
+#: app/api/two-factor/method/route.ts
+#: lib/two-factor-hooks.ts
+msgctxt "--eGOh"
+msgid "Turn off two-factor authentication before choosing another method."
+msgstr "Turn off two-factor authentication before choosing another method."
+
+#: app/api/two-factor/method/route.ts
+msgctxt "TPzkXL"
+msgid "Choose email."
+msgstr "Choose email."
+
+#: app/api/two-factor/method/route.ts
+msgctxt "hcuwhb"
+msgid "This sign-in method is not available right now."
+msgstr "This sign-in method is not available right now."
+
 #: app/components/account-menu.tsx
 #: app/components/account-screen.tsx
 #: app/components/landing.tsx
@@ -598,15 +620,25 @@ msgid "Two-factor authentication"
 msgstr "Two-factor authentication"
 
 #: app/components/account-screen.tsx
+msgctxt "gqj6t6"
+msgid "Finish setup so this account can open the workspace."
+msgstr "Finish setup so this account can open the workspace."
+
+#: app/components/account-screen.tsx
+msgctxt "6ThU6H"
+msgid "A code sent to {email} is required after Google or GitHub sign-in."
+msgstr "A code sent to {email} is required after Google or GitHub sign-in."
+
+#: app/components/account-screen.tsx
+msgctxt "dtmdY6"
+msgid "You confirm with a passkey after Google or GitHub sign-in. Add one on a second device in case you lose this one."
+msgstr "You confirm with a passkey after Google or GitHub sign-in. Add one on a second device in case you lose this one."
+
+#: app/components/account-screen.tsx
 #: app/components/auth-form.tsx
 msgctxt "P0s1jE"
 msgid "An authenticator app is required after Google or GitHub sign-in."
 msgstr "An authenticator app is required after Google or GitHub sign-in."
-
-#: app/components/account-screen.tsx
-msgctxt "gqj6t6"
-msgid "Finish setup so this account can open the workspace."
-msgstr "Finish setup so this account can open the workspace."
 
 #: app/components/account-screen.tsx
 msgctxt "SFHRua"
@@ -624,6 +656,22 @@ msgid "Generate backup codes"
 msgstr "Generate backup codes"
 
 #: app/components/account-screen.tsx
+#: app/components/auth-form.tsx
+msgctxt "n4aD33"
+msgid "Could not add the passkey"
+msgstr "Could not add the passkey"
+
+#: app/components/account-screen.tsx
+msgctxt "sGjcve"
+msgid "Passkey added."
+msgstr "Passkey added."
+
+#: app/components/account-screen.tsx
+msgctxt "Ck5euH"
+msgid "Add a passkey"
+msgstr "Add a passkey"
+
+#: app/components/account-screen.tsx
 msgctxt "eH00wg"
 msgid "Could not disable two-factor"
 msgstr "Could not disable two-factor"
@@ -634,14 +682,14 @@ msgid "Two-factor authentication is off."
 msgstr "Two-factor authentication is off."
 
 #: app/components/account-screen.tsx
-msgctxt "bfWH4i"
-msgid "Disable two-factor"
-msgstr "Disable two-factor"
+msgctxt "d01K4R"
+msgid "Change two-factor method"
+msgstr "Change two-factor method"
 
 #: app/components/account-screen.tsx
-msgctxt "73Eqvi"
-msgid "Set up authenticator app"
-msgstr "Set up authenticator app"
+msgctxt "d1U9-h"
+msgid "Set up two-factor"
+msgstr "Set up two-factor"
 
 #: app/components/account-screen.tsx
 msgctxt "SVwJTM"
@@ -723,14 +771,19 @@ msgid "Could not start sign-in"
 msgstr "Could not start sign-in"
 
 #: app/components/auth-form.tsx
+msgctxt "5OERq7"
+msgid "Could not sign in with the passkey"
+msgstr "Could not sign in with the passkey"
+
+#: app/components/auth-form.tsx
 msgctxt "pq85D4"
 msgid "Sign-in was cancelled or failed. Try again."
 msgstr "Sign-in was cancelled or failed. Try again."
 
 #: app/components/auth-form.tsx
-msgctxt "wZpyBS"
-msgid "Continue with Google or GitHub, then set up an authenticator app."
-msgstr "Continue with Google or GitHub, then set up an authenticator app."
+msgctxt "VhBfck"
+msgid "Continue with Google or GitHub, then confirm it is you once more."
+msgstr "Continue with Google or GitHub, then confirm it is you once more."
 
 #: app/components/auth-form.tsx
 msgctxt "mXc8V6"
@@ -753,9 +806,54 @@ msgid "Continue with GitHub"
 msgstr "Continue with GitHub"
 
 #: app/components/auth-form.tsx
+msgctxt "-tUDPN"
+msgid "Sign in with passkey"
+msgstr "Sign in with passkey"
+
+#: app/components/auth-form.tsx
 msgctxt "bokqOg"
 msgid "By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy</privacy> pages."
 msgstr "By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy</privacy> pages."
+
+#: app/components/auth-form.tsx
+msgctxt "ukRNxC"
+msgid "This device already has a passkey for Deni Run."
+msgstr "This device already has a passkey for Deni Run."
+
+#: app/components/auth-form.tsx
+msgctxt "bmO9Cl"
+msgid "The passkey prompt was closed. Try again."
+msgstr "The passkey prompt was closed. Try again."
+
+#: app/components/auth-form.tsx
+msgctxt "GAkHfG"
+msgid "Send a new code in {seconds}s"
+msgstr "Send a new code in {seconds}s"
+
+#: app/components/auth-form.tsx
+msgctxt "gdlGkp"
+msgid "Send a new code"
+msgstr "Send a new code"
+
+#: app/components/auth-form.tsx
+msgctxt "qVTecu"
+msgid "Could not confirm with the passkey"
+msgstr "Could not confirm with the passkey"
+
+#: app/components/auth-form.tsx
+msgctxt "wpt7x7"
+msgid "Confirm it is you with your fingerprint, face, or screen lock."
+msgstr "Confirm it is you with your fingerprint, face, or screen lock."
+
+#: app/components/auth-form.tsx
+msgctxt "vVjHoV"
+msgid "Continue with passkey"
+msgstr "Continue with passkey"
+
+#: app/components/auth-form.tsx
+msgctxt "-zd1w3"
+msgid "Could not send a code"
+msgstr "Could not send a code"
 
 #: app/components/auth-form.tsx
 msgctxt "x2R8CB"
@@ -766,6 +864,11 @@ msgstr "Invalid code"
 msgctxt "YgJbIQ"
 msgid "Enter a backup code from when you enabled two-factor authentication."
 msgstr "Enter a backup code from when you enabled two-factor authentication."
+
+#: app/components/auth-form.tsx
+msgctxt "LNoDtB"
+msgid "We emailed you a 6-digit code. Check your inbox and spam folder."
+msgstr "We emailed you a 6-digit code. Check your inbox and spam folder."
 
 #: app/components/auth-form.tsx
 msgctxt "RKK2dE"
@@ -808,19 +911,24 @@ msgid "Could not start two-factor setup"
 msgstr "Could not start two-factor setup"
 
 #: app/components/auth-form.tsx
-msgctxt "Ac2ehz"
-msgid "Invalid authenticator code"
-msgstr "Invalid authenticator code"
+msgctxt "-vrH74"
+msgid "Choose another method"
+msgstr "Choose another method"
 
 #: app/components/auth-form.tsx
-msgctxt "io-wG_"
-msgid "Set up two-factor authentication"
-msgstr "Set up two-factor authentication"
+msgctxt "TV0Ha_"
+msgid "Verify and continue"
+msgstr "Verify and continue"
 
 #: app/components/auth-form.tsx
-msgctxt "q-x1aG"
-msgid "Enable authenticator app"
-msgstr "Enable authenticator app"
+msgctxt "2ZZbWY"
+msgid "Enter your code"
+msgstr "Enter your code"
+
+#: app/components/auth-form.tsx
+msgctxt "vCm8XD"
+msgid "We sent a 6-digit code to {email}. Check your spam folder if it does not arrive."
+msgstr "We sent a 6-digit code to {email}. Check your spam folder if it does not arrive."
 
 #: app/components/auth-form.tsx
 msgctxt "dChb0Y"
@@ -833,9 +941,49 @@ msgid "Add Deni Run in your authenticator app, save the backup codes, then enter
 msgstr "Add Deni Run in your authenticator app, save the backup codes, then enter a 6-digit code."
 
 #: app/components/auth-form.tsx
-msgctxt "TV0Ha_"
-msgid "Verify and continue"
-msgstr "Verify and continue"
+msgctxt "io-wG_"
+msgid "Set up two-factor authentication"
+msgstr "Set up two-factor authentication"
+
+#: app/components/auth-form.tsx
+msgctxt "4__exi"
+msgid "After Google or GitHub sign-in, you confirm it is you once more. Choose how."
+msgstr "After Google or GitHub sign-in, you confirm it is you once more. Choose how."
+
+#: app/components/auth-form.tsx
+msgctxt "WYATYp"
+msgid "Passkey"
+msgstr "Passkey"
+
+#: app/components/auth-form.tsx
+msgctxt "ZHE-UV"
+msgid "Use your fingerprint, face, or screen lock. Nothing to type."
+msgstr "Use your fingerprint, face, or screen lock. Nothing to type."
+
+#: app/components/auth-form.tsx
+msgctxt "sy-pv5"
+msgid "Email"
+msgstr "Email"
+
+#: app/components/auth-form.tsx
+msgctxt "dC8Ht3"
+msgid "Get a 6-digit code at {email} each time."
+msgstr "Get a 6-digit code at {email} each time."
+
+#: app/components/auth-form.tsx
+msgctxt "izYqCA"
+msgid "Authenticator app"
+msgstr "Authenticator app"
+
+#: app/components/auth-form.tsx
+msgctxt "zSc39N"
+msgid "Use an app such as Google Authenticator or 1Password."
+msgstr "Use an app such as Google Authenticator or 1Password."
+
+#: app/components/auth-form.tsx
+msgctxt "q-x1aG"
+msgid "Enable authenticator app"
+msgstr "Enable authenticator app"
 
 #: app/components/avatar-field.tsx
 msgctxt "MAGAzv"
@@ -2840,7 +2988,7 @@ msgid "Hand work to named teammates and let them finish it on an isolated comput
 msgstr "Hand work to named teammates and let them finish it on an isolated computer (browser, files, and terminal). Your workspace stays private to your account."
 
 #: app/components/setup-screen.tsx
-msgctxt "b99Plc"
+msgctxt "X06UWo"
 msgid "Get a key at openrouter.ai. Run uses anthropic/claude-sonnet-5.5; Run+ uses anthropic/claude-opus-5.5. Each mode counts tokens at 1× to 2.6×, shown in the mode menu. Pick a mode in the workspace. This screen is skipped when an environment variable is set."
 msgstr "Get a key at openrouter.ai. Run uses anthropic/claude-sonnet-5.5; Run+ uses anthropic/claude-opus-5.5. Each mode counts tokens at 1× to 2.6×, shown in the mode menu. Pick a mode in the workspace. This screen is skipped when an environment variable is set."
 
@@ -3102,7 +3250,7 @@ msgid "Name specialists, keep memory on each one, and hand work off instead of s
 msgstr "Name specialists, keep memory on each one, and hand work off instead of stretching a single bot."
 
 #: app/components/upgrade-screen.tsx
-msgctxt "xqhm1T"
+msgctxt "IWT2o2"
 msgid "150M tokens / month"
 msgstr "150M tokens / month"
 
@@ -3202,6 +3350,11 @@ msgid "Loading computer…"
 msgstr "Loading computer…"
 
 #: app/components/workspace.tsx
+msgctxt "HtRP6Y"
+msgid "Could not reset the conversation."
+msgstr "Could not reset the conversation."
+
+#: app/components/workspace.tsx
 msgctxt "B12JBq"
 msgid "Delete {title}? The group conversation and its routines will be removed. Teammates and shared files will remain."
 msgstr "Delete {title}? The group conversation and its routines will be removed. Teammates and shared files will remain."
@@ -3225,11 +3378,6 @@ msgstr "Could not delete group."
 msgctxt "354mCs"
 msgid "Could not update group."
 msgstr "Could not update group."
-
-#: app/components/workspace.tsx
-msgctxt "HtRP6Y"
-msgid "Could not reset the conversation."
-msgstr "Could not reset the conversation."
 
 #: app/components/workspace.tsx
 msgctxt "u7zDdn"
@@ -3360,9 +3508,9 @@ msgid "Back to Deni Run home"
 msgstr "Back to Deni Run home"
 
 #: app/privacy/page.tsx
-msgctxt "vlvrrr"
-msgid "Last updated: October 11, 2026"
-msgstr "Last updated: October 11, 2026"
+msgctxt "9hzHb_"
+msgid "Last updated: October 14, 2026"
+msgstr "Last updated: October 14, 2026"
 
 #: app/privacy/page.tsx
 msgctxt "zFZQnj"
@@ -3380,9 +3528,9 @@ msgid "Account data."
 msgstr "Account data."
 
 #: app/privacy/page.tsx
-msgctxt "jcE7Bx"
-msgid "When you sign in with Google or GitHub we receive your name, email address, profile picture, and the provider account ID. We also store the session records and the two-factor authentication secret and backup codes needed to sign you in."
-msgstr "When you sign in with Google or GitHub we receive your name, email address, profile picture, and the provider account ID. We also store the session records and the two-factor authentication secret and backup codes needed to sign you in."
+msgctxt "0ynyNL"
+msgid "When you sign in with Google or GitHub we receive your name, email address, profile picture, and the provider account ID. We also store the session records and what your two-factor method needs to sign you in: the authenticator secret and backup codes, or the public key of your passkey. Fingerprints and face data never leave your device."
+msgstr "When you sign in with Google or GitHub we receive your name, email address, profile picture, and the provider account ID. We also store the session records and what your two-factor method needs to sign you in: the authenticator secret and backup codes, or the public key of your passkey. Fingerprints and face data never leave your device."
 
 #: app/privacy/page.tsx
 msgctxt "YsRzex"
@@ -3515,6 +3663,11 @@ msgid "Stripe: billing. Receives your email address and payment details."
 msgstr "Stripe: billing. Receives your email address and payment details."
 
 #: app/privacy/page.tsx
+msgctxt "VU8epg"
+msgid "Resend: delivers sign-in codes if you choose email for two-factor. Receives your email address and the code."
+msgstr "Resend: delivers sign-in codes if you choose email for two-factor. Receives your email address and the code."
+
+#: app/privacy/page.tsx
 msgctxt "6GHvNo"
 msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
 msgstr "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
@@ -3545,9 +3698,9 @@ msgid "5. How we protect data"
 msgstr "5. How we protect data"
 
 #: app/privacy/page.tsx
-msgctxt "BRq0T-"
-msgid "Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires an authenticator-app second factor. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security."
-msgstr "Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires an authenticator-app second factor. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security."
+msgctxt "adCMZI"
+msgid "Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires a second factor: a passkey, an emailed code, or a code from an authenticator app. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security."
+msgstr "Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires a second factor: a passkey, an emailed code, or a code from an authenticator app. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security."
 
 #: app/privacy/page.tsx
 msgctxt "DXkzgx"
@@ -3820,11 +3973,6 @@ msgctxt "iFsDVR"
 msgid "Loading"
 msgstr "Loading"
 
-#: lib/api-auth.ts
-msgctxt "WlyxAh"
-msgid "Unauthorized"
-msgstr "Unauthorized"
-
 #: lib/localize-error.ts
 msgctxt "UxEkbJ"
 msgid "Invalid cron expression"
@@ -4059,3 +4207,43 @@ msgstr "Teammate limit reached ({limit} on {plan}). Upgrade to add more teammate
 msgctxt "GhZx8v"
 msgid "Too many requests. Wait a moment and try again."
 msgstr "Too many requests. Wait a moment and try again."
+
+#: lib/two-factor-delivery.ts
+msgctxt "MGbK57"
+msgid "Your Deni Run sign-in code: {code}"
+msgstr "Your Deni Run sign-in code: {code}"
+
+#: lib/two-factor-delivery.ts
+msgctxt "qIXG-o"
+msgid "Your Deni Run sign-in code is {code}. It expires in {minutes} minutes. If you did not try to sign in, you can ignore this email."
+msgstr "Your Deni Run sign-in code is {code}. It expires in {minutes} minutes. If you did not try to sign in, you can ignore this email."
+
+#: lib/two-factor-hooks.ts
+msgctxt "leNxAo"
+msgid "Unlock the passkey with your fingerprint, face, or screen lock PIN and try again."
+msgstr "Unlock the passkey with your fingerprint, face, or screen lock PIN and try again."
+
+#: lib/two-factor-hooks.ts
+msgctxt "eO3_Cz"
+msgid "This account does not use a passkey. Sign in with Google or GitHub."
+msgstr "This account does not use a passkey. Sign in with Google or GitHub."
+
+#: lib/two-factor-hooks.ts
+msgctxt "QEr-WY"
+msgid "Add another passkey before removing your last one."
+msgstr "Add another passkey before removing your last one."
+
+#: lib/two-factor-hooks.ts
+msgctxt "s4OXJJ"
+msgid "This account does not use email codes."
+msgstr "This account does not use email codes."
+
+#: lib/two-factor-hooks.ts
+msgctxt "kNjaYQ"
+msgid "Codes by email are not available right now. Contact support."
+msgstr "Codes by email are not available right now. Contact support."
+
+#: lib/two-factor-hooks.ts
+msgctxt "0uT02k"
+msgid "Too many codes requested. Wait 15 minutes and try again."
+msgstr "Too many codes requested. Wait 15 minutes and try again."

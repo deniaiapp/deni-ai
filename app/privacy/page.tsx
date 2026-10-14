@@ -37,7 +37,7 @@ export default async function PrivacyPage() {
           {t("Back to Deni Run home")}
         </Link>
         <h1 className="text-2xl font-semibold text-foreground">{t("Privacy Policy")}</h1>
-        <p className="text-xs text-muted-foreground">{t("Last updated: October 11, 2026")}</p>
+        <p className="text-xs text-muted-foreground">{t("Last updated: October 14, 2026")}</p>
         <p>
           {t("This policy explains what data Deni Run (run.deniai.app, “Deni Run”, “we”) collects when you use the service, why we collect it, who receives it, how we protect it, and how you can delete it. Deni Run is a web application where AI teammates complete tasks for you on a private, isolated computer (browser, files, and terminal).")}
         </p>
@@ -45,7 +45,7 @@ export default async function PrivacyPage() {
         <Section title={t("1. Data we collect")}>
           <p>
             <strong className="font-medium text-foreground">{t("Account data.")}</strong>{" "}
-            {t("When you sign in with Google or GitHub we receive your name, email address, profile picture, and the provider account ID. We also store the session records and the two-factor authentication secret and backup codes needed to sign you in.")}
+            {t("When you sign in with Google or GitHub we receive your name, email address, profile picture, and the provider account ID. We also store the session records and what your two-factor method needs to sign you in: the authenticator secret and backup codes, or the public key of your passkey. Fingerprints and face data never leave your device.")}
           </p>
           <p>
             <strong className="font-medium text-foreground">{t("Content you create.")}</strong>{" "}
@@ -102,6 +102,7 @@ export default async function PrivacyPage() {
             <li>{t("Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email.")}</li>
             <li>{t("Discord: if you link it, Discord carries the direct messages you and the bot exchange, including files and screenshots you request and notifications about background work if you keep them on, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models.")}</li>
             <li>{t("Stripe: billing. Receives your email address and payment details.")}</li>
+            <li>{t("Resend: delivers sign-in codes if you choose email for two-factor. Receives your email address and the code.")}</li>
             <li>{t("OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data.")}</li>
             <li>{t("Steel: cloud browser sessions, which load the websites your teammate visits.")}</li>
             <li>{t("E2B: the isolated sandbox where terminal commands run.")}</li>
@@ -114,7 +115,7 @@ export default async function PrivacyPage() {
 
         <Section title={t("5. How we protect data")}>
           <p>
-            {t("Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires an authenticator-app second factor. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security.")}
+            {t("Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires a second factor: a passkey, an emailed code, or a code from an authenticator app. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security.")}
           </p>
         </Section>
 

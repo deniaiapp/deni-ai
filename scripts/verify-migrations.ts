@@ -23,6 +23,7 @@ async function main() {
     "job_artifacts",
     "job_events",
     "mcp_connections",
+    "passkey",
     "rate_limits",
     "session",
     "thread_messages",
@@ -41,6 +42,7 @@ async function main() {
     "agent_jobs_user_idempotency_uidx",
     "job_events_user_job_sequence_uidx",
     "discord_links_discord_user_uidx",
+    "passkey_credentialID_uidx",
   ]) {
     if (!indexes.includes(required)) throw new Error(`Missing index ${required}`);
   }
