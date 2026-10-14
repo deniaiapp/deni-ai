@@ -36,10 +36,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { setLocale } from "@/i18n/actions";
-import { locales, type Locale } from "@/i18n/config";
+import { locales } from "@/i18n/config";
+import { localeLabels } from "./language-switcher";
 import type { UsageSnapshot } from "@/lib/plans";
 
-const localeLabels: Record<Locale, string> = { en: "English", ja: "日本語" };
 
 export function AccountMenu({
   usage,

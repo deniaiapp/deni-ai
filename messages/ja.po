@@ -492,6 +492,7 @@ msgid "Manage profile"
 msgstr "プロフィールを管理"
 
 #: app/components/account-menu.tsx
+#: app/components/language-switcher.tsx
 msgctxt "y1Z3or"
 msgid "Language"
 msgstr "言語"
@@ -2246,14 +2247,14 @@ msgid "Get started"
 msgstr "はじめる"
 
 #: app/components/landing.tsx
-msgctxt "-y-H5I"
-msgid "Deni Run · AI teammates with their own computer"
-msgstr "Deni Run · 専用コンピューターを持つAIチームメイト"
+msgctxt "sRPYBI"
+msgid "AI teammates with their own computer"
+msgstr "自分専用のコンピューターを持つAIチームメイト"
 
 #: app/components/landing.tsx
-msgctxt "a7jWEj"
-msgid "Hand work to named teammates and let them finish it on an isolated computer."
-msgstr "名前のあるチームメイトに仕事を任せ、隔離されたコンピューターで完了させましょう。"
+msgctxt "mLSZtS"
+msgid "Hand off the work. They finish it."
+msgstr "仕事を任せれば、最後までやり遂げる。"
 
 #: app/components/landing.tsx
 msgctxt "32pw60"
@@ -2321,9 +2322,9 @@ msgid "How it works"
 msgstr "使い方"
 
 #: app/components/landing.tsx
-msgctxt "IqwL_d"
-msgid "Sign in with Google or GitHub and confirm with an authenticator app."
-msgstr "GoogleまたはGitHubでログインし、認証アプリで確認します。"
+msgctxt "4MFLiq"
+msgid "Sign in with Google or GitHub, then confirm it is you with a passkey, an emailed code, or an authenticator app."
+msgstr "GoogleまたはGitHubでログインし、パスキー、メールで届くコード、または認証アプリで本人確認をします。"
 
 #: app/components/landing.tsx
 msgctxt "y4vBsI"
@@ -2334,48 +2335,6 @@ msgstr "チームメイトにタスク(トピックの調査、フォーム入�
 msgctxt "zu2pLH"
 msgid "Follow the live screen, approve risky steps, and collect the results in your workspace."
 msgstr "ライブ画面を確認し、リスクのある操作を承認して、結果をワークスペースで受け取ります。"
-
-#: app/components/landing.tsx
-msgctxt "fjh1-d"
-msgid "Google sign-in and optional Google plugins"
-msgstr "Googleログインとオプションの Google プラグイン"
-
-#: app/components/landing.tsx
-msgctxt "HU5HuM"
-msgid "Signing in with Google uses only the openid, email, and profile scopes, so Deni Run receives your name, email address, and profile picture to identify your account."
-msgstr "Google でのログインでは openid、email、profile スコープのみを使用し、アカウントを識別するためにお名前、メールアドレス、プロフィール画像を受け取ります。"
-
-#: app/components/landing.tsx
-msgctxt "UcjAOk"
-msgid "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from Plugins in the app or from your Google Account."
-msgstr "オプションの Gmail と Google ドライブのプラグインを接続すると、Deni Run は追加のアクセスを権限ごとに個別に求めます。Gmail の閲覧(gmail.readonly)、承認したメールの送信(gmail.send)、ドライブのファイルの閲覧(drive.readonly)、ドライブ内のファイルの作成と更新(drive.file)です。チームメイトはこのアクセスを、あなたが依頼したタスクを行う場合にのみ使用し、アプリのプラグイン画面または Google アカウントからいつでも接続を解除できます。"
-
-#: app/components/landing.tsx
-msgctxt "GIGG04"
-msgid "Google user data is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
-msgstr "Google ユーザーデータは、販売、広告への利用、AIモデルの学習への利用を一切行いません。Google API から受け取った情報の利用は、限定的な使用の要件を含む Google API サービスのユーザーデータに関するポリシーに準拠します。"
-
-#: app/components/landing.tsx
-msgctxt "ffKO-8"
-msgid "Read the Privacy Policy"
-msgstr "プライバシーポリシーを読む"
-
-#: app/components/landing.tsx
-msgctxt "9FuywR"
-msgid "Acceptable use"
-msgstr "利用上のルール"
-
-#: app/components/landing.tsx
-msgctxt "HKh30c"
-msgid "Deni Run must not be used to break the law, attack systems, send spam, harass people, or create or distribute sexual or intimate imagery of a real person without their consent, including AI-generated imagery. Accounts that do so are suspended."
-msgstr "Deni Run を、法律に違反する行為、システムへの攻撃、スパムの送信、他者への嫌がらせ、本人の同意のない実在の人物の性的・親密な画像(AI生成のものを含む)の作成や配布に使用してはいけません。違反したアカウントは停止されます。"
-
-#: app/components/landing.tsx
-#: app/privacy/page.tsx
-#: app/terms/page.tsx
-msgctxt "32rBNK"
-msgid "Terms of Service"
-msgstr "利用規約"
 
 #: app/components/landing.tsx
 msgctxt "Z3X7Uc"
@@ -3762,6 +3721,12 @@ msgstr "10. お問い合わせ"
 msgctxt "mv-MT8"
 msgid "the operator of this deployment"
 msgstr "このデプロイの運営者"
+
+#: app/privacy/page.tsx
+#: app/terms/page.tsx
+msgctxt "32rBNK"
+msgid "Terms of Service"
+msgstr "利用規約"
 
 #: app/sign-up/page.tsx
 msgctxt "0vL5u1"

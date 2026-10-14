@@ -492,6 +492,7 @@ msgid "Manage profile"
 msgstr "Manage profile"
 
 #: app/components/account-menu.tsx
+#: app/components/language-switcher.tsx
 msgctxt "y1Z3or"
 msgid "Language"
 msgstr "Language"
@@ -2246,14 +2247,14 @@ msgid "Get started"
 msgstr "Get started"
 
 #: app/components/landing.tsx
-msgctxt "-y-H5I"
-msgid "Deni Run · AI teammates with their own computer"
-msgstr "Deni Run · AI teammates with their own computer"
+msgctxt "sRPYBI"
+msgid "AI teammates with their own computer"
+msgstr "AI teammates with their own computer"
 
 #: app/components/landing.tsx
-msgctxt "a7jWEj"
-msgid "Hand work to named teammates and let them finish it on an isolated computer."
-msgstr "Hand work to named teammates and let them finish it on an isolated computer."
+msgctxt "mLSZtS"
+msgid "Hand off the work. They finish it."
+msgstr "Hand off the work. They finish it."
 
 #: app/components/landing.tsx
 msgctxt "32pw60"
@@ -2321,9 +2322,9 @@ msgid "How it works"
 msgstr "How it works"
 
 #: app/components/landing.tsx
-msgctxt "IqwL_d"
-msgid "Sign in with Google or GitHub and confirm with an authenticator app."
-msgstr "Sign in with Google or GitHub and confirm with an authenticator app."
+msgctxt "4MFLiq"
+msgid "Sign in with Google or GitHub, then confirm it is you with a passkey, an emailed code, or an authenticator app."
+msgstr "Sign in with Google or GitHub, then confirm it is you with a passkey, an emailed code, or an authenticator app."
 
 #: app/components/landing.tsx
 msgctxt "y4vBsI"
@@ -2334,48 +2335,6 @@ msgstr "Give a teammate a task, such as researching a topic, filling in a form, 
 msgctxt "zu2pLH"
 msgid "Follow the live screen, approve risky steps, and collect the results in your workspace."
 msgstr "Follow the live screen, approve risky steps, and collect the results in your workspace."
-
-#: app/components/landing.tsx
-msgctxt "fjh1-d"
-msgid "Google sign-in and optional Google plugins"
-msgstr "Google sign-in and optional Google plugins"
-
-#: app/components/landing.tsx
-msgctxt "HU5HuM"
-msgid "Signing in with Google uses only the openid, email, and profile scopes, so Deni Run receives your name, email address, and profile picture to identify your account."
-msgstr "Signing in with Google uses only the openid, email, and profile scopes, so Deni Run receives your name, email address, and profile picture to identify your account."
-
-#: app/components/landing.tsx
-msgctxt "UcjAOk"
-msgid "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from Plugins in the app or from your Google Account."
-msgstr "If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from Plugins in the app or from your Google Account."
-
-#: app/components/landing.tsx
-msgctxt "GIGG04"
-msgid "Google user data is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
-msgstr "Google user data is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements."
-
-#: app/components/landing.tsx
-msgctxt "ffKO-8"
-msgid "Read the Privacy Policy"
-msgstr "Read the Privacy Policy"
-
-#: app/components/landing.tsx
-msgctxt "9FuywR"
-msgid "Acceptable use"
-msgstr "Acceptable use"
-
-#: app/components/landing.tsx
-msgctxt "HKh30c"
-msgid "Deni Run must not be used to break the law, attack systems, send spam, harass people, or create or distribute sexual or intimate imagery of a real person without their consent, including AI-generated imagery. Accounts that do so are suspended."
-msgstr "Deni Run must not be used to break the law, attack systems, send spam, harass people, or create or distribute sexual or intimate imagery of a real person without their consent, including AI-generated imagery. Accounts that do so are suspended."
-
-#: app/components/landing.tsx
-#: app/privacy/page.tsx
-#: app/terms/page.tsx
-msgctxt "32rBNK"
-msgid "Terms of Service"
-msgstr "Terms of Service"
 
 #: app/components/landing.tsx
 msgctxt "Z3X7Uc"
@@ -3762,6 +3721,12 @@ msgstr "10. Contact"
 msgctxt "mv-MT8"
 msgid "the operator of this deployment"
 msgstr "the operator of this deployment"
+
+#: app/privacy/page.tsx
+#: app/terms/page.tsx
+msgctxt "32rBNK"
+msgid "Terms of Service"
+msgstr "Terms of Service"
 
 #: app/sign-up/page.tsx
 msgctxt "0vL5u1"

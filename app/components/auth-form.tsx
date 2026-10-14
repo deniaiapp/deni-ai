@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/input-otp";
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
+import { LanguageSwitcher } from "./language-switcher";
 
 function GoogleIcon() {
   return (
@@ -237,7 +238,10 @@ function AuthCard({
   footer?: ReactNode;
 }) {
   return (
-    <main className="flex min-h-full items-center justify-center bg-background p-6">
+    <main className="relative flex min-h-full items-center justify-center bg-background p-6">
+      <div className="absolute top-4 right-4">
+        <LanguageSwitcher />
+      </div>
       <FadeIn className="flex w-full max-w-sm flex-col gap-6">
         <Link href="/" className="text-center text-sm font-medium text-foreground">
           Deni Run

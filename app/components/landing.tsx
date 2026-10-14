@@ -3,6 +3,7 @@
 import { useExtracted } from "next-intl";
 import Link from "next/link";
 import { formatTokenCount, PLANS } from "@/lib/plans";
+import { LanguageSwitcher } from "./language-switcher";
 
 const rise = "deni-rise";
 const card =
@@ -34,6 +35,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
           <Link href="/privacy" className="hidden text-muted-foreground hover:text-foreground sm:inline">
             {t("Privacy Policy")}
           </Link>
+          <LanguageSwitcher />
           {signedIn ? (
             <Link
               href="/"
@@ -59,13 +61,13 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
 
       <section className="mx-auto max-w-5xl px-6 py-20">
         <p className={`${rise} text-sm text-muted-foreground`}>
-          {t("Deni Run · AI teammates with their own computer")}
+          {t("AI teammates with their own computer")}
         </p>
         <h1
           className={`${rise} mt-3 max-w-3xl text-4xl font-semibold tracking-tight md:text-5xl`}
           style={delay(60)}
         >
-          {t("Hand work to named teammates and let them finish it on an isolated computer.")}
+          {t("Hand off the work. They finish it.")}
         </h1>
         <p
           className={`${rise} mt-5 max-w-2xl text-[0.925rem] leading-relaxed text-muted-foreground`}
@@ -128,7 +130,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <h2 className="text-2xl font-semibold">{t("How it works")}</h2>
         <ol className="mt-6 grid gap-4 md:grid-cols-3">
           {[
-            t("Sign in with Google or GitHub and confirm with an authenticator app."),
+            t("Sign in with Google or GitHub, then confirm it is you with a passkey, an emailed code, or an authenticator app."),
             t("Give a teammate a task, such as researching a topic, filling in a form, or organizing files."),
             t("Follow the live screen, approve risky steps, and collect the results in your workspace."),
           ].map((body, index) => (
@@ -138,37 +140,6 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             </li>
           ))}
         </ol>
-      </section>
-
-      <section id="google-data" className="mx-auto max-w-5xl px-6 pb-20">
-        <div className="rounded-xl border border-foreground/10 bg-surface p-6">
-          <h2 className="text-2xl font-semibold">{t("Google sign-in and optional Google plugins")}</h2>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-secondary-foreground">
-            {t("Signing in with Google uses only the openid, email, and profile scopes, so Deni Run receives your name, email address, and profile picture to identify your account.")}
-          </p>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-secondary-foreground">
-            {t("If you choose to connect the optional Gmail and Google Drive plugins, Deni Run asks for extra access, each permission separately: read your Gmail (gmail.readonly), send email you approve (gmail.send), read your Drive files (drive.readonly), and create or update files in Drive (drive.file). A teammate uses this access only to do a task you ask for, and you can disconnect at any time from Plugins in the app or from your Google Account.")}
-          </p>
-          <p className="mt-3 max-w-3xl text-sm leading-relaxed text-secondary-foreground">
-            {t("Google user data is never sold, used for advertising, or used to train AI models. The use of information received from Google APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.")}
-          </p>
-          <Link
-            href="/privacy"
-            className="mt-4 inline-flex text-sm font-medium text-foreground hover:underline"
-          >
-            {t("Read the Privacy Policy")}
-          </Link>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-5xl px-6 pb-20">
-        <h2 className="text-2xl font-semibold">{t("Acceptable use")}</h2>
-        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-secondary-foreground">
-          {t("Deni Run must not be used to break the law, attack systems, send spam, harass people, or create or distribute sexual or intimate imagery of a real person without their consent, including AI-generated imagery. Accounts that do so are suspended.")}{" "}
-          <Link href="/terms" className="font-medium text-foreground hover:underline">
-            {t("Terms of Service")}
-          </Link>
-        </p>
       </section>
 
       <section id="pricing" className="mx-auto max-w-5xl px-6 pb-24">
