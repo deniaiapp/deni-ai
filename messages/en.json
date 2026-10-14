@@ -2060,6 +2060,7 @@
   "XU0SrB": "{model} exceeded its context window. Start a new chat or trim earlier messages/files.",
   "Bhb-Zw": "You've hit the usage limit for your plan.",
   "WlebTQ": "This model is not available on the Free plan. Upgrade to Plus or higher to use it.",
+  "H-RhUe": "This model is available on the Pro and Max plans. Upgrade to Pro or higher to use it.",
   "Ngc9o1": "Pro mode is not available on the Free plan. Upgrade to Plus or higher to use it.",
   "_WWJev": "Only GPT-6 Luna is available for guest sessions. Log in to use more models.",
   "oDZyOO": "Pro mode is not available for guest sessions. Log in to use it.",

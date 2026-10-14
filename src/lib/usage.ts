@@ -48,14 +48,14 @@ const USAGE_LIMITS: Record<
   basic: {
     free: { limit: 10_000_000, unit: "tokens" },
     plus: { limit: 100_000_000, unit: "tokens" },
-    pro: { limit: 300_000_000, unit: "tokens" },
-    max: { limit: 1_200_000_000, unit: "tokens" },
+    pro: { limit: 250_000_000, unit: "tokens" },
+    max: { limit: 500_000_000, unit: "tokens" },
   },
   premium: {
     free: { limit: 2_000_000, unit: "tokens" },
     plus: { limit: 50_000_000, unit: "tokens" },
     pro: { limit: 150_000_000, unit: "tokens" },
-    max: { limit: 600_000_000, unit: "tokens" },
+    max: { limit: 200_000_000, unit: "tokens" },
   },
 };
 

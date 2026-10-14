@@ -69,7 +69,7 @@ test.each([false, true])(
     expect(state.billingReads).toBe(2);
     expect(summary.tier).toBe(team ? "max" : "pro");
     expect(summary.usage.map(({ limit, used, remaining }) => ({ limit, used, remaining }))).toEqual(
-      (team ? [1_200_000_000, 600_000_000] : [300_000_000, 150_000_000]).map((limit) => ({
+      (team ? [500_000_000, 200_000_000] : [250_000_000, 150_000_000]).map((limit) => ({
         limit,
         used: 123,
         remaining: limit - 123,

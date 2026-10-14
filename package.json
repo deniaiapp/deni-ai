@@ -13,7 +13,7 @@
     "typecheck": "tsc --noEmit",
     "auth:generate": "auth generate --output src/db/schema/auth-schema.ts --yes",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node --env-file=.env.production ./node_modules/drizzle-kit/bin.cjs migrate",
+    "db:migrate": "node --env-file=.env ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:migrate:dev": "node --env-file=.env.local ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:push": "drizzle-kit push",
     "tools:codename": "tsx --env-file-if-exists=.env.local ./tools/codename-generator.ts",
