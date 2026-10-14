@@ -23,12 +23,12 @@ describe("model access", () => {
 
   test("verified free accounts can use the catalog except paid-only models", () => {
     const verifiedOnlyModel = models.find(
-      (model) => !model.paidOnly && !isFreePlanModel(model.value),
+      (model) => !model.paidOnly && !model.proOnly && !isFreePlanModel(model.value),
     );
     assert.ok(verifiedOnlyModel);
     assert.deepEqual(
       getModelsForPlanTier("free", true),
-      models.filter((model) => !model.paidOnly),
+      models.filter((model) => !model.paidOnly && !model.proOnly),
     );
     assert.equal(isModelAllowedForAccount(verifiedOnlyModel.value, "free", true), true);
   });
@@ -37,7 +37,20 @@ describe("model access", () => {
     assert.equal(isModelAllowedForAccount("gpt-6-astra", "free", true), false);
     assert.equal(isModelAllowedForAccount("gpt-6-astra", "free"), false);
     assert.equal(isModelAllowedForAccount("gpt-6-astra", "plus"), true);
-    assert.deepEqual(getModelsForPlanTier("plus"), models);
+    assert.deepEqual(
+      getModelsForPlanTier("plus"),
+      models.filter((model) => !model.proOnly),
+    );
+  });
+
+  test("pro-only models require Pro or Max", () => {
+    for (const value of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]) {
+      assert.equal(isModelAllowedForAccount(value, "free", true), false);
+      assert.equal(isModelAllowedForAccount(value, "plus"), false);
+      assert.equal(isModelAllowedForAccount(value, "pro"), true);
+      assert.equal(isModelAllowedForAccount(value, "max"), true);
+    }
+    assert.deepEqual(getModelsForPlanTier("pro"), models);
   });
 
   test("pro mode requires a paid tier", () => {

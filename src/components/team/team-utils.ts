@@ -42,11 +42,11 @@ function getGroupSeparator(locale?: Intl.LocalesArgument) {
   );
 }
 
-// Limits are whole token counts, so only the locale's digit grouping (plus spaces and
-// underscores) is dropped. Anything else, such as a decimal separator, is rejected
+// Limits are whole token counts, so only the locale's digit grouping (plus spaces,
+// underscores, and either apostrophe, since ICU versions differ for de-CH) is dropped. Anything else, such as a decimal separator, is rejected
 // rather than guessed at.
 export function parseTokenLimit(value: string, locale?: Intl.LocalesArgument) {
-  const normalized = value.replaceAll(getGroupSeparator(locale), "").replace(/[\s_]/g, "");
+  const normalized = value.replaceAll(getGroupSeparator(locale), "").replace(/[\s_'’]/g, "");
   if (!normalized) return null;
   if (!/^\d+$/.test(normalized)) return undefined;
   const parsed = Number(normalized);

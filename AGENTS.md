@@ -56,7 +56,7 @@ Choose checks that establish the changed behavior:
   affected route. Use `pnpm run build` for build/prerender/configuration changes.
 - Schema changes: `pnpm run db:generate`, then inspect the generated SQL.
   Apply migrations only when requested for the target environment:
-  `db:migrate:dev` loads `.env.local`; `db:migrate` loads `.env.production`.
+  `db:migrate:dev` loads `.env.local`; `db:migrate` loads `.env` (production).
   Do not infer permission to apply migrations or use `db:push` from schema edits.
 
 Report what was checked and any remaining blockers. Rerun affected checks after

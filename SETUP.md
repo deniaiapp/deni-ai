@@ -216,7 +216,7 @@ openssl rand -base64 24 | cut -c1-32
 pnpm run db:generate
 
 # Apply migrations
-# Production-style (.env.production):
+# Production (.env):
 pnpm run db:migrate
 
 # Local development (.env.local):
@@ -254,7 +254,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `pnpm run format`             | Format with oxfmt                    |
 | `pnpm run typecheck`          | TypeScript check (`tsc --noEmit`)    |
 | `pnpm run db:generate`        | Generate Drizzle migrations          |
-| `pnpm run db:migrate`         | Migrate using `.env.production`      |
+| `pnpm run db:migrate`         | Migrate using `.env`                 |
 | `pnpm run db:migrate:dev`     | Migrate using `.env.local`           |
 | `pnpm run db:push`            | Push schema (dev)                    |
 | `pnpm run auth:generate`      | Regenerate better-auth schema        |
@@ -267,7 +267,7 @@ Open [http://localhost:3000](http://localhost:3000).
 
 TypeScript scripts run through `tsx`. Unlike Bun, Node.js does not automatically load
 root environment files: the package scripts explicitly load `.env.local` when appropriate,
-and production migrations/maintenance use `.env.production`. For ad-hoc scripts, use
+and production migrations use `.env`. For ad-hoc scripts, use
 `pnpm exec tsx --env-file=.env.local path/to/script.ts`.
 
 ## Stripe billing
@@ -308,7 +308,7 @@ Without the coupon (or if it is invalid), no offer is shown.
 
 Dispute handling is automatic when those extra webhook events are enabled. On `charge.dispute.created` the app emails admins and cancels the related subscription (immediately for fraud, otherwise at period end). Evidence is not submitted automatically; contest from the Stripe Dashboard if needed. On `radar.early_fraud_warning.created` it refunds as fraud only when the payment is still actionable, 3D Secure did not authenticate it, and the account has no post-payment service use. Alerts go to `ADMIN_EMAILS` / `BLOG_ADMIN_EMAILS` when Cloudflare email is configured.
 
-Checkout and card verification always request 3D Secure (`request_three_d_secure: any`), matching the Radar policy that also blocks `:card_3d_secure_support: = 'not_supported'`. A verified card unlocks the full chat model catalog for free accounts (subject to the verified-free token limits); guests remain limited to the guest model. Signed-in free users without a verified card see a reminder at the bottom of the model selector's right panel; it stays visible while scrolling the model list and is hidden for verified-card users, paid users, guests, and deployments with billing disabled.
+Checkout and card verification always request 3D Secure (`request_three_d_secure: any`), matching the Radar policy that also blocks `:card_3d_secure_support: = 'not_supported'`. A verified card unlocks the chat model catalog for free accounts except paid-only models (subject to the verified-free token limits); guests remain limited to the guest model. Pro-only models (the GPT-5.6 series) need Pro or Max, including team plans and lifetime Pro; Plus unlocks every other model. Signed-in free users without a verified card see a reminder at the bottom of the model selector's right panel; it stays visible while scrolling the model list and is hidden for verified-card users, paid users, guests, and deployments with billing disabled.
 
 Keep a Terms of Service URL in Stripe public details (`https://deniai.app/legal/terms`). Optional: turn on [Smart Disputes](https://dashboard.stripe.com/settings/disputes) if you want Stripe to help assemble network evidence.
 

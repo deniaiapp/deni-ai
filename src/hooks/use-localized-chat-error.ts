@@ -57,6 +57,10 @@ export function useLocalizedChatError() {
         return t(
           "This model is not available on the Free plan. Upgrade to Plus or higher to use it.",
         );
+      case "This model is available on the Pro and Max plans. Upgrade to Pro or higher to use it.":
+        return t(
+          "This model is available on the Pro and Max plans. Upgrade to Pro or higher to use it.",
+        );
       case "Pro mode is not available on the Free plan. Upgrade to Plus or higher to use it.":
         return t(
           "Pro mode is not available on the Free plan. Upgrade to Plus or higher to use it.",

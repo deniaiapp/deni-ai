@@ -14,13 +14,13 @@ export type BillingPlanCopy = {
 // in src/lib/usage.ts. Displaying ratios against the adjacent tier (rather
 // than raw token counts or always-vs-Free) keeps the copy meaningful as
 // the weighting scheme evolves and makes upgrade value tangible.
-//   plus  → vs Free  (basic 150/10=15, premium 50/2=25)
-//   pro   → vs Plus  (basic 300/150=2, premium 150/50=3)
-//   max   → vs Pro   (basic 800/300≈2.7, premium 450/150=3)
+//   plus  → vs Free  (basic 100/10=10, premium 50/2=25)
+//   pro   → vs Plus  (basic 250/100=2.5, premium 150/50=3)
+//   max   → vs Pro   (basic 500/250=2, premium 200/150≈1.3)
 const PLAN_USAGE_MULTIPLIERS = {
-  plus: { basic: 15, premium: 25, vs: "Free" as const },
-  pro: { basic: 2, premium: 3, vs: "Plus" as const },
-  max: { basic: 3, premium: 3, vs: "Pro" as const },
+  plus: { basic: 10, premium: 25, vs: "Free" as const },
+  pro: { basic: 2.5, premium: 3, vs: "Plus" as const },
+  max: { basic: 2, premium: 1.3, vs: "Pro" as const },
 } as const;
 
 export function useBillingPlanCopy(planId: BillingPlanId): BillingPlanCopy;

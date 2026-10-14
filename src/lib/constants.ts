@@ -82,6 +82,11 @@ export type ModelDefinition = {
    * Card verification on the Free plan does not unlock it.
    */
   paidOnly?: boolean;
+  /**
+   * When true, the model is limited to the Pro and Max tiers (including team
+   * plans and lifetime Pro). Plus and Free accounts cannot use it.
+   */
+  proOnly?: boolean;
   default?: boolean;
   provider?: string;
   efforts: ModelEfforts;
@@ -137,6 +142,8 @@ export function formatModelDeprecationDate(date: string, locale: string): string
 // https://console.groq.com/docs/models
 // https://openrouter.ai/api/v1/models (routed model variants)
 // Pro/Fast mode and long-context multipliers are applied separately.
+// Exception: Sol models are rated 3x, above their price tier, because they carry
+// most basic usage (GPT-6.x Sol: about $0.67 per 1M quota units).
 const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-6 Astra",
@@ -155,7 +162,7 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-6 Sol",
     value: "gpt-6-sol",
-    tokenMultiplier: 1.5,
+    tokenMultiplier: 3,
     author: "openai",
     description: "High-end GPT-6 model for demanding reasoning, coding, and agentic work.",
     efforts: ["none", "low", "medium", "high", "xhigh", "max"],
@@ -166,7 +173,7 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-6.1 Sol",
     value: "gpt-6.1-sol",
-    tokenMultiplier: 1.5,
+    tokenMultiplier: 3,
     author: "openai",
     description: "High-end GPT-6.1 model for demanding reasoning, coding, and agentic work.",
     featured: true,
@@ -190,8 +197,9 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-5.6 Sol",
     value: "gpt-5.6-sol",
-    tokenMultiplier: 2,
+    tokenMultiplier: 3,
     author: "openai",
+    proOnly: true,
     description: "OpenAI flagship for complex reasoning, coding, and agentic work.",
     efforts: ["none", "low", "medium", "high", "xhigh", "max"],
     supportsProMode: true,
@@ -201,8 +209,9 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-5.6 Terra",
     value: "gpt-5.6-terra",
-    tokenMultiplier: 1,
+    tokenMultiplier: 1.5,
     author: "openai",
+    proOnly: true,
     description: "Balanced GPT-5.6 model for everyday work at half the cost of Sol.",
     efforts: ["none", "low", "medium", "high", "xhigh", "max"],
     supportsProMode: true,
@@ -214,21 +223,13 @@ const catalogModels: readonly ModelDefinition[] = [
     value: "gpt-5.6-luna",
     tokenMultiplier: 1,
     author: "openai",
+    proOnly: true,
     description: "Fastest, most affordable GPT-5.6 model for high-volume tasks.",
     default: true,
     efforts: ["none", "low", "medium", "high", "xhigh", "max"],
     supportsProMode: true,
     supportsFastMode: true,
     contextWindow: 1_050_000,
-  },
-  {
-    name: "Gemini 3.1 Pro",
-    value: "gemini-3.1-pro-preview",
-    tokenMultiplier: 1.5,
-    author: "google",
-    description: "Best for complex tasks",
-    featured: true,
-    efforts: ["low", "high"],
   },
   {
     name: "Gemini 3.8 Flash",
@@ -387,8 +388,9 @@ export const defaultModel = models.find((model) => model.value === "gpt-6-luna")
 
 /**
  * Models available on the Free plan.
- * Verified cards unlock the catalog except `paidOnly` models; paid tiers
- * (Plus / Pro / Max / Team) unlock everything.
+ * Verified cards unlock the catalog except `paidOnly` and `proOnly` models;
+ * Plus unlocks everything except `proOnly` models, and Pro / Max / Team unlock
+ * everything.
  */
 export const FREE_PLAN_MODEL_VALUES = [
   "gpt-6-luna",
@@ -413,6 +415,10 @@ export function isPaidOnlyModel(modelValue: string): boolean {
   return models.some((model) => model.value === modelValue && model.paidOnly);
 }
 
+export function isProOnlyModel(modelValue: string): boolean {
+  return models.some((model) => model.value === modelValue && model.proOnly);
+}
+
 export function isGuestModel(modelValue: string): boolean {
   return guestModelSet.has(modelValue);
 }
@@ -426,6 +432,10 @@ export function isModelAllowedForAccount(
   tier: "free" | "plus" | "pro" | "max" | null | undefined,
   hasVerifiedPaymentMethod = false,
 ): boolean {
+  if (isProOnlyModel(modelValue)) {
+    return tier === "pro" || tier === "max";
+  }
+
   if (tier && tier !== "free") {
     return true;
   }
