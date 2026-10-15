@@ -11,3 +11,7 @@ minimumReleaseAgeExclude:
   - '@tanstack/router-utils@1.162.4'
   - '@tanstack/start-plugin-core@1.171.53'
   - '@tanstack/start-server-core@1.169.43'
+# Nitro hoists one tslib into .output/server/node_modules for every bundled import. tsyringe asks
+# for tslib 1, which lacks helpers like __spreadArray that tslib 2 users need, and 2 is a superset.
+overrides:
+  tslib: ^2.8.1
