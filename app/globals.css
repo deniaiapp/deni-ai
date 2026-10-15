@@ -3,6 +3,11 @@
 @import "streamdown/styles.css";
 @import "shadcn/tailwind.css";
 
+/* Streamdown styles its markdown (list markers, nested list indents, tables) with Tailwind classes
+   in its bundle. Tailwind skips node_modules, so without this list bullets render outside the
+   message bubble. */
+@source "../node_modules/streamdown/dist/*.js";
+
 @custom-variant dark (&:is(.dark *));
 
 /* Theme palettes. Keep shared surfaces and contrast shades paired across modes. */
