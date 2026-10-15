@@ -396,16 +396,16 @@ export function ComputerPanel({
       <div className="px-3 py-2">
         <Tabs value={visibleTab} onValueChange={(value) => setTab(value as Tab)}>
           <TabsList className="w-full">
-            <TabsTrigger value="screen">{t("Screen")}</TabsTrigger>
-            <TabsTrigger value="files">
+            <TabsTrigger value="screen" className="px-1.5">{t("Screen")}</TabsTrigger>
+            <TabsTrigger value="files" className="px-1.5">
               {tabBusy === "files" ? <Spinner size="sm" className="size-3.5" /> : null}
               {t("Files")}
             </TabsTrigger>
-            <TabsTrigger value="terminal">
+            <TabsTrigger value="terminal" className="px-1.5">
               {tabBusy === "terminal" ? <Spinner size="sm" className="size-3.5" /> : null}
               {t("Terminal")}
             </TabsTrigger>
-            <TabsTrigger value="log">{t("Log")}</TabsTrigger>
+            <TabsTrigger value="log" className="px-1.5">{t("Log")}</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
