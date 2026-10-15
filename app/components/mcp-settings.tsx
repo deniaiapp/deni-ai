@@ -77,6 +77,18 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
     else setMessage(data.error ?? t("Could not change permission."));
   }
 
+  // None → ask every time, one → its name, some → first name plus a count, every action → all.
+  function alwaysAllowSummary(plugin: BuiltinPlugin) {
+    const actions = builtinActions[plugin.kind];
+    const allowed = actions.filter((action) => plugin.alwaysAllow.includes(action));
+    const [first] = allowed;
+    if (!first) return t("Ask every time");
+    const name = actionLabels[first] ?? first;
+    if (allowed.length === 1) return name;
+    if (allowed.length === actions.length) return t("All actions");
+    return t("{action} +{count} more", { action: name, count: String(allowed.length - 1) });
+  }
+
   async function disconnect(kind: BuiltinPlugin["kind"]) {
     const label = pluginLabels[kind];
     if (!window.confirm(t("Disconnect {plugin}? Teammates will lose access to it right away. You can connect it again later.", { plugin: label }))) return;
@@ -189,7 +201,7 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button type="button" size="sm" variant="outline" className="min-w-0 max-w-64">
-                        <span className="truncate">{plugin.alwaysAllow.length ? builtinActions[plugin.kind].filter((action) => plugin.alwaysAllow.includes(action)).map((action) => actionLabels[action] ?? action).join(", ") : t("Ask every time")}</span>
+                        <span className="truncate">{alwaysAllowSummary(plugin)}</span>
                         <ChevronDownIcon data-icon="inline-end" className="size-4 shrink-0" />
                       </Button>
                     </DropdownMenuTrigger>

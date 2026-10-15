@@ -2476,6 +2476,16 @@ msgid "Ask every time"
 msgstr "毎回確認"
 
 #: app/components/mcp-settings.tsx
+msgctxt "jK9a9x"
+msgid "All actions"
+msgstr "すべて"
+
+#: app/components/mcp-settings.tsx
+msgctxt "po_u49"
+msgid "{action} +{count} more"
+msgstr "{action} ほか{count}件"
+
+#: app/components/mcp-settings.tsx
 msgctxt "i-Rkf2"
 msgid "Run without asking"
 msgstr "確認せずに実行"
