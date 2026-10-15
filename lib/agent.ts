@@ -1,4 +1,4 @@
-import { tool } from "ai";
+import { tool, type ModelMessage } from "ai";
 import { z } from "zod";
 import type { Bot, Skill } from "./types";
 import {
@@ -647,9 +647,30 @@ function browserActivityTitle(tr: Translate, action: string) {
   }
 }
 
+type ApprovalCall = { toolCallId?: string; messages?: ModelMessage[] };
+
+/**
+ * When a run resumes, the SDK checks each approved call again before running it. That is
+ * not a new request, so it must not put the job back into waiting_approval.
+ */
+function alreadyAnswered({ toolCallId, messages }: ApprovalCall = {}) {
+  if (!toolCallId || !messages) return false;
+  const requests = new Set<string>();
+  const answers = new Set<string>();
+  for (const message of messages) {
+    if (typeof message.content === "string") continue;
+    for (const part of message.content) {
+      if (part.type === "tool-approval-request" && part.toolCallId === toolCallId) requests.add(part.approvalId);
+      if (part.type === "tool-approval-response") answers.add(part.approvalId);
+    }
+  }
+  return [...requests].some((id) => answers.has(id));
+}
+
 export function deniToolApproval(options?: { userId?: string; jobId?: string; locale?: string }) {
   const tr = translatorFor(options?.locale);
-  const approval = () => {
+  const approval = (call?: ApprovalCall) => {
+    if (alreadyAnswered(call)) return "user-approval" as const;
     if (options?.userId && options.jobId) {
       void transitionJob(options.userId, options.jobId, "running", { status: "waiting_approval" }).catch(
         () => undefined,
@@ -665,15 +686,15 @@ export function deniToolApproval(options?: { userId?: string; jobId?: string; lo
     return "user-approval" as const;
   };
   return {
-    runCommand: ({ command }: { command: string }) =>
-      commandNeedsApproval(command) ? approval() : ("not-applicable" as const),
-    workspace: ({ action }: { action: string }) =>
-      action === "delete" ? approval() : ("not-applicable" as const),
-    mcp: ({ action }: { action: string }) =>
-      action === "call" ? approval() : ("not-applicable" as const),
-    builtInPlugin: async ({ kind, action }: { kind: PluginKind; action: string }) =>
+    runCommand: ({ command }: { command: string }, call?: ApprovalCall) =>
+      commandNeedsApproval(command) ? approval(call) : ("not-applicable" as const),
+    workspace: ({ action }: { action: string }, call?: ApprovalCall) =>
+      action === "delete" ? approval(call) : ("not-applicable" as const),
+    mcp: ({ action }: { action: string }, call?: ApprovalCall) =>
+      action === "call" ? approval(call) : ("not-applicable" as const),
+    builtInPlugin: async ({ kind, action }: { kind: PluginKind; action: string }, call?: ApprovalCall) =>
       isReadAction(action) ? ("not-applicable" as const)
-        : options?.userId && await isAlwaysAllowed(options.userId, kind, action as WriteAction) ? ("approved" as const) : approval(),
+        : options?.userId && await isAlwaysAllowed(options.userId, kind, action as WriteAction) ? ("approved" as const) : approval(call),
   };
 }
 export function deniHandoffToolApproval(locale?: string) {

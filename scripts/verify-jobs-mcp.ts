@@ -123,6 +123,21 @@ async function main() {
   assert(JSON.stringify(call).includes("echoed"), "MCP tool call did not return result");
   const approval = agent.deniToolApproval({ userId: "tenant-a", jobId: stale.id });
   assert(approval.mcp({ action: "call" }) === "user-approval", "MCP call did not require approval");
+
+  // Resuming after an approval re-checks the approved call; that must not wait for approval again.
+  const resumed = await jobs.createJob({ userId: "tenant-a", threadId: "thread-a", botId: "bot-a", kind: "chat", idempotencyKey: "resumed-approval", payload: {} });
+  assert(Boolean((await jobs.claimJob("tenant-a", resumed.id))?.claimed), "resumed test job was not claimed");
+  const answered = [
+    { role: "assistant" as const, content: [{ type: "tool-call" as const, toolCallId: "call-1", toolName: "mcp", input: { action: "call" } }, { type: "tool-approval-request" as const, approvalId: "ap-1", toolCallId: "call-1" }] },
+    { role: "tool" as const, content: [{ type: "tool-approval-response" as const, approvalId: "ap-1", approved: true }] },
+  ];
+  const recheck = agent.deniToolApproval({ userId: "tenant-a", jobId: resumed.id });
+  assert(recheck.mcp({ action: "call" }, { toolCallId: "call-1", messages: answered }) === "user-approval", "an approved call was not treated as approved");
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert((await jobs.getJob("tenant-a", resumed.id))?.status === "running", "re-checking an approved call put the job back into waiting_approval");
+  recheck.mcp({ action: "call" }, { toolCallId: "call-2", messages: answered });
+  await new Promise((resolve) => setTimeout(resolve, 100));
+  assert((await jobs.getJob("tenant-a", resumed.id))?.status === "waiting_approval", "a new call did not wait for approval");
   server.close();
   console.log(`verified durable job claims, checkpoints, cancel, uncertain recovery, tenant isolation, and MCP discovery/call on local SQLite`);
 }
