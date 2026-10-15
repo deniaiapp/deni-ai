@@ -1,7 +1,7 @@
 import { PaperPlaneTiltIcon, StopIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import type { ChatStatus } from "ai";
 import { useExtracted } from "@/i18n/react";
-import type { ComponentProps, KeyboardEventHandler, MouseEvent } from "react";
+import type { ComponentProps, KeyboardEventHandler } from "react";
 import { useCallback } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -82,7 +82,7 @@ export const PromptInputSubmit = ({
   }
 
   const handleClick = useCallback(
-    (e: MouseEvent<HTMLButtonElement>) => {
+    (e: Parameters<NonNullable<PromptInputSubmitProps["onClick"]>>[0]) => {
       if (isGenerating && onStop) {
         e.preventDefault();
         onStop();

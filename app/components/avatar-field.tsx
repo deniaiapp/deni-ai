@@ -1,6 +1,6 @@
 import { useExtracted } from "@/i18n/react";
 import { useRef, useState } from "react";
-import * as Popover from "@radix-ui/react-popover";
+import { Popover } from "@base-ui/react/popover";
 import { ImagePlus, Smile, X } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -38,8 +38,8 @@ export function AvatarField({ name, accent = "#555555", value, onChange, disable
     <div className="flex flex-wrap items-center gap-2">
       <span className="mr-1 [&>span]:size-12"><Avatar name={name || "?"} accent={accent} icon={value} /></span>
       <Popover.Root open={open} onOpenChange={setOpen}>
-        <Popover.Trigger asChild><Button type="button" variant="outline" size="xs" icon={Smile} disabled={disabled || busy}>{t("Emoji")}</Button></Popover.Trigger>
-        <Popover.Portal><Popover.Content side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-[70] overflow-hidden rounded-2xl border border-foreground/10 bg-surface-32 shadow-xl"><ReactionPicker onBack={() => setOpen(false)} onSelect={(emoji) => { onChange(emoji); setOpen(false); }} /></Popover.Content></Popover.Portal>
+        <Popover.Trigger disabled={disabled || busy} render={<Button type="button" variant="outline" size="xs" icon={Smile} />}>{t("Emoji")}</Popover.Trigger>
+        <Popover.Portal><Popover.Positioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-[70]"><Popover.Popup className="overflow-hidden rounded-2xl border border-foreground/10 bg-surface-32 shadow-xl outline-none"><ReactionPicker onBack={() => setOpen(false)} onSelect={(emoji) => { onChange(emoji); setOpen(false); }} /></Popover.Popup></Popover.Positioner></Popover.Portal>
       </Popover.Root>
       <Button type="button" variant="outline" size="xs" icon={ImagePlus} disabled={disabled} loading={busy} onClick={() => fileInput.current?.click()}>{t("Upload")}</Button>
       {value ? <Button type="button" variant="ghost" size="xs" icon={X} disabled={disabled || busy} onClick={() => onChange(null)}>{t("Reset")}</Button> : null}

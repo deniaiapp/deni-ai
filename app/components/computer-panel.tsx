@@ -592,7 +592,8 @@ export function ComputerPanel({
               <div className="space-y-2">
                 <div className="flex items-center gap-1">
                   <Checkbox
-                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    checked={allSelected}
+                    indeterminate={someSelected && !allSelected}
                     onCheckedChange={(value) => toggleAll(value === true)}
                     disabled={files.length === 0 || filesBusy}
                     aria-label={t("Select all files")}
@@ -720,9 +721,7 @@ export function ComputerPanel({
               : t("Delete {count, plural, one {# item} other {# items}}? This cannot be undone.", { count: deleteConfirm?.paths.length ?? 0 })}
           </p>
           <div className="mt-6 flex justify-end gap-2">
-            <DialogClose asChild>
-              <Button variant="secondary">{t("Cancel")}</Button>
-            </DialogClose>
+            <DialogClose render={<Button variant="secondary" />}>{t("Cancel")}</DialogClose>
             <Button
               type="button"
               variant="destructive"

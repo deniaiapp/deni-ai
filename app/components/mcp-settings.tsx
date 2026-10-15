@@ -4,7 +4,7 @@ import { ChevronDownIcon, PlugIcon, TrashIcon, WrenchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuGroupLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingFallback } from "@/components/ui/loading";
@@ -197,15 +197,15 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
                 {plugin.writeAccess ? <div className="flex items-center justify-between gap-3 text-sm">
                   <span>{t("Always allow")}</span>
                   <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button type="button" size="sm" variant="outline" className="min-w-0 max-w-64">
-                        <span className="truncate">{alwaysAllowSummary(plugin)}</span>
-                        <ChevronDownIcon data-icon="inline-end" className="size-4 shrink-0" />
-                      </Button>
+                    <DropdownMenuTrigger render={<Button type="button" size="sm" variant="outline" className="min-w-0 max-w-64" />}>
+                      <span className="truncate">{alwaysAllowSummary(plugin)}</span>
+                      <ChevronDownIcon data-icon="inline-end" className="size-4 shrink-0" />
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>{t("Run without asking")}</DropdownMenuLabel>
-                      {builtinActions[plugin.kind].map((action) => <DropdownMenuCheckboxItem key={action} checked={plugin.alwaysAllow.includes(action)} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => void setAlwaysAllow(plugin.kind, action, checked)}>{actionLabels[action] ?? action}</DropdownMenuCheckboxItem>)}
+                      <DropdownMenuGroup>
+                        <DropdownMenuGroupLabel>{t("Run without asking")}</DropdownMenuGroupLabel>
+                        {builtinActions[plugin.kind].map((action) => <DropdownMenuCheckboxItem key={action} checked={plugin.alwaysAllow.includes(action)} onCheckedChange={(checked) => void setAlwaysAllow(plugin.kind, action, checked)}>{actionLabels[action] ?? action}</DropdownMenuCheckboxItem>)}
+                      </DropdownMenuGroup>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div> : null}

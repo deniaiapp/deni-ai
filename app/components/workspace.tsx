@@ -988,9 +988,7 @@ function BotDialog({
           </div>
         </div>
         <div className="mt-6 flex justify-end gap-2">
-          <DialogClose asChild>
-            <Button variant="secondary" disabled={busy || iconBusy}>{t("Close")}</Button>
-          </DialogClose>
+          <DialogClose disabled={busy || iconBusy} render={<Button variant="secondary" />}>{t("Close")}</DialogClose>
           <Button
             type="button"
             variant="primary"
@@ -1068,9 +1066,7 @@ function SectionDialog({
           ) : null}
         </div>
         <div className="mt-6 flex justify-end gap-2">
-          <DialogClose asChild>
-            <Button variant="secondary">{t("Close")}</Button>
-          </DialogClose>
+          <DialogClose render={<Button variant="secondary" />}>{t("Close")}</DialogClose>
           <Button
             type="button"
             variant="primary"

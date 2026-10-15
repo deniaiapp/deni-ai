@@ -318,72 +318,70 @@ function TeammateRow({
       transition={{ duration: 0.28, ease: easeOut }}
     >
     <ContextMenu>
-      <ContextMenuTrigger asChild>
-        <button
-          type="button"
-          onClick={onSelect}
-          className={cn(
-            "flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-left whitespace-normal",
-            active ? "bg-primary/10 ring-1 ring-inset ring-primary/25" : "hover:bg-primary/5",
-          )}
-        >
-          <Avatar name={bot.name} accent={bot.accent} icon={bot.icon} />
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="flex min-w-0 items-baseline justify-between gap-2">
-              <span className="truncate text-[13px] font-semibold text-foreground">{bot.name}</span>
-              <time dateTime={thread.updatedAt} className="shrink-0 text-[10px] text-muted-foreground">{thread.updatedAt.slice(5, 10).replace("-", "/")}</time>
-            </span>
-            <span className="min-w-0 truncate text-xs text-muted-foreground">
-              {thread.lastPreview || bot.job}
-            </span>
+      <ContextMenuTrigger
+        render={<button type="button" />}
+        onClick={onSelect}
+        className={cn(
+          "flex w-full items-center gap-2.5 rounded-xl px-2 py-2.5 text-left whitespace-normal",
+          active ? "bg-primary/10 ring-1 ring-inset ring-primary/25" : "hover:bg-primary/5",
+        )}
+      >
+        <Avatar name={bot.name} accent={bot.accent} icon={bot.icon} />
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="flex min-w-0 items-baseline justify-between gap-2">
+            <span className="truncate text-[13px] font-semibold text-foreground">{bot.name}</span>
+            <time dateTime={thread.updatedAt} className="shrink-0 text-[10px] text-muted-foreground">{thread.updatedAt.slice(5, 10).replace("-", "/")}</time>
           </span>
-          {loading ? (
-            <Loader2 className="mt-1.5 size-3.5 shrink-0 animate-spin text-muted-foreground" />
-          ) : jobState === "waiting" ? (
-            <span className="mt-1.5 text-xs text-warning-300" aria-label={t("Task waiting")}>⏸</span>
-          ) : jobState === "attention" ? (
-            <span className="mt-1.5 text-xs text-warning-300" aria-label={t("Task needs attention")}>⚠</span>
-          ) : thread.pinned ? (
-            <Pin className="mt-1.5 size-3 shrink-0 text-muted-foreground" aria-label={t("Pinned")} />
-          ) : null}
-          {thread.unread ? (
-            <span className="mt-2 size-2 shrink-0 rounded-full bg-primary" aria-label={t("Unread")} />
-          ) : null}
-        </button>
+          <span className="min-w-0 truncate text-xs text-muted-foreground">
+            {thread.lastPreview || bot.job}
+          </span>
+        </span>
+        {loading ? (
+          <Loader2 className="mt-1.5 size-3.5 shrink-0 animate-spin text-muted-foreground" />
+        ) : jobState === "waiting" ? (
+          <span className="mt-1.5 text-xs text-warning-300" aria-label={t("Task waiting")}>⏸</span>
+        ) : jobState === "attention" ? (
+          <span className="mt-1.5 text-xs text-warning-300" aria-label={t("Task needs attention")}>⚠</span>
+        ) : thread.pinned ? (
+          <Pin className="mt-1.5 size-3 shrink-0 text-muted-foreground" aria-label={t("Pinned")} />
+        ) : null}
+        {thread.unread ? (
+          <span className="mt-2 size-2 shrink-0 rounded-full bg-primary" aria-label={t("Unread")} />
+        ) : null}
       </ContextMenuTrigger>
       <ContextMenuContent>
-        <ContextMenuItem onSelect={() => onAction("pin")}>
+        <ContextMenuItem onClick={() => onAction("pin")}>
           <Pin />
           {thread.pinned ? t("Unpin") : t("Pin")}
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => onAction("new-section")}>
+        <ContextMenuItem onClick={() => onAction("new-section")}>
           <FolderInput />
           {t("Move to new section")}
         </ContextMenuItem>
         {thread.section ? (
-          <ContextMenuItem onSelect={() => onAction("remove-section")}>
+          <ContextMenuItem onClick={() => onAction("remove-section")}>
             <FolderMinus />
             {t("Remove from section")}
           </ContextMenuItem>
         ) : null}
-        <ContextMenuItem onSelect={() => onAction("unread")}>
+        <ContextMenuItem onClick={() => onAction("unread")}>
           <MessageSquare />
           {thread.unread ? t("Mark as Read") : t("Mark as Unread")}
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => onAction("reset")}>
+        <ContextMenuItem onClick={() => onAction("reset")}>
           <RotateCcw />
           {t("Reset conversation")}
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => onAction("edit")}>
+        <ContextMenuItem onClick={() => onAction("edit")}>
           <Pencil />
           {thread.kind === "group" ? t("Edit group") : t("Edit profile")}
         </ContextMenuItem>
-        <ContextMenuItem onSelect={() => onAction("duplicate")}>
+        <ContextMenuItem onClick={() => onAction("duplicate")}>
           <Copy />
           {t("Duplicate")}
         </ContextMenuItem>
         <ContextMenuSeparator />
-        <ContextMenuItem onSelect={() => onAction("hide")}>
+        <ContextMenuItem onClick={() => onAction("hide")}>
           {thread.hidden ? <Eye /> : <EyeOff />}
           {thread.hidden ? t("Show in sidebar") : t("Hide from sidebar")}
         </ContextMenuItem>
@@ -391,7 +389,7 @@ function TeammateRow({
         <ContextMenuItem
           variant="destructive"
           disabled={thread.kind === "dm" && DEFAULT_BOT_IDS.has(bot.id)}
-          onSelect={() => onAction("delete")}
+          onClick={() => onAction("delete")}
         >
           <Trash2 />
           {t("Delete")}

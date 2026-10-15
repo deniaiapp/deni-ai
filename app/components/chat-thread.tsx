@@ -1903,13 +1903,8 @@ function RunModePicker({
   };
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <button
-          type="button"
-          className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground"
-        >
-          {isPlus ? "Run+" : "Run"} {levelLabels[level]}
-        </button>
+      <DropdownMenuTrigger className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground">
+        {isPlus ? "Run+" : "Run"} {levelLabels[level]}
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="start" className="w-56">
         {levels.map((id) => {
@@ -1917,7 +1912,7 @@ function RunModePicker({
           return (
             <DropdownMenuItem
               key={id}
-              onSelect={() => selectMode(mode.id)}
+              onClick={() => selectMode(mode.id)}
               className={mode.id === value ? "bg-surface-active" : undefined}
             >
               <span className="flex min-w-0 flex-col">
@@ -1932,8 +1927,8 @@ function RunModePicker({
           {(["Run", "Run+"] as const).map((family) => (
             <DropdownMenuItem
               key={family}
-              onSelect={(event) => {
-                event.preventDefault(); // Keep the menu open to choose a level above.
+              closeOnClick={false} // Keep the menu open to choose a level above.
+              onClick={() => {
                 if ((family === "Run+") !== isPlus) {
                   selectMode(family === "Run+" ? `plus-${level}` : level);
                 }

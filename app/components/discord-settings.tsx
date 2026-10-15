@@ -1,7 +1,7 @@
 import { useExtracted } from "@/i18n/react";
 import { CircleHelp } from "lucide-react";
 import { useState } from "react";
-import * as Popover from "@radix-ui/react-popover";
+import { Popover } from "@base-ui/react/popover";
 import { Button } from "@/components/ui/button";
 
 export type DiscordStatus = {
@@ -69,11 +69,11 @@ export function DiscordCard({ status, onStatusChange }: { status: DiscordStatus 
             Discord
             {status.link ? (
               <Popover.Root>
-                <Popover.Trigger asChild>
-                  <button type="button" aria-label={hint} className="rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2"><CircleHelp className="size-4" /></button>
-                </Popover.Trigger>
+                <Popover.Trigger aria-label={hint} className="rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2"><CircleHelp className="size-4" /></Popover.Trigger>
                 <Popover.Portal>
-                  <Popover.Content side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-[70] max-w-xs rounded-xl border border-foreground/10 bg-surface-32 p-3 text-xs font-normal text-secondary-foreground shadow-xl outline-none">{hint}</Popover.Content>
+                  <Popover.Positioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-[70]">
+                    <Popover.Popup className="max-w-xs rounded-xl border border-foreground/10 bg-surface-32 p-3 text-xs font-normal text-secondary-foreground shadow-xl outline-none">{hint}</Popover.Popup>
+                  </Popover.Positioner>
                 </Popover.Portal>
               </Popover.Root>
             ) : null}

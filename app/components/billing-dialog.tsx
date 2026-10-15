@@ -97,9 +97,7 @@ export function BillingDialog({
           <LoadingFallback label={t("Loading usage…")} className="py-8" />
         )}
         <div className="mt-6 flex justify-end gap-2">
-          <DialogClose asChild>
-            <Button variant="secondary">{t("Close")}</Button>
-          </DialogClose>
+          <DialogClose render={<Button variant="secondary" />}>{t("Close")}</DialogClose>
           {usage?.plan === "pro" ? (
             <Button type="button" variant="primary" loading={busy} onClick={onManage}>
               {t("Manage billing")}

@@ -1,9 +1,8 @@
-import * as TabsPrimitive from "@radix-ui/react-tabs";
-import type { ComponentProps } from "react";
+import { Tabs as TabsPrimitive } from "@base-ui/react/tabs";
 
 import { cn } from "@/lib/utils";
 
-function Tabs({ className, ...props }: ComponentProps<typeof TabsPrimitive.Root>) {
+function Tabs({ className, ...props }: TabsPrimitive.Root.Props) {
   return (
     <TabsPrimitive.Root
       data-slot="tabs"
@@ -13,7 +12,7 @@ function Tabs({ className, ...props }: ComponentProps<typeof TabsPrimitive.Root>
   );
 }
 
-function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.List>) {
+function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
@@ -26,14 +25,14 @@ function TabsList({ className, ...props }: ComponentProps<typeof TabsPrimitive.L
   );
 }
 
-function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitive.Trigger>) {
+function TabsTrigger({ className, ...props }: TabsPrimitive.Tab.Props) {
   return (
-    <TabsPrimitive.Trigger
+    <TabsPrimitive.Tab
       data-slot="tabs-trigger"
       className={cn(
         "inline-flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1 text-sm font-medium text-muted-foreground transition-colors outline-none",
-        "data-[state=active]:bg-primary/15 data-[state=active]:text-foreground data-[state=active]:shadow-[inset_0_-2px_0_var(--primary)] focus-visible:ring-2 focus-visible:ring-primary/50",
-        "disabled:pointer-events-none disabled:opacity-50",
+        "data-active:bg-primary/15 data-active:text-foreground data-active:shadow-[inset_0_-2px_0_var(--primary)] focus-visible:ring-2 focus-visible:ring-primary/50",
+        "data-disabled:pointer-events-none data-disabled:opacity-50",
         className,
       )}
       {...props}
@@ -41,9 +40,9 @@ function TabsTrigger({ className, ...props }: ComponentProps<typeof TabsPrimitiv
   );
 }
 
-function TabsContent({ className, ...props }: ComponentProps<typeof TabsPrimitive.Content>) {
+function TabsContent({ className, ...props }: TabsPrimitive.Panel.Props) {
   return (
-    <TabsPrimitive.Content
+    <TabsPrimitive.Panel
       data-slot="tabs-content"
       className={cn("flex-1", className)}
       {...props}

@@ -1,8 +1,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
-import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { Loader2Icon } from "lucide-react"
-import type { ComponentProps, ElementType } from "react"
+import type { ElementType } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -46,9 +45,9 @@ const buttonVariants = cva(
 
 type IconComponent = ElementType<{ size?: number | string; className?: string }>
 
-export type ButtonProps = ComponentProps<"button"> &
+export type ButtonProps = Omit<ButtonPrimitive.Props, "className"> &
   VariantProps<typeof buttonVariants> & {
-    asChild?: boolean
+    className?: string
     icon?: IconComponent
     loading?: boolean
     shape?: "default" | "square"
@@ -59,16 +58,14 @@ function Button({
   variant = "default",
   size = "default",
   shape = "default",
-  asChild = false,
   icon: Icon,
   loading = false,
   disabled,
   children,
   ...props
 }: ButtonProps) {
-  const Comp = asChild ? Slot : ButtonPrimitive
   return (
-    <Comp
+    <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size, className }), shape === "square" && "aspect-square p-0")}
       disabled={disabled || loading}
@@ -76,7 +73,7 @@ function Button({
     >
       {loading ? <Loader2Icon className="size-4 animate-spin" /> : Icon ? <Icon /> : null}
       {children}
-    </Comp>
+    </ButtonPrimitive>
   )
 }
 

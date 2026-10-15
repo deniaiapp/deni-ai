@@ -1,32 +1,30 @@
-import * as ContextMenuPrimitive from "@radix-ui/react-context-menu";
-import type { ComponentProps } from "react";
+import { ContextMenu as ContextMenuPrimitive } from "@base-ui/react/context-menu";
 
 import { cn } from "@/lib/utils";
 
-function ContextMenu({ ...props }: ComponentProps<typeof ContextMenuPrimitive.Root>) {
+function ContextMenu({ ...props }: ContextMenuPrimitive.Root.Props) {
   return <ContextMenuPrimitive.Root data-slot="context-menu" {...props} />;
 }
 
-function ContextMenuTrigger({ ...props }: ComponentProps<typeof ContextMenuPrimitive.Trigger>) {
+function ContextMenuTrigger({ ...props }: ContextMenuPrimitive.Trigger.Props) {
   return <ContextMenuPrimitive.Trigger data-slot="context-menu-trigger" {...props} />;
 }
 
-function ContextMenuContent({
-  className,
-  ...props
-}: ComponentProps<typeof ContextMenuPrimitive.Content>) {
+function ContextMenuContent({ className, ...props }: ContextMenuPrimitive.Popup.Props) {
   return (
     <ContextMenuPrimitive.Portal>
-      <ContextMenuPrimitive.Content
-        data-slot="context-menu-content"
-        className={cn(
-          "z-50 min-w-52 overflow-hidden rounded-lg border border-foreground/10 bg-surface-28 p-1 text-neutral-236 shadow-xl outline-none",
-          "data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95",
-          "data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95",
-          className,
-        )}
-        {...props}
-      />
+      <ContextMenuPrimitive.Positioner className="z-50 outline-none">
+        <ContextMenuPrimitive.Popup
+          data-slot="context-menu-content"
+          className={cn(
+            "z-50 min-w-52 overflow-hidden rounded-lg border border-foreground/10 bg-surface-28 p-1 text-neutral-236 shadow-xl outline-none",
+            "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
+            "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            className,
+          )}
+          {...props}
+        />
+      </ContextMenuPrimitive.Positioner>
     </ContextMenuPrimitive.Portal>
   );
 }
@@ -35,7 +33,7 @@ function ContextMenuItem({
   className,
   variant = "default",
   ...props
-}: ComponentProps<typeof ContextMenuPrimitive.Item> & {
+}: ContextMenuPrimitive.Item.Props & {
   variant?: "default" | "destructive";
 }) {
   return (
@@ -45,10 +43,10 @@ function ContextMenuItem({
       className={cn(
         "relative flex cursor-default items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] outline-none select-none",
         "text-neutral-232 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-neutral-154",
-        "focus:bg-surface-active data-[highlighted]:bg-surface-active",
-        "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
+        "data-highlighted:bg-surface-active",
+        "data-disabled:pointer-events-none data-disabled:opacity-40",
         "data-[variant=destructive]:text-error-soft data-[variant=destructive]:[&_svg]:text-error-soft",
-        "data-[variant=destructive]:focus:bg-destructive-500/10 data-[variant=destructive]:data-[highlighted]:bg-destructive-500/10",
+        "data-[variant=destructive]:data-highlighted:bg-destructive-500/10",
         className,
       )}
       {...props}
@@ -56,10 +54,7 @@ function ContextMenuItem({
   );
 }
 
-function ContextMenuSeparator({
-  className,
-  ...props
-}: ComponentProps<typeof ContextMenuPrimitive.Separator>) {
+function ContextMenuSeparator({ className, ...props }: ContextMenuPrimitive.Separator.Props) {
   return (
     <ContextMenuPrimitive.Separator
       data-slot="context-menu-separator"

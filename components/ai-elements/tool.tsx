@@ -85,7 +85,7 @@ export const ToolHeader = ({ className, title, type, state, toolName, ...props }
         <span className="truncate font-medium text-sm text-foreground">{title ?? derivedName}</span>
         {getStatusBadge(state)}
       </div>
-      <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+      <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground transition-transform group-data-open:rotate-180" />
     </CollapsibleTrigger>
   );
 };
@@ -96,7 +96,7 @@ export const ToolContent = ({ className, ...props }: ToolContentProps) => (
   <CollapsibleContent
     className={cn(
       "space-y-3 border-t border-foreground/10 px-3 py-3 text-neutral-231 outline-none",
-      "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 data-[state=closed]:animate-out data-[state=open]:animate-in",
+      "data-closed:fade-out-0 data-closed:slide-out-to-top-2 data-open:slide-in-from-top-2 data-closed:animate-out data-open:animate-in",
       className,
     )}
     {...props}

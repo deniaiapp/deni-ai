@@ -113,32 +113,29 @@ export function AccountMenu({
           setMenuOpen(next);
         }}
       >
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label={t("Account menu")}
-            className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-foreground/5"
-          >
-            {user?.image ? (
-              <img
-                src={user.image}
-                alt=""
-                className="size-8 shrink-0 rounded-full object-cover"
-              />
-            ) : (
-              <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-xs text-foreground">
-                {name.slice(0, 1).toUpperCase()}
-              </span>
-            )}
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="min-w-0 truncate text-sm text-foreground">{name}</span>
-              <span className="min-w-0 truncate text-xs text-muted-foreground">
-                {usage
-                  ? t("{plan} · {percent}% remaining", { plan: usage.planName, percent: String(remainingPercent) })
-                  : t("Account")}
-              </span>
+        <DropdownMenuTrigger
+          aria-label={t("Account menu")}
+          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-foreground/5"
+        >
+          {user?.image ? (
+            <img
+              src={user.image}
+              alt=""
+              className="size-8 shrink-0 rounded-full object-cover"
+            />
+          ) : (
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-xs text-foreground">
+              {name.slice(0, 1).toUpperCase()}
             </span>
-          </button>
+          )}
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="min-w-0 truncate text-sm text-foreground">{name}</span>
+            <span className="min-w-0 truncate text-xs text-muted-foreground">
+              {usage
+                ? t("{plan} · {percent}% remaining", { plan: usage.planName, percent: String(remainingPercent) })
+                : t("Account")}
+            </span>
+          </span>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="start" className="w-56">
           <DropdownMenuLabel>
@@ -147,7 +144,7 @@ export function AccountMenu({
           <DropdownMenuSeparator />
           <DropdownMenuItem
             disabled={exporting || signingOut}
-            onSelect={() => {
+            onClick={() => {
               onOpenBilling();
             }}
           >
@@ -155,12 +152,12 @@ export function AccountMenu({
             {t("Plan and usage")}
           </DropdownMenuItem>
           {onPro ? null : (
-            <DropdownMenuItem disabled={exporting || signingOut} onSelect={() => void router.navigate({ to: "/upgrade" })}>
+            <DropdownMenuItem disabled={exporting || signingOut} onClick={() => void router.navigate({ to: "/upgrade" })}>
               <Sparkles />
               {t("Upgrade to Pro")}
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem disabled={exporting || signingOut} onSelect={() => void router.navigate({ to: "/account" })}>
+          <DropdownMenuItem disabled={exporting || signingOut} onClick={() => void router.navigate({ to: "/account" })}>
             <UserRound />
             {t("Manage profile")}
           </DropdownMenuItem>
@@ -212,8 +209,8 @@ export function AccountMenu({
           </DropdownMenuSub>
           <DropdownMenuItem
             aria-busy={exporting}
-            onSelect={(event) => {
-              event.preventDefault();
+            closeOnClick={false}
+            onClick={() => {
               if (busy) return;
               void downloadExport();
             }}
@@ -226,7 +223,7 @@ export function AccountMenu({
           <DropdownMenuItem
             variant="destructive"
             disabled={exporting || signingOut}
-            onSelect={() => {
+            onClick={() => {
               setConfirm("");
               setError("");
               setDeleteOpen(true);
@@ -237,8 +234,8 @@ export function AccountMenu({
           </DropdownMenuItem>
           <DropdownMenuItem
             disabled={exporting || signingOut}
-            onSelect={(event) => {
-              event.preventDefault();
+            closeOnClick={false}
+            onClick={() => {
               if (busy) return;
               setBusy("signout");
               void authClient.signOut({
@@ -275,9 +272,7 @@ export function AccountMenu({
           />
           {error ? <p className="mt-2 text-sm text-destructive-300">{error}</p> : null}
           <div className="mt-6 flex justify-end gap-2">
-            <DialogClose asChild>
-              <Button variant="secondary">{t("Cancel")}</Button>
-            </DialogClose>
+            <DialogClose render={<Button variant="secondary" />}>{t("Cancel")}</DialogClose>
             <Button
               type="button"
               variant="destructive"

@@ -267,19 +267,19 @@ body {
   to { opacity: 0; transform: translateY(6px) scale(0.98); }
 }
 
-.deni-dialog-overlay[data-state="open"] {
+.deni-dialog-overlay[data-open] {
   animation: deni-dialog-fade-in 220ms ease-out both;
 }
 
-.deni-dialog-overlay[data-state="closed"] {
+.deni-dialog-overlay[data-closed] {
   animation: deni-dialog-fade-out 160ms ease-in both;
 }
 
-.deni-dialog-content[data-state="open"] {
+.deni-dialog-content[data-open] {
   animation: deni-dialog-enter 280ms cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.deni-dialog-content[data-state="closed"] {
+.deni-dialog-content[data-closed] {
   animation: deni-dialog-leave 160ms ease-in both;
 }
 
