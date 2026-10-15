@@ -842,6 +842,16 @@ msgid "Reasoning"
 msgstr "推論"
 
 #: app/components/chat-thread.tsx
+msgctxt "6XFO_C"
+msgid "Approved"
+msgstr "承認済み"
+
+#: app/components/chat-thread.tsx
+msgctxt "uRYIb9"
+msgid "Declined"
+msgstr "却下"
+
+#: app/components/chat-thread.tsx
 #: app/components/routines-dialog.tsx
 msgctxt "aX1b8r"
 msgid "Teammate"
@@ -882,16 +892,6 @@ msgstr "メッセージ"
 msgctxt "Kiv4kU"
 msgid "Could not save permission."
 msgstr "権限を保存できませんでした。"
-
-#: app/components/chat-thread.tsx
-msgctxt "hlNVnU"
-msgid "Approved · {label}"
-msgstr "承認済み · {label}"
-
-#: app/components/chat-thread.tsx
-msgctxt "a3EMWN"
-msgid "Declined · {label}"
-msgstr "却下 · {label}"
 
 #: app/components/chat-thread.tsx
 msgctxt "ofCpTm"

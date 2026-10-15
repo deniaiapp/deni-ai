@@ -45,10 +45,8 @@ import {
 } from "@/components/ai-elements/chain-of-thought";
 import {
   Confirmation,
-  ConfirmationAccepted,
   ConfirmationAction,
   ConfirmationActions,
-  ConfirmationRejected,
   ConfirmationRequest,
   ConfirmationTitle,
 } from "@/components/ai-elements/confirmation";
@@ -1202,6 +1200,7 @@ const MessageBlock = memo(function MessageBlock({
   const lastPart = message.parts.at(-1);
   const reasoningIsStreaming =
     isLastMessage && isStreaming && lastPart?.type === "reasoning";
+  const pluginActionLabels = usePluginActionLabels();
   const cotSteps = buildCotSteps(
     toolLabel,
     t("Reasoning"),
@@ -1209,6 +1208,8 @@ const MessageBlock = memo(function MessageBlock({
     reasoningIsStreaming,
     handoffs,
     bots,
+    (name, input, approved) =>
+      [approved ? t("Approved") : t("Declined"), toolApprovalDetail(name, input, pluginActionLabels)].filter(Boolean).join(" · "),
   );
   const cotWorking = cotSteps.length > 0 && isLastMessage && isStreaming;
   // The saved duration covers the whole run and survives a reload; the local timer only fills in
@@ -1432,6 +1433,7 @@ function buildCotSteps(
   reasoningIsStreaming: boolean,
   handoffs?: Record<string, HandoffSnapshot>,
   bots?: Bot[],
+  approvalNote?: (name: string, input: unknown, approved: boolean) => string,
 ): CotStep[] {
   const steps: CotStep[] = [];
 
@@ -1477,6 +1479,11 @@ function buildCotSteps(
 
     const liveHandoff =
       name === "messageBot" ? liveHandoffFor(toolPart, handoffs) : undefined;
+    // Answered approvals are listed here instead of as a card in the reply.
+    const answered =
+      toolPart.approval && !toolPart.approval.isAutomatic && typeof toolPart.approval.approved === "boolean"
+        ? approvalNote?.(name, input, toolPart.approval.approved)
+        : undefined;
     steps.push({
       key: toolPart.toolCallId ?? `tool-${index}`,
       icon: toolStepIcon(name),
@@ -1486,7 +1493,7 @@ function buildCotSteps(
           ? errorText
           : liveHandoff?.status === "running" && liveHandoff.currentLabel
             ? liveHandoff.currentLabel
-            : undefined,
+            : answered,
       sites: failed ? undefined : stepSites(name, toolPart.output, input),
       status:
         liveHandoff?.status === "running" || isToolRunning(state)
@@ -1655,6 +1662,8 @@ function PartView({
     if (toolPart.approval && !toolPart.approval.isAutomatic) {
       const approval = toolPart.approval;
       const detail = toolApprovalDetail(name, input, pluginActionLabels);
+      // Once answered, the step is shown under the Worked header instead.
+      if (state !== "approval-requested") return null;
       return (
         <Confirmation approval={approval} state={state}>
           <ConfirmationRequest>
@@ -1673,18 +1682,6 @@ function PartView({
               } : undefined}
             />
           </ConfirmationRequest>
-          <ConfirmationAccepted>
-            <ConfirmationTitle>{t("Approved · {label}", { label: displayLabel })}</ConfirmationTitle>
-            {detail ? (
-              <p className="font-mono text-xs text-muted-foreground">{detail}</p>
-            ) : null}
-          </ConfirmationAccepted>
-          <ConfirmationRejected>
-            <ConfirmationTitle>{t("Declined · {label}", { label: displayLabel })}</ConfirmationTitle>
-            {detail ? (
-              <p className="font-mono text-xs text-muted-foreground">{detail}</p>
-            ) : null}
-          </ConfirmationRejected>
         </Confirmation>
       );
     }

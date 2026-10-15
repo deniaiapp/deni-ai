@@ -842,6 +842,16 @@ msgid "Reasoning"
 msgstr "Reasoning"
 
 #: app/components/chat-thread.tsx
+msgctxt "6XFO_C"
+msgid "Approved"
+msgstr "Approved"
+
+#: app/components/chat-thread.tsx
+msgctxt "uRYIb9"
+msgid "Declined"
+msgstr "Declined"
+
+#: app/components/chat-thread.tsx
 #: app/components/routines-dialog.tsx
 msgctxt "aX1b8r"
 msgid "Teammate"
@@ -882,16 +892,6 @@ msgstr "Message"
 msgctxt "Kiv4kU"
 msgid "Could not save permission."
 msgstr "Could not save permission."
-
-#: app/components/chat-thread.tsx
-msgctxt "hlNVnU"
-msgid "Approved · {label}"
-msgstr "Approved · {label}"
-
-#: app/components/chat-thread.tsx
-msgctxt "a3EMWN"
-msgid "Declined · {label}"
-msgstr "Declined · {label}"
 
 #: app/components/chat-thread.tsx
 msgctxt "ofCpTm"
