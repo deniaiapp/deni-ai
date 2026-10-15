@@ -153,6 +153,59 @@ function ChatHistoryLoader({
   );
 }
 
+/** Jump back to the latest message whenever the user sends a new one. */
+function ScrollToBottomOnSend({ lastUserMessageId }: { lastUserMessageId?: string }) {
+  const { scrollToBottom } = useStickToBottomContext();
+  const previousIdRef = useRef(lastUserMessageId);
+
+  useEffect(() => {
+    if (lastUserMessageId === previousIdRef.current) {
+      return;
+    }
+    previousIdRef.current = lastUserMessageId;
+    if (lastUserMessageId) {
+      void scrollToBottom();
+    }
+  }, [lastUserMessageId, scrollToBottom]);
+
+  return null;
+}
+
+/**
+ * Stop following the stream as soon as the user scrolls up, by any input.
+ * use-stick-to-bottom only escapes on wheel while content is resizing, so touch,
+ * scrollbar drags and keyboard scrolling kept getting pulled back down. It also
+ * ignores scroll events during resizes, so re-lock here once the user scrolls
+ * back to the bottom.
+ */
+function PauseFollowOnScrollUp() {
+  const { scrollRef, scrollToBottom, state, stopScroll } = useStickToBottomContext();
+
+  useEffect(() => {
+    const root = scrollRef.current;
+    if (!root) {
+      return;
+    }
+    let lastScrollTop = root.scrollTop;
+    const handleScroll = () => {
+      const { scrollTop } = root;
+      const distanceFromBottom = root.scrollHeight - root.clientHeight - scrollTop;
+      // Programmatic follow only moves down and shrinking content clamps to the
+      // bottom, so moving up away from the bottom is always the user.
+      if (scrollTop < lastScrollTop && distanceFromBottom > 2) {
+        stopScroll();
+      } else if (scrollTop > lastScrollTop && distanceFromBottom <= 2 && !state.isAtBottom) {
+        void scrollToBottom();
+      }
+      lastScrollTop = scrollTop;
+    };
+    root.addEventListener("scroll", handleScroll, { passive: true });
+    return () => root.removeEventListener("scroll", handleScroll);
+  }, [scrollRef, scrollToBottom, state, stopScroll]);
+
+  return null;
+}
+
 export const ChatInterfaceMessages = memo(function ChatInterfaceMessages({
   messages,
   groupedMessages,
@@ -358,6 +411,10 @@ export const ChatInterfaceMessages = memo(function ChatInterfaceMessages({
           </Card>
         )}
       </ConversationContent>
+      <PauseFollowOnScrollUp />
+      <ScrollToBottomOnSend
+        lastUserMessageId={messages.findLast((message) => message.role === "user")?.id}
+      />
       <ConversationScrollButton />
     </Conversation>
   );
