@@ -87,4 +87,20 @@ const toolTurn = (index: number): UIMessage[] => [
 const tools = Array.from({ length: 6 }, (_, index) => toolTurn(index)).flat();
 assert(modelContextMessages(tools).length === tools.length, "slimmed tool output should fit the budget");
 
+// Signed thinking from earlier turns is dropped: Anthropic rejects it once the prefix changes.
+const signed = { openrouter: { reasoning_details: [{ type: "reasoning.text", text: "plan", signature: "sig" }] } };
+const thinkingTurn = (id: string, steps: number): UIMessage => ({
+  id,
+  role: "assistant",
+  parts: Array.from({ length: steps }, (_, step) => [
+    { type: "step-start" },
+    { type: "reasoning", text: `${id} thought ${step}`, providerMetadata: signed },
+    { type: "tool-browser", toolCallId: `${id}-${step}`, state: "output-available", input: {}, output: { ok: true }, callProviderMetadata: signed },
+  ]).flat(),
+} as unknown as UIMessage);
+const olderThinking = JSON.stringify(await convertToModelMessages(compactMessagesForModel([user("q1", "hi"), thinkingTurn("old", 1), user("q2", "again")])));
+assert(!olderThinking.includes("signature") && !olderThinking.includes("old thought"), "earlier thinking must not reach the model");
+const resumed = JSON.stringify(await convertToModelMessages(compactMessagesForModel([user("q1", "hi"), thinkingTurn("old", 1), user("q2", "go"), thinkingTurn("now", 2)])));
+assert(resumed.includes("now thought 1") && !resumed.includes("now thought 0") && !resumed.includes("old thought"), "only the last step of a resumed turn keeps its thinking");
+
 console.log("context window verification passed");

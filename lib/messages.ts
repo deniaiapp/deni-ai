@@ -188,16 +188,37 @@ export function modelContextMessages(messages: UIMessage[]): UIMessage[] {
   return [{ ...first, parts: [{ type: "text", text: TRIMMED_NOTE }, ...first.parts] }, ...rest];
 }
 
-/** Slim tool output and reasoning for the model, after cutting the thread to its context window. */
+/** Drops reasoning before `keepFrom`; OpenRouter also reads its signatures from tool call metadata. */
+function withoutReasoning(message: UIMessage, keepFrom: number): UIMessage {
+  const parts = message.parts.flatMap((part, index) => {
+    if (index >= keepFrom) return [part];
+    if (part.type === "reasoning") return [];
+    const metadata = (part as { callProviderMetadata?: { openrouter?: Record<string, unknown> } }).callProviderMetadata;
+    if (!isToolPart(part) || !metadata?.openrouter || !("reasoning_details" in metadata.openrouter)) return [part];
+    const { reasoning_details: _, ...openrouter } = metadata.openrouter;
+    return [{ ...part, callProviderMetadata: { ...metadata, openrouter } } as UIMessage["parts"][number]];
+  });
+  return { ...message, parts };
+}
+
+/**
+ * Anthropic binds each signed thinking block to the exact conversation before it, and trimming,
+ * slimming, and reply context change that prefix. Only the last step of a final assistant message
+ * (a tool loop being resumed) needs its thinking, so every earlier step goes without.
+ */
+function reasoningForModel(messages: UIMessage[]): UIMessage[] {
+  return messages.map((message, index) => {
+    if (index < messages.length - 1 || message.role !== "assistant") return withoutReasoning(message, message.parts.length);
+    return withoutReasoning(message, message.parts.findLastIndex((part) => part.type === "step-start"));
+  });
+}
+
+/** Slim tool output and drop stale reasoning for the model, after cutting the thread to its context window. */
 export function compactMessagesForModel(thread: UIMessage[]): UIMessage[] {
-  const messages = modelContextMessages(thread);
+  const messages = reasoningForModel(modelContextMessages(thread));
   const startRecent = Math.max(0, messages.length - RECENT_COUNT);
   return mapMessageParts(messages, (part, messageIndex) => {
     const recent = messageIndex >= startRecent;
-    if (part.type === "reasoning" && "text" in part && typeof part.text === "string") {
-      if (recent && messageIndex === messages.length - 1) return part;
-      return { ...part, text: truncateString(part.text, MAX_REASONING_MODEL) };
-    }
     if (isToolPart(part) && "output" in part) {
       return {
         ...part,
