@@ -223,9 +223,6 @@ importers:
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
       cn:
         specifier: ^0.4.0
         version: 0.4.0
@@ -238,9 +235,6 @@ importers:
       e2b:
         specifier: ^2.55.0
         version: 2.55.0
-      emoji-picker-react:
-        specifier: ^4.22.3
-        version: 4.22.3(react@19.3.0)
       emoji-regex:
         specifier: ^11.0.0
         version: 11.0.0
@@ -283,9 +277,6 @@ importers:
       stripe:
         specifier: ^23.0.0
         version: 23.0.0(@types/node@26.6.5)
-      tailwind-merge:
-        specifier: ^3.7.0
-        version: 3.7.0
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
@@ -329,6 +320,9 @@ importers:
       drizzle-kit:
         specifier: ^0.31.11
         version: 0.31.11
+      emoji-picker-react:
+        specifier: ^4.22.3
+        version: 4.22.3(react@19.3.0)
       husky:
         specifier: ^9.1.7
         version: 9.1.7

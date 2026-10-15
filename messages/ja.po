@@ -1402,7 +1402,6 @@ msgid "Your help is needed"
 msgstr "操作が必要です"
 
 #: app/components/computer-panel.tsx
-#: components/ai-elements/tool.tsx
 msgctxt "KN7zKn"
 msgid "Error"
 msgstr "エラー"
@@ -3788,56 +3787,6 @@ msgstr "送信中"
 msgctxt "62nsdy"
 msgid "Retry"
 msgstr "再試行"
-
-#: components/ai-elements/reasoning.tsx
-msgctxt "QrZMdi"
-msgid "Thinking..."
-msgstr "考え中…"
-
-#: components/ai-elements/reasoning.tsx
-msgctxt "tfrHH2"
-msgid "Thought for a few seconds"
-msgstr "数秒間考えました"
-
-#: components/ai-elements/reasoning.tsx
-msgctxt "bfs4eB"
-msgid "Thought for {duration} seconds"
-msgstr "{duration}秒間考えました"
-
-#: components/ai-elements/tool.tsx
-msgctxt "uPFUUe"
-msgid "Awaiting approval"
-msgstr "承認待ち"
-
-#: components/ai-elements/tool.tsx
-msgctxt "Nuo4L7"
-msgid "Responded"
-msgstr "応答済み"
-
-#: components/ai-elements/tool.tsx
-msgctxt "nDyaq_"
-msgid "Running"
-msgstr "実行中"
-
-#: components/ai-elements/tool.tsx
-msgctxt "eKEL_g"
-msgid "Pending"
-msgstr "保留中"
-
-#: components/ai-elements/tool.tsx
-msgctxt "95stPq"
-msgid "Completed"
-msgstr "完了"
-
-#: components/ai-elements/tool.tsx
-msgctxt "5kp1Ie"
-msgid "Denied"
-msgstr "拒否"
-
-#: components/ai-elements/tool.tsx
-msgctxt "ZpQ6us"
-msgid "Result"
-msgstr "結果"
 
 #: components/routine-labels.ts
 msgctxt "mJR06P"

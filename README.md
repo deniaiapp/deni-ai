@@ -69,68 +69,18 @@ http://localhost:3000
 
 ## Docker / Dokploy
 
-### Local PostgreSQL
-
-No Docker or system-wide PostgreSQL installation is needed. After installing the
-project dependencies with Bun or pnpm (Node.js is required):
-
-```bash
-bun db:start
-```
-
-This uses the platform's native PostgreSQL 17 binaries supplied by `embedded-postgres`.
-It initializes `.deni/postgres/data` once, creates the `deni` database, and starts the
-server in the background using `pg_ctl`. Repeated starts reuse the running server.
-Supported platforms include Windows x64, macOS x64/ARM64, and Linux x64/ARM64.
-For the local app and migrations, set this in `.env.local`:
-
-```dotenv
-DATABASE_URL=postgres://deni:deni@127.0.0.1:5432/deni
-```
-
-Then run `bun db:migrate` and `bun dev`. The local database starts empty; this command
-does not migrate existing Neon data or rewrite your current connection settings.
-Use `bun db:stop` for a clean shutdown without deleting data, `bun db:status` to
-check whether it is running, and `bun db:logs` to follow its logs (Ctrl+C exits the
-log viewer without stopping PostgreSQL).
-If port 5432 is occupied, set `LOCAL_POSTGRES_PORT` in `.env.local` and use that same
-port in `DATABASE_URL`. Local credentials are `deni` / `deni`, and the port is bound
-only to `127.0.0.1`. Native database files are separate from any previous Docker
-volume. Native binary installation hooks are allowed in the package-manager config;
-if installing with lifecycle scripts disabled, allow the `@embedded-postgres/*`
-package for your platform before starting the database.
-
-### Dokploy PostgreSQL
-
-Compose includes a PostgreSQL 17 service named `postgres`, with persistent storage in
-the `postgres-data` volume and a readiness health check. PostgreSQL is published only
-on the server's loopback address at `127.0.0.1:15433`. In Tabby, configure a local SSH
-forward from local `127.0.0.1:15432` to remote `127.0.0.1:15433` on this server.
-The local database URL then uses port `15432`; the app container still uses
-`postgres:5432` internally.
-Set `POSTGRES_PASSWORD` in Dokploy's Environment tab before deploying; `POSTGRES_DB`
-and `POSTGRES_USER` default to `deni`. A hex password from `openssl rand -hex 32` can
-be used directly in the connection URL.
-
-The app continues to use the existing `DATABASE_URL`. When ready to switch to the
-included database, set it to `postgres://deni:<password>@postgres:5432/deni` (adjust
-the username and database if changed). This is a new, empty database: existing Neon
-data is not copied automatically, and application schema migrations are still required.
-Keep the `postgres-data` volume when redeploying. Changing the initialization variables
-does not change the credentials or database in an already initialized volume.
-
 Production uses Steel for the browser and E2B for the terminal, so the image does not install Chromium. Set `STEEL_API_KEY`, `E2B_API_KEY`, and S3/R2 credentials. Set `EXA_API_KEY` to give teammates a `webSearch` tool backed by Exa; without it the tool is not offered. `NEXT_PUBLIC_*` values are inlined at image build time — change them and rebuild.
 
 ```bash
 cp .env.example .env
-# fill BETTER_AUTH_SECRET, Google/GitHub OAuth, DATABASE_URL, APP_ENCRYPTION_KEY, and the keys above
+# fill BETTER_AUTH_SECRET, Google/GitHub OAuth, D1_PROXY_URL, D1_PROXY_TOKEN, APP_ENCRYPTION_KEY, and the keys above
 pnpm db:migrate
 docker compose up --build
 ```
 
 Compose does not bind host port 3000 (Dokploy routes through Traefik). For a local bind, add `ports: ["3000:3000"]` under `app` temporarily.
 
-On Dokploy, create a **Compose** service from this repo (`docker-compose.yml`). Put the same variables in the Environment tab (Dokploy writes `.env` next to the compose file). Point `DATABASE_URL` at your Postgres instance. Point the domain at service `app`, container port `3000`. Run `pnpm db:migrate` (`drizzle-kit migrate`) against that database before rolling out a schema change. The app container does not migrate on start. The routine scheduler is on by default (`DENI_SCHEDULER=true`). Keep a single app replica, or set `DENI_SCHEDULER=false` on extras.
+On Dokploy, create a **Compose** service from this repo (`docker-compose.yml`). Put the same variables in the Environment tab (Dokploy writes `.env` next to the compose file). Set `D1_PROXY_URL` and `D1_PROXY_TOKEN` for the d1-proxy Worker (see `docs/d1-migration.md`). Point the domain at service `app`, container port `3000`. Run `pnpm db:migrate` (applies `db/migrations` to D1) before rolling out a schema change. The app container does not migrate on start. The routine scheduler is on by default (`DENI_SCHEDULER=true`). Keep a single app replica, or set `DENI_SCHEDULER=false` on extras.
 
 Dockerfile-only deploys: build type **Dockerfile**, port `3000`, health check `/api/health`. Pass `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_SUPPORT_EMAIL` as build arguments.
 
