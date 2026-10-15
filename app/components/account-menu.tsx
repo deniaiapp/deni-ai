@@ -1,5 +1,4 @@
 import { useExtracted, useLocale } from "@/i18n/react";
-import { useTheme } from "next-themes";
 import { useRouter } from "@tanstack/react-router";
 import { useState, useTransition } from "react";
 import {
@@ -17,6 +16,8 @@ import {
   UserRound,
 } from "lucide-react";
 import { authClient } from "@/lib/auth-client";
+import { useTheme } from "@/components/theme-provider";
+import { isTheme } from "@/lib/theme";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -191,7 +192,7 @@ export function AccountMenu({
               {t("Theme")}
             </DropdownMenuSubTrigger>
             <DropdownMenuSubContent>
-              <DropdownMenuRadioGroup value={theme ?? "system"} onValueChange={setTheme}>
+              <DropdownMenuRadioGroup value={theme} onValueChange={(next) => { if (isTheme(next)) setTheme(next); }}>
                 <DropdownMenuRadioItem value="light">
                   <Sun />
                   {t("Light")}

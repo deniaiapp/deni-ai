@@ -4,16 +4,18 @@ import { IntlProvider } from "use-intl";
 import "@fontsource-variable/geist-mono";
 import "@fontsource-variable/inter";
 import { MotionProvider } from "@/components/motion";
-import { ThemeProvider } from "@/components/theme-provider";
+import { themeScript, ThemeProvider, useTheme } from "@/components/theme-provider";
 import { getRequestIntl } from "@/i18n/functions";
 import { headTranslator } from "@/i18n/head";
 import { loadMessages } from "@/i18n/messages";
+import { getThemePreference } from "@/lib/theme";
+import { cn } from "@/lib/utils";
 import "../globals.css";
 
 export const Route = createRootRoute({
   loader: async () => {
-    const { locale, timeZone } = await getRequestIntl();
-    return { locale, timeZone, messages: await loadMessages(locale) };
+    const [{ locale, timeZone }, theme] = await Promise.all([getRequestIntl(), getThemePreference()]);
+    return { locale, timeZone, theme, messages: await loadMessages(locale) };
   },
   // The locale only changes through the language menus, which invalidate the router.
   staleTime: Infinity,
@@ -43,24 +45,27 @@ export const Route = createRootRoute({
 });
 
 function RootComponent() {
-  const { locale, timeZone, messages } = Route.useLoaderData();
+  const { locale, timeZone, theme, messages } = Route.useLoaderData();
   return (
-    <RootDocument lang={locale}>
-      <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+    <ThemeProvider initialTheme={theme}>
+      <RootDocument lang={locale}>
         <IntlProvider locale={locale} timeZone={timeZone} messages={messages}>
           <MotionProvider>
             <Outlet />
           </MotionProvider>
         </IntlProvider>
-      </ThemeProvider>
-    </RootDocument>
+      </RootDocument>
+    </ThemeProvider>
   );
 }
 
 function RootDocument({ lang, children }: { lang: string; children: ReactNode }) {
+  const { resolvedTheme } = useTheme();
   return (
-    <html lang={lang} suppressHydrationWarning className="h-full antialiased">
+    // The class can differ during hydration when the system theme script added "dark".
+    <html lang={lang} suppressHydrationWarning className={cn("h-full antialiased", resolvedTheme === "dark" && "dark")}>
       <head>
+        <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <HeadContent />
       </head>
       <body className="h-full overflow-hidden bg-background text-foreground tracking-tight">
