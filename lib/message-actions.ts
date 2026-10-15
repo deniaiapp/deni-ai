@@ -1,6 +1,6 @@
 import type { UIMessage } from "ai";
 import emojiRegex from "emoji-regex";
-import { splitAssistantBubbles } from "./message-bubbles";
+import { splitAssistantBubbles, usesBubbleBreaks, withoutBubbleBreaks } from "./message-bubbles";
 
 export type MessageReaction = string;
 
@@ -20,7 +20,7 @@ export function messageBubbleTargets(message: UIMessage, index: number): Message
   const targets: MessageBubble[] = [];
   message.parts.forEach((part, partIndex) => {
     if (part.type !== "text" || !part.text.trim()) return;
-    const texts = role === "assistant" ? splitAssistantBubbles(part.text) : [part.text];
+    const texts = role === "assistant" ? splitAssistantBubbles(part.text, usesBubbleBreaks(message.metadata)) : [part.text];
     texts.forEach((text, bubbleIndex) => {
       // Existing whole-message reactions remain on the first bubble.
       const key = targets.length === 0 ? baseKey : `bubble:${JSON.stringify([baseKey, partIndex, bubbleIndex])}`;
@@ -79,7 +79,7 @@ export function messageActionKey(message: UIMessage, index: number): string {
 }
 
 export function messageBody(message: UIMessage): string {
-  return message.parts.flatMap((part) => part.type === "text" ? [part.text] : []).join("\n\n").trim();
+  return message.parts.flatMap((part) => part.type === "text" ? [withoutBubbleBreaks(part.text)] : []).join("\n\n").trim();
 }
 
 export function updateReactions(current: string[], emoji: MessageReaction, selected: boolean): string[] {

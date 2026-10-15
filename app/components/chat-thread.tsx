@@ -83,6 +83,7 @@ import {
   type MessageReference,
   type MessageReaction,
 } from "@/lib/message-actions";
+import { usesBubbleBreaks } from "@/lib/message-bubbles";
 import { createReactionState, type ReactionMap } from "@/lib/reaction-state";
 import { messageAuthor, type MessageAuthor } from "@/lib/group-chat";
 import { isContextReset, workedMsOf } from "@/lib/messages";
@@ -1316,7 +1317,7 @@ const MessageBlock = memo(function MessageBlock({
             const partBubbles = bubbles.filter(
               (bubble) => bubble.partIndex === index,
             );
-            if (part.type === "text" && partBubbles.length) {
+            if (part.type === "text" && (partBubbles.length || usesBubbleBreaks(message.metadata))) {
               return partBubbles.map((bubble) => (
                 <div
                   key={bubble.key}

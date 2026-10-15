@@ -19,6 +19,7 @@ import {
 } from "discord.js";
 import type { DiscordLink } from "./discord-link";
 import type { Translate } from "./i18n-server";
+import { splitBubbleBreaks } from "./message-bubbles";
 
 export type { Translate };
 
@@ -78,8 +79,15 @@ export function parseCustomId(value: string) {
   return { prefix, args };
 }
 
-/** Split on paragraph, line, then word boundaries so a long reply never exceeds Discord's limit. */
+/**
+ * One Discord message per chat bubble the model chose, then split on paragraph, line, and word
+ * boundaries so a long bubble never exceeds Discord's limit.
+ */
 export function splitForDiscord(text: string, limit = MESSAGE_LIMIT) {
+  return splitBubbleBreaks(text).flatMap((bubble) => splitAtLimit(bubble, limit));
+}
+
+function splitAtLimit(text: string, limit: number) {
   const chunks: string[] = [];
   let rest = text.trim();
   while (rest.length > limit) {

@@ -39,6 +39,7 @@ import { loadMessages, readStore, saveMessages } from "./store";
 import { resetThreadContext } from "./thread-context";
 import type { AgentJob, Bot, Store, Thread } from "./types";
 import { assertCanUseTokens, recordTokenUsage } from "./usage";
+import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "./message-bubbles";
 
 /** What the Discord layer should show after a turn. It never needs to know about jobs or UI messages. */
 export type PendingApproval = { tool: string; summary: string; truncated: boolean };
@@ -225,7 +226,7 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
       stream: result.stream,
       originalMessages: streamHistory,
       generateMessageId: () => assistantId,
-      messageMetadata: () => ({ author, jobId: job.id }),
+      messageMetadata: () => ({ ...BUBBLE_BREAK_METADATA, author, jobId: job.id }),
       onEnd: ({ messages: next, isAborted }) => {
         response = next.find((message) => message.id === assistantId);
         aborted = isAborted;
@@ -239,7 +240,7 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
     if (failure) throw failure;
 
     if (response) {
-      const stored = { ...response, metadata: { ...((response.metadata as object) ?? {}), author, jobId: job.id } } as UIMessage;
+      const stored = { ...response, metadata: { ...((response.metadata as object) ?? {}), ...BUBBLE_BREAK_METADATA, author, jobId: job.id } } as UIMessage;
       response = stored;
       await saveMessages(userId, thread.id, [stored]);
     }
@@ -269,7 +270,7 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
         jobId: job.id,
         kind: "completed",
         title: tr("{name} finished a task", { name: bot.name }),
-        body: text.slice(0, 240),
+        body: withoutBubbleBreaks(text).slice(0, 240),
       }).catch(() => undefined);
     }
     return { kind: "reply", botName: bot.name, text };

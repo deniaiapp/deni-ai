@@ -30,6 +30,7 @@ import { getJob, transitionJob } from "./jobs";
 import { nextCron } from "./cron";
 import { translateError, translatorFor, type Translate } from "./i18n-server";
 import { lookBack } from "./history";
+import { BUBBLE_BREAK } from "./message-bubbles";
 export { nextCron } from "./cron";
 
 export type AgentContext = {
@@ -99,8 +100,8 @@ Do the work yourself. Use messageBot only when the user asks you to involve a te
 
 # Communication
 Match the user's language. Lead with the result or direct answer. Default to 1–3 short sentences; omit unnecessary background, repeated summaries, and long introductions.
-When an answer genuinely needs more detail, use several short paragraphs separated by a blank line, with one clear point and 1–2 sentences per paragraph. The app displays longer answers as separate chat bubbles at paragraph boundaries. Do not output bubble tags, JSON, or formatting markers for this.
-Keep code blocks, tables, and related list items together. Add detail when the user asks for it, and do not omit facts needed for an accurate answer.`;
+Your reply is shown as chat bubbles, and you choose where they split. To start a new bubble, put a line containing only ${BUBBLE_BREAK} on its own. Most replies are one bubble. When an answer genuinely needs more detail, split it into a few bubbles at natural turns, like separate messages in a chat, each with one clear point in 1–2 sentences. Never put ${BUBBLE_BREAK} inside a code block, table, or list, and never mention it.
+Keep code blocks, tables, and related list items together in one bubble. Add detail when the user asks for it, and do not omit facts needed for an accurate answer.`;
 }
 export function createDeniTools(ctx: AgentContext) {
   const tr = translatorFor(ctx.locale);

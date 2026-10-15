@@ -1,5 +1,6 @@
 import type { UIMessage } from "ai";
 import type { Bot } from "./types";
+import { withoutBubbleBreaks } from "./message-bubbles";
 
 export type MessageAuthor = Pick<Bot, "id" | "name" | "accent">;
 export function messageRequestKey(message: UIMessage): string {
@@ -38,7 +39,7 @@ export function groupContext(messages: UIMessage[], botId: string): UIMessage[] 
   return messages.map((message) => {
     const author = messageAuthor(message);
     if (message.role !== "assistant" || !author || author.id === botId) return message;
-    const text = message.parts.flatMap((part) => part.type === "text" ? [part.text] : []).join("\n\n");
+    const text = message.parts.flatMap((part) => part.type === "text" ? [withoutBubbleBreaks(part.text)] : []).join("\n\n");
     return { ...message, role: "user", parts: [{ type: "text", text: `[${author.name}, another teammate]\n${text || "Used a tool."}` }] } as UIMessage;
   });
 }

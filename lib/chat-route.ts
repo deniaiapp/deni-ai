@@ -40,6 +40,7 @@ import { groupContext } from "@/lib/group-chat";
 import { translateError, translateMessage } from "@/lib/i18n-server";
 import { getExtracted, getLocale } from "@/i18n/server";
 import { localizeUsageLimit } from "@/lib/localize-error";
+import { BUBBLE_BREAK_METADATA } from "@/lib/message-bubbles";
 
 async function jobConflict(job: { id: string; status: string }) {
   const t = await getExtracted();
@@ -363,12 +364,12 @@ export async function handleChat(req: Request) {
           generateMessageId: () => assistantId,
           messageMetadata: ({ part }) =>
             part.type === "finish"
-              ? { author, jobId: job.id, workedMs: workedBefore + Date.now() - runStartedAt }
-              : { author, jobId: job.id },
+              ? { ...BUBBLE_BREAK_METADATA, author, jobId: job.id, workedMs: workedBefore + Date.now() - runStartedAt }
+              : { ...BUBBLE_BREAK_METADATA, author, jobId: job.id },
           onEnd: async ({ messages: next, isAborted }) => {
             const response = next.find((message) => message.id === assistantId);
             try {
-              if (response) await saveMessages(userId, thread.id, [{ ...response, metadata: { ...(response.metadata as object ?? {}), author, jobId: job.id } }]);
+              if (response) await saveMessages(userId, thread.id, [{ ...response, metadata: { ...(response.metadata as object ?? {}), ...BUBBLE_BREAK_METADATA, author, jobId: job.id } }]);
               if (isAborted) { await finishJob(userId, job.id, "cancelled"); writeRunStatus?.("failed"); return; }
               if (response && hasPendingWorkflowWait(response)) { writeRunStatus?.("waiting"); return; }
               await finalizeChatJob();

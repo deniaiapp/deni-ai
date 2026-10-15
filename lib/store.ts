@@ -21,6 +21,7 @@ import { nowIso } from "./ids";
 import type { Store, Thread } from "./types";
 import { mergeStoredMessages, normalizeMessageIds } from "./messages";
 import { emitComputer } from "./events";
+import { withoutBubbleBreaks } from "./message-bubbles";
 
 const g = globalThis as typeof globalThis & {
   __deniStoreLocks?: Map<string, Promise<unknown>>;
@@ -249,7 +250,7 @@ function lastText(messages: UIMessage[]): string {
     const parts = messages[i]?.parts ?? [];
     for (let j = parts.length - 1; j >= 0; j--) {
       const part = parts[j] as { type?: string; text?: string };
-      if (part?.type === "text" && part.text?.trim()) return part.text.trim();
+      if (part?.type === "text" && part.text?.trim()) return withoutBubbleBreaks(part.text).trim();
     }
   }
   return "";

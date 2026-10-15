@@ -6,6 +6,7 @@ import { nowIso } from "./ids";
 import { getSummaryModel } from "./llm";
 import { messagesWithReplyContext } from "./message-actions";
 import { isContextReset, modelContextStart } from "./messages";
+import { withoutBubbleBreaks } from "./message-bubbles";
 import { loadMessages, mutateStore, readStore } from "./store";
 import type { Bot } from "./types";
 import { recordTokenUsage } from "./usage";
@@ -32,7 +33,7 @@ function toolName(part: { type: string; toolName?: string }) {
 }
 
 function messageText(message: UIMessage) {
-  return message.parts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n\n").trim();
+  return message.parts.flatMap((part) => (part.type === "text" ? [withoutBubbleBreaks(part.text)] : [])).join("\n\n").trim();
 }
 
 function toolsUsed(message: UIMessage) {

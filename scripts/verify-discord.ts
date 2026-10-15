@@ -82,6 +82,8 @@ async function main() {
   assert(chunks.length > 1 && chunks.every((chunk) => chunk.length > 0 && chunk.length <= 1_900), "chunk size");
   assert(chunks.join("").replace(/\s/g, "") === long.replace(/\s/g, ""), "chunks lost text");
   assert(bot.splitForDiscord("short").join() === "short", "short text changed");
+  // Each chat bubble the model chose becomes its own Discord message.
+  assert(bot.splitForDiscord("Hi.\n<!-- split -->\nMore.").join("|") === "Hi.|More.", "bubbles not sent separately");
 
   // Button ids carry the job and round and stay under Discord's 100 character cap.
   const part = (id: string) => ({ type: "tool-runCommand", toolCallId: id, state: "approval-requested", input: { command: "ls" }, approval: { id } });

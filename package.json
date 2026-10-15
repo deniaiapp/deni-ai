@@ -8,7 +8,7 @@
     "build": "vite build",
     "start": "node .output/server/index.mjs",
     "worker": "tsx worker/index.ts",
-    "test:core": "tsx scripts/verify-review-fixes.ts && tsx scripts/verify-cron.ts && tsx scripts/verify-job-ui.ts && tsx scripts/verify-chat-sessions.ts && tsx scripts/verify-message-actions.ts && tsx scripts/verify-context-window.ts && tsx scripts/verify-history.ts && tsx scripts/verify-migrations.ts && tsx scripts/verify-jobs-mcp.ts && tsx scripts/verify-d1-semantics.ts && tsx scripts/verify-auth-d1.ts && tsx scripts/verify-two-factor-methods.ts && tsx scripts/verify-plugin-disconnect.ts && tsx scripts/verify-discord.ts && tsx scripts/verify-discord-team.ts && tsx scripts/verify-discord-skills.ts && tsx scripts/verify-discord-tasks.ts && tsx scripts/verify-discord-files.ts && tsx scripts/verify-discord-plugins.ts",
+    "test:core": "tsx scripts/verify-review-fixes.ts && tsx scripts/verify-cron.ts && tsx scripts/verify-job-ui.ts && tsx scripts/verify-chat-sessions.ts && tsx scripts/verify-message-actions.ts && tsx scripts/verify-message-bubbles.ts && tsx scripts/verify-context-window.ts && tsx scripts/verify-history.ts && tsx scripts/verify-migrations.ts && tsx scripts/verify-jobs-mcp.ts && tsx scripts/verify-d1-semantics.ts && tsx scripts/verify-auth-d1.ts && tsx scripts/verify-two-factor-methods.ts && tsx scripts/verify-plugin-disconnect.ts && tsx scripts/verify-discord.ts && tsx scripts/verify-discord-team.ts && tsx scripts/verify-discord-skills.ts && tsx scripts/verify-discord-tasks.ts && tsx scripts/verify-discord-files.ts && tsx scripts/verify-discord-plugins.ts",
     "typecheck": "tsc --noEmit",
     "messages:extract": "tsx scripts/extract-messages.ts",
     "lint": "oxlint",

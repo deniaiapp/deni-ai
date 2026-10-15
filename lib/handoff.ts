@@ -8,6 +8,7 @@ import { loadMessages, mutateStore, readStore, saveMessages } from "./store";
 import type { HandoffSnapshot, HandoffStep } from "./types";
 import { translateError, translateMessage, translatorFor } from "./i18n-server";
 import { assertCanUseTokens, isUsageLimitError, recordTokenUsage } from "./usage";
+import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "./message-bubbles";
 
 type HandoffRun = HandoffSnapshot & { userId: string; locale?: string };
 
@@ -226,13 +227,13 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
   const assistant: UIMessage = {
     id: `${run.id}_assistant`,
     role: "assistant",
-    metadata: { author: { id: target.id, name: target.name, accent: target.accent } },
+    metadata: { ...BUBBLE_BREAK_METADATA, author: { id: target.id, name: target.name, accent: target.accent } },
     parts: [{ type: "text", text: reply }],
   };
   await saveMessages(run.userId, run.threadId, [assistant]);
   publish(run, {
     status: "done",
-    reply,
+    reply: withoutBubbleBreaks(reply),
     currentLabel: tr("Done"),
     finishedAt: Date.now(),
   });

@@ -16,6 +16,7 @@ import type { AgentJob } from "./types";
 import { messagesWithReplyContext } from "./message-actions";
 import { groupContext } from "./group-chat";
 import { translateError, translatorFor } from "./i18n-server";
+import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "./message-bubbles";
 
 function payloadMessages(job: AgentJob): UIMessage[] {
   const value = job.payload.messages;
@@ -116,7 +117,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
     const assistant: UIMessage = {
       id: `${job.id}_assistant`,
       role: "assistant",
-      metadata: { author: { id: bot.id, name: bot.name, accent: bot.accent }, jobId: job.id },
+      metadata: { ...BUBBLE_BREAK_METADATA, author: { id: bot.id, name: bot.name, accent: bot.accent }, jobId: job.id },
       parts: [{ type: "text", text: result.text || tr("Task completed.") }],
     };
     await saveMessages(userId, job.threadId, [assistant]);
@@ -137,7 +138,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
         jobId: job.id,
         kind: "completed",
         title: tr("{name} finished a task", { name: bot.name }),
-        body: result.text?.slice(0, 240) || tr("The task is complete."),
+        body: withoutBubbleBreaks(result.text ?? "").slice(0, 240) || tr("The task is complete."),
       }).catch(() => undefined);
     }
     return completed;
