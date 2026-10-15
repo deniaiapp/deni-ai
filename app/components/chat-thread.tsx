@@ -767,13 +767,9 @@ export function ChatThread({
               );
             })
           )}
-          {showBusyIndicator ? (
+          {showBusyIndicator && (waitingForUser || savingResult) ? (
             <span className="text-xs text-muted-foreground">
-              {waitingForUser
-                ? t("Waiting for your help")
-                : savingResult
-                  ? t("Saving result")
-                  : t("Working on the computer")}
+              {waitingForUser ? t("Waiting for your help") : t("Saving result")}
               <AnimatedDots />
             </span>
           ) : null}

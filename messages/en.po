@@ -731,11 +731,6 @@ msgid "Saving result"
 msgstr "Saving result"
 
 #: app/components/chat-thread.tsx
-msgctxt "xdZNBn"
-msgid "Working on the computer"
-msgstr "Working on the computer"
-
-#: app/components/chat-thread.tsx
 msgctxt "VAdNNz"
 msgid "Failed to send"
 msgstr "Failed to send"

@@ -731,11 +731,6 @@ msgid "Saving result"
 msgstr "結果を保存中"
 
 #: app/components/chat-thread.tsx
-msgctxt "xdZNBn"
-msgid "Working on the computer"
-msgstr "コンピューターで作業中"
-
-#: app/components/chat-thread.tsx
 msgctxt "VAdNNz"
 msgid "Failed to send"
 msgstr "送信に失敗しました"
