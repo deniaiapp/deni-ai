@@ -4,12 +4,10 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { account } from "@/db/auth-schema";
 import { auth } from "./auth";
+import { pluginKinds, pluginReadActions, pluginWriteActions, type PluginKind, type PluginOperation, type WriteAction } from "./plugin-actions";
 import { mutateStore, readStore } from "./store";
 
-export const pluginKinds = ["gmail", "drive", "github"] as const;
-export type PluginKind = (typeof pluginKinds)[number];
-export const writeActions = ["send", "create", "update", "createIssue", "createPR", "comment"] as const;
-export type WriteAction = (typeof writeActions)[number];
+export { pluginKinds, pluginWriteActions, writeActions, type PluginKind, type PluginOperation, type WriteAction } from "./plugin-actions";
 export const scopes = {
   gmail: { read: "https://www.googleapis.com/auth/gmail.readonly", write: "https://www.googleapis.com/auth/gmail.send" },
   drive: { read: "https://www.googleapis.com/auth/drive.readonly", write: "https://www.googleapis.com/auth/drive.file" },
@@ -19,8 +17,6 @@ export const scopes = {
 // (comma separated, empty for none) to override; remove "gmail,drive" below to re-enable.
 const disabledPlugins = () => new Set((process.env.DISABLED_PLUGINS ?? "gmail,drive").split(",").map((item) => item.trim()).filter(Boolean));
 const provider = (kind: PluginKind) => kind === "github" ? "github" : "google";
-/** Write actions each plugin supports; anything else is refused on save and at run time. */
-export const pluginWriteActions: Record<PluginKind, WriteAction[]> = { gmail: ["send"], drive: ["create", "update"], github: ["createIssue", "createPR", "comment"] };
 
 export async function pluginStatus(userId: string) {
   const rows = await db.select({ id: account.id, providerId: account.providerId, scope: account.scope }).from(account).where(eq(account.userId, userId));
@@ -124,7 +120,7 @@ async function accessToken(userId: string, kind: PluginKind, write = false) {
   return tokens.accessToken;
 }
 
-async function api(userId: string, kind: PluginKind, url: URL, options?: { method?: string; body?: string; write?: boolean; contentType?: string }) {
+async function api(userId: string, kind: PluginKind, url: URL, options?: { method?: string; body?: string; write?: boolean; contentType?: string; maxLength?: number }) {
   const token = await accessToken(userId, kind, options?.write);
   const response = await fetch(url, {
     method: options?.method ?? "GET",
@@ -134,15 +130,41 @@ async function api(userId: string, kind: PluginKind, url: URL, options?: { metho
   });
   const text = await response.text();
   if (!response.ok) throw new Error(`${kind} request failed (${response.status}): ${text.slice(0, 500)}`);
-  if (text.length > 200_000) throw new Error("Result too large to display");
+  if (text.length > (options?.maxLength ?? 200_000)) throw new Error("Result too large to display");
   try { return JSON.parse(text) as unknown; } catch { return text.slice(0, 30_000); }
 }
 
-export type PluginOperation = "search" | "read" | WriteAction;
-export async function runPlugin(userId: string, kind: PluginKind, action: PluginOperation, input: { query?: string; id?: string; repo?: string; title?: string; body?: string; to?: string; subject?: string; head?: string; base?: string; mimeType?: string }) {
+type GithubUser = { login?: string } | null | undefined;
+type GithubIssue = {
+  number: number; title: string; state: string; html_url: string; user?: GithubUser; labels?: (string | { name?: string })[]; assignees?: GithubUser[];
+  comments?: number; pull_request?: unknown; draft?: boolean; updated_at?: string; head?: { ref?: string }; base?: { ref?: string }; merged_at?: string | null;
+};
+const logins = (users?: GithubUser[]) => (users ?? []).map((user) => user?.login).filter(Boolean);
+// Lists come back trimmed to what the model needs, so a page of 30 stays small.
+const issueSummary = (item: GithubIssue) => ({
+  number: item.number, title: item.title, state: item.state, url: item.html_url, author: item.user?.login,
+  labels: (item.labels ?? []).map((label) => typeof label === "string" ? label : label.name), assignees: logins(item.assignees),
+  ...(item.comments !== undefined ? { comments: item.comments } : {}), ...(item.pull_request || item.head ? { pullRequest: true, draft: item.draft } : {}),
+  ...(item.head ? { head: item.head.ref, base: item.base?.ref, merged: Boolean(item.merged_at) } : {}), updatedAt: item.updated_at,
+});
+const issueNumber = (id?: string) => {
+  if (!id || !/^\d+$/.test(id)) throw new Error("Issue or pull request number required");
+  return id;
+};
+const userList = (value: string[] | undefined, name: string) => {
+  if (value && (value.length > 100 || value.some((item) => !item.trim() || item.length > 100))) throw new Error(`Invalid ${name}`);
+  return value;
+};
+
+export type PluginInput = {
+  query?: string; id?: string; repo?: string; title?: string; body?: string; to?: string; subject?: string; head?: string; base?: string; mimeType?: string;
+  ref?: string; state?: "open" | "closed" | "all"; stateReason?: "completed" | "not_planned" | "reopened"; labels?: string[]; assignees?: string[]; reviewers?: string[];
+  mergeMethod?: "merge" | "squash" | "rebase"; event?: "APPROVE" | "REQUEST_CHANGES" | "COMMENT"; page?: number;
+};
+export async function runPlugin(userId: string, kind: PluginKind, action: PluginOperation, input: PluginInput) {
   if (disabledPlugins().has(kind)) throw new Error(`${kind} is temporarily disabled.`);
-  if (Object.values(input).some((value) => value && value.length > 20_000)) throw new Error("Input too large");
-  if (action !== "search" && action !== "read" && !pluginWriteActions[kind].includes(action)) throw new Error("Unsupported plugin operation");
+  if (Object.values(input).flat().some((value) => typeof value === "string" && value.length > 20_000)) throw new Error("Input too large");
+  if (!(pluginReadActions[kind] as readonly string[]).includes(action) && !(pluginWriteActions[kind] as readonly string[]).includes(action)) throw new Error("Unsupported plugin operation");
   if (kind === "gmail") {
     const base = "https://gmail.googleapis.com/gmail/v1/users/me/messages";
     if (action === "search") { const url = new URL(base); url.searchParams.set("q", input.query ?? ""); url.searchParams.set("maxResults", "20"); return api(userId, kind, url); }
@@ -193,9 +215,96 @@ export async function runPlugin(userId: string, kind: PluginKind, action: Plugin
     return api(userId, kind, new URL(`https://www.googleapis.com/upload/drive/v3/files/${encodeURIComponent(input.id)}?uploadType=media`), { method: "PATCH", body: input.body, contentType: "text/plain; charset=UTF-8", write: true });
   }
   const base = "https://api.github.com";
-  if (action === "search") { const code = input.query?.startsWith("code:"); const url = new URL(base + (code ? "/search/code" : "/search/issues")); url.searchParams.set("q", code ? (input.query ?? "").slice(5).trim() : input.query ?? ""); url.searchParams.set("per_page", "20"); return api(userId, kind, url); }
+  const page = (url: URL, size = 30) => {
+    url.searchParams.set("per_page", String(size));
+    if (input.page) url.searchParams.set("page", String(input.page));
+    return url;
+  };
+  if (action === "search") { const code = input.query?.startsWith("code:"); const url = new URL(base + (code ? "/search/code" : "/search/issues")); url.searchParams.set("q", code ? (input.query ?? "").slice(5).trim() : input.query ?? ""); return api(userId, kind, page(url, 20)); }
+  if (action === "listRepos") {
+    const url = page(new URL(`${base}/user/repos`));
+    url.searchParams.set("sort", "updated");
+    const repos = await api(userId, kind, url) as { full_name: string; private: boolean; description?: string | null; default_branch?: string; open_issues_count?: number; html_url: string; pushed_at?: string }[];
+    return repos.map((item) => ({ repo: item.full_name, private: item.private, description: item.description, defaultBranch: item.default_branch, openIssues: item.open_issues_count, url: item.html_url, pushedAt: item.pushed_at }));
+  }
   if (!input.repo || !/^[\w.-]+\/[\w.-]+$/.test(input.repo)) throw new Error("Repository must be owner/name");
   const repo = `${base}/repos/${input.repo}`;
+  if (input.ref !== undefined && !/^[\w./-]{1,250}$/.test(input.ref)) throw new Error("Invalid branch or ref");
+  if (action === "listIssues" || action === "listPRs") {
+    const url = page(new URL(`${repo}/${action === "listPRs" ? "pulls" : "issues"}`));
+    url.searchParams.set("state", input.state ?? "open");
+    if (action === "listIssues" && input.labels?.length) url.searchParams.set("labels", input.labels.join(","));
+    if (action === "listPRs" && input.base) url.searchParams.set("base", input.base);
+    return (await api(userId, kind, url) as GithubIssue[]).map(issueSummary);
+  }
+  if (action === "readPR") {
+    const number = issueNumber(input.id);
+    const pr = await api(userId, kind, new URL(`${repo}/pulls/${number}`)) as GithubIssue & { body?: string | null; mergeable?: boolean | null; mergeable_state?: string; additions?: number; deletions?: number; changed_files?: number; requested_reviewers?: GithubUser[] };
+    const files = await api(userId, kind, page(new URL(`${repo}/pulls/${number}/files`), 50), { maxLength: 2_000_000 }) as { filename: string; status: string; additions: number; deletions: number; patch?: string }[];
+    return {
+      ...issueSummary(pr), body: pr.body?.slice(0, 10_000), mergeable: pr.mergeable, mergeableState: pr.mergeable_state, additions: pr.additions, deletions: pr.deletions,
+      changedFiles: pr.changed_files, requestedReviewers: logins(pr.requested_reviewers),
+      files: files.map((file) => ({ file: file.filename, status: file.status, additions: file.additions, deletions: file.deletions, patch: file.patch?.slice(0, 4_000) })),
+    };
+  }
+  if (action === "listComments") {
+    const comments = await api(userId, kind, page(new URL(`${repo}/issues/${issueNumber(input.id)}/comments`))) as { id: number; user?: GithubUser; body?: string; created_at?: string; html_url: string }[];
+    return comments.map((comment) => ({ id: comment.id, author: comment.user?.login, body: comment.body?.slice(0, 5_000), createdAt: comment.created_at, url: comment.html_url }));
+  }
+  if (action === "listLabels") {
+    const labels = await api(userId, kind, page(new URL(`${repo}/labels`), 100)) as { name: string; description?: string | null }[];
+    return labels.map((label) => ({ name: label.name, description: label.description }));
+  }
+  if (action === "listBranches") {
+    const branches = await api(userId, kind, page(new URL(`${repo}/branches`), 100)) as { name: string; protected?: boolean; commit?: { sha?: string } }[];
+    return branches.map((branch) => ({ name: branch.name, protected: branch.protected, sha: branch.commit?.sha }));
+  }
+  if (action === "listCommits") {
+    const url = page(new URL(`${repo}/commits`));
+    if (input.ref) url.searchParams.set("sha", input.ref);
+    const commits = await api(userId, kind, url, { maxLength: 2_000_000 }) as { sha: string; html_url: string; author?: GithubUser; commit: { message: string; author?: { name?: string; date?: string } } }[];
+    return commits.map((item) => ({ sha: item.sha, message: item.commit.message.slice(0, 2_000), author: item.author?.login ?? item.commit.author?.name, date: item.commit.author?.date, url: item.html_url }));
+  }
+  if (action === "listReleases") {
+    const releases = await api(userId, kind, page(new URL(`${repo}/releases`), 20), { maxLength: 2_000_000 }) as { tag_name: string; name?: string | null; draft: boolean; prerelease: boolean; published_at?: string | null; html_url: string; body?: string | null }[];
+    return releases.map((release) => ({ tag: release.tag_name, name: release.name, draft: release.draft, prerelease: release.prerelease, publishedAt: release.published_at, url: release.html_url, notes: release.body?.slice(0, 3_000) }));
+  }
+  if (action === "listWorkflowRuns") {
+    const url = page(new URL(`${repo}/actions/runs`), 20);
+    if (input.ref) url.searchParams.set("branch", input.ref);
+    const { workflow_runs: runs } = await api(userId, kind, url, { maxLength: 2_000_000 }) as { workflow_runs: { id: number; name?: string; display_title?: string; head_branch?: string; head_sha?: string; event?: string; status?: string; conclusion?: string | null; html_url: string; created_at?: string }[] };
+    return runs.map((run) => ({ id: run.id, workflow: run.name, title: run.display_title, branch: run.head_branch, sha: run.head_sha, event: run.event, status: run.status, conclusion: run.conclusion, url: run.html_url, createdAt: run.created_at }));
+  }
+  if (action === "updateIssue") {
+    const number = issueNumber(input.id);
+    const changes = {
+      ...(input.title !== undefined ? { title: input.title } : {}), ...(input.body !== undefined ? { body: input.body } : {}),
+      ...(input.state && input.state !== "all" ? { state: input.state } : {}), ...(input.stateReason ? { state_reason: input.stateReason } : {}),
+      ...(input.labels ? { labels: userList(input.labels, "labels") } : {}), ...(input.assignees ? { assignees: userList(input.assignees, "assignees") } : {}),
+    };
+    const reviewers = userList(input.reviewers, "reviewers");
+    if (!Object.keys(changes).length && !reviewers?.length) throw new Error("Nothing to change");
+    const updated = Object.keys(changes).length ? await api(userId, kind, new URL(`${repo}/issues/${number}`), { method: "PATCH", body: JSON.stringify(changes), write: true }) as GithubIssue : undefined;
+    if (reviewers?.length) await api(userId, kind, new URL(`${repo}/pulls/${number}/requested_reviewers`), { method: "POST", body: JSON.stringify({ reviewers }), write: true });
+    return { ...(updated ? issueSummary(updated) : { number: Number(number) }), ...(reviewers?.length ? { requestedReviewers: reviewers } : {}) };
+  }
+  if (action === "mergePR") {
+    return api(userId, kind, new URL(`${repo}/pulls/${issueNumber(input.id)}/merge`), {
+      method: "PUT", write: true,
+      body: JSON.stringify({ merge_method: input.mergeMethod ?? "merge", ...(input.title ? { commit_title: input.title } : {}), ...(input.body ? { commit_message: input.body } : {}) }),
+    });
+  }
+  if (action === "review") {
+    const event = input.event ?? "COMMENT";
+    if (event !== "APPROVE" && !input.body) throw new Error("Review comment required");
+    const review = await api(userId, kind, new URL(`${repo}/pulls/${issueNumber(input.id)}/reviews`), { method: "POST", body: JSON.stringify({ event, ...(input.body ? { body: input.body } : {}) }), write: true }) as { id: number; state: string; html_url: string };
+    return { id: review.id, state: review.state, url: review.html_url };
+  }
+  if (action === "rerunWorkflow") {
+    if (!input.id || !/^\d+$/.test(input.id)) throw new Error("Workflow run ID required");
+    await api(userId, kind, new URL(`${repo}/actions/runs/${input.id}/rerun-failed-jobs`), { method: "POST", write: true });
+    return { rerun: true, runId: Number(input.id) };
+  }
   if (action === "read") {
     if (!input.id) throw new Error("Issue/PR number or file path required");
     if (/^\d+$/.test(input.id)) return api(userId, kind, new URL(`${repo}/issues/${input.id}`));

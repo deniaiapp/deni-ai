@@ -2278,6 +2278,26 @@ msgctxt "vPCMyI"
 msgid "Add a comment"
 msgstr "Add a comment"
 
+#: app/components/plugin-action-labels.ts
+msgctxt "1PvOSL"
+msgid "Edit, close, or reopen an issue or pull request"
+msgstr "Edit, close, or reopen an issue or pull request"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "VB9riu"
+msgid "Review a pull request"
+msgstr "Review a pull request"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "4MAqvI"
+msgid "Merge a pull request"
+msgstr "Merge a pull request"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "qL93w8"
+msgid "Re-run failed workflow jobs"
+msgstr "Re-run failed workflow jobs"
+
 #: app/components/reaction-picker.tsx
 msgctxt "AstDeQ"
 msgid "Smileys & People"

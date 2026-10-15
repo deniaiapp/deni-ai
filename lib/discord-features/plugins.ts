@@ -43,6 +43,10 @@ export const actionLabels: Record<WriteAction, string> = {
   createIssue: "Create issues",
   createPR: "Open pull requests",
   comment: "Comment on issues and pull requests",
+  updateIssue: "Edit, close, and reopen issues and pull requests",
+  review: "Review pull requests",
+  mergePR: "Merge pull requests",
+  rerunWorkflow: "Re-run failed workflow jobs",
 };
 
 type PluginState = Awaited<ReturnType<typeof pluginStatus>>[number];

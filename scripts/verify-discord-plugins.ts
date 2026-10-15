@@ -221,7 +221,7 @@ async function main() {
   assert(textOf((await runPlugins("u1", "status")).sent).includes("Always allowed: Create issues"), "status does not show always-allowed actions");
   const actions = autocomplete({ name: "action", value: "" }, { kind: "github" });
   await pf.autocomplete!(actions.interaction, ctx("u1"));
-  assert(actions.answered().map((item) => item.value).join() === "createIssue,createPR,comment", `action choices: ${JSON.stringify(actions.answered())}`);
+  assert(actions.answered().map((item) => item.value).join() === "createIssue,createPR,comment,updateIssue,review,mergePR,rerunWorkflow", `action choices: ${JSON.stringify(actions.answered())}`);
   assert(actions.answered()[0].name.includes("always allowed"), "action choices do not show the current state");
 
   // Disconnect asks first, then reports what the web reports; buttons are checked against the sender.

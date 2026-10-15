@@ -10,5 +10,9 @@ export function usePluginActionLabels(): Record<string, string> {
     createIssue: t("Create an issue"),
     createPR: t("Open a pull request"),
     comment: t("Add a comment"),
+    updateIssue: t("Edit, close, or reopen an issue or pull request"),
+    review: t("Review a pull request"),
+    mergePR: t("Merge a pull request"),
+    rerunWorkflow: t("Re-run failed workflow jobs"),
   };
 }

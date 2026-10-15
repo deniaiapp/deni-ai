@@ -10,13 +10,12 @@ import { Label } from "@/components/ui/label";
 import { LoadingFallback } from "@/components/ui/loading";
 import { Select } from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
+import { pluginWriteActions, type PluginKind } from "@/lib/plugin-actions";
 import { DiscordCard, fetchDiscordStatus, type DiscordStatus } from "./discord-settings";
 import { usePluginActionLabels } from "./plugin-action-labels";
 
-type BuiltinPlugin = { kind: "gmail" | "drive" | "github"; connected: boolean; writeAccess: boolean; alwaysAllow: string[] };
-const builtinActions: Record<BuiltinPlugin["kind"], string[]> = {
-  gmail: ["send"], drive: ["create", "update"], github: ["createIssue", "createPR", "comment"],
-};
+type BuiltinPlugin = { kind: PluginKind; connected: boolean; writeAccess: boolean; alwaysAllow: string[] };
+const builtinActions = pluginWriteActions;
 const pluginLabels = { gmail: "Gmail", drive: "Google Drive", github: "GitHub" };
 const pluginScopes = {
   gmail: { read: "https://www.googleapis.com/auth/gmail.readonly", write: "https://www.googleapis.com/auth/gmail.send" },

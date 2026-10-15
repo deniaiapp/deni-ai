@@ -25,6 +25,7 @@ import { mutateStore, readStore } from "./store";
 import { registerArtifact } from "./artifacts";
 import { callMcpTool, listMcpConnections, listMcpTools } from "./mcp";
 import { isAlwaysAllowed, pluginStatus, runPlugin } from "./builtin-plugins";
+import { isReadAction, pluginKinds, readActions, writeActions, type PluginKind, type WriteAction } from "./plugin-actions";
 import { createNotification } from "./notifications";
 import { getJob, transitionJob } from "./jobs";
 import { nextCron } from "./cron";
@@ -248,11 +249,19 @@ export function createDeniTools(ctx: AgentContext) {
       execute: async () => pluginStatus(ctx.userId),
     }),
     builtInPlugin: tool({
-      description: "Search/read a connected Gmail, Google Drive, or GitHub account. For GitHub search, prefix query with 'code:' to search code; read uses a repo and issue/PR number or file path. Drive read returns text content for small text files and Google Docs, or metadata otherwise. Sending mail, changing Drive text files created with this app, or creating GitHub issues/PRs/comments requires approval unless the user enabled Always allow for that exact operation. Never use for deletion or code pushes.",
+      description: [
+        "Use a connected Gmail, Google Drive, or GitHub account. search and read work for all three; Drive read returns text content for small text files and Google Docs, or metadata otherwise.",
+        "GitHub (repo is owner/name, id is an issue/PR number unless noted): search (prefix query with 'code:' to search code), read (issue/PR number or file path), listRepos, listIssues (state, labels), listPRs (state, base), readPR (details, changed files, and patches), listComments, listLabels, listBranches, listCommits (ref), listReleases, listWorkflowRuns (ref = branch; returns run ids),",
+        "createIssue (title, body), createPR (title, body, head, base), comment (id, body), updateIssue (id plus any of title, body, state open/closed, stateReason completed/not_planned, labels and assignees replace the current lists, reviewers requests PR reviews), review (id, event APPROVE/REQUEST_CHANGES/COMMENT, body), mergePR (id, mergeMethod merge/squash/rebase, optional title/body for the commit), rerunWorkflow (id = workflow run id; re-runs failed jobs).",
+        "List actions take page (1, 2, ...) for more results. Sending mail, changing Drive text files created with this app, and every GitHub write require approval unless the user enabled Always allow for that exact operation. Never use for deletion or code pushes.",
+      ].join(" "),
       inputSchema: z.object({
-        kind: z.enum(["gmail", "drive", "github"]),
-        action: z.enum(["search", "read", "send", "create", "update", "createIssue", "createPR", "comment"]),
+        kind: z.enum(pluginKinds),
+        action: z.enum([...readActions, ...writeActions]),
         query: z.string().optional(), id: z.string().optional(), repo: z.string().optional(), title: z.string().optional(), body: z.string().optional(), to: z.string().optional(), subject: z.string().optional(), head: z.string().optional(), base: z.string().optional(),
+        ref: z.string().optional(), state: z.enum(["open", "closed", "all"]).optional(), stateReason: z.enum(["completed", "not_planned", "reopened"]).optional(),
+        labels: z.array(z.string()).max(100).optional(), assignees: z.array(z.string()).max(100).optional(), reviewers: z.array(z.string()).max(100).optional(),
+        mergeMethod: z.enum(["merge", "squash", "rebase"]).optional(), event: z.enum(["APPROVE", "REQUEST_CHANGES", "COMMENT"]).optional(), page: z.number().int().min(1).max(100).optional(),
       }),
       execute: async ({ kind, action, ...input }) => runPlugin(ctx.userId, kind, action, input),
     }),
@@ -662,9 +671,9 @@ export function deniToolApproval(options?: { userId?: string; jobId?: string; lo
       action === "delete" ? approval() : ("not-applicable" as const),
     mcp: ({ action }: { action: string }) =>
       action === "call" ? approval() : ("not-applicable" as const),
-    builtInPlugin: async ({ kind, action }: { kind: "gmail" | "drive" | "github"; action: string }) =>
-      action === "search" || action === "read" ? ("not-applicable" as const)
-        : options?.userId && await isAlwaysAllowed(options.userId, kind, action as "send" | "create" | "update" | "createIssue" | "createPR" | "comment") ? ("approved" as const) : approval(),
+    builtInPlugin: async ({ kind, action }: { kind: PluginKind; action: string }) =>
+      isReadAction(action) ? ("not-applicable" as const)
+        : options?.userId && await isAlwaysAllowed(options.userId, kind, action as WriteAction) ? ("approved" as const) : approval(),
   };
 }
 export function deniHandoffToolApproval(locale?: string) {
@@ -683,7 +692,7 @@ export function deniHandoffToolApproval(locale?: string) {
         ? { type: "denied" as const, reason }
         : ("not-applicable" as const),
     builtInPlugin: ({ action }: { action: string }) =>
-      action === "search" || action === "read" ? ("not-applicable" as const)
+      isReadAction(action) ? ("not-applicable" as const)
         : { type: "denied" as const, reason },
   };
 }

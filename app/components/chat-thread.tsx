@@ -1826,7 +1826,7 @@ function toolApprovalDetail(name: string, input: unknown, pluginActionLabels: Re
   if (name === "runCommand") return snippet(inputValue(input, "command"));
   if (name === "builtInPlugin") {
     const action = inputValue(input, "action");
-    return snippet([inputValue(input, "kind"), action ? pluginActionLabels[action] ?? action : undefined, inputValue(input, "repo"), inputValue(input, "to"), inputValue(input, "subject"), inputValue(input, "title"), inputValue(input, "id")].filter(Boolean).join(" · "), 220);
+    return snippet([inputValue(input, "kind"), action ? pluginActionLabels[action] ?? action : undefined, inputValue(input, "repo"), inputValue(input, "to"), inputValue(input, "subject"), inputValue(input, "title"), inputValue(input, "id"), inputValue(input, "state"), inputValue(input, "event"), inputValue(input, "mergeMethod")].filter(Boolean).join(" · "), 220);
   }
   if (name === "workspace") {
     const path = inputValue(input, "path");
