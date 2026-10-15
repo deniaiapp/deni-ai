@@ -824,17 +824,17 @@ msgstr "{job}。決まった手順は不要です。同僚に頼むように書�
 #: app/components/chat-thread.tsx
 msgctxt "Ajoqx1"
 msgid "Worked for {count}s"
-msgstr "{count}秒間作業しました"
+msgstr "{count} 秒間作業しました"
 
 #: app/components/chat-thread.tsx
 msgctxt "VSp1Sr"
 msgid "Worked for {count}m"
-msgstr "{count}分間作業しました"
+msgstr "{count} 分間作業しました"
 
 #: app/components/chat-thread.tsx
 msgctxt "6Wz8hi"
 msgid "Worked for {count}h"
-msgstr "{count}時間作業しました"
+msgstr "{count} 時間作業しました"
 
 #: app/components/chat-thread.tsx
 msgctxt "Aw3qRf"

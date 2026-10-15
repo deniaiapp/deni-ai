@@ -99,6 +99,12 @@ export function contextResetMessage(id: string): UIMessage {
   return { id, role: "system", parts: [], metadata: { kind: CONTEXT_RESET, at: new Date().toISOString() } };
 }
 
+/** How long the teammate worked on this reply, saved by the chat route so it survives a reload. */
+export function workedMsOf(message: UIMessage | undefined): number | undefined {
+  const value = (message?.metadata as { workedMs?: unknown } | undefined)?.workedMs;
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
 export function isContextReset(message: UIMessage) {
   return message.role === "system" && (message.metadata as { kind?: unknown } | undefined)?.kind === CONTEXT_RESET;
 }

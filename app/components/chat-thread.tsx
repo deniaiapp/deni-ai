@@ -85,7 +85,7 @@ import {
 } from "@/lib/message-actions";
 import { createReactionState, type ReactionMap } from "@/lib/reaction-state";
 import { messageAuthor, type MessageAuthor } from "@/lib/group-chat";
-import { isContextReset } from "@/lib/messages";
+import { isContextReset, workedMsOf } from "@/lib/messages";
 import { RUN_MODES, type RunMode } from "@/lib/model";
 import type {
   AgentJob,
@@ -1210,7 +1210,10 @@ const MessageBlock = memo(function MessageBlock({
     bots,
   );
   const cotWorking = cotSteps.length > 0 && isLastMessage && isStreaming;
-  const workedMs = useWorkedDuration(workKey, cotWorking);
+  // The saved duration covers the whole run and survives a reload; the local timer only fills in
+  // until the finish metadata arrives.
+  const liveWorkedMs = useWorkedDuration(workKey, cotWorking);
+  const workedMs = workedMsOf(message) ?? liveWorkedMs;
   const replyTo = replyReference(message);
   const canAct =
     !actionsDisabled &&

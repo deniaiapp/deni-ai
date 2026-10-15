@@ -19,7 +19,7 @@ import { getDeniModel } from "@/lib/llm";
 import { parseRunMode } from "@/lib/model";
 import { loadMessages, mutateStore, readStore, saveMessages } from "@/lib/store";
 import { assertCanUseTokens, isUsageLimitError, recordTokenUsage } from "@/lib/usage";
-import { compactMessagesForModel, mergeThreadMessages } from "@/lib/messages";
+import { compactMessagesForModel, mergeThreadMessages, workedMsOf } from "@/lib/messages";
 import {
   checkpointJob,
   claimJob,
@@ -182,6 +182,9 @@ export async function handleChat(req: Request) {
   const approvalMessage = continuationFrom === "waiting_approval" ? incoming.findLast((message) => message.role === "assistant") : undefined;
   const assistantId = approvalMessage?.id || `${job.id}_assistant_${createHash("sha256").update(idempotencyKey).digest("hex").slice(0, 12)}`;
   const author = { id: bot.id, name: bot.name, accent: bot.accent };
+  // A reply resumed after an approval keeps counting from the time already worked on it.
+  const runStartedAt = Date.now();
+  const workedBefore = workedMsOf(approvalMessage) ?? 0;
   const requestMessage = approvalMessage ?? incoming.findLast((message) => message.role === "user");
   // Concurrent group replies may already follow this input in stored history.
   // The UI stream must still create this bot's own answer, not continue theirs.
@@ -358,7 +361,10 @@ export async function handleChat(req: Request) {
           stream: result.stream,
           originalMessages: streamHistory,
           generateMessageId: () => assistantId,
-          messageMetadata: () => ({ author, jobId: job.id }),
+          messageMetadata: ({ part }) =>
+            part.type === "finish"
+              ? { author, jobId: job.id, workedMs: workedBefore + Date.now() - runStartedAt }
+              : { author, jobId: job.id },
           onEnd: async ({ messages: next, isAborted }) => {
             const response = next.find((message) => message.id === assistantId);
             try {
