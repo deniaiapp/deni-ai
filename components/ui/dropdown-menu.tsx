@@ -153,6 +153,31 @@ function DropdownMenuRadioItem({
   );
 }
 
+function DropdownMenuCheckboxItem({
+  className,
+  children,
+  ...props
+}: ComponentProps<typeof DropdownMenuPrimitive.CheckboxItem>) {
+  return (
+    <DropdownMenuPrimitive.CheckboxItem
+      data-slot="dropdown-menu-checkbox-item"
+      className={cn(
+        "relative flex cursor-default items-center gap-2.5 rounded-md py-1.5 pr-8 pl-2 text-[13px] outline-none select-none",
+        "text-neutral-232 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 [&_svg]:text-neutral-154",
+        "focus:bg-surface-active data-[highlighted]:bg-surface-active",
+        "data-[disabled]:pointer-events-none data-[disabled]:opacity-40",
+        className,
+      )}
+      {...props}
+    >
+      {children}
+      <DropdownMenuPrimitive.ItemIndicator className="absolute right-2 flex items-center">
+        <Check />
+      </DropdownMenuPrimitive.ItemIndicator>
+    </DropdownMenuPrimitive.CheckboxItem>
+  );
+}
+
 function DropdownMenuSeparator({
   className,
   ...props
@@ -168,6 +193,7 @@ function DropdownMenuSeparator({
 
 export {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,

@@ -76,6 +76,7 @@ import { Empty } from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
 import { Avatar } from "./sidebar";
 import { MessageActions } from "./message-actions";
+import { usePluginActionLabels } from "./plugin-action-labels";
 import {
   messageActionKey,
   messageBubbleTargets,
@@ -1631,6 +1632,7 @@ function PartView({
 }) {
   const t = useExtracted();
   const toolLabel = useToolDisplayLabel();
+  const pluginActionLabels = usePluginActionLabels();
   if (part.type === "text" && part.text.trim()) {
     return (
       <MessageContent>
@@ -1654,7 +1656,7 @@ function PartView({
     const displayLabel = toolLabel(name, input, state);
     if (toolPart.approval && !toolPart.approval.isAutomatic) {
       const approval = toolPart.approval;
-      const detail = toolApprovalDetail(name, input);
+      const detail = toolApprovalDetail(name, input, pluginActionLabels);
       return (
         <Confirmation approval={approval} state={state}>
           <ConfirmationRequest>
@@ -1822,9 +1824,12 @@ function useToolDisplayLabel() {
   return toolDisplayLabel;
 }
 
-function toolApprovalDetail(name: string, input: unknown) {
+function toolApprovalDetail(name: string, input: unknown, pluginActionLabels: Record<string, string>) {
   if (name === "runCommand") return snippet(inputValue(input, "command"));
-  if (name === "builtInPlugin") return snippet([inputValue(input, "kind"), inputValue(input, "action"), inputValue(input, "repo"), inputValue(input, "to"), inputValue(input, "subject"), inputValue(input, "title"), inputValue(input, "id")].filter(Boolean).join(" · "), 220);
+  if (name === "builtInPlugin") {
+    const action = inputValue(input, "action");
+    return snippet([inputValue(input, "kind"), action ? pluginActionLabels[action] ?? action : undefined, inputValue(input, "repo"), inputValue(input, "to"), inputValue(input, "subject"), inputValue(input, "title"), inputValue(input, "id")].filter(Boolean).join(" · "), 220);
+  }
   if (name === "workspace") {
     const path = inputValue(input, "path");
     return path ? snippet(path) : undefined;

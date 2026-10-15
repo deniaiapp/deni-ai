@@ -1768,6 +1768,7 @@ msgid "Approve"
 msgstr "Approve"
 
 #: app/components/chat-thread.tsx
+#: app/components/mcp-settings.tsx
 msgctxt "lr3QX_"
 msgid "Always allow"
 msgstr "Always allow"
@@ -2470,9 +2471,14 @@ msgid "Enable write access"
 msgstr "Enable write access"
 
 #: app/components/mcp-settings.tsx
-msgctxt "BhUhpa"
-msgid "{action} · Always allow"
-msgstr "{action} · Always allow"
+msgctxt "jDJtl7"
+msgid "Ask every time"
+msgstr "Ask every time"
+
+#: app/components/mcp-settings.tsx
+msgctxt "i-Rkf2"
+msgid "Run without asking"
+msgstr "Run without asking"
 
 #: app/components/mcp-settings.tsx
 msgctxt "qj1uhz"
@@ -2628,6 +2634,36 @@ msgstr "Mark all read"
 msgctxt "56G1F0"
 msgid "No notifications."
 msgstr "No notifications."
+
+#: app/components/plugin-action-labels.ts
+msgctxt "u1a-J1"
+msgid "Send an email"
+msgstr "Send an email"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "oSxleB"
+msgid "Create a file"
+msgstr "Create a file"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "EdOe1W"
+msgid "Update a file"
+msgstr "Update a file"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "-1BY_s"
+msgid "Create an issue"
+msgstr "Create an issue"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "pCQMeL"
+msgid "Open a pull request"
+msgstr "Open a pull request"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "vPCMyI"
+msgid "Add a comment"
+msgstr "Add a comment"
 
 #: app/components/reaction-picker.tsx
 msgctxt "AstDeQ"

@@ -1768,6 +1768,7 @@ msgid "Approve"
 msgstr "承認"
 
 #: app/components/chat-thread.tsx
+#: app/components/mcp-settings.tsx
 msgctxt "lr3QX_"
 msgid "Always allow"
 msgstr "常に許可"
@@ -2470,9 +2471,14 @@ msgid "Enable write access"
 msgstr "書き込みを有効にする"
 
 #: app/components/mcp-settings.tsx
-msgctxt "BhUhpa"
-msgid "{action} · Always allow"
-msgstr "{action} · 常に許可"
+msgctxt "jDJtl7"
+msgid "Ask every time"
+msgstr "毎回確認"
+
+#: app/components/mcp-settings.tsx
+msgctxt "i-Rkf2"
+msgid "Run without asking"
+msgstr "確認せずに実行"
 
 #: app/components/mcp-settings.tsx
 msgctxt "qj1uhz"
@@ -2628,6 +2634,36 @@ msgstr "すべて既読にする"
 msgctxt "56G1F0"
 msgid "No notifications."
 msgstr "通知はありません。"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "u1a-J1"
+msgid "Send an email"
+msgstr "メールを送信"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "oSxleB"
+msgid "Create a file"
+msgstr "ファイルを作成"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "EdOe1W"
+msgid "Update a file"
+msgstr "ファイルを更新"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "-1BY_s"
+msgid "Create an issue"
+msgstr "Issueを作成"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "pCQMeL"
+msgid "Open a pull request"
+msgstr "プルリクエストを作成"
+
+#: app/components/plugin-action-labels.ts
+msgctxt "vPCMyI"
+msgid "Add a comment"
+msgstr "コメントを追加"
 
 #: app/components/reaction-picker.tsx
 msgctxt "AstDeQ"

@@ -6,12 +6,14 @@ import { ChevronDownIcon, PlugIcon, TrashIcon, WrenchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingFallback } from "@/components/ui/loading";
 import { Select } from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
 import { DiscordCard, fetchDiscordStatus, type DiscordStatus } from "./discord-settings";
+import { usePluginActionLabels } from "./plugin-action-labels";
 
 type BuiltinPlugin = { kind: "gmail" | "drive" | "github"; connected: boolean; writeAccess: boolean; alwaysAllow: string[] };
 const builtinActions: Record<BuiltinPlugin["kind"], string[]> = {
@@ -27,6 +29,7 @@ import type { McpConnection } from "@/lib/types";
 
 export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const t = useExtracted();
+  const actionLabels = usePluginActionLabels();
   const [connections, setConnections] = useState<McpConnection[]>([]);
   const [plugins, setPlugins] = useState<BuiltinPlugin[]>([]);
   const [discord, setDiscord] = useState<DiscordStatus | null>(null);
@@ -181,7 +184,21 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
               </div>
               {plugin.connected ? <div className="mt-3 space-y-3 border-t border-foreground/10 pt-3">
                 {!plugin.writeAccess && plugin.kind !== "github" ? <Button type="button" size="sm" variant="outline" onClick={() => void connect(plugin.kind, true)}>{t("Enable write access")}</Button> : null}
-                {plugin.writeAccess ? <div className="space-y-2">{builtinActions[plugin.kind].map((action) => <label key={action} className="flex items-center justify-between gap-3 text-sm"><span>{t("{action} · Always allow", { action })}</span><input type="checkbox" checked={plugin.alwaysAllow.includes(action)} onChange={(event) => void setAlwaysAllow(plugin.kind, action, event.target.checked)} className="accent-primary" /></label>)}</div> : null}
+                {plugin.writeAccess ? <div className="flex items-center justify-between gap-3 text-sm">
+                  <span>{t("Always allow")}</span>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" size="sm" variant="outline" className="min-w-0 max-w-64">
+                        <span className="truncate">{plugin.alwaysAllow.length ? builtinActions[plugin.kind].filter((action) => plugin.alwaysAllow.includes(action)).map((action) => actionLabels[action] ?? action).join(", ") : t("Ask every time")}</span>
+                        <ChevronDownIcon data-icon="inline-end" className="size-4 shrink-0" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuLabel>{t("Run without asking")}</DropdownMenuLabel>
+                      {builtinActions[plugin.kind].map((action) => <DropdownMenuCheckboxItem key={action} checked={plugin.alwaysAllow.includes(action)} onSelect={(event) => event.preventDefault()} onCheckedChange={(checked) => void setAlwaysAllow(plugin.kind, action, checked)}>{actionLabels[action] ?? action}</DropdownMenuCheckboxItem>)}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div> : null}
                 <div><Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void disconnect(plugin.kind)}>{t("Disconnect")}</Button></div>
               </div> : null}
             </div>)}
