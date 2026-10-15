@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { validAvatarIcon } from "./avatar";
 import { createId, nowIso } from "./ids";

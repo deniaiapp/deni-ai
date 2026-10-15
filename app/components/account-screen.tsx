@@ -1,7 +1,5 @@
-"use client";
-
-import { useExtracted } from "next-intl";
-import Link from "next/link";
+import { useExtracted } from "@/i18n/react";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { Button } from "@/components/ui/button";
@@ -81,7 +79,7 @@ export function AccountScreen() {
     <main className="h-full overflow-y-auto bg-background px-6 py-12 text-foreground">
       <Stagger className="mx-auto flex max-w-2xl flex-col gap-6">
         <StaggerItem>
-        <Link href="/" className="text-xs text-muted-foreground hover:text-foreground">
+        <Link to="/" className="text-xs text-muted-foreground hover:text-foreground">
           {t("Back to workspace")}
         </Link>
         </StaggerItem>

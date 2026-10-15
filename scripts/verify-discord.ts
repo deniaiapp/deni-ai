@@ -11,7 +11,7 @@ dotenv.config({ path: ".env.local", override: true, quiet: true });
 for (const key of Object.keys(process.env)) if (key.startsWith("S3_")) delete process.env[key];
 
 mockModules((request) => {
-  if (request === "server-only") return {};
+  if (request === "@tanstack/react-start/server-only") return {};
   return undefined;
 });
 

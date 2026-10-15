@@ -8,8 +8,8 @@ dotenv.config({ path: ".env", quiet: true });
 dotenv.config({ path: ".env.local", override: true, quiet: true });
 
 mockModules((request) => {
-  if (request === "server-only") return {};
-  if (request === "next/headers") return { headers: async () => new Headers() };
+  if (request === "@tanstack/react-start/server-only") return {};
+  if (request === "@tanstack/react-start/server") return { getRequestHeaders: () => new Headers() };
   return undefined;
 });
 

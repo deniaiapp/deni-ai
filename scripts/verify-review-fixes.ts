@@ -75,7 +75,7 @@ async function main() {
     },
   };
   const restoreModules = mockModules((request, parentPath) => {
-    if (request === "server-only") return {};
+    if (request === "@tanstack/react-start/server-only") return {};
     if (request === "./store")
       return {
         readStore: async () => store,

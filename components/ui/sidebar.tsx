@@ -1,7 +1,5 @@
-"use client";
-
 import { Loader2Icon, PanelLeftIcon, XIcon } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import type { ComponentProps } from "react";
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 

@@ -1,5 +1,5 @@
 import { Loader2Icon } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import type { ComponentProps } from "react";
 
 import { cn } from "@/lib/utils";

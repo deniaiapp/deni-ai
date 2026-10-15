@@ -50,7 +50,7 @@ Use one allowed scope, or several in the order they matter: `chore(web,api,db)`.
 | `ci` | GitHub Actions, Husky, commitlint |
 | `docs` | README and contributing |
 | `deps` | Dependency bumps |
-| `config` | Next config, env examples, tooling |
+| `config` | Vite config, env examples, tooling |
 
 ### Body (required)
 

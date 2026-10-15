@@ -3,7 +3,7 @@
 The app keeps running on Docker/Dokploy. Only the database moves.
 
 ```
-Next.js app + worker  --HTTPS, bearer token-->  d1-proxy Worker  --binding-->  D1
+App server + worker  --HTTPS, bearer token-->  d1-proxy Worker  --binding-->  D1
 ```
 
 D1 can only be bound inside a Worker. Calling its REST API directly from the server would

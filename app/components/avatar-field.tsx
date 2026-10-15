@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { useRef, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { ImagePlus, Smile, X } from "lucide-react";

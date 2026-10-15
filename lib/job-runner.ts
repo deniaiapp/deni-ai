@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { convertToModelMessages, generateText, isLoopFinished, type UIMessage } from "ai";
 import { buildInstructions, createDeniTools, deniHandoffToolApproval, deniToolApproval } from "./agent";

@@ -1,7 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
-import { getExtracted } from "next-intl/server";
-import { NextResponse } from "next/server";
+import { getExtracted } from "@/i18n/server";
 import { getWorkspaceUserId } from "./auth";
 
 export async function getApiUserId() {
@@ -10,5 +9,5 @@ export async function getApiUserId() {
 
 export async function unauthorizedResponse() {
   const t = await getExtracted();
-  return NextResponse.json({ error: t("Unauthorized") }, { status: 401 });
+  return Response.json({ error: t("Unauthorized") }, { status: 401 });
 }

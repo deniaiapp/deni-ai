@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { rm } from "node:fs/promises";
 import { eq } from "drizzle-orm";

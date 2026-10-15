@@ -1,7 +1,7 @@
 import { registerHooks } from "node:module";
 import { fileURLToPath } from "node:url";
 
-// Replaces modules for the verify scripts. The package is ESM (vinext needs "type": "module"),
+// Replaces modules for the verify scripts. The package is ESM ("type": "module"),
 // so patching Module._load no longer reaches lib/ imports. module.registerHooks sees both
 // import and require, and a mock is served as an ES module that re-exports the object's keys.
 

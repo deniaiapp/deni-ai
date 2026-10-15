@@ -1,5 +1,5 @@
 /**
- * Japanese strings for server code that runs outside a Next.js request: agent tool errors,
+ * Japanese strings for server code that runs outside a request: agent tool errors,
  * background jobs, the standalone worker, and the labels they persist. `{name}` marks a
  * placeholder. Keys must match the English text exactly. UI and API route strings live in
  * messages/*.po instead.

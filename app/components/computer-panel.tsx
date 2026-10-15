@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "@/i18n/react";
 import { translateMessage } from "@/lib/i18n-server";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
@@ -495,7 +493,6 @@ export function ComputerPanel({
                       <Spinner size="md" />
                     </span>
                   ) : null}
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={`/api/computer/screenshot?t=${encodeURIComponent(stamp)}${screenshotQuery}`}
                     alt="Deni Run"
@@ -770,7 +767,6 @@ export function ComputerPanel({
               onClick={() => setScreenExpanded(false)}
               className="absolute top-3 right-3 z-10 bg-surface-raised text-foreground shadow-lg"
             />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/api/computer/screenshot?t=${encodeURIComponent(stamp)}${screenshotQuery}`}
               alt={t("Enlarged Deni Run screen")}

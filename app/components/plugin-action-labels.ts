@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 
 // Readable names for built-in plugin write actions, shown instead of ids like "createIssue".
 export function usePluginActionLabels(): Record<string, string> {

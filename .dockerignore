@@ -1,6 +1,8 @@
 .git
 .github
-.next
+.output
+.nitro
+.tanstack
 .deni
 node_modules
 .env
@@ -10,11 +12,9 @@ node_modules
 AGENTS.md
 CLAUDE.md
 tsconfig.tsbuildinfo
-next-env.d.ts
 coverage
 .vercel
 .vscode
 .idea
 worker
 dist
-.vinext

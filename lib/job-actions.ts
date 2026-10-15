@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { releaseBrowserTakeover } from "./browser-workspaces";
 import { setComputer } from "./computer";

@@ -1,4 +1,4 @@
 #!/bin/sh
 set -eu
 
-exec node server.js
+exec node server/index.mjs

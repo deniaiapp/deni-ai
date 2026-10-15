@@ -1,8 +1,6 @@
-"use client";
-
 import { PaperPlaneTiltIcon, StopIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import type { ChatStatus } from "ai";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import type { ComponentProps, KeyboardEventHandler, MouseEvent } from "react";
 import { useCallback } from "react";
 

@@ -2,8 +2,8 @@ import { defaultLocale, isLocale, type Locale } from "../i18n/config";
 import { ja } from "./i18n-ja";
 
 /**
- * Translator for server code that has no Next.js request, such as the standalone worker and
- * the messages agents and background jobs persist. It deliberately avoids next-intl so it
+ * Translator for server code that runs outside a request, such as the standalone worker and
+ * the messages agents and background jobs persist. It does not read the request, so it
  * also runs under `tsx worker/index.ts`.
  */
 export type Translate = (message: string, params?: Record<string, string | number>) => string;

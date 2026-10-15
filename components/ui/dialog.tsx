@@ -1,7 +1,5 @@
-"use client";
-
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { XIcon } from "lucide-react";
 import type { ComponentProps } from "react";
 

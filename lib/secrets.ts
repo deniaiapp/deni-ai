@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 

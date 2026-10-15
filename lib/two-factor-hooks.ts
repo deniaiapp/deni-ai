@@ -1,6 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
-import { getExtracted } from "next-intl/server";
+import { getExtracted } from "@/i18n/server";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { deleteSessionCookie } from "better-auth/cookies";
 import { generateRandomString } from "better-auth/crypto";

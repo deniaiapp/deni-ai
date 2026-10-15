@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { LoadingFallback } from "@/components/ui/loading";
 
 export function PageLoading() {

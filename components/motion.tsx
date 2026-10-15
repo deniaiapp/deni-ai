@@ -1,5 +1,3 @@
-"use client";
-
 import { motion, MotionConfig } from "motion/react";
 import type { ReactNode } from "react";
 import { easeOut, fadeIn, fadeUp, stagger } from "@/lib/motion";

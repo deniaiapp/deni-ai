@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { useMemo, useState } from "react";
 import { ArrowLeft, Search, X } from "lucide-react";
 import { EMOJI_CATALOG } from "@/lib/emoji-catalog";

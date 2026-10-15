@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { LoadingFallback } from "@/components/ui/loading";

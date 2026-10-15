@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { createId } from "./ids";
 import { hasActiveThreadJob } from "./jobs";

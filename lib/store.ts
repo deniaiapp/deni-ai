@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import type { UIMessage } from "ai";

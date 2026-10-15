@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { convertToModelMessages, isStepCount, streamText, type UIMessage } from "ai";
 import { createId, nowIso } from "./ids";

@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { useState } from "react";
 import { BellIcon, CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";

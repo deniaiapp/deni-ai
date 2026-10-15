@@ -16,7 +16,6 @@ RUN npm install -g corepack@latest \
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile --store-dir /pnpm/store
 
-ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 # Imported at build time; the database is only contacted at runtime.
 ENV BETTER_AUTH_SECRET=build-placeholder-secret-not-used-at-runtime
@@ -28,11 +27,9 @@ ENV NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
 ENV NEXT_PUBLIC_SUPPORT_EMAIL=$NEXT_PUBLIC_SUPPORT_EMAIL
 
 COPY . .
-# vinext buildはoutput: "standalone"でdist/standaloneに自己完結したサーバーを出力する。
-# next/font/googleのフォントは.vinext/fontsにキャッシュされるので、毎回Googleから取り直さないよう
-# BuildKitキャッシュに置く
-RUN --mount=type=cache,id=vinext-fonts,target=/app/.vinext/fonts \
-  pnpm build
+# vite build（TanStack Start + Nitro）は.outputに自己完結したNodeサーバーを出力する。
+# フォントは@fontsource-variableからバンドルされるので、ビルド中にGoogleへ取りに行かない
+RUN pnpm build
 
 FROM node:${NODE_VERSION} AS runner
 WORKDIR /app
@@ -40,14 +37,14 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 ENV PORT=3000
-# vinextのサーバーはHOSTNAMEではなくHOSTを読む
+# NitroのサーバーはHOST（またはNITRO_HOST）を読む
 ENV HOST=0.0.0.0
 
 RUN mkdir -p .deni scripts \
   && chown node:node .deni scripts
 
-# standaloneにはpublic、ビルド成果物、実行時に必要なnode_modulesが含まれる
-COPY --from=builder --chown=node:node /app/dist/standalone ./
+# .outputには静的ファイル（public）、サーバー、実行時に必要なnode_modulesが含まれる
+COPY --from=builder --chown=node:node /app/.output ./
 COPY --from=builder --chown=node:node /app/scripts/docker-entrypoint.sh ./entrypoint.sh
 
 RUN sed -i 's/\r$//' ./entrypoint.sh && chmod +x ./entrypoint.sh

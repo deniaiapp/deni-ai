@@ -1,6 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
-import { getExtracted, getLocale } from "next-intl/server";
+import { getExtracted, getLocale } from "@/i18n/server";
 import { translateMessage } from "./i18n-server";
 import type { UsageLimitError } from "./plans";
 import { getUsageSnapshot } from "./usage";

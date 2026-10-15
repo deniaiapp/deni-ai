@@ -1,8 +1,5 @@
-"use client";
-
-import { useExtracted } from "next-intl";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useExtracted } from "@/i18n/react";
+import { Link, useRouter } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import { Check, Copy, Download, Fingerprint, KeyRound, Loader2, Mail } from "lucide-react";
@@ -243,7 +240,7 @@ function AuthCard({
         <LanguageSwitcher />
       </div>
       <FadeIn className="flex w-full max-w-sm flex-col gap-6">
-        <Link href="/" className="text-center text-sm font-medium text-foreground">
+        <Link to="/" className="text-center text-sm font-medium text-foreground">
           Deni Run
         </Link>
         <Card className="gap-6 p-6">
@@ -300,8 +297,9 @@ export function SocialAuth({
       setBusy(null);
       return;
     }
-    router.push("/");
-    router.refresh();
+    // Loaders cached while signed out are stale now.
+    await router.invalidate();
+    await router.navigate({ to: "/" });
   }
 
   const message =
@@ -317,7 +315,7 @@ export function SocialAuth({
           {mode === "sign-in" ? (
             t.rich("New here? <link>Create an account</link>", {
               link: (chunks) => (
-                <Link href="/sign-up" className="text-foreground hover:underline">
+                <Link to="/sign-up" className="text-foreground hover:underline">
                   {chunks}
                 </Link>
               ),
@@ -325,7 +323,7 @@ export function SocialAuth({
           ) : (
             t.rich("Already have an account? <link>Sign in</link>", {
               link: (chunks) => (
-                <Link href="/sign-in" className="text-foreground hover:underline">
+                <Link to="/sign-in" className="text-foreground hover:underline">
                   {chunks}
                 </Link>
               ),
@@ -376,12 +374,12 @@ export function SocialAuth({
       <p className="text-center text-xs text-muted-foreground">
         {t.rich("By continuing you agree to the <terms>Terms</terms> and <privacy>Privacy</privacy> pages.", {
           terms: (chunks) => (
-            <Link href="/terms" className="text-secondary-foreground hover:text-foreground">
+            <Link to="/terms" className="text-secondary-foreground hover:text-foreground">
               {chunks}
             </Link>
           ),
           privacy: (chunks) => (
-            <Link href="/privacy" className="text-secondary-foreground hover:text-foreground">
+            <Link to="/privacy" className="text-secondary-foreground hover:text-foreground">
               {chunks}
             </Link>
           ),
@@ -475,8 +473,9 @@ function PasskeyForm() {
       setBusy(false);
       return;
     }
-    router.push("/");
-    router.refresh();
+    // Loaders cached while signed out are stale now.
+    await router.invalidate();
+    await router.navigate({ to: "/" });
   }
 
   return (
@@ -541,8 +540,9 @@ function CodeForm({ method }: { method: "totp" | "email" }) {
       setBusy(false);
       return;
     }
-    router.push("/");
-    router.refresh();
+    // Loaders cached while signed out are stale now.
+    await router.invalidate();
+    await router.navigate({ to: "/" });
   }
 
   const description = useBackup
@@ -705,8 +705,9 @@ export function TwoFactorSetupForm({
       setBusy(null);
       return;
     }
-    router.push("/");
-    router.refresh();
+    // Loaders cached while signed out are stale now.
+    await router.invalidate();
+    await router.navigate({ to: "/" });
   }
 
   async function startEmail() {
@@ -757,8 +758,9 @@ export function TwoFactorSetupForm({
       setBusy(null);
       return;
     }
-    router.push("/");
-    router.refresh();
+    // Loaders cached while signed out are stale now.
+    await router.invalidate();
+    await router.navigate({ to: "/" });
   }
 
   const backLink = (

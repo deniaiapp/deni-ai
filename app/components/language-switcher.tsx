@@ -1,7 +1,5 @@
-"use client";
-
-import { useExtracted, useLocale } from "next-intl";
-import { useRouter } from "next/navigation";
+import { useExtracted, useLocale } from "@/i18n/react";
+import { useRouter } from "@tanstack/react-router";
 import { useTransition } from "react";
 import { Globe } from "lucide-react";
 import {
@@ -11,7 +9,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { setLocale } from "@/i18n/actions";
+import { setLocale } from "@/i18n/functions";
 import { locales, type Locale } from "@/i18n/config";
 
 export const localeLabels: Record<Locale, string> = { en: "English", ja: "日本語" };
@@ -40,8 +38,8 @@ export function LanguageSwitcher() {
           onValueChange={(next) => {
             if (next === locale) return;
             startTransition(async () => {
-              await setLocale(next);
-              router.refresh();
+              await setLocale({ data: next });
+              await router.invalidate();
             });
           }}
         >

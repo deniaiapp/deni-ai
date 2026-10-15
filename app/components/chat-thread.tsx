@@ -1,7 +1,5 @@
-"use client";
-
 import { useChat } from "@ai-sdk/react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { type UIMessage } from "ai";
 import {
   memo,

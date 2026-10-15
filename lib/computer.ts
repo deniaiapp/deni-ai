@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import Steel from "steel-sdk";
 import { exec } from "node:child_process";

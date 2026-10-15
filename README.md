@@ -60,6 +60,11 @@ Create an API key at [openrouter.ai/keys](https://openrouter.ai/keys) and set `O
 pnpm dev
 ```
 
+The app is built with TanStack Start on Vite. `pnpm build` writes a self-contained Node server to
+`.output/`, and `pnpm start` runs it. UI text is translated with use-intl from `messages/*.po`:
+`pnpm dev` and `pnpm build` add new strings to the catalogs (or run `pnpm messages:extract`), and
+untranslated entries in `messages/ja.po` have an empty `msgstr` that falls back to English.
+
 http://localhost:3000
 
 ## Docker / Dokploy

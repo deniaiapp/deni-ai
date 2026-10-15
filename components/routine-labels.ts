@@ -1,4 +1,4 @@
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { readRoutineSchedule } from "@/lib/routine-schedule";
 
 export function useRoutineLabels() {

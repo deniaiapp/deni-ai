@@ -1,11 +1,9 @@
-"use client";
-
-import { useExtracted } from "next-intl";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useExtracted } from "@/i18n/react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { easeOut } from "@/lib/motion";
 import type { UIMessage } from "ai";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@tanstack/react-router";
 import { MonitorIcon } from "@phosphor-icons/react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -32,7 +30,6 @@ import type {
   AppNotification,
   AgentJob,
 } from "@/lib/types";
-import dynamic from "next/dynamic";
 import { ChatThread, forgetChatThread } from "./chat-thread";
 import { SetupScreen } from "./setup-screen";
 import { BillingDialog } from "./billing-dialog";
@@ -48,12 +45,17 @@ import { RoutinesDialog } from "./routines-dialog";
 import { SkillsDialog } from "./skills-dialog";
 import { AvatarField } from "./avatar-field";
 
-const ComputerPanel = dynamic(
-  () => import("./computer-panel").then((mod) => ({ default: mod.ComputerPanel })),
-  {
-    loading: () => <ComputerPanelLoading />,
-  },
+const LazyComputerPanel = lazy(() =>
+  import("./computer-panel").then((mod) => ({ default: mod.ComputerPanel })),
 );
+
+function ComputerPanel(props: ComponentProps<typeof LazyComputerPanel>) {
+  return (
+    <Suspense fallback={<ComputerPanelLoading />}>
+      <LazyComputerPanel {...props} />
+    </Suspense>
+  );
+}
 
 function ComputerPanelLoading() {
   const t = useExtracted();
@@ -107,7 +109,8 @@ export function Workspace() {
       // OAuth returns here; show the newly connected service without keeping the query parameter.
       // eslint-disable-next-line react/set-state-in-effect
       setModal("mcp");
-      window.history.replaceState(null, "", window.location.pathname);
+      // Keep the router's history state; only the URL changes.
+      window.history.replaceState(window.history.state, "", window.location.pathname);
     }
     const openPlugins = () => setModal("mcp");
     window.addEventListener("open-plugins", openPlugins);
@@ -260,7 +263,7 @@ export function Workspace() {
     setModal(null);
     setEditBot(null);
     if (canUpgrade) {
-      router.push("/upgrade?reason=teammates");
+      void router.navigate({ to: "/upgrade", search: { reason: "teammates" } });
       return;
     }
     setBillingOpen(true);
@@ -843,7 +846,7 @@ export function Workspace() {
         onClose={() => setBillingOpen(false)}
         onUpgrade={() => {
           setBillingOpen(false);
-          router.push("/upgrade");
+          void router.navigate({ to: "/upgrade" });
         }}
         onManage={async () => {
           setBillingBusy(true);

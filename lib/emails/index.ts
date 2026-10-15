@@ -1,12 +1,8 @@
-/// <reference types="@vitejs/plugin-rsc/types" />
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 type EmailRenderer = typeof import("./render");
 
-// Route handlers run in the RSC environment, where react-dom/server refuses to load, so emails are
-// rendered in the SSR environment instead. Scripts run with tsx have no import.meta.env and import
-// the renderer directly.
+// Loaded on first use so react-email stays out of modules that never send mail.
 export async function loadEmailRenderer(): Promise<EmailRenderer> {
-  if (!import.meta.env) return import("./render");
-  return import.meta.viteRsc.import<EmailRenderer>("./render", { environment: "ssr" });
+  return import("./render");
 }

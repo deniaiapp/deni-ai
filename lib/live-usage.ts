@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { pendingBrowserMs } from "./computer";
 import { pendingComputerMs } from "./sandbox";

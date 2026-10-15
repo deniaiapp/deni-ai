@@ -1,8 +1,6 @@
-"use client";
-
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "@/i18n/react";
 import { useTheme } from "next-themes";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@tanstack/react-router";
 import { useState, useTransition } from "react";
 import {
   CreditCard,
@@ -35,7 +33,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
-import { setLocale } from "@/i18n/actions";
+import { setLocale } from "@/i18n/functions";
 import { locales } from "@/i18n/config";
 import { localeLabels } from "./language-switcher";
 import type { UsageSnapshot } from "@/lib/plans";
@@ -122,7 +120,6 @@ export function AccountMenu({
             className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-foreground/5"
           >
             {user?.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={user.image}
                 alt=""
@@ -158,12 +155,12 @@ export function AccountMenu({
             {t("Plan and usage")}
           </DropdownMenuItem>
           {onPro ? null : (
-            <DropdownMenuItem disabled={exporting || signingOut} onSelect={() => router.push("/upgrade")}>
+            <DropdownMenuItem disabled={exporting || signingOut} onSelect={() => void router.navigate({ to: "/upgrade" })}>
               <Sparkles />
               {t("Upgrade to Pro")}
             </DropdownMenuItem>
           )}
-          <DropdownMenuItem disabled={exporting || signingOut} onSelect={() => router.push("/account")}>
+          <DropdownMenuItem disabled={exporting || signingOut} onSelect={() => void router.navigate({ to: "/account" })}>
             <UserRound />
             {t("Manage profile")}
           </DropdownMenuItem>
@@ -178,8 +175,8 @@ export function AccountMenu({
                 onValueChange={(next) => {
                   if (next === locale) return;
                   startLocaleTransition(async () => {
-                    await setLocale(next);
-                    router.refresh();
+                    await setLocale({ data: next });
+                    await router.invalidate();
                   });
                 }}
               >

@@ -1,5 +1,3 @@
-"use client";
-
 import {
   ClockIcon,
   LightningIcon,
@@ -21,7 +19,7 @@ import {
   Loader2,
   Plug,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { useState, type ReactNode } from "react";
 import { motion } from "motion/react";
 import { easeOut } from "@/lib/motion";

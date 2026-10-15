@@ -1,7 +1,5 @@
-"use client";
-
-import { useExtracted } from "next-intl";
-import Link from "next/link";
+import { useExtracted } from "@/i18n/react";
+import { Link } from "@tanstack/react-router";
 import { formatTokenCount, PLANS } from "@/lib/plans";
 import { LanguageSwitcher } from "./language-switcher";
 
@@ -22,7 +20,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
   return (
     <main className="h-full overflow-y-auto bg-background text-foreground">
       <header className={`${rise} mx-auto flex max-w-5xl items-center justify-between px-6 py-5`}>
-        <Link href="/" className="text-[0.925rem] font-semibold">
+        <Link to="/" className="text-[0.925rem] font-semibold">
           Deni Run
         </Link>
         <nav aria-label={t("Main")} className="flex items-center gap-3 text-sm">
@@ -32,24 +30,24 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
           <a href="#pricing" className="text-muted-foreground hover:text-foreground">
             {t("Pricing")}
           </a>
-          <Link href="/privacy" className="hidden text-muted-foreground hover:text-foreground sm:inline">
+          <Link to="/privacy" className="hidden text-muted-foreground hover:text-foreground sm:inline">
             {t("Privacy Policy")}
           </Link>
           <LanguageSwitcher />
           {signedIn ? (
             <Link
-              href="/"
+              to="/"
               className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
             >
               {t("Open workspace")}
             </Link>
           ) : (
             <>
-              <Link href="/sign-in" className="text-muted-foreground hover:text-foreground">
+              <Link to="/sign-in" className="text-muted-foreground hover:text-foreground">
                 {t("Sign in")}
               </Link>
               <Link
-                href="/sign-up"
+                to="/sign-up"
                 className="rounded-lg bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
               >
                 {t("Get started")}
@@ -83,7 +81,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         </p>
         <div className={`${rise} mt-8 flex flex-wrap gap-3`} style={delay(200)}>
           <Link
-            href={startHref}
+            to={startHref}
             className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
           >
             {signedIn ? t("Open workspace") : t("Start free")}
@@ -159,7 +157,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               <li>{t("Isolated files, browser, and terminal")}</li>
             </ul>
             <Link
-              href={startHref}
+              to={startHref}
               className="mt-6 inline-flex rounded-lg bg-foreground/10 px-4 py-2 text-sm transition-transform hover:bg-foreground/15 active:scale-[0.98]"
             >
               {signedIn ? t("Open workspace") : t("Create account")}
@@ -179,7 +177,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
               <li>{t("Same private computer, higher ceiling")}</li>
             </ul>
             <Link
-              href="/upgrade"
+              to="/upgrade"
               className="mt-6 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
             >
               {t("Start Pro")}
@@ -191,16 +189,16 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
       <footer className="border-t border-foreground/10 px-6 py-8 text-xs text-muted-foreground">
         <div className="mx-auto flex max-w-5xl flex-wrap gap-4">
           <span>Deni Run</span>
-          <Link href="/privacy" className="hover:text-foreground">
+          <Link to="/privacy" className="hover:text-foreground">
             {t("Privacy Policy")}
           </Link>
-          <Link href="/terms" className="hover:text-foreground">
+          <Link to="/terms" className="hover:text-foreground">
             {t("Terms")}
           </Link>
-          <Link href="/upgrade" className="hover:text-foreground">
+          <Link to="/upgrade" className="hover:text-foreground">
             {t("Upgrade")}
           </Link>
-          <Link href="/account" className="hover:text-foreground">
+          <Link to="/account" className="hover:text-foreground">
             {t("Account")}
           </Link>
         </div>

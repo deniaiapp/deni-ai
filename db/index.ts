@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { drizzle } from "drizzle-orm/sqlite-proxy";
 import type { Executor, Method } from "./executor";

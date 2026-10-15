@@ -20,7 +20,7 @@ delete process.env.E2B_API_KEY;
 delete process.env.STEEL_API_KEY;
 
 mockModules((request) => {
-  if (request === "server-only") return {};
+  if (request === "@tanstack/react-start/server-only") return {};
   return undefined;
 });
 

@@ -1,7 +1,5 @@
-"use client";
-
 import { ArrowDownIcon } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import type { ComponentProps, ReactNode } from "react";
 import { useCallback } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";

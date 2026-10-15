@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { Sandbox } from "e2b";
 import { mutateStore, readStore } from "./store";

@@ -1,7 +1,5 @@
-"use client";
-
-import { useExtracted } from "next-intl";
-import Link from "next/link";
+import { useExtracted } from "@/i18n/react";
+import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { Check } from "lucide-react";
 import { motion } from "motion/react";
@@ -93,10 +91,10 @@ export function UpgradeScreen({
     <main className="h-full overflow-y-auto bg-background text-foreground">
       <FadeIn>
         <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <Link href="/" className="text-[0.925rem] font-semibold hover:text-foreground">
+          <Link to="/" className="text-[0.925rem] font-semibold hover:text-foreground">
             Deni Run
           </Link>
-          <Link href="/" className="text-sm text-muted-foreground hover:text-foreground">
+          <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
             {signedIn ? t("Back to workspace") : t("Back")}
           </Link>
         </header>
@@ -241,7 +239,7 @@ function UpgradeActions({
   if (!signedIn) {
     return (
       <Link
-        href="/sign-up"
+        to="/sign-up"
         className="inline-flex h-9 w-full items-center justify-center rounded-lg bg-primary px-4 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
       >
         {t("Start Pro · ${price}/mo", { price: String(pro.priceUsd) })}

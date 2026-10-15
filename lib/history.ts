@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { generateText, type UIMessage } from "ai";
 import { groupContext, messageAuthor } from "./group-chat";

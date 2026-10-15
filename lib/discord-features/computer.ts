@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { scrubServerPaths } from "../discord-text";
 import { AttachmentBuilder, type ChatInputCommandInteraction, escapeMarkdown, time } from "discord.js";

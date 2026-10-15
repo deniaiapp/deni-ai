@@ -1,7 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
   "plugins": [
-    "nextjs",
     "typescript"
   ],
   "categories": {
@@ -11,36 +10,14 @@
     "builtin": true
   },
   "ignorePatterns": [
-    ".next/**",
-    "out/**",
-    "build/**",
-    "next-env.d.ts"
+    ".output/**",
+    "dist/**",
+    "app/routeTree.gen.ts"
   ],
   "rules": {
     "no-array-constructor": "error",
     "no-unused-expressions": "warn",
     "no-unused-vars": "warn",
-    "nextjs/google-font-display": "warn",
-    "nextjs/google-font-preconnect": "warn",
-    "nextjs/next-script-for-ga": "warn",
-    "nextjs/no-async-client-component": "warn",
-    "nextjs/no-before-interactive-script-outside-document": "warn",
-    "nextjs/no-css-tags": "warn",
-    "nextjs/no-head-element": "warn",
-    "nextjs/no-html-link-for-pages": "error",
-    "nextjs/no-img-element": "warn",
-    "nextjs/no-page-custom-font": "warn",
-    "nextjs/no-styled-jsx-in-document": "warn",
-    "nextjs/no-sync-scripts": "error",
-    "nextjs/no-title-in-document-head": "warn",
-    "nextjs/no-typos": "warn",
-    "nextjs/no-unwanted-polyfillio": "warn",
-    "nextjs/inline-script-id": "error",
-    "nextjs/no-assign-module-variable": "error",
-    "nextjs/no-document-import-in-page": "error",
-    "nextjs/no-duplicate-head": "error",
-    "nextjs/no-head-import-in-document": "error",
-    "nextjs/no-script-component-in-head": "error",
     "typescript/ban-ts-comment": "error",
     "typescript/no-duplicate-enum-values": "error",
     "typescript/no-empty-object-type": "error",

@@ -9,7 +9,7 @@ import { mockModules } from "./module-mocks";
 dotenv.config({ path: ".env", quiet: true });
 dotenv.config({ path: ".env.local", override: true, quiet: true });
 
-mockModules((request) => (request === "server-only" ? {} : undefined));
+mockModules((request) => (request === "@tanstack/react-start/server-only" ? {} : undefined));
 
 function assert(condition: boolean, message: string) {
   if (!condition) throw new Error(message);

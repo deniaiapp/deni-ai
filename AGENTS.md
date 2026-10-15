@@ -1,12 +1,14 @@
-<!-- BEGIN:nextjs-agent-rules -->
+# Framework
 
-# This is NOT the Next.js you know
+The app runs on TanStack Start (Vite and Nitro), not Next.js. Routes live in `app/routes/` and
+`app/routeTree.gen.ts` is generated from them. The installed packages ship guides: read
+`node_modules/@tanstack/react-start/skills/` and the skills it links to before changing routes,
+server functions, or middleware.
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
-
-This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
-
-<!-- END:nextjs-agent-rules -->
+UI strings are English source text passed to `useExtracted()` (components, from `@/i18n/react`),
+`getExtracted()` (server code, from `@/i18n/server`), or `headTranslator()` (route `head`). They are
+looked up in `messages/*.po` with use-intl. `pnpm dev`, `pnpm build`, and `pnpm messages:extract`
+add new strings to the catalogs; translate the empty `msgstr` entries in `messages/ja.po`.
 
 # Commit messages
 

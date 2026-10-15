@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { createId, nowIso } from "./ids";
 import { mutateStore } from "./store";

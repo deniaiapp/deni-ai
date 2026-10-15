@@ -5,9 +5,9 @@ import path from "node:path";
 import { mockModules } from "./module-mocks";
 
 mockModules((request) => {
-  if (request === "server-only") return {};
-  if (request === "next/headers") return { headers: async () => new Headers() };
-  if (request === "next-intl/server") {
+  if (request === "@tanstack/react-start/server-only") return {};
+  if (request === "@tanstack/react-start/server") return { getRequestHeaders: () => new Headers() };
+  if (request === "@/i18n/server") {
     return {
       getLocale: async () => "en",
       getExtracted: async () => (message: string, values?: Record<string, string>) =>

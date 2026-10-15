@@ -1,9 +1,8 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
-import { headers } from "next/headers";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
-import { nextCookies } from "better-auth/next-js";
+import { tanstackStartCookies } from "better-auth/tanstack-start";
 import { twoFactor } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
 import { db } from "@/db";
@@ -119,12 +118,19 @@ export const auth = betterAuth({
         },
       },
     }),
-    nextCookies(),
+    tanstackStartCookies(),
   ],
 });
 
+async function currentRequestHeaders() {
+  // Imported here so lib modules that import this file still load outside a request (the worker,
+  // the verify scripts).
+  const { getRequestHeaders } = await import("@tanstack/react-start/server");
+  return new Headers(getRequestHeaders());
+}
+
 export async function getAuthSession() {
-  const requestHeaders = await headers();
+  const requestHeaders = await currentRequestHeaders();
   if (isLocalAuthBypass(requestHeaders.get("host"))) {
     // Workspace tables reference the auth user; create one stable tenant for local work.
     await db.insert(authSchema.user).values({

@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { CircleHelp } from "lucide-react";
 import { useState } from "react";
 import * as Popover from "@radix-ui/react-popover";

@@ -1,5 +1,3 @@
-"use client";
-
 import { createAuthClient } from "better-auth/react";
 import { inferAdditionalFields, twoFactorClient } from "better-auth/client/plugins";
 import { passkeyClient } from "@better-auth/passkey/client";

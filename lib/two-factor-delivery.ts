@@ -1,6 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
-import { getExtracted, getLocale } from "next-intl/server";
+import { getExtracted, getLocale } from "@/i18n/server";
 import { loadEmailRenderer } from "./emails";
 
 // Email codes and passkeys are the alternatives to an authenticator app. Email is offered only

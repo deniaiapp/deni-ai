@@ -1,6 +1,6 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
-import { getExtracted } from "next-intl/server";
+import { getExtracted } from "@/i18n/server";
 import { rawRows } from "@/db";
 
 export class RateLimitError extends Error {

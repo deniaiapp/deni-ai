@@ -6,440 +6,6 @@ msgstr ""
 "X-Generator: @eloqnt/format-po\n"
 "X-Message-Key: msgctxt\n"
 
-#: app/api/account/route.ts
-msgctxt "5CloRe"
-msgid "Could not finish deleting your account. Please try again."
-msgstr "アカウントの削除を完了できませんでした。もう一度お試しください。"
-
-#: app/api/artifacts/[id]/route.ts
-msgctxt "crm7iz"
-msgid "Artifact not found"
-msgstr "成果物が見つかりません"
-
-#: app/api/artifacts/route.ts
-msgctxt "H6cAuM"
-msgid "threadId, path, and title are required"
-msgstr "threadId、path、title は必須です"
-
-#: app/api/billing/checkout/route.ts
-#: app/api/billing/portal/route.ts
-#: app/api/billing/sync/route.ts
-msgctxt "7o8Vnj"
-msgid "Billing is not configured yet"
-msgstr "請求はまだ設定されていません"
-
-#: app/api/billing/portal/route.ts
-msgctxt "Rqx0bS"
-msgid "No billing account yet"
-msgstr "請求アカウントがまだありません"
-
-#: app/api/billing/webhook/route.ts
-msgctxt "psyCqT"
-msgid "webhook is not configured"
-msgstr "Webhook が設定されていません"
-
-#: app/api/billing/webhook/route.ts
-msgctxt "rCW5d_"
-msgid "missing signature"
-msgstr "署名がありません"
-
-#: app/api/billing/webhook/route.ts
-msgctxt "p90_sR"
-msgid "invalid signature"
-msgstr "署名が正しくありません"
-
-#: app/api/bots/[id]/route.ts
-#: app/api/bots/route.ts
-msgctxt "YeQIlr"
-msgid "Invalid icon"
-msgstr "アイコンが正しくありません"
-
-#: app/api/bots/[id]/route.ts
-#: app/api/chat/route.ts
-msgctxt "7BBlLa"
-msgid "Teammate not found"
-msgstr "チームメイトが見つかりません"
-
-#: app/api/bots/[id]/route.ts
-msgctxt "8xZJax"
-msgid "Default teammates cannot be deleted"
-msgstr "デフォルトのチームメイトは削除できません"
-
-#: app/api/bots/route.ts
-#: app/api/routines/route.ts
-msgctxt "_4pQDl"
-msgid "Name is required."
-msgstr "名前は必須です。"
-
-#: app/api/chat/route.ts
-msgctxt "1qOPhr"
-msgid "Please approve or deny the pending action before continuing."
-msgstr "続行する前に、保留中の操作を承認または拒否してください。"
-
-#: app/api/chat/route.ts
-msgctxt "LlIzf6"
-msgid "Finish the step on the computer, then send a new message to continue."
-msgstr "コンピューター上の手順を完了してから、新しいメッセージを送って続行してください。"
-
-#: app/api/chat/route.ts
-msgctxt "c65x3L"
-msgid "Review the previous run before retrying it."
-msgstr "再試行する前に、前回の実行内容を確認してください。"
-
-#: app/api/chat/route.ts
-msgctxt "BCRyYP"
-msgid "This task is already running or this message has already been submitted."
-msgstr "このタスクはすでに実行中か、このメッセージはすでに送信済みです。"
-
-#: app/api/chat/route.ts
-#: app/api/threads/[id]/reactions/route.ts
-#: app/api/threads/[id]/reset/route.ts
-#: app/api/threads/[id]/route.ts
-msgctxt "eePQiZ"
-msgid "Conversation not found."
-msgstr "会話が見つかりません。"
-
-#: app/api/chat/route.ts
-msgctxt "xFBzaV"
-msgid "OPENROUTER_API_KEY is missing"
-msgstr "OPENROUTER_API_KEY が設定されていません"
-
-#: app/api/chat/route.ts
-msgctxt "s-buJt"
-msgid "The message you replied to is no longer available."
-msgstr "返信先のメッセージは存在しません。"
-
-#: app/api/chat/route.ts
-msgctxt "4LlISz"
-msgid "Could not resume the task. Please send your message again."
-msgstr "タスクを再開できませんでした。メッセージをもう一度送信してください。"
-
-#: app/api/chat/route.ts
-#: app/components/chat-thread.tsx
-msgctxt "_LViiD"
-msgid "Saving result"
-msgstr "結果を保存中"
-
-#: app/api/chat/route.ts
-msgctxt "S5QEJr"
-msgid "{name} finished a task"
-msgstr "{name} さんがタスクを完了しました"
-
-#: app/api/chat/route.ts
-msgctxt "jIeWzL"
-msgid "The result is ready in this conversation."
-msgstr "結果はこの会話で確認できます。"
-
-#: app/api/chat/route.ts
-msgctxt "wHKxTi"
-msgid "{name} could not save the result"
-msgstr "{name} さんは結果を保存できませんでした"
-
-#: app/api/chat/route.ts
-msgctxt "SqDnJo"
-msgid "The model call failed"
-msgstr "モデルの呼び出しに失敗しました"
-
-#: app/api/chat/route.ts
-msgctxt "Xa8iLm"
-msgid "{name} could not finish the task"
-msgstr "{name} さんはタスクを完了できませんでした"
-
-#: app/api/chat/route.ts
-msgctxt "ojVpVJ"
-msgid "Could not save the response"
-msgstr "応答を保存できませんでした"
-
-#: app/api/computer/files/route.ts
-msgctxt "9dhBF3"
-msgid "Path and content are required"
-msgstr "パスと内容は必須です"
-
-#: app/api/computer/files/route.ts
-#: app/api/jobs/[id]/route.ts
-msgctxt "hILI0p"
-msgid "Unsupported action"
-msgstr "サポートされていない操作です"
-
-#: app/api/computer/files/route.ts
-msgctxt "Yhh1t3"
-msgid "No files to download"
-msgstr "ダウンロードするファイルがありません"
-
-#: app/api/computer/files/route.ts
-msgctxt "sRcnfR"
-msgid "Too many files to download (maximum {max})"
-msgstr "ダウンロードするファイルが多すぎます(最大{max}件)"
-
-#: app/api/computer/files/route.ts
-msgctxt "Z3YXLX"
-msgid "Files are too large to download together (maximum {max} bytes)"
-msgstr "まとめてダウンロードするにはファイルが大きすぎます(最大{max}バイト)"
-
-#: app/api/computer/files/route.ts
-msgctxt "dMkFLa"
-msgid "Path is required"
-msgstr "パスは必須です"
-
-#: app/api/computer/input/route.ts
-msgctxt "v9-mKP"
-msgid "Another task currently owns the computer"
-msgstr "別のタスクがコンピューターを使用中です"
-
-#: app/api/computer/input/route.ts
-msgctxt "HP3V8w"
-msgid "Invalid input"
-msgstr "入力が正しくありません"
-
-#: app/api/computer/workspaces/route.ts
-msgctxt "igLZna"
-msgid "Job ID is required"
-msgstr "ジョブIDは必須です"
-
-#: app/api/computer/workspaces/route.ts
-msgctxt "IQgAIB"
-msgid "Workspace not found"
-msgstr "ワークスペースが見つかりません"
-
-#: app/api/group-chat/route.ts
-#: app/api/threads/[id]/route.ts
-msgctxt "fSEJPG"
-msgid "Group not found."
-msgstr "グループが見つかりません。"
-
-#: app/api/group-chat/route.ts
-msgctxt "RDI57C"
-msgid "A message is required"
-msgstr "メッセージは必須です"
-
-#: app/api/group-chat/route.ts
-msgctxt "VyIPiQ"
-msgid "Invalid mention"
-msgstr "メンションが正しくありません"
-
-#: app/api/group-chat/route.ts
-msgctxt "YdfYZs"
-msgid "No matching teammate in this group"
-msgstr "このグループに該当するチームメイトがいません"
-
-#: app/api/group-chat/route.ts
-msgctxt "aDCKS8"
-msgid "This approval is no longer pending."
-msgstr "この承認はすでに保留中ではありません。"
-
-#: app/api/group-chat/route.ts
-msgctxt "HNqXjI"
-msgid "Could not respond ({status})."
-msgstr "応答できませんでした({status})。"
-
-#: app/api/group-chat/route.ts
-msgctxt "6U8g0S"
-msgid "This teammate could not respond."
-msgstr "このチームメイトは応答できませんでした。"
-
-#: app/api/handoffs/route.ts
-msgctxt "WMOB8_"
-msgid "Handoff not found"
-msgstr "引き継ぎが見つかりません"
-
-#: app/api/jobs/[id]/route.ts
-msgctxt "s9ZiB3"
-msgid "Job not found"
-msgstr "ジョブが見つかりません"
-
-#: app/api/jobs/[id]/route.ts
-msgctxt "pHxHMB"
-msgid "This job cannot be cancelled"
-msgstr "このジョブはキャンセルできません"
-
-#: app/api/jobs/[id]/route.ts
-msgctxt "XLzOqk"
-msgid "This job cannot be retried"
-msgstr "このジョブは再試行できません"
-
-#: app/api/mcp/route.ts
-#: app/api/notifications/route.ts
-msgctxt "9W2lsE"
-msgid "ID is required"
-msgstr "IDは必須です"
-
-#: app/api/mcp/route.ts
-msgctxt "ijB2JA"
-msgid "Connection not found"
-msgstr "接続が見つかりません"
-
-#: app/api/mcp/route.ts
-msgctxt "aMeYz5"
-msgid "Name and URL are required"
-msgstr "名前とURLは必須です"
-
-#: app/api/notifications/route.ts
-msgctxt "YNzq0k"
-msgid "Notification not found"
-msgstr "通知が見つかりません"
-
-#: app/api/plugins/route.ts
-msgctxt "CocmeK"
-msgid "Invalid permission"
-msgstr "権限が正しくありません"
-
-#: app/api/plugins/route.ts
-msgctxt "bsJmcP"
-msgid "Unable to change permission"
-msgstr "権限を変更できません"
-
-#: app/api/plugins/route.ts
-msgctxt "TfSUhU"
-msgid "Invalid plugin"
-msgstr "無効なプラグインです"
-
-#: app/api/plugins/route.ts
-#: app/components/mcp-settings.tsx
-msgctxt "2lM-aK"
-msgid "Could not disconnect plugin."
-msgstr "プラグインの接続を解除できませんでした。"
-
-#: app/api/routines/route.ts
-msgctxt "LbfSKQ"
-msgid "Instruction is required."
-msgstr "指示は必須です。"
-
-#: app/api/routines/route.ts
-msgctxt "w8Ol2I"
-msgid "When to run is required."
-msgstr "実行タイミングは必須です。"
-
-#: app/api/routines/route.ts
-msgctxt "QiZ_c0"
-msgid "Invalid routine."
-msgstr "ルーティンが正しくありません。"
-
-#: app/api/routines/route.ts
-msgctxt "8QFcFD"
-msgid "Routine not found."
-msgstr "ルーティンが見つかりません。"
-
-#: app/api/routines/route.ts
-msgctxt "6TYLcK"
-msgid "Teammate or conversation not found."
-msgstr "チームメイトまたは会話が見つかりません。"
-
-#: app/api/routines/route.ts
-#: app/components/routines-dialog.tsx
-msgctxt "AUygSW"
-msgid "Could not save routine."
-msgstr "ルーティンを保存できませんでした。"
-
-#: app/api/routines/route.ts
-#: app/components/routines-dialog.tsx
-msgctxt "KvfPWt"
-msgid "Could not update routine."
-msgstr "ルーティンを更新できませんでした。"
-
-#: app/api/routines/route.ts
-msgctxt "OgPpjk"
-msgid "Routine ID is required."
-msgstr "ルーティンIDは必須です。"
-
-#: app/api/setup/route.ts
-msgctxt "4ElhnU"
-msgid "API key is required"
-msgstr "APIキーは必須です"
-
-#: app/api/setup/route.ts
-msgctxt "6Cu7HT"
-msgid "Unable to save API key"
-msgstr "APIキーを保存できません"
-
-#: app/api/skills/route.ts
-msgctxt "rDFJbh"
-msgid "Name and instructions are required."
-msgstr "名前と指示は必須です。"
-
-#: app/api/skills/route.ts
-msgctxt "lu5_IO"
-msgid "Skill ID is required."
-msgstr "スキルIDは必須です。"
-
-#: app/api/skills/route.ts
-msgctxt "R5O_G-"
-msgid "A skill with this name already exists."
-msgstr "同じ名前のスキルがすでに存在します。"
-
-#: app/api/skills/route.ts
-msgctxt "KaE7gK"
-msgid "Skill not found."
-msgstr "スキルが見つかりません。"
-
-#: app/api/skills/route.ts
-#: app/components/skills-dialog.tsx
-msgctxt "c5QIy0"
-msgid "Could not save skill."
-msgstr "スキルを保存できませんでした。"
-
-#: app/api/threads/[id]/reactions/route.ts
-msgctxt "H8UP1V"
-msgid "Invalid reaction"
-msgstr "リアクションが正しくありません"
-
-#: app/api/threads/[id]/reactions/route.ts
-msgctxt "UhsO-i"
-msgid "Message not found"
-msgstr "メッセージが見つかりません"
-
-#: app/api/threads/[id]/reset/route.ts
-msgctxt "OatSux"
-msgid "Stop or finish the current task before resetting the conversation."
-msgstr "実行中または待機中のタスクを終えるか停止してから、会話をリセットしてください。"
-
-#: app/api/threads/[id]/route.ts
-msgctxt "rDFiEI"
-msgid "Invalid conversation settings."
-msgstr "会話の設定が正しくありません。"
-
-#: app/api/threads/[id]/route.ts
-msgctxt "pzrKQf"
-msgid "Use the teammate profile to edit a DM."
-msgstr "DMを編集するには、チームメイトのプロフィールから行ってください。"
-
-#: app/api/threads/[id]/route.ts
-#: app/api/threads/route.ts
-msgctxt "ybsB88"
-msgid "Choose at least two valid teammates."
-msgstr "有効なチームメイトを2人以上選んでください。"
-
-#: app/api/threads/[id]/route.ts
-msgctxt "F3zqeC"
-msgid "Could not update conversation."
-msgstr "会話を更新できませんでした。"
-
-#: app/api/threads/route.ts
-msgctxt "gGF2lC"
-msgid "Choose at least two teammates and a valid group name/icon."
-msgstr "チームメイトを2人以上と、有効なグループ名・アイコンを選んでください。"
-
-#: app/api/two-factor/method/route.ts
-#: lib/api-auth.ts
-msgctxt "WlyxAh"
-msgid "Unauthorized"
-msgstr "認証されていません"
-
-#: app/api/two-factor/method/route.ts
-#: lib/two-factor-hooks.ts
-msgctxt "--eGOh"
-msgid "Turn off two-factor authentication before choosing another method."
-msgstr "別の方法を選ぶ前に、二要素認証をオフにしてください。"
-
-#: app/api/two-factor/method/route.ts
-msgctxt "TPzkXL"
-msgid "Choose email."
-msgstr "メールを選んでください。"
-
-#: app/api/two-factor/method/route.ts
-msgctxt "hcuwhb"
-msgid "This sign-in method is not available right now."
-msgstr "この確認方法は現在利用できません。"
-
 #: app/components/account-menu.tsx
 #: app/components/account-screen.tsx
 #: app/components/landing.tsx
@@ -1157,6 +723,12 @@ msgstr "完了"
 msgctxt "0E-C4I"
 msgid "Waiting for your help"
 msgstr "あなたの操作を待っています"
+
+#: app/components/chat-thread.tsx
+#: lib/chat-route.ts
+msgctxt "_LViiD"
+msgid "Saving result"
+msgstr "結果を保存中"
 
 #: app/components/chat-thread.tsx
 msgctxt "xdZNBn"
@@ -1960,7 +1532,7 @@ msgstr "ファイルを開いています…"
 
 #: app/components/computer-panel.tsx
 #: app/components/upgrade-screen.tsx
-#: app/terms/page.tsx
+#: app/routes/terms.tsx
 msgctxt "cyR7Kh"
 msgid "Back"
 msgstr "戻る"
@@ -2209,6 +1781,22 @@ msgctxt "NOt03J"
 msgid "Send this code to the bot in a Discord direct message. It works once and expires in 10 minutes."
 msgstr "このコードを Discord のダイレクトメッセージでボットに送ってください。1回だけ使え、10分で期限切れになります。"
 
+#: app/components/error-page.tsx
+#: lib/localize-error.ts
+msgctxt "JqiqNj"
+msgid "Something went wrong"
+msgstr "問題が発生しました"
+
+#: app/components/error-page.tsx
+msgctxt "N4_7uj"
+msgid "Reload this page. If it keeps happening, wait a moment and try again."
+msgstr "ページを再読み込みしてください。改善しない場合は、しばらくしてからもう一度お試しください。"
+
+#: app/components/error-page.tsx
+msgctxt "FazwRl"
+msgid "Try again"
+msgstr "もう一度試す"
+
 #: app/components/landing.tsx
 msgctxt "EFTSMc"
 msgid "Main"
@@ -2225,7 +1813,7 @@ msgid "Pricing"
 msgstr "料金"
 
 #: app/components/landing.tsx
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "vx0nkZ"
 msgid "Privacy Policy"
 msgstr "プライバシーポリシー"
@@ -2237,7 +1825,7 @@ msgid "Open workspace"
 msgstr "ワークスペースを開く"
 
 #: app/components/landing.tsx
-#: app/sign-in/page.tsx
+#: app/routes/sign-in.tsx
 msgctxt "SQJto2"
 msgid "Sign in"
 msgstr "ログイン"
@@ -2410,9 +1998,30 @@ msgid "Could not change permission."
 msgstr "権限を変更できませんでした。"
 
 #: app/components/mcp-settings.tsx
+msgctxt "jDJtl7"
+msgid "Ask every time"
+msgstr "毎回確認"
+
+#: app/components/mcp-settings.tsx
+msgctxt "jK9a9x"
+msgid "All actions"
+msgstr "すべて"
+
+#: app/components/mcp-settings.tsx
+msgctxt "po_u49"
+msgid "{action} +{count} more"
+msgstr "{action} ほか{count}件"
+
+#: app/components/mcp-settings.tsx
 msgctxt "MfmOfk"
 msgid "Disconnect {plugin}? Teammates will lose access to it right away. You can connect it again later."
 msgstr "{plugin} の接続を解除しますか?チームメイトは直ちに使えなくなります。あとで再び接続できます。"
+
+#: app/components/mcp-settings.tsx
+#: app/routes/api/plugins.ts
+msgctxt "2lM-aK"
+msgid "Could not disconnect plugin."
+msgstr "プラグインの接続を解除できませんでした。"
 
 #: app/components/mcp-settings.tsx
 msgctxt "lEIfUi"
@@ -2469,21 +2078,6 @@ msgstr "再接続"
 msgctxt "1_zz7T"
 msgid "Enable write access"
 msgstr "書き込みを有効にする"
-
-#: app/components/mcp-settings.tsx
-msgctxt "jDJtl7"
-msgid "Ask every time"
-msgstr "毎回確認"
-
-#: app/components/mcp-settings.tsx
-msgctxt "jK9a9x"
-msgid "All actions"
-msgstr "すべて"
-
-#: app/components/mcp-settings.tsx
-msgctxt "po_u49"
-msgid "{action} +{count} more"
-msgstr "{action} ほか{count}件"
 
 #: app/components/mcp-settings.tsx
 msgctxt "i-Rkf2"
@@ -2619,6 +2213,21 @@ msgstr "メッセージをコピーしました"
 msgctxt "TaDFih"
 msgid "Remove {emoji} reaction"
 msgstr "{emoji}のリアクションを削除"
+
+#: app/components/not-found.tsx
+msgctxt "QRccCM"
+msgid "Page not found"
+msgstr "ページが見つかりません"
+
+#: app/components/not-found.tsx
+msgctxt "cOlyLA"
+msgid "That URL is not part of Deni Run."
+msgstr "このURLは Deni Run にありません。"
+
+#: app/components/not-found.tsx
+msgctxt "rPgekg"
+msgid "Back home"
+msgstr "ホームに戻る"
 
 #: app/components/notification-inbox.tsx
 msgctxt "YPBnhF"
@@ -2760,10 +2369,29 @@ msgctxt "aWpBzj"
 msgid "Show more"
 msgstr "もっと見る"
 
+#: app/components/route-loading.tsx
+#: app/components/workspace.tsx
+#: components/page-loading.tsx
+msgctxt "T4VxQN"
+msgid "Loading…"
+msgstr "読み込み中…"
+
 #: app/components/routines-dialog.tsx
 msgctxt "Kf8HlF"
 msgid "Could not refresh routines."
 msgstr "ルーティンを更新できませんでした。"
+
+#: app/components/routines-dialog.tsx
+#: app/routes/api/routines.ts
+msgctxt "KvfPWt"
+msgid "Could not update routine."
+msgstr "ルーティンを更新できませんでした。"
+
+#: app/components/routines-dialog.tsx
+#: app/routes/api/routines.ts
+msgctxt "AUygSW"
+msgid "Could not save routine."
+msgstr "ルーティンを保存できませんでした。"
 
 #: app/components/routines-dialog.tsx
 msgctxt "Hh1rVh"
@@ -3140,6 +2768,12 @@ msgid "Could not refresh skills."
 msgstr "スキルを更新できませんでした。"
 
 #: app/components/skills-dialog.tsx
+#: app/routes/api/skills.ts
+msgctxt "c5QIy0"
+msgid "Could not save skill."
+msgstr "スキルを保存できませんでした。"
+
+#: app/components/skills-dialog.tsx
 msgctxt "9zifG7"
 msgid "Could not delete skill."
 msgstr "スキルを削除できませんでした。"
@@ -3395,13 +3029,6 @@ msgid "Delete {name}? Their conversation and routines will be removed."
 msgstr "{name}を削除しますか?会話とルーティンは削除されます。"
 
 #: app/components/workspace.tsx
-#: app/loading.tsx
-#: components/page-loading.tsx
-msgctxt "T4VxQN"
-msgid "Loading…"
-msgstr "読み込み中…"
-
-#: app/components/workspace.tsx
 msgctxt "HFB1Us"
 msgid "Select a teammate"
 msgstr "チームメイトを選択してください"
@@ -3461,375 +3088,683 @@ msgctxt "-a-2ug"
 msgid "Members"
 msgstr "メンバー"
 
-#: app/error.tsx
-#: lib/localize-error.ts
-msgctxt "JqiqNj"
-msgid "Something went wrong"
-msgstr "問題が発生しました"
-
-#: app/error.tsx
-msgctxt "N4_7uj"
-msgid "Reload this page. If it keeps happening, wait a moment and try again."
-msgstr "ページを再読み込みしてください。改善しない場合は、しばらくしてからもう一度お試しください。"
-
-#: app/error.tsx
-msgctxt "FazwRl"
-msgid "Try again"
-msgstr "もう一度試す"
-
-#: app/layout.tsx
+#: app/routes/__root.tsx
 msgctxt "fEMMml"
 msgid "AI teammates with an isolated computer for every account."
 msgstr "アカウントごとに隔離されたコンピューターを持つAIチームメイト。"
 
-#: app/not-found.tsx
-msgctxt "QRccCM"
-msgid "Page not found"
-msgstr "ページが見つかりません"
+#: app/routes/api/account.ts
+msgctxt "5CloRe"
+msgid "Could not finish deleting your account. Please try again."
+msgstr "アカウントの削除を完了できませんでした。もう一度お試しください。"
 
-#: app/not-found.tsx
-msgctxt "cOlyLA"
-msgid "That URL is not part of Deni Run."
-msgstr "このURLは Deni Run にありません。"
+#: app/routes/api/artifacts/$id.ts
+msgctxt "crm7iz"
+msgid "Artifact not found"
+msgstr "成果物が見つかりません"
 
-#: app/not-found.tsx
-msgctxt "rPgekg"
-msgid "Back home"
-msgstr "ホームに戻る"
+#: app/routes/api/artifacts/index.ts
+msgctxt "H6cAuM"
+msgid "threadId, path, and title are required"
+msgstr "threadId、path、title は必須です"
 
-#: app/privacy/page.tsx
+#: app/routes/api/billing/checkout.ts
+#: app/routes/api/billing/portal.ts
+#: app/routes/api/billing/sync.ts
+msgctxt "7o8Vnj"
+msgid "Billing is not configured yet"
+msgstr "請求はまだ設定されていません"
+
+#: app/routes/api/billing/portal.ts
+msgctxt "Rqx0bS"
+msgid "No billing account yet"
+msgstr "請求アカウントがまだありません"
+
+#: app/routes/api/billing/webhook.ts
+msgctxt "psyCqT"
+msgid "webhook is not configured"
+msgstr "Webhook が設定されていません"
+
+#: app/routes/api/billing/webhook.ts
+msgctxt "rCW5d_"
+msgid "missing signature"
+msgstr "署名がありません"
+
+#: app/routes/api/billing/webhook.ts
+msgctxt "p90_sR"
+msgid "invalid signature"
+msgstr "署名が正しくありません"
+
+#: app/routes/api/bots/$id.ts
+#: app/routes/api/bots/index.ts
+msgctxt "YeQIlr"
+msgid "Invalid icon"
+msgstr "アイコンが正しくありません"
+
+#: app/routes/api/bots/$id.ts
+#: lib/chat-route.ts
+msgctxt "7BBlLa"
+msgid "Teammate not found"
+msgstr "チームメイトが見つかりません"
+
+#: app/routes/api/bots/$id.ts
+msgctxt "8xZJax"
+msgid "Default teammates cannot be deleted"
+msgstr "デフォルトのチームメイトは削除できません"
+
+#: app/routes/api/bots/index.ts
+#: app/routes/api/routines.ts
+msgctxt "_4pQDl"
+msgid "Name is required."
+msgstr "名前は必須です。"
+
+#: app/routes/api/computer/files.ts
+msgctxt "9dhBF3"
+msgid "Path and content are required"
+msgstr "パスと内容は必須です"
+
+#: app/routes/api/computer/files.ts
+#: app/routes/api/jobs/$id.ts
+msgctxt "hILI0p"
+msgid "Unsupported action"
+msgstr "サポートされていない操作です"
+
+#: app/routes/api/computer/files.ts
+msgctxt "Yhh1t3"
+msgid "No files to download"
+msgstr "ダウンロードするファイルがありません"
+
+#: app/routes/api/computer/files.ts
+msgctxt "sRcnfR"
+msgid "Too many files to download (maximum {max})"
+msgstr "ダウンロードするファイルが多すぎます(最大{max}件)"
+
+#: app/routes/api/computer/files.ts
+msgctxt "Z3YXLX"
+msgid "Files are too large to download together (maximum {max} bytes)"
+msgstr "まとめてダウンロードするにはファイルが大きすぎます(最大{max}バイト)"
+
+#: app/routes/api/computer/files.ts
+msgctxt "dMkFLa"
+msgid "Path is required"
+msgstr "パスは必須です"
+
+#: app/routes/api/computer/input.ts
+msgctxt "v9-mKP"
+msgid "Another task currently owns the computer"
+msgstr "別のタスクがコンピューターを使用中です"
+
+#: app/routes/api/computer/input.ts
+msgctxt "HP3V8w"
+msgid "Invalid input"
+msgstr "入力が正しくありません"
+
+#: app/routes/api/computer/workspaces.ts
+msgctxt "igLZna"
+msgid "Job ID is required"
+msgstr "ジョブIDは必須です"
+
+#: app/routes/api/computer/workspaces.ts
+msgctxt "IQgAIB"
+msgid "Workspace not found"
+msgstr "ワークスペースが見つかりません"
+
+#: app/routes/api/group-chat.ts
+#: app/routes/api/threads/$id/index.ts
+msgctxt "fSEJPG"
+msgid "Group not found."
+msgstr "グループが見つかりません。"
+
+#: app/routes/api/group-chat.ts
+msgctxt "RDI57C"
+msgid "A message is required"
+msgstr "メッセージは必須です"
+
+#: app/routes/api/group-chat.ts
+msgctxt "VyIPiQ"
+msgid "Invalid mention"
+msgstr "メンションが正しくありません"
+
+#: app/routes/api/group-chat.ts
+msgctxt "YdfYZs"
+msgid "No matching teammate in this group"
+msgstr "このグループに該当するチームメイトがいません"
+
+#: app/routes/api/group-chat.ts
+msgctxt "aDCKS8"
+msgid "This approval is no longer pending."
+msgstr "この承認はすでに保留中ではありません。"
+
+#: app/routes/api/group-chat.ts
+msgctxt "HNqXjI"
+msgid "Could not respond ({status})."
+msgstr "応答できませんでした({status})。"
+
+#: app/routes/api/group-chat.ts
+msgctxt "6U8g0S"
+msgid "This teammate could not respond."
+msgstr "このチームメイトは応答できませんでした。"
+
+#: app/routes/api/handoffs.ts
+msgctxt "WMOB8_"
+msgid "Handoff not found"
+msgstr "引き継ぎが見つかりません"
+
+#: app/routes/api/jobs/$id.ts
+msgctxt "s9ZiB3"
+msgid "Job not found"
+msgstr "ジョブが見つかりません"
+
+#: app/routes/api/jobs/$id.ts
+msgctxt "pHxHMB"
+msgid "This job cannot be cancelled"
+msgstr "このジョブはキャンセルできません"
+
+#: app/routes/api/jobs/$id.ts
+msgctxt "XLzOqk"
+msgid "This job cannot be retried"
+msgstr "このジョブは再試行できません"
+
+#: app/routes/api/mcp.ts
+#: app/routes/api/notifications.ts
+msgctxt "9W2lsE"
+msgid "ID is required"
+msgstr "IDは必須です"
+
+#: app/routes/api/mcp.ts
+msgctxt "ijB2JA"
+msgid "Connection not found"
+msgstr "接続が見つかりません"
+
+#: app/routes/api/mcp.ts
+msgctxt "aMeYz5"
+msgid "Name and URL are required"
+msgstr "名前とURLは必須です"
+
+#: app/routes/api/notifications.ts
+msgctxt "YNzq0k"
+msgid "Notification not found"
+msgstr "通知が見つかりません"
+
+#: app/routes/api/plugins.ts
+msgctxt "CocmeK"
+msgid "Invalid permission"
+msgstr "権限が正しくありません"
+
+#: app/routes/api/plugins.ts
+msgctxt "bsJmcP"
+msgid "Unable to change permission"
+msgstr "権限を変更できません"
+
+#: app/routes/api/plugins.ts
+msgctxt "TfSUhU"
+msgid "Invalid plugin"
+msgstr "無効なプラグインです"
+
+#: app/routes/api/routines.ts
+msgctxt "LbfSKQ"
+msgid "Instruction is required."
+msgstr "指示は必須です。"
+
+#: app/routes/api/routines.ts
+msgctxt "w8Ol2I"
+msgid "When to run is required."
+msgstr "実行タイミングは必須です。"
+
+#: app/routes/api/routines.ts
+msgctxt "QiZ_c0"
+msgid "Invalid routine."
+msgstr "ルーティンが正しくありません。"
+
+#: app/routes/api/routines.ts
+msgctxt "8QFcFD"
+msgid "Routine not found."
+msgstr "ルーティンが見つかりません。"
+
+#: app/routes/api/routines.ts
+msgctxt "6TYLcK"
+msgid "Teammate or conversation not found."
+msgstr "チームメイトまたは会話が見つかりません。"
+
+#: app/routes/api/routines.ts
+msgctxt "OgPpjk"
+msgid "Routine ID is required."
+msgstr "ルーティンIDは必須です。"
+
+#: app/routes/api/setup.ts
+msgctxt "4ElhnU"
+msgid "API key is required"
+msgstr "APIキーは必須です"
+
+#: app/routes/api/setup.ts
+msgctxt "6Cu7HT"
+msgid "Unable to save API key"
+msgstr "APIキーを保存できません"
+
+#: app/routes/api/skills.ts
+msgctxt "rDFJbh"
+msgid "Name and instructions are required."
+msgstr "名前と指示は必須です。"
+
+#: app/routes/api/skills.ts
+msgctxt "lu5_IO"
+msgid "Skill ID is required."
+msgstr "スキルIDは必須です。"
+
+#: app/routes/api/skills.ts
+msgctxt "R5O_G-"
+msgid "A skill with this name already exists."
+msgstr "同じ名前のスキルがすでに存在します。"
+
+#: app/routes/api/skills.ts
+msgctxt "KaE7gK"
+msgid "Skill not found."
+msgstr "スキルが見つかりません。"
+
+#: app/routes/api/threads/$id/index.ts
+msgctxt "rDFiEI"
+msgid "Invalid conversation settings."
+msgstr "会話の設定が正しくありません。"
+
+#: app/routes/api/threads/$id/index.ts
+msgctxt "pzrKQf"
+msgid "Use the teammate profile to edit a DM."
+msgstr "DMを編集するには、チームメイトのプロフィールから行ってください。"
+
+#: app/routes/api/threads/$id/index.ts
+#: app/routes/api/threads/index.ts
+msgctxt "ybsB88"
+msgid "Choose at least two valid teammates."
+msgstr "有効なチームメイトを2人以上選んでください。"
+
+#: app/routes/api/threads/$id/index.ts
+#: app/routes/api/threads/$id/reactions.ts
+#: app/routes/api/threads/$id/reset.ts
+#: lib/chat-route.ts
+msgctxt "eePQiZ"
+msgid "Conversation not found."
+msgstr "会話が見つかりません。"
+
+#: app/routes/api/threads/$id/index.ts
+msgctxt "F3zqeC"
+msgid "Could not update conversation."
+msgstr "会話を更新できませんでした。"
+
+#: app/routes/api/threads/$id/reactions.ts
+msgctxt "H8UP1V"
+msgid "Invalid reaction"
+msgstr "リアクションが正しくありません"
+
+#: app/routes/api/threads/$id/reactions.ts
+msgctxt "UhsO-i"
+msgid "Message not found"
+msgstr "メッセージが見つかりません"
+
+#: app/routes/api/threads/$id/reset.ts
+msgctxt "OatSux"
+msgid "Stop or finish the current task before resetting the conversation."
+msgstr "実行中または待機中のタスクを終えるか停止してから、会話をリセットしてください。"
+
+#: app/routes/api/threads/index.ts
+msgctxt "gGF2lC"
+msgid "Choose at least two teammates and a valid group name/icon."
+msgstr "チームメイトを2人以上と、有効なグループ名・アイコンを選んでください。"
+
+#: app/routes/api/two-factor/method.ts
+#: lib/api-auth.ts
+msgctxt "WlyxAh"
+msgid "Unauthorized"
+msgstr "認証されていません"
+
+#: app/routes/api/two-factor/method.ts
+#: lib/two-factor-hooks.ts
+msgctxt "--eGOh"
+msgid "Turn off two-factor authentication before choosing another method."
+msgstr "別の方法を選ぶ前に、二要素認証をオフにしてください。"
+
+#: app/routes/api/two-factor/method.ts
+msgctxt "TPzkXL"
+msgid "Choose email."
+msgstr "メールを選んでください。"
+
+#: app/routes/api/two-factor/method.ts
+msgctxt "hcuwhb"
+msgid "This sign-in method is not available right now."
+msgstr "この確認方法は現在利用できません。"
+
+#: app/routes/privacy.tsx
 msgctxt "abpBoW"
 msgid "Privacy Policy · Deni Run"
 msgstr "プライバシーポリシー · Deni Run"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "mJcUKC"
 msgid "How Deni Run collects, uses, shares, protects, retains, and deletes your data."
 msgstr "Deni Run がお客様のデータをどのように収集、利用、共有、保護、保持、削除するかを説明します。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "eKGYwl"
 msgid "Back to Deni Run home"
 msgstr "Deni Run のホームに戻る"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "9hzHb_"
 msgid "Last updated: October 14, 2026"
 msgstr "最終更新日: 2026年10月14日"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "zFZQnj"
 msgid "This policy explains what data Deni Run (run.deniai.app, “Deni Run”, “we”) collects when you use the service, why we collect it, who receives it, how we protect it, and how you can delete it. Deni Run is a web application where AI teammates complete tasks for you on a private, isolated computer (browser, files, and terminal)."
 msgstr "本ポリシーは、お客様がサービスを利用する際に Deni Run(run.deniai.app、以下「Deni Run」「当社」)が収集するデータ、その目的、受領者、保護方法、削除方法を説明するものです。Deni Run は、AIチームメイトが専用の隔離されたコンピューター(ブラウザ、ファイル、ターミナル)上でお客様に代わってタスクを完了するWebアプリケーションです。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "Xri3zT"
 msgid "1. Data we collect"
 msgstr "1. 収集するデータ"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "I5Wnfc"
 msgid "Account data."
 msgstr "アカウントデータ。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "0ynyNL"
 msgid "When you sign in with Google or GitHub we receive your name, email address, profile picture, and the provider account ID. We also store the session records and what your two-factor method needs to sign you in: the authenticator secret and backup codes, or the public key of your passkey. Fingerprints and face data never leave your device."
 msgstr "GoogleまたはGitHubでログインすると、お名前、メールアドレス、プロフィール画像、プロバイダーのアカウントIDを受け取ります。また、ログインに必要なセッション記録と、選んだ二要素認証の方法に必要な情報(認証アプリのシークレットとバックアップコード、またはパスキーの公開鍵)を保存します。指紋や顔のデータが端末の外に送られることはありません。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "YsRzex"
 msgid "Content you create."
 msgstr "お客様が作成するコンテンツ。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "fzP87f"
 msgid "Messages and tasks you give teammates, teammate settings and memory, routines, skills, connected tool settings, files in your workspace, and screenshots of the computer session."
 msgstr "チームメイトに送るメッセージやタスク、チームメイトの設定とメモリ、ルーティン、スキル、接続したツールの設定、ワークスペース内のファイル、コンピューターセッションのスクリーンショット。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "HNafWa"
 msgid "Billing data."
 msgstr "請求データ。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "SCuuas"
 msgid "If you subscribe to Pro, Stripe collects your payment details. We store only your plan, Stripe customer and subscription IDs, and usage counters. We never see or store your card number."
 msgstr "Pro を購読すると、Stripe がお支払い情報を収集します。当社が保存するのは、プラン、Stripe の顧客IDおよびサブスクリプションID、使用量カウンターのみです。カード番号を見たり保存したりすることはありません。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "bl_WHw"
 msgid "Discord data."
 msgstr "Discord のデータ。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "qdNvnc"
 msgid "Only if you link Discord from Plugins in the app, we store your Discord user ID and username, the language of the session that created the link, which teammate or group you are talking to, and whether you want notifications there. The messages you send to the Deni Run bot in a direct message and the replies are saved in that conversation in your workspace, like any other message, and files you attach are saved in your workspace inbox. We read only direct messages sent to the bot, never server channels, and the bot does not request the Message Content privileged intent."
 msgstr "アプリの「プラグイン」から Discord を連携した場合に限り、Discord のユーザー ID とユーザー名、連携を作成したセッションの言語、話し相手のチームメイトまたはグループ、Discord で通知を受け取るかどうかを保存します。Deni Run のボットにダイレクトメッセージで送ったメッセージと返信は、他のメッセージと同じように、あなたのワークスペースのその会話に保存されます。添付したファイルはワークスペースの受信フォルダに保存されます。読み取るのはボット宛てのダイレクトメッセージだけで、サーバーのチャンネルは読みません。また、ボットは特権インテント「メッセージ内容」を要求しません。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "qorkWG"
 msgid "Technical data."
 msgstr "技術データ。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "9OAK8d"
 msgid "Session cookies, rate-limit counters, and server logs that may include IP address and request metadata, used to keep the service secure and working."
 msgstr "セッションCookie、レート制限カウンター、IPアドレスやリクエストのメタデータを含むことがあるサーバーログ。サービスの安全性と稼働を保つために使用します。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "lsHi-v"
 msgid "2. Google user data"
 msgstr "2. Google ユーザーデータ"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "I3x0KK"
 msgid "Google Sign-In."
 msgstr "Google ログイン。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "-zVhSJ"
 msgid "When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service."
 msgstr "Google でログインする際は、openid、email、profile スコープのみを要求し、お名前、メールアドレス、プロフィール画像、Google アカウントIDを受け取ります。これらは、アカウントの作成と識別、アプリ内でのお名前と画像の表示、お客様が選択した場合の GitHub ログインの同一アカウントへの紐づけ、Stripe を通じた請求領収書の送付、サービスに関するご連絡に使用します。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "2p4qSu"
 msgid "Optional Gmail and Google Drive plugins."
 msgstr "オプションの Gmail / Google ドライブ プラグイン。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "PAazL_"
 msgid "Only if you choose to connect them from Plugins in the app, Deni Run asks Google for additional access. Each permission is requested separately and you can decline it. The permissions are:"
 msgstr "アプリ内のプラグインから接続することを選んだ場合にのみ、Deni Run は Google に追加のアクセスを求めます。権限はそれぞれ個別に要求され、拒否することもできます。権限は次のとおりです。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "ga4Jey"
 msgid "Gmail, read-only (gmail.readonly): lets a teammate search your mail and read the sender, recipient, date, subject, and text of messages it needs for a task you gave it."
 msgstr "Gmail の閲覧のみ(gmail.readonly): チームメイトがメールを検索し、依頼されたタスクに必要なメッセージの差出人、宛先、日付、件名、本文を読めるようにします。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "puN7BV"
 msgid "Gmail, send (gmail.send): lets a teammate send an email on your behalf. Each message needs your approval unless you turn on “always allow” for sending."
 msgstr "Gmail の送信(gmail.send): チームメイトがあなたに代わってメールを送信できるようにします。送信で「常に許可」をオンにしていない限り、メールごとにあなたの承認が必要です。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "aebB6S"
 msgid "Google Drive, read-only (drive.readonly): lets a teammate search your Drive by file name and read Google Docs and text files it needs for a task you gave it."
 msgstr "Google ドライブの閲覧のみ(drive.readonly): チームメイトがファイル名でドライブを検索し、依頼されたタスクに必要な Google ドキュメントとテキストファイルを読めるようにします。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "WMtQfW"
 msgid "Google Drive, files created by the app (drive.file): lets a teammate create new files, and update files it created, in your Drive. Each change needs your approval unless you turn on “always allow”."
 msgstr "Google ドライブのアプリが作成したファイル(drive.file): チームメイトがドライブに新しいファイルを作成し、自身が作成したファイルを更新できるようにします。「常に許可」をオンにしていない限り、変更ごとにあなたの承認が必要です。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "vEYtSS"
 msgid "These permissions are used only to carry out the tasks you ask a teammate to do, and only when you ask. We do not scan, index, or copy your whole mailbox or Drive. Content retrieved for a task is sent to the AI model provider listed below to produce the response you see, and may be kept in that task’s conversation history in your workspace. Google access tokens are stored in our database and used only to call Google APIs for you."
 msgstr "これらの権限は、チームメイトに依頼されたタスクを実行するためにのみ、依頼があったときにのみ使用します。メールボックスやドライブ全体をスキャン、インデックス化、コピーすることはありません。タスクのために取得した内容は、表示される応答を生成するために下記のAIモデルプロバイダーに送信され、ワークスペース内のそのタスクの会話履歴に残ることがあります。Google のアクセストークンはデータベースに保存され、お客様に代わって Google API を呼び出す目的でのみ使用します。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "AK5rCT"
 msgid "Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to develop, improve, or train generalized AI or machine-learning models, and we do not allow humans to read it unless you give consent for specific items, it is necessary for security or abuse investigation, or the law requires it."
 msgstr "Deni Run による、Google API から受け取った情報の利用および他のアプリへの転送は、限定的な使用の要件を含む Google API サービスのユーザーデータに関するポリシーに準拠します。Google ユーザーデータを広告に使用すること、販売やデータブローカーへの転送、汎用的なAI・機械学習モデルの開発、改善、学習への使用は行いません。また、お客様が特定の項目について同意した場合、セキュリティや不正利用の調査に必要な場合、法律で求められる場合を除き、人が閲覧することを認めません。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "G4kUCt"
 msgid "3. How we use data"
 msgstr "3. データの利用目的"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "Y5Qt1h"
 msgid "To provide the service: run your teammates and computer sessions, store your workspace, enforce plan limits, process payments, keep the service secure, prevent abuse, fix bugs, and answer support requests. We do not use your data for advertising or profiling, and we do not sell it."
 msgstr "サービスを提供するために利用します。具体的には、チームメイトとコンピューターセッションの実行、ワークスペースの保存、プラン上限の適用、決済処理、サービスの安全性の維持、不正利用の防止、不具合の修正、サポート対応です。お客様のデータを広告やプロファイリングに使用することはなく、販売もしません。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "NucqTm"
 msgid "4. Who receives data"
 msgstr "4. データの提供先"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "oZbZjp"
 msgid "We share data only with the providers that run the product, and only what each needs:"
 msgstr "データは、製品を運営するプロバイダーに対して、それぞれが必要とする範囲でのみ共有します。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "az6da7"
 msgid "Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email."
 msgstr "Google と GitHub: ログインと、接続したプラグイン。ログインや、メール送信など依頼された操作の実行に必要なリクエストのみを送信します。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "vx7Nra"
 msgid "Discord: if you link it, Discord carries the direct messages you and the bot exchange, including files and screenshots you request and notifications about background work if you keep them on, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
 msgstr "Discord: 連携した場合、あなたとボットがやり取りするダイレクトメッセージ（あなたが求めたファイルやスクリーンショット、通知をオンにしている場合のバックグラウンド作業の通知を含みます）は Discord を経由し、Discord 自身の利用規約とプライバシーポリシーが適用されます。Discord に処理されたくない内容は送らないでください。メッセージ内容はあなたへの回答にのみ使い、AI モデルの学習には使いません。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "A54dst"
 msgid "Stripe: billing. Receives your email address and payment details."
 msgstr "Stripe: 請求。メールアドレスとお支払い情報を受け取ります。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "VU8epg"
 msgid "Resend: delivers sign-in codes if you choose email for two-factor. Receives your email address and the code."
 msgstr "Resend: 二要素認証でメールを選んだ場合に、ログインコードを届けます。メールアドレスとコードを受け取ります。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "6GHvNo"
 msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
 msgstr "OpenRouter と、その接続先のモデルプロバイダー: AIモデルへのリクエスト。メッセージ、ファイル、ページの内容に加え、Gmail や Google ドライブを接続している場合は、チームメイトがタスクのために取得したメールやファイルの内容を受け取ります。これらはそのタスクへの応答にのみ使用され、当社がモデルの学習に使用することはありません。Google のプロフィールデータは送信しません。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "e_XJkf"
 msgid "Steel: cloud browser sessions, which load the websites your teammate visits."
 msgstr "Steel: クラウドブラウザセッション。チームメイトが訪問するウェブサイトを読み込みます。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "Hbf4RH"
 msgid "E2B: the isolated sandbox where terminal commands run."
 msgstr "E2B: ターミナルコマンドを実行する隔離されたサンドボックス。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "hMrc-Q"
 msgid "Our database and S3-compatible object storage (typically Cloudflare R2) hosting providers."
 msgstr "データベースおよびS3互換オブジェクトストレージ(通常は Cloudflare R2)のホスティングプロバイダー。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "3UIoog"
 msgid "We may also disclose data when required by law or to protect the rights, safety, and security of users and the service. If the service is sold or merged, data may transfer to the new operator under this policy."
 msgstr "法律で求められる場合、またはユーザーとサービスの権利、安全、セキュリティを守るために、データを開示することがあります。サービスが売却または合併された場合、データは本ポリシーに基づき新しい運営者に引き継がれることがあります。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "obGr2j"
 msgid "5. How we protect data"
 msgstr "5. データの保護"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "adCMZI"
 msgid "Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires a second factor: a passkey, an emailed code, or a code from an authenticator app. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security."
 msgstr "アカウントはそれぞれ隔離されています。ワークスペースのファイル、ブラウザセッション、ターミナルのサンドボックスはユーザーIDに紐づけられ、他のアカウントとは共有されません。通信はHTTPSで暗号化されます。ログインには二要素認証(パスキー、メールで届くコード、または認証アプリのコード)が必要です。データベースとストレージへのアクセスは、サービスのみが保持する認証情報で制限されます。完全に安全なシステムは存在しないため、絶対的な安全性を保証することはできません。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "DXkzgx"
 msgid "6. Retention and deletion"
 msgstr "6. 保持と削除"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "WSq4pI"
 msgid "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation."
 msgstr "アカウントが有効な間、データを保持します。<link>アカウント</link>から、保存されているアカウントデータのコピーをエクスポートしたり、アカウントを削除したりできます。アカウントを削除すると、サブスクリプションが解約され、ログイン、セッション、会話、チームメイト、ルーティン、スキル、コンピューターの状態、ワークスペースのファイル、スクリーンショットがデータベースとオブジェクトストレージから削除されます。Stripe の請求書など、税務・会計の法令で保存が必要な記録は、法定期間 Stripe が保持します。バックアップとログは通常のローテーションで上書きされます。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "3xC8Ih"
 msgid "You can unlink Discord at any time from Plugins in the app or by sending /unlink to the bot. Unlinking deletes the stored link and any unused link code, and the bot stops answering that Discord account. Deleting your Deni Run account does the same. Messages already delivered in Discord stay in your Discord account until you delete them there."
 msgstr "Discord の連携は、アプリの「プラグイン」またはボットへの /unlink の送信でいつでも解除できます。解除すると、保存されている連携情報と未使用のリンクコードが削除され、ボットはその Discord アカウントに応答しなくなります。Deni Run のアカウントを削除した場合も同様です。すでに Discord に届いたメッセージは、あなたが Discord 上で削除するまで残ります。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "QbGVAA"
 msgid "You can disconnect the Gmail, Google Drive, and GitHub plugins at any time from Plugins in the app, which stops teammates using them right away and revokes our access at Google or GitHub once the last plugin of that provider is disconnected. You can also revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
 msgstr "アプリのプラグイン画面から、Gmail、Google ドライブ、GitHub のプラグインをいつでも接続解除できます。解除するとチームメイトは直ちに使えなくなり、そのプロバイダーの最後のプラグインを解除した時点で、Google または GitHub 側のアクセス権も取り消されます。Google アカウントのセキュリティ設定から、Gmail、Google ドライブ、または Google アカウント全体に対する Deni Run のアクセス権を取り消すこともでき、アクセスは直ちに停止します。Deni Run のアカウントを削除すると、当社が保持する Google のアクセストークンも削除されます。ログインせずに削除を依頼する場合は、下記の連絡先までご連絡ください。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "ZaMphK"
 msgid "7. Cookies"
 msgstr "7. Cookie"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "idVmmZ"
 msgid "We use only the cookies needed to keep you signed in and to remember your language and theme. We do not use advertising or cross-site tracking cookies."
 msgstr "ログイン状態の維持と、言語およびテーマの記憶に必要なCookieのみを使用します。広告用やサイト横断のトラッキング用Cookieは使用しません。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "qd7tYO"
 msgid "8. Your rights and children"
 msgstr "8. お客様の権利と子ども"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "hZJFta"
 msgid "Depending on where you live, you may have the right to access, correct, export, or delete your data and to object to certain processing. Use the Account page or contact us. Deni Run is not directed to children under 16, and we do not knowingly collect their data."
 msgstr "お住まいの地域によっては、データの閲覧、訂正、エクスポート、削除を求める権利や、特定の処理に異議を述べる権利があります。アカウントページをご利用いただくか、ご連絡ください。Deni Run は16歳未満の子どもを対象としておらず、そのデータを意図的に収集することはありません。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "0cZ8bw"
 msgid "9. Changes to this policy"
 msgstr "9. 本ポリシーの変更"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "tQFFTq"
 msgid "We will update this page and the date above when this policy changes, and we will notify signed-in users of material changes in the app or by email."
 msgstr "本ポリシーを変更する場合は、このページと上記の日付を更新し、重要な変更についてはログイン中のユーザーにアプリ内またはメールでお知らせします。"
 
-#: app/privacy/page.tsx
+#: app/routes/privacy.tsx
 msgctxt "0nbvfu"
 msgid "10. Contact"
 msgstr "10. お問い合わせ"
 
-#: app/privacy/page.tsx
-#: app/terms/page.tsx
+#: app/routes/privacy.tsx
+#: app/routes/terms.tsx
 msgctxt "mv-MT8"
 msgid "the operator of this deployment"
 msgstr "このデプロイの運営者"
 
-#: app/privacy/page.tsx
-#: app/terms/page.tsx
+#: app/routes/privacy.tsx
+#: app/routes/terms.tsx
 msgctxt "32rBNK"
 msgid "Terms of Service"
 msgstr "利用規約"
 
-#: app/sign-up/page.tsx
+#: app/routes/sign-up.tsx
 msgctxt "0vL5u1"
 msgid "Create an account"
 msgstr "アカウントを作成"
 
-#: app/terms/page.tsx
+#: app/routes/terms.tsx
 msgctxt "iSjB38"
 msgid "Deni Run is an AI teammate service that can operate a private computer (browser, files, and terminal) on your behalf. By creating an account you agree to these terms."
 msgstr "Deni Run は、あなたに代わって専用コンピューター(ブラウザ、ファイル、ターミナル)を操作できるAIチームメイトのサービスです。アカウントを作成すると、本規約に同意したものとみなされます。"
 
-#: app/terms/page.tsx
+#: app/routes/terms.tsx
 msgctxt "j9MGr2"
 msgid "You are responsible for the tasks you assign, including browsing, file changes, and shell commands. Do not use Deni Run to break the law, attack systems, send spam, or process data you are not allowed to handle. Destructive actions may require your approval, but you remain responsible for the outcome."
 msgstr "ブラウジング、ファイルの変更、シェルコマンドを含め、依頼したタスクについてはお客様が責任を負います。Deni Run を、法律に違反する行為、システムへの攻撃、スパムの送信、取り扱う権限のないデータの処理に使用しないでください。破壊的な操作では承認を求める場合がありますが、結果の責任はお客様にあります。"
 
-#: app/terms/page.tsx
+#: app/routes/terms.tsx
 msgctxt "8BzMay"
 msgid "You must not use Deni Run to create, edit, or distribute sexual or intimate imagery of a real person without their consent, including AI-generated imagery, or any sexual content involving minors. We remove such content and suspend and report the accounts involved."
 msgstr "Deni Run を、本人の同意のない実在の人物の性的・親密な画像(AI生成のものを含む)、または未成年者が関わる性的コンテンツの作成、編集、配布に使用してはいけません。当社はそのようなコンテンツを削除し、関係するアカウントを停止して通報します。"
 
-#: app/terms/page.tsx
+#: app/routes/terms.tsx
 msgctxt "F5hHF3"
 msgid "Usage limits apply by plan. Paid subscriptions renew monthly until canceled through the billing portal. Fees are charged by Stripe. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms."
 msgstr "使用量の上限はプランごとに適用されます。有料のサブスクリプションは、請求ポータルから解約するまで毎月更新されます。料金は Stripe を通じて請求されます。インフラの濫用、フェアユースの超過、または本規約への違反があった場合、アカウントを停止することがあります。"
 
-#: app/terms/page.tsx
+#: app/routes/terms.tsx
 msgctxt "BARVqC"
 msgid "Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service."
 msgstr "コンピューターのセッション、ファイル、メモリはあなたのアカウント内に限定されます。これらのデータは<link>アカウント</link>からエクスポートまたは削除できます。アカウントを削除すると、このサービスに保存されたログイン情報も削除されます。"
 
-#: app/terms/page.tsx
+#: app/routes/terms.tsx
 msgctxt "bXXNWc"
 msgid "If you link a Discord account, you are responsible for who can use that account. Anyone who can send direct messages from it can use your workspace much as you can in the app, except account and billing settings: give your teammates tasks, approve actions with the Approve button, change teammates, groups, skills, routines, and plugins, and read or delete workspace files. Discord’s own terms and privacy policy apply to your use of Discord. You can unlink at any time from Plugins or with /unlink."
 msgstr "Discord アカウントを連携した場合、そのアカウントを誰が使えるかはあなたの責任です。そのアカウントからダイレクトメッセージを送れる人は、アカウントと請求の設定を除き、アプリとほぼ同じようにワークスペースを使えます。チームメイトへのタスクの依頼、「承認」ボタンでの操作の承認、チームメイト・グループ・スキル・ルーティン・プラグインの変更、ワークスペースのファイルの閲覧や削除ができます。Discord の利用には Discord 自身の利用規約とプライバシーポリシーが適用されます。連携は「プラグイン」または /unlink でいつでも解除できます。"
 
-#: app/terms/page.tsx
+#: app/routes/terms.tsx
 msgctxt "PR34Xj"
 msgid "Our <link>Privacy Policy</link> explains how we handle your data, including information received from Google sign-in."
 msgstr "当社の<link>プライバシーポリシー</link>では、Google ログインから受け取る情報を含め、データの取り扱いについて説明しています。"
 
-#: app/terms/page.tsx
+#: app/routes/terms.tsx
 msgctxt "fyPFTO"
 msgid "The service is provided as-is. We do not warrant uninterrupted availability. These terms may be updated as the product changes."
 msgstr "本サービスは現状有姿で提供され、中断のない提供を保証するものではありません。本規約は、製品の変更に応じて更新されることがあります。"
 
-#: app/terms/page.tsx
+#: app/routes/terms.tsx
 msgctxt "Iexom4"
 msgid "Contact:"
 msgstr "お問い合わせ:"
 
-#: app/upgrade/page.tsx
+#: app/routes/upgrade.tsx
 msgctxt "kEgsaX"
 msgid "Upgrade to Pro · Deni Run"
 msgstr "Proにアップグレード · Deni Run"
 
-#: app/upgrade/page.tsx
+#: app/routes/upgrade.tsx
 msgctxt "aKq-bu"
 msgid "More teammates, tokens, and computer time on a private computer."
 msgstr "専用コンピューターで、より多くのチームメイト、トークン、コンピューター時間を。"
@@ -3983,6 +3918,71 @@ msgstr "サイドバーの表示を切り替え"
 msgctxt "iFsDVR"
 msgid "Loading"
 msgstr "読み込み中"
+
+#: lib/chat-route.ts
+msgctxt "1qOPhr"
+msgid "Please approve or deny the pending action before continuing."
+msgstr "続行する前に、保留中の操作を承認または拒否してください。"
+
+#: lib/chat-route.ts
+msgctxt "LlIzf6"
+msgid "Finish the step on the computer, then send a new message to continue."
+msgstr "コンピューター上の手順を完了してから、新しいメッセージを送って続行してください。"
+
+#: lib/chat-route.ts
+msgctxt "c65x3L"
+msgid "Review the previous run before retrying it."
+msgstr "再試行する前に、前回の実行内容を確認してください。"
+
+#: lib/chat-route.ts
+msgctxt "BCRyYP"
+msgid "This task is already running or this message has already been submitted."
+msgstr "このタスクはすでに実行中か、このメッセージはすでに送信済みです。"
+
+#: lib/chat-route.ts
+msgctxt "xFBzaV"
+msgid "OPENROUTER_API_KEY is missing"
+msgstr "OPENROUTER_API_KEY が設定されていません"
+
+#: lib/chat-route.ts
+msgctxt "s-buJt"
+msgid "The message you replied to is no longer available."
+msgstr "返信先のメッセージは存在しません。"
+
+#: lib/chat-route.ts
+msgctxt "4LlISz"
+msgid "Could not resume the task. Please send your message again."
+msgstr "タスクを再開できませんでした。メッセージをもう一度送信してください。"
+
+#: lib/chat-route.ts
+msgctxt "S5QEJr"
+msgid "{name} finished a task"
+msgstr "{name} さんがタスクを完了しました"
+
+#: lib/chat-route.ts
+msgctxt "jIeWzL"
+msgid "The result is ready in this conversation."
+msgstr "結果はこの会話で確認できます。"
+
+#: lib/chat-route.ts
+msgctxt "wHKxTi"
+msgid "{name} could not save the result"
+msgstr "{name} さんは結果を保存できませんでした"
+
+#: lib/chat-route.ts
+msgctxt "SqDnJo"
+msgid "The model call failed"
+msgstr "モデルの呼び出しに失敗しました"
+
+#: lib/chat-route.ts
+msgctxt "Xa8iLm"
+msgid "{name} could not finish the task"
+msgstr "{name} さんはタスクを完了できませんでした"
+
+#: lib/chat-route.ts
+msgctxt "ojVpVJ"
+msgid "Could not save the response"
+msgstr "応答を保存できませんでした"
 
 #: lib/localize-error.ts
 msgctxt "UxEkbJ"

@@ -13,9 +13,10 @@
 # testing
 /coverage
 
-# next.js
-/.next/
-/out/
+# TanStack Start / Nitro
+/.output/
+/.nitro/
+/.tanstack/
 
 # production
 /build
@@ -42,7 +43,6 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # Cloudflare Worker local state and secrets
 .wrangler/
@@ -50,4 +50,3 @@ d1-proxy/.wrangler-*/
 d1-proxy/.dev.vars
 .deni/local.sqlite*
 /dist/
-.vinext/

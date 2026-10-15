@@ -1,5 +1,3 @@
-"use client";
-
 import { isAvatarImage } from "@/lib/avatar";
 
 export function Avatar({ name, accent, icon }: { name: string; accent: string; icon?: string | null }) {

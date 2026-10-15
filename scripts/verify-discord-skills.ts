@@ -14,7 +14,7 @@ dotenv.config({ path: ".env", quiet: true });
 dotenv.config({ path: ".env.local", override: true, quiet: true });
 
 mockModules((request) => {
-  if (request === "server-only") return {};
+  if (request === "@tanstack/react-start/server-only") return {};
   return undefined;
 });
 

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Starts the vinext standalone server from `pnpm build` and checks that it serves the health
+# Starts the Nitro server from `pnpm build` (.output/server) and checks that it serves the health
 # route and a translated page. Production mode requires D1_PROXY_URL, which CI does not have, so
 # the health route answers 503 with {"ok":false}; that still proves route handlers run.
 set -eu
@@ -7,7 +7,7 @@ set -eu
 PORT="${PORT:-3100}"
 LOG="$(mktemp)"
 
-PORT="$PORT" HOST=127.0.0.1 node dist/standalone/server.js >"$LOG" 2>&1 &
+PORT="$PORT" HOST=127.0.0.1 node .output/server/index.mjs >"$LOG" 2>&1 &
 SERVER_PID=$!
 trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
 

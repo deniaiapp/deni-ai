@@ -1,7 +1,5 @@
-"use client";
-
 import { BrainIcon, ChevronDownIcon } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import type { ComponentProps, ReactNode } from "react";
 import { createContext, memo, useContext, useEffect, useRef, useState } from "react";
 import { Streamdown } from "streamdown";

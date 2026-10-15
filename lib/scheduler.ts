@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { type UIMessage } from "ai";
 import { nextCron } from "./agent";

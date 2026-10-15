@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "@/i18n/react";
 import { useEffect, useRef, useState, type ReactElement, type ReactNode } from "react";
 import { Check, Copy, Reply, MoreHorizontal, Smile } from "lucide-react";
 import * as Popover from "@radix-ui/react-popover";

@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import type { DiscordFeature } from "../discord-ui";
 import { feature as computer } from "./computer";

@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "@/i18n/react";
 import { translateMessage } from "@/lib/i18n-server";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { ArrowLeft, Clock3, Pencil, Plus, Trash2 } from "lucide-react";

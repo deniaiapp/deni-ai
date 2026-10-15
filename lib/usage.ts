@@ -1,4 +1,4 @@
-import "server-only";
+import "@tanstack/react-start/server-only";
 
 import { mutateStore, readStore } from "./store";
 import type { Billing, Store, UsagePeriod } from "./types";

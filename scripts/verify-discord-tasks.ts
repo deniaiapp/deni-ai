@@ -5,7 +5,7 @@ import type { ChatInputCommandInteraction } from "discord.js";
 import { mockModules } from "./module-mocks";
 
 mockModules((request) => {
-  if (request === "server-only") return {};
+  if (request === "@tanstack/react-start/server-only") return {};
   return undefined;
 });
 
