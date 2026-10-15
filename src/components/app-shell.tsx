@@ -64,10 +64,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [pathname, startNewChat]);
 
   return (
-    <SidebarProvider>
+    // Cap the shell at the viewport so the chat list scrolls inside its own
+    // container (auto-scroll) and the composer stays pinned to the bottom.
+    <SidebarProvider className="h-svh">
       {isChatSearchOpen ? <ChatSearch open onOpenChange={setIsChatSearchOpen} /> : null}
       <AppSidebar onOpenChatSearch={() => setIsChatSearchOpen(true)} />
-      <SidebarInset>
+      <SidebarInset className="min-h-0 overflow-hidden">
         <TwoFactorBanner />
         <FlashOfferStrip />
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4">
