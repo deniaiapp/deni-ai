@@ -169,7 +169,27 @@ async function enforceFlixaAccessPolicy(
     headers: clientHeaders,
   };
 
-  if (await isUserBannedFromFlixa(userId)) {
+  let banned: boolean;
+  try {
+    banned = await isUserBannedFromFlixa(userId);
+  } catch {
+    // Ban status unknown (DB error): fail closed. Same response as a DB
+    // error during API key validation (do not expose ban checks).
+    const errorResponse = getAuthErrorResponseConfig('db_error');
+    return c.json(
+      {
+        error: {
+          message: authErrorMessage('db_error', 'Database error during validation'),
+          type: errorResponse.type,
+          param: null,
+          code: 'db_error',
+        },
+      },
+      { status: errorResponse.status },
+    );
+  }
+
+  if (banned) {
     recordClientSignalLog({
       ...logBase,
       allowed: signal.allowed,

@@ -77,6 +77,9 @@ export function invalidateBanCache(userId?: string): void {
 
 /**
  * Check whether a user is banned from Flixa.
+ *
+ * Throws when the ban status cannot be determined (e.g. DB error) so callers
+ * fail closed instead of treating an unknown status as "not banned".
  */
 export async function isUserBannedFromFlixa(userId: string): Promise<boolean> {
   const cached = getCachedBanStatus(userId);
@@ -105,8 +108,9 @@ export async function isUserBannedFromFlixa(userId: string): Promise<boolean> {
       return banned;
     } catch (error) {
       console.error("[Ban] Failed to check ban status:", error);
-      // Fail open on DB errors so a flixa_ban outage does not lock everyone out.
-      return false;
+      // Fail closed: an unknown status must not let a banned user through.
+      // Not cached, so the next request retries the lookup.
+      throw error;
     }
   })();
 

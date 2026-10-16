@@ -53,12 +53,13 @@ Admin security env:
 | `ADMIN_USER` | Optional username (default `admin`) |
 | `ADMIN_COOKIE_SECURE` | Force `Secure` session cookie (`true` recommended behind HTTPS) |
 | `ADMIN_SESSION_DAYS` | Session lifetime (default 7, max 30) |
+| `ADMIN_SESSION_SECRET` | Recommended; 32+ random bytes used to sign session cookies. When unset, the key is PBKDF2-derived from `ADMIN_PASSWORD`. Changing it (or `ADMIN_PASSWORD`) logs out all admin sessions |
 | `ADMIN_ALLOW_BASIC` | Allow HTTP Basic for scripts (default on; set `false` to disable) |
 | `ADMIN_IP_ALLOWLIST` | **Optional.** Comma-separated IPs / IPv4 CIDRs. Leave empty for mobile / changing IPs |
 
 Do **not** require IP allowlist if you log in from mobile or CGNAT — the address changes and you will lock yourself out. Prefer a long `ADMIN_PASSWORD`, login rate limits, and HTTPS. Allowlist is only useful for fixed office / VPN egress IPs.
 
-Failed logins are rate-limited, delayed slightly, and logged as `[AdminAuth] login_failed` (password never logged). Startup warns on weak passwords only.
+Failed logins are rate-limited, delayed slightly, and logged as `[AdminAuth] login_failed` (password never logged). Startup warns on weak passwords and on a short (or, in production, missing) `ADMIN_SESSION_SECRET` only.
 
 ### Rate limiting
 In-process fixed-window limits (per instance). Disable with `RATE_LIMIT_ENABLED=false`.

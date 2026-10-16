@@ -26,6 +26,8 @@ import { isAuthDisabledMode } from "../utils/authMode";
  *   ADMIN_USER            (default: "admin")
  *   ADMIN_PASSWORD        (required — admin disabled when unset)
  *   ADMIN_SESSION_DAYS    (default: 7, max 30)
+ *   ADMIN_SESSION_SECRET  (32+ random bytes; signs session cookies. When unset
+ *                          the key is PBKDF2-derived from ADMIN_PASSWORD)
  *   ADMIN_COOKIE_SECURE   (force Secure cookies)
  *   ADMIN_IP_ALLOWLIST    (comma-separated IPs / IPv4 CIDRs)
  *   ADMIN_ALLOW_BASIC     (default true; set false to disable Basic)
@@ -54,9 +56,87 @@ function sessionTtlMs(): number {
   return sessionDays() * 24 * 60 * 60 * 1000;
 }
 
-function sessionSecret(): string {
-  // Password changes invalidate all sessions.
-  return `flixa-admin-v1:${adminPassword() ?? ""}`;
+function sessionSecret(): string | undefined {
+  return process.env.ADMIN_SESSION_SECRET || undefined;
+}
+
+// Cloudflare Workers rejects PBKDF2 iteration counts above 100,000.
+const SESSION_KDF_ITERATIONS = 100_000;
+const SESSION_KDF_SALT = "flixa-admin-session-kdf-v1";
+
+let cachedSessionKey: {
+  secret: string;
+  password: string;
+  key: Promise<CryptoKey>;
+} | null = null;
+
+async function deriveSessionKey(
+  password: string,
+  secret: string,
+): Promise<CryptoKey> {
+  const enc = new TextEncoder();
+  let bits: ArrayBuffer;
+  if (secret) {
+    const secretKey = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(secret),
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+    bits = await crypto.subtle.sign(
+      "HMAC",
+      secretKey,
+      enc.encode(`flixa-admin-session-v1:${password}`),
+    );
+  } else {
+    const passwordKey = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(password),
+      "PBKDF2",
+      false,
+      ["deriveBits"],
+    );
+    bits = await crypto.subtle.deriveBits(
+      {
+        name: "PBKDF2",
+        hash: "SHA-256",
+        salt: enc.encode(SESSION_KDF_SALT),
+        iterations: SESSION_KDF_ITERATIONS,
+      },
+      passwordKey,
+      256,
+    );
+  }
+  return crypto.subtle.importKey(
+    "raw",
+    bits,
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+}
+
+/**
+ * HMAC key for session tokens. Never the raw password, so a cookie is not a
+ * fast offline oracle for ADMIN_PASSWORD: keyed by ADMIN_SESSION_SECRET when
+ * set, else PBKDF2 of the password. Password changes invalidate all sessions.
+ */
+function sessionSigningKey(): Promise<CryptoKey> {
+  const password = adminPassword() ?? "";
+  const secret = sessionSecret() ?? "";
+  if (
+    !cachedSessionKey ||
+    cachedSessionKey.secret !== secret ||
+    cachedSessionKey.password !== password
+  ) {
+    const key = deriveSessionKey(password, secret);
+    cachedSessionKey = { secret, password, key };
+    key.catch(() => {
+      if (cachedSessionKey?.key === key) cachedSessionKey = null;
+    });
+  }
+  return cachedSessionKey.key;
 }
 
 function isBasicAuthAllowed(): boolean {
@@ -91,15 +171,8 @@ function requestIsHttps(c: Context): boolean {
 
 async function hmacSha256Base64Url(
   message: string,
-  secret: string,
+  key: CryptoKey,
 ): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    "raw",
-    new TextEncoder().encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
   const sig = await crypto.subtle.sign(
     "HMAC",
     key,
@@ -127,7 +200,7 @@ export async function createAdminSessionToken(): Promise<string> {
   const exp = Date.now() + sessionTtlMs();
   const nonce = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
   const payload = `v2.${exp}.${nonce}`;
-  const sig = await hmacSha256Base64Url(payload, sessionSecret());
+  const sig = await hmacSha256Base64Url(payload, await sessionSigningKey());
   return `${payload}.${sig}`;
 }
 
@@ -143,7 +216,10 @@ export async function verifyAdminSessionToken(
     const exp = Number.parseInt(expRaw, 10);
     if (!Number.isFinite(exp) || exp <= Date.now()) return false;
     const payload = `${version}.${expRaw}.${nonce}`;
-    const expected = await hmacSha256Base64Url(payload, sessionSecret());
+    const expected = await hmacSha256Base64Url(
+      payload,
+      await sessionSigningKey(),
+    );
     return timingSafeEqualString(sig, expected);
   }
 
@@ -153,7 +229,10 @@ export async function verifyAdminSessionToken(
     const exp = Number.parseInt(expRaw, 10);
     if (!Number.isFinite(exp) || exp <= Date.now()) return false;
     const payload = `${version}.${expRaw}`;
-    const expected = await hmacSha256Base64Url(payload, sessionSecret());
+    const expected = await hmacSha256Base64Url(
+      payload,
+      await sessionSigningKey(),
+    );
     return timingSafeEqualString(sig, expected);
   }
 

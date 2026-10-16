@@ -90,12 +90,35 @@ export function flattenResponsesInputItems(input: unknown): unknown {
     return input;
   }
 
-  let current = input;
-  while (current.some(Array.isArray)) {
-    current = current.flatMap((item) => (Array.isArray(item) ? item : [item]));
+  if (!input.some(Array.isArray)) {
+    return input;
   }
 
-  return current;
+  // Single depth-first pass with an explicit stack: linear in the number of
+  // elements regardless of nesting depth, and no recursion to overflow.
+  const flattened: unknown[] = [];
+  const stack: Array<{ items: unknown[]; index: number }> = [{ items: input, index: 0 }];
+  while (stack.length > 0) {
+    const frame = stack[stack.length - 1];
+    if (frame.index >= frame.items.length) {
+      stack.pop();
+      continue;
+    }
+
+    const index = frame.index++;
+    if (!(index in frame.items)) {
+      continue;
+    }
+
+    const item = frame.items[index];
+    if (Array.isArray(item)) {
+      stack.push({ items: item, index: 0 });
+    } else {
+      flattened.push(item);
+    }
+  }
+
+  return flattened;
 }
 
 function stringifyResponsesToolOutput(output: unknown): string {

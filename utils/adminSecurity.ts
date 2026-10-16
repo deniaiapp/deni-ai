@@ -139,6 +139,17 @@ export function warnAdminConfigAtStartup(): void {
     console.warn(`[AdminSecurity] ${w}`);
   }
 
+  const sessionSecret = process.env.ADMIN_SESSION_SECRET;
+  if (sessionSecret && sessionSecret.length < 32) {
+    console.warn(
+      "[AdminSecurity] ADMIN_SESSION_SECRET is shorter than 32 characters — use 32+ random bytes.",
+    );
+  } else if (!sessionSecret && process.env.NODE_ENV === "production") {
+    console.warn(
+      "[AdminSecurity] Set ADMIN_SESSION_SECRET (32+ random bytes) so admin session cookies are not signed with a key derived from ADMIN_PASSWORD.",
+    );
+  }
+
   if (isAdminIpAllowlistEnabled()) {
     console.info(
       `[AdminSecurity] IP allowlist active (${getAdminIpAllowlist().length} entries). ` +
@@ -165,6 +176,22 @@ export type AdminAuditEvent =
   | "basic_ok"
   | "unauthorized";
 
+const AUDIT_PATH_MAX = 512;
+
+/**
+ * Escape control characters (C0, DEL, C1 incl. NEL, U+2028/U+2029) so
+ * client-supplied values cannot break or forge audit log lines.
+ */
+function escapeAuditValue(value: string): string {
+  // oxlint-disable-next-line no-control-regex
+  return value.replace(/[\x00-\x1f\x7f-\x9f\u2028\u2029]/g, (ch) => {
+    const code = ch.charCodeAt(0);
+    return code > 0xff
+      ? `\\u${code.toString(16).padStart(4, "0")}`
+      : `\\x${code.toString(16).padStart(2, "0")}`;
+  });
+}
+
 export function logAdminAudit(
   event: AdminAuditEvent,
   details: {
@@ -176,12 +203,14 @@ export function logAdminAudit(
 ): void {
   const parts = [
     `[AdminAuth] ${event}`,
-    details.ip ? `ip=${details.ip}` : null,
-    details.path ? `path=${details.path}` : null,
-    details.username
-      ? `user=${details.username.slice(0, 64)}`
+    details.ip ? `ip=${escapeAuditValue(details.ip)}` : null,
+    details.path
+      ? `path=${escapeAuditValue(details.path.slice(0, AUDIT_PATH_MAX))}`
       : null,
-    details.reason ? `reason=${details.reason}` : null,
+    details.username
+      ? `user=${escapeAuditValue(String(details.username.slice(0, 64)))}`
+      : null,
+    details.reason ? `reason=${escapeAuditValue(details.reason)}` : null,
   ].filter(Boolean);
   if (event === "login_failed" || event === "ip_denied") {
     console.warn(parts.join(" "));

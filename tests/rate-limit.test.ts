@@ -136,6 +136,16 @@ describe("getClientIp", () => {
     const headers = new Headers({ "x-forwarded-for": "203.0.113.5" });
     expect(getClientIp(headers, "2001:db8::1")).toBe("203.0.113.5");
     expect(getClientIp(headers, "::ffff:127.0.0.1")).toBe("203.0.113.5");
-    expect(getClientIp(new Headers({ "x-forwarded-for": "garbage,203.0.113.5" }), "127.0.0.1")).toBe("127.0.0.1");
+    expect(getClientIp(new Headers({ "x-forwarded-for": "garbage,203.0.113.5" }), "127.0.0.1")).toBe("203.0.113.5");
+  });
+
+  test("malformed client-supplied XFF entries do not make the trusted peer the client", () => {
+    Bun.env.TRUSTED_PROXY_IPS = "127.0.0.1,10.0.0.0/8";
+    // An appending proxy forwards the client's "not-an-ip" followed by the real client address.
+    expect(getClientIp(new Headers({ "x-forwarded-for": "not-an-ip, 198.51.100.7" }), "127.0.0.1")).toBe("198.51.100.7");
+    expect(getClientIp(new Headers({ "x-forwarded-for": "not-an-ip, 198.51.100.7, 10.0.0.2" }), "10.0.0.1")).toBe("198.51.100.7");
+    // A malformed hop where the client address belongs yields no identity.
+    expect(getClientIp(new Headers({ "x-forwarded-for": "not-an-ip" }), "127.0.0.1")).toBe("unknown");
+    expect(getClientIp(new Headers({ "x-forwarded-for": "198.51.100.7, not-an-ip, 10.0.0.2" }), "10.0.0.1")).toBe("unknown");
   });
 });

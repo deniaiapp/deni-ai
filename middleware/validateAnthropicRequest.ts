@@ -9,8 +9,61 @@ interface AnthropicRequestBody {
 const VALID_MESSAGE_ROLES = ["user", "assistant"] as const;
 const SYSTEM_COMPAT_ROLES = ["system", "developer"] as const;
 
+// Auth checks the plan tier and billing against `model` only, so client
+// fields that make OpenRouter route to or run other models are not forwarded.
+const MODEL_SELECTING_BODY_FIELDS = ["fallbacks", "models", "preset", "route"] as const;
+
+// OpenRouter plugins that neither select nor run another model. Other ids
+// (auto-router, auto-beta-router, pareto-router, fusion, unknown) are dropped.
+const ALLOWED_OPENROUTER_PLUGIN_IDS: ReadonlySet<string> = new Set([
+  "web",
+  "web-fetch",
+  "file-parser",
+  "response-healing",
+  "moderation",
+  "context-compression",
+]);
+
+// OpenRouter server tools that run no other model. Any other `openrouter:*`
+// type (advisor, fusion, subagent, image_generation, unknown) is rejected.
+const ALLOWED_OPENROUTER_TOOL_TYPES: ReadonlySet<string> = new Set([
+  "openrouter:datetime",
+  "openrouter:web_search",
+  "openrouter:web_fetch",
+  "openrouter:bash",
+  "openrouter:shell",
+  "openrouter:apply_patch",
+  "openrouter:files",
+  "openrouter:experimental__search_models",
+]);
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function toolSelectsModel(tool: unknown): boolean {
+  if (!isObject(tool)) return false;
+
+  if (typeof tool.type === "string") {
+    const type = tool.type.toLowerCase();
+    if (type.startsWith("advisor_")) return true;
+    if (type.startsWith("openrouter:") && !ALLOWED_OPENROUTER_TOOL_TYPES.has(tool.type)) {
+      return true;
+    }
+  }
+
+  return (
+    tool.model !== undefined ||
+    (isObject(tool.parameters) && tool.parameters.model !== undefined)
+  );
+}
+
+function isAllowedPlugin(plugin: unknown): boolean {
+  return (
+    isObject(plugin) &&
+    typeof plugin.id === "string" &&
+    ALLOWED_OPENROUTER_PLUGIN_IDS.has(plugin.id)
+  );
 }
 
 function extractTextContent(content: unknown): string {
@@ -158,8 +211,37 @@ export async function validateAnthropicRequest(c: Context, next: Next) {
       );
     }
 
+    const forwardedBody: Record<string, unknown> = { ...body };
+
+    if (Array.isArray(forwardedBody.tools)) {
+      const index = forwardedBody.tools.findIndex(toolSelectsModel);
+      if (index !== -1) {
+        return c.json(
+          {
+            error: {
+              message: `Tool at index ${index} is not supported: tools that select or run another model are not allowed`,
+              type: "invalid_request_error",
+              param: `tools[${index}]`,
+              code: "invalid_tool",
+            },
+          },
+          400,
+        );
+      }
+    }
+
+    for (const field of MODEL_SELECTING_BODY_FIELDS) {
+      delete forwardedBody[field];
+    }
+
+    if (Array.isArray(forwardedBody.plugins)) {
+      forwardedBody.plugins = forwardedBody.plugins.filter(isAllowedPlugin);
+    } else {
+      delete forwardedBody.plugins;
+    }
+
     c.set("validatedBody", {
-      ...body,
+      ...forwardedBody,
       messages: normalizedMessages,
       system: mergeSystemPrompt(body.system, systemMessages),
     });

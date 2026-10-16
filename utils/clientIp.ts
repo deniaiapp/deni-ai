@@ -37,14 +37,19 @@ export function getClientIp(headers: Headers, peerAddress = "unknown"): string {
   const raw = headers.get(header);
   if (!raw) return peer;
   const hops = raw.split(",").map(normalizeIp);
-  if (hops.some((hop) => !isIP(hop))) return peer;
-  if (header !== "x-forwarded-for") return hops.length === 1 ? hops[0] : peer;
+  if (header !== "x-forwarded-for") {
+    if (hops.some((hop) => !isIP(hop))) return peer;
+    return hops.length === 1 ? hops[0] : peer;
+  }
 
   // Walk from the transport peer towards the client. Ignore attacker-supplied
-  // addresses to the left of the first untrusted hop.
+  // entries (valid or not) to the left of the first untrusted hop. A malformed
+  // hop where the client address belongs yields no identity, never the
+  // trusted peer's own address.
   let address = peer;
   for (let i = hops.length - 1; i >= 0 && isTrustedProxy(address); i--) {
     address = hops[i];
+    if (!isIP(address)) return "unknown";
   }
   return address;
 }
