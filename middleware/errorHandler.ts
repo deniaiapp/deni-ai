@@ -1,6 +1,7 @@
 import { Context } from "hono";
 import { HTTPException } from "hono/http-exception";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { publicErrorBody } from "../utils/agent/publicError";
 
 interface ErrorWithStatus extends Error {
   statusCode?: number;
@@ -43,15 +44,9 @@ export function errorHandler(err: ErrorWithStatus, c: Context) {
     err.status ||
     500) as ContentfulStatusCode;
 
+  // Never echo exception messages to clients; details stay in server logs.
   return c.json(
-    {
-      error: {
-        message: err.message || "Internal server error",
-        type: err.type || "server_error",
-        param: err.param || null,
-        code: err.code || null,
-      },
-    },
+    publicErrorBody(statusCode, { type: err.type, code: err.code }),
     statusCode,
   );
 }

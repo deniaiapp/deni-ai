@@ -51,6 +51,10 @@ import {
   createUpstreamTimeout,
   type UpstreamTimeout,
 } from "../../utils/agent/upstream";
+import {
+  publicErrorMessage,
+  publicUpstreamErrorResponse,
+} from "../../utils/agent/publicError";
 
 const router = new Hono<{
   Variables: {
@@ -1035,13 +1039,7 @@ async function proxyResponsesUpstream(options: {
       bodyLength: errorBody.length,
     });
     await releaseReservedUsage(auth);
-    return new Response(errorBody, {
-      status: response.status,
-      headers: {
-        "Content-Type":
-          response.headers.get("content-type") || "application/json",
-      },
-    });
+    return publicUpstreamErrorResponse(response.status, errorBody);
   }
 
   if (stream && response.body) {
@@ -1808,13 +1806,7 @@ async function createAnthropicMessagesFailoverResponse(
       errorBody,
     );
     await releaseReservedUsage(auth);
-    return new Response(errorBody, {
-      status: response.status,
-      headers: {
-        "Content-Type":
-          response.headers.get("content-type") || "application/json",
-      },
-    });
+    return publicUpstreamErrorResponse(response.status, errorBody);
   }
 
   if (body.stream && response.body) {
@@ -1976,7 +1968,7 @@ router.post(
         return c.json(
           {
             error: {
-              message: clientResult.error,
+              message: "Internal server error",
               type: "server_error",
               param: null,
               code: "missing_provider_key",
@@ -2106,13 +2098,7 @@ router.post(
           }
 
           await releaseReservedUsage(auth);
-          return new Response(errorBody, {
-            status: response.status,
-            headers: {
-              "Content-Type":
-                response.headers.get("content-type") || "application/json",
-            },
-          });
+          return publicUpstreamErrorResponse(response.status, errorBody);
         }
 
         if (stream && response.body) {
@@ -2453,7 +2439,7 @@ router.post(
         return c.json(
           {
             error: {
-              message: error.message,
+              message: publicErrorMessage(statusCode),
               type: error.type || "api_error",
               param: null,
               code: error.code || null,
@@ -2466,14 +2452,13 @@ router.post(
       if (error instanceof Anthropic.APIError) {
         const statusCode = (error.status || 500) as ContentfulStatusCode;
         const apiError = error as {
-          message: string;
           type?: string;
           code?: string | null;
         };
         return c.json(
           {
             error: {
-              message: apiError.message,
+              message: publicErrorMessage(statusCode),
               type: apiError.type || "api_error",
               param: null,
               code: apiError.code || null,
@@ -2482,12 +2467,10 @@ router.post(
           statusCode,
         );
       }
-
-      const err = error as Error;
       return c.json(
         {
           error: {
-            message: err.message || "Internal server error",
+            message: "Internal server error",
             type: "server_error",
             param: null,
             code: null,
@@ -2520,7 +2503,7 @@ router.post(
         return c.json(
           {
             error: {
-              message: clientResult.error,
+              message: "Internal server error",
               type: "server_error",
               param: null,
               code: "missing_provider_key",
@@ -2547,7 +2530,7 @@ router.post(
         return c.json(
           {
             error: {
-              message: "Unsupported provider for Responses API",
+              message: "Internal server error",
               type: "server_error",
               param: null,
               code: "unsupported_provider",
@@ -2579,7 +2562,7 @@ router.post(
         return c.json(
           {
             error: {
-              message: error.message,
+              message: publicErrorMessage(statusCode),
               type: error.type || "api_error",
               param: null,
               code: error.code || null,
@@ -2592,14 +2575,13 @@ router.post(
       if (error instanceof Anthropic.APIError) {
         const statusCode = (error.status || 500) as ContentfulStatusCode;
         const apiError = error as {
-          message: string;
           type?: string;
           code?: string | null;
         };
         return c.json(
           {
             error: {
-              message: apiError.message,
+              message: publicErrorMessage(statusCode),
               type: apiError.type || "api_error",
               param: null,
               code: apiError.code || null,
@@ -2608,12 +2590,10 @@ router.post(
           statusCode,
         );
       }
-
-      const err = error as Error;
       return c.json(
         {
           error: {
-            message: err.message || "Internal server error",
+            message: "Internal server error",
             type: "server_error",
             param: null,
             code: null,
@@ -2647,7 +2627,7 @@ router.post(
         return c.json(
           {
             error: {
-              message: clientResult.error,
+              message: "Internal server error",
               type: "server_error",
               param: null,
               code: "missing_provider_key",
@@ -2680,7 +2660,7 @@ router.post(
         return c.json(
           {
             error: {
-              message: "Unsupported provider for Responses compact",
+              message: "Internal server error",
               type: "server_error",
               param: null,
               code: "unsupported_provider",
@@ -2715,13 +2695,7 @@ router.post(
         const errorBody = await response.text();
         upstreamTimeout.dispose();
         await releaseReservedUsage(auth);
-        return new Response(errorBody, {
-          status: response.status,
-          headers: {
-            "Content-Type":
-              response.headers.get("content-type") || "application/json",
-          },
-        });
+        return publicUpstreamErrorResponse(response.status, errorBody);
       }
 
       let responseBody: string;
@@ -2757,12 +2731,10 @@ router.post(
     } catch (error) {
       await releaseReservedUsage(auth);
       console.error("Agent responses compact error:", error);
-
-      const err = error as Error;
       return c.json(
         {
           error: {
-            message: err.message || "Internal server error",
+            message: "Internal server error",
             type: "server_error",
             param: null,
             code: null,
@@ -2806,7 +2778,7 @@ router.post(
         return c.json(
           {
             error: {
-              message: "OPENROUTER_API_KEY is required for this endpoint",
+              message: "Internal server error",
               type: "server_error",
               param: null,
               code: "missing_provider_key",
@@ -2896,13 +2868,7 @@ router.post(
         }
 
         await releaseReservedUsage(auth);
-        return new Response(errorBody, {
-          status: response.status,
-          headers: {
-            "Content-Type":
-              response.headers.get("content-type") || "application/json",
-          },
-        });
+        return publicUpstreamErrorResponse(response.status, errorBody);
       }
 
       clearOpenRouterMessagesFailoverState(openRouterModel);
@@ -3020,12 +2986,10 @@ router.post(
     } catch (error) {
       await releaseReservedUsage(auth);
       console.error("Anthropic endpoint error:", error);
-
-      const err = error as Error;
       return c.json(
         {
           error: {
-            message: err.message || "Internal server error",
+            message: "Internal server error",
             type: "server_error",
             param: null,
             code: null,
