@@ -171,7 +171,7 @@ async function fetchBillingProfile(userId: string): Promise<BillingProfile> {
   >(
     `WITH team_billing AS (
        SELECT b.plan_id, b.status, b.current_period_end, b.max_mode_enabled,
-              b.payment_method_fingerprint, b.card_funding, b.card_verified_at,
+              b.payment_method_fingerprint, b.card_verified_at,
               TRUE AS is_team
        FROM billing b
        INNER JOIN member m ON b.organization_id = m.organization_id
@@ -185,7 +185,7 @@ async function fetchBillingProfile(userId: string): Promise<BillingProfile> {
        LIMIT 1
      ), personal_billing AS (
        SELECT plan_id, status, current_period_end, max_mode_enabled,
-              payment_method_fingerprint, card_funding, card_verified_at,
+              payment_method_fingerprint, card_verified_at,
               FALSE AS is_team
        FROM billing
        WHERE user_id = $1 AND organization_id IS NULL
@@ -353,7 +353,6 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
     cardVerifiedAt: billing?.card_verified_at
       ? new Date(billing.card_verified_at).toISOString()
       : null,
-    cardFunding: billing?.card_funding ?? null,
     verifyUrl: getVerifyUrl(),
     upgradeUrl: getUpgradeUrl(),
     isTeam,

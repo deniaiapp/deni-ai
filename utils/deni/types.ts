@@ -4,7 +4,6 @@ export interface DeniUsageInfo {
   status: string | null;
   hasVerifiedPaymentMethod: boolean;
   cardVerifiedAt: string | null;
-  cardFunding: string | null;
   verifyUrl: string;
   upgradeUrl: string;
   isTeam: boolean;
@@ -28,7 +27,6 @@ export interface BillingRow {
   current_period_end: Date | null;
   max_mode_enabled: boolean;
   payment_method_fingerprint: string | null;
-  card_funding: string | null;
   card_verified_at: Date | null;
 }
 

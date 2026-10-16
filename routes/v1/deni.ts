@@ -16,7 +16,6 @@ function getAuthDisabledUsageInfo() {
     tier: 'max' as const,
     hasVerifiedPaymentMethod: true,
     cardVerifiedAt: null,
-    cardFunding: null,
     verifyUrl: getVerifyUrl(),
     upgradeUrl: getUpgradeUrl(),
     isTeam: false,
