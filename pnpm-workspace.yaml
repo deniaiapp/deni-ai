@@ -1,0 +1,4 @@
+allowBuilds:
+  "@openrouter/sdk": true
+  esbuild: true
+  workerd: true

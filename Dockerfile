@@ -1,11 +1,18 @@
+FROM node:22-alpine AS deps
+
+WORKDIR /app
+
+RUN npm install -g pnpm@12.10.1
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile --prod
+
 FROM oven/bun:1-alpine AS build
 
 WORKDIR /app
 
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile --production
-
-COPY server.ts app.ts tsconfig.json ./
+COPY --from=deps /app/node_modules ./node_modules
+COPY package.json server.ts app.ts tsconfig.json ./
 COPY middleware ./middleware
 COPY routes ./routes
 COPY utils ./utils

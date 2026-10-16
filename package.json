@@ -47,7 +47,5 @@
     "typescript": "^7.0.2",
     "wrangler": "^4.149.0"
   },
-  "trustedDependencies": [
-    "@openrouter/sdk"
-  ]
+  "packageManager": "pnpm@12.10.1"
 }

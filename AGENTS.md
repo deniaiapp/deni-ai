@@ -6,15 +6,15 @@
 There is no dedicated `src/` folder; keep new modules close to the feature they support. Follow the existing split: route layer in `routes/`, reusable logic in `utils/`, cross-cutting concerns in `middleware/`.
 
 ## Build, Test, and Development Commands
-Install dependencies with `bun install`.
+Install dependencies with `pnpm install`.
 
-- `bun run server.ts` or `bun start`: start the API locally.
-- `bun --watch server.ts` or `bun dev`: start with auto-reload.
+- `bun run server.ts` or `pnpm start`: start the API locally.
+- `bun --watch server.ts` or `pnpm dev`: start with auto-reload.
 - `bun --env-file=.env.production --watch server.ts`: run against production-style env vars.
 - `bun build server.ts --outdir ./dist --target bun`: create a build output in `dist/`.
-- `bun run typecheck`: run TypeScript checks with `tsc --noEmit`.
-- `bun run dev:worker` / `bun run deploy:worker`: run on local workerd / deploy to Cloudflare Workers (`wrangler.toml`). DB goes through the `DENI_DB` Hyperdrive binding; secrets via `bunx wrangler secret put <NAME>`.
-- `bunx oxlint .` and `bunx oxfmt . --check`: optional lint/format validation using installed tools.
+- `pnpm run typecheck`: run TypeScript checks with `tsc --noEmit`.
+- `pnpm run dev:worker` / `pnpm run deploy:worker`: run on local workerd / deploy to Cloudflare Workers (`wrangler.toml`). DB goes through the `DENI_DB` Hyperdrive binding; secrets via `pnpm exec wrangler secret put <NAME>`.
+- `pnpm exec oxlint .` and `pnpm exec oxfmt . --check`: optional lint/format validation using installed tools.
 
 ## Coding Style & Naming Conventions
 Use TypeScript and keep modules small and single-purpose. Match the surrounding file style rather than reformatting unrelated code. Existing code uses:
@@ -26,7 +26,7 @@ Use TypeScript and keep modules small and single-purpose. Match the surrounding 
 Prefer explicit return types on exported functions and keep API error payloads consistent with current Hono handlers.
 
 ## Testing Guidelines
-There is no automated test suite configured yet. At minimum, run `bun run typecheck` before opening a PR. For endpoint changes, verify manually with `curl` or a REST client against `/health`, `/v1/agent/chat/completions`, or the affected `/v1/deni/*` route.
+There is no automated test suite configured yet. At minimum, run `pnpm run typecheck` before opening a PR. For endpoint changes, verify manually with `curl` or a REST client against `/health`, `/v1/agent/chat/completions`, or the affected `/v1/deni/*` route.
 
 If you add tests, place them near the feature or under a top-level `tests/` directory and use descriptive names such as `deni-usage.test.ts`.
 

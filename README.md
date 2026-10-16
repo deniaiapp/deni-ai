@@ -27,7 +27,7 @@ curl -fsSL https://bun.sh/install | bash
 ## Installation
 
 ```bash
-bun install
+pnpm install
 ```
 
 ### API Endpoint
@@ -251,13 +251,13 @@ bun start
 For automatic restart after a Bun crash:
 
 ```bash
-bun run start:supervised
+pnpm run start:supervised
 ```
 
 Pass server arguments after `--` when needed:
 
 ```bash
-bun run start:supervised -- --port 3000
+pnpm run start:supervised -- --port 3000
 ```
 
 The supervisor restarts only non-zero exits, uses a bounded backoff, and stops
@@ -272,7 +272,7 @@ bun dev
 ### Type Checking
 
 ```bash
-bun run typecheck
+pnpm run typecheck
 ```
 
 ## Project Structure
