@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderClosed, MessageSquare, Plus } from "lucide-react";
+import { FolderClosed, GitCompareArrows, MessageSquare, Plus } from "lucide-react";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
@@ -302,6 +302,17 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
                   <Kbd className="ml-auto opacity-0 transition-opacity duration-150 group-hover/search:opacity-100 bg-sidebar text-sidebar-foreground/80">
                     Ctrl+K
                   </Kbd>
+                </Button>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <Button
+                  className="h-9 w-full justify-start gap-2 rounded-none font-medium"
+                  variant="outline"
+                  render={<Link href="/compare" />}
+                  nativeButton={false}
+                >
+                  <GitCompareArrows className="size-4" />
+                  <span>{t("Compare models")}</span>
                 </Button>
               </SidebarMenuItem>
               <SidebarMenuItem>

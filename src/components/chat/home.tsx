@@ -1,10 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useExtracted } from "next-intl";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { ChatComposer, type ComposerMessage } from "@/components/chat/chat-composer";
 import { AdSlot } from "@/components/ad-slot";
@@ -169,10 +167,6 @@ export default function ChatHome() {
                   onCreateClick={() => push("/settings/projects")}
                   className="flex-wrap"
                 />
-
-                <Button size="sm" nativeButton={false} render={<Link href="/compare" />}>
-                  {t("Compare models")}
-                </Button>
               </div>
             }
             value={input}

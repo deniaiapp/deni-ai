@@ -464,6 +464,55 @@ test("the home page prompt shows at once but is posted only after its chat row e
   expect(harness.pageInvalidate).toHaveBeenCalledExactlyOnceWith({ id: "new-chat" });
 });
 
+test("the home page prompt survives a remount right after mounting, as StrictMode does", async () => {
+  let createRow!: () => void;
+  void trackChatCreation(
+    "remounted-chat",
+    () =>
+      new Promise<void>((resolve) => {
+        createRow = resolve;
+      }),
+    0,
+  );
+  const posted: UIMessage[][] = [];
+  const chat = new Chat({
+    id: "remounted-chat",
+    transport: {
+      sendMessages: async (options) => {
+        await ensureChatCreated("remounted-chat");
+        // Like fetch, an aborted request never reaches the server.
+        if (options.abortSignal?.aborted) {
+          throw new DOMException("Aborted", "AbortError");
+        }
+        posted.push(options.messages);
+        return new ReadableStream<UIMessageChunk>({
+          start(controller) {
+            controller.enqueue({ type: "start", messageId: "answer" });
+            controller.enqueue({ type: "finish", finishReason: "stop" });
+            controller.close();
+          },
+        });
+      },
+      reconnectToStream: async () => null,
+    },
+  });
+  const { rerender } = sendStoredPrompt("remounted-chat", chat);
+
+  // Unmount: run effect cleanups (useChat's stops the chat), keeping refs and state.
+  for (const slot of harness.slots) {
+    if (slot && typeof slot === "object" && "cleanup" in slot) {
+      (slot as EffectSlot).cleanup?.();
+      (slot as EffectSlot).deps = undefined;
+    }
+  }
+  void chat.stop();
+  rerender();
+
+  createRow();
+  await vi.waitFor(() => expect(posted).toHaveLength(1));
+  expect(chat.messages[0]?.parts).toContainEqual({ type: "text", text: "Stored prompt" });
+});
+
 test("a chat that cannot be created keeps the home page prompt, its attachments and its page", async () => {
   let failCreation!: () => void;
   const failedAttempt = new Promise<void>((_resolve, reject) => {
