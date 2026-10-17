@@ -41,6 +41,7 @@ import {
   withStableAttachmentUrls,
   type ResolvedAttachments,
 } from "@/lib/attachments";
+import { stripEarlierTurnReasoning } from "@/lib/chat-reasoning";
 import { inlineTextAttachments } from "@/lib/chat-text-attachments";
 import {
   prepareBinaryAttachments,
@@ -318,15 +319,20 @@ export async function POST(req: Request) {
   }
   let modelMessages: ModelMessage[];
   try {
-    modelMessages = await convertToModelMessages(
-      await fitBinaryAttachmentsToBudget(
-        prepareBinaryAttachments(
-          await inlineTextAttachments(resolvedAttachments.messages, resolvedAttachments.cacheKeys),
+    modelMessages = stripEarlierTurnReasoning(
+      await convertToModelMessages(
+        await fitBinaryAttachmentsToBudget(
+          prepareBinaryAttachments(
+            await inlineTextAttachments(
+              resolvedAttachments.messages,
+              resolvedAttachments.cacheKeys,
+            ),
+          ),
+          attachmentCache,
+          // Not the request signal: like the generation, a download outlives a
+          // client disconnect. The helper bounds it with its own timeout.
+          new AbortController().signal,
         ),
-        attachmentCache,
-        // Not the request signal: like the generation, a download outlives a
-        // client disconnect. The helper bounds it with its own timeout.
-        new AbortController().signal,
       ),
     );
   } catch {
