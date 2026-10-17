@@ -18,6 +18,7 @@ import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useChatBranches } from "@/hooks/use-chat-branches";
 import { useMemorySaveNotice } from "@/hooks/use-memory-save-notice";
 import { useNewChat } from "@/hooks/use-new-chat";
+import { setPreferredModel, usePreferredModel } from "@/hooks/use-preferred-model";
 import { useUsageStatus } from "@/hooks/use-usage-status";
 import { authClient } from "@/lib/auth-client";
 import { ensureChatCreated } from "@/lib/chat-creation";
@@ -236,9 +237,13 @@ export function ChatInterface({
     availableModels.some((entry) => entry.value === initialProjectDefaultModel)
       ? initialProjectDefaultModel
       : null;
-  const fallbackModel = availableModels.some((entry) => entry.value === defaultModel.value)
-    ? defaultModel.value
-    : (availableModels[0]?.value ?? defaultModel.value);
+  const preferredModel = usePreferredModel();
+  const fallbackModel =
+    preferredModel && availableModels.some((entry) => entry.value === preferredModel)
+      ? preferredModel
+      : availableModels.some((entry) => entry.value === defaultModel.value)
+        ? defaultModel.value
+        : (availableModels[0]?.value ?? defaultModel.value);
   const availableModelValues = useMemo(
     () =>
       availableModels.length > 0 ? new Set(availableModels.map((entry) => entry.value)) : undefined,
@@ -410,6 +415,7 @@ export function ChatInterface({
   const handleModelChange = useCallback(
     (value: string) => {
       setModel(value);
+      setPreferredModel(value);
       const nextModel = availableModels.find((entry) => entry.value === value);
       const nextEfforts = nextModel?.efforts;
       if (!nextModel?.supportsProMode) {
