@@ -177,65 +177,74 @@ export function useInitialMessage(params: {
       return;
     }
 
-    const storedData = readStoredInitialMessage();
-    if (storedData) {
-      initialMessageSentRef.current = true;
-      setConsumedSeed({
-        id,
-        seed: seedFromStored(storedData, modelRef.current, availableModelValuesRef.current),
-      });
-      try {
-        sessionStorage.removeItem(INITIAL_MESSAGE_STORAGE_KEY);
-      } catch {
-        // Nothing to clear when storage is unavailable.
-      }
-      emitInitialMessageStore();
+    if (readStoredInitialMessage()) {
+      // Send on the next task, not in this effect: useChat stops its request when
+      // it unmounts, so StrictMode's development remount (or any remount right
+      // after mounting) would cancel the first message.
+      const timer = setTimeout(() => {
+        const storedData = readStoredInitialMessage();
+        if (initialMessageSentRef.current || !storedData) {
+          return;
+        }
+        initialMessageSentRef.current = true;
+        setConsumedSeed({
+          id,
+          seed: seedFromStored(storedData, modelRef.current, availableModelValuesRef.current),
+        });
+        try {
+          sessionStorage.removeItem(INITIAL_MESSAGE_STORAGE_KEY);
+        } catch {
+          // Nothing to clear when storage is unavailable.
+        }
+        emitInitialMessageStore();
 
-      const files = Array.isArray(storedData.files)
-        ? storedData.files.filter(
-            (file): file is { type: "file"; filename?: string; mediaType: string; url: string } =>
-              Boolean(file?.url && file?.mediaType),
-          )
-        : [];
+        const files = Array.isArray(storedData.files)
+          ? storedData.files.filter(
+              (file): file is { type: "file"; filename?: string; mediaType: string; url: string } =>
+                Boolean(file?.url && file?.mediaType),
+            )
+          : [];
 
-      const sendModel =
-        storedData.model &&
-        (!availableModelValuesRef.current || availableModelValuesRef.current.has(storedData.model))
-          ? storedData.model
-          : modelRef.current;
-      const sendSelected = models.find((entry) => entry.value === sendModel);
-      const parsedReasoningEffort =
-        resolveReasoningEffort(sendSelected?.efforts ?? false, storedData.reasoningEffort) ??
-        "high";
-      const parsedProMode = Boolean(storedData.proMode && sendSelected?.supportsProMode);
-      const parsedFastMode = Boolean(storedData.fastMode && sendSelected?.supportsFastMode);
+        const sendModel =
+          storedData.model &&
+          (!availableModelValuesRef.current ||
+            availableModelValuesRef.current.has(storedData.model))
+            ? storedData.model
+            : modelRef.current;
+        const sendSelected = models.find((entry) => entry.value === sendModel);
+        const parsedReasoningEffort =
+          resolveReasoningEffort(sendSelected?.efforts ?? false, storedData.reasoningEffort) ??
+          "high";
+        const parsedProMode = Boolean(storedData.proMode && sendSelected?.supportsProMode);
+        const parsedFastMode = Boolean(storedData.fastMode && sendSelected?.supportsFastMode);
 
-      // The chat row may still be in creation. The chat transport waits for it
-      // (and retries a failed creation) before posting, so send right away: if
-      // creation still fails, the chat keeps the prompt and its attachments and
-      // shows its error, and the stored copy is already gone.
-      Promise.resolve(
-        sendMessageRef.current(
-          {
-            text: storedData.text,
-            files: files.length > 0 ? files : undefined,
-          },
-          {
-            body: {
-              model: sendModel,
-              webSearch: storedData.webSearch,
-              reasoningEffort: parsedReasoningEffort,
-              proMode: parsedProMode,
-              fastMode: parsedFastMode,
-              deepResearch: storedData.deepResearch ?? false,
-              id,
+        // The chat row may still be in creation. The chat transport waits for it
+        // (and retries a failed creation) before posting, so send right away: if
+        // creation still fails, the chat keeps the prompt and its attachments and
+        // shows its error, and the stored copy is already gone.
+        Promise.resolve(
+          sendMessageRef.current(
+            {
+              text: storedData.text,
+              files: files.length > 0 ? files : undefined,
             },
-          },
-        ),
-      ).finally(() => {
-        onMessageSentRef.current();
-      });
-      return;
+            {
+              body: {
+                model: sendModel,
+                webSearch: storedData.webSearch,
+                reasoningEffort: parsedReasoningEffort,
+                proMode: parsedProMode,
+                fastMode: parsedFastMode,
+                deepResearch: storedData.deepResearch ?? false,
+                id,
+              },
+            },
+          ),
+        ).finally(() => {
+          onMessageSentRef.current();
+        });
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
     const initialMessage = searchParams.get("message");
