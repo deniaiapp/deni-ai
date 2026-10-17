@@ -32,7 +32,9 @@ import {
   isQuestionnaireInput,
   isQuestionnaireToolPart,
 } from "@/components/chat/questionnaire-tool";
+import { IntelligentUiMessageProvider } from "@/components/chat/intelligent-ui/intelligent-ui-context";
 import type { QuestionnaireToolOutput } from "@/lib/chat-tools/questionnaire";
+import { stripIntelligentUiBlocks } from "@/lib/intelligent-ui/schema";
 import { hasSuccessfulToolPart } from "@/components/chat/chat-utils";
 import type { ReasoningEffort } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -168,7 +170,11 @@ function AssistantMessage({
       {textParts.map((part, i) => (
         <Message key={`${message.id}-text-${i}`} from={message.role}>
           <MessageContent>
-            <MessageResponse>{part.text}</MessageResponse>
+            <IntelligentUiMessageProvider
+              value={{ messageId: message.id, isStreaming: isStreamingThis }}
+            >
+              <MessageResponse>{part.text}</MessageResponse>
+            </IntelligentUiMessageProvider>
           </MessageContent>
           {i === textParts.length - 1 && state.showActions && (
             <MessageActions>
@@ -309,7 +315,7 @@ function AssistantMessage({
                   onClick={() =>
                     speech.toggle(
                       `${message.id}-${i}`,
-                      part.text,
+                      stripIntelligentUiBlocks(part.text),
                       locale === "ja" ? "ja-JP" : "en-US",
                     )
                   }

@@ -1,6 +1,7 @@
 import type { UIMessage } from "ai";
 import { z } from "zod";
 import { comparisonToolNames } from "@/lib/comparison-settings";
+import { visualLayouts } from "@/lib/intelligent-ui/prompt";
 
 export const ChatRequestSchema = z.object({
   id: z.string().min(1).max(200),
@@ -29,6 +30,7 @@ export const ChatRequestSchema = z.object({
   deepResearch: z.boolean().optional(),
   responseStyle: z.enum(["retry", "detailed", "concise"]).optional(),
   forceWebSearch: z.boolean().optional(),
+  visualLayout: z.enum(visualLayouts).optional(),
   additionalInstruction: z.string().trim().min(1).max(4000).optional(),
 });
 

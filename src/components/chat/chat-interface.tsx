@@ -10,6 +10,7 @@ import { ArtifactPreviewProvider } from "@/components/chat/artifact-preview-cont
 import { ChatComposer, type ComposerMessage } from "@/components/chat/chat-composer";
 import { ChatInterfaceHeader } from "@/components/chat/chat-interface-header";
 import { ChatInterfaceMessages } from "@/components/chat/chat-interface-messages";
+import { IntelligentUiActionsProvider } from "@/components/chat/intelligent-ui/intelligent-ui-context";
 import { UsageAlerts } from "@/components/chat/usage-alerts";
 import { useAvailableModels } from "@/hooks/use-available-models";
 import { useChatPageSync } from "@/hooks/use-chat-page-sync";
@@ -20,6 +21,7 @@ import { useMemorySaveNotice } from "@/hooks/use-memory-save-notice";
 import { useNewChat } from "@/hooks/use-new-chat";
 import { setPreferredModel, usePreferredModel } from "@/hooks/use-preferred-model";
 import { useUsageStatus } from "@/hooks/use-usage-status";
+import { getVisualLayout } from "@/hooks/use-visual-layout";
 import { authClient } from "@/lib/auth-client";
 import { ensureChatCreated } from "@/lib/chat-creation";
 import { CHAT_OLDER_MESSAGE_COUNT, mergeMessageWindow } from "@/lib/chat-messages";
@@ -180,9 +182,11 @@ export function ChatInterface({
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        body: {
+        // Read on every request so a layout change applies to the next answer.
+        body: () => ({
           id,
-        },
+          visualLayout: getVisualLayout(),
+        }),
         // A chat started on the client may still be creating its row, or need a
         // retry after a failed attempt; /api/chat rejects chats without one.
         fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -384,6 +388,28 @@ export function ChatInterface({
       setInput,
     });
 
+  const isIntelligentUiSendBlocked =
+    isSubmitBlocked || hasPendingQuestionnaire || status === "submitted" || status === "streaming";
+  // Intelligent UI buttons and forms send their prompt as the next user message
+  // with the current composer settings, leaving any draft in the composer alone.
+  const intelligentUiActions = {
+    sendPrompt: isIntelligentUiSendBlocked
+      ? null
+      : (text: string) =>
+          submitComposerMessage({
+            message: { text, files: [] },
+            options: { model, webSearch, reasoningEffort, proMode, fastMode, deepResearch },
+            id,
+            isSubmitBlocked: false,
+            usageTier,
+            sendMessage,
+            invalidateChats: () => {
+              void utils.chat.getChats.invalidate();
+            },
+            setInput: () => undefined,
+          }),
+  };
+
   // Adjust invalid model during render (avoids setState-in-effect cascade).
   if (!selectedModel && availableModels.length > 0) {
     setModel(fallbackModel);
@@ -448,88 +474,90 @@ export function ChatInterface({
 
   return (
     <ArtifactPreviewProvider>
-      <ArtifactPreviewPanel />
-      <div className="flex h-full flex-1 min-h-0 flex-col w-full max-w-3xl mx-auto p-4 overflow-hidden">
-        <ChatInterfaceHeader
-          chatId={id}
-          messages={messages}
-          initialTitle={initialTitle}
-          initialProjectId={initialProjectId}
-          initialProjectName={initialProjectName}
-        />
-        <ChatInterfaceMessages
-          messages={messages}
-          groupedMessages={groupedMessages}
-          messageRenderKeys={messageRenderKeys}
-          messageIndexMap={messageIndexMap}
-          status={status}
-          showMessageActions={showMessageActions}
-          isSubmitBlocked={isSubmitBlocked || hasPendingQuestionnaire}
-          isWaitingForResponse={isWaitingForResponse}
-          sessionUserId={session.data?.session?.userId}
-          isAnonymous={isAnonymous}
-          usageTier={usageQuery.data?.tier ?? null}
-          error={error}
-          initialProjectId={initialProjectId}
-          requestBody={requestBody}
-          onRegenerate={handleRegenerate}
-          availableModels={availableModels}
-          onModelChange={handleModelChange}
-          onWebSearchChange={handleWebSearchChange}
-          onQuestionnaireComplete={handleQuestionnaireComplete}
-          webSearchAvailable={features.webSearch}
-          isActive={isActive}
-          hasMore={hasMore}
-          isLoadingOlder={isLoadingOlder}
-          onLoadOlder={
-            status === "streaming" || status === "submitted" ? undefined : loadOlderMessages
-          }
-        />
+      <IntelligentUiActionsProvider value={intelligentUiActions}>
+        <ArtifactPreviewPanel />
+        <div className="flex h-full flex-1 min-h-0 flex-col w-full max-w-3xl mx-auto p-4 overflow-hidden">
+          <ChatInterfaceHeader
+            chatId={id}
+            messages={messages}
+            initialTitle={initialTitle}
+            initialProjectId={initialProjectId}
+            initialProjectName={initialProjectName}
+          />
+          <ChatInterfaceMessages
+            messages={messages}
+            groupedMessages={groupedMessages}
+            messageRenderKeys={messageRenderKeys}
+            messageIndexMap={messageIndexMap}
+            status={status}
+            showMessageActions={showMessageActions}
+            isSubmitBlocked={isSubmitBlocked || hasPendingQuestionnaire}
+            isWaitingForResponse={isWaitingForResponse}
+            sessionUserId={session.data?.session?.userId}
+            isAnonymous={isAnonymous}
+            usageTier={usageQuery.data?.tier ?? null}
+            error={error}
+            initialProjectId={initialProjectId}
+            requestBody={requestBody}
+            onRegenerate={handleRegenerate}
+            availableModels={availableModels}
+            onModelChange={handleModelChange}
+            onWebSearchChange={handleWebSearchChange}
+            onQuestionnaireComplete={handleQuestionnaireComplete}
+            webSearchAvailable={features.webSearch}
+            isActive={isActive}
+            hasMore={hasMore}
+            isLoadingOlder={isLoadingOlder}
+            onLoadOlder={
+              status === "streaming" || status === "submitted" ? undefined : loadOlderMessages
+            }
+          />
 
-        <UsageAlerts
-          status={{
-            isAnonymous,
-            isSignupLimited,
-            isUsageLow,
-            isUsageBlocked,
-            canEnableMaxMode,
-            billingDisabled,
-          }}
-          usage={{
-            remaining: remainingUsage,
-            unitLabel: usageUnitLabel,
-            categoryLabel: usageCategoryLabel,
-            tierLabel: usageTierLabel,
-          }}
-          enableMaxMode={enableMaxMode}
-          onRefreshUsage={() => usageQuery.refetch()}
-        />
+          <UsageAlerts
+            status={{
+              isAnonymous,
+              isSignupLimited,
+              isUsageLow,
+              isUsageBlocked,
+              canEnableMaxMode,
+              billingDisabled,
+            }}
+            usage={{
+              remaining: remainingUsage,
+              unitLabel: usageUnitLabel,
+              categoryLabel: usageCategoryLabel,
+              tierLabel: usageTierLabel,
+            }}
+            enableMaxMode={enableMaxMode}
+            onRefreshUsage={() => usageQuery.refetch()}
+          />
 
-        <ChatComposer
-          className="mt-4"
-          globalDrop={isActive}
-          value={input}
-          onValueChange={setInput}
-          onSubmit={handleSubmit}
-          onStop={handleStop}
-          status={status}
-          isSubmitDisabled={isSubmitBlocked || hasPendingQuestionnaire}
-          availableModels={availableModels}
-          model={model}
-          onModelChange={handleModelChange}
-          webSearch={webSearch}
-          onWebSearchChange={(enabled) => setWebSearch(enabled && features.webSearch)}
-          webSearchAvailable={features.webSearch}
-          reasoningEffort={reasoningEffort}
-          onReasoningEffortChange={setReasoningEffort}
-          proMode={proMode}
-          onProModeChange={setProMode}
-          fastMode={fastMode}
-          onFastModeChange={setFastMode}
-          deepResearch={deepResearch}
-          onDeepResearchChange={setDeepResearch}
-        />
-      </div>
+          <ChatComposer
+            className="mt-4"
+            globalDrop={isActive}
+            value={input}
+            onValueChange={setInput}
+            onSubmit={handleSubmit}
+            onStop={handleStop}
+            status={status}
+            isSubmitDisabled={isSubmitBlocked || hasPendingQuestionnaire}
+            availableModels={availableModels}
+            model={model}
+            onModelChange={handleModelChange}
+            webSearch={webSearch}
+            onWebSearchChange={(enabled) => setWebSearch(enabled && features.webSearch)}
+            webSearchAvailable={features.webSearch}
+            reasoningEffort={reasoningEffort}
+            onReasoningEffortChange={setReasoningEffort}
+            proMode={proMode}
+            onProModeChange={setProMode}
+            fastMode={fastMode}
+            onFastModeChange={setFastMode}
+            deepResearch={deepResearch}
+            onDeepResearchChange={setDeepResearch}
+          />
+        </div>
+      </IntelligentUiActionsProvider>
     </ArtifactPreviewProvider>
   );
 }

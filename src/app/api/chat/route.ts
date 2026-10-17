@@ -190,6 +190,7 @@ export async function POST(req: Request) {
     deepResearch = false,
     responseStyle,
     forceWebSearch = false,
+    visualLayout = "rich",
     additionalInstruction,
   } = parsedBody.data;
 
@@ -639,6 +640,8 @@ export async function POST(req: Request) {
     interactive: !isComparison,
     deepResearch: deepResearchEnabled,
     forceWebSearch: forceWebSearchEnabled,
+    // Comparison panes cannot send the follow-ups that Intelligent UI actions rely on.
+    visualLayout: isComparison ? undefined : visualLayout,
   });
 
   let requestMessages: ModelMessage[] = modelMessages;

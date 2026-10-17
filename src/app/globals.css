@@ -421,6 +421,36 @@
   }
 }
 
+/* Intelligent UI: categorical chart slots (fixed order, validated for CVD
+   separation in both modes) and status colors, independent of theme presets. */
+.intelligent-ui {
+  --iui-series-1: #2a78d6;
+  --iui-series-2: #eb6834;
+  --iui-series-3: #1baf7a;
+  --iui-series-4: #eda100;
+  --iui-series-5: #e87ba4;
+  --iui-series-6: #008300;
+  --iui-series-7: #6250d6;
+  --iui-series-8: #e34948;
+  --iui-grid: color-mix(in oklab, var(--foreground) 9%, transparent);
+  --iui-axis: color-mix(in oklab, var(--foreground) 22%, transparent);
+  --iui-good: #006300;
+  --iui-critical: #d03b3b;
+}
+
+.dark .intelligent-ui {
+  --iui-series-1: #3987e5;
+  --iui-series-2: #d95926;
+  --iui-series-3: #199e70;
+  --iui-series-4: #c98500;
+  --iui-series-5: #d55181;
+  --iui-series-6: #008300;
+  --iui-series-7: #9085e9;
+  --iui-series-8: #e66767;
+  --iui-good: #0ca30c;
+  --iui-critical: #e66767;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
