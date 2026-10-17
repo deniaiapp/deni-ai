@@ -232,20 +232,18 @@ function AssistantMessage({
                     </Button>
                   </form>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => regenerateMessage()}>
+                  <DropdownMenuItem onClick={() => regenerateMessage()}>
                     <RefreshCcwIcon className="size-4" />
                     {t("Regenerate")}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem
-                    onSelect={() => regenerateMessage({ responseStyle: "detailed" })}
+                    onClick={() => regenerateMessage({ responseStyle: "detailed" })}
                   >
                     <ListFilterIcon className="size-4" />
                     {t("Expand answer")}
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onSelect={() => regenerateMessage({ responseStyle: "concise" })}
-                  >
+                  <DropdownMenuItem onClick={() => regenerateMessage({ responseStyle: "concise" })}>
                     <ListFilterIcon className="size-4" />
                     {t("Shorten answer")}
                   </DropdownMenuItem>
@@ -253,7 +251,7 @@ function AssistantMessage({
                     <>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
-                        onSelect={() => {
+                        onClick={() => {
                           onWebSearchChange(true);
                           regenerateMessage({
                             webSearch: true,
@@ -265,7 +263,7 @@ function AssistantMessage({
                         {t("Use web search")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
-                        onSelect={() => {
+                        onClick={() => {
                           onWebSearchChange(true);
                           regenerateMessage({
                             webSearch: true,
@@ -288,7 +286,7 @@ function AssistantMessage({
                       {availableModels.map((modelOption) => (
                         <DropdownMenuItem
                           key={modelOption.value}
-                          onSelect={() => {
+                          onClick={() => {
                             onModelChange(modelOption.value);
                             regenerateMessage({ model: modelOption.value });
                           }}
