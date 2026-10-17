@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, Moon, Sun, Monitor } from "lucide-react";
+import { Check, Moon, Sun, Monitor, Sparkles, AlignLeft } from "lucide-react";
 import { useExtracted } from "next-intl";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
@@ -9,6 +9,7 @@ import { SettingsPageShell } from "@/components/settings-page-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useThemePreset } from "@/hooks/use-theme-preset";
+import { setVisualLayout, useVisualLayout } from "@/hooks/use-visual-layout";
 import { changeLocaleAction } from "@/lib/locale-actions";
 import { type ThemeName, themePresets } from "@/lib/theme-presets";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ export default function AppearancePage() {
   const hasMounted = useHasMounted();
   const { theme, setTheme } = useTheme();
   const { preset, setPreset } = useThemePreset();
+  const visualLayout = useVisualLayout();
   const activeTheme = preset;
   // Avoid hydration mismatch: server always sees theme as undefined.
   const activeMode = hasMounted ? theme : undefined;
@@ -75,6 +77,23 @@ export default function AppearancePage() {
     { value: "system", label: t("System"), icon: Monitor },
   ];
 
+  const visualLayoutOptions = [
+    {
+      value: "rich",
+      icon: Sparkles,
+      title: t("Rich"),
+      description: t(
+        "Answers can include charts, checklists, calculators, and other interactive elements when they help",
+      ),
+    },
+    {
+      value: "simple",
+      icon: AlignLeft,
+      title: t("Simple"),
+      description: t("Mostly text. Visual elements appear only when you ask for them"),
+    },
+  ] as const;
+
   return (
     <SettingsPageShell title={t("Appearance")} description={t("Customize your visual experience")}>
       {/* Language Section */}
@@ -108,6 +127,47 @@ export default function AppearancePage() {
                 {label}
               </Button>
             ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Intelligent UI Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm font-medium">{t("Layout and visuals")}</CardTitle>
+          <CardDescription>
+            {t("Choose how much answers use visual and interactive elements")}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup">
+            {visualLayoutOptions.map(({ value, icon: Icon, title, description }) => {
+              const selected = hasMounted && visualLayout === value;
+              return (
+                <button
+                  key={value}
+                  aria-checked={selected}
+                  type="button"
+                  role="radio"
+                  onClick={() => setVisualLayout(value)}
+                  className={cn(
+                    "flex items-start gap-3 rounded-xl border p-3 text-left transition-colors",
+                    selected ? "border-foreground bg-accent" : "border-border hover:bg-accent/50",
+                  )}
+                >
+                  <Icon className="mt-0.5 size-4 shrink-0" />
+                  <span className="min-w-0 flex-1 space-y-0.5">
+                    <span className="block text-sm font-medium">{title}</span>
+                    <span className="block text-xs text-muted-foreground">{description}</span>
+                  </span>
+                  {selected && (
+                    <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                      <Check className="size-3" />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

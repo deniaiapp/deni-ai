@@ -13,6 +13,8 @@ import {
 } from "@/components/ai-elements/code-block";
 import { Button } from "@/components/ui/button";
 import { useArtifactPreview } from "@/components/chat/artifact-preview-context";
+import { IntelligentUiBlockView } from "@/components/chat/intelligent-ui/intelligent-ui-block";
+import { INTELLIGENT_UI_LANGUAGE } from "@/lib/intelligent-ui/schema";
 import { cn } from "@/lib/utils";
 
 const PREVIEWABLE = new Set(["html", "htm", "jsx", "tsx", "react"]);
@@ -70,7 +72,7 @@ export function StreamdownCode({ className, children, ...props }: StreamdownCode
   const code = extractText(children).replace(/\n$/, "");
   const isPreviewable = PREVIEWABLE.has(language.toLowerCase());
 
-  return (
+  const codeBlock = (
     <CodeBlock code={code} language={language} showLineNumbers={false}>
       <CodeBlockHeader>
         <CodeBlockTitle>
@@ -93,5 +95,11 @@ export function StreamdownCode({ className, children, ...props }: StreamdownCode
         </CodeBlockActions>
       </CodeBlockHeader>
     </CodeBlock>
+  );
+
+  return language === INTELLIGENT_UI_LANGUAGE ? (
+    <IntelligentUiBlockView code={code} fallback={codeBlock} />
+  ) : (
+    codeBlock
   );
 }

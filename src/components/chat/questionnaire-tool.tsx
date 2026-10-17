@@ -275,7 +275,7 @@ function QuestionnaireForm({
         className="flex flex-col gap-3"
       >
         <legend
-          className="w-full text-base font-medium text-foreground"
+          className="mb-3 w-full text-base font-medium text-foreground"
           ref={legendRef}
           tabIndex={-1}
         >

@@ -24,17 +24,18 @@ import {
 } from "@/components/ai-elements/message";
 import {
   AssistantMessageChainOfThought,
-  AssistantMessageImageParts,
+  AssistantMessageRetiredToolNotices,
   AssistantMessageSources,
-  AssistantMessageVideoParts,
 } from "@/components/chat/assistant-message-parts";
 import {
   AssistantMessageQuestionnaireParts,
   isQuestionnaireInput,
   isQuestionnaireToolPart,
 } from "@/components/chat/questionnaire-tool";
+import { IntelligentUiMessageProvider } from "@/components/chat/intelligent-ui/intelligent-ui-context";
 import type { QuestionnaireToolOutput } from "@/lib/chat-tools/questionnaire";
-import { isImageToolPart, isVideoToolPart } from "@/components/chat/chat-utils";
+import { stripIntelligentUiBlocks } from "@/lib/intelligent-ui/schema";
+import { hasSuccessfulToolPart } from "@/components/chat/chat-utils";
 import type { ReasoningEffort } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import {
@@ -132,8 +133,8 @@ function AssistantMessage({
         part.type === "reasoning" || part.type === "tool-search" || part.type === "tool-browse",
     ) ?? [];
   const textParts = message.parts?.filter((part) => part.type === "text") ?? [];
-  const videoToolParts = message.parts?.filter(isVideoToolPart) ?? [];
-  const imageToolParts = message.parts?.filter(isImageToolPart) ?? [];
+  const hasImageResult = hasSuccessfulToolPart(message.parts, "tool-image");
+  const hasVideoResult = hasSuccessfulToolPart(message.parts, "tool-video");
   const questionnaireToolParts = message.parts?.filter(isQuestionnaireToolPart) ?? [];
   const sourceParts = message.parts?.filter((part) => part.type === "source-url") ?? [];
 
@@ -169,7 +170,11 @@ function AssistantMessage({
       {textParts.map((part, i) => (
         <Message key={`${message.id}-text-${i}`} from={message.role}>
           <MessageContent>
-            <MessageResponse>{part.text}</MessageResponse>
+            <IntelligentUiMessageProvider
+              value={{ messageId: message.id, isStreaming: isStreamingThis }}
+            >
+              <MessageResponse>{part.text}</MessageResponse>
+            </IntelligentUiMessageProvider>
           </MessageContent>
           {i === textParts.length - 1 && state.showActions && (
             <MessageActions>
@@ -310,7 +315,7 @@ function AssistantMessage({
                   onClick={() =>
                     speech.toggle(
                       `${message.id}-${i}`,
-                      part.text,
+                      stripIntelligentUiBlocks(part.text),
                       locale === "ja" ? "ja-JP" : "en-US",
                     )
                   }
@@ -340,8 +345,10 @@ function AssistantMessage({
         </Message>
       ))}
 
-      <AssistantMessageVideoParts messageId={message.id} videoToolParts={videoToolParts} />
-      <AssistantMessageImageParts messageId={message.id} imageToolParts={imageToolParts} />
+      <AssistantMessageRetiredToolNotices
+        showImageNotice={hasImageResult}
+        showVideoNotice={hasVideoResult}
+      />
       <AssistantMessageQuestionnaireParts
         isInteractive={state.isLastMessage && isActive}
         onComplete={onQuestionnaireComplete}

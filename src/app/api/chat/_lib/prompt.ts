@@ -1,3 +1,5 @@
+import { buildIntelligentUiInstruction, type VisualLayout } from "@/lib/intelligent-ui/prompt";
+
 type BuildSystemPromptParams = {
   currentDate: string;
   persistentMemory: string | null;
@@ -10,6 +12,8 @@ type BuildSystemPromptParams = {
   interactive?: boolean;
   deepResearch?: boolean;
   forceWebSearch?: boolean;
+  /** Intelligent UI layout preference; omit to disable Intelligent UI. */
+  visualLayout?: VisualLayout;
 };
 
 export function buildChatSystemPrompt({
@@ -24,6 +28,7 @@ export function buildChatSystemPrompt({
   interactive = true,
   deepResearch = false,
   forceWebSearch = false,
+  visualLayout,
 }: BuildSystemPromptParams): string {
   const responseStyleInstruction =
     responseStyle === "detailed"
@@ -87,6 +92,7 @@ export function buildChatSystemPrompt({
       : "- If you're unsure about something, acknowledge the uncertainty rather than making up information.",
     "- Format code blocks with appropriate syntax highlighting.",
     "- Use markdown formatting for better readability.",
+    visualLayout ? buildIntelligentUiInstruction(visualLayout) : null,
     additionalInstructionPrompt,
     responseStyleInstruction,
     researchInstruction,
