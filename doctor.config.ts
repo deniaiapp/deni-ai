@@ -11,8 +11,6 @@ export default {
       "src/components/ui/**",
       // Shared primitives/helpers — not React component entry files
       "src/lib/base-ui-compat.tsx",
-      // Standalone Veo UI is WIP; chat tools + API routes still use @/lib/veo
-      "src/components/veo/**",
       // Type-only module augmentation for better-auth-ui plugins
       "src/lib/auth/auth-plugin.ts",
     ],

@@ -1,5 +1,4 @@
 const ALLOWED_EXTERNAL_PROTOCOLS = new Set(["http:", "https:", "mailto:", "tel:"]);
-const ALLOWED_DOWNLOAD_PROTOCOLS = new Set(["http:", "https:", "data:", "blob:"]);
 
 /**
  * True for same-origin paths only.
@@ -25,23 +24,6 @@ export function toSafeHref(value: string | null | undefined, fallback = "#") {
   try {
     const parsed = new URL(value);
     return ALLOWED_EXTERNAL_PROTOCOLS.has(parsed.protocol) ? parsed.toString() : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-export function toSafeDownloadHref(value: string | null | undefined, fallback = "#") {
-  if (!value) {
-    return fallback;
-  }
-
-  if (isSameOriginPath(value)) {
-    return value;
-  }
-
-  try {
-    const parsed = new URL(value);
-    return ALLOWED_DOWNLOAD_PROTOCOLS.has(parsed.protocol) ? parsed.toString() : fallback;
   } catch {
     return fallback;
   }

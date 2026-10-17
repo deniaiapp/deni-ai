@@ -99,6 +99,7 @@ export { default as History } from "lucide-react/dist/esm/icons/rotate-ccw-clock
 export { default as Home } from "lucide-react/dist/esm/icons/house.mjs";
 export { default as Image } from "lucide-react/dist/esm/icons/image.mjs";
 export { default as ImageIcon } from "lucide-react/dist/esm/icons/image.mjs";
+export { default as ImageOffIcon } from "lucide-react/dist/esm/icons/image-off.mjs";
 export { default as InfoIcon } from "lucide-react/dist/esm/icons/info.mjs";
 export { default as Key } from "lucide-react/dist/esm/icons/key.mjs";
 export { default as KeyRound } from "lucide-react/dist/esm/icons/key-round.mjs";
@@ -203,6 +204,7 @@ export { default as UserX } from "lucide-react/dist/esm/icons/user-x.mjs";
 export { default as Users } from "lucide-react/dist/esm/icons/users.mjs";
 export { default as UsersIcon } from "lucide-react/dist/esm/icons/users.mjs";
 export { default as VideoIcon } from "lucide-react/dist/esm/icons/video.mjs";
+export { default as VideoOffIcon } from "lucide-react/dist/esm/icons/video-off.mjs";
 export { default as Volume2Icon } from "lucide-react/dist/esm/icons/volume-2.mjs";
 export { default as Workflow } from "lucide-react/dist/esm/icons/workflow.mjs";
 export { default as Wrench } from "lucide-react/dist/esm/icons/wrench.mjs";

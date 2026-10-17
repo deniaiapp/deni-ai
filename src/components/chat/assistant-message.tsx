@@ -24,9 +24,8 @@ import {
 } from "@/components/ai-elements/message";
 import {
   AssistantMessageChainOfThought,
-  AssistantMessageImageParts,
+  AssistantMessageRetiredToolNotices,
   AssistantMessageSources,
-  AssistantMessageVideoParts,
 } from "@/components/chat/assistant-message-parts";
 import {
   AssistantMessageQuestionnaireParts,
@@ -34,7 +33,7 @@ import {
   isQuestionnaireToolPart,
 } from "@/components/chat/questionnaire-tool";
 import type { QuestionnaireToolOutput } from "@/lib/chat-tools/questionnaire";
-import { isImageToolPart, isVideoToolPart } from "@/components/chat/chat-utils";
+import { hasSuccessfulToolPart } from "@/components/chat/chat-utils";
 import type { ReasoningEffort } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
 import {
@@ -132,8 +131,8 @@ function AssistantMessage({
         part.type === "reasoning" || part.type === "tool-search" || part.type === "tool-browse",
     ) ?? [];
   const textParts = message.parts?.filter((part) => part.type === "text") ?? [];
-  const videoToolParts = message.parts?.filter(isVideoToolPart) ?? [];
-  const imageToolParts = message.parts?.filter(isImageToolPart) ?? [];
+  const hasImageResult = hasSuccessfulToolPart(message.parts, "tool-image");
+  const hasVideoResult = hasSuccessfulToolPart(message.parts, "tool-video");
   const questionnaireToolParts = message.parts?.filter(isQuestionnaireToolPart) ?? [];
   const sourceParts = message.parts?.filter((part) => part.type === "source-url") ?? [];
 
@@ -340,8 +339,10 @@ function AssistantMessage({
         </Message>
       ))}
 
-      <AssistantMessageVideoParts messageId={message.id} videoToolParts={videoToolParts} />
-      <AssistantMessageImageParts messageId={message.id} imageToolParts={imageToolParts} />
+      <AssistantMessageRetiredToolNotices
+        showImageNotice={hasImageResult}
+        showVideoNotice={hasVideoResult}
+      />
       <AssistantMessageQuestionnaireParts
         isInteractive={state.isLastMessage && isActive}
         onComplete={onQuestionnaireComplete}
