@@ -15,8 +15,18 @@ export function DocumentTitle({ title }: { title?: string | null }) {
 
   useEffect(() => {
     const previous = document.title;
-    document.title = next;
+    const apply = () => {
+      if (document.title !== next) {
+        document.title = next;
+      }
+    };
+    apply();
+    // Client navigations re-insert the route's metadata <title> after this
+    // effect runs; reapply before paint so the default title never shows.
+    const observer = new MutationObserver(apply);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
     return () => {
+      observer.disconnect();
       if (document.title === next) {
         document.title = previous;
       }

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Suspense } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -6,6 +7,12 @@ import { RuntimeAppProviders } from "@/components/runtime-app-providers";
 import { Spinner } from "@/components/ui/spinner";
 import { getSession } from "@/lib/get-session";
 import { RETURN_TO_HEADER, signInPath } from "@/lib/sign-in-redirect";
+
+// App routes set their own titles client-side (DocumentTitle); keep the
+// marketing homepage title out of signed-in tabs and client navigations.
+export const metadata: Metadata = {
+  title: { absolute: "Deni AI" },
+};
 
 /** Content-area only — AppShell (sidebar) stays visible while auth resolves. */
 function AppContentFallback() {
