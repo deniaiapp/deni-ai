@@ -11,6 +11,7 @@ import { AdSlot } from "@/components/ad-slot";
 import { ProjectSelect } from "@/components/projects/project-select";
 import { useAvailableModels } from "@/hooks/use-available-models";
 import { useNewChat } from "@/hooks/use-new-chat";
+import { setPreferredModel, usePreferredModel } from "@/hooks/use-preferred-model";
 import { defaultModel, getPreferredReasoningEffort, type ReasoningEffort } from "@/lib/constants";
 import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc/react";
@@ -43,7 +44,8 @@ export default function ChatHome() {
   const { availableModels, platformCapabilities, canShowAds } = useAvailableModels();
   const { features } = platformCapabilities;
   const [input, setInput] = useState("");
-  const [model, setModel] = useState(defaultModel.value);
+  const preferredModel = usePreferredModel();
+  const [modelOverride, setModel] = useState<string | null>(null);
   const [webSearch, setWebSearch] = useState(false);
   const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>(() =>
     getPreferredReasoningEffort(defaultModel.efforts),
@@ -55,18 +57,19 @@ export default function ChatHome() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const projectsQuery = trpc.projects.list.useQuery();
-  const selectedModel = availableModels.find((entry) => entry.value === model);
+  const isAvailable = (value: string | null): value is string =>
+    value !== null && availableModels.some((entry) => entry.value === value);
+  // Derive instead of storing a fallback: the plan tier loads after the first
+  // render, and a paid preferred model must win once it becomes available.
+  const model = isAvailable(modelOverride)
+    ? modelOverride
+    : isAvailable(preferredModel)
+      ? preferredModel
+      : isAvailable(defaultModel.value) || availableModels.length === 0
+        ? defaultModel.value
+        : availableModels[0].value;
   const effectiveWebSearch = features.webSearch && webSearch;
   const effectiveDeepResearch = features.webSearch && deepResearch;
-
-  // Fall back when the current selection is not allowed on this plan.
-  if (!selectedModel && availableModels.length > 0) {
-    setModel(
-      availableModels.some((entry) => entry.value === defaultModel.value)
-        ? defaultModel.value
-        : availableModels[0].value,
-    );
-  }
 
   const handleProjectChange = (nextProjectId: string | null) => {
     setProjectId(nextProjectId);
@@ -124,6 +127,7 @@ export default function ChatHome() {
 
   const handleModelChange = (value: string) => {
     setModel(value);
+    setPreferredModel(value);
     const nextModel = availableModels.find((entry) => entry.value === value);
     if (!nextModel?.supportsProMode) {
       setProMode(false);
