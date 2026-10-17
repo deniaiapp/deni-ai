@@ -228,9 +228,9 @@
   --sh-space: #e6edf3;
 }
 
+/* sugar-high already separates lines with "\n"; block lines would double the spacing. */
 .sh__line {
-  display: block;
-  min-height: 1.25em;
+  display: inline;
 }
 
 /* ========================================
