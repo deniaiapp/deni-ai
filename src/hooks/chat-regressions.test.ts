@@ -371,6 +371,51 @@ test("an assistant-only server window recovers the matching pending message", as
   expect(await recoverPending(pending, sliceLatestMessages(complete).messages)).toEqual(complete);
 });
 
+test("a stream dropped by a sleeping phone is reported as a disconnect", async () => {
+  const onFinish = vi.fn();
+  const chat = new Chat({
+    onFinish,
+    transport: {
+      sendMessages: async () =>
+        new ReadableStream<UIMessageChunk>({
+          start(controller) {
+            controller.enqueue({ type: "start", messageId: "a1" });
+            controller.enqueue({ type: "text-start", id: "text" });
+            controller.enqueue({ type: "text-delta", id: "text", delta: "Partial" });
+            // What iOS Safari throws when it suspends the page mid-stream.
+            controller.error(new TypeError("Load failed"));
+          },
+        }),
+      reconnectToStream: async () => null,
+    },
+  });
+  await chat.sendMessage({ text: "Question one" });
+  expect(chat.status).toBe("error");
+  expect(onFinish).toHaveBeenCalledWith(expect.objectContaining({ isDisconnect: true }));
+  chat.clearError();
+  expect(chat.status).toBe("ready");
+  expect(chat.error).toBeUndefined();
+});
+
+test("recovery reports when the saved answer has been read back", async () => {
+  const { complete } = pendingConversation();
+  harness.pageFetch.mockResolvedValue(sliceLatestMessages(complete));
+  const onRecovered = vi.fn();
+  render(() =>
+    useChatPageSync({
+      id: "chat",
+      status: "ready",
+      isWaitingForResponse: true,
+      activeGenerationId: null,
+      statusUpdatedAt: new Date("2026-10-08T00:00:00Z"),
+      isStatusSuccess: true,
+      setMessages: vi.fn(),
+      onRecovered,
+    }),
+  );
+  await vi.waitFor(() => expect(onRecovered).toHaveBeenCalledOnce());
+});
+
 const storedFile = {
   type: "file" as const,
   filename: "report.pdf",

@@ -692,6 +692,16 @@ export async function POST(req: Request) {
         promptFingerprints[reportedPrompt.messageCount] === reportedPrompt.fingerprint
       ) {
         reportedPromptTokens = reportedPrompt.inputTokens;
+        // The provider counted the prompt this one starts with. A text estimate
+        // of that same prefix can exceed its real size and would bill tokens the
+        // prompt does not have at the full rate, so only the messages after it
+        // are estimated.
+        const reportedPrefixTokens = estimatePromptTextTokens({
+          modelMessages: modelMessages.slice(0, reportedPrompt.messageCount),
+          systemPrompt,
+        });
+        basePromptTokens =
+          reportedPrompt.inputTokens + Math.max(0, basePromptTokens - reportedPrefixTokens);
       }
       consumedUsageAmount = estimateTokenReservation({
         estimatedPromptTokens:

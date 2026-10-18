@@ -441,9 +441,43 @@ test("a cut-off step bills the prompt the provider last read from cache at the c
   state.consumed = 0;
   state.refunded = 0;
   await run(request());
-  // The cut-off prompt is the one the provider reported and read from cache last time.
+  // The cut-off prompt is the one the provider reported and read from cache last
+  // time, even where the text estimate of that same prompt is larger.
+  expect(promptEstimate()).toBeGreaterThan(1_000);
+  expect(state.consumed - state.refunded).toBe(Math.ceil(1_000 * 0.1 + streamedOutputAmount));
+});
+
+test("a cut-off follow-up bills only the messages after the reported prompt at the full rate", async () => {
+  const model = "report-follow-up-model";
+  const firstQuestion: UIMessage = {
+    id: "user-message",
+    role: "user",
+    parts: [{ type: "text", text: "Hello" }],
+  };
+  state.mode = "finished";
+  state.inputTokens = 1_000;
+  state.cacheReadTokens = 1_000;
+  await run(messagesRequest([firstQuestion], { model }));
+  const firstEstimate = promptEstimate();
+
+  state.mode = "stopped";
+  state.usage = false;
+  state.consumed = 0;
+  state.refunded = 0;
+  await run(
+    messagesRequest(
+      [
+        firstQuestion,
+        { id: "answer", role: "assistant", parts: [{ type: "text", text: "Hi! How can I help?" }] },
+        { id: "follow-up", role: "user", parts: [{ type: "text", text: "Tell me a joke" }] },
+      ],
+      { model },
+    ),
+  );
+  const newMessageTokens = promptEstimate() - firstEstimate;
+  expect(newMessageTokens).toBeGreaterThan(0);
   expect(state.consumed - state.refunded).toBe(
-    Math.ceil(Math.max(promptEstimate(), 1_000) * 0.1 + streamedOutputAmount),
+    Math.ceil(1_000 * 0.1 + newMessageTokens + streamedOutputAmount),
   );
 });
 

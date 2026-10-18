@@ -179,6 +179,9 @@ export function ChatInterface({
   const { availableModels, platformCapabilities } = useAvailableModels();
   const { features } = platformCapabilities;
   const billingDisabled = !features.billing;
+  // Whether /api/chat accepted the latest request. By then the server has saved
+  // the turn with a pending answer, which it finishes even if the client drops.
+  const responseReceivedRef = useRef(false);
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -190,22 +193,49 @@ export function ChatInterface({
         // A chat started on the client may still be creating its row, or need a
         // retry after a failed attempt; /api/chat rejects chats without one.
         fetch: async (input: RequestInfo | URL, init?: RequestInit) => {
+          responseReceivedRef.current = false;
           if (!(await ensureChatCreated(id)) && !init?.signal?.aborted) {
             throw new Error("Chat not found");
           }
-          return fetch(input, init);
+          const response = await fetch(input, init);
+          responseReceivedRef.current = response.ok;
+          return response;
         },
       }),
     [id],
   );
 
-  const { messages, sendMessage, regenerate, setMessages, addToolOutput, status, error, stop } =
-    useChat({
-      id,
-      messages: initialMessages,
-      sendAutomaticallyWhen: shouldResumeQuestionnaire,
-      transport,
-    });
+  const [isRecoveringStream, setIsRecoveringStream] = useState(false);
+  const {
+    messages,
+    sendMessage,
+    regenerate,
+    setMessages,
+    addToolOutput,
+    status,
+    error,
+    stop,
+    clearError,
+  } = useChat({
+    id,
+    messages: initialMessages,
+    sendAutomaticallyWhen: shouldResumeQuestionnaire,
+    transport,
+    onFinish: ({ isDisconnect }) => {
+      // A phone that sleeps mid-answer drops the stream with a network error,
+      // but the server keeps generating and saves the answer. Read it back from
+      // the saved page instead of showing the error.
+      if (isDisconnect && responseReceivedRef.current) {
+        clearError();
+        setIsRecoveringStream(true);
+      }
+    },
+  });
+  // A new request streams the answer itself.
+  if (isRecoveringStream && (status === "submitted" || status === "streaming")) {
+    setIsRecoveringStream(false);
+  }
+  const handleStreamRecovered = useCallback(() => setIsRecoveringStream(false), []);
 
   const oldestIndexRef = useRef(initialOldestIndex);
   const hasMoreRef = useRef(initialHasMore);
@@ -333,7 +363,9 @@ export function ChatInterface({
   const showMessageActions = status !== "streaming" && status !== "submitted";
   const lastMessage = messages.at(-1);
   const isWaitingForResponse =
-    status !== "streaming" && status !== "submitted" && isPendingMessage(lastMessage);
+    status !== "streaming" &&
+    status !== "submitted" &&
+    (isRecoveringStream || isPendingMessage(lastMessage));
   const chatStatusQuery = trpc.chat.getChatStatus.useQuery(
     { id },
     {
@@ -354,6 +386,7 @@ export function ChatInterface({
     statusUpdatedAt: chatStatusQuery.data?.updated_at,
     isStatusSuccess: chatStatusQuery.isSuccess,
     setMessages,
+    onRecovered: handleStreamRecovered,
   });
 
   useMemorySaveNotice({ status, enabled: features.memory });
