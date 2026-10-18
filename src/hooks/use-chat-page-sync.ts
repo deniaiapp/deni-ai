@@ -15,6 +15,8 @@ export function useChatPageSync(params: {
   statusUpdatedAt: Date | null | undefined;
   isStatusSuccess: boolean;
   setMessages: (messages: UIMessage[] | ((current: UIMessage[]) => UIMessage[])) => void;
+  /** Called once the saved page has been read back after the generation ended. */
+  onRecovered?: () => void;
 }) {
   const {
     id,
@@ -24,6 +26,7 @@ export function useChatPageSync(params: {
     statusUpdatedAt,
     isStatusSuccess,
     setMessages,
+    onRecovered,
   } = params;
   const utils = trpc.useUtils();
   const lastRecoveredStatusRef = useRef<number | null>(null);
@@ -56,7 +59,11 @@ export function useChatPageSync(params: {
       .fetch({ id }, { staleTime: 0 })
       .then((chat) => {
         settled = true;
-        if (cancelled || !chat?.messages) {
+        if (cancelled) {
+          return;
+        }
+        onRecovered?.();
+        if (!chat?.messages) {
           return;
         }
 
@@ -110,6 +117,7 @@ export function useChatPageSync(params: {
     id,
     isStatusSuccess,
     isWaitingForResponse,
+    onRecovered,
     recoveredAt,
     recoveryRetry,
     setMessages,
