@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { SidebarResizeHandle } from "@/components/sidebar-resize-handle";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -411,6 +412,7 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      <SidebarResizeHandle />
     </Sidebar>
   );
 }

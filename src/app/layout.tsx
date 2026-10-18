@@ -9,6 +9,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { defaultLocale } from "@/i18n/locales";
 import { GA_ID } from "@/lib/constants";
 import { HOME_ALTERNATE_NAMES, HOME_DESCRIPTION, HOME_TITLE } from "@/lib/seo";
+import { SIDEBAR_WIDTH_BOOT_SCRIPT } from "@/lib/sidebar-width";
 import "./globals.css";
 import "./themes.css";
 
@@ -112,8 +113,11 @@ function safeJsonLd(data: unknown) {
     .replace(/&/g, "\\u0026");
 }
 
-/** Sync html[lang] from the locale cookie before first paint (avoids FOUC). */
-const LOCALE_LANG_SCRIPT = `(function(){try{var p=location.pathname;if(p==="/ja"||p.indexOf("/ja/")===0){document.documentElement.lang="ja";return;}var m=document.cookie.match(/(?:^|; )locale=([^;]*)/);var l=m&&decodeURIComponent(m[1]);if(l==="en"||l==="ja")document.documentElement.lang=l;}catch(e){}})();`;
+/**
+ * Before first paint (avoids FOUC): sync html[lang] from the locale cookie and
+ * restore the user's resized sidebar width.
+ */
+const BOOT_SCRIPT = `(function(){try{var p=location.pathname;if(p==="/ja"||p.indexOf("/ja/")===0){document.documentElement.lang="ja";return;}var m=document.cookie.match(/(?:^|; )locale=([^;]*)/);var l=m&&decodeURIComponent(m[1]);if(l==="en"||l==="ja")document.documentElement.lang=l;}catch(e){}})();${SIDEBAR_WIDTH_BOOT_SCRIPT}`;
 
 /**
  * Executable only during SSR HTML parse. On the client, React would not re-run
@@ -128,7 +132,7 @@ function InlineBootScript() {
     <script
       type={typeof window === "undefined" ? "text/javascript" : "text/plain"}
       suppressHydrationWarning
-      dangerouslySetInnerHTML={{ __html: LOCALE_LANG_SCRIPT }}
+      dangerouslySetInnerHTML={{ __html: BOOT_SCRIPT }}
     />
   );
 }

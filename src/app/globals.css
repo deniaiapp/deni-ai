@@ -156,6 +156,21 @@
     letter-spacing: -0.02em;
   }
 
+  /* SidebarResizeHandle drag: follow the pointer without the width transition. */
+  html[data-sidebar-resizing] {
+    user-select: none;
+
+    &,
+    & * {
+      cursor: col-resize !important;
+    }
+
+    [data-slot="sidebar-gap"],
+    [data-slot="sidebar-container"] {
+      transition: none;
+    }
+  }
+
   body.mono,
   body .mono {
     letter-spacing: normal;
