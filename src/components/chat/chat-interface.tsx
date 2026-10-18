@@ -509,7 +509,7 @@ export function ChatInterface({
     <ArtifactPreviewProvider>
       <IntelligentUiActionsProvider value={intelligentUiActions}>
         <ArtifactPreviewPanel />
-        <div className="flex h-full flex-1 min-h-0 flex-col w-full max-w-3xl mx-auto p-4 overflow-hidden">
+        <div className="flex h-full flex-1 min-h-0 flex-col w-full max-w-4xl mx-auto p-4 overflow-hidden">
           <ChatInterfaceHeader
             chatId={id}
             messages={messages}
