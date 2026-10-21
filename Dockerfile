@@ -30,7 +30,7 @@
 # ---------------------------------------------------------------------------
 FROM node:22-bookworm-slim AS deps
 WORKDIR /app
-RUN npm install --global pnpm@12.8.1
+RUN npm install --global pnpm@latest
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY patches ./patches
 COPY packages/disposable-email-domains ./packages/disposable-email-domains
@@ -41,7 +41,7 @@ RUN --mount=type=cache,id=deni-ai-pnpm,target=/pnpm/store \
 # Build (Next.js production build)
 # Node.js runs Next's compiler and workers.
 # ---------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS builder
+FROM node:24-bookworm-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 \
   NODE_ENV=production \
