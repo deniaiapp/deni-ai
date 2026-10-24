@@ -190,10 +190,9 @@ export function modelContextMessages(messages: UIMessage[]): UIMessage[] {
   return [{ ...first, parts: [{ type: "text", text: TRIMMED_NOTE }, ...first.parts] }, ...rest];
 }
 
-/** Drops reasoning before `keepFrom`; OpenRouter also reads its signatures from tool call metadata. */
-function withoutReasoning(message: UIMessage, keepFrom: number): UIMessage {
-  const parts = message.parts.flatMap((part, index) => {
-    if (index >= keepFrom) return [part];
+/** Drops reasoning; OpenRouter also reads its signatures from tool call metadata. */
+function withoutReasoning(message: UIMessage): UIMessage {
+  const parts = message.parts.flatMap((part) => {
     if (part.type === "reasoning") return [];
     const metadata = (part as { callProviderMetadata?: { openrouter?: Record<string, unknown> } }).callProviderMetadata;
     if (!isToolPart(part) || !metadata?.openrouter || !("reasoning_details" in metadata.openrouter)) return [part];
@@ -204,15 +203,13 @@ function withoutReasoning(message: UIMessage, keepFrom: number): UIMessage {
 }
 
 /**
- * Anthropic binds each signed thinking block to the exact conversation before it, and trimming,
- * slimming, and reply context change that prefix. Only the last step of a final assistant message
- * (a tool loop being resumed) needs its thinking, so every earlier step goes without.
+ * Anthropic binds each signed thinking block to the exact conversation before it. A final
+ * assistant message (a tool loop resumed after an approval) keeps every step's thinking, so its
+ * prefix matches what the model saw; earlier turns go without. A block whose prefix still moved
+ * is dropped by Anthropic (block_binding drop_block in lib/llm.ts) instead of failing the request.
  */
 function reasoningForModel(messages: UIMessage[]): UIMessage[] {
-  return messages.map((message, index) => {
-    if (index < messages.length - 1 || message.role !== "assistant") return withoutReasoning(message, message.parts.length);
-    return withoutReasoning(message, message.parts.findLastIndex((part) => part.type === "step-start"));
-  });
+  return messages.map((message, index) => (index === messages.length - 1 && message.role === "assistant" ? message : withoutReasoning(message)));
 }
 
 /** Slim tool output and drop stale reasoning for the model, after cutting the thread to its context window. */

@@ -14,10 +14,14 @@ export async function getDeniModel(userId: string, runMode?: RunMode) {
     reasoning_effort: mode.effort,
     // Anthropic automatic prompt caching: the breakpoint follows the growing conversation.
     cache_control: { type: "ephemeral" },
+    // A signed thinking block whose earlier conversation changed (trimming, slimmed tool output)
+    // is dropped by Anthropic instead of failing the whole request. OpenRouter passes this through.
+    thinking: { type: "adaptive", block_binding: { prefix_mismatch_behavior: "drop_block" } },
   };
   const openrouter = createOpenRouter({
     apiKey,
     extraBody,
+    headers: { "anthropic-beta": "thinking-binding-controls-2026-08-01" },
   });
   return {
     model: openrouter(mode.modelId),
