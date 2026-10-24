@@ -22,6 +22,16 @@ export const mcpCatalog = [
     url: "https://mcp.slack.com/mcp",
     docsUrl: "https://docs.slack.dev/ai/mcp-server",
     clientEnv: { id: "SLACK_MCP_CLIENT_ID", secret: "SLACK_MCP_CLIENT_SECRET" },
+    // Must match the user token scopes of the Slack app; the server advertises more than we
+    // ask for (users:read.email is left out for Marketplace review).
+    scope: [
+      "search:read.public", "search:read.private", "search:read.mpim", "search:read.im", "search:read.files", "search:read.users",
+      "channels:history", "groups:history", "mpim:history", "im:history",
+      "channels:read", "groups:read", "im:read", "mpim:read",
+      "channels:write", "groups:write", "im:write", "mpim:write",
+      "chat:write", "files:read", "files:write", "canvases:read", "canvases:write",
+      "lists:read", "lists:write", "reactions:read", "reactions:write", "users:read", "emoji:read",
+    ].join(" "),
   },
 ] as const satisfies readonly McpCatalogEntry[];
 
