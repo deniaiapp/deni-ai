@@ -31,7 +31,7 @@ Deni AI is a multi-model AI chat app for people who want strong model choice wit
 | --------- | ------------------------------------------------- |
 | Framework | Next.js 16 (App Router, React 19, React Compiler) |
 | Language  | TypeScript (strict)                               |
-| Runtime   | Node.js 22.18+ (pnpm 12.8.1)                      |
+| Runtime   | Node.js 26+ (pnpm 12.8.1)                         |
 | UI        | Tailwind CSS v4, shadcn/ui (Base UI)              |
 | API       | tRPC + TanStack Query                             |
 | DB        | PostgreSQL (Neon recommended) + Drizzle ORM       |

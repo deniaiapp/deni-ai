@@ -28,7 +28,7 @@
 # ---------------------------------------------------------------------------
 # Install dependencies (pnpm workspaces + pnpm-lock.yaml)
 # ---------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS deps
+FROM node:26-slim AS deps
 WORKDIR /app
 RUN npm install --global pnpm@latest
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -41,7 +41,7 @@ RUN --mount=type=cache,id=deni-ai-pnpm,target=/pnpm/store \
 # Build (Next.js production build)
 # Node.js runs Next's compiler and workers.
 # ---------------------------------------------------------------------------
-FROM node:24-bookworm-slim AS builder
+FROM node:26-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 \
   NODE_ENV=production \
@@ -158,7 +158,7 @@ RUN set -eu; \
 # ---------------------------------------------------------------------------
 # Runtime (Next.js standalone + Node.js)
 # ---------------------------------------------------------------------------
-FROM node:22-bookworm-slim AS runner
+FROM node:26-slim AS runner
 WORKDIR /app
 
 # NODE_OPTIONS caps the V8 heap at 75% of the container memory limit so GC runs before
