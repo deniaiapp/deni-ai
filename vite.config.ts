@@ -17,8 +17,12 @@ function onwarn(warning: { code?: string }, warn: (warning: never) => void) {
 
 export default defineConfig(({ mode }) => {
   const env = { ...loadEnv(mode, process.cwd(), "NEXT_PUBLIC_"), ...process.env };
+  // MCP OAuth callbacks can reach the dev server through an https tunnel (MCP_OAUTH_BASE_URL);
+  // Vite otherwise refuses hosts other than localhost.
+  const tunnelUrl = loadEnv(mode, process.cwd(), "").MCP_OAUTH_BASE_URL;
+  const tunnelHost = tunnelUrl && URL.canParse(tunnelUrl) ? new URL(tunnelUrl).hostname : "";
   return {
-    server: { port: 3000 },
+    server: { port: 3000, ...(tunnelHost ? { allowedHosts: [tunnelHost] } : {}) },
     resolve: { tsconfigPaths: true },
     define: Object.fromEntries(
       publicEnv.map((name) => [`process.env.${name}`, JSON.stringify(env[name] ?? "")]),

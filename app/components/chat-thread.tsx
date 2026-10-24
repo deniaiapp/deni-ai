@@ -73,6 +73,8 @@ import { Spinner } from "@/components/ui/spinner";
 import { Avatar } from "./sidebar";
 import { MessageActions } from "./message-actions";
 import { usePluginActionLabels } from "./plugin-action-labels";
+import { mcpArgumentPreview, mcpToolTitle, useMcpConnectionNames } from "./mcp-tool-labels";
+import { McpApprovalDetails } from "./mcp-approval";
 import {
   messageActionKey,
   messageBubbleTargets,
@@ -1667,8 +1669,14 @@ function PartView({
       return (
         <Confirmation approval={approval} state={state}>
           <ConfirmationRequest>
-            <ConfirmationTitle>{displayLabel}</ConfirmationTitle>
-            {detail ? (
+            {name === "mcp" ? (
+              <McpApprovalDetails
+                connectionId={inputValue(input, "connectionId")}
+                tool={inputValue(input, "name")}
+                args={inputRecord(input, "arguments") as Record<string, unknown> | undefined}
+              />
+            ) : <ConfirmationTitle>{displayLabel}</ConfirmationTitle>}
+            {detail && name !== "mcp" ? (
               <p className="font-mono text-xs text-secondary-foreground">{detail}</p>
             ) : null}
             {name === "builtInPlugin" && inputValue(input, "body") ? <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-foreground/5 p-2 text-xs">{inputValue(input, "body")}</pre> : null}
@@ -1677,6 +1685,10 @@ function PartView({
               onDeny={() => onApprove(approval.id, false)}
               onAlwaysAllow={name === "builtInPlugin" ? async () => {
                 const response = await fetch("/api/plugins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: inputValue(input, "kind"), action: inputValue(input, "action"), enabled: true }) });
+                if (!response.ok) throw new Error((await response.json()).error ?? t("Could not save permission."));
+                onApprove(approval.id, true);
+              } : name === "mcp" && inputValue(input, "name") ? async () => {
+                const response = await fetch("/api/mcp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "always-allow", id: inputValue(input, "connectionId"), tool: inputValue(input, "name"), enabled: true }) });
                 if (!response.ok) throw new Error((await response.json()).error ?? t("Could not save permission."));
                 onApprove(approval.id, true);
               } : undefined}
@@ -1725,6 +1737,7 @@ function formatDetail(value: unknown) {
 
 function useToolDisplayLabel() {
   const t = useExtracted();
+  const mcpNames = useMcpConnectionNames();
 
   function toolDisplayLabel(
   name: string,
@@ -1751,6 +1764,18 @@ function useToolDisplayLabel() {
   }
 
   if (denied) return t("Action was declined");
+
+  if (name === "mcp") {
+    const service = mcpNames[inputValue(input, "connectionId") ?? ""] ?? t("a connected app");
+    if (action === "list") {
+      if (failed) return t("Couldn't check {service} tools", { service });
+      return completed ? t("Checked {service} tools", { service }) : t("Checking {service} tools", { service });
+    }
+    const tool = mcpToolTitle(inputValue(input, "name") ?? "", service);
+    if (failed) return tool ? t("Couldn't use {service}: {tool}", { service, tool }) : t("Couldn't use {service}", { service });
+    if (completed) return tool ? t("Used {service}: {tool}", { service, tool }) : t("Used {service}", { service });
+    return tool ? t("{service}: {tool}", { service, tool }) : t("Using {service}", { service });
+  }
 
   if (name === "browser" || name.toLowerCase().includes("browser")) {
     switch (action) {
@@ -1801,6 +1826,7 @@ function useToolDisplayLabel() {
     listRoutines: [t("Checking routines"), t("Checked routines"), t("Couldn't check routines")],
     listBuiltinPlugins: [t("Showing connected services"), t("Showed connected services"), t("Couldn't show connected services")],
     builtInPlugin: [t("Using a connected service"), t("Used a connected service"), t("Couldn't use a connected service")],
+    listMcpConnections: [t("Checking connected apps"), t("Checked connected apps"), t("Couldn't check connected apps")],
     pauseRoutine: [t("Updating a routine"), t("Updated a routine"), t("Couldn't update a routine")],
     messageBot: [t("Asking a teammate"), t("Asked a teammate"), t("Couldn't ask a teammate")],
     handoffStatus: [t("Checking a teammate"), t("Checked a teammate"), t("Couldn't check a teammate")],
@@ -1829,6 +1855,7 @@ function toolApprovalDetail(name: string, input: unknown, pluginActionLabels: Re
     const path = inputValue(input, "path");
     return path ? snippet(path) : undefined;
   }
+  if (name === "mcp") return snippet(mcpArgumentPreview(inputRecord(input, "arguments")).summary, 220);
   return undefined;
 }
 
@@ -1946,6 +1973,12 @@ function inputValue(input: unknown, key: string) {
   if (!input || typeof input !== "object") return undefined;
   const value = (input as Record<string, unknown>)[key];
   return typeof value === "string" ? value : undefined;
+}
+
+function inputRecord(input: unknown, key: string) {
+  if (!input || typeof input !== "object") return undefined;
+  const value = (input as Record<string, unknown>)[key];
+  return value && typeof value === "object" && !Array.isArray(value) ? value : undefined;
 }
 
 function inputNumber(input: unknown, key: string) {

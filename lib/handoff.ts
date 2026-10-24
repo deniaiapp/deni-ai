@@ -189,7 +189,7 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
       allowHandoff: false,
       locale: run.locale,
     }),
-    toolApproval: deniHandoffToolApproval(run.locale),
+    toolApproval: deniHandoffToolApproval(run.locale, undefined, run.userId),
     stopWhen: isStepCount(16),
     timeout: { totalMs: 180_000, stepMs: 45_000 },
     providerOptions,

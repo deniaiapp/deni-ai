@@ -3,16 +3,25 @@ import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import {
   deleteMcpConnection,
   listMcpConnections,
+  describeMcpTool,
+  listMcpTools,
+  mcpAlwaysAllowed,
   saveMcpConnection,
+  setMcpAlwaysAllow,
+  startMcpSignIn,
   testMcpConnection,
 } from "@/lib/mcp";
+import { limitOrResponse } from "@/lib/rate-limit";
+import { oauthBaseUrl } from "@/lib/site";
 import { getExtracted } from "@/i18n/server";
 import { localizeError } from "@/lib/localize-error";
 
 async function GET() {
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
-  return Response.json({ connections: await listMcpConnections(userId) }, {
+  const connections = await listMcpConnections(userId);
+  const alwaysAllow = Object.fromEntries(await Promise.all(connections.map(async (connection) => [connection.id, await mcpAlwaysAllowed(userId, connection.id)])));
+  return Response.json({ connections, alwaysAllow }, {
     headers: { "Cache-Control": "no-store" },
   });
 }
@@ -22,8 +31,11 @@ async function POST({ request: req }: { request: Request }) {
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const body = (await req.json().catch(() => ({}))) as {
-    action?: "save" | "test" | "delete";
+    action?: "save" | "test" | "delete" | "connect" | "tools" | "describe" | "always-allow";
     id?: string;
+    catalogId?: string;
+    tool?: string;
+    arguments?: Record<string, unknown>;
     name?: string;
     url?: string;
     transport?: "streamable-http" | "sse";
@@ -32,6 +44,26 @@ async function POST({ request: req }: { request: Request }) {
     enabled?: boolean;
   };
   try {
+    if (body.action === "connect") {
+      if (!body.id && !body.catalogId) return Response.json({ error: t("ID is required") }, { status: 400 });
+      const limited = await limitOrResponse(userId, "mcp-connect", 20);
+      if (limited) return limited;
+      return Response.json(await startMcpSignIn(userId, { id: body.id, catalogId: body.catalogId }, oauthBaseUrl() || new URL(req.url).origin));
+    }
+    if (body.action === "tools") {
+      if (!body.id) return Response.json({ error: t("ID is required") }, { status: 400 });
+      return Response.json(await listMcpTools(userId, body.id));
+    }
+    if (body.action === "describe") {
+      if (!body.id || !body.tool) return Response.json({ error: t("ID is required") }, { status: 400 });
+      const args = body.arguments && typeof body.arguments === "object" && !Array.isArray(body.arguments) ? body.arguments : undefined;
+      return Response.json(await describeMcpTool(userId, body.id, body.tool, args));
+    }
+    if (body.action === "always-allow") {
+      if (!body.id || !body.tool || typeof body.enabled !== "boolean") return Response.json({ error: t("Invalid permission") }, { status: 400 });
+      await setMcpAlwaysAllow(userId, body.id, body.tool, body.enabled);
+      return Response.json({ alwaysAllow: await mcpAlwaysAllowed(userId, body.id) });
+    }
     if (body.action === "test") {
       if (!body.id) return Response.json({ error: t("ID is required") }, { status: 400 });
       return Response.json(await testMcpConnection(userId, body.id));
@@ -65,6 +97,6 @@ async function POST({ request: req }: { request: Request }) {
   }
 }
 
-export const Route = createFileRoute("/api/mcp")({
+export const Route = createFileRoute("/api/mcp/")({
   server: { handlers: { GET, POST } },
 });

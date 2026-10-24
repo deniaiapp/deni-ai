@@ -23,7 +23,7 @@ import { createId, nowIso } from "./ids";
 import { hasExaApiKey, webSearch } from "./search";
 import { mutateStore, readStore } from "./store";
 import { registerArtifact } from "./artifacts";
-import { callMcpTool, listMcpConnections, listMcpTools } from "./mcp";
+import { callMcpTool, listMcpConnections, listMcpTools, mcpCallPreapproved } from "./mcp";
 import { isAlwaysAllowed, pluginStatus, runPlugin } from "./builtin-plugins";
 import { isReadAction, pluginKinds, readActions, writeActions, type PluginKind, type WriteAction } from "./plugin-actions";
 import { createNotification } from "./notifications";
@@ -267,7 +267,7 @@ export function createDeniTools(ctx: AgentContext) {
     }),
     mcp: tool({
       description:
-        "Use a configured Model Context Protocol server. List tools first; calls that can change external data require user approval.",
+        "Use a connected Model Context Protocol server, such as the Notion, Linear, or Slack connectors or a custom server. List tools first. Read-only tools of connectors run directly; other calls need user approval unless the user set that tool to Always allow. If a call says to sign in again, tell the user to reconnect it in Plugins.",
       inputSchema: z.object({
         connectionId: z.string().min(1),
         action: z.enum(["list", "call"]),
@@ -690,15 +690,16 @@ export function deniToolApproval(options?: { userId?: string; jobId?: string; lo
       commandNeedsApproval(command) ? approval(call) : ("not-applicable" as const),
     workspace: ({ action }: { action: string }, call?: ApprovalCall) =>
       action === "delete" ? approval(call) : ("not-applicable" as const),
-    mcp: ({ action }: { action: string }, call?: ApprovalCall) =>
-      action === "call" ? approval(call) : ("not-applicable" as const),
+    mcp: async ({ action, connectionId, name }: { action: string; connectionId: string; name?: string }, call?: ApprovalCall) =>
+      action !== "call" ? ("not-applicable" as const)
+        : options?.userId && name && await mcpCallPreapproved(options.userId, connectionId, name) ? ("approved" as const) : approval(call),
     builtInPlugin: async ({ kind, action }: { kind: PluginKind; action: string }, call?: ApprovalCall) =>
       isReadAction(action) ? ("not-applicable" as const)
         : options?.userId && await isAlwaysAllowed(options.userId, kind, action as WriteAction) ? ("approved" as const) : approval(call),
   };
 }
 /** Deny every action that needs approval. For runs with no one watching to answer a card. */
-export function deniHandoffToolApproval(locale?: string, denial?: string) {
+export function deniHandoffToolApproval(locale?: string, denial?: string, userId?: string) {
   const reason = denial ?? translatorFor(locale)("Handoffs cannot wait for approval");
   return {
     runCommand: ({ command }: { command: string }) =>
@@ -709,10 +710,11 @@ export function deniHandoffToolApproval(locale?: string, denial?: string) {
       action === "delete"
         ? { type: "denied" as const, reason }
         : ("not-applicable" as const),
-    mcp: ({ action }: { action: string }) =>
-      action === "call"
-        ? { type: "denied" as const, reason }
-        : ("not-applicable" as const),
+    // Like built-in plugins, only reads run here: read-only tools of catalog connectors.
+    mcp: async ({ action, connectionId, name }: { action: string; connectionId: string; name?: string }) =>
+      action !== "call" || (userId && name && await mcpCallPreapproved(userId, connectionId, name, { readOnly: true }))
+        ? ("not-applicable" as const)
+        : { type: "denied" as const, reason },
     builtInPlugin: ({ action }: { action: string }) =>
       isReadAction(action) ? ("not-applicable" as const)
         : { type: "denied" as const, reason },

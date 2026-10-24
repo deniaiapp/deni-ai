@@ -96,7 +96,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
       tools: createDeniTools({ userId, bot, threadId: job.threadId, jobId: job.id, allowHandoff: !isGroup, locale }),
       // Only a text reply is saved below, so an approval card could never be answered and the
       // job would stay in waiting_approval. Deny those actions; the reply explains what is left.
-      toolApproval: deniHandoffToolApproval(locale, tr("Background tasks cannot wait for approval")),
+      toolApproval: deniHandoffToolApproval(locale, tr("Background tasks cannot wait for approval"), userId),
       stopWhen: isLoopFinished(),
       providerOptions,
       onStepFinish: async (step) => {

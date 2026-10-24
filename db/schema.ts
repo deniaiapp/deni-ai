@@ -121,6 +121,10 @@ export const mcpConnections = sqliteTable(
     url: text("url").notNull(),
     transport: text("transport").notNull().default("streamable-http"),
     authSecret: text("auth_secret"),
+    // Encrypted JSON of the OAuth client, tokens, and any authorization still in flight.
+    oauth: text("oauth"),
+    // Connector catalog entry this connection was added from, or null for a custom server.
+    catalogId: text("catalog_id"),
     headers: jsonText("headers").$type<Record<string, string>>().notNull(),
     enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
     lastTestAt: timestampMs("last_test_at"),

@@ -1,16 +1,19 @@
 import { useExtracted } from "@/i18n/react";
 import { useEffect, useState } from "react";
-import { ChevronDownIcon, PlugIcon, TrashIcon, WrenchIcon } from "lucide-react";
+import { CheckCircle2Icon, ChevronDownIcon, CircleAlertIcon, LogInIcon, PlugIcon, TrashIcon, WrenchIcon } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
-import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuGroupLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuGroup, DropdownMenuGroupLabel, DropdownMenuLabel, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LoadingFallback } from "@/components/ui/loading";
 import { Select } from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
 import { pluginWriteActions, type PluginKind } from "@/lib/plugin-actions";
+import { mcpCatalog } from "@/lib/mcp-catalog";
+import { ConnectorLogo } from "./connector-logos";
 import { DiscordCard, fetchDiscordStatus, type DiscordStatus } from "./discord-settings";
 import { usePluginActionLabels } from "./plugin-action-labels";
 
@@ -24,8 +27,38 @@ const pluginScopes = {
 };
 import type { McpConnection } from "@/lib/types";
 
-export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+/** What the MCP OAuth callback reported in the URL when it sent the browser back. */
+export type McpSignInReturn = { connectionId: string | null; error: string | null };
+type McpTool = { name: string; description?: string; annotations?: { readOnlyHint?: boolean } };
+type ToolList = { status: "loading" } | { status: "ready"; tools: McpTool[] } | { status: "error"; error: string };
+
+// Stored errors are the server's English text; these mean the saved sign-in no longer works.
+const authErrorPattern = /sign in|\b401\b|\b403\b|unauthori[sz]ed|invalid_token/i;
+
+function needsSignIn(connection: McpConnection) {
+  return connection.oauth === "signed-out" || (connection.lastError != null && authErrorPattern.test(connection.lastError));
+}
+
+/** A connection works once signed in, or once a server without sign-in passed a test. */
+function isConnected(connection: McpConnection) {
+  if (needsSignIn(connection)) return false;
+  return connection.oauth === "signed-in" || (connection.oauth === null && connection.lastTestAt != null && connection.lastError == null);
+}
+
+export function McpSettings({ open, onOpenChange, signInReturn = null, autoConnect = null, onAutoConnectStarted }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  signInReturn?: McpSignInReturn | null;
+  /** Catalog id to start connecting once the dialog has loaded, as if Connect was clicked. */
+  autoConnect?: string | null;
+  onAutoConnectStarted?: () => void;
+}) {
   const t = useExtracted();
+  const connectorDescriptions: Record<string, string> = {
+    notion: t("Search, read, and update pages and databases in Notion."),
+    linear: t("Find, create, and update issues and projects in Linear."),
+    slack: t("Search messages and channels, and post to Slack."),
+  };
   const actionLabels = usePluginActionLabels();
   const [connections, setConnections] = useState<McpConnection[]>([]);
   const [plugins, setPlugins] = useState<BuiltinPlugin[]>([]);
@@ -40,6 +73,12 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
   const [headers, setHeaders] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [notice, setNotice] = useState<{ tone: "success" | "error"; text: string } | null>(null);
+  const [alwaysAllow, setAlwaysAllowMap] = useState<Record<string, string[]>>({});
+  const [toolLists, setToolLists] = useState<Record<string, ToolList>>({});
+  // Connector or connection id whose sign-in is starting, and connector errors by catalog id.
+  const [signingIn, setSigningIn] = useState<string | null>(null);
+  const [connectorErrors, setConnectorErrors] = useState<Record<string, string>>({});
 
   async function loadPlugins() {
     const res = await fetch("/api/plugins", { cache: "no-store" });
@@ -106,18 +145,149 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
 
   async function load() {
     const res = await fetch("/api/mcp", { cache: "no-store" });
-    if (!res.ok) return;
-    const json = (await res.json()) as { connections?: McpConnection[] };
-    setConnections(json.connections ?? []);
+    if (!res.ok) return null;
+    const json = (await res.json()) as { connections?: McpConnection[]; alwaysAllow?: Record<string, string[]> };
+    const list = json.connections ?? [];
+    setConnections(list);
+    setAlwaysAllowMap(json.alwaysAllow ?? {});
+    return list;
   }
 
   useEffect(() => {
     if (open) {
       // A dialog opening is the external event that requires refreshing the connection list.
       // eslint-disable-next-line react/set-state-in-effect
-      void Promise.allSettled([load(), loadPlugins(), loadDiscord()]).then(() => setReady(true));
+      const loaded = load();
+      void Promise.allSettled([loaded, loadPlugins(), loadDiscord()]).then(async () => {
+        setReady(true);
+        if (signInReturn?.error) setNotice({ tone: "error", text: signInReturn.error });
+        else if (signInReturn?.connectionId) {
+          const connection = (await loaded.catch(() => null))?.find((item) => item.id === signInReturn.connectionId);
+          setNotice({ tone: "success", text: connection ? t("Connected {name}.", { name: connection.name }) : t("Connected.") });
+        } else setNotice(null);
+        const entry = mcpCatalog.find((item) => item.id === autoConnect);
+        if (entry) {
+          // An "Add to …" link: start the connector's sign-in unless it already works.
+          onAutoConnectStarted?.();
+          const existing = (await loaded.catch(() => null))?.find((item) => item.catalogId === entry.id);
+          if (existing && isConnected(existing)) setNotice({ tone: "success", text: t("{name} is already connected.", { name: existing.name }) });
+          else await signIn({ catalogId: entry.id });
+        }
+      });
     }
-  }, [open]);
+    // Opening the dialog or a new sign-in return refreshes it; a new translator alone does not.
+    // The connector to add arrives together with the dialog opening, so it is read here only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, signInReturn]);
+
+  /** Start OAuth for a connector (adding it first) or an existing connection, then leave for the sign-in page. */
+  async function signIn(target: { catalogId: string } | { id: string }) {
+    const key = "catalogId" in target ? target.catalogId : target.id;
+    setSigningIn(key);
+    setMessage(null);
+    setNotice(null);
+    if ("catalogId" in target) setConnectorErrors((current) => ({ ...current, [target.catalogId]: "" }));
+    try {
+      const res = await fetch("/api/mcp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "connect", ...target }) });
+      const data = (await res.json().catch(() => ({}))) as { connection?: McpConnection; authorizeUrl?: string | null; error?: string };
+      if (!res.ok || !data.connection) throw new Error(data.error || t("Could not start sign-in."));
+      if (data.authorizeUrl) {
+        // The server's sign-in page sends the browser back to /?plugins=1 when done.
+        window.location.assign(data.authorizeUrl);
+        return;
+      }
+      // No sign-in needed; check the server right away.
+      setSigningIn(null);
+      await test(data.connection.id);
+    } catch (error) {
+      const text = error instanceof Error ? error.message : String(error);
+      if ("catalogId" in target) setConnectorErrors((current) => ({ ...current, [target.catalogId]: text }));
+      else setMessage(text);
+      setSigningIn(null);
+      await load();
+    }
+  }
+
+  async function disconnectConnection(connection: McpConnection) {
+    if (!window.confirm(t("Disconnect {plugin}? Teammates will lose access to it right away. You can connect it again later.", { plugin: connection.name }))) return;
+    setBusy(true);
+    setMessage(null);
+    setNotice(null);
+    try {
+      const res = await fetch("/api/mcp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", id: connection.id }) });
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? t("Could not disconnect plugin."));
+      setMessage(t("Disconnected {plugin}. Teammates can no longer use it.", { plugin: connection.name }));
+      await load();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : String(error));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function loadTools(id: string) {
+    const current = toolLists[id];
+    if (current?.status === "ready") return;
+    setToolLists((lists) => ({ ...lists, [id]: { status: "loading" } }));
+    try {
+      const res = await fetch("/api/mcp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "tools", id }) });
+      const data = (await res.json().catch(() => ({}))) as { tools?: McpTool[]; error?: string };
+      if (!res.ok) throw new Error(data.error || t("Could not load tools."));
+      setToolLists((lists) => ({ ...lists, [id]: { status: "ready", tools: Array.isArray(data.tools) ? data.tools : [] } }));
+    } catch (error) {
+      setToolLists((lists) => ({ ...lists, [id]: { status: "error", error: error instanceof Error ? error.message : String(error) } }));
+    }
+  }
+
+  async function setToolAlwaysAllow(id: string, tool: string, enabled: boolean) {
+    const res = await fetch("/api/mcp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "always-allow", id, tool, enabled }) });
+    const data = (await res.json().catch(() => ({}))) as { alwaysAllow?: string[]; error?: string };
+    const next = data.alwaysAllow;
+    if (res.ok && next) setAlwaysAllowMap((current) => ({ ...current, [id]: next }));
+    else setMessage(data.error ?? t("Could not change permission."));
+  }
+
+  function toolAlwaysAllowSummary(id: string) {
+    const [first, ...rest] = alwaysAllow[id] ?? [];
+    if (!first) return t("Ask every time");
+    if (rest.length === 0) return first;
+    return t("{action} +{count} more", { action: first, count: String(rest.length) });
+  }
+
+  /**
+   * Always allow for an MCP connection's tools. Connector servers are known, so their read-only
+   * tools already run freely and only the others are listed; custom servers list every tool.
+   */
+  function toolAlwaysAllow(connection: McpConnection) {
+    const trustsReadOnly = connection.catalogId != null;
+    const list = toolLists[connection.id];
+    const allowed = alwaysAllow[connection.id] ?? [];
+    const tools = list?.status === "ready" ? list.tools.filter((tool) => !trustsReadOnly || tool.annotations?.readOnlyHint !== true) : [];
+    return <div className="flex items-center justify-between gap-3 text-sm">
+      <span>{t("Always allow")}</span>
+      <DropdownMenu onOpenChange={(next) => { if (next) void loadTools(connection.id); }}>
+        <DropdownMenuTrigger render={<Button type="button" size="sm" variant="outline" className="min-w-0 max-w-64" aria-label={t("Always allow tools for {name}", { name: connection.name })} />}>
+          <span className="truncate">{toolAlwaysAllowSummary(connection.id)}</span>
+          <ChevronDownIcon data-icon="inline-end" className="size-4 shrink-0" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="max-h-80 max-w-80">
+          <DropdownMenuGroup>
+            <DropdownMenuGroupLabel>{t("Run without asking")}</DropdownMenuGroupLabel>
+            {!list || list.status === "loading" ? <DropdownMenuLabel>{t("Loading tools…")}</DropdownMenuLabel>
+              : list.status === "error" ? <DropdownMenuLabel className="text-destructive-300">{list.error}</DropdownMenuLabel>
+              : tools.length === 0 ? <DropdownMenuLabel>{trustsReadOnly ? t("Every tool on this server is read-only.") : t("This server has no tools.")}</DropdownMenuLabel>
+              : tools.map((tool) => <DropdownMenuCheckboxItem key={tool.name} checked={allowed.includes(tool.name)} onCheckedChange={(checked) => void setToolAlwaysAllow(connection.id, tool.name, checked)}>
+                <span className="grid min-w-0"><span className="truncate font-mono text-xs">{tool.name}</span>{tool.description ? <span className="truncate text-xs text-muted-foreground">{tool.description}</span> : null}</span>
+              </DropdownMenuCheckboxItem>)}
+          </DropdownMenuGroup>
+          {trustsReadOnly ? <DropdownMenuLabel className="mt-1 border-t border-foreground/10 pt-2">{t("Read-only tools already run without asking.")}</DropdownMenuLabel> : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>;
+  }
+
+  const customConnections = connections.filter((connection) => connection.catalogId == null);
 
   async function save() {
     setBusy(true);
@@ -186,6 +356,10 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
         <DialogTitle className="flex items-center gap-2"><PlugIcon className="size-4" /> {t("Plugins")}</DialogTitle>
         <DialogDescription>{t("Connect built-in services for search and reading. Writing requires a separate approval unless you enable Always allow for that action.")}</DialogDescription>
         {ready ? <>
+          {notice ? <Alert variant={notice.tone === "error" ? "destructive" : "default"} role={notice.tone === "error" ? "alert" : "status"}>
+            {notice.tone === "error" ? <CircleAlertIcon /> : <CheckCircle2Icon />}
+            <AlertDescription>{notice.text}</AlertDescription>
+          </Alert> : null}
           <div className="grid gap-3">
             {plugins.map((plugin) => <div key={plugin.kind} className="rounded-xl border border-foreground/10 bg-surface-raised p-4">
               <div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold">{pluginLabels[plugin.kind]}</h3><p className="text-xs text-muted-foreground">{plugin.connected ? t("Connected · search and read") : t("Not connected")}</p></div>
@@ -213,14 +387,49 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
             </div>)}
             <DiscordCard status={discord} onStatusChange={setDiscord} />
           </div>
+          <section aria-labelledby="mcp-connectors-heading" className="space-y-3">
+            <div>
+              <h3 id="mcp-connectors-heading" className="text-sm font-semibold">{t("Connectors")}</h3>
+              <p className="text-xs text-muted-foreground">{t("Connect apps in one click. You sign in on their site; Deni Run never sees your password.")}</p>
+            </div>
+            <div className="grid gap-3">
+              {mcpCatalog.map((entry) => {
+                const connection = connections.find((item) => item.catalogId === entry.id);
+                const connected = connection ? isConnected(connection) : false;
+                const expired = connection ? needsSignIn(connection) : false;
+                const error = connectorErrors[entry.id];
+                const status = connected ? t("Connected") : expired ? t("Needs sign-in again") : t("Not connected");
+                return <div key={entry.id} className="rounded-xl border border-foreground/10 bg-surface-raised p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-foreground/5 ring-1 ring-foreground/10"><ConnectorLogo id={entry.id} className="size-6" /></span>
+                      <div className="min-w-0">
+                        <h4 className="font-semibold">{entry.name}</h4>
+                        <p className="text-xs text-muted-foreground">{connectorDescriptions[entry.id]}</p>
+                        <p className={`text-xs ${expired ? "text-warning-300" : "text-muted-foreground"}`}>{status}</p>
+                      </div>
+                    </div>
+                    <Button type="button" size="sm" variant={connected ? "outline" : "primary"} loading={signingIn === entry.id} disabled={signingIn != null && signingIn !== entry.id} onClick={() => void signIn({ catalogId: entry.id })} aria-label={connected || expired ? t("Reconnect {name}", { name: entry.name }) : t("Connect {name}", { name: entry.name })}>
+                      {connected || expired ? t("Reconnect") : t("Connect")}
+                    </Button>
+                  </div>
+                  {error ? <p role="alert" className="mt-2 text-xs text-destructive-300">{error}</p> : null}
+                  {connection && (connected || expired) ? <div className="mt-3 space-y-3 border-t border-foreground/10 pt-3">
+                    {connected ? toolAlwaysAllow(connection) : null}
+                    <div><Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void disconnectConnection(connection)}>{t("Disconnect")}</Button></div>
+                  </div> : null}
+                </div>;
+              })}
+            </div>
+          </section>
           {message ? <p className="text-sm text-secondary-foreground">{message}</p> : null}
           <Collapsible open={mcpOpen} onOpenChange={setMcpOpen} className="space-y-3">
             <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 rounded-lg px-1 py-1 text-left text-sm font-semibold hover:bg-foreground/5">
-              <span>{t("Custom MCP servers")}{connections.length > 0 ? ` (${connections.length})` : ""}</span>
+              <span>{t("Custom MCP servers")}{customConnections.length > 0 ? ` (${customConnections.length})` : ""}</span>
               <ChevronDownIcon className={`size-4 transition-transform ${mcpOpen ? "rotate-180" : ""}`} />
             </CollapsibleTrigger>
             <CollapsibleContent className="space-y-3">
-              <p className="text-xs text-muted-foreground">{t("Connect a streamable HTTP or SSE MCP server. Secrets are encrypted per account.")}</p>
+              <p className="text-xs text-muted-foreground">{t("Connect a streamable HTTP or SSE MCP server. Secrets are encrypted per account.")} {t("If the server uses OAuth, save it without a token and sign in.")}</p>
               <div className="grid gap-3 rounded-lg bg-foreground/5 p-3 ring-1 ring-foreground/10">
                 <div className="grid gap-1.5"><Label htmlFor="mcp-name">{t("Name")}</Label><Input id="mcp-name" value={name} onChange={(event) => setName(event.currentTarget.value)} placeholder={t("My tools")} /></div>
                 <div className="grid gap-1.5"><Label htmlFor="mcp-url">{t("Server URL")}</Label><Input id="mcp-url" value={url} onChange={(event) => setUrl(event.currentTarget.value)} placeholder="https://example.com/mcp" /></div>
@@ -230,13 +439,22 @@ export function McpSettings({ open, onOpenChange }: { open: boolean; onOpenChang
                 <Button type="button" onClick={() => void save()} loading={busy} disabled={!name.trim() || !url.trim()} icon={PlugIcon}>{t("Save connection")}</Button>
               </div>
               <div className="space-y-2">
-                {connections.length === 0 ? <p className="text-sm text-muted-foreground">{t("No MCP connections yet.")}</p> : connections.map((connection) => (
-                  <div key={connection.id} className="flex items-center gap-2 rounded-lg bg-surface-raised p-3 ring-1 ring-foreground/10">
-                    <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{connection.name}</p><p className="truncate font-mono text-xs text-muted-foreground">{connection.url}</p><p className="text-xs text-muted-foreground">{connection.hasSecret ? t("Secret saved") : t("No secret")} · {connection.lastTestAt ? t("tested {time}", { time: connection.lastTestAt }) : t("not tested")}</p></div>
-                    <Button type="button" size="xs" variant="outline" icon={WrenchIcon} loading={busy} onClick={() => void test(connection.id)}>{t("Test")}</Button>
-                    <Button type="button" size="xs" variant="ghost" icon={TrashIcon} disabled={busy} onClick={() => void remove(connection.id)} aria-label={t("Delete {name}", { name: connection.name })} />
-                  </div>
-                ))}
+                {customConnections.length === 0 ? <p className="text-sm text-muted-foreground">{t("No MCP connections yet.")}</p> : customConnections.map((connection) => {
+                  const expired = needsSignIn(connection);
+                  const auth = connection.oauth === "signed-in" ? t("Signed in with OAuth") : connection.oauth === "signed-out" ? t("Signed out") : connection.hasSecret ? t("Secret saved") : t("No secret");
+                  return <div key={connection.id} className="space-y-3 rounded-lg bg-surface-raised p-3 ring-1 ring-foreground/10">
+                    <div className="flex items-center gap-2">
+                      <div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{connection.name}</p><p className="truncate font-mono text-xs text-muted-foreground">{connection.url}</p><p className="text-xs text-muted-foreground">{auth} · {connection.lastTestAt ? t("tested {time}", { time: connection.lastTestAt }) : t("not tested")}</p>
+                        {expired ? <p className="text-xs text-warning-300">{t("Needs sign-in again")}</p> : connection.lastError ? <p className="truncate text-xs text-destructive-300" title={connection.lastError}>{t("Last test failed")}</p> : null}
+                      </div>
+                      {expired ? <Button type="button" size="xs" variant="primary" icon={LogInIcon} loading={signingIn === connection.id} disabled={signingIn != null && signingIn !== connection.id} onClick={() => void signIn({ id: connection.id })} aria-label={t("Sign in to {name}", { name: connection.name })}>{t("Sign in")}</Button>
+                        : connection.oauth === null && !connection.hasSecret ? <Button type="button" size="xs" variant="outline" icon={LogInIcon} loading={signingIn === connection.id} disabled={signingIn != null && signingIn !== connection.id} onClick={() => void signIn({ id: connection.id })} aria-label={t("Sign in to {name} with OAuth", { name: connection.name })}>{t("Sign in with OAuth")}</Button> : null}
+                      <Button type="button" size="xs" variant="outline" icon={WrenchIcon} loading={busy} onClick={() => void test(connection.id)}>{t("Test")}</Button>
+                      <Button type="button" size="xs" variant="ghost" icon={TrashIcon} disabled={busy} onClick={() => void remove(connection.id)} aria-label={t("Delete {name}", { name: connection.name })} />
+                    </div>
+                    {isConnected(connection) ? toolAlwaysAllow(connection) : null}
+                  </div>;
+                })}
               </div>
             </CollapsibleContent>
           </Collapsible>

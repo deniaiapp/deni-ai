@@ -142,6 +142,23 @@ async function main() {
       return new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result }), { headers: { "content-type": "application/json" } });
     }
     if (url.startsWith("https://down.example.test/")) return new Response("down", { status: 500 });
+    // Notion's connector: a 401 that points at its resource metadata, then the authorization server.
+    const json = (value: unknown) => new Response(JSON.stringify(value), { headers: { "content-type": "application/json" } });
+    if (url === "https://mcp.notion.com/mcp") {
+      return new Response("", { status: 401, headers: { "www-authenticate": 'Bearer resource_metadata="https://mcp.notion.com/.well-known/oauth-protected-resource/mcp"' } });
+    }
+    if (url === "https://mcp.notion.com/.well-known/oauth-protected-resource/mcp") {
+      return json({ resource: "https://mcp.notion.com/mcp", authorization_servers: ["https://auth.notion.test"] });
+    }
+    if (url === "https://auth.notion.test/.well-known/oauth-authorization-server") {
+      return json({
+        issuer: "https://auth.notion.test",
+        authorization_endpoint: "https://auth.notion.test/authorize",
+        token_endpoint: "https://auth.notion.test/token",
+        code_challenge_methods_supported: ["S256"],
+        client_id_metadata_document_supported: true,
+      });
+    }
     throw new Error(`unexpected fetch: ${url}`);
   }) as typeof fetch;
 
@@ -311,7 +328,7 @@ async function main() {
   // List: host, transport, switch, test state. Never the URL's path or query, the token, or header values.
   let list = textOf((await runMcp("u1", "list")).sent);
   assert(["**Tools**", "`mcp.example.test`", "Streamable HTTP", "SSE", "token saved", "not tested"].every((part) => list.includes(part)), `list: ${list}`);
-  assert(!/secret-\d|\/mcp|token=/.test(list), `list leaked a secret: ${list}`);
+  assert(!/secret-\d|example\.test\/|token=/.test(list), `list leaked a secret: ${list}`);
 
   // Test: by name or id, sends the stored credentials, and records the result.
   const tested = textOf((await runMcp("u1", "test", { name: "tools" })).sent);
@@ -353,6 +370,33 @@ async function main() {
   const deleted = button("Delete?");
   await mf.component!(deleted.interaction, ctx("u1"), ["delete", tools.id]);
   assert(textOf(deleted.sent).includes("Deleted Tools.") && (await rows("u1")).length === 1, "delete failed");
+
+  // Connectors: listed with their state; connecting answers with a link button to the authorization page.
+  delete process.env.SLACK_MCP_CLIENT_ID;
+  list = textOf((await runMcp("u1", "list")).sent);
+  assert(/\*\*Notion\*\* — not connected/.test(list) && /\*\*Slack\*\* — not set up on this server/.test(list) && list.includes("**Events**"), `connector list: ${list}`);
+  const connectCall = await runMcp("u1", "connect", { connector: "notion" });
+  const linkButton = connectCall.sent.flatMap((message) => message.components ?? []).flatMap((row) => row.toJSON().components as { url?: string; label?: string }[])[0];
+  const authorize = new URL(linkButton?.url ?? "https://invalid.test");
+  assert(authorize.origin + authorize.pathname === "https://auth.notion.test/authorize" && linkButton?.label === "Sign in to Notion", `connect button: ${JSON.stringify(linkButton)}`);
+  assert(authorize.searchParams.get("redirect_uri") === "https://app.example.test/api/mcp/oauth/callback" && authorize.searchParams.get("code_challenge_method") === "S256", `authorize url: ${authorize}`);
+  assert(textOf(connectCall.sent).includes("signed in to Deni Run") && textOf(connectCall.sent).includes("/mcp connect again"), `connect text: ${textOf(connectCall.sent)}`);
+  const notion = (await rows("u1")).find((row) => row.catalogId === "notion");
+  assert(Boolean(notion?.oauth) && notion?.name === "Notion", "connecting did not add the connector");
+  assert(/\*\*Notion\*\* — needs sign-in · on/.test(textOf((await runMcp("u1", "list")).sent)), "a pending sign-in was not shown");
+  await runMcp("u1", "connect", { connector: "notion" });
+  assert((await rows("u1")).filter((row) => row.catalogId === "notion").length === 1, "reconnecting added a second row");
+  const slack = textOf((await runMcp("u1", "connect", { connector: "slack" }, "ja")).sent);
+  assert(slack.includes("このコネクタはこのサーバーではまだ設定されていません") && !(await rows("u1")).some((row) => row.catalogId === "slack"), `slack: ${slack}`);
+  assert(textOf((await runMcp("u1", "connect", { connector: "bogus" })).sent).includes("No connector"), "an unknown connector was accepted");
+
+  // Disconnect asks first, then deletes through the same button as /mcp delete.
+  assert(textOf((await runMcp("u2", "disconnect", { connector: "notion" })).sent).includes("Notion is not connected"), "another account disconnected Notion");
+  const askDisconnect = await runMcp("u1", "disconnect", { connector: "notion" });
+  assert(idsOf(askDisconnect.sent).join() === `mc:delete:${notion!.id},mc:cancel`, `disconnect ids: ${idsOf(askDisconnect.sent).join()}`);
+  const disconnected = button("Disconnect Notion?");
+  await mf.component!(disconnected.interaction, ctx("u1"), ["delete", notion!.id]);
+  assert(textOf(disconnected.sent).includes("Deleted Notion.") && !(await rows("u1")).some((row) => row.catalogId === "notion"), "disconnect failed");
 
   // Every string has Japanese with the same placeholders, and no other dictionary overrides it.
   const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((match) => match[1]).sort().join();

@@ -39,7 +39,8 @@ import { parseRunMode, type RunMode } from "@/lib/model";
 import { canCommitThreadResponse, groupJobsByThread, isActiveJob, jobVisualState, mergeJobSnapshots, shouldMarkThreadUnread } from "@/lib/job-view";
 import { cacheThreadMessages } from "@/lib/thread-state";
 import { discardChatSession, getChatSession, syncChatSessionMessages, updateChatSessionJobState } from "@/lib/chat-sessions";
-import { McpSettings } from "./mcp-settings";
+import { McpSettings, type McpSignInReturn } from "./mcp-settings";
+import { connectorId, takePendingConnect } from "@/lib/connect-intent";
 import { NotificationInbox } from "./notification-inbox";
 import { RoutinesDialog } from "./routines-dialog";
 import { SkillsDialog } from "./skills-dialog";
@@ -104,11 +105,27 @@ export function Workspace() {
   const activeThreadRef = useRef<string | null>(null);
   const threadReady = loadedThreadId != null && loadedThreadId === activeThreadId;
   const [modal, setModal] = useState<Modal>(null);
+  const [mcpSignInReturn, setMcpSignInReturn] = useState<McpSignInReturn | null>(null);
+  // Connector to start connecting once Plugins opens, from ?connect= or a link followed before sign-in.
+  const [autoConnect, setAutoConnect] = useState<string | null>(null);
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("plugins") === "1") {
-      // OAuth returns here; show the newly connected service without keeping the query parameter.
+    const params = new URLSearchParams(window.location.search);
+    const pending = takePendingConnect();
+    const connect = connectorId(params.get("connect")) ?? pending;
+    if (connect) {
       // eslint-disable-next-line react/set-state-in-effect
+      setAutoConnect(connect);
       setModal("mcp");
+    }
+    if (params.get("plugins") === "1") {
+      // OAuth returns here; show the newly connected service without keeping the query parameters.
+      setModal("mcp");
+      // MCP sign-in also reports the connection it finished, or why it failed.
+      const connectionId = params.get("mcp");
+      const error = params.get("mcpError");
+      if (connectionId || error) setMcpSignInReturn({ connectionId, error });
+    }
+    if (params.get("plugins") === "1" || params.has("connect")) {
       // Keep the router's history state; only the URL changes.
       window.history.replaceState(window.history.state, "", window.location.pathname);
     }
@@ -725,7 +742,7 @@ export function Workspace() {
         </motion.div>
       ) : null}
 
-      <McpSettings open={modal === "mcp"} onOpenChange={(open) => setModal(open ? "mcp" : null)} />
+      <McpSettings open={modal === "mcp"} signInReturn={mcpSignInReturn} autoConnect={autoConnect} onAutoConnectStarted={() => setAutoConnect(null)} onOpenChange={(open) => { setModal(open ? "mcp" : null); if (!open) { setMcpSignInReturn(null); setAutoConnect(null); } }} />
 
       {computer ? (
         <Button

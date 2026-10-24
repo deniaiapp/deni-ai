@@ -227,7 +227,11 @@ export type McpConnection = {
   url: string;
   transport: "streamable-http" | "sse";
   enabled: boolean;
+  /** Connector catalog entry, or null for a custom server. */
+  catalogId: string | null;
   hasSecret: boolean;
+  /** OAuth sign-in state; null when the server does not use OAuth. */
+  oauth: "signed-in" | "signed-out" | null;
   headerNames: string[];
   lastTestAt: string | null;
   lastError: string | null;
@@ -253,6 +257,8 @@ export type Store = {
   notifications?: AppNotification[];
   mcpConnections?: McpConnection[];
   pluginAlwaysAllow?: Record<string, boolean>;
+  /** MCP tools that run without approval, keyed `${connectionId}:${toolName}`. */
+  mcpAlwaysAllow?: Record<string, boolean>;
   /** Rolling summaries of the history each thread no longer sends to the model, by thread id. */
   historySummaries?: Record<string, HistorySummary>;
   /** Discord preferences of the linked account. The link itself lives in discord_links. */

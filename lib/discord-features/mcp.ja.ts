@@ -44,4 +44,32 @@ export const ja: Record<string, string> = {
   "That connection no longer exists.": "その接続はもうありません。",
   "Deleted {name}.": "{name} を削除しました。",
   "That form is no longer valid.": "このフォームはもう使えません。",
+  "not connected": "未接続",
+  "not set up on this server": "このサーバーでは未設定",
+  "connected": "接続済み",
+  "needs sign-in": "要サインイン",
+  "Connectors": "コネクタ",
+  "Connect one with /mcp connect.": "/mcp connect で接続できます。",
+  "Custom servers": "カスタムサーバー",
+  "Signing in needs the app's address, which this server does not have set.":
+    "サインインにはアプリのアドレスが必要ですが、このサーバーには設定されていません。",
+  "Could not start signing in to {name}: {error}": "{name} へのサインインを開始できませんでした: {error}",
+  "{name} does not need a sign-in. It is connected.": "{name} はサインイン不要です。接続しました。",
+  "Open the link below in a browser where you are signed in to Deni Run to connect {name}. It works for 15 minutes.":
+    "{name} に接続するには、Deni Run にサインインしているブラウザーで下のリンクを開いてください。リンクの有効期限は 15 分です。",
+  "If that browser is not signed in, you are asked to sign in first. Then run /mcp connect again for a fresh link.":
+    "そのブラウザーでサインインしていない場合は、先にサインインを求められます。その後、/mcp connect をもう一度実行して新しいリンクを取得してください。",
+  "Sign in to {name}": "{name} にサインイン",
+  "No connector with that name. Run /mcp list to see them.": "その名前のコネクタはありません。/mcp list で一覧を確認してください。",
+  "{name} is not connected.": "{name} は接続されていません。",
+  "Disconnect {name}? Its sign-in is deleted, and teammates can no longer call it.":
+    "{name} の接続を解除しますか?サインイン情報は削除され、チームメイトは呼び出せなくなります。",
+  // Errors from lib/mcp.ts and lib/mcp-oauth.ts, shown through discordErrorText.
+  "This connector is not set up on this server yet": "このコネクタはこのサーバーではまだ設定されていません",
+  "Unknown connector": "不明なコネクタです",
+  "Sign in to this MCP server again": "この MCP サーバーに再度サインインしてください",
+  "This MCP server does not publish how to sign in": "この MCP サーバーはサインイン方法を公開していません",
+  "This MCP server does not support secure sign-in (PKCE)": "この MCP サーバーは安全なサインイン(PKCE)に対応していません",
+  "This MCP server needs an OAuth client that Deni Run does not have": "この MCP サーバーには Deni Run が持っていない OAuth クライアントが必要です",
+  "Could not register Deni Run with this MCP server": "この MCP サーバーに Deni Run を登録できませんでした",
 };

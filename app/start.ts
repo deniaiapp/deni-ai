@@ -9,6 +9,8 @@ const publicExact = new Set([
   "/upgrade",
   "/terms",
   "/privacy",
+  "/support",
+  "/integrations",
   "/sign-in",
   "/sign-up",
   "/two-factor",
@@ -17,9 +19,12 @@ const publicExact = new Set([
 
 function isPublicPath(pathname: string) {
   if (publicExact.has(pathname)) return true;
+  if (pathname.startsWith("/integrations/")) return true;
   if (pathname.startsWith("/api/auth")) return true;
   if (pathname === "/api/billing/webhook") return true;
   if (pathname === "/api/health") return true;
+  // Checks the session itself; in development it first hands tunnel callbacks back to localhost.
+  if (pathname === "/api/mcp/oauth/callback") return true;
   // Static files are served before the app; anything with an extension that reaches it is not a page.
   if (/\.[^/]+$/.test(pathname)) return true;
   return false;
