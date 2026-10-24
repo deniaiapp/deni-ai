@@ -1,19 +1,22 @@
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { useExtracted } from "@/i18n/react";
-import { mcpCatalogEntry, type McpCatalogId } from "@/lib/mcp-catalog";
+import { mcpCatalogEntry } from "@/lib/mcp-catalog";
 import { ConnectorLogo } from "./connector-logos";
 import { PublicLayout } from "./public-layout";
 
 const card = "rounded-xl border border-foreground/10 bg-surface p-5";
 
+/** Connectors with a landing page of their own. */
+export type LandingConnectorId = "slack" | "notion" | "linear";
+
 /** Starts the real flow: the workspace opens Plugins and connects; signed-out visitors sign in first. */
-export function connectHref(id: McpCatalogId) {
+export function connectHref(id: string) {
   return `/?plugins=1&connect=${id}`;
 }
 
 /** The "Add to Slack" style button: white, bordered, brand mark, the same in light and dark themes. */
-export function AddToButton({ id, label }: { id: McpCatalogId; label: string }) {
+export function AddToButton({ id, label }: { id: LandingConnectorId; label: string }) {
   return (
     <a
       href={connectHref(id)}
@@ -25,7 +28,7 @@ export function AddToButton({ id, label }: { id: McpCatalogId; label: string }) 
   );
 }
 
-function useConnectorCopy(id: McpCatalogId) {
+function useConnectorCopy(id: LandingConnectorId) {
   const t = useExtracted();
   switch (id) {
     case "slack":
@@ -89,7 +92,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   );
 }
 
-export function ConnectorLanding({ id }: { id: McpCatalogId }) {
+export function ConnectorLanding({ id }: { id: LandingConnectorId }) {
   const t = useExtracted();
   const entry = mcpCatalogEntry(id);
   const copy = useConnectorCopy(id);

@@ -54,6 +54,7 @@
     "react-email": "^6.11.3",
     "react-qr-code": "^2.2.0",
     "shadcn": "^4.22.1",
+    "simple-icons": "^16.35.0",
     "steel-sdk": "^0.18.0",
     "streamdown": "^2.7.1",
     "stripe": "^23.0.1",

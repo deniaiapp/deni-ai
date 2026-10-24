@@ -1776,6 +1776,206 @@ msgctxt "JpsXCp"
 msgid "Delete {name}"
 msgstr "Delete {name}"
 
+#: app/components/connector-gallery.tsx
+msgctxt "y3prrs"
+msgid "Search, read, and update pages and databases in Notion."
+msgstr "Search, read, and update pages and databases in Notion."
+
+#: app/components/connector-gallery.tsx
+msgctxt "YM1mfS"
+msgid "Find, create, and update issues and projects in Linear."
+msgstr "Find, create, and update issues and projects in Linear."
+
+#: app/components/connector-gallery.tsx
+msgctxt "vs-OUt"
+msgid "Search messages and channels, and post to Slack."
+msgstr "Search messages and channels, and post to Slack."
+
+#: app/components/connector-gallery.tsx
+msgctxt "QkFfj4"
+msgid "Search and update Jira issues and Confluence pages."
+msgstr "Search and update Jira issues and Confluence pages."
+
+#: app/components/connector-gallery.tsx
+msgctxt "2eNiEF"
+msgid "Read and update boards, items, and updates in monday.com."
+msgstr "Read and update boards, items, and updates in monday.com."
+
+#: app/components/connector-gallery.tsx
+msgctxt "n10F1r"
+msgid "Find, create, and update tasks and docs in ClickUp."
+msgstr "Find, create, and update tasks and docs in ClickUp."
+
+#: app/components/connector-gallery.tsx
+msgctxt "-vGj9K"
+msgid "Read and update records in your Airtable bases."
+msgstr "Read and update records in your Airtable bases."
+
+#: app/components/connector-gallery.tsx
+msgctxt "v6Sm26"
+msgid "Search and read your meeting notes and transcripts in Granola."
+msgstr "Search and read your meeting notes and transcripts in Granola."
+
+#: app/components/connector-gallery.tsx
+msgctxt "DuyhjE"
+msgid "Search and read files in your Dropbox."
+msgstr "Search and read files in your Dropbox."
+
+#: app/components/connector-gallery.tsx
+msgctxt "b-n0B5"
+msgid "Run the actions you set up in Zapier across thousands of apps."
+msgstr "Run the actions you set up in Zapier across thousands of apps."
+
+#: app/components/connector-gallery.tsx
+msgctxt "u74Hlx"
+msgid "Search conversations, tickets, and contacts in Intercom."
+msgstr "Search conversations, tickets, and contacts in Intercom."
+
+#: app/components/connector-gallery.tsx
+msgctxt "B7jl4N"
+msgid "Search, create, and edit designs in Canva."
+msgstr "Search, create, and edit designs in Canva."
+
+#: app/components/connector-gallery.tsx
+msgctxt "N0mdht"
+msgid "Read Miro boards and add content to them."
+msgstr "Read Miro boards and add content to them."
+
+#: app/components/connector-gallery.tsx
+msgctxt "r0AYc1"
+msgid "Read and update sites, pages, and CMS collections in Webflow."
+msgstr "Read and update sites, pages, and CMS collections in Webflow."
+
+#: app/components/connector-gallery.tsx
+msgctxt "DJYMYH"
+msgid "Manage your Wix sites, content, and business apps."
+msgstr "Manage your Wix sites, content, and business apps."
+
+#: app/components/connector-gallery.tsx
+msgctxt "k_qaVR"
+msgid "Search and update people, companies, and deals in Attio."
+msgstr "Search and update people, companies, and deals in Attio."
+
+#: app/components/connector-gallery.tsx
+msgctxt "0deYPM"
+msgid "Find and update leads, contacts, and opportunities in Close."
+msgstr "Find and update leads, contacts, and opportunities in Close."
+
+#: app/components/connector-gallery.tsx
+msgctxt "EQj-tu"
+msgid "Look up customers, payments, and subscriptions in Stripe."
+msgstr "Look up customers, payments, and subscriptions in Stripe."
+
+#: app/components/connector-gallery.tsx
+msgctxt "dMb489"
+msgid "Look up transactions, and manage invoices and orders in PayPal."
+msgstr "Look up transactions, and manage invoices and orders in PayPal."
+
+#: app/components/connector-gallery.tsx
+msgctxt "ggszNK"
+msgid "Look up payments, orders, catalog items, and customers in Square."
+msgstr "Look up payments, orders, catalog items, and customers in Square."
+
+#: app/components/connector-gallery.tsx
+msgctxt "Mh6Ac5"
+msgid "Search issues and errors, and read stack traces in Sentry."
+msgstr "Search issues and errors, and read stack traces in Sentry."
+
+#: app/components/connector-gallery.tsx
+msgctxt "UE4rJz"
+msgid "Query databases and manage projects in Supabase."
+msgstr "Query databases and manage projects in Supabase."
+
+#: app/components/connector-gallery.tsx
+msgctxt "16fO0X"
+msgid "Run SQL and manage projects and branches in Neon Postgres."
+msgstr "Run SQL and manage projects and branches in Neon Postgres."
+
+#: app/components/connector-gallery.tsx
+msgctxt "h5Lb_m"
+msgid "Manage Workers, DNS, and other resources in your Cloudflare account."
+msgstr "Manage Workers, DNS, and other resources in your Cloudflare account."
+
+#: app/components/connector-gallery.tsx
+msgctxt "9s-o1j"
+msgid "Query product analytics, feature flags, and errors in PostHog."
+msgstr "Query product analytics, feature flags, and errors in PostHog."
+
+#: app/components/connector-gallery.tsx
+msgctxt "cHmBnv"
+msgid "Search models, datasets, Spaces, and papers on Hugging Face."
+msgstr "Search models, datasets, Spaces, and papers on Hugging Face."
+
+#: app/components/connector-gallery.tsx
+msgctxt "4TSz47"
+msgid "Look up current documentation and code examples for libraries."
+msgstr "Look up current documentation and code examples for libraries."
+
+#: app/components/connector-gallery.tsx
+msgctxt "L82l1q"
+msgid "Ask questions about public GitHub repositories and read their docs."
+msgstr "Ask questions about public GitHub repositories and read their docs."
+
+#: app/components/connector-gallery.tsx
+msgctxt "4cDn6b"
+msgid "Productivity"
+msgstr "Productivity"
+
+#: app/components/connector-gallery.tsx
+msgctxt "n5D_Ku"
+msgid "Communication"
+msgstr "Communication"
+
+#: app/components/connector-gallery.tsx
+msgctxt "VSJAMc"
+msgid "Design and websites"
+msgstr "Design and websites"
+
+#: app/components/connector-gallery.tsx
+msgctxt "c8nvms"
+msgid "Sales"
+msgstr "Sales"
+
+#: app/components/connector-gallery.tsx
+msgctxt "iYc3Ld"
+msgid "Payments"
+msgstr "Payments"
+
+#: app/components/connector-gallery.tsx
+msgctxt "g_w-Mb"
+msgid "Developer tools"
+msgstr "Developer tools"
+
+#: app/components/connector-gallery.tsx
+msgctxt "8FpI47"
+msgid "Search connectors"
+msgstr "Search connectors"
+
+#: app/components/connector-gallery.tsx
+msgctxt "ccXLVi"
+msgid "Category"
+msgstr "Category"
+
+#: app/components/connector-gallery.tsx
+msgctxt "zQvVDJ"
+msgid "All"
+msgstr "All"
+
+#: app/components/connector-gallery.tsx
+msgctxt "U1epW2"
+msgid "{count, plural, one {# connector} other {# connectors}}"
+msgstr "{count, plural, one {# connector} other {# connectors}}"
+
+#: app/components/connector-gallery.tsx
+msgctxt "iReNCt"
+msgid "No connectors match “{query}”."
+msgstr "No connectors match “{query}”."
+
+#: app/components/connector-gallery.tsx
+msgctxt "9DJMBV"
+msgid "No connectors in this category."
+msgstr "No connectors in this category."
+
 #: app/components/connector-landing.tsx
 msgctxt "3e4BHF"
 msgid "Let your AI teammates search Slack, catch up on channels and threads, and post updates for you, with your approval."
@@ -2302,24 +2502,6 @@ msgid "This may delete or overwrite data in {service}."
 msgstr "This may delete or overwrite data in {service}."
 
 #: app/components/mcp-settings.tsx
-#: app/routes/integrations/index.tsx
-msgctxt "y3prrs"
-msgid "Search, read, and update pages and databases in Notion."
-msgstr "Search, read, and update pages and databases in Notion."
-
-#: app/components/mcp-settings.tsx
-#: app/routes/integrations/index.tsx
-msgctxt "YM1mfS"
-msgid "Find, create, and update issues and projects in Linear."
-msgstr "Find, create, and update issues and projects in Linear."
-
-#: app/components/mcp-settings.tsx
-#: app/routes/integrations/index.tsx
-msgctxt "vs-OUt"
-msgid "Search messages and channels, and post to Slack."
-msgstr "Search messages and channels, and post to Slack."
-
-#: app/components/mcp-settings.tsx
 msgctxt "vBjft2"
 msgid "Could not connect plugin."
 msgstr "Could not connect plugin."
@@ -2416,6 +2598,32 @@ msgid "Read-only tools already run without asking."
 msgstr "Read-only tools already run without asking."
 
 #: app/components/mcp-settings.tsx
+msgctxt "IvjoDS"
+msgid "Connected"
+msgstr "Connected"
+
+#: app/components/mcp-settings.tsx
+msgctxt "yj09C7"
+msgid "Needs sign-in again"
+msgstr "Needs sign-in again"
+
+#: app/components/mcp-settings.tsx
+msgctxt "5srDqp"
+msgid "Reconnect {name}"
+msgstr "Reconnect {name}"
+
+#: app/components/mcp-settings.tsx
+#: app/routes/integrations/index.tsx
+msgctxt "6g5cOV"
+msgid "Connect {name}"
+msgstr "Connect {name}"
+
+#: app/components/mcp-settings.tsx
+msgctxt "Eg11ZY"
+msgid "Reconnect"
+msgstr "Reconnect"
+
+#: app/components/mcp-settings.tsx
 msgctxt "PiF85g"
 msgid "Unable to save connection"
 msgstr "Unable to save connection"
@@ -2457,11 +2665,6 @@ msgid "Not connected"
 msgstr "Not connected"
 
 #: app/components/mcp-settings.tsx
-msgctxt "Eg11ZY"
-msgid "Reconnect"
-msgstr "Reconnect"
-
-#: app/components/mcp-settings.tsx
 msgctxt "1_zz7T"
 msgid "Enable write access"
 msgstr "Enable write access"
@@ -2483,24 +2686,14 @@ msgid "Connect apps in one click. You sign in on their site; Deni Run never sees
 msgstr "Connect apps in one click. You sign in on their site; Deni Run never sees your password."
 
 #: app/components/mcp-settings.tsx
-msgctxt "IvjoDS"
-msgid "Connected"
-msgstr "Connected"
+msgctxt "8Q-Q5L"
+msgid "Browse connectors"
+msgstr "Browse connectors"
 
 #: app/components/mcp-settings.tsx
-msgctxt "yj09C7"
-msgid "Needs sign-in again"
-msgstr "Needs sign-in again"
-
-#: app/components/mcp-settings.tsx
-msgctxt "5srDqp"
-msgid "Reconnect {name}"
-msgstr "Reconnect {name}"
-
-#: app/components/mcp-settings.tsx
-msgctxt "6g5cOV"
-msgid "Connect {name}"
-msgstr "Connect {name}"
+msgctxt "FfVRAG"
+msgid "No connectors yet. Browse {count} apps such as Slack, Notion, Jira, and Sentry."
+msgstr "No connectors yet. Browse {count} apps such as Slack, Notion, Jira, and Sentry."
 
 #: app/components/mcp-settings.tsx
 #: app/routes/integrations/index.tsx
@@ -2607,6 +2800,11 @@ msgstr "Sign in with OAuth"
 msgctxt "xu6eM8"
 msgid "Test"
 msgstr "Test"
+
+#: app/components/mcp-settings.tsx
+msgctxt "C2ytou"
+msgid "Add it as a custom MCP server"
+msgstr "Add it as a custom MCP server"
 
 #: app/components/message-actions.tsx
 msgctxt "tV9bAW"
@@ -3908,9 +4106,14 @@ msgid "Integrations · Deni Run"
 msgstr "Integrations · Deni Run"
 
 #: app/routes/integrations/index.tsx
-msgctxt "m8KqrQ"
-msgid "Apps Deni Run teammates can work with: Slack, Notion, Linear, Gmail, Google Drive, GitHub, Discord, and your own MCP servers."
-msgstr "Apps Deni Run teammates can work with: Slack, Notion, Linear, Gmail, Google Drive, GitHub, Discord, and your own MCP servers."
+msgctxt "qWQQBz"
+msgid "Apps Deni Run teammates can work with: Slack, Notion, Linear, Jira, Sentry, Stripe, and more connectors, plus Gmail, Google Drive, GitHub, Discord, and your own MCP servers."
+msgstr "Apps Deni Run teammates can work with: Slack, Notion, Linear, Jira, Sentry, Stripe, and more connectors, plus Gmail, Google Drive, GitHub, Discord, and your own MCP servers."
+
+#: app/routes/integrations/index.tsx
+msgctxt "TdTXXf"
+msgid "Learn more"
+msgstr "Learn more"
 
 #: app/routes/integrations/index.tsx
 msgctxt "sJLESG"
@@ -3938,11 +4141,6 @@ msgid "Connect any streamable HTTP or SSE MCP server, with a bearer token or OAu
 msgstr "Connect any streamable HTTP or SSE MCP server, with a bearer token or OAuth sign-in. Every call asks first unless you always allow that tool."
 
 #: app/routes/integrations/index.tsx
-msgctxt "9Z6P5I"
-msgid "One click to connect. You sign in on the app’s own site; Deni Run never sees your password."
-msgstr "One click to connect. You sign in on the app’s own site; Deni Run never sees your password."
-
-#: app/routes/integrations/index.tsx
 msgctxt "Xgngmo"
 msgid "Built-in plugins"
 msgstr "Built-in plugins"
@@ -3968,9 +4166,14 @@ msgid "Connect the apps you already use so AI teammates can find information and
 msgstr "Connect the apps you already use so AI teammates can find information and get work done there. Everything is off until you connect it, and changes wait for your approval. Connect and disconnect any of them from Plugins in your workspace."
 
 #: app/routes/integrations/index.tsx
-msgctxt "TdTXXf"
-msgid "Learn more"
-msgstr "Learn more"
+msgctxt "9Z6P5I"
+msgid "One click to connect. You sign in on the app’s own site; Deni Run never sees your password."
+msgstr "One click to connect. You sign in on the app’s own site; Deni Run never sees your password."
+
+#: app/routes/integrations/index.tsx
+msgctxt "4ScnNj"
+msgid "Search {count} apps or filter by category."
+msgstr "Search {count} apps or filter by category."
 
 #: app/routes/integrations/linear.tsx
 msgctxt "msyRXq"
@@ -4184,9 +4387,9 @@ msgid "Deni Run’s use and transfer to any other app of information received fr
 msgstr "Deni Run’s use and transfer to any other app of information received from Google APIs will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We do not use Google user data for advertising, we do not sell it or transfer it to data brokers, we do not use it to develop, improve, or train generalized AI or machine-learning models, and we do not allow humans to read it unless you give consent for specific items, it is necessary for security or abuse investigation, or the law requires it."
 
 #: app/routes/privacy.tsx
-msgctxt "7NXVvz"
-msgid "3. Connectors: Slack, Notion, Linear, and custom MCP servers"
-msgstr "3. Connectors: Slack, Notion, Linear, and custom MCP servers"
+msgctxt "pS8lnV"
+msgid "3. Connectors: Slack, Notion, Linear, other apps, and custom MCP servers"
+msgstr "3. Connectors: Slack, Notion, Linear, other apps, and custom MCP servers"
 
 #: app/routes/privacy.tsx
 msgctxt "IWqj-j"
@@ -4214,14 +4417,14 @@ msgid "Slack gives Deni Run a user token, so teammates act as you, with your acc
 msgstr "Slack gives Deni Run a user token, so teammates act as you, with your access: they cannot see channels or conversations you cannot see, and messages they send appear under your name. The permissions requested let a teammate, when you ask, search and read messages, files, canvases, lists, and people in conversations you belong to; send or schedule messages; create conversations, canvases, and lists; upload files; and add reactions. Before you approve an action, Deni Run looks up the names of the channels and people it involves with Slack’s read-only tools, so the approval shows “#general” instead of an ID; these names are kept in memory for up to ten minutes."
 
 #: app/routes/privacy.tsx
-msgctxt "9KsjVF"
-msgid "Notion and Linear."
-msgstr "Notion and Linear."
+msgctxt "yyOaEs"
+msgid "Notion, Linear, and other connectors."
+msgstr "Notion, Linear, and other connectors."
 
 #: app/routes/privacy.tsx
-msgctxt "xow7nI"
-msgid "Teammates can search and read pages, databases, issues, and projects you have access to, and create or update them when you ask."
-msgstr "Teammates can search and read pages, databases, issues, and projects you have access to, and create or update them when you ask."
+msgctxt "etvC6E"
+msgid "With these and the other connectors listed in Plugins, such as Atlassian, Sentry, or Stripe, teammates can search and read what your account can access in that service, and create or update items there when you ask. A few connectors, such as Context7 and DeepWiki, only look up public information and need no sign-in; nothing about you is stored for them beyond the connection itself."
+msgstr "With these and the other connectors listed in Plugins, such as Atlassian, Sentry, or Stripe, teammates can search and read what your account can access in that service, and create or update items there when you ask. A few connectors, such as Context7 and DeepWiki, only look up public information and need no sign-in; nothing about you is stored for them beyond the connection itself."
 
 #: app/routes/privacy.tsx
 msgctxt "jTAHlC"
@@ -4274,9 +4477,9 @@ msgid "Discord: if you link it, Discord carries the direct messages you and the 
 msgstr "Discord: if you link it, Discord carries the direct messages you and the bot exchange, including files and screenshots you request and notifications about background work if you keep them on, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models."
 
 #: app/routes/privacy.tsx
-msgctxt "-QCNml"
-msgid "Slack, Notion, Linear, and custom MCP servers you connect: receive the requests a teammate makes for a task you gave it, under each service’s own terms and privacy policy."
-msgstr "Slack, Notion, Linear, and custom MCP servers you connect: receive the requests a teammate makes for a task you gave it, under each service’s own terms and privacy policy."
+msgctxt "EreOWD"
+msgid "Slack, Notion, Linear, the other connectors, and custom MCP servers you connect: receive the requests a teammate makes for a task you gave it, under each service’s own terms and privacy policy."
+msgstr "Slack, Notion, Linear, the other connectors, and custom MCP servers you connect: receive the requests a teammate makes for a task you gave it, under each service’s own terms and privacy policy."
 
 #: app/routes/privacy.tsx
 msgctxt "A54dst"
@@ -4289,9 +4492,9 @@ msgid "Resend: delivers sign-in codes if you choose email for two-factor. Receiv
 msgstr "Resend: delivers sign-in codes if you choose email for two-factor. Receives your email address and the code."
 
 #: app/routes/privacy.tsx
-msgctxt "1TiWpq"
-msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail, Google Drive, Slack, Notion, Linear, or another MCP server, the content a teammate retrieves from it for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
-msgstr "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail, Google Drive, Slack, Notion, Linear, or another MCP server, the content a teammate retrieves from it for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
+msgctxt "dHsMYF"
+msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail, Google Drive, Slack, Notion, Linear, or another connector or MCP server, the content a teammate retrieves from it for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
+msgstr "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail, Google Drive, Slack, Notion, Linear, or another connector or MCP server, the content a teammate retrieves from it for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
 
 #: app/routes/privacy.tsx
 msgctxt "e_XJkf"
@@ -4349,9 +4552,9 @@ msgid "You can disconnect the Gmail, Google Drive, and GitHub plugins at any tim
 msgstr "You can disconnect the Gmail, Google Drive, and GitHub plugins at any time from Plugins in the app, which stops teammates using them right away and revokes our access at Google or GitHub once the last plugin of that provider is disconnected. You can also revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below."
 
 #: app/routes/privacy.tsx
-msgctxt "zjpAjm"
-msgid "You can disconnect Slack, Notion, Linear, or any MCP server at any time from Plugins in the app, which deletes the tokens we hold for it right away. To also revoke the grant on the service’s side, remove Deni Run from that service’s connected or authorized apps (in Slack, from your workspace’s app management page). Deleting your Deni Run account deletes every connection and its tokens."
-msgstr "You can disconnect Slack, Notion, Linear, or any MCP server at any time from Plugins in the app, which deletes the tokens we hold for it right away. To also revoke the grant on the service’s side, remove Deni Run from that service’s connected or authorized apps (in Slack, from your workspace’s app management page). Deleting your Deni Run account deletes every connection and its tokens."
+msgctxt "YxN-q_"
+msgid "You can disconnect Slack, Notion, Linear, any other connector, or any MCP server at any time from Plugins in the app, which deletes the tokens we hold for it right away. To also revoke the grant on the service’s side, remove Deni Run from that service’s connected or authorized apps (in Slack, from your workspace’s app management page). Deleting your Deni Run account deletes every connection and its tokens."
+msgstr "You can disconnect Slack, Notion, Linear, any other connector, or any MCP server at any time from Plugins in the app, which deletes the tokens we hold for it right away. To also revoke the grant on the service’s side, remove Deni Run from that service’s connected or authorized apps (in Slack, from your workspace’s app management page). Deleting your Deni Run account deletes every connection and its tokens."
 
 #: app/routes/privacy.tsx
 msgctxt "CRfcwC"
@@ -4446,14 +4649,14 @@ msgid "Frequently asked questions"
 msgstr "Frequently asked questions"
 
 #: app/routes/support.tsx
-msgctxt "qrFEMN"
-msgid "How do I connect Slack, Notion, or Linear?"
-msgstr "How do I connect Slack, Notion, or Linear?"
+msgctxt "YdA9eB"
+msgid "How do I connect Slack, Notion, Linear, or another app?"
+msgstr "How do I connect Slack, Notion, Linear, or another app?"
 
 #: app/routes/support.tsx
-msgctxt "7XcbU9"
-msgid "In your workspace, open Plugins and click Connect next to the app under Connectors. You sign in on the app’s own site and choose what to allow; Deni Run never sees your password. When you come back, the connector shows Connected and any teammate can use it."
-msgstr "In your workspace, open Plugins and click Connect next to the app under Connectors. You sign in on the app’s own site and choose what to allow; Deni Run never sees your password. When you come back, the connector shows Connected and any teammate can use it."
+msgctxt "lArnJ6"
+msgid "In your workspace, open Plugins, click Browse connectors, search for the app, and click Connect. You sign in on the app’s own site and choose what to allow; Deni Run never sees your password. When you come back, the connector shows Connected and any teammate can use it."
+msgstr "In your workspace, open Plugins, click Browse connectors, search for the app, and click Connect. You sign in on the app’s own site and choose what to allow; Deni Run never sees your password. When you come back, the connector shows Connected and any teammate can use it."
 
 #: app/routes/support.tsx
 msgctxt "Q6W4lt"
@@ -4509,6 +4712,11 @@ msgstr "Notion: disconnect Deni Run from the connections in your Notion settings
 msgctxt "1-NFtn"
 msgid "Linear: revoke Deni Run from the authorized applications in your Linear account settings."
 msgstr "Linear: revoke Deni Run from the authorized applications in your Linear account settings."
+
+#: app/routes/support.tsx
+msgctxt "pQmPnH"
+msgid "Other connectors: remove Deni Run from the connected or authorized apps in that service’s settings."
+msgstr "Other connectors: remove Deni Run from the connected or authorized apps in that service’s settings."
 
 #: app/routes/support.tsx
 msgctxt "K3ff74"

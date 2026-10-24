@@ -2,8 +2,9 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { headTranslator } from "@/i18n/head";
 import { useExtracted } from "@/i18n/react";
-import { mcpCatalog } from "@/lib/mcp-catalog";
-import { ConnectorLogo } from "../../components/connector-logos";
+import { mcpCatalog, type McpCatalogEntry } from "@/lib/mcp-catalog";
+import { ConnectorGallery } from "../../components/connector-gallery";
+import { connectHref } from "../../components/connector-landing";
 import { PublicLayout } from "../../components/public-layout";
 
 export const Route = createFileRoute("/integrations/")({
@@ -14,7 +15,7 @@ export const Route = createFileRoute("/integrations/")({
         { title: t("Integrations · Deni Run") },
         {
           name: "description",
-          content: t("Apps Deni Run teammates can work with: Slack, Notion, Linear, Gmail, Google Drive, GitHub, Discord, and your own MCP servers."),
+          content: t("Apps Deni Run teammates can work with: Slack, Notion, Linear, Jira, Sentry, Stripe, and more connectors, plus Gmail, Google Drive, GitHub, Discord, and your own MCP servers."),
         },
       ],
     };
@@ -33,7 +34,15 @@ function Mark({ children }: { children: ReactNode }) {
   );
 }
 
-type Item = { key: string; name: string; body: string; mark: ReactNode; to?: "/integrations/slack" | "/integrations/notion" | "/integrations/linear" };
+type LandingPath = "/integrations/slack" | "/integrations/notion" | "/integrations/linear";
+type Item = { key: string; name: string; body: string; mark: ReactNode; to?: LandingPath };
+
+/** Connectors with their own page; the rest start connecting straight from the gallery. */
+const landingPages: Partial<Record<string, LandingPath>> = {
+  slack: "/integrations/slack",
+  notion: "/integrations/notion",
+  linear: "/integrations/linear",
+};
 
 function IntegrationCard({ item, cta }: { item: Item; cta: string }) {
   const content = (
@@ -61,18 +70,19 @@ function IntegrationCard({ item, cta }: { item: Item; cta: string }) {
 
 function IntegrationsPage() {
   const t = useExtracted();
-  const connectorBodies: Record<string, string> = {
-    notion: t("Search, read, and update pages and databases in Notion."),
-    linear: t("Find, create, and update issues and projects in Linear."),
-    slack: t("Search messages and channels, and post to Slack."),
+  const connectorAction = (entry: McpCatalogEntry) => {
+    const to = landingPages[entry.id];
+    const link = "shrink-0 text-xs font-medium text-foreground hover:underline";
+    return to ? (
+      <Link to={to} className={link}>
+        {t("Learn more")} →
+      </Link>
+    ) : (
+      <a href={connectHref(entry.id)} className={link}>
+        {t("Connect {name}", { name: entry.name })} →
+      </a>
+    );
   };
-  const connectors: Item[] = mcpCatalog.map((entry) => ({
-    key: entry.id,
-    name: entry.name,
-    body: connectorBodies[entry.id] ?? "",
-    mark: <ConnectorLogo id={entry.id} className="size-6" />,
-    to: `/integrations/${entry.id}`,
-  }));
   const builtIn: Item[] = [
     { key: "gmail", name: "Gmail", mark: "M", body: t("Search and read your mail, and send email on your behalf after you approve.") },
     { key: "drive", name: "Google Drive", mark: "D", body: t("Search and read Docs and text files, and create or update files the app made after you approve.") },
@@ -83,7 +93,6 @@ function IntegrationsPage() {
     { key: "mcp", name: t("Custom MCP servers"), mark: "MCP", body: t("Connect any streamable HTTP or SSE MCP server, with a bearer token or OAuth sign-in. Every call asks first unless you always allow that tool.") },
   ];
   const groups = [
-    { title: t("Connectors"), body: t("One click to connect. You sign in on the app’s own site; Deni Run never sees your password."), items: connectors },
     { title: t("Built-in plugins"), body: t("Sign in with Google or GitHub to let teammates use these services."), items: builtIn },
     { title: t("More ways to work"), body: t("Reach your teammates from Discord, or bring your own tools."), items: other },
   ];
@@ -95,6 +104,16 @@ function IntegrationsPage() {
           <p className="text-[0.925rem] leading-relaxed text-muted-foreground">
             {t("Connect the apps you already use so AI teammates can find information and get work done there. Everything is off until you connect it, and changes wait for your approval. Connect and disconnect any of them from Plugins in your workspace.")}
           </p>
+        </section>
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold">{t("Connectors")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("One click to connect. You sign in on the app’s own site; Deni Run never sees your password.")}{" "}
+              {t("Search {count} apps or filter by category.", { count: String(mcpCatalog.length) })}
+            </p>
+          </div>
+          <ConnectorGallery listClassName="gap-4 lg:grid-cols-3" cardClassName="bg-surface p-5" renderAction={connectorAction} />
         </section>
         {groups.map((group) => (
           <section key={group.title} className="space-y-4">

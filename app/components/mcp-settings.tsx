@@ -1,6 +1,6 @@
 import { useExtracted } from "@/i18n/react";
 import { useEffect, useState } from "react";
-import { CheckCircle2Icon, ChevronDownIcon, CircleAlertIcon, LogInIcon, PlugIcon, TrashIcon, WrenchIcon } from "lucide-react";
+import { CheckCircle2Icon, ChevronDownIcon, CircleAlertIcon, LayoutGridIcon, LogInIcon, PlugIcon, TrashIcon, WrenchIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -12,7 +12,8 @@ import { LoadingFallback } from "@/components/ui/loading";
 import { Select } from "@/components/ui/select";
 import { authClient } from "@/lib/auth-client";
 import { pluginWriteActions, type PluginKind } from "@/lib/plugin-actions";
-import { mcpCatalog } from "@/lib/mcp-catalog";
+import { mcpCatalog, type McpCatalogEntry } from "@/lib/mcp-catalog";
+import { ConnectorGallery, useConnectorDescriptions } from "./connector-gallery";
 import { ConnectorLogo } from "./connector-logos";
 import { DiscordCard, fetchDiscordStatus, type DiscordStatus } from "./discord-settings";
 import { usePluginActionLabels } from "./plugin-action-labels";
@@ -54,11 +55,7 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
   onAutoConnectStarted?: () => void;
 }) {
   const t = useExtracted();
-  const connectorDescriptions: Record<string, string> = {
-    notion: t("Search, read, and update pages and databases in Notion."),
-    linear: t("Find, create, and update issues and projects in Linear."),
-    slack: t("Search messages and channels, and post to Slack."),
-  };
+  const connectorDescriptions = useConnectorDescriptions();
   const actionLabels = usePluginActionLabels();
   const [connections, setConnections] = useState<McpConnection[]>([]);
   const [plugins, setPlugins] = useState<BuiltinPlugin[]>([]);
@@ -66,6 +63,7 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
   // Cards render together once the first load settles, so none of them pops in late.
   const [ready, setReady] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [secret, setSecret] = useState("");
@@ -180,8 +178,11 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, signInReturn]);
 
-  /** Start OAuth for a connector (adding it first) or an existing connection, then leave for the sign-in page. */
-  async function signIn(target: { catalogId: string } | { id: string }) {
+  /**
+   * Start OAuth for a connector (adding it first) or an existing connection, then leave for the
+   * sign-in page. Servers without sign-in are tested here instead, which finishes the connect.
+   */
+  async function signIn(target: { catalogId: string } | { id: string }): Promise<"leaving" | "done" | "failed"> {
     const key = "catalogId" in target ? target.catalogId : target.id;
     setSigningIn(key);
     setMessage(null);
@@ -194,18 +195,25 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
       if (data.authorizeUrl) {
         // The server's sign-in page sends the browser back to /?plugins=1 when done.
         window.location.assign(data.authorizeUrl);
-        return;
+        return "leaving";
       }
       // No sign-in needed; check the server right away.
       setSigningIn(null);
       await test(data.connection.id);
+      return "done";
     } catch (error) {
       const text = error instanceof Error ? error.message : String(error);
       if ("catalogId" in target) setConnectorErrors((current) => ({ ...current, [target.catalogId]: text }));
       else setMessage(text);
       setSigningIn(null);
       await load();
+      return "failed";
     }
+  }
+
+  /** Back to the Plugins dialog once a connector without sign-in is added, to show its result. */
+  async function connectFromGallery(entry: McpCatalogEntry) {
+    if ((await signIn({ catalogId: entry.id })) === "done") setGalleryOpen(false);
   }
 
   async function disconnectConnection(connection: McpConnection) {
@@ -288,6 +296,26 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
   }
 
   const customConnections = connections.filter((connection) => connection.catalogId == null);
+  // Connectors already added to this account, plus any whose connect just failed (from an
+  // "Add to …" link, say) so the error stays visible here.
+  const addedConnectors = mcpCatalog.filter((entry) => connections.some((item) => item.catalogId === entry.id) || connectorErrors[entry.id]);
+
+  function connectorStatus(entry: McpCatalogEntry) {
+    const connection = connections.find((item) => item.catalogId === entry.id);
+    const error = connectorErrors[entry.id];
+    if (error) return <span role="alert" className="text-destructive-300">{error}</span>;
+    if (connection && isConnected(connection)) return <span className="text-muted-foreground">{t("Connected")}</span>;
+    if (connection && needsSignIn(connection)) return <span className="text-warning-300">{t("Needs sign-in again")}</span>;
+    return null;
+  }
+
+  function connectorAction(entry: McpCatalogEntry) {
+    const connection = connections.find((item) => item.catalogId === entry.id);
+    const again = connection != null && (isConnected(connection) || needsSignIn(connection));
+    return <Button type="button" size="sm" variant={again ? "outline" : "primary"} loading={signingIn === entry.id} disabled={signingIn != null && signingIn !== entry.id} onClick={() => void connectFromGallery(entry)} aria-label={again ? t("Reconnect {name}", { name: entry.name }) : t("Connect {name}", { name: entry.name })}>
+      {again ? t("Reconnect") : t("Connect")}
+    </Button>;
+  }
 
   async function save() {
     setBusy(true);
@@ -388,12 +416,18 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
             <DiscordCard status={discord} onStatusChange={setDiscord} />
           </div>
           <section aria-labelledby="mcp-connectors-heading" className="space-y-3">
-            <div>
-              <h3 id="mcp-connectors-heading" className="text-sm font-semibold">{t("Connectors")}</h3>
-              <p className="text-xs text-muted-foreground">{t("Connect apps in one click. You sign in on their site; Deni Run never sees your password.")}</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 id="mcp-connectors-heading" className="text-sm font-semibold">{t("Connectors")}</h3>
+                <p className="text-xs text-muted-foreground">{t("Connect apps in one click. You sign in on their site; Deni Run never sees your password.")}</p>
+              </div>
+              <Button type="button" size="sm" variant="outline" icon={LayoutGridIcon} onClick={() => setGalleryOpen(true)}>{t("Browse connectors")}</Button>
             </div>
             <div className="grid gap-3">
-              {mcpCatalog.map((entry) => {
+              {addedConnectors.length === 0 ? <button type="button" onClick={() => setGalleryOpen(true)} className="rounded-xl border border-dashed border-foreground/15 p-4 text-left text-sm text-muted-foreground transition-colors hover:bg-foreground/5">
+                {t("No connectors yet. Browse {count} apps such as Slack, Notion, Jira, and Sentry.", { count: String(mcpCatalog.length) })}
+              </button> : null}
+              {addedConnectors.map((entry) => {
                 const connection = connections.find((item) => item.catalogId === entry.id);
                 const connected = connection ? isConnected(connection) : false;
                 const expired = connection ? needsSignIn(connection) : false;
@@ -402,7 +436,7 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
                 return <div key={entry.id} className="rounded-xl border border-foreground/10 bg-surface-raised p-4">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-foreground/5 ring-1 ring-foreground/10"><ConnectorLogo id={entry.id} className="size-6" /></span>
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white ring-1 ring-foreground/10"><ConnectorLogo id={entry.id} className="size-6" /></span>
                       <div className="min-w-0">
                         <h4 className="font-semibold">{entry.name}</h4>
                         <p className="text-xs text-muted-foreground">{connectorDescriptions[entry.id]}</p>
@@ -460,6 +494,20 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
           </Collapsible>
         </> : <LoadingFallback className="py-8" />}
       </DialogContent>
+      <Dialog open={galleryOpen} onOpenChange={setGalleryOpen}>
+        <DialogContent size="lg" className="flex max-h-[85vh] flex-col overflow-hidden">
+          <DialogTitle className="flex items-center gap-2"><LayoutGridIcon className="size-4" /> {t("Browse connectors")}</DialogTitle>
+          <DialogDescription>{t("Connect apps in one click. You sign in on their site; Deni Run never sees your password.")}</DialogDescription>
+          <div className="-mx-6 min-h-0 flex-1 overflow-auto px-6 pb-1">
+            <ConnectorGallery
+              autoFocus
+              renderStatus={connectorStatus}
+              renderAction={connectorAction}
+              empty={<Button type="button" size="sm" variant="link" onClick={() => { setGalleryOpen(false); setMcpOpen(true); }}>{t("Add it as a custom MCP server")}</Button>}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }

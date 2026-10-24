@@ -260,7 +260,8 @@ const connectorOption = (option: SlashCommandStringOption) =>
     .setDescription("Connector")
     .setDescriptionLocalization("ja", "コネクタ")
     .setRequired(true)
-    .addChoices(...mcpCatalog.map((entry) => ({ name: entry.name, value: entry.id })));
+    // More connectors than the 25 fixed choices Discord allows, so they are suggested as typed.
+    .setAutocomplete(true);
 
 const command = dmCommand("mcp", "Connectors and custom MCP servers your teammates can call", "チームメイトが呼び出せるコネクタとカスタム MCP サーバー")
   .addSubcommand((sub) => sub.setName("list").setDescription("List connectors and your MCP connections").setDescriptionLocalization("ja", "コネクタと MCP 接続の一覧"))
@@ -300,7 +301,7 @@ export const feature: DiscordFeature = {
       return;
     }
     if (subcommand === "connect" || subcommand === "disconnect") {
-      const entry = mcpCatalogEntry(interaction.options.getString("connector"));
+      const entry = findByIdOrName([...mcpCatalog], interaction.options.getString("connector"));
       if (!entry) {
         await respond(interaction, tr("No connector with that name. Run /mcp list to see them."));
         return;
@@ -354,6 +355,13 @@ export const feature: DiscordFeature = {
   async autocomplete(interaction, { link, tr }) {
     const focused = interaction.options.getFocused();
     const subcommand = interaction.options.getSubcommand(false);
+    if (subcommand === "connect" || subcommand === "disconnect") {
+      // Match keywords too, so "jira" finds Atlassian.
+      const wanted = focused.trim().toLowerCase();
+      const entries = mcpCatalog.filter((entry) => !wanted || [entry.name, ...(entry.keywords ?? [])].some((word) => word.toLowerCase().includes(wanted)));
+      await interaction.respond(choices(entries, "", (entry) => entry.name, (entry) => entry.id));
+      return;
+    }
     const connections = (await listMcpConnections(link.userId)).filter((item) =>
       subcommand === "enable" ? !item.enabled : subcommand === "disable" ? item.enabled : true,
     );

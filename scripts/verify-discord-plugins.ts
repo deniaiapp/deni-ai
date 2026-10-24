@@ -352,6 +352,13 @@ async function main() {
   assert(enableChoices.answered().map((item) => item.value).join() === events.id, `enable choices: ${JSON.stringify(enableChoices.answered())}`);
   await runMcp("u1", "enable", { name: "Events" });
   assert((await rows("u1")).find((row) => row.id === events.id)?.enabled === true, "enable did not save");
+  // Connectors outnumber Discord's fixed choices, so they are suggested by name or keyword.
+  const allConnectors = autocomplete({ name: "connector", value: "" }, {}, "connect");
+  await mf.autocomplete!(allConnectors.interaction, ctx("u1"));
+  assert(allConnectors.answered().length === 25, `connector choices are capped at 25: ${allConnectors.answered().length}`);
+  const jira = autocomplete({ name: "connector", value: "jira" }, {}, "connect");
+  await mf.autocomplete!(jira.interaction, ctx("u1"));
+  assert(jira.answered().map((item) => item.value).join() === "atlassian", `keyword choices: ${JSON.stringify(jira.answered())}`);
 
   // Another account never reaches these connections, by name, id, button, or autocomplete.
   assert(textOf((await runMcp("u2", "test", { name: tools.id })).sent).includes("No MCP connection"), "another account tested by id");

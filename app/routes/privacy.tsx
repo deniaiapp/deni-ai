@@ -96,7 +96,7 @@ function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title={t("3. Connectors: Slack, Notion, Linear, and custom MCP servers")}>
+        <Section title={t("3. Connectors: Slack, Notion, Linear, other apps, and custom MCP servers")}>
           <p>
             {t("Only if you choose to connect them from Plugins in the app, or with the Add to Slack button, teammates can use these services through their official Model Context Protocol (MCP) servers. You sign in on the service’s own site and choose what to allow there; Deni Run never sees your password for that service.")}
           </p>
@@ -109,8 +109,8 @@ function PrivacyPage() {
             {t("Slack gives Deni Run a user token, so teammates act as you, with your access: they cannot see channels or conversations you cannot see, and messages they send appear under your name. The permissions requested let a teammate, when you ask, search and read messages, files, canvases, lists, and people in conversations you belong to; send or schedule messages; create conversations, canvases, and lists; upload files; and add reactions. Before you approve an action, Deni Run looks up the names of the channels and people it involves with Slack’s read-only tools, so the approval shows “#general” instead of an ID; these names are kept in memory for up to ten minutes.")}
           </p>
           <p>
-            <strong className="font-medium text-foreground">{t("Notion and Linear.")}</strong>{" "}
-            {t("Teammates can search and read pages, databases, issues, and projects you have access to, and create or update them when you ask.")}
+            <strong className="font-medium text-foreground">{t("Notion, Linear, and other connectors.")}</strong>{" "}
+            {t("With these and the other connectors listed in Plugins, such as Atlassian, Sentry, or Stripe, teammates can search and read what your account can access in that service, and create or update items there when you ask. A few connectors, such as Context7 and DeepWiki, only look up public information and need no sign-in; nothing about you is stored for them beyond the connection itself.")}
           </p>
           <p>
             <strong className="font-medium text-foreground">{t("When teammates act.")}</strong>{" "}
@@ -135,10 +135,10 @@ function PrivacyPage() {
           <ul className="list-disc space-y-1 pl-5">
             <li>{t("Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email.")}</li>
             <li>{t("Discord: if you link it, Discord carries the direct messages you and the bot exchange, including files and screenshots you request and notifications about background work if you keep them on, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models.")}</li>
-            <li>{t("Slack, Notion, Linear, and custom MCP servers you connect: receive the requests a teammate makes for a task you gave it, under each service’s own terms and privacy policy.")}</li>
+            <li>{t("Slack, Notion, Linear, the other connectors, and custom MCP servers you connect: receive the requests a teammate makes for a task you gave it, under each service’s own terms and privacy policy.")}</li>
             <li>{t("Stripe: billing. Receives your email address and payment details.")}</li>
             <li>{t("Resend: delivers sign-in codes if you choose email for two-factor. Receives your email address and the code.")}</li>
-            <li>{t("OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail, Google Drive, Slack, Notion, Linear, or another MCP server, the content a teammate retrieves from it for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data.")}</li>
+            <li>{t("OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail, Google Drive, Slack, Notion, Linear, or another connector or MCP server, the content a teammate retrieves from it for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data.")}</li>
             <li>{t("Steel: cloud browser sessions, which load the websites your teammate visits.")}</li>
             <li>{t("E2B: the isolated sandbox where terminal commands run.")}</li>
             <li>{t("Cloudflare: database (D1) and file storage (R2), in Japan.")}</li>
@@ -168,7 +168,7 @@ function PrivacyPage() {
             {t("You can disconnect the Gmail, Google Drive, and GitHub plugins at any time from Plugins in the app, which stops teammates using them right away and revokes our access at Google or GitHub once the last plugin of that provider is disconnected. You can also revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below.")}
           </p>
           <p>
-            {t("You can disconnect Slack, Notion, Linear, or any MCP server at any time from Plugins in the app, which deletes the tokens we hold for it right away. To also revoke the grant on the service’s side, remove Deni Run from that service’s connected or authorized apps (in Slack, from your workspace’s app management page). Deleting your Deni Run account deletes every connection and its tokens.")}
+            {t("You can disconnect Slack, Notion, Linear, any other connector, or any MCP server at any time from Plugins in the app, which deletes the tokens we hold for it right away. To also revoke the grant on the service’s side, remove Deni Run from that service’s connected or authorized apps (in Slack, from your workspace’s app management page). Deleting your Deni Run account deletes every connection and its tokens.")}
           </p>
         </Section>
 

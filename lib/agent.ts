@@ -267,7 +267,7 @@ export function createDeniTools(ctx: AgentContext) {
     }),
     mcp: tool({
       description:
-        "Use a connected Model Context Protocol server, such as the Notion, Linear, or Slack connectors or a custom server. List tools first. Read-only tools of connectors run directly; other calls need user approval unless the user set that tool to Always allow. If a call says to sign in again, tell the user to reconnect it in Plugins.",
+        "Use a connected Model Context Protocol server, such as the Notion, Linear, Slack, Atlassian, or Sentry connectors or a custom server. List tools first. Read-only tools of connectors run directly; other calls need user approval unless the user set that tool to Always allow. If a call says to sign in again, tell the user to reconnect it in Plugins.",
       inputSchema: z.object({
         connectionId: z.string().min(1),
         action: z.enum(["list", "call"]),

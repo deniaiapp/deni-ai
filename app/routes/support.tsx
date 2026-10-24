@@ -81,9 +81,9 @@ function SupportPage() {
 
         <h2 className="pt-4 text-lg font-semibold text-foreground">{t("Frequently asked questions")}</h2>
 
-        <Question id="connect" title={t("How do I connect Slack, Notion, or Linear?")}>
+        <Question id="connect" title={t("How do I connect Slack, Notion, Linear, or another app?")}>
           <p>
-            {t("In your workspace, open Plugins and click Connect next to the app under Connectors. You sign in on the app’s own site and choose what to allow; Deni Run never sees your password. When you come back, the connector shows Connected and any teammate can use it.")}
+            {t("In your workspace, open Plugins, click Browse connectors, search for the app, and click Connect. You sign in on the app’s own site and choose what to allow; Deni Run never sees your password. When you come back, the connector shows Connected and any teammate can use it.")}
           </p>
           <p>
             {t.rich("You can also start from the app’s page under <link>Integrations</link>, for example the “Add to Slack” button. If you are not signed in yet, you sign in first and the connection starts right after.", {
@@ -115,6 +115,7 @@ function SupportPage() {
             <li>{t("Slack: in Slack, open Tools & settings → Manage apps and remove Deni Run, or ask a workspace admin to remove it.")}</li>
             <li>{t("Notion: disconnect Deni Run from the connections in your Notion settings.")}</li>
             <li>{t("Linear: revoke Deni Run from the authorized applications in your Linear account settings.")}</li>
+            <li>{t("Other connectors: remove Deni Run from the connected or authorized apps in that service’s settings.")}</li>
             <li>{t("Gmail and Google Drive: remove Deni Run under third-party connections in your Google Account security settings.")}</li>
             <li>{t("GitHub: revoke Deni Run under Settings → Applications → Authorized OAuth Apps.")}</li>
             <li>{t("Discord: click Unlink in Plugins, or send /unlink to the bot.")}</li>
