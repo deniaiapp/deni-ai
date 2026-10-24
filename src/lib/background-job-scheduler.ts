@@ -1,6 +1,11 @@
 import * as Sentry from "@sentry/nextjs";
 import { runStorageCleanupJob } from "@/lib/storage-cleanup-job";
-import { runUsageAndMeterJob } from "@/lib/usage-and-meter-job";
+import { getUsageAndMeterNextDueAt, runUsageAndMeterJob } from "@/lib/usage-and-meter-job";
+import {
+  beginUsageAndMeterCheck,
+  isUsageAndMeterCheckDue,
+  requestUsageAndMeterCheck,
+} from "@/lib/usage-and-meter-schedule";
 
 /** Failure counts of a run, each above 0 when that part failed. */
 export type JobFailureCounts = Record<string, number>;
@@ -123,16 +128,32 @@ export function scheduleBackgroundJob(job: BackgroundJob) {
 }
 
 /**
- * Usage reservation recovery and Max Mode meter retries every minute (first 30
- * seconds after boot). Its failure counts are this run's failed recoveries and
- * deliveries, plus the meter events awaiting manual review (a total).
+ * Usage reservation recovery and Max Mode meter retries (first 30 seconds after
+ * boot). It ticks every minute but queries the database only when work is due
+ * (`usage-and-meter-schedule.ts`): when a reservation turns stale or a meter
+ * retry comes up, as read after each run or requested by `usage.ts` when a
+ * settlement or delivery fails, and otherwise once an hour, so an idle server
+ * lets the database suspend. Its failure counts are this run's failed
+ * recoveries and deliveries, plus the meter events awaiting manual review (a
+ * total).
  */
 export const usageAndMeterJob: BackgroundJob = {
   name: "usage-and-meter",
   firstDelayMs: 30_000,
   intervalMs: 60_000,
   run: async () => {
-    const result = await runUsageAndMeterJob();
+    if (!isUsageAndMeterCheckDue()) return null;
+    beginUsageAndMeterCheck();
+    let result: Awaited<ReturnType<typeof runUsageAndMeterJob>>;
+    try {
+      result = await runUsageAndMeterJob();
+      const nextDueAt = await getUsageAndMeterNextDueAt();
+      if (nextDueAt) requestUsageAndMeterCheck(nextDueAt.getTime());
+    } catch (error) {
+      // Work may remain that could not be read: try again on the next tick.
+      requestUsageAndMeterCheck(0);
+      throw error;
+    }
     if (result.healthy) return null;
     return {
       recoveryFailed: result.recoveryFailed,

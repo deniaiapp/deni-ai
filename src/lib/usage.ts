@@ -16,6 +16,7 @@ import { canonicalTeamBillingRow } from "@/lib/team-billing-record";
 import { isMaxModeEligible, deliverMaxModeUsageReport } from "./max-mode";
 import { enqueueMaxModeMeterEvent } from "./max-mode-meter-events";
 import { isBillingDisabled } from "./billing-config";
+import { requestUsageAndMeterCheck } from "./usage-and-meter-schedule";
 
 const ACTIVE_BILLING_STATUSES = new Set(["active", "trialing", "past_due", "paid"]);
 
@@ -24,6 +25,9 @@ export type SubscriptionTier = "free" | "plus" | "pro" | "max";
 export type UsageUnit = "requests" | "tokens";
 type UsageRecord = typeof usageQuota.$inferSelect;
 type UsageDatabase = Pick<typeof db, "select" | "insert" | "update">;
+
+/** An unsettled reservation silent this long is recovered by the usage and meter job. */
+export const USAGE_RESERVATION_STALE_MS = 15 * 60_000;
 
 function withUsageLock<T>(
   userId: string,
@@ -762,13 +766,20 @@ export async function settleUsage({
       .set({ settledAmount: amount, maxModeAmount, settledAt: now })
       .where(eq(usageReservation.id, reservationId));
     return { maxModeAmount, amount };
+  }).catch((error: unknown) => {
+    // The reservation stays unsettled: have the job recover it once it is stale.
+    requestUsageAndMeterCheck(Date.now() + USAGE_RESERVATION_STALE_MS);
+    throw error;
   });
   if (result.maxModeAmount > 0) {
+    let delivered = false;
     try {
-      await deliverMaxModeUsageReport(reservationId);
+      delivered = ((await deliverMaxModeUsageReport(reservationId))?.delivered ?? 0) > 0;
     } catch (error) {
       console.error("Settled usage retained for meter delivery", { reservationId, error });
     }
+    // A queued meter event is retried by the job; its retry time is read from the database.
+    if (!delivered) requestUsageAndMeterCheck(Date.now() + 60_000);
   }
   return result;
 }
@@ -806,7 +817,7 @@ export async function recordObservedUsage({
 
 /** Recover interrupted requests from durable actual usage; never bill abandoned estimates. */
 export async function recoverUsageReservations(now = new Date()) {
-  const staleBefore = new Date(now.getTime() - 15 * 60_000);
+  const staleBefore = new Date(now.getTime() - USAGE_RESERVATION_STALE_MS);
   const stale = await db
     .select({ id: usageReservation.id, userId: usageReservation.userId })
     .from(usageReservation)

@@ -1,12 +1,12 @@
-import { count, eq } from "drizzle-orm";
+import { and, count, eq, isNull, min } from "drizzle-orm";
 import { db } from "@/db/drizzle";
-import { maxModeMeterEvent } from "@/db/schema";
+import { maxModeMeterEvent, usageReservation } from "@/db/schema";
 import { retryMaxModeUsageReports } from "@/lib/max-mode";
-import { recoverUsageReservations } from "@/lib/usage";
+import { recoverUsageReservations, USAGE_RESERVATION_STALE_MS } from "@/lib/usage";
 
 /**
- * One usage-recovery and Max Mode meter run: run every minute in-process by a
- * production server (`background-job-scheduler.ts`), or triggered through
+ * One usage-recovery and Max Mode meter run: run in-process by a production
+ * server when work is due (`background-job-scheduler.ts`), or triggered through
  * `/api/cron/max-mode-meter-events`. Settles up to five usage reservations
  * silent for 15 minutes, delivers up to five due meter events, and counts the
  * meter events awaiting manual review (`requiresReview`, a total, not this
@@ -33,4 +33,31 @@ export async function runUsageAndMeterJob() {
     requiresReview,
     healthy: meter.failed === 0 && recovery.recoveryFailed === 0 && requiresReview === 0,
   };
+}
+
+/**
+ * When the job next has work: the oldest unsettled reservation turning stale,
+ * or the earliest meter retry (`null` when neither exists). A time already
+ * passed means work is due now, e.g. a batch that did not finish everything.
+ */
+export async function getUsageAndMeterNextDueAt(): Promise<Date | null> {
+  const [[reservation], [meter]] = await Promise.all([
+    db
+      .select({ updatedAt: min(usageReservation.updatedAt) })
+      .from(usageReservation)
+      .where(isNull(usageReservation.settledAt)),
+    db
+      .select({ nextAttemptAt: min(maxModeMeterEvent.nextAttemptAt) })
+      .from(maxModeMeterEvent)
+      .where(
+        and(isNull(maxModeMeterEvent.deliveredAt), eq(maxModeMeterEvent.requiresReview, false)),
+      ),
+  ]);
+  const dueTimes = [
+    reservation?.updatedAt
+      ? reservation.updatedAt.getTime() + USAGE_RESERVATION_STALE_MS
+      : undefined,
+    meter?.nextAttemptAt?.getTime(),
+  ].filter((time) => time !== undefined);
+  return dueTimes.length > 0 ? new Date(Math.min(...dueTimes)) : null;
 }

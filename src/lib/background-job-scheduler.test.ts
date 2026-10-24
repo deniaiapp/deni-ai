@@ -6,18 +6,26 @@ import {
   stuckRunThresholdMs,
   type BackgroundJob,
 } from "./background-job-scheduler";
+import {
+  requestUsageAndMeterCheck,
+  USAGE_AND_METER_IDLE_CHECK_MS,
+} from "./usage-and-meter-schedule";
 
 const mocks = vi.hoisted(() => ({
   captureException: vi.fn(),
   captureMessage: vi.fn(),
   usageAndMeter: vi.fn(),
+  usageAndMeterNextDueAt: vi.fn(),
   storageCleanup: vi.fn(),
 }));
 vi.mock("@sentry/nextjs", () => ({
   captureException: mocks.captureException,
   captureMessage: mocks.captureMessage,
 }));
-vi.mock("@/lib/usage-and-meter-job", () => ({ runUsageAndMeterJob: mocks.usageAndMeter }));
+vi.mock("@/lib/usage-and-meter-job", () => ({
+  runUsageAndMeterJob: mocks.usageAndMeter,
+  getUsageAndMeterNextDueAt: mocks.usageAndMeterNextDueAt,
+}));
 vi.mock("@/lib/storage-cleanup-job", () => ({ runStorageCleanupJob: mocks.storageCleanup }));
 
 const healthyUsage = {
@@ -41,9 +49,12 @@ const MINUTE = 60_000;
 beforeEach(() => {
   vi.useFakeTimers({ now: 0 });
   delete (globalThis as { scheduledBackgroundJobs?: Set<string> }).scheduledBackgroundJobs;
+  delete (globalThis as { usageAndMeterNextCheckAt?: number }).usageAndMeterNextCheckAt;
   mocks.captureException.mockReset();
   mocks.captureMessage.mockReset();
   mocks.usageAndMeter.mockReset().mockResolvedValue(healthyUsage);
+  // Work due every minute, so the job runs on each tick unless a test says otherwise.
+  mocks.usageAndMeterNextDueAt.mockReset().mockImplementation(async () => new Date(Date.now()));
   mocks.storageCleanup.mockReset().mockResolvedValue(healthyStorage);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -68,6 +79,50 @@ test("usage and meter runs 30 seconds after boot, then every minute", async () =
   await vi.advanceTimersByTimeAsync(3 * MINUTE);
   expect(mocks.usageAndMeter).toHaveBeenCalledTimes(5);
   expect(mocks.captureMessage).not.toHaveBeenCalled();
+});
+
+test("without due work, usage and meter skips the database until the hourly check", async () => {
+  mocks.usageAndMeterNextDueAt.mockResolvedValue(null);
+  startBackgroundJobScheduler();
+  await vi.advanceTimersByTimeAsync(30_000);
+  expect(mocks.usageAndMeter).toHaveBeenCalledTimes(1);
+  expect(mocks.usageAndMeterNextDueAt).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(USAGE_AND_METER_IDLE_CHECK_MS - 1);
+  expect(mocks.usageAndMeter).toHaveBeenCalledTimes(1);
+  expect(mocks.usageAndMeterNextDueAt).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(MINUTE);
+  expect(mocks.usageAndMeter).toHaveBeenCalledTimes(2);
+});
+
+test("usage and meter runs on the first tick after its due work", async () => {
+  mocks.usageAndMeterNextDueAt.mockResolvedValueOnce(new Date(30_000 + 15 * MINUTE));
+  mocks.usageAndMeterNextDueAt.mockResolvedValue(null);
+  startBackgroundJobScheduler();
+  await vi.advanceTimersByTimeAsync(30_000 + 14 * MINUTE);
+  expect(mocks.usageAndMeter).toHaveBeenCalledTimes(1);
+  await vi.advanceTimersByTimeAsync(MINUTE);
+  expect(mocks.usageAndMeter).toHaveBeenCalledTimes(2);
+});
+
+test("a requested check makes usage and meter run on the next tick", async () => {
+  mocks.usageAndMeterNextDueAt.mockResolvedValue(null);
+  startBackgroundJobScheduler();
+  await vi.advanceTimersByTimeAsync(30_000 + 5 * MINUTE);
+  expect(mocks.usageAndMeter).toHaveBeenCalledTimes(1);
+  requestUsageAndMeterCheck(Date.now() + 30_000);
+  await vi.advanceTimersByTimeAsync(MINUTE);
+  expect(mocks.usageAndMeter).toHaveBeenCalledTimes(2);
+});
+
+test("a check requested during a run is kept over the idle wait", async () => {
+  mocks.usageAndMeterNextDueAt.mockResolvedValue(null);
+  mocks.usageAndMeter.mockImplementationOnce(async () => {
+    requestUsageAndMeterCheck(Date.now() + 2 * MINUTE);
+    return healthyUsage;
+  });
+  startBackgroundJobScheduler();
+  await vi.advanceTimersByTimeAsync(30_000 + 2 * MINUTE);
+  expect(mocks.usageAndMeter).toHaveBeenCalledTimes(2);
 });
 
 test("storage cleanup runs 2 minutes after boot, then every hour", async () => {
@@ -184,11 +239,13 @@ test("a storage cleanup still running after 3 hours is reported as stuck", async
 test("errors are caught and sent to Sentry, and the job keeps running", async () => {
   const error = new Error("database unavailable");
   mocks.usageAndMeter.mockRejectedValueOnce(error);
+  mocks.usageAndMeterNextDueAt.mockResolvedValue(null);
   startBackgroundJobScheduler();
   await vi.advanceTimersByTimeAsync(30_000);
   expect(mocks.captureException).toHaveBeenCalledWith(error, {
     tags: { job: "usage-and-meter" },
   });
+  // A failed run is retried on the next tick, not after the idle wait.
   await vi.advanceTimersByTimeAsync(MINUTE);
   expect(mocks.usageAndMeter).toHaveBeenCalledTimes(2);
   expect(mocks.captureException).toHaveBeenCalledTimes(1);

@@ -6,7 +6,7 @@ export const maxDuration = 300;
 
 /**
  * Manual or external trigger of the usage recovery and Max Mode meter job that
- * a production server already runs every minute in-process (see SETUP.md).
+ * a production server already runs in-process when work is due (see SETUP.md).
  */
 export async function GET(request: Request) {
   if (!env.CRON_SECRET)

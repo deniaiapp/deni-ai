@@ -1,7 +1,10 @@
+import { connection } from "next/server";
 import { getModelHealth } from "@/lib/model-health";
 
 export async function GET() {
-  const rows = await getModelHealth();
+  // Results live in this server's memory: read them per request, never at build time.
+  await connection();
+  const rows = getModelHealth();
   return Response.json(
     {
       models: rows.map((row) => ({
@@ -9,9 +12,7 @@ export async function GET() {
         provider: row.provider,
         available: row.available,
         latencyMs: row.latencyMs,
-        consecutiveFailures: row.consecutiveFailures,
         checkedAt: row.checkedAt,
-        lastAvailableAt: row.lastAvailableAt,
       })),
     },
     { headers: { "Cache-Control": "no-store" } },
