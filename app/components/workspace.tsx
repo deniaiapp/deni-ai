@@ -79,7 +79,48 @@ type StatePayload = {
   runMode?: RunMode;
 };
 
-type Modal = "bot" | "group" | "skills" | "routines" | "mcp" | null;
+type Modal = "bot" | "group" | "skills" | "routines" | null;
+
+const openPlugins = () => window.dispatchEvent(new Event("open-plugins"));
+
+const sameJson = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+
+/**
+ * Plugins keeps its own open state: opening it from the workspace would re-render the whole chat
+ * behind it. It opens on the "open-plugins" event, and on load for ?plugins=1 or ?connect=.
+ */
+function PluginsDialog() {
+  const [open, setOpen] = useState(false);
+  const [signInReturn, setSignInReturn] = useState<McpSignInReturn | null>(null);
+  // Connector to start connecting once Plugins opens, from ?connect= or a link followed before sign-in.
+  const [autoConnect, setAutoConnect] = useState<string | null>(null);
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const pending = takePendingConnect();
+    const connect = connectorId(params.get("connect")) ?? pending;
+    if (connect) {
+      // eslint-disable-next-line react/set-state-in-effect
+      setAutoConnect(connect);
+      setOpen(true);
+    }
+    if (params.get("plugins") === "1") {
+      // OAuth returns here; show the newly connected service without keeping the query parameters.
+      setOpen(true);
+      // MCP sign-in also reports the connection it finished, or why it failed.
+      const connectionId = params.get("mcp");
+      const error = params.get("mcpError");
+      if (connectionId || error) setSignInReturn({ connectionId, error });
+    }
+    if (params.get("plugins") === "1" || params.has("connect")) {
+      // Keep the router's history state; only the URL changes.
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+    }
+    const show = () => setOpen(true);
+    window.addEventListener("open-plugins", show);
+    return () => window.removeEventListener("open-plugins", show);
+  }, []);
+  return <McpSettings open={open} signInReturn={signInReturn} autoConnect={autoConnect} onAutoConnectStarted={() => setAutoConnect(null)} onOpenChange={(next) => { setOpen(next); if (!next) { setSignInReturn(null); setAutoConnect(null); } }} />;
+}
 
 export function Workspace() {
   const t = useExtracted();
@@ -105,34 +146,6 @@ export function Workspace() {
   const activeThreadRef = useRef<string | null>(null);
   const threadReady = loadedThreadId != null && loadedThreadId === activeThreadId;
   const [modal, setModal] = useState<Modal>(null);
-  const [mcpSignInReturn, setMcpSignInReturn] = useState<McpSignInReturn | null>(null);
-  // Connector to start connecting once Plugins opens, from ?connect= or a link followed before sign-in.
-  const [autoConnect, setAutoConnect] = useState<string | null>(null);
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const pending = takePendingConnect();
-    const connect = connectorId(params.get("connect")) ?? pending;
-    if (connect) {
-      // eslint-disable-next-line react/set-state-in-effect
-      setAutoConnect(connect);
-      setModal("mcp");
-    }
-    if (params.get("plugins") === "1") {
-      // OAuth returns here; show the newly connected service without keeping the query parameters.
-      setModal("mcp");
-      // MCP sign-in also reports the connection it finished, or why it failed.
-      const connectionId = params.get("mcp");
-      const error = params.get("mcpError");
-      if (connectionId || error) setMcpSignInReturn({ connectionId, error });
-    }
-    if (params.get("plugins") === "1" || params.has("connect")) {
-      // Keep the router's history state; only the URL changes.
-      window.history.replaceState(window.history.state, "", window.location.pathname);
-    }
-    const openPlugins = () => setModal("mcp");
-    window.addEventListener("open-plugins", openPlugins);
-    return () => window.removeEventListener("open-plugins", openPlugins);
-  }, []);
   const [routineEditorId, setRoutineEditorId] = useState<string | null>(null);
   const openRoutines = useCallback((id?: string) => { setRoutineEditorId(id ?? null); setModal("routines"); }, []);
   const [mobileComputer, setMobileComputer] = useState(false);
@@ -174,11 +187,13 @@ export function Workspace() {
     const mergedJobs = mergeJobSnapshots(Object.values(jobsByThreadRef.current).flat(), json.jobs ?? []);
     const grouped = groupJobsByThread(mergedJobs);
     jobsByThreadRef.current = grouped;
-    setJobsByThread(grouped);
+    // Keep the current state when a poll changes nothing, so the workspace does not re-render.
+    setJobsByThread((current) => (sameJson(current, grouped) ? current : grouped));
     for (const [threadId, jobs] of Object.entries(grouped)) {
       updateChatSessionJobState(threadId, jobs.some(isActiveJob));
     }
-    if (json.notifications) setNotifications(json.notifications);
+    const polledNotifications = json.notifications;
+    if (polledNotifications) setNotifications((current) => (sameJson(current, polledNotifications) ? current : polledNotifications));
     const nextStatuses: Record<string, string> = {};
     const completedInactive = new Set<string>();
     for (const job of mergedJobs) {
@@ -640,7 +655,7 @@ export function Workspace() {
           onNewGroup={() => setModal("group")}
           onOpenSkills={() => setModal("skills")}
            onOpenRoutines={() => openRoutines()}
-           onOpenMcp={() => setModal("mcp")}
+           onOpenMcp={openPlugins}
           onTeammateAction={handleTeammateAction}
           usage={usage}
           loadingThreadId={activeThreadId && !threadReady ? activeThreadId : null}
@@ -742,7 +757,7 @@ export function Workspace() {
         </motion.div>
       ) : null}
 
-      <McpSettings open={modal === "mcp"} signInReturn={mcpSignInReturn} autoConnect={autoConnect} onAutoConnectStarted={() => setAutoConnect(null)} onOpenChange={(open) => { setModal(open ? "mcp" : null); if (!open) { setMcpSignInReturn(null); setAutoConnect(null); } }} />
+      <PluginsDialog />
 
       {computer ? (
         <Button
