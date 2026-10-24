@@ -32,7 +32,6 @@ FROM node:26-slim AS deps
 WORKDIR /app
 RUN npm install --global pnpm@latest
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY patches ./patches
 COPY packages/disposable-email-domains ./packages/disposable-email-domains
 RUN --mount=type=cache,id=deni-ai-pnpm,target=/pnpm/store \
   pnpm install --frozen-lockfile --store-dir=/pnpm/store
