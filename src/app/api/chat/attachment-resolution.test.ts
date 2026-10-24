@@ -14,24 +14,15 @@ const mocks = vi.hoisted(() => ({
   updateChat: vi.fn(),
   consume: vi.fn(),
   resolveModel: vi.fn(),
-  sign: vi.fn(async (key: string, ttl: number) => `https://app.ufs.sh/f/${key}?ttl=${ttl}&sig=s`),
+  sign: vi.fn(
+    async (key: string, ttl: number) => `https://storage.example/${key}?ttl=${ttl}&sig=s`,
+  ),
   anonymous: false,
   fit: vi.fn(async (messages: UIMessage[], _cache: Map<string, unknown>) => messages),
 }));
 const dialect = new PgDialect();
 
 vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
-vi.mock("@/env", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@/env")>();
-  // UploadThing app `app`: its public file URLs are `https://app.ufs.sh/f/<key>`.
-  const token = Buffer.from(JSON.stringify({ appId: "app" })).toString("base64");
-  return {
-    ...actual,
-    env: new Proxy(actual.env, {
-      get: (target, key) => (key === "UPLOADTHING_TOKEN" ? token : Reflect.get(target, key)),
-    }),
-  };
-});
 vi.mock("@/lib/auth", () => ({
   auth: {
     api: {
@@ -44,17 +35,11 @@ vi.mock("@/lib/auth", () => ({
 }));
 vi.mock("@/db/drizzle", () => ({
   db: {
-    // The `id in (...)` lookup of resolveAttachmentFileParts, and the user's
-    // rows by `storage_key in (...)` of rewriteMigratedAttachmentUrls.
+    // The `id in (...)` lookup of resolveAttachmentFileParts.
     select: () => ({
       from: () => ({
         where: async (condition: SQL) => {
-          const { sql: text, params } = dialect.sqlToQuery(condition);
-          if (text.includes('"storage_key" in')) {
-            return mocks.rows.filter(
-              (row) => params.includes(row.storageKey) && row.userId === params.at(-1),
-            );
-          }
+          const { params } = dialect.sqlToQuery(condition);
           return mocks.rows.filter((row) => params.includes(row.id));
         },
       }),
@@ -169,12 +154,12 @@ test.each([`/api/attachments/${MINE}`, `http://localhost:3000/api/attachments/${
     expect(mocks.sign).toHaveBeenCalledExactlyOnceWith("key-mine", 300);
     const downloaded = mocks.fit.mock.calls[0]?.[0];
     expect(downloaded?.[0]?.parts[1]).toMatchObject({
-      url: "https://app.ufs.sh/f/key-mine?ttl=300&sig=s",
+      url: "https://storage.example/key-mine?ttl=300&sig=s",
     });
     // ...while the saved transcript keeps the stable app URL.
     const saved = JSON.stringify(mocks.updateChat.mock.calls[0]?.[2]);
     expect(saved).toContain(appUrl);
-    expect(saved).not.toContain("ufs.sh");
+    expect(saved).not.toContain("storage.example");
     // And the file is tied to the chat, for the owner only.
     expect(mocks.links).toEqual([{ set: { chatId: "chat-id" }, params: [MINE, "user", "ready"] }]);
   },
@@ -205,34 +190,6 @@ test("another user's attachment anywhere in the history rejects the request", as
   expect(response.status).toBe(400);
   expect(mocks.updateChat).not.toHaveBeenCalled();
 });
-
-test("a tab loaded before the migration sends the old public URL: read and saved by its app URL", async () => {
-  const response = await send([ask("https://app.ufs.sh/f/key-mine")]);
-
-  expect(response.status).toBe(402);
-  // The file is private now: the server reads it by a signed URL...
-  expect(mocks.sign).toHaveBeenCalledExactlyOnceWith("key-mine", 300);
-  expect(mocks.fit.mock.calls[0]?.[0]?.[0]?.parts[1]).toMatchObject({
-    url: "https://app.ufs.sh/f/key-mine?ttl=300&sig=s",
-  });
-  // ...and the saved chat gets its app URL, not the dead public one back.
-  const saved = JSON.stringify(mocks.updateChat.mock.calls[0]?.[2]);
-  expect(saved).toContain(`"/api/attachments/${MINE}"`);
-  expect(saved).not.toContain("ufs.sh");
-});
-
-test.each(["https://app.ufs.sh/f/key-unmigrated", "https://app.ufs.sh/f/key-theirs"])(
-  "a public URL not migrated for this user is left as it is: %s",
-  async (url) => {
-    const response = await send([ask(url)]);
-
-    // Not rejected: before the migration, or for a file left public, it still works.
-    expect(response.status).toBe(402);
-    expect(mocks.sign).not.toHaveBeenCalled();
-    expect(mocks.fit.mock.calls[0]?.[0]?.[0]?.parts[1]).toMatchObject({ url });
-    expect(JSON.stringify(mocks.updateChat.mock.calls[0]?.[2])).toContain(url);
-  },
-);
 
 test.each([
   // Unknown sizes count as the 10 MB maximum, so passing proves the lookup by signed URL.

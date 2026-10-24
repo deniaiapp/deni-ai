@@ -3,9 +3,8 @@ import { user } from "./auth-schema";
 
 /**
  * Account data exports built in the background (Settings → Account). The JSON
- * file is a private UploadThing file under `storage_key`, uploaded with the
- * row id as its custom id, and only handed out as a short-lived signed URL to
- * its owner. A row is `pending` while its job runs, then `ready` (with
+ * file is a private R2 object under `storage_key` (`exports/<id>`), and only
+ * handed out as a short-lived signed URL to its owner. A row is `pending` while its job runs, then `ready` (with
  * `expires_at`, 7 days later) or `failed`. Export files do not count toward
  * the attachment storage quota; the storage-cleanup cron deletes expired ones.
  */
@@ -20,7 +19,7 @@ export const accountExport = pgTable(
     status: text("status", { enum: ["pending", "ready", "failed"] })
       .notNull()
       .default("pending"),
-    /** UploadThing file key; null until the file is stored. */
+    /** R2 object key; null until the file is stored. */
     storageKey: text("storage_key"),
     /** Size of the stored file; null until it is stored. */
     sizeBytes: bigint("size_bytes", { mode: "number" }),

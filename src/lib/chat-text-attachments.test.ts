@@ -1,8 +1,14 @@
 import type { UIMessage } from "ai";
 import { afterEach, expect, test, vi } from "vitest";
 
+// Stored files are read through signed URLs into this bucket.
 vi.mock("@/env", () => ({
-  env: { UPLOADTHING_TOKEN: Buffer.from(JSON.stringify({ appId: "app" })).toString("base64") },
+  env: {
+    R2_ACCOUNT_ID: "acct",
+    R2_ACCESS_KEY_ID: "access-key",
+    R2_SECRET_ACCESS_KEY: "secret-key",
+    R2_BUCKET: "deni-files",
+  },
 }));
 
 const { inlineTextAttachments } = await import("./chat-text-attachments");
@@ -24,7 +30,11 @@ function userMessage(parts: UIMessage["parts"]): UIMessage {
 }
 
 test("replaces text attachments with their contents and keeps other parts", async () => {
-  const image = { type: "file", mediaType: "image/png", url: "https://app.ufs.sh/f/a" } as const;
+  const image = {
+    type: "file",
+    mediaType: "image/png",
+    url: "https://acct.r2.cloudflarestorage.com/deni-files/attachments/a",
+  } as const;
   const [message] = await inlineTextAttachments([
     userMessage([
       { type: "text", text: "Summarize" },
@@ -67,13 +77,13 @@ test("never fetches URLs outside the attachment store", async () => {
         type: "file",
         mediaType: "text/plain",
         filename: "b.txt",
-        url: "https://evil.example/ufs.sh",
+        url: "https://evil.example/deni-files/x",
       },
       {
         type: "file",
         mediaType: "text/plain",
         filename: "c.txt",
-        url: "https://other-tenant.ufs.sh/f/key",
+        url: "https://acct.r2.cloudflarestorage.com/other-bucket/key",
       },
     ]),
   ]);
@@ -105,7 +115,7 @@ test("stops reading a stored file that streams past the size cap", async () => {
         type: "file",
         mediaType: "text/plain",
         filename: "big.txt",
-        url: "https://app.ufs.sh/f/big",
+        url: "https://acct.r2.cloudflarestorage.com/deni-files/attachments/big",
       },
     ]),
   ]);
@@ -145,7 +155,12 @@ test("fetches stored attachments without following redirects", async () => {
 
   const [message] = await inlineTextAttachments([
     userMessage([
-      { type: "file", mediaType: "text/plain", filename: "a.txt", url: "https://app.ufs.sh/f/key" },
+      {
+        type: "file",
+        mediaType: "text/plain",
+        filename: "a.txt",
+        url: "https://acct.r2.cloudflarestorage.com/deni-files/attachments/key",
+      },
     ]),
   ]);
 
@@ -187,7 +202,7 @@ test("bounds the cache even when stored files are empty", async () => {
       type: "file",
       mediaType: "text/plain",
       filename: "empty.txt",
-      url: `https://app.ufs.sh/f/empty?copy=${index}`,
+      url: `https://acct.r2.cloudflarestorage.com/deni-files/attachments/empty?copy=${index}`,
     }) as const;
   const request = (indexes: number[]) =>
     inlineTextAttachments([userMessage(indexes.map((index) => emptyFile(index)))]);
@@ -212,7 +227,7 @@ test("caches a stored file under its stable key, not its per-request signed URL"
   const fetchMock = vi.fn(async () => new Response("private notes"));
   vi.stubGlobal("fetch", fetchMock);
   const request = (signature: string) => {
-    const url = `https://app.ufs.sh/f/stable-key?signature=${signature}`;
+    const url = `https://acct.r2.cloudflarestorage.com/deni-files/attachments/stable-key?signature=${signature}`;
     return inlineTextAttachments(
       [
         userMessage([
@@ -234,7 +249,7 @@ test("caches a stored file under its stable key, not its per-request signed URL"
 test("a URL spelled like a stable key never reads that file's cached text", async () => {
   const fetchMock = vi.fn(async () => new Response("secret"));
   vi.stubGlobal("fetch", fetchMock);
-  const url = "https://app.ufs.sh/f/victim?signature=s";
+  const url = "https://acct.r2.cloudflarestorage.com/deni-files/attachments/victim?signature=s";
   await inlineTextAttachments(
     [userMessage([{ type: "file", mediaType: "text/plain", filename: "a.txt", url }])],
     new Map([[url, "attachment:victim:victim-id"]]),

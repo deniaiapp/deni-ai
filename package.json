@@ -23,7 +23,7 @@
     "tools:commit": "tsx --env-file-if-exists=.env.local ./tools/commit.ts",
     "tools:grant-card-flash-offer": "tsx --env-file-if-exists=.env.local ./tools/grant-card-flash-offer.ts",
     "tools:purge-anonymous": "tsx --env-file=.env.production ./tools/purge-anonymous.ts",
-    "tools:migrate-private-attachments": "tsx --env-file=.env.production ./tools/migrate-private-attachments.ts",
+    "tools:migrate-uploadthing-to-r2": "tsx --env-file=.env.production ./tools/migrate-uploadthing-to-r2.ts",
     "disposable:refresh": "pnpm --filter @deni-ai/disposable-email-domains refresh",
     "test": "vitest run",
     "doctor": "react-doctor"
@@ -58,6 +58,7 @@
     "@trpc/server": "^11.19.0",
     "@upstash/redis": "^1.39.0",
     "ai": "^7.0.133",
+    "aws4fetch": "^1.0.20",
     "better-auth": "^1.7.7",
     "bowser": "^2.14.1",
     "cheerio": "^1.2.0",
@@ -86,7 +87,6 @@
     "sugar-high": "^2.6.0",
     "superjson": "^2.2.6",
     "undici": "^8.11.2",
-    "uploadthing": "^7.7.4",
     "use-stick-to-bottom": "^1.1.6",
     "zod": "^4.6.5"
   },

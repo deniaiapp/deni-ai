@@ -70,7 +70,7 @@ Required and optional variables are validated in `src/env.ts`. A starter list is
 - **AI (optional):** `OPENROUTER_API_KEY` (all platform models)
 - **Search / CAPTCHA (optional):** `EXA_API_KEY`, Turnstile keys
 - **Stripe (optional):** `STRIPE_SECRET_KEY`; missing Stripe keys disable billing
-- **Optional:** Cloudflare Email Sending, Upstash Redis, UploadThing, AdSense
+- **Optional:** Cloudflare Email Sending, Upstash Redis, Cloudflare R2, AdSense
 
 Details: [SETUP.md](SETUP.md).
 

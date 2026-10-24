@@ -5,9 +5,6 @@ overrides:
   "katex": ^0.18.2
   "@tanstack/query-core": 5.102.8
   "@esbuild-kit/core-utils>esbuild": ^0.25.0
-  "uploadthing>effect": ^3.20.0
-  "@uploadthing/shared>effect": ^3.20.0
-  "@effect/platform>effect": ^3.20.0
 
 allowBuilds:
   "@parcel/watcher": true
@@ -47,6 +44,3 @@ minimumReleaseAgeExclude:
   - next@16.3.7
   - use-intl@4.14.8
   - react-email@6.11.1
-
-patchedDependencies:
-  uploadthing@7.7.4: patches/uploadthing@7.7.4.patch

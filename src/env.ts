@@ -53,7 +53,21 @@ export const env = createEnv({
     CLOUDFLARE_API_TOKEN: z.string().min(1).optional(),
     UPSTASH_REDIS_REST_URL: z.url().optional(),
     UPSTASH_REDIS_REST_TOKEN: z.string().min(1).optional(),
-    UPLOADTHING_TOKEN: z.string().min(1).optional(),
+    /**
+     * Cloudflare R2 attachment storage (optional; without it attachments fall
+     * back to inline base64 URLs). All four are required to enable it. The API
+     * token needs Object Read & Write on the bucket.
+     */
+    R2_ACCOUNT_ID: z
+      .string()
+      .regex(/^[a-z0-9]+$/i, "R2_ACCOUNT_ID must be a Cloudflare account id")
+      .optional(),
+    R2_ACCESS_KEY_ID: z.string().min(1).optional(),
+    R2_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    R2_BUCKET: z
+      .string()
+      .regex(/^[a-z0-9][a-z0-9-]{1,62}$/, "R2_BUCKET must be an R2 bucket name")
+      .optional(),
     /**
      * Client IP resolution behind proxies (see `src/lib/client-ip.ts` and SETUP.md).
      * CLIENT_IP_HEADER: single-value header set by the trusted edge (e.g.
@@ -127,7 +141,10 @@ export const env = createEnv({
     CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
     UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
-    UPLOADTHING_TOKEN: process.env.UPLOADTHING_TOKEN,
+    R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
+    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
+    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
+    R2_BUCKET: process.env.R2_BUCKET,
     CLIENT_IP_HEADER: process.env.CLIENT_IP_HEADER,
     TRUSTED_PROXY_HOPS: process.env.TRUSTED_PROXY_HOPS,
   },

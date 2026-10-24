@@ -1,12 +1,11 @@
 import type { UIMessage } from "ai";
-import { env } from "@/env";
 import {
   decodeTextAttachment,
   isTextMediaType,
   MAX_TEXT_ATTACHMENT_BYTES,
   textMediaTypeForName,
 } from "@/lib/attachment-types";
-import { isStoredFileUrl, uploadThingFileHostname } from "@/lib/stored-files";
+import { isStoredFileUrl } from "@/lib/upload";
 
 /** Characters of one file sent to the model; longer files are cut with a notice. */
 const MAX_INLINE_CHARS = 400_000;
@@ -53,17 +52,6 @@ function cacheText(key: string, text: string) {
     textCache.delete(oldestKey);
     cachedChars -= cacheCost(oldestKey, oldest);
   }
-}
-
-/**
- * Only files this app stored are fetched: signed URLs of private files (see
- * `resolveAttachmentFileParts`) and public URLs of files uploaded before
- * storage became private. Message parts come from the client, so any other URL
- * (including another UploadThing app's) would let a user make the server
- * request hosts of their choosing.
- */
-function isStoredAttachmentUrl(url: URL) {
-  return isStoredFileUrl(url, uploadThingFileHostname(env.UPLOADTHING_TOKEN));
 }
 
 function readDataUrl(url: string): Uint8Array | null {
@@ -117,7 +105,10 @@ async function readAttachmentBytes(url: string): Promise<Uint8Array | null> {
   } catch {
     return null;
   }
-  if (!isStoredAttachmentUrl(parsed)) return null;
+  // Only signed URLs of this app's private files (see `resolveAttachmentFileParts`)
+  // are fetched. Message parts come from the client, so any other URL would let a
+  // user make the server request hosts of their choosing.
+  if (!isStoredFileUrl(parsed)) return null;
 
   try {
     const response = await fetch(parsed, {

@@ -7,8 +7,7 @@ import { env } from "@/env";
 import { collectAccountExportFiles } from "@/lib/account-export-jobs";
 import { fitsStorageLimit, getStorageLimitBytes } from "@/lib/attachment-quota";
 import { attachmentUrl, parseAppAttachmentUrl } from "@/lib/attachment-url";
-import { rewriteLegacyAttachmentUrls } from "@/lib/legacy-attachment-migration";
-import { storedFileKey, uploadThingFileHostname } from "@/lib/stored-files";
+import { attachmentStorageKey } from "@/lib/stored-files";
 import {
   ATTACHMENT_FETCH_URL_TTL_SECONDS,
   deleteStoredFiles,
@@ -96,12 +95,17 @@ export type StorageReservation =
   | { ok: false; usedBytes: number; limitBytes: number };
 
 /**
- * A row marked `deleting`. Its file is deleted by storage key, or by custom id
- * (the attachment id every upload carries) when the key was never recorded.
+ * A row marked `deleting`. Its file is deleted by storage key, or by the key
+ * every upload derives from its attachment id when the key was never recorded.
  */
 export type DeletingAttachment = { id: string; storageKey: string | null };
 
 const deletingColumns = { id: attachment.id, storageKey: attachment.storageKey };
+
+/** Where a row's file is, or would be if its upload got that far. */
+function attachmentFileKey({ id, storageKey }: DeletingAttachment): string {
+  return storageKey ?? attachmentStorageKey(id);
+}
 
 /**
  * Delete the stored files of rows marked `deleting`, then the rows whose file
@@ -114,15 +118,8 @@ export async function purgeDeletingAttachments(
   database: Pick<typeof db, "delete"> = db,
 ): Promise<{ deleted: number; failed: number }> {
   if (rows.length === 0) return { deleted: 0, failed: 0 };
-  const keys = rows.flatMap(({ storageKey }) => (storageKey ? [storageKey] : []));
-  const customIds = rows.flatMap(({ id, storageKey }) => (storageKey ? [] : [id]));
-  const goneKeys = new Set(keys.length > 0 ? await deleteStoredFiles(keys) : []);
-  const goneIds = new Set(
-    customIds.length > 0 ? await deleteStoredFiles(customIds, "customId") : [],
-  );
-  const removable = rows.flatMap(({ id, storageKey }) =>
-    (storageKey ? goneKeys.has(storageKey) : goneIds.has(id)) ? [id] : [],
-  );
+  const gone = new Set(await deleteStoredFiles(rows.map(attachmentFileKey)));
+  const removable = rows.flatMap((row) => (gone.has(attachmentFileKey(row)) ? [row.id] : []));
 
   let deleted = 0;
   for (let start = 0; start < removable.length; start += ROW_DELETE_BATCH_SIZE) {
@@ -238,8 +235,8 @@ export async function releaseAttachmentReservation(
  * Give back the quota of an upload that failed after its file may have been
  * stored, when deleting that file failed too. The reservation is the only
  * record of the file, so it is marked `deleting` instead of dropped: the
- * storage-cleanup cron deletes the file by its custom id (the reservation id),
- * then the row.
+ * storage-cleanup cron deletes the file by the key derived from the
+ * reservation id, then the row.
  */
 export async function abandonAttachmentReservation(
   id: string,
@@ -327,21 +324,14 @@ export async function linkChatAttachments(
 
 /**
  * The URLs a saved chat can reference each file by, mapped to its attachment
- * id: its app URL, relative or absolute on the app's origin, and, for a file
- * recorded by the migration tool, its public storage URL
- * (`https://<appId>.ufs.sh/f/<key>`), which the owner's chats the tool has not
- * rewritten yet still carry.
+ * id: its app URL, relative or absolute on the app's origin.
  */
-function attachmentReferenceUrls(
-  files: readonly { id: string; storageKey: string | null }[],
-): Map<string, string> {
+function attachmentReferenceUrls(files: readonly { id: string }[]): Map<string, string> {
   const origin = appOrigin();
-  const hostname = uploadThingFileHostname(env.UPLOADTHING_TOKEN);
   const ids = new Map<string, string>();
-  for (const { id, storageKey } of files) {
+  for (const { id } of files) {
     ids.set(attachmentUrl(id), id);
     if (origin) ids.set(`${origin}${attachmentUrl(id)}`, id);
-    if (hostname && storageKey) ids.set(`https://${hostname}/f/${storageKey}`, id);
   }
   return ids;
 }
@@ -358,7 +348,7 @@ async function keepFilesReferencedElsewhere(
   chatId: string,
 ): Promise<void> {
   const files = await database
-    .select({ id: attachment.id, storageKey: attachment.storageKey })
+    .select({ id: attachment.id })
     .from(attachment)
     .where(
       and(
@@ -409,9 +399,8 @@ async function keepFilesReferencedElsewhere(
  * `purgeDeletingAttachments` once that transaction has committed.
  *
  * A file has one chat, but other chats of its owner can reference it too (a
- * re-imported export, a legacy file the migration tool found in several
- * chats, by its public URL until the tool reaches them). Deleting one chat
- * keeps such a file and ties it to the most recently updated of those chats
+ * re-imported export, a legacy file the private-storage migration found in
+ * several chats). Deleting one chat keeps such a file and ties it to the most recently updated of those chats
  * instead.
  */
 export async function markChatAttachmentsForDeletion(
@@ -487,12 +476,6 @@ export async function cleanUpAttachmentStorage(
 }
 
 /**
- * Files to delete from storage: by storage key, and by custom id (the
- * attachment id every upload carries) for uploads whose key was never recorded.
- */
-export type AccountStoredFiles = { keys: string[]; customIds: string[] };
-
-/**
  * Every file an account has in storage, read before its user row is deleted
  * (that cascades the rows recording them): attachments and data export files.
  * Anything else stored per account belongs here too, so deleting the account
@@ -501,22 +484,16 @@ export type AccountStoredFiles = { keys: string[]; customIds: string[] };
 export async function collectAccountStoredFiles(
   userId: string,
   database: Pick<typeof db, "select"> = db,
-): Promise<AccountStoredFiles> {
+): Promise<string[]> {
   const [rows, exports] = await Promise.all([
     database.select(deletingColumns).from(attachment).where(eq(attachment.userId, userId)),
     collectAccountExportFiles(userId, database),
   ]);
-  return {
-    keys: [...rows.flatMap(({ storageKey }) => (storageKey ? [storageKey] : [])), ...exports.keys],
-    customIds: [
-      ...rows.flatMap(({ id, storageKey }) => (storageKey ? [] : [id])),
-      ...exports.customIds,
-    ],
-  };
+  return [...rows.map(attachmentFileKey), ...exports];
 }
 
-/** Stored files of users being deleted, read before their rows cascade away. */
-const departingFiles = new Map<string, AccountStoredFiles>();
+/** Storage keys of users being deleted, read before their rows cascade away. */
+const departingFiles = new Map<string, string[]>();
 
 /**
  * Better Auth `databaseHooks.user.delete` steps for every account deletion
@@ -537,67 +514,9 @@ export const accountDeletionAttachmentHooks = {
   after: async (user: { id: string }) => {
     const files = departingFiles.get(user.id);
     departingFiles.delete(user.id);
-    if (!files) return;
-    if (files.keys.length > 0) await deleteStoredFiles(files.keys);
-    if (files.customIds.length > 0) await deleteStoredFiles(files.customIds, "customId");
+    if (files && files.length > 0) await deleteStoredFiles(files);
   },
 };
-
-/** Storage keys of this app's public storage URLs in file parts, newest first, at most `limit`. */
-function collectStorageUrlKeys(messages: UIMessage[], hostname: string, limit: number): string[] {
-  const keys = new Set<string>();
-  for (const message of messages.toReversed()) {
-    for (const part of message.parts.toReversed()) {
-      if (keys.size >= limit) return [...keys];
-      if (part.type !== "file") continue;
-      let url: URL;
-      try {
-        url = new URL(part.url);
-      } catch {
-        continue;
-      }
-      const key = storedFileKey(url, hostname);
-      if (key) keys.add(key);
-    }
-  }
-  return [...keys];
-}
-
-/**
- * Point file parts that still carry the public storage URL of one of the
- * user's migrated files (`https://<appId>.ufs.sh/f/<key>`) at its app URL.
- * A tab loaded before `tools/migrate-private-attachments.ts` ran still sends
- * those URLs, and the chat route saves the messages the client sends. The file
- * is private now, so the old URL no longer serves it: rewritten, it is read
- * like any stored file (`resolveAttachmentFileParts`), and saving the messages
- * keeps the app URLs instead of writing the dead ones back. A key with no row
- * of the user's (not migrated yet, or recorded for another account) is left
- * as it is. Never throws: on a failed lookup the messages come back unchanged.
- */
-export async function rewriteMigratedAttachmentUrls(
-  messages: UIMessage[],
-  userId: string,
-  database: Pick<typeof db, "select"> = db,
-): Promise<UIMessage[]> {
-  const hostname = uploadThingFileHostname(env.UPLOADTHING_TOKEN);
-  if (!hostname) return messages;
-  const keys = collectStorageUrlKeys(messages, hostname, MAX_RESOLVED_ATTACHMENTS);
-  if (keys.length === 0) return messages;
-  try {
-    const rows = await database
-      .select({ id: attachment.id, storageKey: attachment.storageKey })
-      .from(attachment)
-      .where(and(inArray(attachment.storageKey, keys), eq(attachment.userId, userId)));
-    const idsByKey = new Map(
-      rows.flatMap(({ id, storageKey }) => (storageKey ? [[storageKey, id] as const] : [])),
-    );
-    if (idsByKey.size === 0) return messages;
-    return rewriteLegacyAttachmentUrls(messages, hostname, idsByKey).messages as UIMessage[];
-  } catch (error) {
-    console.error("[attachments] Failed to look up migrated attachments", error);
-    return messages;
-  }
-}
 
 /** Ids per lookup when checking imported attachment URLs. */
 const IMPORT_LOOKUP_BATCH_SIZE = 1000;

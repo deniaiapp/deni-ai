@@ -3,7 +3,7 @@ import { user } from "./auth-schema";
 import { chats } from "./chat";
 
 /**
- * Private chat attachments. Files live in UploadThing under `storage_key` and
+ * Private chat attachments. Files live in R2 under `storage_key` and
  * are only reachable through `/api/attachments/<id>`, which checks the owner.
  * A row is inserted as `pending` (reserving its size against the owner's
  * storage quota) before the upload and becomes `ready` once the file is stored.
@@ -20,7 +20,10 @@ export const attachment = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     chatId: text("chat_id").references(() => chats.id, { onDelete: "set null" }),
-    /** UploadThing file key; null until the upload succeeds. */
+    /**
+     * R2 object key (`attachments/<id>`; a file copied from UploadThing keeps
+     * its old key); null until the upload succeeds.
+     */
     storageKey: text("storage_key"),
     mediaType: text("media_type").notNull(),
     sizeBytes: bigint("size_bytes", { mode: "number" }).notNull(),

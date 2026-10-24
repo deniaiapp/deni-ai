@@ -1,33 +1,18 @@
-import { beforeEach, expect, test, vi } from "vitest";
+import { afterEach, beforeEach, expect, test, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  uploadFiles: vi.fn(
-    async (
-      _file: Blob & { name: string; customId?: string },
-      _options: unknown,
-    ): Promise<{ data: { key: string; ufsUrl: string } | null; error: unknown }> => ({
-      data: { key: "file-key", ufsUrl: "https://app.ufs.sh/f/file-key" },
-      error: null,
-    }),
-  ),
-  generateSignedURL: vi.fn(async (key: string, options: { expiresIn: number }) => ({
-    ufsUrl: `https://app.ufs.sh/f/${key}?expires=${options.expiresIn}`,
-  })),
-  deleteFiles: vi.fn(async (keys: string[], _options?: { keyType?: string }) => ({
-    success: true,
-    deletedCount: keys.length,
-  })),
-}));
+const ACCOUNT = "0123456789abcdef0123456789abcdef";
+const BUCKET_URL = `https://${ACCOUNT}.r2.cloudflarestorage.com/deni-files`;
 
-vi.mock("@/env", () => ({ env: { UPLOADTHING_TOKEN: "token" } }));
-vi.mock("uploadthing/server", async (importOriginal) => ({
-  UTFile: (await importOriginal<typeof import("uploadthing/server")>()).UTFile,
-  UTApi: class {
-    uploadFiles = mocks.uploadFiles;
-    generateSignedURL = mocks.generateSignedURL;
-    deleteFiles = mocks.deleteFiles;
+vi.mock("@/env", () => ({
+  env: {
+    R2_ACCOUNT_ID: ACCOUNT,
+    R2_ACCESS_KEY_ID: "access-key",
+    R2_SECRET_ACCESS_KEY: "secret-key",
+    R2_BUCKET: "deni-files",
   },
 }));
+
+const fetchMock = vi.fn(async (_request: Request) => new Response(null, { status: 200 }));
 
 const {
   ATTACHMENT_EXPORT_URL_TTL_SECONDS,
@@ -35,79 +20,111 @@ const {
   ATTACHMENT_VIEW_URL_TTL_SECONDS,
   deleteStoredFiles,
   isStorageConfigured,
+  isStoredFileUrl,
   signAttachmentUrl,
   uploadPrivateFile,
 } = await import("./upload");
+const { attachmentStorageKey, exportStorageKey, storageConfigFrom } =
+  await import("./stored-files");
 
 beforeEach(() => {
-  mocks.uploadFiles.mockClear();
-  mocks.generateSignedURL.mockClear();
-  mocks.deleteFiles.mockClear();
+  fetchMock.mockClear();
+  vi.stubGlobal("fetch", fetchMock);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
 
-test("files are uploaded as private, tagged with their row id, and only their key is kept", async () => {
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+test("storage is configured only with every R2 setting, well-formed", () => {
+  const complete = {
+    R2_ACCOUNT_ID: ACCOUNT,
+    R2_ACCESS_KEY_ID: "a",
+    R2_SECRET_ACCESS_KEY: "s",
+    R2_BUCKET: "deni-files",
+  };
   expect(isStorageConfigured()).toBe(true);
-  const file = new File(["xyz"], "a.png", { type: "image/png", lastModified: 1234 });
-  expect(await uploadPrivateFile(file, "attachment-id")).toBe("file-key");
-  expect(mocks.uploadFiles).toHaveBeenCalledOnce();
-  const [uploaded, options] = mocks.uploadFiles.mock.calls[0]!;
-  expect(options).toEqual({ acl: "private" });
-  expect(uploaded).toMatchObject({
-    name: "a.png",
-    type: "image/png",
-    size: 3,
-    lastModified: 1234,
-    customId: "attachment-id",
-  });
-  expect(await uploaded.text()).toBe("xyz");
+  expect(storageConfigFrom(complete)).toMatchObject({ accountId: ACCOUNT, bucket: "deni-files" });
+  expect(storageConfigFrom({ ...complete, R2_BUCKET: undefined })).toBeNull();
+  expect(storageConfigFrom({ ...complete, R2_ACCOUNT_ID: "evil.example/x" })).toBeNull();
+  expect(storageConfigFrom({ ...complete, R2_BUCKET: "../other" })).toBeNull();
+});
+
+test("keys derive from row ids", () => {
+  expect(attachmentStorageKey("abc")).toBe("attachments/abc");
+  expect(exportStorageKey("abc")).toBe("exports/abc");
+});
+
+test("files are stored as signed PUTs under their key, with their type and name", async () => {
+  const file = new File(["xyz"], "写真 1.png", { type: "image/png" });
+  expect(await uploadPrivateFile(file, "attachments/id-1")).toBe(true);
+  const [request] = fetchMock.mock.calls[0]!;
+  expect(request.method).toBe("PUT");
+  expect(request.url).toBe(`${BUCKET_URL}/attachments/id-1`);
+  expect(request.headers.get("content-type")).toBe("image/png");
+  expect(request.headers.get("content-disposition")).toBe(
+    `inline; filename="__ 1.png"; filename*=UTF-8''%E5%86%99%E7%9C%9F%201.png`,
+  );
+  expect(request.headers.get("authorization")).toMatch(/^AWS4-HMAC-SHA256 Credential=access-key\//);
+  expect(await request.text()).toBe("xyz");
 });
 
 test("a file can be stored to download under its name rather than to show", async () => {
   const file = new File(["{}"], "deni-ai-export-2026-10-11.json", { type: "application/json" });
-  expect(await uploadPrivateFile(file, "export-id", { contentDisposition: "attachment" })).toBe(
-    "file-key",
+  expect(await uploadPrivateFile(file, "exports/id-1", { contentDisposition: "attachment" })).toBe(
+    true,
   );
-  const [uploaded, options] = mocks.uploadFiles.mock.calls[0]!;
-  expect(options).toEqual({ acl: "private", contentDisposition: "attachment" });
-  expect(uploaded).toMatchObject({ name: "deni-ai-export-2026-10-11.json", customId: "export-id" });
+  const [request] = fetchMock.mock.calls[0]!;
+  expect(request.headers.get("content-disposition")).toMatch(
+    /^attachment; filename="deni-ai-export-2026-10-11.json"/,
+  );
 });
 
-test("a failed upload returns null", async () => {
-  mocks.uploadFiles.mockResolvedValueOnce({ data: null, error: { code: "UPLOAD_FAILED" } });
-  expect(await uploadPrivateFile(new File(["x"], "a.png"), "id")).toBeNull();
-  mocks.uploadFiles.mockRejectedValueOnce(new Error("network"));
-  expect(await uploadPrivateFile(new File(["x"], "a.png"), "id")).toBeNull();
+test("a failed upload returns false", async () => {
+  fetchMock.mockResolvedValueOnce(new Response(null, { status: 403 }));
+  expect(await uploadPrivateFile(new File(["x"], "a.png"), "attachments/id")).toBe(false);
+  fetchMock.mockRejectedValueOnce(new Error("network"));
+  expect(await uploadPrivateFile(new File(["x"], "a.png"), "attachments/id")).toBe(false);
 });
 
-test("signed URLs use the requested lifetime", async () => {
+test("signed URLs are presigned locally with the requested lifetime", async () => {
   expect([
     ATTACHMENT_VIEW_URL_TTL_SECONDS,
     ATTACHMENT_FETCH_URL_TTL_SECONDS,
     ATTACHMENT_EXPORT_URL_TTL_SECONDS,
   ]).toEqual([600, 300, 900]);
-  expect(await signAttachmentUrl("file-key", ATTACHMENT_VIEW_URL_TTL_SECONDS)).toBe(
-    "https://app.ufs.sh/f/file-key?expires=600",
-  );
-  expect(mocks.generateSignedURL).toHaveBeenCalledWith("file-key", { expiresIn: 600 });
+  const url = new URL(await signAttachmentUrl("attachments/id-1", ATTACHMENT_VIEW_URL_TTL_SECONDS));
+  expect(`${url.origin}${url.pathname}`).toBe(`${BUCKET_URL}/attachments/id-1`);
+  expect(url.searchParams.get("X-Amz-Expires")).toBe("600");
+  expect(url.searchParams.get("X-Amz-Signature")).toMatch(/^[0-9a-f]{64}$/);
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(isStoredFileUrl(url)).toBe(true);
 });
 
-test("stored files are deleted in batches, best effort, reporting the keys that are gone", async () => {
-  const keys = Array.from({ length: 250 }, (_, index) => `key-${index}`);
-  mocks.deleteFiles.mockRejectedValueOnce(new Error("temporarily unavailable"));
-  mocks.deleteFiles.mockResolvedValueOnce({ success: false, deletedCount: 0 });
-  // The first two batches failed: only the last one's keys are reported deleted.
-  await expect(deleteStoredFiles([...keys, "key-0", ""])).resolves.toEqual(keys.slice(200));
-  expect(mocks.deleteFiles.mock.calls.map(([batch]) => batch.length)).toEqual([100, 100, 50]);
-  expect(mocks.deleteFiles.mock.calls.flatMap(([batch]) => batch)).toEqual(keys);
-  expect(mocks.deleteFiles.mock.calls.every(([, options]) => options?.keyType === "fileKey")).toBe(
-    true,
+test("only URLs into the bucket are stored files", () => {
+  expect(isStoredFileUrl(new URL(`${BUCKET_URL}/attachments/x`))).toBe(true);
+  expect(isStoredFileUrl(new URL(`${BUCKET_URL}/`))).toBe(false);
+  expect(
+    isStoredFileUrl(new URL(`https://${ACCOUNT}.r2.cloudflarestorage.com/other-bucket/x`)),
+  ).toBe(false);
+  expect(isStoredFileUrl(new URL(`http://${ACCOUNT}.r2.cloudflarestorage.com/deni-files/x`))).toBe(
+    false,
   );
+  expect(isStoredFileUrl(new URL("https://app.ufs.sh/f/key"))).toBe(false);
 });
 
-test("files whose key was never recorded are deleted by their custom id", async () => {
-  expect(await deleteStoredFiles(["attachment-id"], "customId")).toEqual(["attachment-id"]);
-  expect(mocks.deleteFiles).toHaveBeenCalledExactlyOnceWith(["attachment-id"], {
-    keyType: "customId",
+test("stored files are deleted best effort, reporting the keys that are gone", async () => {
+  fetchMock.mockImplementation(async (request: Request) => {
+    const key = new URL(request.url).pathname.split("/").at(-1);
+    if (key === "broken") return new Response(null, { status: 403 });
+    if (key === "missing") return new Response(null, { status: 404 });
+    return new Response(null, { status: 204 });
   });
+  const deleted = await deleteStoredFiles(["a", "broken", "missing", "a", ""]);
+  expect(deleted.toSorted()).toEqual(["a", "missing"]);
+  expect(fetchMock).toHaveBeenCalledTimes(3);
+  expect(fetchMock.mock.calls.every(([request]) => request.method === "DELETE")).toBe(true);
+  fetchMock.mockReset();
+  fetchMock.mockImplementation(async () => new Response(null, { status: 200 }));
 });

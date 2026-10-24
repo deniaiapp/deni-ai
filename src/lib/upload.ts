@@ -1,6 +1,10 @@
-import { UTApi, UTFile } from "uploadthing/server";
 import { env } from "@/env";
-import { deleteFilesInBatches } from "@/lib/stored-files";
+import {
+  contentDispositionHeader,
+  createFileStorage,
+  type FileStorage,
+  storageConfigFrom,
+} from "@/lib/stored-files";
 
 /**
  * Lifetimes of signed storage URLs. Files are private: every URL handed out
@@ -13,75 +17,64 @@ export const ATTACHMENT_FETCH_URL_TTL_SECONDS = 300;
 /** Links included in data exports. */
 export const ATTACHMENT_EXPORT_URL_TTL_SECONDS = 900;
 
-let utapi: UTApi | null = null;
+const storageConfig = storageConfigFrom(env);
+const storage: FileStorage | null = storageConfig ? createFileStorage(storageConfig) : null;
 
-if (env.UPLOADTHING_TOKEN) {
-  utapi = new UTApi();
-}
-
-/** Whether UploadThing storage is configured. */
+/** Whether R2 storage is configured. */
 export function isStorageConfigured(): boolean {
-  return utapi !== null;
+  return storage !== null;
 }
 
 /**
- * Upload a file to UploadThing as a private file. Returns its storage key (never a
- * public URL), or `null` when storage is not configured or the upload failed.
+ * Upload a file to R2 as a private object under `key` (see
+ * `attachmentStorageKey` and `exportStorageKey`). Returns whether it was
+ * stored: false when storage is not configured or the upload failed.
  *
- * `customId` is stored with the file (the attachment row id), so a file whose key
- * never reached the database can still be deleted with `deleteStoredFiles(ids, "customId")`.
  * `contentDisposition: "attachment"` makes its signed URL download the file
  * under its name instead of showing it (data exports).
  */
 export async function uploadPrivateFile(
   file: File,
-  customId: string,
+  key: string,
   { contentDisposition }: { contentDisposition?: "inline" | "attachment" } = {},
-): Promise<string | null> {
-  if (!utapi) return null;
+): Promise<boolean> {
+  if (!storage) return false;
 
   try {
-    const stored = new UTFile([file], file.name, {
-      type: file.type,
-      lastModified: file.lastModified,
-      customId,
+    await storage.put(key, file, {
+      contentType: file.type || "application/octet-stream",
+      contentDisposition: contentDispositionHeader(
+        contentDisposition ?? "inline",
+        file.name || "file",
+      ),
     });
-    const response = await utapi.uploadFiles(
-      stored,
-      contentDisposition ? { acl: "private", contentDisposition } : { acl: "private" },
-    );
-
-    if (response.error) {
-      console.error("[upload] UploadThing error:", response.error);
-      return null;
-    }
-
-    return response.data.key;
+    return true;
   } catch (error) {
     console.error("[upload] Failed to upload file:", error);
-    return null;
+    return false;
   }
 }
 
 /**
  * Sign a short-lived URL for a private file. Signing is local (no request to
- * UploadThing). Throws when storage is not configured.
+ * R2). Throws when storage is not configured.
  */
 export async function signAttachmentUrl(key: string, expiresInSeconds: number): Promise<string> {
-  if (!utapi) throw new Error("Attachment storage is not configured.");
-  const { ufsUrl } = await utapi.generateSignedURL(key, { expiresIn: expiresInSeconds });
-  return ufsUrl;
+  if (!storage) throw new Error("Attachment storage is not configured.");
+  return storage.sign(key, expiresInSeconds);
 }
 
 /**
- * Delete stored files in batches of 100, by storage key or by the custom id
- * given at upload. Best effort: failures are logged, not thrown. Returns the
- * keys that are gone, so a caller can keep a record of the rest to retry.
+ * Delete stored files by storage key. Best effort: failures are logged, not
+ * thrown. Returns the keys that are gone, so a caller can keep a record of the
+ * rest to retry.
  */
-export async function deleteStoredFiles(
-  keys: readonly string[],
-  keyType: "fileKey" | "customId" = "fileKey",
-): Promise<string[]> {
-  if (!utapi) return [];
-  return deleteFilesInBatches(utapi, keys, keyType);
+export async function deleteStoredFiles(keys: readonly string[]): Promise<string[]> {
+  if (!storage) return [];
+  return storage.delete(keys);
+}
+
+/** Whether a URL is a signed URL of this app's storage (see `FileStorage.isFileUrl`). */
+export function isStoredFileUrl(url: URL): boolean {
+  return storage?.isFileUrl(url) ?? false;
 }

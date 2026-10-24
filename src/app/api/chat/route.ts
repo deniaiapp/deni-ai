@@ -37,7 +37,6 @@ import {
   ForeignAttachmentError,
   linkChatAttachments,
   resolveAttachmentFileParts,
-  rewriteMigratedAttachmentUrls,
   withStableAttachmentUrls,
   type ResolvedAttachments,
 } from "@/lib/attachments";
@@ -230,13 +229,7 @@ export async function POST(req: Request) {
   }
 
   const storedMessages = Array.isArray(chat.messages) ? (chat.messages as UIMessage[]) : [];
-  // A tab loaded before the private-storage migration still sends the old
-  // public URLs of the user's files, which no longer serve them: read and save
-  // those files by their app URLs instead.
-  const messages = await rewriteMigratedAttachmentUrls(
-    mergeStoredAndClientMessages(storedMessages, validatedMessages.data),
-    userId,
-  );
+  const messages = mergeStoredAndClientMessages(storedMessages, validatedMessages.data);
 
   let memoryState: Awaited<ReturnType<typeof getUserMemoryState>>;
   let modelContext: Awaited<ReturnType<typeof resolveChatModelContext>>;

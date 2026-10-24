@@ -7,16 +7,12 @@ const mocks = vi.hoisted(() => ({
   upload: vi.fn(
     async (
       _file: File,
-      _customId: string,
+      _key: string,
       _options?: { contentDisposition?: string },
-    ): Promise<string | null> => "export-key",
+    ): Promise<boolean> => true,
   ),
   // Reports every key as deleted unless a test says otherwise.
-  deleteStoredFiles: vi.fn(
-    async (keys: readonly string[], _keyType?: "fileKey" | "customId"): Promise<string[]> => [
-      ...keys,
-    ],
-  ),
+  deleteStoredFiles: vi.fn(async (keys: readonly string[]): Promise<string[]> => [...keys]),
 }));
 
 vi.mock("@/db/drizzle", () => ({ db: {} }));
@@ -208,7 +204,7 @@ function createDatabase(
 
 beforeEach(() => {
   mocks.build.mockReset().mockResolvedValue({ profile: { id: "user" } });
-  mocks.upload.mockReset().mockResolvedValue("export-key");
+  mocks.upload.mockReset().mockResolvedValue(true);
   mocks.deleteStoredFiles.mockClear();
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
@@ -311,27 +307,24 @@ test("the job stores a private JSON download and replaces the owner's older expo
   await runAccountExportJob({ id: "job", userId: "user", createdAt }, database);
 
   expect(mocks.build).toHaveBeenCalledExactlyOnceWith("user");
-  const [file, customId, options] = mocks.upload.mock.calls[0]!;
+  const [file, key, options] = mocks.upload.mock.calls[0]!;
   expect(file.name).toBe("deni-ai-export-2026-10-11.json");
   expect(file.type).toBe("application/json");
   expect(JSON.parse(await file.text())).toEqual({ profile: { id: "user", name: "Ada" } });
-  // Tagged with its row id, so it can be deleted even if its key is never saved.
-  expect(customId).toBe("job");
+  // Keyed by its row id, so it can be deleted even if its key is never saved.
+  expect(key).toBe("exports/job");
   expect(options).toEqual({ contentDisposition: "attachment" });
 
   const job = rows.find((row) => row.id === "job")!;
   expect(job).toMatchObject({
     status: "ready",
-    storageKey: "export-key",
+    storageKey: "exports/job",
     sizeBytes: file.size,
     error: null,
   });
   expect(job.expiresAt!.getTime() - job.completedAt!.getTime()).toBe(ACCOUNT_EXPORT_RETENTION_MS);
   expect(rows.map((row) => row.id)).toEqual(["job", "theirs"]);
-  expect(mocks.deleteStoredFiles.mock.calls).toEqual([
-    [["key-previous"]],
-    [["failed-before"], "customId"],
-  ]);
+  expect(mocks.deleteStoredFiles.mock.calls).toEqual([[["key-previous", "exports/failed-before"]]]);
 });
 
 test("a failed job marks its export failed and keeps no file", async () => {
@@ -339,7 +332,7 @@ test("a failed job marks its export failed and keeps no file", async () => {
     { id: "upload", status: "pending" },
     { id: "build", status: "pending" },
   ]);
-  mocks.upload.mockResolvedValueOnce(null);
+  mocks.upload.mockResolvedValueOnce(false);
   await runAccountExportJob({ id: "upload", userId: "user", createdAt: NOW }, database);
   mocks.build.mockRejectedValueOnce(new Error("database unavailable"));
   await runAccountExportJob({ id: "build", userId: "user", createdAt: NOW }, database);
@@ -358,12 +351,12 @@ test("a job whose export was given up meanwhile deletes the file it stored", asy
   ]);
   await runAccountExportJob({ id: "lost", userId: "user", createdAt: ago(40 * MINUTE) }, database);
   expect(rows[0]).toMatchObject({ status: "failed", storageKey: null });
-  expect(mocks.deleteStoredFiles).toHaveBeenCalledExactlyOnceWith(["export-key"]);
+  expect(mocks.deleteStoredFiles).toHaveBeenCalledExactlyOnceWith(["exports/lost"]);
 
   // Deleted with its account: same.
   mocks.deleteStoredFiles.mockClear();
   await runAccountExportJob({ id: "gone", userId: "user", createdAt: NOW }, database);
-  expect(mocks.deleteStoredFiles).toHaveBeenCalledExactlyOnceWith(["export-key"]);
+  expect(mocks.deleteStoredFiles).toHaveBeenCalledExactlyOnceWith(["exports/gone"]);
 });
 
 test("a job that cannot save its export marks it failed and deletes the file", async () => {
@@ -372,7 +365,7 @@ test("a job that cannot save its export marks it failed and deletes the file", a
   });
   await runAccountExportJob({ id: "job", userId: "user", createdAt: NOW }, database);
   expect(rows[0]).toMatchObject({ status: "failed", error: "save_failed", storageKey: null });
-  expect(mocks.deleteStoredFiles).toHaveBeenCalledExactlyOnceWith(["export-key"]);
+  expect(mocks.deleteStoredFiles).toHaveBeenCalledExactlyOnceWith(["exports/job"]);
 });
 
 test("a job keeps its file when its export may have been saved ready", async () => {
@@ -381,11 +374,11 @@ test("a job keeps its file when its export may have been saved ready", async () 
     failUpdate: (values) => (values.status === "ready" ? "after" : undefined),
   });
   await runAccountExportJob({ id: "job", userId: "user", createdAt: NOW }, saved.database);
-  expect(saved.rows[0]).toMatchObject({ status: "ready", storageKey: "export-key" });
+  expect(saved.rows[0]).toMatchObject({ status: "ready", storageKey: "exports/job" });
   expect(mocks.deleteStoredFiles).not.toHaveBeenCalled();
 
   // The database is unreachable: the row stays pending without a key, and its
-  // file is deleted by custom id with it.
+  // file is deleted by the key its id derives with it.
   const down = createDatabase([{ id: "job", status: "pending" }], { failUpdate: () => "before" });
   const unreadable = {
     ...(down.database as object),
@@ -408,13 +401,14 @@ test("the storage cleanup deletes expired exports and old unfinished ones", asyn
     { id: "stuck", storageKey: "key-stuck", expiresAt: ago(2 * MINUTE) },
   ]);
   // One file fails to delete: its row stays for the next run.
-  mocks.deleteStoredFiles.mockImplementationOnce(async () => ["key-stuck"]);
+  mocks.deleteStoredFiles.mockImplementationOnce(async (keys) =>
+    keys.filter((key) => key !== "key-expired"),
+  );
 
   expect(await cleanUpAccountExports({ now: NOW }, database)).toEqual({ deleted: 3, failed: 1 });
   expect(rows.map((row) => row.id)).toEqual(["expired", "valid", "recent-failed"]);
   expect(mocks.deleteStoredFiles.mock.calls).toEqual([
-    [["key-stuck", "key-expired"]],
-    [["old-failed", "old-pending"], "customId"],
+    [["key-stuck", "key-expired", "exports/old-failed", "exports/old-pending"]],
   ]);
 });
 
@@ -438,8 +432,8 @@ test("account deletion collects the account's export files", async () => {
     { id: "building", status: "pending" },
     { id: "theirs", userId: "someone-else", storageKey: "key-theirs" },
   ]);
-  expect(await collectAccountExportFiles("user", database)).toEqual({
-    keys: ["key-ready"],
-    customIds: ["building"],
-  });
+  expect(await collectAccountExportFiles("user", database)).toEqual([
+    "key-ready",
+    "exports/building",
+  ]);
 });

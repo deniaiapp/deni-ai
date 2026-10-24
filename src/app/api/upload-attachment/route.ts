@@ -17,6 +17,7 @@ import {
 } from "@/lib/attachments";
 import { auth } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { attachmentStorageKey } from "@/lib/stored-files";
 import { deleteStoredFiles, isStorageConfigured, uploadPrivateFile } from "@/lib/upload";
 import { guardMutationRequest } from "@/lib/mutation-request";
 
@@ -195,28 +196,29 @@ async function storeAttachment(file: File, userId: string, isAnonymous: boolean)
     );
   }
 
+  // Keyed by the reservation id: if the key is never recorded (crash, timeout),
+  // dropping the abandoned reservation still deletes the file.
+  const key = attachmentStorageKey(reservation.id);
+
   /**
-   * Give the quota back. The reservation is dropped only when `deleted` (what
-   * `deleteStoredFiles` reports gone) includes `stored`, the file's custom id
-   * or key: until then it is the file's only record, so it is marked for the
-   * storage-cleanup cron to delete the file by its custom id instead. If even
-   * that fails, the pending row expires and is cleaned up the same way.
+   * Give the quota back. The reservation is dropped only once the file is
+   * gone (`deleted`, what `deleteStoredFiles` reports, includes its key):
+   * until then it is the file's only record, so it is marked for the
+   * storage-cleanup cron to delete the file by its key instead. If even that
+   * fails, the pending row expires and is cleaned up the same way.
    */
-  const release = async (deleted: readonly string[], stored: string) => {
+  const release = async (deleted: readonly string[]) => {
     try {
-      if (deleted.includes(stored)) await releaseAttachmentReservation(reservation.id);
+      if (deleted.includes(key)) await releaseAttachmentReservation(reservation.id);
       else await abandonAttachmentReservation(reservation.id);
     } catch (error) {
       console.error("[upload-attachment] failed to release a storage reservation", error);
     }
   };
 
-  // Tagged with the reservation id: if the key below is never recorded (crash,
-  // timeout), dropping the abandoned reservation still deletes the file.
-  const key = await uploadPrivateFile(file, reservation.id);
-  if (!key) {
+  if (!(await uploadPrivateFile(file, key))) {
     // A request can fail after the file was stored (for example, a lost response).
-    await release(await deleteStoredFiles([reservation.id], "customId"), reservation.id);
+    await release(await deleteStoredFiles([key]));
     return NextResponse.json({ error: UPLOAD_FAILED }, { status: 502 });
   }
 
@@ -227,14 +229,14 @@ async function storeAttachment(file: File, userId: string, isAnonymous: boolean)
     console.error("[upload-attachment] failed to record a stored attachment", error);
   }
   if (!ready) {
-    await release(await deleteStoredFiles([key]), key);
+    await release(await deleteStoredFiles([key]));
     return NextResponse.json({ error: UPLOAD_FAILED }, { status: 500 });
   }
 
   return NextResponse.json({ url: attachmentUrl(reservation.id), mediaType: file.type });
 }
 
-// Without UploadThing (local development), attachments travel inline as base64
+// Without R2 storage (local development), attachments travel inline as base64
 // data URLs: nothing is stored, so there is no quota. Keep the fallback small so
 // chat history and response payloads stay within limits.
 const MAX_DATA_URL_BYTES = 512 * 1024;

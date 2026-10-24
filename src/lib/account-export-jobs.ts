@@ -2,8 +2,8 @@ import { and, asc, desc, eq, gt, inArray, lt, ne, sql } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { db } from "@/db/drizzle";
 import { accountExport } from "@/db/schema";
-import type { AccountStoredFiles } from "@/lib/attachments";
 import { buildAccountExport } from "@/lib/account-export";
+import { exportStorageKey } from "@/lib/stored-files";
 import { deleteStoredFiles, uploadPrivateFile } from "@/lib/upload";
 
 /**
@@ -59,8 +59,16 @@ type StatusRow = Omit<AccountExportStatus, "status"> & {
 
 const fileColumns = { id: accountExport.id, storageKey: accountExport.storageKey };
 
-/** An export row whose file is to be deleted: by key, or by custom id (the row id) without one. */
+/** An export row whose file is to be deleted. */
 type ExportFile = { id: string; storageKey: string | null };
+
+/**
+ * Where a row's file is. Without a recorded key, a job cut off between its
+ * upload and saving the key may still have left a file under the row id.
+ */
+function exportFileKey({ id, storageKey }: ExportFile): string {
+  return storageKey ?? exportStorageKey(id);
+}
 
 /** 32 URL-safe characters: 192 random bits. */
 export function newAccountExportId(): string {
@@ -176,17 +184,8 @@ export async function purgeAccountExports(
   database: Pick<typeof db, "delete"> = db,
 ): Promise<{ deleted: number; failed: number }> {
   if (rows.length === 0) return { deleted: 0, failed: 0 };
-  const keys = rows.flatMap(({ storageKey }) => (storageKey ? [storageKey] : []));
-  // Without a key, a job cut off between its upload and saving the key may
-  // still have left a file under the row id.
-  const customIds = rows.flatMap(({ id, storageKey }) => (storageKey ? [] : [id]));
-  const goneKeys = new Set(keys.length > 0 ? await deleteStoredFiles(keys) : []);
-  const goneIds = new Set(
-    customIds.length > 0 ? await deleteStoredFiles(customIds, "customId") : [],
-  );
-  const removable = rows.flatMap(({ id, storageKey }) =>
-    (storageKey ? goneKeys.has(storageKey) : goneIds.has(id)) ? [id] : [],
-  );
+  const gone = new Set(await deleteStoredFiles(rows.map(exportFileKey)));
+  const removable = rows.flatMap((row) => (gone.has(exportFileKey(row)) ? [row.id] : []));
 
   let deleted = 0;
   for (let start = 0; start < removable.length; start += ROW_DELETE_BATCH_SIZE) {
@@ -243,22 +242,19 @@ export async function cleanUpAccountExports(
 export async function collectAccountExportFiles(
   userId: string,
   database: Pick<typeof db, "select"> = db,
-): Promise<AccountStoredFiles> {
+): Promise<string[]> {
   const rows = await database
     .select(fileColumns)
     .from(accountExport)
     .where(eq(accountExport.userId, userId));
-  return {
-    keys: rows.flatMap(({ storageKey }) => (storageKey ? [storageKey] : [])),
-    customIds: rows.flatMap(({ id, storageKey }) => (storageKey ? [] : [id])),
-  };
+  return rows.map(exportFileKey);
 }
 
 /**
  * Whether export `id` may be ready with `storageKey` as its file, so a job must
  * keep that file. Assumed so when the row cannot be read: a file kept for a
- * row that is not ready has no key on it, and is deleted by its custom id with
- * that row (see `purgeAccountExports`).
+ * row that is not ready has no key on it, and is deleted by the key derived
+ * from its id with that row (see `purgeAccountExports`).
  */
 async function mayBeSavedExportFile(
   id: string,
@@ -299,8 +295,11 @@ export async function runAccountExportJob(
     stage = "upload_failed";
     // Downloaded rather than shown when its signed URL is opened. Exports are
     // not attachments: they do not count toward the storage quota.
-    storageKey = await uploadPrivateFile(file, id, { contentDisposition: "attachment" });
-    if (!storageKey) throw new Error("The export file could not be stored");
+    const key = exportStorageKey(id);
+    if (!(await uploadPrivateFile(file, key, { contentDisposition: "attachment" }))) {
+      throw new Error("The export file could not be stored");
+    }
+    storageKey = key;
     stage = "save_failed";
     const completedAt = new Date();
     const saved = await database

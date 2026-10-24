@@ -1,20 +1,15 @@
 import { beforeEach, expect, test, vi } from "vitest";
 
 const ATTACHMENT_ID = "a".repeat(32);
+const STORAGE_KEY = `attachments/${ATTACHMENT_ID}`;
 
 const mocks = vi.hoisted(() => ({
   session: { session: { userId: "user" }, user: { isAnonymous: false } } as unknown,
   allowed: true,
   configured: true,
-  uploadFile: vi.fn(
-    async (_file: File, _customId: string): Promise<string | null> => "storage-key",
-  ),
+  uploadFile: vi.fn(async (_file: File, _key: string): Promise<boolean> => true),
   // Reports every file as deleted unless a test says otherwise.
-  deleteStoredFiles: vi.fn(
-    async (keys: readonly string[], _keyType?: "fileKey" | "customId"): Promise<string[]> => [
-      ...keys,
-    ],
-  ),
+  deleteStoredFiles: vi.fn(async (keys: readonly string[]): Promise<string[]> => [...keys]),
   limit: vi.fn(async (_userId: string, _isAnonymous: boolean) => 100 * 1024 * 1024),
   reserve: vi.fn(
     async (_input: {
@@ -217,9 +212,9 @@ test("stores the file privately and returns the app URL, never the storage URL",
     sizeBytes: PNG.byteLength,
     limitBytes: 100 * 1024 * 1024,
   });
-  expect(mocks.markReady).toHaveBeenCalledWith(ATTACHMENT_ID, "storage-key");
-  // Tagged with the reservation id, so the file can be found even if its key is lost.
-  expect(mocks.uploadFile.mock.calls[0]?.[1]).toBe(ATTACHMENT_ID);
+  expect(mocks.markReady).toHaveBeenCalledWith(ATTACHMENT_ID, STORAGE_KEY);
+  // Keyed by the reservation id, so the file can be found even if its key is lost.
+  expect(mocks.uploadFile.mock.calls[0]?.[1]).toBe(STORAGE_KEY);
   // Quota is reserved before anything is stored.
   expect(mocks.reserve.mock.invocationCallOrder[0]).toBeLessThan(
     mocks.uploadFile.mock.invocationCallOrder[0] ?? 0,
@@ -251,7 +246,7 @@ test("an upload past the storage quota is rejected before anything is stored", a
 });
 
 test("a failed upload gives the quota back instead of falling back to an inline copy", async () => {
-  mocks.uploadFile.mockResolvedValueOnce(null);
+  mocks.uploadFile.mockResolvedValueOnce(false);
   const response = await upload(PNG, "image/png");
   expect(response.status).toBe(502);
   expect(await response.json()).toEqual({ error: "Attachment upload failed." });
@@ -259,26 +254,26 @@ test("a failed upload gives the quota back instead of falling back to an inline 
   expect(mocks.abandon).not.toHaveBeenCalled();
   expect(mocks.markReady).not.toHaveBeenCalled();
   // The request may have failed after the file was stored.
-  expect(mocks.deleteStoredFiles).toHaveBeenCalledExactlyOnceWith([ATTACHMENT_ID], "customId");
+  expect(mocks.deleteStoredFiles).toHaveBeenCalledExactlyOnceWith([STORAGE_KEY]);
 });
 
 test("a stored file whose record cannot be saved is deleted again", async () => {
   mocks.markReady.mockResolvedValueOnce(false);
   const response = await upload(PNG, "image/png");
   expect(response.status).toBe(500);
-  expect(mocks.deleteStoredFiles).toHaveBeenCalledWith(["storage-key"]);
+  expect(mocks.deleteStoredFiles).toHaveBeenCalledWith([STORAGE_KEY]);
   expect(mocks.release).toHaveBeenCalledWith(ATTACHMENT_ID);
   expect(mocks.abandon).not.toHaveBeenCalled();
 });
 
 test("a file that could not be deleted again keeps its reservation for the cleanup", async () => {
   vi.spyOn(console, "error").mockImplementation(() => {});
-  // The upload failed after storing the file, and UploadThing is still failing.
-  mocks.uploadFile.mockResolvedValueOnce(null);
+  // The upload failed after storing the file, and R2 is still failing.
+  mocks.uploadFile.mockResolvedValueOnce(false);
   mocks.deleteStoredFiles.mockResolvedValueOnce([]);
   expect((await upload(PNG, "image/png")).status).toBe(502);
   // Dropping the row would leave the file untracked: it is marked for deletion
-  // instead, which gives the quota back and lets the cron delete the file by id.
+  // instead, which gives the quota back and lets the cron delete the file by its key.
   expect(mocks.release).not.toHaveBeenCalled();
   expect(mocks.abandon).toHaveBeenCalledExactlyOnceWith(ATTACHMENT_ID);
 
@@ -286,7 +281,7 @@ test("a file that could not be deleted again keeps its reservation for the clean
   mocks.markReady.mockRejectedValueOnce(new Error("database unavailable"));
   mocks.deleteStoredFiles.mockResolvedValueOnce([]);
   expect((await upload(PNG, "image/png")).status).toBe(500);
-  expect(mocks.deleteStoredFiles).toHaveBeenLastCalledWith(["storage-key"]);
+  expect(mocks.deleteStoredFiles).toHaveBeenLastCalledWith([STORAGE_KEY]);
   expect(mocks.release).not.toHaveBeenCalled();
   expect(mocks.abandon).toHaveBeenCalledExactlyOnceWith(ATTACHMENT_ID);
 });

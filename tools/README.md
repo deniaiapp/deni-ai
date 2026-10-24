@@ -36,20 +36,19 @@ pnpm run tools:codename
 
 ## Purge anonymous users
 
-Production maintenance. Loads `.env.production` via the package script. Prefer reviewing the script before running against live data. Deleting a guest also deletes its stored attachment files (needs `UPLOADTHING_TOKEN`; without a valid token it deletes no users when the guests to purge have stored files, since nothing would record those files afterwards); files that could not be deleted are listed and the script exits with status 1.
+Production maintenance. Loads `.env.production` via the package script. Prefer reviewing the script before running against live data. Deleting a guest also deletes its stored attachment files (needs the `R2_*` settings; without them it deletes no users when the guests to purge have stored files, since nothing would record those files afterwards); files that could not be deleted are listed and the script exits with status 1.
 
 ```sh
 pnpm run tools:purge-anonymous
 ```
 
-## Migrate attachments to private storage
+## Copy UploadThing files to R2
 
-Production maintenance, run once after deploying private attachment storage (see SETUP.md, "Attachment storage", for the rollout order). Loads `.env.production`; needs `DATABASE_URL` and `UPLOADTHING_TOKEN`. Finds chats whose saved messages reference public UploadThing URLs of this app (`https://<appId>.ufs.sh/f/<key>`), records an `attachment` row for each file (owned by the chat's owner, tied to the chat, sized from the UploadThing file list), rewrites those URLs to `/api/attachments/<id>`, and makes the files private. Nothing is deleted. Dry run by default: it reports the chats, files and storage each account gains against its quota. Resumable: rerun until it reports nothing left. A file referenced by more than one account is left public and listed. A file UploadThing no longer lists, or whose row was deleted or is being deleted since the scan, is not recorded (again) and is listed; its chats keep the public URL. A tab opened before the run keeps working: the chat server reads and saves the user's migrated files by their app URLs. `--limit=<n>` migrates at most n chats per run. For another environment, run `pnpm exec tsx --env-file=.env.local tools/migrate-private-attachments.ts`.
+Production maintenance, for the move from UploadThing to R2 (see SETUP.md, "Attachment storage move from UploadThing to R2", for the rollout order). Loads `.env.production`; needs `DATABASE_URL`, `UPLOADTHING_TOKEN` and the `R2_*` settings. Copies every ready attachment and ready, unexpired data export whose file is still in UploadThing to R2 under the same storage key, keeping the content type and name UploadThing served it with. The database is only read, and nothing is deleted. Dry run by default: it reports how many files are already in R2 and how many are left to copy. A file already in R2 is skipped, so it can be rerun; files that fail to copy are listed and the script exits with status 1. For another environment, run `pnpm exec tsx --env-file=.env.local tools/migrate-uploadthing-to-r2.ts`.
 
 ```sh
-pnpm run tools:migrate-private-attachments
-pnpm run tools:migrate-private-attachments --apply
-pnpm run tools:migrate-private-attachments --apply --limit=100
+pnpm run tools:migrate-uploadthing-to-r2
+pnpm run tools:migrate-uploadthing-to-r2 --apply
 ```
 
 ## Stripe Customer Portal
