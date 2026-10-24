@@ -1,7 +1,7 @@
 import "@tanstack/react-start/server-only";
 
 import { convertToModelMessages, generateText, isLoopFinished, type UIMessage } from "ai";
-import { buildInstructions, createDeniTools, deniHandoffToolApproval, deniToolApproval } from "./agent";
+import { buildInstructions, createDeniTools, deniHandoffToolApproval } from "./agent";
 import { getApiKey } from "./config";
 import { finishJob, checkpointJob, claimJob, heartbeatJob, getJob } from "./jobs";
 import { getDeniModel } from "./llm";
@@ -94,10 +94,9 @@ export async function runBackgroundJob(userId: string, jobId: string) {
       ),
       messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(isGroup ? groupContext(messages, bot.id) : messages))),
       tools: createDeniTools({ userId, bot, threadId: job.threadId, jobId: job.id, allowHandoff: !isGroup, locale }),
-      toolApproval:
-        job.kind === "routine"
-          ? deniHandoffToolApproval(locale)
-          : deniToolApproval({ userId, jobId: job.id, locale }),
+      // Only a text reply is saved below, so an approval card could never be answered and the
+      // job would stay in waiting_approval. Deny those actions; the reply explains what is left.
+      toolApproval: deniHandoffToolApproval(locale, tr("Background tasks cannot wait for approval")),
       stopWhen: isLoopFinished(),
       providerOptions,
       onStepFinish: async (step) => {

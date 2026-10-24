@@ -12,7 +12,8 @@ import { buildInstructions, createDeniTools, deniToolApproval } from "./agent";
 import { getApiKey } from "./config";
 import { releaseBrowserTakeover } from "./browser-workspaces";
 import { setComputer } from "./computer";
-import { hasPendingWorkflowWait } from "./chat-run-state";
+import { hasOpenApproval, hasPendingWorkflowWait } from "./chat-run-state";
+import { releaseStaleApproval } from "./job-actions";
 import { discordErrorText, discordTranslator as translatorFor } from "./discord-i18n";
 import { translateError } from "./i18n-server";
 import {
@@ -170,7 +171,14 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
     failureHandled = true;
     const message = translateError(locale, error);
     await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, lastError: message, jobId: job.id }).catch(() => undefined);
-    const failed = await finishJob(userId, job.id, "failed", { error: message }).catch(() => null);
+    // deniToolApproval may already have parked the job before the reply could be saved.
+    const failed = await transitionJob(userId, job.id, ["running", "finalizing", "waiting_approval", "waiting_takeover"], {
+      status: "failed",
+      error: message,
+      finishedAt: new Date(),
+      heartbeatAt: null,
+      lockedAt: null,
+    }).catch(() => null);
     if (failed) {
       await createNotification({
         userId,
@@ -326,18 +334,22 @@ async function runBotTurn(options: {
 }): Promise<TurnOutcome> {
   const { userId, locale, store, bot, thread, incoming, idempotencyKey } = options;
   const tr = translatorFor(locale);
-  const active = (await listJobs(userId, { threadId: thread.id, limit: 20, summary: true })).find(
+  let active = (await listJobs(userId, { threadId: thread.id, limit: 20, summary: true })).find(
     (job) => job.botId === bot.id && job.kind === "chat" && ACTIVE.includes(job.status),
   );
   if (active?.status === "waiting_approval") {
-    // Only a Discord-started job can be answered with these buttons; the web chat owns the rest.
-    const full = await getJob(userId, active.id);
     const persisted = await loadMessages(userId, thread.id);
-    const pending = pendingRequestFor(persisted, active.id);
-    if (full?.payload.source !== "discord" || !pending) {
-      return { kind: "notice", text: tr("A task is waiting for your approval in the app.") };
+    if (!hasOpenApproval(persisted, active.id) && await releaseStaleApproval(userId, active.id)) {
+      active = undefined;
+    } else {
+      // Only a Discord-started job can be answered with these buttons; the web chat owns the rest.
+      const full = await getJob(userId, active.id);
+      const pending = pendingRequestFor(persisted, active.id);
+      if (full?.payload.source !== "discord" || !pending) {
+        return { kind: "notice", text: tr("A task is waiting for your approval in the app.") };
+      }
+      return approvalOutcome(pending, active.id, bot, locale);
     }
-    return approvalOutcome(pending, active.id, bot, locale);
   }
   if (active && active.status !== "waiting_takeover") {
     return { kind: "notice", text: tr("{name} is still working on your last message.", { name: bot.name }) };

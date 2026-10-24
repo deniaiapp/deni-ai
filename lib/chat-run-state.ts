@@ -56,3 +56,17 @@ export function lastAssistantText(messages: UIMessage[]) {
   }
   return undefined;
 }
+
+/**
+ * Whether a job parked in waiting_approval still has a card the person can answer. A card
+ * without a job ID also counts, so an older message never lets a live wait be cancelled.
+ */
+export function hasOpenApproval(messages: UIMessage[], jobId: string) {
+  return messages.some((message) => {
+    const owner = (message.metadata as { jobId?: unknown } | undefined)?.jobId;
+    return message.role === "assistant" && (owner === undefined || owner === jobId) && message.parts.some((part) => {
+      const value = part as { state?: string; approval?: { id?: string } };
+      return value.state === "approval-requested" && Boolean(value.approval?.id);
+    });
+  });
+}

@@ -138,6 +138,20 @@ async function main() {
   recheck.mcp({ action: "call" }, { toolCallId: "call-2", messages: answered });
   await new Promise((resolve) => setTimeout(resolve, 100));
   assert((await jobs.getJob("tenant-a", resumed.id))?.status === "waiting_approval", "a new call did not wait for approval");
+
+  // A wait whose card was answered or never saved must not block the next message forever.
+  const { hasOpenApproval } = await import("../lib/chat-run-state");
+  const { releaseStaleApproval } = await import("../lib/job-actions");
+  const card = (jobId: string | undefined, state: string) => ({
+    id: "m-1", role: "assistant" as const, metadata: jobId ? { jobId } : {},
+    parts: [{ type: "tool-mcp", toolCallId: "call-2", state, approval: { id: "ap-2" } }],
+  }) as unknown as import("ai").UIMessage;
+  assert(hasOpenApproval([card(resumed.id, "approval-requested")], resumed.id), "an open card was not found");
+  assert(hasOpenApproval([card(undefined, "approval-requested")], resumed.id), "a card without a job ID did not count as open");
+  assert(!hasOpenApproval([card("job-other", "approval-requested")], resumed.id), "another job's card kept this job waiting");
+  assert(!hasOpenApproval([card(resumed.id, "approval-responded")], resumed.id), "an answered card counted as open");
+  assert((await releaseStaleApproval("tenant-a", resumed.id))?.status === "cancelled", "a stale approval wait was not released");
+  assert((await releaseStaleApproval("tenant-a", resumed.id)) === null, "a job that stopped waiting was released again");
   server.close();
   console.log(`verified durable job claims, checkpoints, cancel, uncertain recovery, tenant isolation, and MCP discovery/call on local SQLite`);
 }

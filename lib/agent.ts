@@ -697,8 +697,9 @@ export function deniToolApproval(options?: { userId?: string; jobId?: string; lo
         : options?.userId && await isAlwaysAllowed(options.userId, kind, action as WriteAction) ? ("approved" as const) : approval(call),
   };
 }
-export function deniHandoffToolApproval(locale?: string) {
-  const reason = translatorFor(locale)("Handoffs cannot wait for approval");
+/** Deny every action that needs approval. For runs with no one watching to answer a card. */
+export function deniHandoffToolApproval(locale?: string, denial?: string) {
+  const reason = denial ?? translatorFor(locale)("Handoffs cannot wait for approval");
   return {
     runCommand: ({ command }: { command: string }) =>
       commandNeedsApproval(command)

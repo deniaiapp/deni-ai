@@ -3,7 +3,7 @@ import "@tanstack/react-start/server-only";
 import { releaseBrowserTakeover } from "./browser-workspaces";
 import { setComputer } from "./computer";
 import { runBackgroundJob } from "./job-runner";
-import { cancelJob, getJob, retryJob } from "./jobs";
+import { appendJobEvent, cancelJob, getJob, retryJob, transitionJob } from "./jobs";
 import type { AgentJob } from "./types";
 
 /**
@@ -20,6 +20,24 @@ export async function cancelAndReleaseJob(userId: string, jobId: string, locale?
     await releaseBrowserTakeover(userId, jobId).catch(() => undefined);
     await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId }).catch(() => undefined);
   }
+  return job;
+}
+
+/**
+ * Cancel a job left in waiting_approval after its last approval was answered or lost. Nothing on
+ * screen can resume it, so the next message starts a new job instead of being refused. Null when
+ * the job is no longer waiting.
+ */
+export async function releaseStaleApproval(userId: string, jobId: string) {
+  const job = await transitionJob(userId, jobId, "waiting_approval", {
+    status: "cancelled",
+    finishedAt: new Date(),
+    heartbeatAt: null,
+    lockedAt: null,
+  });
+  if (!job) return null;
+  await appendJobEvent(userId, jobId, "cancelled", { reason: "stale_approval" }).catch(() => undefined);
+  await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId }).catch(() => undefined);
   return job;
 }
 

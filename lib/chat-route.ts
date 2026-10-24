@@ -32,7 +32,8 @@ import {
   updateJob,
 } from "@/lib/jobs";
 import { createNotification } from "@/lib/notifications";
-import { hasPendingWorkflowWait } from "@/lib/chat-run-state";
+import { hasOpenApproval, hasPendingWorkflowWait } from "@/lib/chat-run-state";
+import { releaseStaleApproval } from "@/lib/job-actions";
 import { messagesWithReplyContext, resolveReplyReferences } from "@/lib/message-actions";
 import { releaseBrowserTakeover } from "@/lib/browser-workspaces";
 import { createHash } from "node:crypto";
@@ -137,6 +138,9 @@ export async function handleChat(req: Request) {
   if (job && ["completed", "failed", "cancelled"].includes(job.status) && hasNewInput) job = null;
   const continuationFrom = job?.status === "waiting_takeover" && hasNewInput ? "waiting_takeover"
     : job?.status === "waiting_approval" && includesApprovalResponse(incoming, persisted) ? "waiting_approval" : undefined;
+  if (job?.status === "waiting_approval" && !continuationFrom && !hasOpenApproval(persisted, job.id)) {
+    if (await releaseStaleApproval(userId, job.id)) job = null;
+  }
   if (job && job.status !== "queued" && !continuationFrom) {
     return jobConflict(job);
   }
@@ -375,7 +379,15 @@ export async function handleChat(req: Request) {
               await finalizeChatJob();
             } catch (error) {
               reportError(error, "save chat response");
-              await finishJob(userId, job.id, "failed", { error: t("Could not save the response") }).catch(() => undefined);
+              // deniToolApproval may already have parked the job, but the unsaved card can never
+              // be answered, so the wait has to end here too.
+              await transitionJob(userId, job.id, ["running", "finalizing", "waiting_approval", "waiting_takeover"], {
+                status: "failed",
+                error: t("Could not save the response"),
+                finishedAt: new Date(),
+                heartbeatAt: null,
+                lockedAt: null,
+              }).catch(() => undefined);
               writeRunStatus?.("failed");
             }
           },

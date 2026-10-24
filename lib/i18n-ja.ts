@@ -19,6 +19,7 @@ export const ja: Record<string, string> = {
   "bot not found": "チームメイトが見つかりません",
   "dm not found": "ダイレクトメッセージが見つかりません",
   "Handoffs cannot wait for approval": "引き継ぎでは承認を待てません",
+  "Background tasks cannot wait for approval": "バックグラウンドのタスクでは承認を待てません",
   "Take control of the computer screen. When you are done, tell the teammate in chat to continue.":
     "コンピューターの画面を操作してください。完了したら、チャットでチームメイトに続行を伝えてください。",
   "The teammate is working in the background. Keep doing other work. Call handoffStatus to read their thinking and tool use.":

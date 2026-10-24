@@ -9,7 +9,7 @@ import {
   setComputer,
 } from "@/lib/computer";
 import { claimBrowserTakeover, releaseBrowserTakeover } from "@/lib/browser-workspaces";
-import { updateJob } from "@/lib/jobs";
+import { transitionJob } from "@/lib/jobs";
 import { getExtracted } from "@/i18n/server";
 import { localizeError } from "@/lib/localize-error";
 
@@ -53,7 +53,9 @@ async function POST({ request: req }: { request: Request }) {
       if (!claimed) {
         return Response.json({ error: t("Another task currently owns the computer") }, { status: 409 });
       }
-      await updateJob(userId, body.jobId, { status: "waiting_takeover" }).catch(() => undefined);
+      // The computer keeps the ID of its last job after it finishes. Only park a job that is
+      // still running, or taking over a leftover browser would reopen a finished task.
+      await transitionJob(userId, body.jobId, "running", { status: "waiting_takeover" }).catch(() => undefined);
     }
     await setComputer(userId, {
       status: "takeover",
