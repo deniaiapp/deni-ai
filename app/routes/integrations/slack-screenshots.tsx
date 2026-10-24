@@ -44,8 +44,8 @@ function SlackScreenshotsPage() {
               <img
                 src={`/marketplace/slack/${shot}.png`}
                 alt={captions[shot]}
-                width={1667}
-                height={954}
+                width={1600}
+                height={1000}
                 loading={index < 2 ? "eager" : "lazy"}
                 className="h-auto w-full rounded-xl border border-foreground/10"
               />
