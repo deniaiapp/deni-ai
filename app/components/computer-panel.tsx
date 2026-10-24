@@ -737,7 +737,7 @@ export function ComputerPanel({
       <AnimatePresence>
       {showScreen && screenExpanded && !computer.steelDebugUrl ? (
         <motion.div
-          className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4"
           role="dialog"
           aria-modal="true"
           aria-label={t("Enlarged computer screen")}
@@ -810,7 +810,7 @@ function LiveBrowserView({
   if (expanded) {
     return (
       <motion.div
-        className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+        className="fixed inset-0 z-60 flex items-center justify-center bg-black/80 p-4"
         role="dialog"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
