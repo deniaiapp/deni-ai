@@ -46,6 +46,8 @@ export function exportStorageKey(id: string): string {
 /** Deletes in flight at once (R2 deletes objects one request at a time here). */
 const DELETE_CONCURRENCY = 10;
 const REQUEST_TIMEOUT_MS = 30_000;
+/** Retries of an upload R2 answered with 5xx or 429. */
+const PUT_RETRIES = 3;
 
 export type StoredObjectOptions = {
   contentType: string;
@@ -89,14 +91,26 @@ export function createFileStorage(config: StorageConfig) {
       const headers: Record<string, string> = { "content-type": contentType };
       if (contentDisposition) headers["content-disposition"] = contentDisposition;
       const data = body instanceof Blob ? new Uint8Array(await body.arrayBuffer()) : body;
-      const response = await client.fetch(objectUrl(key), {
-        method: "PUT",
-        headers,
-        body: data,
-        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-      });
-      await response.body?.cancel();
-      if (!response.ok) throw new Error(`R2 rejected the upload (${response.status})`);
+      // Sign only, then send the bytes themselves: `client.fetch` hands fetch a
+      // signed Request whose body arrives as a stream, which goes out chunked
+      // without Content-Length, and R2 answers 411.
+      const signal = AbortSignal.timeout(REQUEST_TIMEOUT_MS);
+      for (let attempt = 0; ; attempt++) {
+        const signed = await client.sign(objectUrl(key), { method: "PUT", headers, body: data });
+        const response = await fetch(signed.url, {
+          method: "PUT",
+          headers: signed.headers,
+          body: data,
+          signal,
+        });
+        await response.body?.cancel();
+        if (response.ok) return;
+        const retryable = response.status >= 500 || response.status === 429;
+        if (!retryable || attempt >= PUT_RETRIES) {
+          throw new Error(`R2 rejected the upload (${response.status})`);
+        }
+        await new Promise((resolve) => setTimeout(resolve, 50 * 2 ** attempt));
+      }
     },
 
     /** Whether an object exists. Throws when R2 cannot tell. */
