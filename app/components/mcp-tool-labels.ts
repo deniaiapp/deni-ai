@@ -1,37 +1,47 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import type { McpConnection } from "@/lib/types";
 
-// Shared by every tool step on the page. A step naming an ID the list does not have yet (the
-// connection was added after the page loaded) asks again.
-let namesRequest: Promise<Record<string, string>> | null = null;
+// One list of connection names for the whole page. Every tool step reads it; a step naming an
+// ID the list lacks (added after it loaded, or the last request failed) asks for it again, at
+// most once every few seconds, instead of each step fetching its own copy.
+let connectionNames: Record<string, string> = {};
+let namesRequest: Promise<void> | null = null;
+let lastAttempt = 0;
+const listeners = new Set<() => void>();
 
-function loadNames(fresh = false) {
-  if (fresh) namesRequest = null;
-  namesRequest ??= fetch("/api/mcp", { cache: "no-store" })
-    .then((response) => (response.ok ? response.json() : { connections: [] }))
-    .then((data: { connections?: McpConnection[] }) =>
-      Object.fromEntries((data.connections ?? []).map((connection) => [connection.id, connection.name])),
-    )
-    .catch(() => {
+function refreshNames() {
+  if (namesRequest || Date.now() - lastAttempt < 5_000) return;
+  lastAttempt = Date.now();
+  namesRequest = fetch("/api/mcp", { cache: "no-store" })
+    .then((response) => (response.ok ? (response.json() as Promise<{ connections?: McpConnection[] }>) : null))
+    .then((data) => {
+      if (!data) return;
+      connectionNames = Object.fromEntries((data.connections ?? []).map((connection) => [connection.id, connection.name]));
+      for (const listener of listeners) listener();
+    })
+    .catch(() => undefined)
+    .finally(() => {
       namesRequest = null;
-      return {};
     });
-  return namesRequest;
 }
 
-/** Names of all MCP connections by ID, read fresh whenever a component using it mounts. */
+function subscribe(listener: () => void) {
+  listeners.add(listener);
+  if (listeners.size === 1) refreshNames();
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+/** Looks up an MCP connection's name by ID; unknown IDs refresh the shared list. */
 export function useMcpConnectionNames() {
-  const [names, setNames] = useState<Record<string, string>>({});
-  useEffect(() => {
-    let active = true;
-    void loadNames(true).then((loaded) => {
-      if (active) setNames(loaded);
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
-  return names;
+  const names = useSyncExternalStore(subscribe, () => connectionNames, () => connectionNames);
+  return (id: string | undefined) => {
+    if (!id) return undefined;
+    // Scheduled outside render so a missing name never updates state while rendering.
+    if (!names[id]) queueMicrotask(refreshNames);
+    return names[id];
+  };
 }
 
 export type McpToolDescription = {

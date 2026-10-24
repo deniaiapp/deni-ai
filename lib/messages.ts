@@ -66,11 +66,13 @@ function slimToolInput(input: unknown) {
   if (!input || typeof input !== "object") return input;
   const rec = input as Record<string, unknown>;
   const keep: Record<string, unknown> = {};
-  for (const key of ["action", "path", "url", "command", "name", "reason", "key", "selector"]) {
+  for (const key of ["action", "path", "url", "command", "name", "reason", "key", "selector", "connectionId"]) {
     const value = rec[key];
     if (typeof value === "string") keep[key] = truncateString(value, 200);
     else if (value != null) keep[key] = value;
   }
+  // MCP approval cards show where a call goes and the text it writes, also after a reload.
+  if (rec.arguments && typeof rec.arguments === "object") keep.arguments = slimJson(rec.arguments, MAX_TOOL_UI);
   return keep;
 }
 

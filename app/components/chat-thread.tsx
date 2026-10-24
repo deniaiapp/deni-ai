@@ -1737,7 +1737,7 @@ function formatDetail(value: unknown) {
 
 function useToolDisplayLabel() {
   const t = useExtracted();
-  const mcpNames = useMcpConnectionNames();
+  const mcpName = useMcpConnectionNames();
 
   function toolDisplayLabel(
   name: string,
@@ -1766,7 +1766,7 @@ function useToolDisplayLabel() {
   if (denied) return t("Action was declined");
 
   if (name === "mcp") {
-    const service = mcpNames[inputValue(input, "connectionId") ?? ""] ?? t("a connected app");
+    const service = mcpName(inputValue(input, "connectionId")) ?? t("a connected app");
     if (action === "list") {
       if (failed) return t("Couldn't check {service} tools", { service });
       return completed ? t("Checked {service} tools", { service }) : t("Checking {service} tools", { service });
