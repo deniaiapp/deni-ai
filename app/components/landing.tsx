@@ -189,6 +189,12 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
       <footer className="border-t border-foreground/10 px-6 py-8 text-xs text-muted-foreground">
         <div className="mx-auto flex max-w-5xl flex-wrap gap-4">
           <span>Deni Run</span>
+          <Link to="/integrations" className="hover:text-foreground">
+            {t("Integrations")}
+          </Link>
+          <Link to="/support" className="hover:text-foreground">
+            {t("Support")}
+          </Link>
           <Link to="/privacy" className="hover:text-foreground">
             {t("Privacy Policy")}
           </Link>

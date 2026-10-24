@@ -955,6 +955,57 @@ msgid "Action was declined"
 msgstr "操作は拒否されました"
 
 #: app/components/chat-thread.tsx
+#: app/components/mcp-approval.tsx
+msgctxt "OzOlY-"
+msgid "a connected app"
+msgstr "接続中のアプリ"
+
+#: app/components/chat-thread.tsx
+msgctxt "nmlxlK"
+msgid "Couldn't check {service} tools"
+msgstr "{service} のツールを確認できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "DYMUgf"
+msgid "Checked {service} tools"
+msgstr "{service} のツールを確認しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "81eRjE"
+msgid "Checking {service} tools"
+msgstr "{service} のツールを確認しています"
+
+#: app/components/chat-thread.tsx
+msgctxt "S6VGXb"
+msgid "Couldn't use {service}: {tool}"
+msgstr "{service}: {tool} を実行できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "3sZpoK"
+msgid "Couldn't use {service}"
+msgstr "{service} を使えませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "kz-9Zg"
+msgid "Used {service}: {tool}"
+msgstr "{service}: {tool} を実行しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "LkWhzP"
+msgid "Used {service}"
+msgstr "{service} を使いました"
+
+#: app/components/chat-thread.tsx
+msgctxt "zZgHe6"
+msgid "{service}: {tool}"
+msgstr "{service}: {tool}"
+
+#: app/components/chat-thread.tsx
+msgctxt "fotcnQ"
+msgid "Using {service}"
+msgstr "{service} を使っています"
+
+#: app/components/chat-thread.tsx
 msgctxt "AY7syN"
 msgid "Couldn't open the page"
 msgstr "ページを開けませんでした"
@@ -1268,6 +1319,21 @@ msgstr "接続済みサービスを使用しました"
 msgctxt "04VF7h"
 msgid "Couldn't use a connected service"
 msgstr "接続済みサービスを使用できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "_mGKaQ"
+msgid "Checking connected apps"
+msgstr "接続中のアプリを確認しています"
+
+#: app/components/chat-thread.tsx
+msgctxt "5odFYG"
+msgid "Checked connected apps"
+msgstr "接続中のアプリを確認しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "DthUwA"
+msgid "Couldn't check connected apps"
+msgstr "接続中のアプリを確認できませんでした"
 
 #: app/components/chat-thread.tsx
 msgctxt "zQDTkW"
@@ -1710,6 +1776,232 @@ msgctxt "JpsXCp"
 msgid "Delete {name}"
 msgstr "{name}を削除"
 
+#: app/components/connector-landing.tsx
+msgctxt "3e4BHF"
+msgid "Let your AI teammates search Slack, catch up on channels and threads, and post updates for you, with your approval."
+msgstr "AIチームメイトが Slack を検索し、チャンネルやスレッドの流れを把握して、あなたの承認のもとで代わりに最新情報を投稿します。"
+
+#: app/components/connector-landing.tsx
+msgctxt "QVunhO"
+msgid "Search messages, channels, and people you can see"
+msgstr "あなたが閲覧できるメッセージ、チャンネル、メンバーを検索"
+
+#: app/components/connector-landing.tsx
+msgctxt "z8D7Bo"
+msgid "Read channel history and whole threads to catch you up"
+msgstr "チャンネルの履歴やスレッド全体を読んで、要点をまとめて伝える"
+
+#: app/components/connector-landing.tsx
+msgctxt "AGpcoE"
+msgid "Post messages and replies, after you approve each one"
+msgstr "メッセージや返信を、1件ずつあなたが承認してから投稿"
+
+#: app/components/connector-landing.tsx
+msgctxt "t2HfTK"
+msgid "Summarize what happened in #product this week and save the notes to my workspace."
+msgstr "今週の #product の出来事を要約して、メモをワークスペースに保存して。"
+
+#: app/components/connector-landing.tsx
+msgctxt "mnlnDc"
+msgid "Find the thread where we picked the launch date and tell me who decided."
+msgstr "リリース日を決めたスレッドを探して、誰が決めたか教えて。"
+
+#: app/components/connector-landing.tsx
+msgctxt "Z5aUvB"
+msgid "Collect every customer question from #support today into a spreadsheet."
+msgstr "今日 #support に来たお客様の質問をすべてスプレッドシートにまとめて。"
+
+#: app/components/connector-landing.tsx
+msgctxt "Y-AsD8"
+msgid "Draft a status update from my open Linear issues and post it to #team-updates."
+msgstr "自分の未完了の Linear issue から進捗報告を書いて、#team-updates に投稿して。"
+
+#: app/components/connector-landing.tsx
+msgctxt "6iHjcy"
+msgid "Deni Run works in any Slack workspace you belong to that allows the app. Teammates act as you, so they only see the channels, messages, and people your Slack account can see. If your workspace only allows approved apps, Slack asks you to request approval from a workspace admin first."
+msgstr "Deni Run は、あなたが参加していてアプリの利用が許可されている任意の Slack ワークスペースで使えます。チームメイトはあなたとして操作するため、あなたの Slack アカウントで閲覧できるチャンネル、メッセージ、メンバーしか見えません。ワークスペースで承認済みのアプリしか許可されていない場合は、先にワークスペースの管理者へ承認をリクエストするよう Slack から求められます。"
+
+#: app/components/connector-landing.tsx
+msgctxt "obocIj"
+msgid "To remove access on Slack’s side as well, open Tools & settings → Manage apps in Slack and remove Deni Run, or ask a workspace admin to remove it."
+msgstr "Slack 側からもアクセスを取り消すには、Slack で「ツールと設定」→「アプリを管理する」を開いて Deni Run を削除するか、ワークスペースの管理者に削除を依頼してください。"
+
+#: app/components/connector-landing.tsx
+msgctxt "kpL6bn"
+msgid "Let your AI teammates find, read, and update pages and databases in Notion, with your approval for every change."
+msgstr "AIチームメイトが Notion のページやデータベースを検索、閲覧、更新します。変更はすべてあなたの承認が必要です。"
+
+#: app/components/connector-landing.tsx
+msgctxt "m430db"
+msgid "Search pages and databases you have access to"
+msgstr "アクセスできるページやデータベースを検索"
+
+#: app/components/connector-landing.tsx
+msgctxt "MF6oen"
+msgid "Read pages to answer questions or gather research"
+msgstr "ページを読んで質問に答えたり、調べものをまとめたりする"
+
+#: app/components/connector-landing.tsx
+msgctxt "xbn33u"
+msgid "Create and update pages and database entries, after you approve"
+msgstr "ページやデータベースの項目を、あなたの承認後に作成・更新"
+
+#: app/components/connector-landing.tsx
+msgctxt "JloBh5"
+msgid "Find our onboarding checklist in Notion and turn it into a task list."
+msgstr "Notion にあるオンボーディングのチェックリストを探して、タスクリストにして。"
+
+#: app/components/connector-landing.tsx
+msgctxt "d_B14_"
+msgid "Read the Q3 planning page and summarize the open decisions."
+msgstr "Q3 の計画ページを読んで、未決定の事項をまとめて。"
+
+#: app/components/connector-landing.tsx
+msgctxt "Ad3J0r"
+msgid "Add a page to the meeting notes database with today’s summary."
+msgstr "議事録データベースに今日の要約のページを追加して。"
+
+#: app/components/connector-landing.tsx
+msgctxt "FJKC0M"
+msgid "Notion asks which workspace and pages to share when you connect. Teammates act as you and only see what you shared with the integration."
+msgstr "接続時に、共有するワークスペースとページを Notion で選びます。チームメイトはあなたとして操作し、インテグレーションに共有したものしか見えません。"
+
+#: app/components/connector-landing.tsx
+msgctxt "tZXGd1"
+msgid "To remove access on Notion’s side as well, disconnect Deni Run from the connections in your Notion settings."
+msgstr "Notion 側からもアクセスを取り消すには、Notion の設定にある接続の一覧から Deni Run の接続を解除してください。"
+
+#: app/components/connector-landing.tsx
+msgctxt "i574zt"
+msgid "Let your AI teammates find, create, and update Linear issues and projects, with your approval for every change."
+msgstr "AIチームメイトが Linear の issue やプロジェクトを検索、作成、更新します。変更はすべてあなたの承認が必要です。"
+
+#: app/components/connector-landing.tsx
+msgctxt "gJ1EXC"
+msgid "Search issues, projects, and teams"
+msgstr "issue、プロジェクト、チームを検索"
+
+#: app/components/connector-landing.tsx
+msgctxt "541sOR"
+msgid "Read issues and comments to report status"
+msgstr "issue やコメントを読んで状況を報告"
+
+#: app/components/connector-landing.tsx
+msgctxt "pS6TWO"
+msgid "Create and update issues and comments, after you approve"
+msgstr "issue やコメントを、あなたの承認後に作成・更新"
+
+#: app/components/connector-landing.tsx
+msgctxt "C-b80f"
+msgid "List my open Linear issues due this week, sorted by priority."
+msgstr "今週期限の自分の未完了の Linear issue を、優先度順に一覧にして。"
+
+#: app/components/connector-landing.tsx
+msgctxt "obi02l"
+msgid "File a bug in Linear from the error in this screenshot."
+msgstr "このスクリーンショットのエラーから Linear にバグを起票して。"
+
+#: app/components/connector-landing.tsx
+msgctxt "Nh1fm7"
+msgid "Summarize what the platform team shipped this cycle."
+msgstr "このサイクルでプラットフォームチームがリリースしたものをまとめて。"
+
+#: app/components/connector-landing.tsx
+msgctxt "PRjpv2"
+msgid "Teammates act as you in the Linear workspace you choose when you connect, and see only the teams and issues your account can see."
+msgstr "チームメイトは、接続時に選んだ Linear ワークスペースであなたとして操作し、あなたのアカウントで閲覧できるチームと issue だけを見ます。"
+
+#: app/components/connector-landing.tsx
+msgctxt "UnTtve"
+msgid "To remove access on Linear’s side as well, revoke Deni Run from the authorized applications in your Linear account settings."
+msgstr "Linear 側からもアクセスを取り消すには、Linear のアカウント設定にある承認済みアプリケーションから Deni Run を取り消してください。"
+
+#: app/components/connector-landing.tsx
+msgctxt "rz6iFP"
+msgid "All integrations"
+msgstr "すべての連携"
+
+#: app/components/connector-landing.tsx
+msgctxt "f3PG3Y"
+msgid "Deni Run for {name}"
+msgstr "{name} 向け Deni Run"
+
+#: app/components/connector-landing.tsx
+msgctxt "JA2tuL"
+msgid "Add to {name}"
+msgstr "{name} に追加"
+
+#: app/components/connector-landing.tsx
+msgctxt "WJPYu8"
+msgid "Free to start. You sign in to Deni Run, then approve access on {name}."
+msgstr "無料で始められます。Deni Run にログインしてから、{name} でアクセスを承認します。"
+
+#: app/components/connector-landing.tsx
+msgctxt "s_9HD9"
+msgid "What your teammates can do"
+msgstr "チームメイトにできること"
+
+#: app/components/connector-landing.tsx
+msgctxt "ciW7qW"
+msgid "Example tasks"
+msgstr "タスクの例"
+
+#: app/components/connector-landing.tsx
+#: app/components/landing.tsx
+msgctxt "HK3ph8"
+msgid "How it works"
+msgstr "使い方"
+
+#: app/components/connector-landing.tsx
+msgctxt "a_km9y"
+msgid "Click “Add to {name}” and sign in to Deni Run with Google or GitHub."
+msgstr "「{name} に追加」をクリックし、Google または GitHub で Deni Run にログインします。"
+
+#: app/components/connector-landing.tsx
+msgctxt "UxVTE_"
+msgid "{name} asks you to allow access. Deni Run never sees your {name} password."
+msgstr "{name} からアクセスの許可を求められます。Deni Run があなたの {name} のパスワードを見ることはありません。"
+
+#: app/components/connector-landing.tsx
+msgctxt "L1Xx8j"
+msgid "Back in your workspace, give any teammate a task that needs {name}."
+msgstr "ワークスペースに戻り、{name} が必要なタスクをチームメイトに依頼します。"
+
+#: app/components/connector-landing.tsx
+msgctxt "jhqtsM"
+msgid "You approve every change"
+msgstr "変更はすべてあなたが承認"
+
+#: app/components/connector-landing.tsx
+msgctxt "X8n4nL"
+msgid "Tools that {name} marks as read-only, such as searching and reading, run without asking. Anything else, such as posting or editing, stops and shows you an approval card with what will be sent, and runs only after you approve it."
+msgstr "検索や閲覧など、{name} が読み取り専用としているツールは確認なしで実行されます。投稿や編集などそれ以外の操作は一旦停止し、送信される内容を示す承認カードを表示して、あなたが承認した後にのみ実行されます。"
+
+#: app/components/connector-landing.tsx
+msgctxt "2ebwjq"
+msgid "If you trust a specific action, turn on Always allow for that tool in Plugins. In background runs that no one is watching, only read-only tools run and everything else is declined."
+msgstr "信頼できる操作であれば、「プラグイン」でそのツールの「常に許可」をオンにできます。誰も見ていないバックグラウンド実行では、読み取り専用のツールだけが実行され、それ以外はすべて拒否されます。"
+
+#: app/components/connector-landing.tsx
+msgctxt "ZTyMjO"
+msgid "Your data"
+msgstr "あなたのデータ"
+
+#: app/components/connector-landing.tsx
+msgctxt "GBp0wu"
+msgid "Deni Run reads from {name} only to carry out a task you gave a teammate. What a teammate retrieves is sent to the AI model provider to produce the answer and may be kept in that conversation in your workspace. Sign-in tokens are stored encrypted and used only to call {name} for you. We do not sell your data or use it for advertising."
+msgstr "Deni Run が {name} からデータを読み取るのは、あなたがチームメイトに依頼したタスクを実行するときだけです。チームメイトが取得した内容は、回答を生成するために AI モデルプロバイダーに送信され、ワークスペース内のその会話に残ることがあります。ログイン用のトークンは暗号化して保存され、あなたに代わって {name} を呼び出すためにのみ使用されます。データを販売したり広告に使用したりすることはありません。"
+
+#: app/components/connector-landing.tsx
+msgctxt "i3cNpt"
+msgid "Disconnect any time from Plugins in the app, which deletes the stored tokens right away. {revoke} Details are in our <privacy>Privacy Policy</privacy>; questions go to <support>Support</support>."
+msgstr "アプリの「プラグイン」からいつでも接続を解除でき、保存されたトークンは直ちに削除されます。{revoke} 詳しくは<privacy>プライバシーポリシー</privacy>をご覧ください。ご質問は<support>サポート</support>までお寄せください。"
+
+#: app/components/connector-landing.tsx
+msgctxt "ELcmtZ"
+msgid "Ready to hand off work in {name}?"
+msgstr "{name} での仕事を任せてみませんか?"
+
 #: app/components/discord-settings.tsx
 msgctxt "qqy7Oh"
 msgid "Commands in the DM: /help lists everything you can do from Discord, /teammate chooses who you talk to, /reset starts a new conversation, /unlink disconnects. Files you attach are saved to the workspace, and actions that need approval show Approve and Deny buttons."
@@ -1792,6 +2084,7 @@ msgid "Try again"
 msgstr "もう一度試す"
 
 #: app/components/landing.tsx
+#: app/components/public-layout.tsx
 msgctxt "EFTSMc"
 msgid "Main"
 msgstr "メイン"
@@ -1807,6 +2100,7 @@ msgid "Pricing"
 msgstr "料金"
 
 #: app/components/landing.tsx
+#: app/components/public-layout.tsx
 #: app/routes/privacy.tsx
 msgctxt "vx0nkZ"
 msgid "Privacy Policy"
@@ -1819,6 +2113,7 @@ msgid "Open workspace"
 msgstr "ワークスペースを開く"
 
 #: app/components/landing.tsx
+#: app/components/mcp-settings.tsx
 #: app/routes/sign-in.tsx
 msgctxt "SQJto2"
 msgid "Sign in"
@@ -1900,11 +2195,6 @@ msgid "Connect Gmail, Google Drive, or GitHub so a teammate can search, read, an
 msgstr "Gmail、Google ドライブ、GitHub を接続すると、チームメイトがあなたに代わって検索、閲覧、下書きや送信を行えます。接続するまではどれもオフです。"
 
 #: app/components/landing.tsx
-msgctxt "HK3ph8"
-msgid "How it works"
-msgstr "使い方"
-
-#: app/components/landing.tsx
 msgctxt "4MFLiq"
 msgid "Sign in with Google or GitHub, then confirm it is you with a passkey, an emailed code, or an authenticator app."
 msgstr "GoogleまたはGitHubでログインし、パスキー、メールで届くコード、または認証アプリで本人確認をします。"
@@ -1971,6 +2261,21 @@ msgid "Start Pro"
 msgstr "Proをはじめる"
 
 #: app/components/landing.tsx
+#: app/components/public-layout.tsx
+#: app/routes/integrations/index.tsx
+msgctxt "6cBDhe"
+msgid "Integrations"
+msgstr "連携"
+
+#: app/components/landing.tsx
+#: app/components/public-layout.tsx
+#: app/routes/support.tsx
+msgctxt "HqRNN8"
+msgid "Support"
+msgstr "サポート"
+
+#: app/components/landing.tsx
+#: app/components/public-layout.tsx
 msgctxt "xkr-zo"
 msgid "Terms"
 msgstr "利用規約"
@@ -1980,6 +2285,39 @@ msgstr "利用規約"
 msgctxt "0h_lPM"
 msgid "Upgrade"
 msgstr "アップグレード"
+
+#: app/components/mcp-approval.tsx
+msgctxt "0mS8ff"
+msgid "run a tool"
+msgstr "ツールを実行"
+
+#: app/components/mcp-approval.tsx
+msgctxt "2-ppTp"
+msgid "Wants to {action} in {service}"
+msgstr "{service} で「{action}」を実行しようとしています"
+
+#: app/components/mcp-approval.tsx
+msgctxt "KzBusX"
+msgid "This may delete or overwrite data in {service}."
+msgstr "{service} のデータを削除または上書きする可能性があります。"
+
+#: app/components/mcp-settings.tsx
+#: app/routes/integrations/index.tsx
+msgctxt "y3prrs"
+msgid "Search, read, and update pages and databases in Notion."
+msgstr "Notionのページやデータベースを検索、閲覧、更新します。"
+
+#: app/components/mcp-settings.tsx
+#: app/routes/integrations/index.tsx
+msgctxt "YM1mfS"
+msgid "Find, create, and update issues and projects in Linear."
+msgstr "Linearのイシューやプロジェクトを検索、作成、更新します。"
+
+#: app/components/mcp-settings.tsx
+#: app/routes/integrations/index.tsx
+msgctxt "vs-OUt"
+msgid "Search messages and channels, and post to Slack."
+msgstr "Slackのメッセージやチャンネルを検索し、投稿します。"
 
 #: app/components/mcp-settings.tsx
 msgctxt "vBjft2"
@@ -2021,6 +2359,61 @@ msgstr "プラグインの接続を解除できませんでした。"
 msgctxt "lEIfUi"
 msgid "Disconnected {plugin}. Teammates can no longer use it."
 msgstr "{plugin} の接続を解除しました。チームメイトは使用できなくなりました。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "tJ-xBR"
+msgid "Connected {name}."
+msgstr "{name}を接続しました。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "OHVrf_"
+msgid "Connected."
+msgstr "接続しました。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "uxdVUQ"
+msgid "{name} is already connected."
+msgstr "{name} はすでに接続されています。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "1PJ67p"
+msgid "Could not start sign-in."
+msgstr "ログインを開始できませんでした。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "kw_3qo"
+msgid "Could not load tools."
+msgstr "ツールを読み込めませんでした。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "L44Le1"
+msgid "Always allow tools for {name}"
+msgstr "{name}のツールを常に許可"
+
+#: app/components/mcp-settings.tsx
+msgctxt "i-Rkf2"
+msgid "Run without asking"
+msgstr "確認せずに実行"
+
+#: app/components/mcp-settings.tsx
+msgctxt "zwnS8X"
+msgid "Loading tools…"
+msgstr "ツールを読み込み中…"
+
+#: app/components/mcp-settings.tsx
+msgctxt "ZxdVFf"
+msgid "Every tool on this server is read-only."
+msgstr "このサーバーのツールはすべて読み取り専用です。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "l9RK6E"
+msgid "This server has no tools."
+msgstr "このサーバーにはツールがありません。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "5ML6Jf"
+msgid "Read-only tools already run without asking."
+msgstr "読み取り専用のツールは確認なしで実行されます。"
 
 #: app/components/mcp-settings.tsx
 msgctxt "PiF85g"
@@ -2074,16 +2467,43 @@ msgid "Enable write access"
 msgstr "書き込みを有効にする"
 
 #: app/components/mcp-settings.tsx
-msgctxt "i-Rkf2"
-msgid "Run without asking"
-msgstr "確認せずに実行"
-
-#: app/components/mcp-settings.tsx
 msgctxt "qj1uhz"
 msgid "Disconnect"
 msgstr "接続を解除"
 
 #: app/components/mcp-settings.tsx
+#: app/routes/integrations/index.tsx
+msgctxt "2mMJRv"
+msgid "Connectors"
+msgstr "コネクタ"
+
+#: app/components/mcp-settings.tsx
+msgctxt "jEfLW3"
+msgid "Connect apps in one click. You sign in on their site; Deni Run never sees your password."
+msgstr "ワンクリックでアプリを接続できます。ログインは各サービスのサイトで行うため、Deni Runがパスワードを見ることはありません。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "IvjoDS"
+msgid "Connected"
+msgstr "接続済み"
+
+#: app/components/mcp-settings.tsx
+msgctxt "yj09C7"
+msgid "Needs sign-in again"
+msgstr "再ログインが必要です"
+
+#: app/components/mcp-settings.tsx
+msgctxt "5srDqp"
+msgid "Reconnect {name}"
+msgstr "{name}を再接続"
+
+#: app/components/mcp-settings.tsx
+msgctxt "6g5cOV"
+msgid "Connect {name}"
+msgstr "{name}を接続"
+
+#: app/components/mcp-settings.tsx
+#: app/routes/integrations/index.tsx
 msgctxt "VJKXaS"
 msgid "Custom MCP servers"
 msgstr "カスタムMCPサーバー"
@@ -2092,6 +2512,11 @@ msgstr "カスタムMCPサーバー"
 msgctxt "CkbIrf"
 msgid "Connect a streamable HTTP or SSE MCP server. Secrets are encrypted per account."
 msgstr "ストリーミング可能なHTTPまたはSSEのMCPサーバーに接続します。シークレットはアカウントごとに暗号化されます。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "9rckfC"
+msgid "If the server uses OAuth, save it without a token and sign in."
+msgstr "OAuthを使うサーバーは、トークンなしで保存してからログインしてください。"
 
 #: app/components/mcp-settings.tsx
 msgctxt "2ggvbL"
@@ -2129,6 +2554,16 @@ msgid "No MCP connections yet."
 msgstr "MCP接続はまだありません。"
 
 #: app/components/mcp-settings.tsx
+msgctxt "5sfp2F"
+msgid "Signed in with OAuth"
+msgstr "OAuthでログイン済み"
+
+#: app/components/mcp-settings.tsx
+msgctxt "lbpe3v"
+msgid "Signed out"
+msgstr "ログアウト済み"
+
+#: app/components/mcp-settings.tsx
 msgctxt "Pe7yxq"
 msgid "Secret saved"
 msgstr "シークレット保存済み"
@@ -2147,6 +2582,26 @@ msgstr "{time}にテスト済み"
 msgctxt "t7HOdt"
 msgid "not tested"
 msgstr "未テスト"
+
+#: app/components/mcp-settings.tsx
+msgctxt "Q2u-PT"
+msgid "Last test failed"
+msgstr "前回のテストに失敗しました"
+
+#: app/components/mcp-settings.tsx
+msgctxt "H9KoIT"
+msgid "Sign in to {name}"
+msgstr "{name}にログイン"
+
+#: app/components/mcp-settings.tsx
+msgctxt "rfZWRO"
+msgid "Sign in to {name} with OAuth"
+msgstr "OAuthで{name}にログイン"
+
+#: app/components/mcp-settings.tsx
+msgctxt "yM8Au_"
+msgid "Sign in with OAuth"
+msgstr "OAuthでログイン"
 
 #: app/components/mcp-settings.tsx
 msgctxt "xu6eM8"
@@ -3279,18 +3734,24 @@ msgctxt "XLzOqk"
 msgid "This job cannot be retried"
 msgstr "このジョブは再試行できません"
 
-#: app/routes/api/mcp.ts
+#: app/routes/api/mcp/index.ts
 #: app/routes/api/notifications.ts
 msgctxt "9W2lsE"
 msgid "ID is required"
 msgstr "IDは必須です"
 
-#: app/routes/api/mcp.ts
+#: app/routes/api/mcp/index.ts
+#: app/routes/api/plugins.ts
+msgctxt "CocmeK"
+msgid "Invalid permission"
+msgstr "権限が正しくありません"
+
+#: app/routes/api/mcp/index.ts
 msgctxt "ijB2JA"
 msgid "Connection not found"
 msgstr "接続が見つかりません"
 
-#: app/routes/api/mcp.ts
+#: app/routes/api/mcp/index.ts
 msgctxt "aMeYz5"
 msgid "Name and URL are required"
 msgstr "名前とURLは必須です"
@@ -3299,11 +3760,6 @@ msgstr "名前とURLは必須です"
 msgctxt "YNzq0k"
 msgid "Notification not found"
 msgstr "通知が見つかりません"
-
-#: app/routes/api/plugins.ts
-msgctxt "CocmeK"
-msgid "Invalid permission"
-msgstr "権限が正しくありません"
 
 #: app/routes/api/plugins.ts
 msgctxt "bsJmcP"
@@ -3446,6 +3902,106 @@ msgctxt "hcuwhb"
 msgid "This sign-in method is not available right now."
 msgstr "この確認方法は現在利用できません。"
 
+#: app/routes/integrations/index.tsx
+msgctxt "f2QvlV"
+msgid "Integrations · Deni Run"
+msgstr "連携 · Deni Run"
+
+#: app/routes/integrations/index.tsx
+msgctxt "m8KqrQ"
+msgid "Apps Deni Run teammates can work with: Slack, Notion, Linear, Gmail, Google Drive, GitHub, Discord, and your own MCP servers."
+msgstr "Deni Run のチームメイトが連携できるアプリ: Slack、Notion、Linear、Gmail、Google ドライブ、GitHub、Discord、そしてあなた独自の MCP サーバー。"
+
+#: app/routes/integrations/index.tsx
+msgctxt "sJLESG"
+msgid "Search and read your mail, and send email on your behalf after you approve."
+msgstr "メールを検索して読み、あなたの承認後に代わりにメールを送信します。"
+
+#: app/routes/integrations/index.tsx
+msgctxt "ot9p3H"
+msgid "Search and read Docs and text files, and create or update files the app made after you approve."
+msgstr "ドキュメントやテキストファイルを検索して読み、あなたの承認後に、アプリが作成したファイルの作成や更新を行います。"
+
+#: app/routes/integrations/index.tsx
+msgctxt "dn9T0R"
+msgid "Read repositories, issues, pull requests, and workflow runs. Open issues and pull requests, comment, review, and merge after you approve."
+msgstr "リポジトリ、issue、プルリクエスト、ワークフローの実行を読み取ります。あなたの承認後に、issue やプルリクエストの作成、コメント、レビュー、マージを行います。"
+
+#: app/routes/integrations/index.tsx
+msgctxt "Kxv3Q7"
+msgid "Link your Discord account to give teammates tasks, approve actions, and get notified from a direct message with the Deni Run bot."
+msgstr "Discord アカウントを連携すると、Deni Run ボットとのダイレクトメッセージから、チームメイトへのタスクの依頼、操作の承認、通知の受け取りができます。"
+
+#: app/routes/integrations/index.tsx
+msgctxt "TwSFIi"
+msgid "Connect any streamable HTTP or SSE MCP server, with a bearer token or OAuth sign-in. Every call asks first unless you always allow that tool."
+msgstr "ストリーミング可能な HTTP または SSE の任意の MCP サーバーを、Bearer トークンまたは OAuth ログインで接続できます。そのツールを常に許可しない限り、呼び出しのたびに確認を求めます。"
+
+#: app/routes/integrations/index.tsx
+msgctxt "9Z6P5I"
+msgid "One click to connect. You sign in on the app’s own site; Deni Run never sees your password."
+msgstr "ワンクリックで接続できます。ログインは各アプリのサイトで行うため、Deni Run がパスワードを見ることはありません。"
+
+#: app/routes/integrations/index.tsx
+msgctxt "Xgngmo"
+msgid "Built-in plugins"
+msgstr "組み込みプラグイン"
+
+#: app/routes/integrations/index.tsx
+msgctxt "xgVf9W"
+msgid "Sign in with Google or GitHub to let teammates use these services."
+msgstr "Google または GitHub でログインすると、チームメイトがこれらのサービスを使えるようになります。"
+
+#: app/routes/integrations/index.tsx
+msgctxt "Nz9Q1s"
+msgid "More ways to work"
+msgstr "その他の使い方"
+
+#: app/routes/integrations/index.tsx
+msgctxt "wH3ouN"
+msgid "Reach your teammates from Discord, or bring your own tools."
+msgstr "Discord からチームメイトに連絡したり、独自のツールを持ち込んだりできます。"
+
+#: app/routes/integrations/index.tsx
+msgctxt "eSk0YU"
+msgid "Connect the apps you already use so AI teammates can find information and get work done there. Everything is off until you connect it, and changes wait for your approval. Connect and disconnect any of them from Plugins in your workspace."
+msgstr "普段使っているアプリを接続すれば、AIチームメイトがそこで情報を探し、仕事を進められます。接続するまではどれもオフで、変更はあなたの承認を待ちます。どのアプリも、ワークスペースの「プラグイン」から接続・接続解除できます。"
+
+#: app/routes/integrations/index.tsx
+msgctxt "TdTXXf"
+msgid "Learn more"
+msgstr "詳しく見る"
+
+#: app/routes/integrations/linear.tsx
+msgctxt "msyRXq"
+msgid "Deni Run for Linear"
+msgstr "Linear 向け Deni Run"
+
+#: app/routes/integrations/linear.tsx
+msgctxt "2-wDY2"
+msgid "Connect Linear so Deni Run teammates can find, create, and update issues with your approval."
+msgstr "Linear を接続すると、Deni Run のチームメイトがあなたの承認のもとで issue を検索、作成、更新できます。"
+
+#: app/routes/integrations/notion.tsx
+msgctxt "1GHm3N"
+msgid "Deni Run for Notion"
+msgstr "Notion 向け Deni Run"
+
+#: app/routes/integrations/notion.tsx
+msgctxt "Y7RNfZ"
+msgid "Connect Notion so Deni Run teammates can find, read, and update pages and databases with your approval."
+msgstr "Notion を接続すると、Deni Run のチームメイトがあなたの承認のもとでページやデータベースを検索、閲覧、更新できます。"
+
+#: app/routes/integrations/slack.tsx
+msgctxt "GG1ohZ"
+msgid "Deni Run for Slack"
+msgstr "Slack 向け Deni Run"
+
+#: app/routes/integrations/slack.tsx
+msgctxt "WFZVgI"
+msgid "Add Deni Run to Slack so AI teammates can search messages, catch up on threads, and post updates with your approval."
+msgstr "Deni Run を Slack に追加すると、AIチームメイトがあなたの承認のもとでメッセージの検索、スレッドの把握、最新情報の投稿を行えます。"
+
 #: app/routes/privacy.tsx
 msgctxt "abpBoW"
 msgid "Privacy Policy · Deni Run"
@@ -3462,9 +4018,9 @@ msgid "Back to Deni Run home"
 msgstr "Deni Run のホームに戻る"
 
 #: app/routes/privacy.tsx
-msgctxt "9hzHb_"
-msgid "Last updated: October 14, 2026"
-msgstr "最終更新日: 2026年10月14日"
+msgctxt "dg-din"
+msgid "Last updated: October 24, 2026"
+msgstr "最終更新日: 2026年10月24日"
 
 #: app/routes/privacy.tsx
 msgctxt "zFZQnj"
@@ -3582,9 +4138,69 @@ msgid "Deni Run’s use and transfer to any other app of information received fr
 msgstr "Deni Run による、Google API から受け取った情報の利用および他のアプリへの転送は、限定的な使用の要件を含む Google API サービスのユーザーデータに関するポリシーに準拠します。Google ユーザーデータを広告に使用すること、販売やデータブローカーへの転送、汎用的なAI・機械学習モデルの開発、改善、学習への使用は行いません。また、お客様が特定の項目について同意した場合、セキュリティや不正利用の調査に必要な場合、法律で求められる場合を除き、人が閲覧することを認めません。"
 
 #: app/routes/privacy.tsx
-msgctxt "G4kUCt"
-msgid "3. How we use data"
-msgstr "3. データの利用目的"
+msgctxt "7NXVvz"
+msgid "3. Connectors: Slack, Notion, Linear, and custom MCP servers"
+msgstr "3. コネクタ: Slack、Notion、Linear、カスタム MCP サーバー"
+
+#: app/routes/privacy.tsx
+msgctxt "IWqj-j"
+msgid "Only if you choose to connect them from Plugins in the app, or with the Add to Slack button, teammates can use these services through their official Model Context Protocol (MCP) servers. You sign in on the service’s own site and choose what to allow there; Deni Run never sees your password for that service."
+msgstr "アプリ内の「プラグイン」から、または「Slack に追加」ボタンで接続することを選んだ場合にのみ、チームメイトはこれらのサービスを、各サービス公式の Model Context Protocol(MCP)サーバーを通じて使用できます。ログインはそのサービス自身のサイトで行い、許可する内容もそこで選択します。Deni Run がそのサービスのパスワードを見ることはありません。"
+
+#: app/routes/privacy.tsx
+msgctxt "B-HBfq"
+msgid "What we store."
+msgstr "保存する情報。"
+
+#: app/routes/privacy.tsx
+msgctxt "_XMr6R"
+msgid "For each connection: its name and server address, the OAuth client details and access and refresh tokens the service issues, which tools you set to “Always allow”, and when it was last checked. Tokens are encrypted with AES-256-GCM before they are stored and are used only to call that service for you. We do not copy or index your workspace in any of these services."
+msgstr "接続ごとに、その名前とサーバーアドレス、サービスが発行する OAuth クライアント情報ならびにアクセストークンおよびリフレッシュトークン、お客様が「常に許可」に設定したツール、最後に確認した日時を保存します。トークンは保存前に AES-256-GCM で暗号化され、お客様に代わってそのサービスを呼び出すためにのみ使用します。これらのサービス内のお客様のワークスペースをコピーしたり、インデックス化したりすることはありません。"
+
+#: app/routes/privacy.tsx
+msgctxt "RXNDQa"
+msgid "Slack."
+msgstr "Slack。"
+
+#: app/routes/privacy.tsx
+msgctxt "aZFVrP"
+msgid "Slack gives Deni Run a user token, so teammates act as you, with your access: they cannot see channels or conversations you cannot see, and messages they send appear under your name. The permissions requested let a teammate, when you ask, search and read messages, files, canvases, lists, and people in conversations you belong to; send or schedule messages; create conversations, canvases, and lists; upload files; and add reactions. Before you approve an action, Deni Run looks up the names of the channels and people it involves with Slack’s read-only tools, so the approval shows “#general” instead of an ID; these names are kept in memory for up to ten minutes."
+msgstr "Slack は Deni Run にユーザートークンを発行するため、チームメイトはお客様として、お客様のアクセス権の範囲で操作します。お客様が閲覧できないチャンネルや会話をチームメイトが閲覧することはできず、チームメイトが送信したメッセージはお客様の名前で表示されます。要求する権限により、チームメイトは、お客様が依頼したときに、お客様が参加している会話のメッセージ、ファイル、canvas、リスト、メンバーの検索と閲覧、メッセージの送信または予約送信、会話、canvas、リストの作成、ファイルのアップロード、リアクションの追加を行えます。お客様が操作を承認する前に、Deni Run は Slack の読み取り専用ツールを使って、その操作に関係するチャンネルやメンバーの名前を調べ、承認画面に ID ではなく「#general」のように表示します。これらの名前は最大10分間メモリ上に保持されます。"
+
+#: app/routes/privacy.tsx
+msgctxt "9KsjVF"
+msgid "Notion and Linear."
+msgstr "Notion と Linear。"
+
+#: app/routes/privacy.tsx
+msgctxt "xow7nI"
+msgid "Teammates can search and read pages, databases, issues, and projects you have access to, and create or update them when you ask."
+msgstr "チームメイトは、お客様がアクセスできるページ、データベース、issue、プロジェクトを検索および閲覧でき、お客様が依頼したときにそれらを作成または更新できます。"
+
+#: app/routes/privacy.tsx
+msgctxt "jTAHlC"
+msgid "When teammates act."
+msgstr "チームメイトが操作するとき。"
+
+#: app/routes/privacy.tsx
+msgctxt "3kXkwO"
+msgid "Only while carrying out a task you gave them. Tools the service marks as read-only run without asking. Anything else, such as sending a message or changing a page, is shown to you with what it will do and runs only after you approve it, unless you turned on “Always allow” for that exact tool. For custom MCP servers you add yourself, every call needs your approval unless you allowed that tool."
+msgstr "お客様が依頼したタスクを実行している間に限ります。サービスが読み取り専用としているツールは確認なしで実行されます。メッセージの送信やページの変更など、それ以外の操作は、何を行うかをお客様に表示し、お客様が承認した後にのみ実行されます。ただし、お客様がまさにそのツールに対して「常に許可」をオンにしている場合を除きます。お客様が自分で追加したカスタム MCP サーバーについては、そのツールを許可していない限り、すべての呼び出しにお客様の承認が必要です。"
+
+#: app/routes/privacy.tsx
+msgctxt "KgZYLK"
+msgid "Where the content goes."
+msgstr "コンテンツの送信先。"
+
+#: app/routes/privacy.tsx
+msgctxt "3-_1LD"
+msgid "Content a teammate retrieves is sent to the AI model provider listed below to produce the response you see, and may be kept in that task’s conversation history in your workspace. We do not use data from these services for advertising, we do not sell it, we do not use it to train or improve AI or machine-learning models, and people at Deni Run do not read it unless you ask us to for support, it is needed to investigate security or abuse, or the law requires it."
+msgstr "チームメイトが取得したコンテンツは、表示される応答を生成するために下記のAIモデルプロバイダーに送信され、ワークスペース内のそのタスクの会話履歴に残ることがあります。これらのサービスから得たデータを広告に使用すること、販売すること、AI・機械学習モデルの学習や改善に使用することはありません。また、お客様がサポートのために依頼した場合、セキュリティや不正利用の調査に必要な場合、法律で求められる場合を除き、Deni Run の担当者がそれを閲覧することはありません。"
+
+#: app/routes/privacy.tsx
+msgctxt "rP7P6p"
+msgid "4. How we use data"
+msgstr "4. データの利用目的"
 
 #: app/routes/privacy.tsx
 msgctxt "Y5Qt1h"
@@ -3592,9 +4208,9 @@ msgid "To provide the service: run your teammates and computer sessions, store y
 msgstr "サービスを提供するために利用します。具体的には、チームメイトとコンピューターセッションの実行、ワークスペースの保存、プラン上限の適用、決済処理、サービスの安全性の維持、不正利用の防止、不具合の修正、サポート対応です。お客様のデータを広告やプロファイリングに使用することはなく、販売もしません。"
 
 #: app/routes/privacy.tsx
-msgctxt "NucqTm"
-msgid "4. Who receives data"
-msgstr "4. データの提供先"
+msgctxt "uTA9NN"
+msgid "5. Who receives data"
+msgstr "5. データの提供先"
 
 #: app/routes/privacy.tsx
 msgctxt "oZbZjp"
@@ -3612,6 +4228,11 @@ msgid "Discord: if you link it, Discord carries the direct messages you and the 
 msgstr "Discord: 連携した場合、あなたとボットがやり取りするダイレクトメッセージ（あなたが求めたファイルやスクリーンショット、通知をオンにしている場合のバックグラウンド作業の通知を含みます）は Discord を経由し、Discord 自身の利用規約とプライバシーポリシーが適用されます。Discord に処理されたくない内容は送らないでください。メッセージ内容はあなたへの回答にのみ使い、AI モデルの学習には使いません。"
 
 #: app/routes/privacy.tsx
+msgctxt "-QCNml"
+msgid "Slack, Notion, Linear, and custom MCP servers you connect: receive the requests a teammate makes for a task you gave it, under each service’s own terms and privacy policy."
+msgstr "お客様が接続した Slack、Notion、Linear、カスタム MCP サーバー: お客様が依頼したタスクのためにチームメイトが行うリクエストを、各サービス自身の利用規約とプライバシーポリシーのもとで受け取ります。"
+
+#: app/routes/privacy.tsx
 msgctxt "A54dst"
 msgid "Stripe: billing. Receives your email address and payment details."
 msgstr "Stripe: 請求。メールアドレスとお支払い情報を受け取ります。"
@@ -3622,9 +4243,9 @@ msgid "Resend: delivers sign-in codes if you choose email for two-factor. Receiv
 msgstr "Resend: 二要素認証でメールを選んだ場合に、ログインコードを届けます。メールアドレスとコードを受け取ります。"
 
 #: app/routes/privacy.tsx
-msgctxt "6GHvNo"
-msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
-msgstr "OpenRouter と、その接続先のモデルプロバイダー: AIモデルへのリクエスト。メッセージ、ファイル、ページの内容に加え、Gmail や Google ドライブを接続している場合は、チームメイトがタスクのために取得したメールやファイルの内容を受け取ります。これらはそのタスクへの応答にのみ使用され、当社がモデルの学習に使用することはありません。Google のプロフィールデータは送信しません。"
+msgctxt "1TiWpq"
+msgid "OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail, Google Drive, Slack, Notion, Linear, or another MCP server, the content a teammate retrieves from it for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data."
+msgstr "OpenRouter と、その接続先のモデルプロバイダー: AIモデルへのリクエスト。メッセージ、ファイル、ページの内容に加え、Gmail、Google ドライブ、Slack、Notion、Linear、またはその他の MCP サーバーを接続している場合は、チームメイトがタスクのためにそこから取得した内容を受け取ります。これらはそのタスクへの応答にのみ使用され、当社がモデルの学習に使用することはありません。Google のプロフィールデータは送信しません。"
 
 #: app/routes/privacy.tsx
 msgctxt "e_XJkf"
@@ -3637,9 +4258,14 @@ msgid "E2B: the isolated sandbox where terminal commands run."
 msgstr "E2B: ターミナルコマンドを実行する隔離されたサンドボックス。"
 
 #: app/routes/privacy.tsx
-msgctxt "hMrc-Q"
-msgid "Our database and S3-compatible object storage (typically Cloudflare R2) hosting providers."
-msgstr "データベースおよびS3互換オブジェクトストレージ(通常は Cloudflare R2)のホスティングプロバイダー。"
+msgctxt "MI-5lC"
+msgid "Cloudflare: database (D1) and file storage (R2), in Japan."
+msgstr "Cloudflare: データベース(D1)とファイルストレージ(R2)。所在地は日本です。"
+
+#: app/routes/privacy.tsx
+msgctxt "KuJ33x"
+msgid "Contabo: the servers that run the app, in Japan."
+msgstr "Contabo: アプリを実行するサーバー。所在地は日本です。"
 
 #: app/routes/privacy.tsx
 msgctxt "3UIoog"
@@ -3647,9 +4273,9 @@ msgid "We may also disclose data when required by law or to protect the rights, 
 msgstr "法律で求められる場合、またはユーザーとサービスの権利、安全、セキュリティを守るために、データを開示することがあります。サービスが売却または合併された場合、データは本ポリシーに基づき新しい運営者に引き継がれることがあります。"
 
 #: app/routes/privacy.tsx
-msgctxt "obGr2j"
-msgid "5. How we protect data"
-msgstr "5. データの保護"
+msgctxt "JjJmIG"
+msgid "6. How we protect data"
+msgstr "6. データの保護"
 
 #: app/routes/privacy.tsx
 msgctxt "adCMZI"
@@ -3657,9 +4283,9 @@ msgid "Every account is isolated: workspace files, browser sessions, and termina
 msgstr "アカウントはそれぞれ隔離されています。ワークスペースのファイル、ブラウザセッション、ターミナルのサンドボックスはユーザーIDに紐づけられ、他のアカウントとは共有されません。通信はHTTPSで暗号化されます。ログインには二要素認証(パスキー、メールで届くコード、または認証アプリのコード)が必要です。データベースとストレージへのアクセスは、サービスのみが保持する認証情報で制限されます。完全に安全なシステムは存在しないため、絶対的な安全性を保証することはできません。"
 
 #: app/routes/privacy.tsx
-msgctxt "DXkzgx"
-msgid "6. Retention and deletion"
-msgstr "6. 保持と削除"
+msgctxt "Nq8WAk"
+msgid "7. Retention and deletion"
+msgstr "7. 保持と削除"
 
 #: app/routes/privacy.tsx
 msgctxt "WSq4pI"
@@ -3677,9 +4303,14 @@ msgid "You can disconnect the Gmail, Google Drive, and GitHub plugins at any tim
 msgstr "アプリのプラグイン画面から、Gmail、Google ドライブ、GitHub のプラグインをいつでも接続解除できます。解除するとチームメイトは直ちに使えなくなり、そのプロバイダーの最後のプラグインを解除した時点で、Google または GitHub 側のアクセス権も取り消されます。Google アカウントのセキュリティ設定から、Gmail、Google ドライブ、または Google アカウント全体に対する Deni Run のアクセス権を取り消すこともでき、アクセスは直ちに停止します。Deni Run のアカウントを削除すると、当社が保持する Google のアクセストークンも削除されます。ログインせずに削除を依頼する場合は、下記の連絡先までご連絡ください。"
 
 #: app/routes/privacy.tsx
-msgctxt "ZaMphK"
-msgid "7. Cookies"
-msgstr "7. Cookie"
+msgctxt "zjpAjm"
+msgid "You can disconnect Slack, Notion, Linear, or any MCP server at any time from Plugins in the app, which deletes the tokens we hold for it right away. To also revoke the grant on the service’s side, remove Deni Run from that service’s connected or authorized apps (in Slack, from your workspace’s app management page). Deleting your Deni Run account deletes every connection and its tokens."
+msgstr "Slack、Notion、Linear、または任意の MCP サーバーの接続は、アプリの「プラグイン」からいつでも解除でき、解除すると当社が保持しているそのトークンは直ちに削除されます。サービス側の許可も取り消すには、そのサービスの接続済みアプリまたは承認済みアプリから Deni Run を削除してください(Slack の場合は、ワークスペースのアプリ管理ページから行います)。Deni Run のアカウントを削除すると、すべての接続とそのトークンが削除されます。"
+
+#: app/routes/privacy.tsx
+msgctxt "CRfcwC"
+msgid "8. Cookies"
+msgstr "8. Cookie"
 
 #: app/routes/privacy.tsx
 msgctxt "idVmmZ"
@@ -3687,9 +4318,9 @@ msgid "We use only the cookies needed to keep you signed in and to remember your
 msgstr "ログイン状態の維持と、言語およびテーマの記憶に必要なCookieのみを使用します。広告用やサイト横断のトラッキング用Cookieは使用しません。"
 
 #: app/routes/privacy.tsx
-msgctxt "qd7tYO"
-msgid "8. Your rights and children"
-msgstr "8. お客様の権利と子ども"
+msgctxt "Q9Zy-j"
+msgid "9. Your rights and children"
+msgstr "9. お客様の権利と子ども"
 
 #: app/routes/privacy.tsx
 msgctxt "hZJFta"
@@ -3697,9 +4328,9 @@ msgid "Depending on where you live, you may have the right to access, correct, e
 msgstr "お住まいの地域によっては、データの閲覧、訂正、エクスポート、削除を求める権利や、特定の処理に異議を述べる権利があります。アカウントページをご利用いただくか、ご連絡ください。Deni Run は16歳未満の子どもを対象としておらず、そのデータを意図的に収集することはありません。"
 
 #: app/routes/privacy.tsx
-msgctxt "0cZ8bw"
-msgid "9. Changes to this policy"
-msgstr "9. 本ポリシーの変更"
+msgctxt "BMbvUB"
+msgid "10. Changes to this policy"
+msgstr "10. 本ポリシーの変更"
 
 #: app/routes/privacy.tsx
 msgctxt "tQFFTq"
@@ -3707,9 +4338,9 @@ msgid "We will update this page and the date above when this policy changes, and
 msgstr "本ポリシーを変更する場合は、このページと上記の日付を更新し、重要な変更についてはログイン中のユーザーにアプリ内またはメールでお知らせします。"
 
 #: app/routes/privacy.tsx
-msgctxt "0nbvfu"
-msgid "10. Contact"
-msgstr "10. お問い合わせ"
+msgctxt "h1PAYP"
+msgid "11. Contact"
+msgstr "11. お問い合わせ"
 
 #: app/routes/privacy.tsx
 #: app/routes/terms.tsx
@@ -3723,10 +4354,190 @@ msgctxt "32rBNK"
 msgid "Terms of Service"
 msgstr "利用規約"
 
+#: app/routes/sign-in.tsx
+msgctxt "IDdBHw"
+msgid "Sign in to connect {name}"
+msgstr "ログインして {name} を接続"
+
 #: app/routes/sign-up.tsx
 msgctxt "0vL5u1"
 msgid "Create an account"
 msgstr "アカウントを作成"
+
+#: app/routes/support.tsx
+msgctxt "FmNFD1"
+msgid "Support · Deni Run"
+msgstr "サポート · Deni Run"
+
+#: app/routes/support.tsx
+msgctxt "EBi6ka"
+msgid "Get help with Deni Run: contact support, connect and disconnect Slack, Notion, and Linear, approvals, and deleting your data."
+msgstr "Deni Run のヘルプ: サポートへのお問い合わせ、Slack・Notion・Linear の接続と接続解除、承認、データの削除について。"
+
+#: app/routes/support.tsx
+msgctxt "WnQ_AZ"
+msgid "Contact us"
+msgstr "お問い合わせ"
+
+#: app/routes/support.tsx
+msgctxt "Wod8tB"
+msgid "Email <mail>{email}</mail> with what you were trying to do, what happened instead, and the email address of your Deni Run account. Screenshots help. We aim to reply within two business days."
+msgstr "<mail>{email}</mail> まで、行おうとしていたこと、実際に起きたこと、Deni Run アカウントのメールアドレスを添えてメールでお問い合わせください。スクリーンショットがあると助かります。2営業日以内の返信を目指しています。"
+
+#: app/routes/support.tsx
+msgctxt "FWyUn6"
+msgid "Contact the operator of this deployment for help."
+msgstr "サポートが必要な場合は、このデプロイの運営者にお問い合わせください。"
+
+#: app/routes/support.tsx
+msgctxt "M6KKNW"
+msgid "Never send passwords, sign-in codes, or access tokens. We will never ask for them."
+msgstr "パスワード、ログインコード、アクセストークンは絶対に送らないでください。当社からそれらを尋ねることはありません。"
+
+#: app/routes/support.tsx
+msgctxt "7Rm1x6"
+msgid "Frequently asked questions"
+msgstr "よくある質問"
+
+#: app/routes/support.tsx
+msgctxt "qrFEMN"
+msgid "How do I connect Slack, Notion, or Linear?"
+msgstr "Slack、Notion、Linear を接続するには?"
+
+#: app/routes/support.tsx
+msgctxt "7XcbU9"
+msgid "In your workspace, open Plugins and click Connect next to the app under Connectors. You sign in on the app’s own site and choose what to allow; Deni Run never sees your password. When you come back, the connector shows Connected and any teammate can use it."
+msgstr "ワークスペースで「プラグイン」を開き、「コネクタ」の下にあるアプリの「接続」をクリックします。ログインはそのアプリ自身のサイトで行い、許可する内容を選びます。Deni Run がパスワードを見ることはありません。戻ってくるとコネクタに「接続済み」と表示され、どのチームメイトでも使えるようになります。"
+
+#: app/routes/support.tsx
+msgctxt "Q6W4lt"
+msgid "You can also start from the app’s page under <link>Integrations</link>, for example the “Add to Slack” button. If you are not signed in yet, you sign in first and the connection starts right after."
+msgstr "<link>連携</link>にある各アプリのページ(たとえば「Slack に追加」ボタン)から始めることもできます。まだログインしていない場合は、先にログインすると、その直後に接続が始まります。"
+
+#: app/routes/support.tsx
+msgctxt "kpBVbl"
+msgid "What needs my approval, and what does “Always allow” do?"
+msgstr "承認が必要なものは?「常に許可」はどう働く?"
+
+#: app/routes/support.tsx
+msgctxt "-Zo3B1"
+msgid "Tools that a connector marks as read-only, such as searching and reading, run without asking. Every other call, such as posting a message or editing a page, pauses the task and shows an approval card with the tool and what it will send. Nothing is sent until you approve, and if you deny, that step does not run."
+msgstr "検索や閲覧など、コネクタが読み取り専用としているツールは確認なしで実行されます。メッセージの投稿やページの編集など、それ以外の呼び出しではタスクが一時停止し、ツールと送信内容を示す承認カードが表示されます。あなたが承認するまで何も送信されず、拒否した場合はその手順は実行されません。"
+
+#: app/routes/support.tsx
+msgctxt "ZUq3Jr"
+msgid "“Always allow” is set per connection and per tool in Plugins. When it is on for a tool, a teammate can use that tool without asking you each time. Turn it off in the same menu at any time. For custom MCP servers every tool asks first, even ones the server calls read-only, unless you always allow it."
+msgstr "「常に許可」は、「プラグイン」で接続ごと・ツールごとに設定します。あるツールでオンにすると、チームメイトは毎回確認せずにそのツールを使えます。同じメニューからいつでもオフにできます。カスタム MCP サーバーでは、サーバーが読み取り専用としているツールも含め、常に許可しない限りすべてのツールが先に確認を求めます。"
+
+#: app/routes/support.tsx
+msgctxt "clxGtd"
+msgid "Background runs that no one is watching cannot wait for an answer, so there only read-only connector tools run and everything else is declined."
+msgstr "誰も見ていないバックグラウンド実行では回答を待てないため、読み取り専用のコネクタツールだけが実行され、それ以外はすべて拒否されます。"
+
+#: app/routes/support.tsx
+msgctxt "I1nYNZ"
+msgid "How do I disconnect an app?"
+msgstr "アプリの接続を解除するには?"
+
+#: app/routes/support.tsx
+msgctxt "TdhB_w"
+msgid "Open Plugins in your workspace and click Disconnect on the app. Teammates lose access right away and Deni Run deletes the sign-in tokens it stored for that app."
+msgstr "ワークスペースで「プラグイン」を開き、そのアプリの「接続を解除」をクリックします。チームメイトは直ちにアクセスできなくなり、Deni Run はそのアプリ用に保存していたログイン用のトークンを削除します。"
+
+#: app/routes/support.tsx
+msgctxt "A0IF2A"
+msgid "To remove access on the app’s side as well:"
+msgstr "アプリ側からもアクセスを取り消すには:"
+
+#: app/routes/support.tsx
+msgctxt "VQ0wQj"
+msgid "Slack: in Slack, open Tools & settings → Manage apps and remove Deni Run, or ask a workspace admin to remove it."
+msgstr "Slack: Slack で「ツールと設定」→「アプリを管理する」を開いて Deni Run を削除するか、ワークスペースの管理者に削除を依頼してください。"
+
+#: app/routes/support.tsx
+msgctxt "52zoAr"
+msgid "Notion: disconnect Deni Run from the connections in your Notion settings."
+msgstr "Notion: Notion の設定にある接続の一覧から Deni Run の接続を解除してください。"
+
+#: app/routes/support.tsx
+msgctxt "1-NFtn"
+msgid "Linear: revoke Deni Run from the authorized applications in your Linear account settings."
+msgstr "Linear: Linear のアカウント設定にある承認済みアプリケーションから Deni Run を取り消してください。"
+
+#: app/routes/support.tsx
+msgctxt "K3ff74"
+msgid "Gmail and Google Drive: remove Deni Run under third-party connections in your Google Account security settings."
+msgstr "Gmail と Google ドライブ: Google アカウントのセキュリティ設定にあるサードパーティとの接続から Deni Run を削除してください。"
+
+#: app/routes/support.tsx
+msgctxt "uw47_9"
+msgid "GitHub: revoke Deni Run under Settings → Applications → Authorized OAuth Apps."
+msgstr "GitHub: Settings → Applications → Authorized OAuth Apps で Deni Run を取り消してください。"
+
+#: app/routes/support.tsx
+msgctxt "-UDH4v"
+msgid "Discord: click Unlink in Plugins, or send /unlink to the bot."
+msgstr "Discord: 「プラグイン」で「連携を解除」をクリックするか、ボットに /unlink を送信してください。"
+
+#: app/routes/support.tsx
+msgctxt "R-S52x"
+msgid "A connector says “Needs sign-in again”. What do I do?"
+msgstr "コネクタに「再ログインが必要です」と表示されます。どうすればいいですか?"
+
+#: app/routes/support.tsx
+msgctxt "yPElaC"
+msgid "The app no longer accepts the saved sign-in. This happens when access was removed on the app’s side, the sign-in expired and could not be renewed, or a workspace admin changed what apps may do. Open Plugins and click Reconnect on that connector to sign in again; your Always allow choices stay as they were."
+msgstr "保存されたログイン情報をアプリが受け付けなくなっています。アプリ側でアクセスが取り消された、ログインの有効期限が切れて更新できなかった、ワークスペースの管理者がアプリに許可する操作を変更した、といった場合に起こります。「プラグイン」を開いてそのコネクタの「再接続」をクリックし、もう一度ログインしてください。「常に許可」の設定はそのまま残ります。"
+
+#: app/routes/support.tsx
+msgctxt "8nQdqr"
+msgid "If it keeps asking, disconnect the connector, connect it again, and check that your account on that app can still see what the task needs."
+msgstr "何度も求められる場合は、コネクタの接続を解除してから再度接続し、そのアプリのあなたのアカウントでタスクに必要なものがまだ閲覧できるか確認してください。"
+
+#: app/routes/support.tsx
+msgctxt "F4WB02"
+msgid "Which Slack workspaces does Deni Run work in?"
+msgstr "Deni Run はどの Slack ワークスペースで使えますか?"
+
+#: app/routes/support.tsx
+msgctxt "WnRtJg"
+msgid "Any Slack workspace you belong to that allows the app. During sign-in Slack shows which workspace you are connecting; to use a different one, switch workspaces on that screen. Teammates act as you, so they only see the channels, messages, and people your Slack account can see, and messages they post appear as sent by you."
+msgstr "あなたが参加していて、アプリの利用が許可されている任意の Slack ワークスペースで使えます。ログイン中に、接続するワークスペースが Slack に表示されます。別のワークスペースを使うには、その画面でワークスペースを切り替えてください。チームメイトはあなたとして操作するため、あなたの Slack アカウントで閲覧できるチャンネル、メッセージ、メンバーしか見えず、チームメイトが投稿したメッセージはあなたが送信したものとして表示されます。"
+
+#: app/routes/support.tsx
+msgctxt "0j6T0-"
+msgid "If your workspace only allows approved apps, Slack asks you to request approval and a workspace admin must approve Deni Run before you can finish connecting. One Slack connection is kept per Deni Run account; connecting again replaces it."
+msgstr "ワークスペースで承認済みのアプリしか許可されていない場合は、承認をリクエストするよう Slack から求められ、接続を完了する前にワークスペースの管理者が Deni Run を承認する必要があります。Slack の接続は Deni Run アカウントごとに1つです。再度接続すると置き換えられます。"
+
+#: app/routes/support.tsx
+msgctxt "rwGNiN"
+msgid "Connecting fails with “This connector is not set up on this server yet”."
+msgstr "接続しようとすると「このコネクタはこのサーバーでまだ設定されていません」と表示されて失敗します。"
+
+#: app/routes/support.tsx
+msgctxt "o55ctT"
+msgid "That connector needs app credentials that this deployment has not configured. On run.deniai.app this should not happen, so contact us and we will fix it. If you run your own copy of Deni Run, register an app with the provider (for Slack, set SLACK_MCP_CLIENT_ID and SLACK_MCP_CLIENT_SECRET) and restart the server."
+msgstr "そのコネクタには、このデプロイで設定されていないアプリの認証情報が必要です。run.deniai.app ではこの問題は起きないはずなので、お問い合わせいただければ修正します。Deni Run を自分で運用している場合は、プロバイダーにアプリを登録し(Slack の場合は SLACK_MCP_CLIENT_ID と SLACK_MCP_CLIENT_SECRET を設定)、サーバーを再起動してください。"
+
+#: app/routes/support.tsx
+msgctxt "MlJqam"
+msgid "Other connection errors are usually cancelled sign-ins or an expired sign-in link. Click Connect again from Plugins and finish the sign-in within a few minutes."
+msgstr "その他の接続エラーは、たいていログインのキャンセルか、ログイン用リンクの有効期限切れが原因です。「プラグイン」からもう一度「接続」をクリックし、数分以内にログインを完了してください。"
+
+#: app/routes/support.tsx
+msgctxt "B552G1"
+msgid "How do I delete my data or my account?"
+msgstr "データやアカウントを削除するには?"
+
+#: app/routes/support.tsx
+msgctxt "jzU68t"
+msgid "Disconnecting an app deletes the tokens for it. To export or delete everything, go to <account>Account</account>: deleting your account cancels any subscription and removes your conversations, teammates, connections, workspace files, and computer state. Messages a teammate already posted in Slack or other apps stay there until you delete them in that app. See the <privacy>Privacy Policy</privacy> for what we keep and why."
+msgstr "アプリの接続を解除すると、そのアプリのトークンが削除されます。すべてをエクスポートまたは削除するには<account>アカウント</account>を開いてください。アカウントを削除すると、サブスクリプションが解約され、会話、チームメイト、接続、ワークスペースのファイル、コンピューターの状態が削除されます。チームメイトがすでに Slack などのアプリに投稿したメッセージは、そのアプリで削除するまで残ります。当社が保持するデータとその理由については<privacy>プライバシーポリシー</privacy>をご覧ください。"
+
+#: app/routes/support.tsx
+msgctxt "quvKMJ"
+msgid "Can’t sign in? Email <mail>{email}</mail> from the address on your account to request deletion."
+msgstr "ログインできない場合は、アカウントに登録されているアドレスから <mail>{email}</mail> にメールして削除をリクエストしてください。"
 
 #: app/routes/terms.tsx
 msgctxt "iSjB38"
@@ -4007,6 +4818,51 @@ msgstr "MCPツール名が正しくありません"
 msgctxt "xagOzr"
 msgid "MCP request failed"
 msgstr "MCPリクエストに失敗しました"
+
+#: lib/localize-error.ts
+msgctxt "Hhvq0l"
+msgid "Sign in to this MCP server again"
+msgstr "このMCPサーバーにもう一度ログインしてください"
+
+#: lib/localize-error.ts
+msgctxt "oRzYJQ"
+msgid "This MCP server does not publish how to sign in"
+msgstr "このMCPサーバーはログイン方法を公開していません"
+
+#: lib/localize-error.ts
+msgctxt "DunEek"
+msgid "This MCP server does not support secure sign-in (PKCE)"
+msgstr "このMCPサーバーは安全なログイン（PKCE）に対応していません"
+
+#: lib/localize-error.ts
+msgctxt "x9iNdx"
+msgid "This MCP server needs an OAuth client that Deni Run does not have"
+msgstr "このMCPサーバーには、Deni Runが持っていないOAuthクライアントが必要です"
+
+#: lib/localize-error.ts
+msgctxt "-QL6OO"
+msgid "Could not register Deni Run with this MCP server"
+msgstr "このMCPサーバーにDeni Runを登録できませんでした"
+
+#: lib/localize-error.ts
+msgctxt "QueKEA"
+msgid "This sign-in link has expired. Start again."
+msgstr "このログインリンクは期限切れです。もう一度やり直してください。"
+
+#: lib/localize-error.ts
+msgctxt "eMawtR"
+msgid "The MCP server refused the sign-in. Start again."
+msgstr "MCPサーバーがログインを拒否しました。もう一度やり直してください。"
+
+#: lib/localize-error.ts
+msgctxt "qmODB3"
+msgid "This connector is not set up on this server yet"
+msgstr "このコネクタはこのサーバーでまだ設定されていません"
+
+#: lib/localize-error.ts
+msgctxt "dBvBXp"
+msgid "Unknown connector"
+msgstr "不明なコネクタです"
 
 #: lib/localize-error.ts
 msgctxt "m24QeN"

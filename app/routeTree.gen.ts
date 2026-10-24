@@ -16,6 +16,7 @@ import { Route as PrivacyRouteImport } from "./routes/privacy";
 import { Route as RobotsDottxtRouteImport } from "./routes/robots[.]txt";
 import { Route as SignInRouteImport } from "./routes/sign-in";
 import { Route as SignUpRouteImport } from "./routes/sign-up";
+import { Route as SupportRouteImport } from "./routes/support";
 import { Route as TermsRouteImport } from "./routes/terms";
 import { Route as UpgradeRouteImport } from "./routes/upgrade";
 import { Route as ApiAccountRouteImport } from "./routes/api/account";
@@ -24,13 +25,17 @@ import { Route as ApiDiscordRouteImport } from "./routes/api/discord";
 import { Route as ApiGroupChatRouteImport } from "./routes/api/group-chat";
 import { Route as ApiHandoffsRouteImport } from "./routes/api/handoffs";
 import { Route as ApiHealthRouteImport } from "./routes/api/health";
-import { Route as ApiMcpRouteImport } from "./routes/api/mcp";
 import { Route as ApiNotificationsRouteImport } from "./routes/api/notifications";
 import { Route as ApiPluginsRouteImport } from "./routes/api/plugins";
 import { Route as ApiRoutinesRouteImport } from "./routes/api/routines";
 import { Route as ApiSetupRouteImport } from "./routes/api/setup";
 import { Route as ApiSkillsRouteImport } from "./routes/api/skills";
 import { Route as ApiStateRouteImport } from "./routes/api/state";
+import { Route as IntegrationsIndexRouteImport } from "./routes/integrations/index";
+import { Route as IntegrationsLinearRouteImport } from "./routes/integrations/linear";
+import { Route as IntegrationsNotionRouteImport } from "./routes/integrations/notion";
+import { Route as IntegrationsSlackRouteImport } from "./routes/integrations/slack";
+import { Route as OauthClientMetadataDotjsonRouteImport } from "./routes/oauth/client-metadata[.]json";
 import { Route as TwoFactorIndexRouteImport } from "./routes/two-factor/index";
 import { Route as TwoFactorSetupRouteImport } from "./routes/two-factor/setup";
 import { Route as ApiArtifactsIndexRouteImport } from "./routes/api/artifacts/index";
@@ -49,8 +54,10 @@ import { Route as ApiComputerScreenshotRouteImport } from "./routes/api/computer
 import { Route as ApiComputerWorkspacesRouteImport } from "./routes/api/computer/workspaces";
 import { Route as ApiJobsIndexRouteImport } from "./routes/api/jobs/index";
 import { Route as ApiJobsIdRouteImport } from "./routes/api/jobs/$id";
+import { Route as ApiMcpIndexRouteImport } from "./routes/api/mcp/index";
 import { Route as ApiThreadsIndexRouteImport } from "./routes/api/threads/index";
 import { Route as ApiTwoFactorMethodRouteImport } from "./routes/api/two-factor/method";
+import { Route as ApiMcpOauthCallbackRouteImport } from "./routes/api/mcp/oauth/callback";
 import { Route as ApiThreadsIdIndexRouteImport } from "./routes/api/threads/$id/index";
 import { Route as ApiThreadsIdReactionsRouteImport } from "./routes/api/threads/$id/reactions";
 import { Route as ApiThreadsIdResetRouteImport } from "./routes/api/threads/$id/reset";
@@ -88,6 +95,11 @@ const SignInRoute = SignInRouteImport.update({
 const SignUpRoute = SignUpRouteImport.update({
   id: "/sign-up",
   path: "/sign-up",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const SupportRoute = SupportRouteImport.update({
+  id: "/support",
+  path: "/support",
   getParentRoute: () => rootRouteImport,
 } as any);
 const TermsRoute = TermsRouteImport.update({
@@ -130,11 +142,6 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: "/api/health",
   getParentRoute: () => rootRouteImport,
 } as any);
-const ApiMcpRoute = ApiMcpRouteImport.update({
-  id: "/api/mcp",
-  path: "/api/mcp",
-  getParentRoute: () => rootRouteImport,
-} as any);
 const ApiNotificationsRoute = ApiNotificationsRouteImport.update({
   id: "/api/notifications",
   path: "/api/notifications",
@@ -165,6 +172,32 @@ const ApiStateRoute = ApiStateRouteImport.update({
   path: "/api/state",
   getParentRoute: () => rootRouteImport,
 } as any);
+const IntegrationsIndexRoute = IntegrationsIndexRouteImport.update({
+  id: "/integrations/",
+  path: "/integrations/",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const IntegrationsLinearRoute = IntegrationsLinearRouteImport.update({
+  id: "/integrations/linear",
+  path: "/integrations/linear",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const IntegrationsNotionRoute = IntegrationsNotionRouteImport.update({
+  id: "/integrations/notion",
+  path: "/integrations/notion",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const IntegrationsSlackRoute = IntegrationsSlackRouteImport.update({
+  id: "/integrations/slack",
+  path: "/integrations/slack",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const OauthClientMetadataDotjsonRoute =
+  OauthClientMetadataDotjsonRouteImport.update({
+    id: "/oauth/client-metadata.json",
+    path: "/oauth/client-metadata.json",
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const TwoFactorIndexRoute = TwoFactorIndexRouteImport.update({
   id: "/two-factor/",
   path: "/two-factor/",
@@ -255,6 +288,11 @@ const ApiJobsIdRoute = ApiJobsIdRouteImport.update({
   path: "/api/jobs/$id",
   getParentRoute: () => rootRouteImport,
 } as any);
+const ApiMcpIndexRoute = ApiMcpIndexRouteImport.update({
+  id: "/api/mcp/",
+  path: "/api/mcp/",
+  getParentRoute: () => rootRouteImport,
+} as any);
 const ApiThreadsIndexRoute = ApiThreadsIndexRouteImport.update({
   id: "/api/threads/",
   path: "/api/threads/",
@@ -263,6 +301,11 @@ const ApiThreadsIndexRoute = ApiThreadsIndexRouteImport.update({
 const ApiTwoFactorMethodRoute = ApiTwoFactorMethodRouteImport.update({
   id: "/api/two-factor/method",
   path: "/api/two-factor/method",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const ApiMcpOauthCallbackRoute = ApiMcpOauthCallbackRouteImport.update({
+  id: "/api/mcp/oauth/callback",
+  path: "/api/mcp/oauth/callback",
   getParentRoute: () => rootRouteImport,
 } as any);
 const ApiThreadsIdIndexRoute = ApiThreadsIdIndexRouteImport.update({
@@ -289,6 +332,7 @@ export interface FileRoutesByFullPath {
   "/robots.txt": typeof RobotsDottxtRoute;
   "/sign-in": typeof SignInRoute;
   "/sign-up": typeof SignUpRoute;
+  "/support": typeof SupportRoute;
   "/terms": typeof TermsRoute;
   "/upgrade": typeof UpgradeRoute;
   "/api/account": typeof ApiAccountRoute;
@@ -297,14 +341,18 @@ export interface FileRoutesByFullPath {
   "/api/group-chat": typeof ApiGroupChatRoute;
   "/api/handoffs": typeof ApiHandoffsRoute;
   "/api/health": typeof ApiHealthRoute;
-  "/api/mcp": typeof ApiMcpRoute;
   "/api/notifications": typeof ApiNotificationsRoute;
   "/api/plugins": typeof ApiPluginsRoute;
   "/api/routines": typeof ApiRoutinesRoute;
   "/api/setup": typeof ApiSetupRoute;
   "/api/skills": typeof ApiSkillsRoute;
   "/api/state": typeof ApiStateRoute;
+  "/integrations/linear": typeof IntegrationsLinearRoute;
+  "/integrations/notion": typeof IntegrationsNotionRoute;
+  "/integrations/slack": typeof IntegrationsSlackRoute;
+  "/oauth/client-metadata.json": typeof OauthClientMetadataDotjsonRoute;
   "/two-factor/setup": typeof TwoFactorSetupRoute;
+  "/integrations/": typeof IntegrationsIndexRoute;
   "/two-factor/": typeof TwoFactorIndexRoute;
   "/api/artifacts/$id": typeof ApiArtifactsIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
@@ -323,7 +371,9 @@ export interface FileRoutesByFullPath {
   "/api/bots/": typeof ApiBotsIndexRoute;
   "/api/computer/": typeof ApiComputerIndexRoute;
   "/api/jobs/": typeof ApiJobsIndexRoute;
+  "/api/mcp/": typeof ApiMcpIndexRoute;
   "/api/threads/": typeof ApiThreadsIndexRoute;
+  "/api/mcp/oauth/callback": typeof ApiMcpOauthCallbackRoute;
   "/api/threads/$id/reactions": typeof ApiThreadsIdReactionsRoute;
   "/api/threads/$id/reset": typeof ApiThreadsIdResetRoute;
   "/api/threads/$id/": typeof ApiThreadsIdIndexRoute;
@@ -336,6 +386,7 @@ export interface FileRoutesByTo {
   "/robots.txt": typeof RobotsDottxtRoute;
   "/sign-in": typeof SignInRoute;
   "/sign-up": typeof SignUpRoute;
+  "/support": typeof SupportRoute;
   "/terms": typeof TermsRoute;
   "/upgrade": typeof UpgradeRoute;
   "/api/account": typeof ApiAccountRoute;
@@ -344,14 +395,18 @@ export interface FileRoutesByTo {
   "/api/group-chat": typeof ApiGroupChatRoute;
   "/api/handoffs": typeof ApiHandoffsRoute;
   "/api/health": typeof ApiHealthRoute;
-  "/api/mcp": typeof ApiMcpRoute;
   "/api/notifications": typeof ApiNotificationsRoute;
   "/api/plugins": typeof ApiPluginsRoute;
   "/api/routines": typeof ApiRoutinesRoute;
   "/api/setup": typeof ApiSetupRoute;
   "/api/skills": typeof ApiSkillsRoute;
   "/api/state": typeof ApiStateRoute;
+  "/integrations/linear": typeof IntegrationsLinearRoute;
+  "/integrations/notion": typeof IntegrationsNotionRoute;
+  "/integrations/slack": typeof IntegrationsSlackRoute;
+  "/oauth/client-metadata.json": typeof OauthClientMetadataDotjsonRoute;
   "/two-factor/setup": typeof TwoFactorSetupRoute;
+  "/integrations": typeof IntegrationsIndexRoute;
   "/two-factor": typeof TwoFactorIndexRoute;
   "/api/artifacts/$id": typeof ApiArtifactsIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
@@ -370,7 +425,9 @@ export interface FileRoutesByTo {
   "/api/bots": typeof ApiBotsIndexRoute;
   "/api/computer": typeof ApiComputerIndexRoute;
   "/api/jobs": typeof ApiJobsIndexRoute;
+  "/api/mcp": typeof ApiMcpIndexRoute;
   "/api/threads": typeof ApiThreadsIndexRoute;
+  "/api/mcp/oauth/callback": typeof ApiMcpOauthCallbackRoute;
   "/api/threads/$id/reactions": typeof ApiThreadsIdReactionsRoute;
   "/api/threads/$id/reset": typeof ApiThreadsIdResetRoute;
   "/api/threads/$id": typeof ApiThreadsIdIndexRoute;
@@ -384,6 +441,7 @@ export interface FileRoutesById {
   "/robots.txt": typeof RobotsDottxtRoute;
   "/sign-in": typeof SignInRoute;
   "/sign-up": typeof SignUpRoute;
+  "/support": typeof SupportRoute;
   "/terms": typeof TermsRoute;
   "/upgrade": typeof UpgradeRoute;
   "/api/account": typeof ApiAccountRoute;
@@ -392,14 +450,18 @@ export interface FileRoutesById {
   "/api/group-chat": typeof ApiGroupChatRoute;
   "/api/handoffs": typeof ApiHandoffsRoute;
   "/api/health": typeof ApiHealthRoute;
-  "/api/mcp": typeof ApiMcpRoute;
   "/api/notifications": typeof ApiNotificationsRoute;
   "/api/plugins": typeof ApiPluginsRoute;
   "/api/routines": typeof ApiRoutinesRoute;
   "/api/setup": typeof ApiSetupRoute;
   "/api/skills": typeof ApiSkillsRoute;
   "/api/state": typeof ApiStateRoute;
+  "/integrations/linear": typeof IntegrationsLinearRoute;
+  "/integrations/notion": typeof IntegrationsNotionRoute;
+  "/integrations/slack": typeof IntegrationsSlackRoute;
+  "/oauth/client-metadata.json": typeof OauthClientMetadataDotjsonRoute;
   "/two-factor/setup": typeof TwoFactorSetupRoute;
+  "/integrations/": typeof IntegrationsIndexRoute;
   "/two-factor/": typeof TwoFactorIndexRoute;
   "/api/artifacts/$id": typeof ApiArtifactsIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
@@ -418,7 +480,9 @@ export interface FileRoutesById {
   "/api/bots/": typeof ApiBotsIndexRoute;
   "/api/computer/": typeof ApiComputerIndexRoute;
   "/api/jobs/": typeof ApiJobsIndexRoute;
+  "/api/mcp/": typeof ApiMcpIndexRoute;
   "/api/threads/": typeof ApiThreadsIndexRoute;
+  "/api/mcp/oauth/callback": typeof ApiMcpOauthCallbackRoute;
   "/api/threads/$id/reactions": typeof ApiThreadsIdReactionsRoute;
   "/api/threads/$id/reset": typeof ApiThreadsIdResetRoute;
   "/api/threads/$id/": typeof ApiThreadsIdIndexRoute;
@@ -433,6 +497,7 @@ export interface FileRouteTypes {
     | "/robots.txt"
     | "/sign-in"
     | "/sign-up"
+    | "/support"
     | "/terms"
     | "/upgrade"
     | "/api/account"
@@ -441,14 +506,18 @@ export interface FileRouteTypes {
     | "/api/group-chat"
     | "/api/handoffs"
     | "/api/health"
-    | "/api/mcp"
     | "/api/notifications"
     | "/api/plugins"
     | "/api/routines"
     | "/api/setup"
     | "/api/skills"
     | "/api/state"
+    | "/integrations/linear"
+    | "/integrations/notion"
+    | "/integrations/slack"
+    | "/oauth/client-metadata.json"
     | "/two-factor/setup"
+    | "/integrations/"
     | "/two-factor/"
     | "/api/artifacts/$id"
     | "/api/auth/$"
@@ -467,7 +536,9 @@ export interface FileRouteTypes {
     | "/api/bots/"
     | "/api/computer/"
     | "/api/jobs/"
+    | "/api/mcp/"
     | "/api/threads/"
+    | "/api/mcp/oauth/callback"
     | "/api/threads/$id/reactions"
     | "/api/threads/$id/reset"
     | "/api/threads/$id/";
@@ -480,6 +551,7 @@ export interface FileRouteTypes {
     | "/robots.txt"
     | "/sign-in"
     | "/sign-up"
+    | "/support"
     | "/terms"
     | "/upgrade"
     | "/api/account"
@@ -488,14 +560,18 @@ export interface FileRouteTypes {
     | "/api/group-chat"
     | "/api/handoffs"
     | "/api/health"
-    | "/api/mcp"
     | "/api/notifications"
     | "/api/plugins"
     | "/api/routines"
     | "/api/setup"
     | "/api/skills"
     | "/api/state"
+    | "/integrations/linear"
+    | "/integrations/notion"
+    | "/integrations/slack"
+    | "/oauth/client-metadata.json"
     | "/two-factor/setup"
+    | "/integrations"
     | "/two-factor"
     | "/api/artifacts/$id"
     | "/api/auth/$"
@@ -514,7 +590,9 @@ export interface FileRouteTypes {
     | "/api/bots"
     | "/api/computer"
     | "/api/jobs"
+    | "/api/mcp"
     | "/api/threads"
+    | "/api/mcp/oauth/callback"
     | "/api/threads/$id/reactions"
     | "/api/threads/$id/reset"
     | "/api/threads/$id";
@@ -527,6 +605,7 @@ export interface FileRouteTypes {
     | "/robots.txt"
     | "/sign-in"
     | "/sign-up"
+    | "/support"
     | "/terms"
     | "/upgrade"
     | "/api/account"
@@ -535,14 +614,18 @@ export interface FileRouteTypes {
     | "/api/group-chat"
     | "/api/handoffs"
     | "/api/health"
-    | "/api/mcp"
     | "/api/notifications"
     | "/api/plugins"
     | "/api/routines"
     | "/api/setup"
     | "/api/skills"
     | "/api/state"
+    | "/integrations/linear"
+    | "/integrations/notion"
+    | "/integrations/slack"
+    | "/oauth/client-metadata.json"
     | "/two-factor/setup"
+    | "/integrations/"
     | "/two-factor/"
     | "/api/artifacts/$id"
     | "/api/auth/$"
@@ -561,7 +644,9 @@ export interface FileRouteTypes {
     | "/api/bots/"
     | "/api/computer/"
     | "/api/jobs/"
+    | "/api/mcp/"
     | "/api/threads/"
+    | "/api/mcp/oauth/callback"
     | "/api/threads/$id/reactions"
     | "/api/threads/$id/reset"
     | "/api/threads/$id/";
@@ -575,6 +660,7 @@ export interface RootRouteChildren {
   RobotsDottxtRoute: typeof RobotsDottxtRoute;
   SignInRoute: typeof SignInRoute;
   SignUpRoute: typeof SignUpRoute;
+  SupportRoute: typeof SupportRoute;
   TermsRoute: typeof TermsRoute;
   UpgradeRoute: typeof UpgradeRoute;
   ApiAccountRoute: typeof ApiAccountRoute;
@@ -583,14 +669,18 @@ export interface RootRouteChildren {
   ApiGroupChatRoute: typeof ApiGroupChatRoute;
   ApiHandoffsRoute: typeof ApiHandoffsRoute;
   ApiHealthRoute: typeof ApiHealthRoute;
-  ApiMcpRoute: typeof ApiMcpRoute;
   ApiNotificationsRoute: typeof ApiNotificationsRoute;
   ApiPluginsRoute: typeof ApiPluginsRoute;
   ApiRoutinesRoute: typeof ApiRoutinesRoute;
   ApiSetupRoute: typeof ApiSetupRoute;
   ApiSkillsRoute: typeof ApiSkillsRoute;
   ApiStateRoute: typeof ApiStateRoute;
+  IntegrationsLinearRoute: typeof IntegrationsLinearRoute;
+  IntegrationsNotionRoute: typeof IntegrationsNotionRoute;
+  IntegrationsSlackRoute: typeof IntegrationsSlackRoute;
+  OauthClientMetadataDotjsonRoute: typeof OauthClientMetadataDotjsonRoute;
   TwoFactorSetupRoute: typeof TwoFactorSetupRoute;
+  IntegrationsIndexRoute: typeof IntegrationsIndexRoute;
   TwoFactorIndexRoute: typeof TwoFactorIndexRoute;
   ApiArtifactsIdRoute: typeof ApiArtifactsIdRoute;
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute;
@@ -609,7 +699,9 @@ export interface RootRouteChildren {
   ApiBotsIndexRoute: typeof ApiBotsIndexRoute;
   ApiComputerIndexRoute: typeof ApiComputerIndexRoute;
   ApiJobsIndexRoute: typeof ApiJobsIndexRoute;
+  ApiMcpIndexRoute: typeof ApiMcpIndexRoute;
   ApiThreadsIndexRoute: typeof ApiThreadsIndexRoute;
+  ApiMcpOauthCallbackRoute: typeof ApiMcpOauthCallbackRoute;
   ApiThreadsIdReactionsRoute: typeof ApiThreadsIdReactionsRoute;
   ApiThreadsIdResetRoute: typeof ApiThreadsIdResetRoute;
   ApiThreadsIdIndexRoute: typeof ApiThreadsIdIndexRoute;
@@ -664,6 +756,13 @@ declare module "@tanstack/react-router" {
       path: "/sign-up";
       fullPath: "/sign-up";
       preLoaderRoute: typeof SignUpRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/support": {
+      id: "/support";
+      path: "/support";
+      fullPath: "/support";
+      preLoaderRoute: typeof SupportRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/terms": {
@@ -722,13 +821,6 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ApiHealthRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/api/mcp": {
-      id: "/api/mcp";
-      path: "/api/mcp";
-      fullPath: "/api/mcp";
-      preLoaderRoute: typeof ApiMcpRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
     "/api/notifications": {
       id: "/api/notifications";
       path: "/api/notifications";
@@ -769,6 +861,41 @@ declare module "@tanstack/react-router" {
       path: "/api/state";
       fullPath: "/api/state";
       preLoaderRoute: typeof ApiStateRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/integrations/": {
+      id: "/integrations/";
+      path: "/integrations";
+      fullPath: "/integrations/";
+      preLoaderRoute: typeof IntegrationsIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/integrations/linear": {
+      id: "/integrations/linear";
+      path: "/integrations/linear";
+      fullPath: "/integrations/linear";
+      preLoaderRoute: typeof IntegrationsLinearRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/integrations/notion": {
+      id: "/integrations/notion";
+      path: "/integrations/notion";
+      fullPath: "/integrations/notion";
+      preLoaderRoute: typeof IntegrationsNotionRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/integrations/slack": {
+      id: "/integrations/slack";
+      path: "/integrations/slack";
+      fullPath: "/integrations/slack";
+      preLoaderRoute: typeof IntegrationsSlackRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/oauth/client-metadata.json": {
+      id: "/oauth/client-metadata.json";
+      path: "/oauth/client-metadata.json";
+      fullPath: "/oauth/client-metadata.json";
+      preLoaderRoute: typeof OauthClientMetadataDotjsonRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/two-factor/": {
@@ -897,6 +1024,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ApiJobsIdRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/api/mcp/": {
+      id: "/api/mcp/";
+      path: "/api/mcp";
+      fullPath: "/api/mcp/";
+      preLoaderRoute: typeof ApiMcpIndexRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/api/threads/": {
       id: "/api/threads/";
       path: "/api/threads";
@@ -909,6 +1043,13 @@ declare module "@tanstack/react-router" {
       path: "/api/two-factor/method";
       fullPath: "/api/two-factor/method";
       preLoaderRoute: typeof ApiTwoFactorMethodRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/mcp/oauth/callback": {
+      id: "/api/mcp/oauth/callback";
+      path: "/api/mcp/oauth/callback";
+      fullPath: "/api/mcp/oauth/callback";
+      preLoaderRoute: typeof ApiMcpOauthCallbackRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/api/threads/$id/": {
@@ -943,6 +1084,7 @@ const rootRouteChildren: RootRouteChildren = {
   RobotsDottxtRoute: RobotsDottxtRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
+  SupportRoute: SupportRoute,
   TermsRoute: TermsRoute,
   UpgradeRoute: UpgradeRoute,
   ApiAccountRoute: ApiAccountRoute,
@@ -951,14 +1093,18 @@ const rootRouteChildren: RootRouteChildren = {
   ApiGroupChatRoute: ApiGroupChatRoute,
   ApiHandoffsRoute: ApiHandoffsRoute,
   ApiHealthRoute: ApiHealthRoute,
-  ApiMcpRoute: ApiMcpRoute,
   ApiNotificationsRoute: ApiNotificationsRoute,
   ApiPluginsRoute: ApiPluginsRoute,
   ApiRoutinesRoute: ApiRoutinesRoute,
   ApiSetupRoute: ApiSetupRoute,
   ApiSkillsRoute: ApiSkillsRoute,
   ApiStateRoute: ApiStateRoute,
+  IntegrationsLinearRoute: IntegrationsLinearRoute,
+  IntegrationsNotionRoute: IntegrationsNotionRoute,
+  IntegrationsSlackRoute: IntegrationsSlackRoute,
+  OauthClientMetadataDotjsonRoute: OauthClientMetadataDotjsonRoute,
   TwoFactorSetupRoute: TwoFactorSetupRoute,
+  IntegrationsIndexRoute: IntegrationsIndexRoute,
   TwoFactorIndexRoute: TwoFactorIndexRoute,
   ApiArtifactsIdRoute: ApiArtifactsIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
@@ -977,7 +1123,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiBotsIndexRoute: ApiBotsIndexRoute,
   ApiComputerIndexRoute: ApiComputerIndexRoute,
   ApiJobsIndexRoute: ApiJobsIndexRoute,
+  ApiMcpIndexRoute: ApiMcpIndexRoute,
   ApiThreadsIndexRoute: ApiThreadsIndexRoute,
+  ApiMcpOauthCallbackRoute: ApiMcpOauthCallbackRoute,
   ApiThreadsIdReactionsRoute: ApiThreadsIdReactionsRoute,
   ApiThreadsIdResetRoute: ApiThreadsIdResetRoute,
   ApiThreadsIdIndexRoute: ApiThreadsIdIndexRoute,

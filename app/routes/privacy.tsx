@@ -20,9 +20,9 @@ export const Route = createFileRoute("/privacy")({
   component: PrivacyPage,
 });
 
-function Section({ title, children }: { title: string; children: ReactNode }) {
+function Section({ id, title, children }: { id?: string; title: string; children: ReactNode }) {
   return (
-    <section className="space-y-3">
+    <section id={id} className="scroll-mt-6 space-y-3">
       <h2 className="pt-4 text-lg font-semibold text-foreground">{title}</h2>
       {children}
     </section>
@@ -45,7 +45,7 @@ function PrivacyPage() {
           {t("Back to Deni Run home")}
         </Link>
         <h1 className="text-2xl font-semibold text-foreground">{t("Privacy Policy")}</h1>
-        <p className="text-xs text-muted-foreground">{t("Last updated: October 14, 2026")}</p>
+        <p className="text-xs text-muted-foreground">{t("Last updated: October 24, 2026")}</p>
         <p>
           {t("This policy explains what data Deni Run (run.deniai.app, “Deni Run”, “we”) collects when you use the service, why we collect it, who receives it, how we protect it, and how you can delete it. Deni Run is a web application where AI teammates complete tasks for you on a private, isolated computer (browser, files, and terminal).")}
         </p>
@@ -96,38 +96,66 @@ function PrivacyPage() {
           </p>
         </Section>
 
-        <Section title={t("3. How we use data")}>
+        <Section title={t("3. Connectors: Slack, Notion, Linear, and custom MCP servers")}>
+          <p>
+            {t("Only if you choose to connect them from Plugins in the app, or with the Add to Slack button, teammates can use these services through their official Model Context Protocol (MCP) servers. You sign in on the service’s own site and choose what to allow there; Deni Run never sees your password for that service.")}
+          </p>
+          <p>
+            <strong className="font-medium text-foreground">{t("What we store.")}</strong>{" "}
+            {t("For each connection: its name and server address, the OAuth client details and access and refresh tokens the service issues, which tools you set to “Always allow”, and when it was last checked. Tokens are encrypted with AES-256-GCM before they are stored and are used only to call that service for you. We do not copy or index your workspace in any of these services.")}
+          </p>
+          <p>
+            <strong className="font-medium text-foreground">{t("Slack.")}</strong>{" "}
+            {t("Slack gives Deni Run a user token, so teammates act as you, with your access: they cannot see channels or conversations you cannot see, and messages they send appear under your name. The permissions requested let a teammate, when you ask, search and read messages, files, canvases, lists, and people in conversations you belong to; send or schedule messages; create conversations, canvases, and lists; upload files; and add reactions. Before you approve an action, Deni Run looks up the names of the channels and people it involves with Slack’s read-only tools, so the approval shows “#general” instead of an ID; these names are kept in memory for up to ten minutes.")}
+          </p>
+          <p>
+            <strong className="font-medium text-foreground">{t("Notion and Linear.")}</strong>{" "}
+            {t("Teammates can search and read pages, databases, issues, and projects you have access to, and create or update them when you ask.")}
+          </p>
+          <p>
+            <strong className="font-medium text-foreground">{t("When teammates act.")}</strong>{" "}
+            {t("Only while carrying out a task you gave them. Tools the service marks as read-only run without asking. Anything else, such as sending a message or changing a page, is shown to you with what it will do and runs only after you approve it, unless you turned on “Always allow” for that exact tool. For custom MCP servers you add yourself, every call needs your approval unless you allowed that tool.")}
+          </p>
+          <p>
+            <strong className="font-medium text-foreground">{t("Where the content goes.")}</strong>{" "}
+            {t("Content a teammate retrieves is sent to the AI model provider listed below to produce the response you see, and may be kept in that task’s conversation history in your workspace. We do not use data from these services for advertising, we do not sell it, we do not use it to train or improve AI or machine-learning models, and people at Deni Run do not read it unless you ask us to for support, it is needed to investigate security or abuse, or the law requires it.")}
+          </p>
+        </Section>
+
+        <Section title={t("4. How we use data")}>
           <p>
             {t("To provide the service: run your teammates and computer sessions, store your workspace, enforce plan limits, process payments, keep the service secure, prevent abuse, fix bugs, and answer support requests. We do not use your data for advertising or profiling, and we do not sell it.")}
           </p>
         </Section>
 
-        <Section title={t("4. Who receives data")}>
+        <Section id="sub-processors" title={t("5. Who receives data")}>
           <p>
             {t("We share data only with the providers that run the product, and only what each needs:")}
           </p>
           <ul className="list-disc space-y-1 pl-5">
             <li>{t("Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email.")}</li>
             <li>{t("Discord: if you link it, Discord carries the direct messages you and the bot exchange, including files and screenshots you request and notifications about background work if you keep them on, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models.")}</li>
+            <li>{t("Slack, Notion, Linear, and custom MCP servers you connect: receive the requests a teammate makes for a task you gave it, under each service’s own terms and privacy policy.")}</li>
             <li>{t("Stripe: billing. Receives your email address and payment details.")}</li>
             <li>{t("Resend: delivers sign-in codes if you choose email for two-factor. Receives your email address and the code.")}</li>
-            <li>{t("OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail or Google Drive, the email and file content a teammate retrieves for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data.")}</li>
+            <li>{t("OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail, Google Drive, Slack, Notion, Linear, or another MCP server, the content a teammate retrieves from it for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data.")}</li>
             <li>{t("Steel: cloud browser sessions, which load the websites your teammate visits.")}</li>
             <li>{t("E2B: the isolated sandbox where terminal commands run.")}</li>
-            <li>{t("Our database and S3-compatible object storage (typically Cloudflare R2) hosting providers.")}</li>
+            <li>{t("Cloudflare: database (D1) and file storage (R2), in Japan.")}</li>
+            <li>{t("Contabo: the servers that run the app, in Japan.")}</li>
           </ul>
           <p>
             {t("We may also disclose data when required by law or to protect the rights, safety, and security of users and the service. If the service is sold or merged, data may transfer to the new operator under this policy.")}
           </p>
         </Section>
 
-        <Section title={t("5. How we protect data")}>
+        <Section title={t("6. How we protect data")}>
           <p>
             {t("Every account is isolated: workspace files, browser sessions, and terminal sandboxes are scoped to your user ID and not shared with other accounts. Traffic is encrypted with HTTPS. Sign-in requires a second factor: a passkey, an emailed code, or a code from an authenticator app. Access to databases and storage is limited by credentials held only by the service. No system is perfectly secure, so we cannot guarantee absolute security.")}
           </p>
         </Section>
 
-        <Section title={t("6. Retention and deletion")}>
+        <Section title={t("7. Retention and deletion")}>
           <p>
             {t.rich("We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation.", {
               link: accountLink,
@@ -139,27 +167,30 @@ function PrivacyPage() {
           <p>
             {t("You can disconnect the Gmail, Google Drive, and GitHub plugins at any time from Plugins in the app, which stops teammates using them right away and revokes our access at Google or GitHub once the last plugin of that provider is disconnected. You can also revoke Deni Run’s access to Gmail, Google Drive, or your whole Google account from your Google Account security settings; access stops immediately. Deleting your Deni Run account also deletes the Google access tokens we hold. To request deletion without signing in, contact us at the address below.")}
           </p>
+          <p>
+            {t("You can disconnect Slack, Notion, Linear, or any MCP server at any time from Plugins in the app, which deletes the tokens we hold for it right away. To also revoke the grant on the service’s side, remove Deni Run from that service’s connected or authorized apps (in Slack, from your workspace’s app management page). Deleting your Deni Run account deletes every connection and its tokens.")}
+          </p>
         </Section>
 
-        <Section title={t("7. Cookies")}>
+        <Section title={t("8. Cookies")}>
           <p>
             {t("We use only the cookies needed to keep you signed in and to remember your language and theme. We do not use advertising or cross-site tracking cookies.")}
           </p>
         </Section>
 
-        <Section title={t("8. Your rights and children")}>
+        <Section title={t("9. Your rights and children")}>
           <p>
             {t("Depending on where you live, you may have the right to access, correct, export, or delete your data and to object to certain processing. Use the Account page or contact us. Deni Run is not directed to children under 16, and we do not knowingly collect their data.")}
           </p>
         </Section>
 
-        <Section title={t("9. Changes to this policy")}>
+        <Section title={t("10. Changes to this policy")}>
           <p>
             {t("We will update this page and the date above when this policy changes, and we will notify signed-in users of material changes in the app or by email.")}
           </p>
         </Section>
 
-        <Section title={t("10. Contact")}>
+        <Section title={t("11. Contact")}>
           <p>
             {mail ? (
               <a href={mail} className="text-foreground hover:underline">
