@@ -124,8 +124,7 @@ ENV DATABASE_URL=$DATABASE_URL \
 # Mount dependencies from the install stage instead of copying thousands of
 # files into the Node builder. This avoids a slow 40+ second node_modules COPY;
 # the mount is available for the build and is not copied into the runtime image.
-# Persist Turbopack's filesystem cache across Dokploy deploys on this host
-# (and across GitHub Actions runs via buildkit-cache-dance, which maps this id).
+# Persist Turbopack's filesystem cache across Dokploy deploys on this host.
 # After a successful build, keep only the cache directory it just wrote: each
 # Next.js version/config gets its own directory, and stale ones only add size.
 RUN --mount=type=bind,from=deps,source=/app/node_modules,target=/app/node_modules \
