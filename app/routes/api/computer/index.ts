@@ -44,12 +44,6 @@ async function GET({ request: req }: { request: Request }) {
   const jobId = searchParams.get("jobId") || undefined;
   const shouldRefreshScreen = searchParams.get("refresh") === "1";
   const startedAt = Date.now();
-  if (process.env.NODE_ENV !== "production") {
-    console.info("[computer-api] state request received", {
-      refresh: shouldRefreshScreen,
-      files: searchParams.get("files") === "1",
-    });
-  }
   if (shouldRefreshScreen) {
     try {
       await withTimeout(screenshot(userId, jobId), SCREEN_CAPTURE_TIMEOUT_MS);
@@ -86,14 +80,6 @@ async function GET({ request: req }: { request: Request }) {
         });
       }
     }
-  }
-  if (process.env.NODE_ENV !== "production") {
-    console.info("[computer-api] state request completed", {
-      elapsedMs: Date.now() - startedAt,
-      files: files.length,
-      screenshotAt: live.screenshotAt,
-      status: live.status,
-    });
   }
   return Response.json(
     {

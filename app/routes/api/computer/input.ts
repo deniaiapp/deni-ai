@@ -43,9 +43,6 @@ async function POST({ request: req }: { request: Request }) {
   const body = (await req.json()) as ComputerInput;
   const startedAt = Date.now();
   const summary = inputSummary(body);
-  if (process.env.NODE_ENV !== "production") {
-    console.info("[computer-api] input received", summary);
-  }
 
   if (body.type === "takeover") {
     if (body.jobId) {
@@ -62,12 +59,6 @@ async function POST({ request: req }: { request: Request }) {
       workingLabel: "You are in control",
       ...(body.jobId ? { jobId: body.jobId } : {}),
     });
-    if (process.env.NODE_ENV !== "production") {
-      console.info("[computer-api] input completed", {
-        ...summary,
-        elapsedMs: Date.now() - startedAt,
-      });
-    }
     return Response.json({ ok: true });
   }
   if (body.type === "release") {
@@ -81,12 +72,6 @@ async function POST({ request: req }: { request: Request }) {
       workingLabel: "",
       ...(body.jobId ? { jobId: body.jobId } : {}),
     });
-    if (process.env.NODE_ENV !== "production") {
-      console.info("[computer-api] input completed", {
-        ...summary,
-        elapsedMs: Date.now() - startedAt,
-      });
-    }
     return Response.json({ ok: true });
   }
 
@@ -105,12 +90,6 @@ async function POST({ request: req }: { request: Request }) {
       await browserScroll(userId, body.dy, body.jobId);
     } else {
       return Response.json({ error: t("Invalid input") }, { status: 400 });
-    }
-    if (process.env.NODE_ENV !== "production") {
-      console.info("[computer-api] input completed", {
-        ...summary,
-        elapsedMs: Date.now() - startedAt,
-      });
     }
     return Response.json({ ok: true });
   } catch (error) {

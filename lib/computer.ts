@@ -1041,14 +1041,6 @@ export async function browserClick(
       const viewport = session.page.viewportSize() ?? VIEWPORT;
       const x = input.normalized ? input.x * viewport.width : input.x;
       const y = input.normalized ? input.y * viewport.height : input.y;
-      if (process.env.NODE_ENV !== "production") {
-        console.info("[computer] browser click", {
-          x: Math.round(x),
-          y: Math.round(y),
-          viewport,
-          normalized: input.normalized ?? false,
-        });
-      }
       await session.page.mouse.click(x, y);
     } else {
       throw new Error("A selector or x,y coordinates are required");
