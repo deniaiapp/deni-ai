@@ -31,9 +31,9 @@ export class ChatRouteError extends Error {
   }
 }
 
+// Default 5-minute TTL: most chats are short, so 1h writes (2x input) cost more than they save.
 const OPENROUTER_CACHE_CONTROL = {
   type: "ephemeral",
-  ttl: "1h",
 } as const;
 
 const MAX_CACHED_MESSAGES = 2;
