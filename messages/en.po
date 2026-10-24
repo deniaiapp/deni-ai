@@ -3992,10 +3992,56 @@ msgctxt "Y7RNfZ"
 msgid "Connect Notion so Deni Run teammates can find, read, and update pages and databases with your approval."
 msgstr "Connect Notion so Deni Run teammates can find, read, and update pages and databases with your approval."
 
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "7LYxO5"
+msgid "Deni Run for Slack: screenshots"
+msgstr "Deni Run for Slack: screenshots"
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "H2TtyG"
+msgid "Screenshots of installing Deni Run in Slack and using it, from sign-in to an approved message."
+msgstr "Screenshots of installing Deni Run in Slack and using it, from sign-in to an approved message."
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "LsOeYW"
+msgid "Start from the Slack page and choose Add to Slack."
+msgstr "Start from the Slack page and choose Add to Slack."
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "wJh8-9"
+msgid "Slack asks you to allow access. Deni Run never sees your password."
+msgstr "Slack asks you to allow access. Deni Run never sees your password."
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "1674RS"
+msgid "Ask a teammate to summarize a channel. Reading runs without interrupting you."
+msgstr "Ask a teammate to summarize a channel. Reading runs without interrupting you."
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "AQK5aW"
+msgid "Before anything is posted, you see the channel and the full message, and approve it."
+msgstr "Before anything is posted, you see the channel and the full message, and approve it."
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "8oTolt"
+msgid "After you approve, the teammate posts it and links to the message."
+msgstr "After you approve, the teammate posts it and links to the message."
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "dN7EHB"
+msgid "The message appears in Slack under your name."
+msgstr "The message appears in Slack under your name."
+
+#: app/routes/integrations/slack-screenshots.tsx
 #: app/routes/integrations/slack.tsx
 msgctxt "GG1ohZ"
 msgid "Deni Run for Slack"
 msgstr "Deni Run for Slack"
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "4w6TQ_"
+msgid "Screenshots"
+msgstr "Screenshots"
 
 #: app/routes/integrations/slack.tsx
 msgctxt "WFZVgI"

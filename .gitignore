@@ -50,3 +50,4 @@ d1-proxy/.wrangler-*/
 d1-proxy/.dev.vars
 .deni/local.sqlite*
 /dist/
+slack-screenshots/

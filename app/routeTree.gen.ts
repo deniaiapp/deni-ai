@@ -35,6 +35,7 @@ import { Route as IntegrationsIndexRouteImport } from "./routes/integrations/ind
 import { Route as IntegrationsLinearRouteImport } from "./routes/integrations/linear";
 import { Route as IntegrationsNotionRouteImport } from "./routes/integrations/notion";
 import { Route as IntegrationsSlackRouteImport } from "./routes/integrations/slack";
+import { Route as IntegrationsSlackScreenshotsRouteImport } from "./routes/integrations/slack-screenshots";
 import { Route as OauthClientMetadataDotjsonRouteImport } from "./routes/oauth/client-metadata[.]json";
 import { Route as TwoFactorIndexRouteImport } from "./routes/two-factor/index";
 import { Route as TwoFactorSetupRouteImport } from "./routes/two-factor/setup";
@@ -192,6 +193,12 @@ const IntegrationsSlackRoute = IntegrationsSlackRouteImport.update({
   path: "/integrations/slack",
   getParentRoute: () => rootRouteImport,
 } as any);
+const IntegrationsSlackScreenshotsRoute =
+  IntegrationsSlackScreenshotsRouteImport.update({
+    id: "/integrations/slack-screenshots",
+    path: "/integrations/slack-screenshots",
+    getParentRoute: () => rootRouteImport,
+  } as any);
 const OauthClientMetadataDotjsonRoute =
   OauthClientMetadataDotjsonRouteImport.update({
     id: "/oauth/client-metadata.json",
@@ -350,6 +357,7 @@ export interface FileRoutesByFullPath {
   "/integrations/linear": typeof IntegrationsLinearRoute;
   "/integrations/notion": typeof IntegrationsNotionRoute;
   "/integrations/slack": typeof IntegrationsSlackRoute;
+  "/integrations/slack-screenshots": typeof IntegrationsSlackScreenshotsRoute;
   "/oauth/client-metadata.json": typeof OauthClientMetadataDotjsonRoute;
   "/two-factor/setup": typeof TwoFactorSetupRoute;
   "/integrations/": typeof IntegrationsIndexRoute;
@@ -404,6 +412,7 @@ export interface FileRoutesByTo {
   "/integrations/linear": typeof IntegrationsLinearRoute;
   "/integrations/notion": typeof IntegrationsNotionRoute;
   "/integrations/slack": typeof IntegrationsSlackRoute;
+  "/integrations/slack-screenshots": typeof IntegrationsSlackScreenshotsRoute;
   "/oauth/client-metadata.json": typeof OauthClientMetadataDotjsonRoute;
   "/two-factor/setup": typeof TwoFactorSetupRoute;
   "/integrations": typeof IntegrationsIndexRoute;
@@ -459,6 +468,7 @@ export interface FileRoutesById {
   "/integrations/linear": typeof IntegrationsLinearRoute;
   "/integrations/notion": typeof IntegrationsNotionRoute;
   "/integrations/slack": typeof IntegrationsSlackRoute;
+  "/integrations/slack-screenshots": typeof IntegrationsSlackScreenshotsRoute;
   "/oauth/client-metadata.json": typeof OauthClientMetadataDotjsonRoute;
   "/two-factor/setup": typeof TwoFactorSetupRoute;
   "/integrations/": typeof IntegrationsIndexRoute;
@@ -515,6 +525,7 @@ export interface FileRouteTypes {
     | "/integrations/linear"
     | "/integrations/notion"
     | "/integrations/slack"
+    | "/integrations/slack-screenshots"
     | "/oauth/client-metadata.json"
     | "/two-factor/setup"
     | "/integrations/"
@@ -569,6 +580,7 @@ export interface FileRouteTypes {
     | "/integrations/linear"
     | "/integrations/notion"
     | "/integrations/slack"
+    | "/integrations/slack-screenshots"
     | "/oauth/client-metadata.json"
     | "/two-factor/setup"
     | "/integrations"
@@ -623,6 +635,7 @@ export interface FileRouteTypes {
     | "/integrations/linear"
     | "/integrations/notion"
     | "/integrations/slack"
+    | "/integrations/slack-screenshots"
     | "/oauth/client-metadata.json"
     | "/two-factor/setup"
     | "/integrations/"
@@ -678,6 +691,7 @@ export interface RootRouteChildren {
   IntegrationsLinearRoute: typeof IntegrationsLinearRoute;
   IntegrationsNotionRoute: typeof IntegrationsNotionRoute;
   IntegrationsSlackRoute: typeof IntegrationsSlackRoute;
+  IntegrationsSlackScreenshotsRoute: typeof IntegrationsSlackScreenshotsRoute;
   OauthClientMetadataDotjsonRoute: typeof OauthClientMetadataDotjsonRoute;
   TwoFactorSetupRoute: typeof TwoFactorSetupRoute;
   IntegrationsIndexRoute: typeof IntegrationsIndexRoute;
@@ -891,6 +905,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof IntegrationsSlackRouteImport;
       parentRoute: typeof rootRouteImport;
     };
+    "/integrations/slack-screenshots": {
+      id: "/integrations/slack-screenshots";
+      path: "/integrations/slack-screenshots";
+      fullPath: "/integrations/slack-screenshots";
+      preLoaderRoute: typeof IntegrationsSlackScreenshotsRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
     "/oauth/client-metadata.json": {
       id: "/oauth/client-metadata.json";
       path: "/oauth/client-metadata.json";
@@ -1102,6 +1123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IntegrationsLinearRoute: IntegrationsLinearRoute,
   IntegrationsNotionRoute: IntegrationsNotionRoute,
   IntegrationsSlackRoute: IntegrationsSlackRoute,
+  IntegrationsSlackScreenshotsRoute: IntegrationsSlackScreenshotsRoute,
   OauthClientMetadataDotjsonRoute: OauthClientMetadataDotjsonRoute,
   TwoFactorSetupRoute: TwoFactorSetupRoute,
   IntegrationsIndexRoute: IntegrationsIndexRoute,

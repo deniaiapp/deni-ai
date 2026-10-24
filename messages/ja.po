@@ -3992,10 +3992,56 @@ msgctxt "Y7RNfZ"
 msgid "Connect Notion so Deni Run teammates can find, read, and update pages and databases with your approval."
 msgstr "Notion を接続すると、Deni Run のチームメイトがあなたの承認のもとでページやデータベースを検索、閲覧、更新できます。"
 
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "7LYxO5"
+msgid "Deni Run for Slack: screenshots"
+msgstr "Slack 向け Deni Run: スクリーンショット"
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "H2TtyG"
+msgid "Screenshots of installing Deni Run in Slack and using it, from sign-in to an approved message."
+msgstr "Slack に Deni Run を追加して使うまでのスクリーンショット。ログインから承認済みメッセージの投稿まで。"
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "LsOeYW"
+msgid "Start from the Slack page and choose Add to Slack."
+msgstr "Slack のページから「Add to Slack」を選びます。"
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "wJh8-9"
+msgid "Slack asks you to allow access. Deni Run never sees your password."
+msgstr "Slack がアクセスの許可を求めます。Deni Run がパスワードを見ることはありません。"
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "1674RS"
+msgid "Ask a teammate to summarize a channel. Reading runs without interrupting you."
+msgstr "チームメイトにチャンネルの要約を頼みます。読み取りは確認なしで実行されます。"
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "AQK5aW"
+msgid "Before anything is posted, you see the channel and the full message, and approve it."
+msgstr "投稿の前に、チャンネルとメッセージ全文を確認して承認します。"
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "8oTolt"
+msgid "After you approve, the teammate posts it and links to the message."
+msgstr "承認すると、チームメイトが投稿してメッセージへのリンクを返します。"
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "dN7EHB"
+msgid "The message appears in Slack under your name."
+msgstr "メッセージはあなたの名前で Slack に投稿されます。"
+
+#: app/routes/integrations/slack-screenshots.tsx
 #: app/routes/integrations/slack.tsx
 msgctxt "GG1ohZ"
 msgid "Deni Run for Slack"
 msgstr "Slack 向け Deni Run"
+
+#: app/routes/integrations/slack-screenshots.tsx
+msgctxt "4w6TQ_"
+msgid "Screenshots"
+msgstr "スクリーンショット"
 
 #: app/routes/integrations/slack.tsx
 msgctxt "WFZVgI"
