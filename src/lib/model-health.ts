@@ -1,8 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, type LanguageModel } from "ai";
-import { sql } from "drizzle-orm";
-import { db } from "@/db/drizzle";
-import { modelHealth } from "@/db/schema";
 import { env } from "@/env";
 import { models } from "@/lib/constants";
 import { createDeniOpenRouter } from "@/lib/openrouter-provider";
@@ -88,42 +85,32 @@ export async function probeModel(value: string): Promise<ModelHealthResult> {
   }
 }
 
-export async function recordModelHealth(result: ModelHealthResult) {
-  const now = new Date();
-  await db
-    .insert(modelHealth)
-    .values({
-      model: result.model,
-      provider: result.provider,
-      available: result.available,
-      latencyMs: result.latencyMs,
-      error: result.error,
-      consecutiveFailures: result.available ? 0 : 1,
-      checkedAt: now,
-      lastAvailableAt: result.available ? now : null,
-    })
-    .onConflictDoUpdate({
-      target: modelHealth.model,
-      set: {
-        provider: result.provider,
-        available: result.available,
-        latencyMs: result.latencyMs,
-        error: result.error,
-        consecutiveFailures: result.available ? 0 : sql`${modelHealth.consecutiveFailures} + 1`,
-        checkedAt: now,
-        ...(result.available ? { lastAvailableAt: now } : {}),
-      },
-    });
+export type ModelHealthRecord = ModelHealthResult & { checkedAt: Date };
+
+const globalForModelHealth = globalThis as typeof globalThis & {
+  modelHealthResults?: Map<string, ModelHealthRecord>;
+};
+
+/**
+ * Latest result per probed model, kept in this server's memory: each replica
+ * probes on its own, and keeping them out of the database lets it suspend.
+ */
+function modelHealthResults() {
+  return (globalForModelHealth.modelHealthResults ??= new Map());
+}
+
+export function recordModelHealth(result: ModelHealthResult, checkedAt = new Date()) {
+  modelHealthResults().set(result.model, { ...result, checkedAt });
 }
 
 export async function checkModelHealth(): Promise<ModelHealthResult[]> {
   const results = await Promise.all(HEALTH_CHECK_MODEL_VALUES.map(probeModel));
-  await Promise.all(results.map(recordModelHealth));
+  for (const result of results) recordModelHealth(result);
   return results;
 }
 
-export async function getModelHealth() {
-  const rows = await db.select().from(modelHealth);
+export function getModelHealth(): ModelHealthRecord[] {
+  const rows = [...modelHealthResults().values()];
   const order = new Map<string, number>(HEALTH_CHECK_MODEL_VALUES.map((value, i) => [value, i]));
   return rows
     .filter((row) => order.has(row.model))

@@ -1,7 +1,9 @@
 import { getTableName, SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, expect, test, vi } from "vitest";
+import { deliverMaxModeUsageReport } from "./max-mode";
 import { consumeUsage, settleUsage, recordObservedUsage, recoverUsageReservations } from "./usage";
+import { requestUsageAndMeterCheck } from "./usage-and-meter-schedule";
 import type { usageReservation, usageQuota, billing, maxModeMeterEvent } from "@/db/schema";
 
 type Reservation = typeof usageReservation.$inferSelect;
@@ -28,6 +30,7 @@ vi.mock("./max-mode", () => ({
   deliverMaxModeUsageReport: vi.fn(async () => {}),
 }));
 vi.mock("./billing-config", () => ({ isBillingDisabled: false }));
+vi.mock("./usage-and-meter-schedule", () => ({ requestUsageAndMeterCheck: vi.fn() }));
 vi.mock("./stripe", () => ({ stripe: {} }));
 const dialect = new PgDialect();
 const now = new Date("2026-06-01T00:00:00Z");
@@ -259,6 +262,8 @@ beforeEach(() => {
     } as Billing,
   ];
   state.database = database();
+  vi.mocked(requestUsageAndMeterCheck).mockClear();
+  vi.mocked(deliverMaxModeUsageReport).mockReset().mockResolvedValue(undefined);
 });
 const reserve = (reservationId: string, amount = 20) =>
   consumeUsage({ userId: "user", category: "basic", reservationId, amount, now });
@@ -369,6 +374,39 @@ test("meter persistence failure rolls back quota, ledger, and settlement togethe
   expect(state.quota!.used).toBe(limit + 10);
   expect(state.billings[0].maxModeUsageBasic).toBe(0);
   expect(state.reservations[0].settledAt).toBeNull();
+});
+test("a failed settlement has the job recover the reservation once it is stale", async () => {
+  await reserve("a");
+  state.failMeter = true;
+  const before = Date.now();
+  await expect(settle("a", 15)).rejects.toThrow("Meter persistence failed");
+  expect(requestUsageAndMeterCheck).toHaveBeenCalledOnce();
+  expect(vi.mocked(requestUsageAndMeterCheck).mock.calls[0][0]).toBeGreaterThanOrEqual(
+    before + 15 * 60_000,
+  );
+});
+test("an undelivered meter event has the job retry it, a delivered one does not", async () => {
+  await Promise.all([reserve("a"), reserve("b")]);
+  vi.mocked(deliverMaxModeUsageReport).mockResolvedValueOnce({
+    delivered: 1,
+    failed: 0,
+    requiresReview: 0,
+  });
+  await settle("a", 20);
+  expect(requestUsageAndMeterCheck).not.toHaveBeenCalled();
+  vi.mocked(deliverMaxModeUsageReport).mockResolvedValueOnce({
+    delivered: 0,
+    failed: 1,
+    requiresReview: 0,
+  });
+  await settle("b", 20);
+  expect(requestUsageAndMeterCheck).toHaveBeenCalledOnce();
+});
+test("settling without overage needs no job check", async () => {
+  await reserve("a", 5);
+  await settle("a", 5);
+  expect(state.events).toHaveLength(0);
+  expect(requestUsageAndMeterCheck).not.toHaveBeenCalled();
 });
 test("replayed reserve and settlement calls are idempotent", async () => {
   await reserve("a");

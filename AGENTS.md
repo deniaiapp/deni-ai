@@ -1,6 +1,6 @@
 # Agent guide for deni-ai
 
-pnpm, Node.js 22.18+, Next.js App Router, React Compiler, strict TypeScript, Tailwind v4,
+pnpm, Node.js 26+, Next.js App Router, React Compiler, strict TypeScript, Tailwind v4,
 shadcn/ui, Drizzle/Postgres, and better-auth.
 
 ## Task boundaries

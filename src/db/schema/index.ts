@@ -10,7 +10,6 @@ export * from "./device-auth";
 export * from "./memory";
 export * from "./max-mode-meter-event";
 export * from "./model-comparison";
-export * from "./model-health";
 export * from "./project";
 export * from "./reset-credit";
 export * from "./security-activity";

@@ -31,7 +31,7 @@ Day-to-day development targets **`canary`**. **`master`** is the promotion/relea
 
 ### Prerequisites
 
-- [Node.js 22.18+](https://nodejs.org/) and [pnpm 12.8.1](https://pnpm.io/installation)
+- [Node.js 26+](https://nodejs.org/) and [pnpm 12.8.1](https://pnpm.io/installation)
 - PostgreSQL (we recommend [Neon](https://neon.tech/) for serverless PostgreSQL)
 - API keys and OAuth credentials as described in [SETUP.md](SETUP.md)
 
