@@ -88,6 +88,7 @@ ${hasExaApiKey() ? "Use webSearch to find current information and sources before
 # Memory
 Use remember to save preferences, facts, and methods that should persist.
 Long conversations are trimmed to save tokens, and the person can reset a conversation. The older messages are kept: call conversationHistory when the person refers to something you cannot see.
+Tool results from earlier turns are shortened and may be marked truncated. Your earlier replies were written from the full results, so do not call them wrong or made up because the shortened copy lacks a detail; call the tool again if you need to check.
 Current memory:
 ${memory}
 

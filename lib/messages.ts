@@ -32,7 +32,9 @@ function slimJson(value: unknown, max: number): unknown {
   } catch {
     return { truncated: true };
   }
-  const keep: Record<string, unknown> = { truncated: true };
+  // Keep the start of the result itself. With only a bare flag, the model reads its earlier
+  // answer as unsupported by any result and takes it back on the next turn.
+  const keep: Record<string, unknown> = { truncated: true, preview: truncateString(resultText(value), max) };
   for (const key of ["url", "title", "path", "error", "ok", "exitCode", "name", "action"]) {
     if (key in rec) keep[key] = rec[key];
   }
@@ -50,6 +52,18 @@ function slimJson(value: unknown, max: number): unknown {
     });
   }
   return keep;
+}
+
+/** MCP results carry their text in content items; anything else is read as JSON. */
+function resultText(value: object) {
+  const content = (value as { content?: unknown }).content;
+  if (Array.isArray(content)) {
+    const texts = content.flatMap((item) =>
+      item && typeof item === "object" && typeof (item as { text?: unknown }).text === "string" ? [(item as { text: string }).text] : [],
+    );
+    if (texts.length > 0) return texts.join("\n");
+  }
+  return json(value);
 }
 
 function mapMessageParts(

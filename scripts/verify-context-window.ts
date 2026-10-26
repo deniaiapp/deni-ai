@@ -87,6 +87,12 @@ const toolTurn = (index: number): UIMessage[] => [
 const tools = Array.from({ length: 6 }, (_, index) => toolTurn(index)).flat();
 assert(modelContextMessages(tools).length === tools.length, "slimmed tool output should fit the budget");
 
+// A shortened result still shows what the tool returned, or the model takes back what it reported.
+const replayed = (output: unknown) =>
+  JSON.stringify(compactMessagesForModel([user("q", "check"), { id: "r", role: "assistant", parts: [{ type: "tool-mcp", toolCallId: "r1", state: "output-available", input: {}, output }] } as unknown as UIMessage]));
+assert(replayed({ content: [{ type: "text", text: `LIN-42 is Done. ${"detail ".repeat(2_000)}` }] }).includes("LIN-42 is Done."), "a large MCP result lost its text");
+assert(replayed(Array.from({ length: 50 }, (_, index) => ({ number: index, title: `Issue ${index}`, body: "b".repeat(300) }))).includes("Issue 0"), "a large list result lost its items");
+
 // Saved signed thinking is dropped: Anthropic rejects it once the prefix before it changes.
 const signed = { openrouter: { reasoning_details: [{ type: "reasoning.text", text: "plan", signature: "sig" }] } };
 const thinkingTurn = (id: string, steps: number): UIMessage => ({
