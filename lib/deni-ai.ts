@@ -141,6 +141,12 @@ async function callUsageApi(init: { method: "GET"; deniUserId: string } | { meth
   return parseUsage(await res.json());
 }
 
+/** The cached budget, if a recent request left one; never calls Deni AI. */
+export function cachedDeniRunUsage(deniUserId: string) {
+  const cached = usageCache().get(deniUserId);
+  return cached && cached.expiresAt > Date.now() ? cached.usage : undefined;
+}
+
 /** The user's Deni Run budget for this month, cached briefly to keep polling cheap. */
 export async function fetchDeniRunUsage(deniUserId: string, opts?: { fresh?: boolean }) {
   const cached = usageCache().get(deniUserId);

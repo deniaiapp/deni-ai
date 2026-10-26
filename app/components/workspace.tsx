@@ -75,8 +75,12 @@ type StatePayload = {
   routines: Routine[];
   computer: ComputerState;
   shells: ShellRecord[];
-  usage?: UsageSnapshot;
+  usage?: UsageSnapshot | null;
   runMode?: RunMode;
+  // Sent with ?boot=1 only: what the first screen needs, so it takes one request.
+  jobs?: AgentJob[];
+  notifications?: AppNotification[];
+  thread?: { id: string; messages: UIMessage[] };
 };
 
 type Modal = "bot" | "group" | "skills" | "routines" | null;
@@ -143,6 +147,8 @@ export function Workspace() {
   const jobStatusRef = useRef<Record<string, string>>({});
   const jobsRefreshSequence = useRef(0);
   const jobsRequestPending = useRef(false);
+  const jobsBootedAt = useRef(0);
+  const bootedThreadId = useRef<string | null>(null);
   const activeThreadRef = useRef<string | null>(null);
   const threadReady = loadedThreadId != null && loadedThreadId === activeThreadId;
   const [modal, setModal] = useState<Modal>(null);
@@ -175,14 +181,7 @@ export function Workspace() {
   const canUpgrade = usage?.plan !== "max";
   const router = useRouter();
 
-  const refreshJobs = useCallback(async () => {
-    if (jobsRequestPending.current) return;
-    jobsRequestPending.current = true;
-    try {
-    const sequence = ++jobsRefreshSequence.current;
-    const response = await fetch("/api/jobs?overview=1&limit=200&notifications=1", { cache: "no-store" });
-    if (!response.ok || sequence !== jobsRefreshSequence.current) return;
-    const json = (await response.json()) as { jobs?: AgentJob[]; notifications?: AppNotification[] };
+  const applyJobs = useCallback((json: { jobs?: AgentJob[]; notifications?: AppNotification[] }) => {
     const mergedJobs = mergeJobSnapshots(Object.values(jobsByThreadRef.current).flat(), json.jobs ?? []);
     const grouped = groupJobsByThread(mergedJobs);
     jobsByThreadRef.current = grouped;
@@ -213,8 +212,18 @@ export function Workspace() {
         }).catch(() => undefined);
       }
     }
-    } finally { jobsRequestPending.current = false; }
   }, []);
+
+  const refreshJobs = useCallback(async () => {
+    if (jobsRequestPending.current) return;
+    jobsRequestPending.current = true;
+    try {
+      const sequence = ++jobsRefreshSequence.current;
+      const response = await fetch("/api/jobs?overview=1&limit=200&notifications=1", { cache: "no-store" });
+      if (!response.ok || sequence !== jobsRefreshSequence.current) return;
+      applyJobs((await response.json()) as { jobs?: AgentJob[]; notifications?: AppNotification[] });
+    } finally { jobsRequestPending.current = false; }
+  }, [applyJobs]);
 
   useEffect(() => {
     activeThreadRef.current = activeThreadId;
@@ -239,8 +248,10 @@ export function Workspace() {
       const running = chatBusy || Object.values(jobsByThreadRef.current).some((jobs) => jobs.some((job) => ["queued", "running", "finalizing"].includes(job.status)));
       timer = setTimeout(() => void refreshIfVisible(), running ? 2_000 : 15_000);
     };
+    // The boot request already brought the jobs; poll them from the next interval on.
+    if (Date.now() - jobsBootedAt.current < 5_000) timer = setTimeout(() => void refreshIfVisible(), 2_000);
     // eslint-disable-next-line react/set-state-in-effect
-    void refreshIfVisible();
+    else void refreshIfVisible();
     document.addEventListener("visibilitychange", refreshIfVisible);
     return () => {
       disposed = true;
@@ -266,8 +277,8 @@ export function Workspace() {
     });
   }, []);
 
-  const loadState = useCallback(async () => {
-    const res = await fetch("/api/state");
+  const loadState = useCallback(async (boot = false) => {
+    const res = await fetch(boot ? "/api/state?boot=1" : "/api/state");
     const json = (await res.json()) as StatePayload;
     setBots(json.bots);
     setThreads(json.threads);
@@ -277,10 +288,28 @@ export function Workspace() {
     setShells(json.shells ?? []);
     if (json.usage) setUsage(json.usage);
     if (json.runMode) setRunMode(parseRunMode(json.runMode));
-    const notificationResponse = await fetch("/api/notifications?unread=1", { cache: "no-store" });
-    if (notificationResponse.ok) {
-      const notificationJson = (await notificationResponse.json()) as { notifications?: AppNotification[] };
-      setNotifications(notificationJson.notifications ?? []);
+    if (boot) {
+      if (json.notifications) setNotifications(json.notifications);
+      if (json.jobs) {
+        applyJobs(json);
+        jobsBootedAt.current = Date.now();
+      }
+      const first = json.thread;
+      if (first) {
+        // Shown at once; the thread effect then skips its own request for it.
+        messagesByThreadRef.current = cacheThreadMessages(messagesByThreadRef.current, first.id, first.messages);
+        setMessagesByThread((current) => cacheThreadMessages(current, first.id, first.messages));
+        bootedThreadId.current = first.id;
+      }
+      // Deni AI had not answered yet; the server is fetching it now.
+      if (json.usage === null) {
+        void fetch("/api/usage", { cache: "no-store" })
+          .then((response) => (response.ok ? (response.json() as Promise<{ usage?: UsageSnapshot | null }>) : null))
+          .then((usageJson) => {
+            if (usageJson?.usage) setUsage(usageJson.usage);
+          })
+          .catch(() => undefined);
+      }
     }
       if (!json.ready) {
       setBoot("setup");
@@ -288,7 +317,7 @@ export function Workspace() {
     }
       setBoot("app");
       return json;
-  }, []);
+  }, [applyJobs]);
 
   const openTeammatePaywall = useCallback(() => {
     setModal(null);
@@ -304,7 +333,7 @@ export function Workspace() {
   useEffect(() => {
     let cancelled = false;
     const boot = async () => {
-      const json = await loadState();
+      const json = await loadState(true);
       if (cancelled || !json.ready) return;
       setActiveThreadId((current) => current ?? json.threads[0]?.id ?? null);
     };
@@ -322,6 +351,13 @@ export function Workspace() {
     if (cached) {
       setMessages(cached);
       setLoadedThreadId(activeThreadId);
+    }
+    // Only the first thread shown right after boot can skip its request.
+    const booted = bootedThreadId.current === activeThreadId;
+    bootedThreadId.current = null;
+    if (cached && booted) {
+      syncChatSessionMessages(activeThreadId, cached);
+      return;
     }
     fetch(`/api/threads/${activeThreadId}`, { signal: controller.signal })
       .then((res) => res.json())

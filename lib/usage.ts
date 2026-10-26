@@ -3,6 +3,7 @@ import "@tanstack/react-start/server-only";
 import {
   DeniAiAccountMissingError,
   DeniAiUnavailableError,
+  cachedDeniRunUsage,
   deniAiUrl,
   deniAiUsageConfigured,
   fetchDeniRunUsage,
@@ -112,8 +113,18 @@ export async function usageSnapshot(
   userId: string,
   store: Store,
   live?: { pendingBrowserMs?: number; pendingComputerMs?: number },
+  options?: { cachedOnly?: boolean },
 ): Promise<UsageSnapshot | null> {
   try {
+    if (options?.cachedOnly) {
+      // Opening the workspace should not wait on Deni AI. Without a cached budget, answer null
+      // now and warm the cache, so the request the client sends next finds it.
+      const deniUserId = deniAiUsageConfigured() ? await getLinkedDeniAiUserId(userId) : null;
+      if (deniUserId && !cachedDeniRunUsage(deniUserId)) {
+        void fetchDeniRunUsage(deniUserId).catch(() => undefined);
+        return null;
+      }
+    }
     return snapshotFrom(await resolveBudget(userId), store, live);
   } catch (error) {
     console.error("deni ai usage snapshot", error);

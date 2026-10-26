@@ -31,6 +31,7 @@ import { Route as ApiRoutinesRouteImport } from "./routes/api/routines";
 import { Route as ApiSetupRouteImport } from "./routes/api/setup";
 import { Route as ApiSkillsRouteImport } from "./routes/api/skills";
 import { Route as ApiStateRouteImport } from "./routes/api/state";
+import { Route as ApiUsageRouteImport } from "./routes/api/usage";
 import { Route as IntegrationsIndexRouteImport } from "./routes/integrations/index";
 import { Route as IntegrationsLinearRouteImport } from "./routes/integrations/linear";
 import { Route as IntegrationsNotionRouteImport } from "./routes/integrations/notion";
@@ -167,6 +168,11 @@ const ApiSkillsRoute = ApiSkillsRouteImport.update({
 const ApiStateRoute = ApiStateRouteImport.update({
   id: "/api/state",
   path: "/api/state",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const ApiUsageRoute = ApiUsageRouteImport.update({
+  id: "/api/usage",
+  path: "/api/usage",
   getParentRoute: () => rootRouteImport,
 } as any);
 const IntegrationsIndexRoute = IntegrationsIndexRouteImport.update({
@@ -330,6 +336,7 @@ export interface FileRoutesByFullPath {
   "/api/setup": typeof ApiSetupRoute;
   "/api/skills": typeof ApiSkillsRoute;
   "/api/state": typeof ApiStateRoute;
+  "/api/usage": typeof ApiUsageRoute;
   "/integrations/linear": typeof IntegrationsLinearRoute;
   "/integrations/notion": typeof IntegrationsNotionRoute;
   "/integrations/slack": typeof IntegrationsSlackRoute;
@@ -381,6 +388,7 @@ export interface FileRoutesByTo {
   "/api/setup": typeof ApiSetupRoute;
   "/api/skills": typeof ApiSkillsRoute;
   "/api/state": typeof ApiStateRoute;
+  "/api/usage": typeof ApiUsageRoute;
   "/integrations/linear": typeof IntegrationsLinearRoute;
   "/integrations/notion": typeof IntegrationsNotionRoute;
   "/integrations/slack": typeof IntegrationsSlackRoute;
@@ -433,6 +441,7 @@ export interface FileRoutesById {
   "/api/setup": typeof ApiSetupRoute;
   "/api/skills": typeof ApiSkillsRoute;
   "/api/state": typeof ApiStateRoute;
+  "/api/usage": typeof ApiUsageRoute;
   "/integrations/linear": typeof IntegrationsLinearRoute;
   "/integrations/notion": typeof IntegrationsNotionRoute;
   "/integrations/slack": typeof IntegrationsSlackRoute;
@@ -486,6 +495,7 @@ export interface FileRouteTypes {
     | "/api/setup"
     | "/api/skills"
     | "/api/state"
+    | "/api/usage"
     | "/integrations/linear"
     | "/integrations/notion"
     | "/integrations/slack"
@@ -537,6 +547,7 @@ export interface FileRouteTypes {
     | "/api/setup"
     | "/api/skills"
     | "/api/state"
+    | "/api/usage"
     | "/integrations/linear"
     | "/integrations/notion"
     | "/integrations/slack"
@@ -588,6 +599,7 @@ export interface FileRouteTypes {
     | "/api/setup"
     | "/api/skills"
     | "/api/state"
+    | "/api/usage"
     | "/integrations/linear"
     | "/integrations/notion"
     | "/integrations/slack"
@@ -640,6 +652,7 @@ export interface RootRouteChildren {
   ApiSetupRoute: typeof ApiSetupRoute;
   ApiSkillsRoute: typeof ApiSkillsRoute;
   ApiStateRoute: typeof ApiStateRoute;
+  ApiUsageRoute: typeof ApiUsageRoute;
   IntegrationsLinearRoute: typeof IntegrationsLinearRoute;
   IntegrationsNotionRoute: typeof IntegrationsNotionRoute;
   IntegrationsSlackRoute: typeof IntegrationsSlackRoute;
@@ -823,6 +836,13 @@ declare module "@tanstack/react-router" {
       path: "/api/state";
       fullPath: "/api/state";
       preLoaderRoute: typeof ApiStateRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/usage": {
+      id: "/api/usage";
+      path: "/api/usage";
+      fullPath: "/api/usage";
+      preLoaderRoute: typeof ApiUsageRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/integrations/": {
@@ -1040,6 +1060,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiSetupRoute: ApiSetupRoute,
   ApiSkillsRoute: ApiSkillsRoute,
   ApiStateRoute: ApiStateRoute,
+  ApiUsageRoute: ApiUsageRoute,
   IntegrationsLinearRoute: IntegrationsLinearRoute,
   IntegrationsNotionRoute: IntegrationsNotionRoute,
   IntegrationsSlackRoute: IntegrationsSlackRoute,

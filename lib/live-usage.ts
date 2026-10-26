@@ -5,9 +5,9 @@ import { pendingComputerMs } from "./sandbox";
 import type { Store } from "./types";
 import { usageSnapshot } from "./usage";
 
-export function liveUsageSnapshot(store: Store, userId: string) {
+export function liveUsageSnapshot(store: Store, userId: string, options?: { cachedOnly?: boolean }) {
   return usageSnapshot(userId, store, {
     pendingBrowserMs: pendingBrowserMs(userId),
     pendingComputerMs: pendingComputerMs(userId),
-  });
+  }, options);
 }
