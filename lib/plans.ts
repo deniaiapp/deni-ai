@@ -46,7 +46,7 @@ export class UsageLimitError extends Error {
 }
 
 export function isUsageLimitError(error: unknown): error is UsageLimitError {
-  return error instanceof UsageLimitError || (error as { code?: string }).code === "usage_limit";
+  return error instanceof UsageLimitError || (error as { code?: string } | null | undefined)?.code === "usage_limit";
 }
 
 /** Names the limit on a chat 402 so the client can offer to connect or upgrade instead of failing. */
