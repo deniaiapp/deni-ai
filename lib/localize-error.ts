@@ -2,7 +2,7 @@ import "@tanstack/react-start/server-only";
 
 import { getExtracted, getLocale } from "@/i18n/server";
 import { translateMessage } from "./i18n-server";
-import type { UsageLimitError } from "./plans";
+import { USAGE_LIMIT_HEADER, type UsageLimitError } from "./plans";
 import { getUsageSnapshot } from "./usage";
 
 /**
@@ -90,5 +90,13 @@ export async function localizeUsageLimit(userId: string, error: UsageLimitError)
     return t("This month's Deni AI usage is used up on {plan}. Upgrade your Deni AI plan to keep going.", { plan });
   }
   return t("Teammate limit reached ({limit} on {plan}). Upgrade your Deni AI plan to add more teammates.", { limit: String(usage.teammates.limit), plan });
+}
+
+/** A chat 402 whose header tells the client which limit stopped the message. */
+export async function usageLimitResponse(userId: string, error: UsageLimitError) {
+  return new Response(await localizeUsageLimit(userId, error), {
+    status: 402,
+    headers: { [USAGE_LIMIT_HEADER]: error.metric },
+  });
 }
 

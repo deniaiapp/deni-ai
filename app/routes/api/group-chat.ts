@@ -7,7 +7,8 @@ import { listJobs } from "@/lib/jobs";
 import { slimMessagesForClient } from "@/lib/messages";
 import { handleChat } from "@/lib/chat-route";
 import { getExtracted } from "@/i18n/server";
-import { localizeError } from "@/lib/localize-error";
+import { localizeError, usageLimitResponse } from "@/lib/localize-error";
+import { assertCanUseTokens, isUsageLimitError } from "@/lib/usage";
 
 function messageChunks(body: ReadableStream<Uint8Array>, onStatus: (data: Record<string, unknown>) => void) {
   let buffer = "";
@@ -62,6 +63,9 @@ async function POST({ request }: { request: Request }) {
     recipients = members.filter((bot) => bot.id === author?.id);
   }
   if (!recipients.length) return new Response(t("No matching teammate in this group"), { status: 400 });
+  // Report a usage limit once for the group rather than as a failure from every teammate.
+  try { await assertCanUseTokens(userId); }
+  catch (error) { if (isUsageLimitError(error)) return usageLimitResponse(userId, error); }
   const jobs = await listJobs(userId, { threadId: thread.id, limit: 200, summary: true });
   const statuses = new Map<string, string>();
   return createUIMessageStreamResponse({ stream: createUIMessageStream<UIMessage>({

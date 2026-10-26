@@ -14,7 +14,7 @@ import {
 import { motion } from "motion/react";
 import type { StickToBottomContext } from "use-stick-to-bottom";
 import { easeOut } from "@/lib/motion";
-import { RobotIcon, StopIcon, WarningCircleIcon } from "@phosphor-icons/react";
+import { LinkSimpleIcon, RobotIcon, StopIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import {
   BookOpenIcon,
   BrainIcon,
@@ -72,6 +72,7 @@ import { Empty } from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
 import { Avatar } from "./sidebar";
 import { MessageActions } from "./message-actions";
+import { useConnectDeniAi } from "./billing-dialog";
 import { usePluginActionLabels } from "./plugin-action-labels";
 import { mcpArgumentPreview, mcpToolTitle, useMcpConnectionNames } from "./mcp-tool-labels";
 import { McpApprovalDetails } from "./mcp-approval";
@@ -88,6 +89,7 @@ import { createReactionState, type ReactionMap } from "@/lib/reaction-state";
 import { messageAuthor, type MessageAuthor } from "@/lib/group-chat";
 import { isContextReset, workedMsOf } from "@/lib/messages";
 import { RUN_MODES, type RunMode } from "@/lib/model";
+import { isUsageLimitError } from "@/lib/plans";
 import type {
   AgentJob,
   Artifact,
@@ -777,7 +779,9 @@ export function ChatThread({
           {artifacts.length > 0 ? (
             <ArtifactList artifacts={artifacts} onRevision={requestRevision} />
           ) : null}
-          {error || approvalError ? (
+          {isUsageLimitError(error) && error.metric === "link" ? (
+            <ConnectDeniAiAlert onDismiss={clearError} />
+          ) : error || approvalError ? (
             <Alert variant="destructive">
               <WarningCircleIcon weight="fill" />
               <AlertTitle>{t("Failed to send")}</AlertTitle>
@@ -951,6 +955,31 @@ export function ChatThread({
         </PromptInput>
       </div>
     </section>
+  );
+}
+
+/** Shown instead of a send error when the message needs a connected Deni AI account. */
+function ConnectDeniAiAlert({ onDismiss }: { onDismiss: () => void }) {
+  const t = useExtracted();
+  const { busy, connect } = useConnectDeniAi();
+  return (
+    <Alert>
+      <LinkSimpleIcon />
+      <AlertTitle>{t("Connect your Deni AI account")}</AlertTitle>
+      <AlertDescription>
+        <p>
+          {t("Deni Run uses the plan of your Deni AI account. Connect one to keep using teammates, the browser, and the computer.")}
+        </p>
+        <div className="mt-1 flex items-center gap-2">
+          <Button type="button" variant="primary" size="xs" loading={busy} onClick={() => void connect()}>
+            {t("Connect Deni AI account")}
+          </Button>
+          <Button type="button" variant="ghost" size="xs" onClick={onDismiss}>
+            {t("Dismiss")}
+          </Button>
+        </div>
+      </AlertDescription>
+    </Alert>
   );
 }
 

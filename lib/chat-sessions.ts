@@ -6,6 +6,7 @@ import {
 } from "ai";
 import { mergeStoredMessages } from "./messages";
 import { messageAuthor, messageRequestKey, type MessageAuthor } from "./group-chat";
+import { USAGE_LIMIT_HEADER, UsageLimitError, isUsageMetric } from "./plans";
 
 export type GroupReplyStatus = { author: MessageAuthor; status: string; jobId?: string; messageId?: string; error?: string };
 const EMPTY_GROUP_STATUS: Record<string, GroupReplyStatus> = {};
@@ -141,6 +142,15 @@ export function getChatSession(options: {
   };
   const transport = new DefaultChatTransport<UIMessage>({
     api: options.kind === "group" ? "/api/group-chat" : "/api/chat",
+    // Keep which usage limit stopped the message so the thread can offer a way past it.
+    fetch: async (input, init) => {
+      const response = await fetch(input, init);
+      const metric = response.headers.get(USAGE_LIMIT_HEADER);
+      if (response.status === 402 && isUsageMetric(metric)) {
+        throw new UsageLimitError(metric, await response.text());
+      }
+      return response;
+    },
     body: () => ({
       threadId: config.threadId,
       botId: config.botId,

@@ -41,7 +41,7 @@ import { createHash } from "node:crypto";
 import { groupContext } from "@/lib/group-chat";
 import { translateError, translateMessage } from "@/lib/i18n-server";
 import { getExtracted, getLocale } from "@/i18n/server";
-import { localizeUsageLimit } from "@/lib/localize-error";
+import { usageLimitResponse } from "@/lib/localize-error";
 import { BUBBLE_BREAK_METADATA } from "@/lib/message-bubbles";
 
 async function jobConflict(job: { id: string; status: string }) {
@@ -105,7 +105,7 @@ export async function handleChat(req: Request) {
     await assertCanUseTokens(userId);
   } catch (error) {
     if (isUsageLimitError(error)) {
-      return new Response(await localizeUsageLimit(userId, error), { status: 402 });
+      return usageLimitResponse(userId, error);
     }
     if (error instanceof DeniAiUnavailableError) {
       console.error("deni ai usage check", error.cause ?? error);

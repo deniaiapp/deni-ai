@@ -49,6 +49,13 @@ export function isUsageLimitError(error: unknown): error is UsageLimitError {
   return error instanceof UsageLimitError || (error as { code?: string }).code === "usage_limit";
 }
 
+/** Names the limit on a chat 402 so the client can offer to connect or upgrade instead of failing. */
+export const USAGE_LIMIT_HEADER = "x-usage-limit";
+
+export function isUsageMetric(value: unknown): value is UsageMetric {
+  return value === "budget" || value === "teammates" || value === "link";
+}
+
 export type UsageMeter = { used: number; limit: number };
 
 export type UsageSnapshot = {
