@@ -41,7 +41,11 @@ async function accountError(userId: string) {
 async function usageResponse(userId: string) {
   const usage = await getDeniRunUsage(userId);
   return Response.json(
-    { userId, ...usage, manageUrl: `${env.NEXT_PUBLIC_BETTER_AUTH_URL}/settings/billing` },
+    {
+      userId,
+      ...usage,
+      manageUrl: new URL("/settings/billing", env.NEXT_PUBLIC_BETTER_AUTH_URL).toString(),
+    },
     { headers: { "Cache-Control": "no-store" } },
   );
 }

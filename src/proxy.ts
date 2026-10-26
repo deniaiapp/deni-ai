@@ -90,6 +90,13 @@ function rewriteLocalized(request: NextRequest, pathname: string, locale: "ja") 
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
 
+  // Links joined onto a base URL with a trailing slash arrive as //settings/billing.
+  if (pathname.includes("//")) {
+    const url = request.nextUrl.clone();
+    url.pathname = pathname.replace(/\/{2,}/g, "/");
+    return NextResponse.redirect(url, 308);
+  }
+
   if (pathname === JA_PREFIX || pathname === `${JA_PREFIX}/`) {
     return rewriteLocalized(request, "/home", "ja");
   }

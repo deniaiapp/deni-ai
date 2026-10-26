@@ -74,6 +74,16 @@ test("reads the plan budget of the Deni AI user without caching it", async () =>
     manageUrl: "https://deniai.test/settings/billing",
   });
 });
+test("the billing link has one slash when the app URL ends with one", async () => {
+  state.env.NEXT_PUBLIC_BETTER_AUTH_URL = "https://deniai.test/";
+  try {
+    expect((await (await get(auth())).json()).manageUrl).toBe(
+      "https://deniai.test/settings/billing",
+    );
+  } finally {
+    state.env.NEXT_PUBLIC_BETTER_AUTH_URL = "https://deniai.test";
+  }
+});
 test.each([
   [undefined, 404],
   [{ isAnonymous: true }, 403],

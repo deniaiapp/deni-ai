@@ -522,7 +522,9 @@ export const auth = betterAuth({
       },
       sendInvitationEmail: emailEnabled
         ? async (data) => {
-            const url = `${env.NEXT_PUBLIC_BETTER_AUTH_URL}/settings/team?invitationId=${data.id}`;
+            const invitationUrl = new URL("/settings/team", env.NEXT_PUBLIC_BETTER_AUTH_URL);
+            invitationUrl.searchParams.set("invitationId", data.id);
+            const url = invitationUrl.toString();
             await sendEmail({
               to: data.email,
               subject: orgInvitationEmailSubject(data.organization.name),
@@ -589,7 +591,10 @@ export const auth = betterAuth({
                 currentEmail: user.email,
                 newEmail,
                 confirmUrl: url,
-                securityUrl: `${env.NEXT_PUBLIC_BETTER_AUTH_URL}/account/security`,
+                securityUrl: new URL(
+                  "/account/security",
+                  env.NEXT_PUBLIC_BETTER_AUTH_URL,
+                ).toString(),
               }),
             });
           }
