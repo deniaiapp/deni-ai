@@ -2,14 +2,16 @@
 
 Internal scripts for maintainers. Run from the **repository root** with pnpm. Package scripts explicitly load `.env.local` when present; production maintenance uses `.env.production`.
 
-| Script                           | npm script                                   | Purpose                                                                                              |
-| -------------------------------- | -------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| `codename-generator.ts`          | `pnpm run tools:codename`                    | Generate Deni AI version codenames                                                                   |
-| `commit.ts`                      | `pnpm run tools:commit`                      | Conventional commit messages via OpenRouter                                                          |
-| `grant-card-flash-offer.ts`      | `pnpm run tools:grant-card-flash-offer`      | One-off flash offer for card-verified users (dry run unless `--apply`)                               |
-| `purge-anonymous.ts`             | `pnpm run tools:purge-anonymous`             | Purge anonymous users and their stored files (uses `.env.production`)                                |
-| `migrate-private-attachments.ts` | `pnpm run tools:migrate-private-attachments` | Move pre-private-storage uploads to private files (dry run unless `--apply`; uses `.env.production`) |
-| `stripe-portal-setup.ts`         | `pnpm run tools:stripe-portal`               | Stripe Customer Portal configuration                                                                 |
+| Script                         | npm script                                 | Purpose                                                                                                         |
+| ------------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
+| `codename-generator.ts`        | `pnpm run tools:codename`                  | Generate Deni AI version codenames                                                                              |
+| `commit.ts`                    | `pnpm run tools:commit`                    | Conventional commit messages via OpenRouter                                                                     |
+| `grant-card-flash-offer.ts`    | `pnpm run tools:grant-card-flash-offer`    | One-off flash offer for card-verified users (dry run unless `--apply`)                                          |
+| `purge-anonymous.ts`           | `pnpm run tools:purge-anonymous`           | Purge anonymous users and their stored files (uses `.env.production`)                                           |
+| `migrate-uploadthing-to-r2.ts` | `pnpm run tools:migrate-uploadthing-to-r2` | Copy UploadThing files to R2 (dry run unless `--apply`; uses `.env.production`)                                 |
+| `audit-uploadthing-storage.ts` | `pnpm run tools:audit-uploadthing-storage` | Read-only breakdown of the UploadThing files by what the database still references                              |
+| `migrate-legacy-chat-files.ts` | `pnpm run tools:migrate-legacy-chat-files` | Move files old chats reference by public UploadThing URLs to R2 with attachment rows (dry run unless `--apply`) |
+| `stripe-portal-setup.ts`       | `pnpm run tools:stripe-portal`             | Stripe Customer Portal configuration                                                                            |
 
 ## Commit helper
 
@@ -49,6 +51,25 @@ Production maintenance, for the move from UploadThing to R2 (see SETUP.md, "Atta
 ```sh
 pnpm run tools:migrate-uploadthing-to-r2
 pnpm run tools:migrate-uploadthing-to-r2 --apply
+```
+
+## Audit UploadThing storage
+
+Production maintenance, read only: run it before deleting the UploadThing app's files (SETUP.md, "Attachment storage move from UploadThing to R2", step 6). Loads `.env.production`; needs `DATABASE_URL` and `UPLOADTHING_TOKEN`, and checks the files the copy tool covers in R2 when the `R2_*` settings are set. Lists every UploadThing file and reports counts and sizes by UploadThing status, by what in the database references it (ready attachments and current data exports, which the copy tool covers; pending, deleting or stale rows; public URLs in saved chats or model comparisons from before storage became private; retired project files; profile images; nothing), and the files the copy tool skips by upload month. Files referenced by public URLs still show in those chats: deleting them breaks the chats. `--csv=<path>` also writes one line per file with its category.
+
+```sh
+pnpm run tools:audit-uploadthing-storage
+pnpm run tools:audit-uploadthing-storage --csv=uploadthing-audit.csv
+```
+
+## Move legacy chat files to R2
+
+Production maintenance, for files uploaded before storage became private: saved chats still reference them by public UploadThing URLs in file parts, with no attachment row, so the R2 copy tool skips them (the audit above lists them as "Public URL in a saved chat"). Loads `.env.production`; needs `DATABASE_URL`, `UPLOADTHING_TOKEN` and the `R2_*` settings. For each such file it copies the file to R2 under its UploadThing key, records a ready attachment row for the chat's owner (counted against their storage quota) tied to the chat, and rewrites the chat's file parts to `/api/attachments/<id>`, keeping the chat's `updated_at`. Dry run by default: it reports the chats and files found, the storage each account gains, and files it leaves alone (referenced by several accounts or recorded for another, recorded but being deleted, gone from UploadThing, or only mentioned outside file parts). `--apply` migrates; `--limit=<n>` stops after n chats. Nothing is deleted. Rerun until a dry run reports nothing left to migrate; a rerun also rewrites old URLs a tab loaded before the run saved back. Failures are listed and the script exits with status 1.
+
+```sh
+pnpm run tools:migrate-legacy-chat-files
+pnpm run tools:migrate-legacy-chat-files --apply --limit=50
+pnpm run tools:migrate-legacy-chat-files --apply
 ```
 
 ## Stripe Customer Portal
