@@ -13,10 +13,10 @@ import { recordModelSteps } from "./usage";
 
 const TOOL_INPUT_LIMIT = 600;
 const TOOL_OUTPUT_LIMIT = 6_000;
-/** Most transcript tokens summarized in one request. */
-const CHUNK_TOKEN_LIMIT = 120_000;
-/** Requests one compaction may make; anything older than they cover is left out, but stays searchable. */
-const MAX_CHUNKS = 3;
+/** Most transcript tokens in one request, so it stays under Haiku 5.5's 100K-token price step. */
+const CHUNK_TOKEN_LIMIT = 80_000;
+/** Parts one compaction summarizes; anything older is left out, but stays searchable. */
+const MAX_CHUNKS = 10;
 
 const COMPACT_SYSTEM = `You compact the earlier part of a conversation between a person and their AI teammate. The teammate continues from your summary and the most recent messages, and no longer sees what you summarize.
 Keep everything needed to carry on: the person's goals and requests, decisions and their reasons, what was done and what came of it, facts, names, numbers, amounts, dates, IDs, file paths, URLs, the data tool results returned that answers relied on, commitments, open tasks, and stated preferences. Copy figures exactly. Say when something was uncertain or not checked.
@@ -73,23 +73,24 @@ function chunked(entries: string[]) {
 async function summarize(userId: string, threadId: string, bot: Pick<Bot, "name">, plan: NonNullable<ReturnType<typeof compactionPlan>>) {
   const { chunks, partial } = chunked(plan.messages.map((message) => transcriptEntry(message, bot)));
   const { model, modelId } = await getSummaryModel(userId);
-  // Oldest first, each request extending the summary so far.
-  let summary = plan.previousSummary ?? "";
-  for (const [index, chunk] of chunks.entries()) {
-    const result = await generateText({
-      model,
-      system: COMPACT_SYSTEM,
-      prompt: [
-        summary ? `Summary so far:\n${summary}` : "",
-        index === 0 && partial ? "(Older messages are too long to include and are left out.)" : "",
-        `New messages:\n${chunk.join("\n\n")}`,
-      ].filter(Boolean).join("\n\n"),
-      maxOutputTokens: 4_000,
-    });
+  const ask = async (parts: string[]) => {
+    const result = await generateText({ model, system: COMPACT_SYSTEM, prompt: parts.filter(Boolean).join("\n\n"), maxOutputTokens: 4_000 });
     await recordModelSteps(userId, result.steps, modelId);
-    summary = result.text.trim();
-    if (!summary) return undefined;
+    return result.text.trim();
+  };
+  const leftOut = partial ? "(Older messages are too long to include and are left out.)" : "";
+  const previous = plan.previousSummary ? `Summary so far:\n${plan.previousSummary}` : "";
+  let summary: string;
+  if (chunks.length === 1) {
+    summary = await ask([previous, leftOut, `New messages:\n${chunks[0].join("\n\n")}`]);
+  } else {
+    // A long stretch is summarized part by part at once, then merged in order, so compaction
+    // takes two rounds of requests however much it covers.
+    const parts = await Promise.all(chunks.map((chunk) => ask([`New messages:\n${chunk.join("\n\n")}`])));
+    if (parts.some((part) => !part)) return undefined;
+    summary = await ask([previous, leftOut, `New messages, already summarized in parts, oldest first:\n${parts.map((part, index) => `Part ${index + 1}:\n${part}`).join("\n\n")}`]);
   }
+  if (!summary) return undefined;
   const marker = compactionMessage(createId("compact"), plan.throughMessageId, summary);
   await saveMessages(userId, threadId, [marker]);
   return marker;

@@ -138,16 +138,18 @@ export function isCompaction(message: UIMessage) {
   return message.role === "system" && (message.metadata as { kind?: unknown } | undefined)?.kind === COMPACTION;
 }
 
-// A conversation is compacted once the model's view of it passes the limit, keeping about the
-// last COMPACT_KEEP_TOKENS of turns verbatim. Tool results are never shortened, so the model
-// always sees what it based its answers on; the cut stays put between compactions, so the cached
-// prompt prefix keeps being reused.
-export const COMPACT_TOKEN_LIMIT = 150_000;
-const COMPACT_KEEP_TOKENS = 50_000;
+// The Run and Run+ models take 1M tokens. A conversation is compacted once the model's view of it
+// passes the limit, keeping about the last COMPACT_KEEP_TOKENS of turns verbatim. The rest of the
+// window is left for instructions and tool definitions, the tool results a turn adds before it can
+// compact again, the reply, and the error in estimateTokens. Tool results are never shortened, so
+// the model always sees what it based its answers on; the cut stays put between compactions, so
+// the cached prompt prefix keeps being reused.
+export const COMPACT_TOKEN_LIMIT = 700_000;
+const COMPACT_KEEP_TOKENS = 100_000;
 // If compaction fails, whole turns are trimmed from the front once the history passes the limit,
 // down to the target.
-export const HISTORY_TOKEN_LIMIT = 180_000;
-export const HISTORY_TOKEN_TARGET = 100_000;
+export const HISTORY_TOKEN_LIMIT = 750_000;
+export const HISTORY_TOKEN_TARGET = 500_000;
 const TRIMMED_NOTE = "[Earlier messages in this conversation were left out to save tokens. Call conversationHistory for a summary of them or to search them.]";
 const COMPACTED_NOTE = "[Earlier messages in this conversation were compacted into the summary below. Call conversationHistory to search or read them in full when you need a detail the summary leaves out.]";
 
