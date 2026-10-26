@@ -2,13 +2,6 @@ import { getModelDefinition } from '../agent/models';
 
 export type ModelCategory = "basic" | "premium";
 
-// Premium model patterns (high-end models)
-const PREMIUM_PATTERNS = [
-  // Claude models (matches both claude-3-opus and claude-opus-4-6 formats)
-  /claude-.*opus/i,
-  /claude-.*sonnet/i,
-];
-
 // Models that require a minimum tier to access
 // Each entry maps a pattern to the minimum tier required
 const TIER_RESTRICTED_MODELS: Array<{
@@ -23,22 +16,11 @@ const TIER_RESTRICTED_MODELS: Array<{
 ];
 
 /**
- * Determine if a model is premium or basic category
+ * Usage is no longer split by model class: every request spends the one pool shared
+ * with Deni AI chat and Deni Run, recorded on the "basic" quota row (the model's usage
+ * tier scales the amount). "premium" remains for rows written before the change.
  */
-export function getModelCategory(model: string): ModelCategory {
-  const definition = getModelDefinition(model);
-  if (definition?.premium) {
-    return "premium";
-  }
-
-  const modelLower = model.toLowerCase();
-
-  for (const pattern of PREMIUM_PATTERNS) {
-    if (pattern.test(modelLower)) {
-      return "premium";
-    }
-  }
-
+export function getModelCategory(_model: string): ModelCategory {
   return "basic";
 }
 

@@ -438,7 +438,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
     return c.json(
       {
         error: {
-          message: `Insufficient ${modelCategory} model ${quotaReservation.unit} quota to reserve this request (${usageEstimate.reservationAmount} estimated tokens). Please upgrade your plan or wait for quota reset.`,
+          message: `Insufficient monthly usage left to reserve this request (${usageEstimate.reservationAmount} estimated tokens). Please upgrade your plan or wait for the usage reset.`,
           type: 'quota_exceeded',
           param: null,
           code: 'USAGE_LIMIT_EXCEEDED',

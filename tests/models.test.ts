@@ -6,6 +6,7 @@ import {
   getModelContextWindow,
   getModelDefinition,
   getModelTokenUsageMultiplier,
+  isPremiumModelDefinition,
   DEFAULT_MODEL,
   listModelDefinitions,
   MODEL_DEFINITIONS,
@@ -21,12 +22,12 @@ describe("Claude Sonnet 5.5 model support", () => {
 
     expect(model?.id).toBe("anthropic/claude-sonnet-5.5");
     expect(model?.tier).toBe("free");
-    expect(getModelCategory("claude-sonnet-5-5")).toBe("premium");
+    expect(getModelCategory("claude-sonnet-5-5")).toBe("basic");
     expect(getRequiredTierForModel("claude-sonnet-5-5")).toBeNull();
     expect(model?.contextWindow).toBe(1_000_000);
     expect(model?.maxOutputTokens).toBe(128_000);
     expect(model?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
-    expect(getModelTokenUsageMultiplier("claude-sonnet-5-5")).toBe(3);
+    expect(getModelTokenUsageMultiplier("claude-sonnet-5-5")).toBe(1.5);
     expect(resolveAvailableModelId("anthropic/claude-sonnet-5-5")).toBe(
       "anthropic/claude-sonnet-5.5",
     );
@@ -71,13 +72,12 @@ describe("Claude Haiku 5.5 model support", () => {
 });
 
 describe("Codex long-context model support", () => {
-  test("registers GPT-6 Astra as a premium model", () => {
+  test("registers GPT-6 Astra at the top usage tier", () => {
     const definition = getModelDefinition("gpt-6-astra");
 
     expect(definition?.id).toBe("openai/gpt-6-astra");
-    expect(definition?.premium).toBe(true);
-    expect(getModelCategory("gpt-6-astra")).toBe("premium");
-    expect(getModelTokenUsageMultiplier("gpt-6-astra")).toBe(6);
+    expect(definition?.usageTier).toBe(10);
+    expect(getModelTokenUsageMultiplier("gpt-6-astra")).toBe(12);
   });
 
   test("registers GPT-6 Sol and Luna with current context limits", () => {
@@ -99,7 +99,7 @@ describe("Codex long-context model support", () => {
 
     expect(model?.id).toBe("openai/gpt-6.1-sol");
     expect(model?.label).toBe("GPT-6.1 Sol");
-    expect(model?.tokenUsageMultiplier).toBe(3);
+    expect(model?.usageTier).toBe(4);
     expect(model?.contextWindow).toBe(1_050_000);
     expect(model?.maxOutputTokens).toBe(128_000);
     expect(model?.efforts).toEqual(["low", "medium", "high", "xhigh", "max"]);
@@ -175,20 +175,20 @@ describe("Codex long-context model support", () => {
 
   test("charges Sonnet 5.5 at 1.5x on the free plan only", () => {
     expect(getModelTokenUsageMultiplier("claude-sonnet-5-5", "free")).toBe(1.5);
-    expect(getModelTokenUsageMultiplier("claude-sonnet-5-5", "plus")).toBe(3);
-    expect(getModelTokenUsageMultiplier("claude-sonnet-5-5")).toBe(3);
+    expect(getModelTokenUsageMultiplier("claude-sonnet-5-5", "plus")).toBe(1.5);
+    expect(getModelTokenUsageMultiplier("claude-sonnet-5-5")).toBe(1.5);
     expect(getModelTokenUsageMultiplier("gpt-6-luna", "free")).toBe(2);
   });
 
   test("assigns cost tiers explicitly to every registered model", () => {
     expect(
       MODEL_DEFINITIONS.every(
-        (model) => typeof model.tokenUsageMultiplier === "number",
+        (model) => typeof model.usageTier === "number",
       ),
     ).toBe(true);
     expect(getModelTokenUsageMultiplier("openai/gpt-5.6-sol")).toBe(4);
-    expect(getModelTokenUsageMultiplier("anthropic/claude-opus-5.5")).toBe(4);
-    expect(getModelTokenUsageMultiplier("anthropic/claude-fable-5.1")).toBe(6);
+    expect(getModelTokenUsageMultiplier("anthropic/claude-opus-5.5")).toBe(8);
+    expect(getModelTokenUsageMultiplier("anthropic/claude-fable-5.1")).toBe(12);
     expect(
       getModelTokenUsageMultiplier("google/gemini-3.1-pro-preview"),
     ).toBe(3);
@@ -216,5 +216,32 @@ describe("Codex long-context model support", () => {
     ).toEqual(["low", "medium", "high"]);
     expect(getModelDefinition("glm-4.6")).toBeUndefined();
     expect(getModelDefinition("grok-code-fast-1")).toBeUndefined();
+  });
+});
+
+describe("usage tiers", () => {
+  test("usage is not split by model class: every model spends the one pool", () => {
+    for (const model of MODEL_DEFINITIONS) {
+      expect(getModelCategory(model.id)).toBe("basic");
+    }
+    expect(getModelCategory("anthropic/claude-sonnet-5.5")).toBe("basic");
+  });
+
+  test("older clients still get a premium flag for Tier 5 and above", () => {
+    for (const model of MODEL_DEFINITIONS) {
+      expect(isPremiumModelDefinition(model)).toBe(model.usageTier >= 5);
+    }
+  });
+
+  test("clients still receive the multiplier and premium flag", () => {
+    const astra = listModelDefinitions().find((model) => model.id === "openai/gpt-6-astra");
+    expect(astra).toMatchObject({ usageTier: 10, tokenUsageMultiplier: 12, premium: true });
+    const luna = listModelDefinitions().find((model) => model.id === "openai/gpt-6-luna");
+    expect(luna).toMatchObject({ usageTier: 3, tokenUsageMultiplier: 2, premium: false });
+  });
+
+  test("Claude Sonnet 5.5 is Tier 2 (1.5x) on every plan", () => {
+    expect(getModelTokenUsageMultiplier("anthropic/claude-sonnet-5.5")).toBe(1.5);
+    expect(getModelTokenUsageMultiplier("anthropic/claude-sonnet-5.5", "free")).toBe(1.5);
   });
 });

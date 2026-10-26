@@ -19,6 +19,16 @@ export interface DeniUsageInfo {
     periodStart: string;
     periodEnd: string | null;
   }>;
+  /**
+   * The one monthly pool shared by Deni AI chat, Flixa, and Deni Run, in usage units.
+   * Usage is not split by model class; `usage` repeats it for older clients.
+   */
+  pool: {
+    limit: number;
+    used: number;
+    remaining: number;
+    periodEnd: string;
+  };
 }
 
 export interface BillingRow {

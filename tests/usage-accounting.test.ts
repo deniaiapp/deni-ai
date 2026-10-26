@@ -26,6 +26,17 @@ beforeAll(async () => {
     period_start TIMESTAMPTZ NOT NULL, period_end TIMESTAMPTZ,
     PRIMARY KEY (user_id, category)
   )`);
+  // Mirrors deni-ai/src/db/schema/product-usage.ts.
+  await db.exec(`CREATE TABLE product_usage (
+    id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+    user_id TEXT NOT NULL, product TEXT NOT NULL, metric TEXT NOT NULL, unit TEXT NOT NULL,
+    period_start TIMESTAMPTZ NOT NULL, used BIGINT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`);
+  await db.exec(
+    "CREATE UNIQUE INDEX product_usage_user_period_idx ON product_usage (user_id, product, metric, unit, period_start)",
+  );
+  await db.exec("CREATE TABLE signup_risk (user_id TEXT PRIMARY KEY)");
   poolSpy = spyOn(database, "getDeniPool").mockReturnValue({
     query: (sql: string, values: unknown[]) => db.query(sql, values),
   } as unknown as Pool);
@@ -43,7 +54,7 @@ beforeEach(async () => {
   Bun.env.FLIXA_USAGE_FINALIZE_ASYNC = "false";
   Bun.env.OPENROUTER_API_KEY = "local-test-key";
   Bun.env.DENI_AI_API_KEY = "deni_local_test_key";
-  await db.exec("TRUNCATE usage_quota, flixa_usage_reservation");
+  await db.exec("TRUNCATE usage_quota, flixa_usage_reservation, product_usage");
 });
 
 afterAll(async () => {
@@ -95,23 +106,34 @@ async function authContext(): Promise<AgentAuthContext> {
 }
 
 describe("atomic usage reservations", () => {
+  // The Free pool is $10 = 20M units, shared with basic usage and Deni Run.
   test("remaining 1 token admits only one of 20 requests", async () => {
-    await reserveUsageQuota("test-user", "premium", "free", false, 999_999);
+    await reserveUsageQuota("test-user", "premium", "free", false, 19_999_999);
     const results = await Promise.all(
       Array.from({ length: 20 }, () => reserveUsageQuota("test-user", "premium", "free", false, 1)),
     );
     expect(results.filter((r) => r.allowed)).toHaveLength(1);
-    expect(await used()).toBe(1_000_000);
+    expect(await used()).toBe(20_000_000);
   });
 
   test("concurrent first requests cannot exceed the quota", async () => {
     const results = await Promise.all(
       Array.from({ length: 20 }, () =>
-        reserveUsageQuota("test-user", "premium", "free", false, 100_000),
+        reserveUsageQuota("test-user", "premium", "free", false, 2_000_000),
       ),
     );
     expect(results.filter((r) => r.allowed)).toHaveLength(10);
-    expect(await used()).toBe(1_000_000);
+    expect(await used()).toBe(20_000_000);
+  });
+
+  test("basic usage and Deni Run spend the same pool", async () => {
+    await reserveUsageQuota("test-user", "basic", "free", false, 10_000_000);
+    // $2.50 of Deni Run = 5M units.
+    await db.exec(`INSERT INTO product_usage (user_id, product, metric, unit, period_start, used)
+      VALUES ('test-user', 'run', 'model', 'usd_micros',
+        date_trunc('month', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', 2500000)`);
+    expect((await reserveUsageQuota("test-user", "premium", "free", false, 5_000_001)).allowed).toBe(false);
+    expect((await reserveUsageQuota("test-user", "premium", "free", false, 5_000_000)).allowed).toBe(true);
   });
 
   test("settles differences exactly once, including duplicate concurrent retries", async () => {
@@ -121,6 +143,13 @@ describe("atomic usage reservations", () => {
     const second = await reserveUsageQuota("test-user", "premium", "free", false, 100);
     await settleUsageQuota(second.reservation!, 200);
     expect(await used()).toBe(230);
+    // Flixa's share of the shared quota is recorded once per settled receipt.
+    const ledger = await db.query<{ product: string; metric: string; used: number }>(
+      "SELECT product, metric, used FROM product_usage WHERE user_id = 'test-user'",
+    );
+    expect(ledger.rows.map((row) => ({ ...row, used: Number(row.used) }))).toEqual([
+      { product: "flixa", metric: "premium", used: 230 },
+    ]);
   });
 
   test("pre-response errors refund reservations", async () => {

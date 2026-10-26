@@ -1,4 +1,9 @@
 import type { ReasoningEffort } from "./types";
+import {
+  getUsageTierMultiplier,
+  isPremiumUsageTier,
+  type UsageTier,
+} from "./usage-tiers";
 
 export interface ModelDefinition {
   id: string;
@@ -11,13 +16,16 @@ export interface ModelDefinition {
   contextWindow?: number;
   /** Maximum number of tokens the model can generate in one request. */
   maxOutputTokens?: number;
-  premium?: boolean;
-  tokenUsageMultiplier?: number;
-  /** Overrides tokenUsageMultiplier for free-plan users only. */
-  freeTierTokenUsageMultiplier?: number;
+  /**
+   * Usage tier (see USAGE_TIER_MULTIPLIERS): each token counts as the tier's
+   * multiplier toward the quota. Tier 5 and above are premium models.
+   */
+  usageTier: UsageTier;
+  /** Overrides usageTier for free-plan users only. */
+  freeTierUsageTier?: UsageTier;
   /**
    * OpenAI 1M-context models charge more once the prompt exceeds this
-   * threshold (prompt/input tokens). Applied on top of tokenUsageMultiplier.
+   * threshold (prompt/input tokens). Applied on top of the usage tier.
    */
   longContextThreshold?: number;
   /** Multiplier applied when prompt tokens exceed longContextThreshold. */
@@ -153,8 +161,13 @@ export interface AnthropicModelDefinition {
   capabilities: AnthropicCapabilities;
 }
 
-// Quota cost tiers use the mean standard input/output price per 1M tokens:
-// < $5 = 1x, < $10 = 1.5x, < $20 = 2x, < $40 = 3x, < $60 = 4x, otherwise 5x.
+// Usage tiers follow the mean standard input/output price per 1M tokens:
+// < $5 = Tier 1 (1x), < $10 = Tier 2 (1.5x), < $20 = Tier 3 (2x), < $40 = Tier 4 (3x),
+// < $60 = Tier 5 (4x), < $80 = Tier 6 (5x), otherwise Tier 7 (6x); Tiers 8-10 (8x, 10x,
+// 12x) continue the ladder. Models that used the premium quota before usage was merged
+// into one pool (premium flag, or Claude Sonnet/Opus) are rated at twice their previous
+// multiplier, since premium usage was worth about twice as much.
+// Exception: Claude Sonnet 5.5 is Tier 2 (1.5x) on every plan.
 // Rates checked 2026-09-23 against:
 // https://developers.openai.com/api/docs/pricing
 // https://platform.claude.com/docs/en/about-claude/pricing
@@ -163,19 +176,18 @@ export interface AnthropicModelDefinition {
 export const MODEL_DEFINITIONS: ModelDefinition[] = [
   {
     id: "openai/gpt-6-astra",
-    tokenUsageMultiplier: 6,
+    usageTier: 10,
     label: "GPT-6 Astra",
     description: "OpenAI flagship for advanced analysis, software engineering, and deep research.",
     tags: ["general", "reasoning", "agentic", "long-context"],
     efforts: OPENAI_GPT_6_EFFORTS,
-    premium: true,
     ...OPENAI_1M_CONTEXT,
     ...OPENAI_1M_LONG_CONTEXT,
     tier: "plus",
   },
   {
     id: "openai/gpt-6-sol",
-    tokenUsageMultiplier: 3,
+    usageTier: 4,
     label: "GPT-6 Sol",
     description: "High-end GPT-6 model below Astra: strong reasoning, coding, and agentic work at lower cost.",
     tags: ["general", "reasoning", "coding", "agentic", "codex", "long-context"],
@@ -186,7 +198,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "openai/gpt-6.1-sol",
-    tokenUsageMultiplier: 3,
+    usageTier: 4,
     label: "GPT-6.1 Sol",
     description: "Upgrade to GPT-6 Sol for agentic coding, computer use, and document-heavy work.",
     tags: ["general", "reasoning", "coding", "agentic", "long-context"],
@@ -197,7 +209,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "openai/gpt-6-luna",
-    tokenUsageMultiplier: 2,
+    usageTier: 3,
     label: "GPT-6 Luna",
     description: "Fast, low-cost GPT-6 model for high-volume, latency-sensitive tasks.",
     tags: ["general", "reasoning", "fast", "lightweight", "codex", "long-context"],
@@ -213,7 +225,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   // https://platform.claude.com/docs/en/about-claude/pricing
   {
     id: "anthropic/claude-haiku-5.5",
-    tokenUsageMultiplier: 2,
+    usageTier: 3,
     label: "Claude Haiku 5.5",
     description: "Anthropic's fastest model for high-volume, latency-sensitive tasks such as classification, extraction, and routing.",
     tags: ["fast", "lightweight", "long-context"],
@@ -227,8 +239,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   // https://platform.claude.com/docs/en/models/sonnet-5-5/overview
   {
     id: "anthropic/claude-sonnet-5.5",
-    tokenUsageMultiplier: 3,
-    freeTierTokenUsageMultiplier: 1.5,
+    usageTier: 2,
     label: "Claude Sonnet 5.5",
     description: "Sonnet-class model for everyday coding, agents, and knowledge work.",
     tags: ["balanced", "coding", "agentic", "long-context"],
@@ -239,31 +250,29 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "anthropic/claude-fable-5.1",
-    tokenUsageMultiplier: 6,
+    usageTier: 10,
     label: "Claude Fable 5.1",
     description: "Improves on Fable 5, mainly in agentic coding, long-running workflows, and knowledge work.",
     tags: ["coding", "agentic", "long-context"],
     efforts: ANTHROPIC_FABLE_OPUS_EFFORTS,
-    premium: true,
     contextWindow: 1_000_000,
     maxOutputTokens: 128_000,
     tier: "plus",
   },
   {
     id: "anthropic/claude-opus-5.5",
-    tokenUsageMultiplier: 4,
+    usageTier: 8,
     label: "Claude Opus 5.5",
     description: "Anthropic flagship for demanding reasoning, coding, and long-horizon agentic work.",
     tags: ["powerful", "agentic"],
     efforts: ANTHROPIC_FABLE_OPUS_EFFORTS,
     contextWindow: 1_000_000,
     maxOutputTokens: 128_000,
-    premium: true,
     tier: "plus",
   },
   {
     id: "google/gemini-3.8-flash",
-    tokenUsageMultiplier: 2,
+    usageTier: 3,
     label: "Gemini 3.8 Flash",
     description: "Google's most intelligent Flash model, strong in software engineering and agentic tasks.",
     tags: ["fast", "coding", "agentic"],
@@ -274,7 +283,7 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
   },
   {
     id: "google/gemini-3.5-flash-lite",
-    tokenUsageMultiplier: 2,
+    usageTier: 3,
     label: "Gemini 3.5 Flash Lite",
     description: "High-efficiency Google model for focused subagent tasks.",
     tags: ["fast"],
@@ -287,12 +296,28 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
 
 export const DEFAULT_MODEL = "openai/gpt-6-luna";
 export const AVAILABLE_MODELS = MODEL_DEFINITIONS.map((model) => model.id);
-export const DEFAULT_TOKEN_USAGE_MULTIPLIER = 2;
+/** Usage tier of models that are not registered (Tier 3, 2x). */
+export const DEFAULT_USAGE_TIER: UsageTier = 3;
+export const DEFAULT_TOKEN_USAGE_MULTIPLIER = getUsageTierMultiplier(DEFAULT_USAGE_TIER);
 
 /** Model definitions as exposed to clients; flags the default model. */
-export function listModelDefinitions(): Array<ModelDefinition & { default: boolean }> {
+/** Premium models: Tier 5 and above. */
+export function isPremiumModelDefinition(model: ModelDefinition | undefined): boolean {
+  return isPremiumUsageTier(model?.usageTier);
+}
+
+/**
+ * Model definitions as exposed to clients; flags the default model. `premium`
+ * and `tokenUsageMultiplier` are derived from the usage tier and kept for
+ * clients that predate usage tiers.
+ */
+export function listModelDefinitions(): Array<
+  ModelDefinition & { default: boolean; premium: boolean; tokenUsageMultiplier: number }
+> {
   return MODEL_DEFINITIONS.map((model) => ({
     ...model,
+    premium: isPremiumModelDefinition(model),
+    tokenUsageMultiplier: getUsageTierMultiplier(model.usageTier),
     default: model.id === DEFAULT_MODEL,
   }));
 }
@@ -539,14 +564,11 @@ export function getModelTokenUsageMultiplier(
   tier?: ModelDefinition["tier"],
 ): number {
   const definition = getModelDefinition(modelId);
-  const multiplier =
-    (tier === "free" ? definition?.freeTierTokenUsageMultiplier : undefined) ??
-    definition?.tokenUsageMultiplier ??
-    DEFAULT_TOKEN_USAGE_MULTIPLIER;
-
-  return Number.isFinite(multiplier) && multiplier > 0
-    ? multiplier
-    : DEFAULT_TOKEN_USAGE_MULTIPLIER;
+  const usageTier =
+    (tier === "free" ? definition?.freeTierUsageTier : undefined) ??
+    definition?.usageTier ??
+    DEFAULT_USAGE_TIER;
+  return getUsageTierMultiplier(usageTier);
 }
 
 /**

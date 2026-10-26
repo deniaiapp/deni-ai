@@ -23,33 +23,86 @@ const BILLING_PRIORITY_ORDER = `CASE
   ELSE 2
 END`;
 
-// Tier-based usage limits
-const TIER_LIMITS = {
-  free: { unit: "tokens", basic: 10_000_000, premium: 1_000_000 },
-  plus: { unit: "tokens", basic: 150_000_000, premium: 50_000_000 },
-  pro: { unit: "tokens", basic: 300_000_000, premium: 150_000_000 },
-  max: { unit: "tokens", basic: 800_000_000, premium: 450_000_000 },
-} as const;
+// One monthly pool per plan, shared by Deni AI chat, Flixa, and Deni Run. Must match
+// deni-ai/src/lib/usage-pool.ts: the pool is priced in USD, and weighted tokens and
+// Deni Run's cost are both counted in usage units (1M units = $0.50).
+const USAGE_POOL_USD: Record<UsageTier, number> = {
+  free: 10,
+  plus: 100,
+  pro: 200,
+  max: 300,
+};
+const VERIFIED_FREE_POOL_USD = 15;
+const FLAGGED_FREE_POOL_USD = 2;
+const USAGE_UNITS_PER_USD = 2_000_000;
+/** Deni Run's ledger (product_usage, product 'run') is in micro-dollars. */
+const USAGE_UNITS_PER_USD_MICRO = USAGE_UNITS_PER_USD / 1_000_000;
 
-const VERIFIED_FREE_LIMITS = {
-  basic: 25_000_000,
-  premium: 2_000_000,
-} as const;
-
-export function getUsageUnitForTier(tier: UsageTier): UsageUnit {
-  return TIER_LIMITS[tier].unit;
+export function getUsageUnitForTier(_tier: UsageTier): UsageUnit {
+  return "tokens";
 }
 
-function getUsageLimit(
-  category: ModelCategory,
+function getPoolUnits(
   tier: UsageTier,
-  hasVerifiedPaymentMethod = false,
+  hasVerifiedPaymentMethod: boolean,
+  signupFlagged: boolean,
 ): number {
   if (tier === "free" && hasVerifiedPaymentMethod) {
-    return VERIFIED_FREE_LIMITS[category];
+    return VERIFIED_FREE_POOL_USD * USAGE_UNITS_PER_USD;
   }
+  if (tier === "free" && signupFlagged) {
+    return FLAGGED_FREE_POOL_USD * USAGE_UNITS_PER_USD;
+  }
+  return USAGE_POOL_USD[tier] * USAGE_UNITS_PER_USD;
+}
 
-  return TIER_LIMITS[tier][category];
+interface PoolUsage {
+  /** Current-period usage per quota category, in units. */
+  quota: Record<ModelCategory, number>;
+  /** Deni Run's spend this month, in units. */
+  run: number;
+  signupFlagged: boolean;
+}
+
+/** Everything that draws on the shared pool this month, read in one round trip. */
+async function getPoolUsage(userId: string): Promise<PoolUsage> {
+  const result = await getDeniPool().query<{
+    basic: string | number;
+    premium: string | number;
+    run_micros: string | number;
+    flagged: boolean;
+  }>(
+    `SELECT
+       COALESCE((SELECT SUM(used) FROM usage_quota WHERE user_id = $1 AND category = 'basic'
+         AND unit = 'tokens' AND period_end IS NOT NULL AND period_end > NOW()), 0) AS basic,
+       COALESCE((SELECT SUM(used) FROM usage_quota WHERE user_id = $1 AND category = 'premium'
+         AND unit = 'tokens' AND period_end IS NOT NULL AND period_end > NOW()), 0) AS premium,
+       COALESCE((SELECT SUM(used) FROM product_usage WHERE user_id = $1 AND product = 'run'
+         AND unit = 'usd_micros'
+         AND period_start = date_trunc('month', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'), 0)
+         AS run_micros,
+       EXISTS (SELECT 1 FROM signup_risk WHERE user_id = $1) AS flagged`,
+    [userId],
+  );
+  const row = result.rows[0];
+  return {
+    quota: { basic: Number(row?.basic ?? 0), premium: Number(row?.premium ?? 0) },
+    run: Math.round(Number(row?.run_micros ?? 0) * USAGE_UNITS_PER_USD_MICRO),
+    signupFlagged: Boolean(row?.flagged),
+  };
+}
+
+/** What the pool leaves for one category after the other category and Deni Run. */
+async function getCategoryLimit(
+  userId: string,
+  category: ModelCategory,
+  tier: UsageTier,
+  hasVerifiedPaymentMethod: boolean,
+): Promise<number> {
+  const usage = await getPoolUsage(userId);
+  const other = category === "basic" ? usage.quota.premium : usage.quota.basic;
+  const pool = getPoolUnits(tier, hasVerifiedPaymentMethod, usage.signupFlagged);
+  return Math.max(pool - other - usage.run, 0);
 }
 
 function getWebBaseUrl(): string {
@@ -284,7 +337,7 @@ export async function getDeniBillingProfile(
  */
 export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   const pool = getDeniPool();
-  const [billingProfile, usageResult] = await Promise.all([
+  const [billingProfile, usageResult, poolUsage] = await Promise.all([
     getDeniBillingProfile(userId),
     pool.query<UsageQuotaRow>(
       `SELECT category, plan_tier, limit_amount, unit, used, period_start, period_end
@@ -292,8 +345,10 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
        WHERE user_id = $1`,
       [userId],
     ),
+    getPoolUsage(userId),
   ]);
   const { billing, isTeam, tier, hasVerifiedPaymentMethod } = billingProfile;
+  const poolLimit = getPoolUnits(tier, hasVerifiedPaymentMethod, poolUsage.signupFlagged);
 
   // Determine Max Mode eligibility
   const maxModeEligible =
@@ -309,42 +364,29 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   const unit = getUsageUnitForTier(tier);
   const usage: DeniUsageInfo["usage"] = [];
 
-  // Process each category
+  // Usage is not split by model class. Both entries report the one pool and its total
+  // use; the "premium" entry is kept so older extension and CLI versions keep working.
+  const quotaUsed = (category: ModelCategory) => {
+    const row = usageResult.rows.find((r) => r.category === category);
+    return row && !shouldResetUsageRow(row, now, tier, unit) ? Number(row.used) : 0;
+  };
+  const totalUsed = quotaUsed("basic") + quotaUsed("premium") + poolUsage.run;
   for (const category of ["basic", "premium"] as const) {
     const quotaRow = usageResult.rows.find((r) => r.category === category);
-    const limit = getUsageLimit(category, tier, hasVerifiedPaymentMethod);
-
-    if (quotaRow) {
-      const needsReset = shouldResetUsageRow(quotaRow, now, tier, unit);
-      const used = needsReset ? 0 : quotaRow.used;
-      const remaining = Math.max(limit - used, 0);
-
-      usage.push({
-        category,
-        unit,
-        limit,
-        used,
-        remaining,
-        periodStart: needsReset
-          ? now.toISOString()
-          : new Date(quotaRow.period_start).toISOString(),
-        periodEnd: needsReset
-          ? defaultPeriodEnd
-          : quotaRow.period_end
-            ? new Date(quotaRow.period_end).toISOString()
-            : null,
-      });
-    } else {
-      usage.push({
-        category,
-        unit,
-        limit,
-        used: 0,
-        remaining: limit,
-        periodStart: now.toISOString(),
-        periodEnd: defaultPeriodEnd,
-      });
-    }
+    const current = quotaRow && !shouldResetUsageRow(quotaRow, now, tier, unit);
+    usage.push({
+      category,
+      unit,
+      limit: poolLimit,
+      used: totalUsed,
+      remaining: Math.max(poolLimit - totalUsed, 0),
+      periodStart: current ? new Date(quotaRow.period_start).toISOString() : now.toISOString(),
+      periodEnd: current
+        ? quotaRow.period_end
+          ? new Date(quotaRow.period_end).toISOString()
+          : null
+        : defaultPeriodEnd,
+    });
   }
 
   return {
@@ -362,6 +404,12 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
     maxModeEnabled,
     maxModeEligible,
     usage,
+    pool: {
+      limit: poolLimit,
+      used: totalUsed,
+      remaining: Math.max(poolLimit - totalUsed, 0),
+      periodEnd: defaultPeriodEnd,
+    },
   };
 }
 
@@ -411,7 +459,7 @@ export async function reserveUsageQuota(
   if (!Number.isSafeInteger(amount) || amount <= 0) {
     throw new Error("Usage reservation must be a positive safe integer");
   }
-  const limit = getUsageLimit(category, tier, hasVerifiedPaymentMethod);
+  const limit = await getCategoryLimit(userId, category, tier, hasVerifiedPaymentMethod);
   const unit = getUsageUnitForTier(tier);
   if (amount > limit) return { allowed: false, remaining: limit, reserved: false, unit };
   await ensureReservationTable();
@@ -462,18 +510,31 @@ export async function settleUsageQuota(
   if (!Number.isSafeInteger(actualAmount) || actualAmount < 0) {
     throw new Error("Actual usage must be a non-negative safe integer");
   }
+  // The product_usage row (owned by Deni AI's schema) records Flixa's share of
+  // the quota it shares with Deni AI chat, for the combined usage view. It is
+  // written from the same deleted receipt, so it is counted exactly once.
   await getDeniPool().query(
     `WITH receipt AS (
        DELETE FROM flixa_usage_reservation WHERE id = $1::uuid
-       RETURNING user_id, category, plan_tier, period_start, amount
+       RETURNING user_id, category, plan_tier, period_start, amount, created_at
+     ), quota AS (
+       UPDATE usage_quota q
+       SET used = GREATEST(0, q.used - receipt.amount + $2::bigint)
+       FROM receipt
+       WHERE q.user_id = $3 AND q.category = $4
+         AND q.user_id::text = receipt.user_id AND q.category::text = receipt.category
+         AND q.plan_tier::text = receipt.plan_tier AND q.unit = 'tokens'
+         AND EXTRACT(EPOCH FROM q.period_start)::text = receipt.period_start
+       RETURNING q.user_id
      )
-     UPDATE usage_quota q
-     SET used = GREATEST(0, q.used - receipt.amount + $2::bigint)
+     INSERT INTO product_usage (user_id, product, metric, unit, period_start, used)
+     SELECT receipt.user_id, 'flixa', receipt.category, 'tokens',
+            date_trunc('month', receipt.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',
+            $2::bigint
      FROM receipt
-     WHERE q.user_id = $3 AND q.category = $4
-       AND q.user_id::text = receipt.user_id AND q.category::text = receipt.category
-       AND q.plan_tier::text = receipt.plan_tier AND q.unit = 'tokens'
-       AND EXTRACT(EPOCH FROM q.period_start)::text = receipt.period_start`,
+     WHERE $2::bigint > 0
+     ON CONFLICT (user_id, product, metric, unit, period_start)
+     DO UPDATE SET used = product_usage.used + EXCLUDED.used, updated_at = NOW()`,
     [reservation.id, actualAmount, reservation.userId, reservation.category],
   );
 }
