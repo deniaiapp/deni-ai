@@ -1,5 +1,5 @@
 import { useExtracted, useLocale } from "@/i18n/react";
-import { useRouter } from "@tanstack/react-router";
+import { getRouteApi, useRouter } from "@tanstack/react-router";
 import { useState, useTransition } from "react";
 import {
   CreditCard,
@@ -40,6 +40,8 @@ import { localeLabels } from "./language-switcher";
 import type { UsageSnapshot } from "@/lib/plans";
 
 
+const homeRoute = getRouteApi("/");
+
 export function AccountMenu({
   usage,
   onOpenBilling,
@@ -48,8 +50,8 @@ export function AccountMenu({
   onOpenBilling: () => void;
 }) {
   const t = useExtracted();
-  const { data: session } = authClient.useSession();
-  const user = session?.user;
+  const loaded = homeRoute.useLoaderData();
+  const user = "account" in loaded ? loaded.account : undefined;
   const router = useRouter();
   const locale = useLocale();
   const { theme, setTheme } = useTheme();

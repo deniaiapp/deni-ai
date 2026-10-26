@@ -97,6 +97,12 @@ export const auth = betterAuth({
       allowDifferentEmails: true,
     },
   },
+  session: {
+    // Every request checks the session, and each database read is a round trip to D1. A signed
+    // cookie carries the session for a few minutes instead. A session revoked on another device
+    // stays usable here until then.
+    cookieCache: { enabled: true, maxAge: 5 * 60 },
+  },
   user: {
     deleteUser: {
       enabled: true,
@@ -173,7 +179,12 @@ export async function getAuthSession() {
     }).onConflictDoNothing();
     return { user: { id: LOCAL_USER_ID, name: "Local developer", email: LOCAL_USER_EMAIL, twoFactorEnabled: true } };
   }
-  return auth.api.getSession({ headers: requestHeaders });
+  const session = await auth.api.getSession({ headers: requestHeaders });
+  // Two-factor setup turns the flag on in the database, which the cached cookie does not see yet.
+  if (session?.user.id && !session.user.twoFactorEnabled) {
+    return auth.api.getSession({ headers: requestHeaders, query: { disableCookieCache: true } });
+  }
+  return session;
 }
 
 export async function getAuthenticatedUserId() {
