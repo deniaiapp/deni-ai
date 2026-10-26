@@ -3,7 +3,7 @@ import "@tanstack/react-start/server-only";
 import { convertToModelMessages, isStepCount, streamText, type UIMessage } from "ai";
 import { createId, nowIso } from "./ids";
 import { getDeniModel } from "./llm";
-import { compactMessagesForModel } from "./messages";
+import { messagesForModel } from "./messages";
 import { loadMessages, mutateStore, readStore, saveMessages } from "./store";
 import type { HandoffSnapshot, HandoffStep } from "./types";
 import { translateError, translateMessage, translatorFor } from "./i18n-server";
@@ -181,7 +181,7 @@ async function executeHandoff(run: HandoffRun, messages: UIMessage[]) {
     )}
 
 This is a handoff from ${run.fromBotName}. Complete the work and report back concisely. Do not hand the work off again.`,
-    messages: await convertToModelMessages(compactMessagesForModel(messages)),
+    messages: await convertToModelMessages(messagesForModel(messages)),
     tools: createDeniTools({
       userId: run.userId,
       bot: target,

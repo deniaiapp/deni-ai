@@ -1,10 +1,14 @@
 import { convertToModelMessages, type UIMessage } from "ai";
 import {
-  compactMessagesForModel,
+  COMPACT_TOKEN_LIMIT,
+  compactionMessage,
+  compactionPlan,
   contextResetMessage,
   HISTORY_TOKEN_LIMIT,
   HISTORY_TOKEN_TARGET,
+  isCompaction,
   isContextReset,
+  messagesForModel,
   modelContextMessages,
 } from "../lib/messages";
 
@@ -36,7 +40,7 @@ assert(afterReset.length === 1 && afterReset[0].id === "new", `after reset: ${af
 const twoResets = modelContextMessages([user("a", "1"), reset, user("b", "2"), contextResetMessage("reset_2"), user("c", "3")]);
 assert(twoResets.map((m) => m.id).join() === "c", "the latest reset wins");
 assert(modelContextMessages([user("a", "1"), reset]).length === 0, "nothing after a trailing reset");
-const modelInput = await convertToModelMessages(compactMessagesForModel([user("old", "secret"), reset, user("new", "hello")]));
+const modelInput = await convertToModelMessages(messagesForModel([user("old", "secret"), reset, user("new", "hello")]));
 assert(modelInput.length === 1 && modelInput[0].role === "user" && !JSON.stringify(modelInput).includes("secret"), "model input leaked pre-reset text");
 
 // A short conversation is passed through untouched.
@@ -72,37 +76,41 @@ const huge = [...conversation(3, 500), user("big", "do it"), assistant("big-a", 
 const hugeWindow = modelContextMessages(huge);
 assert(hugeWindow[0].id === "big" && hugeWindow.length === 2, `oversized turn: ${hugeWindow.map((m) => m.id)}`);
 
-// Large tool output is weighed after slimming, so a few big results do not wipe the history.
-const toolTurn = (index: number): UIMessage[] => [
-  user(`tu${index}`, `fetch page ${index}`),
-  {
-    id: `ta${index}`,
-    role: "assistant",
-    parts: [
-      { type: "tool-browser", toolCallId: `call${index}`, state: "output-available", input: { url: "https://example.com" }, output: { content: "z".repeat(200_000) } },
-      { type: "text", text: "done" },
-    ],
-  } as unknown as UIMessage,
-];
-const tools = Array.from({ length: 6 }, (_, index) => toolTurn(index)).flat();
-assert(modelContextMessages(tools).length === tools.length, "slimmed tool output should fit the budget");
-
-// A shortened result still shows what the tool returned, or the model takes back what it reported.
-const replayed = (output: unknown) =>
-  JSON.stringify(compactMessagesForModel([user("q", "check"), { id: "r", role: "assistant", parts: [{ type: "tool-mcp", toolCallId: "r1", state: "output-available", input: {}, output }] } as unknown as UIMessage]));
-assert(replayed({ content: [{ type: "text", text: `LIN-42 is Done. ${"detail ".repeat(2_000)}` }] }).includes("LIN-42 is Done."), "a large MCP result lost its text");
-assert(replayed(Array.from({ length: 50 }, (_, index) => ({ number: index, title: `Issue ${index}`, body: "b".repeat(300) }))).includes("Issue 0"), "a large list result lost its items");
-
-// The previous turn's results stay whole, so a follow-up sees every item the answer was based on.
+// Tool results reach the model whole, however old: it answered from them, and a later turn that
+// sees only part of a result reads that answer as made up.
 const subscriptions = { content: [{ type: "text", text: JSON.stringify(Array.from({ length: 10 }, (_, index) => ({ id: `sub_${index}`, status: "active", note: "x".repeat(4_000) }))) }] };
 const resultTurn = (id: string): UIMessage[] => [
   user(`${id}-q`, "list subscriptions"),
-  { id, role: "assistant", parts: [{ type: "tool-mcp", toolCallId: `${id}-call`, state: "output-available", input: {}, output: subscriptions }] } as unknown as UIMessage,
+  { id, role: "assistant", parts: [{ type: "tool-mcp", toolCallId: `${id}-call`, state: "output-available", input: {}, output: subscriptions }, { type: "text", text: "10 active" }] } as unknown as UIMessage,
 ];
-const followUp = JSON.stringify(compactMessagesForModel([...resultTurn("prev"), user("f", "forecast next month?")]));
-assert(followUp.includes("sub_9"), "the previous turn's result was cut");
-const later = JSON.stringify(compactMessagesForModel([...resultTurn("old"), ...conversation(3, 50), user("f", "and now?")]));
-assert(!later.includes("sub_9") && later.includes("sub_0") && later.includes("saw the whole result"), "an older result should be cut with a note saying so");
+const later = JSON.stringify(messagesForModel([...resultTurn("old"), ...conversation(8, 500), user("f", "and now?")]));
+assert(later.includes("sub_9") && later.includes("sub_0"), "an earlier tool result was shortened");
+
+// Under the limit nothing is compacted.
+assert(compactionPlan(conversation(10, 500)) === undefined, "a short conversation should not be compacted");
+
+// Past the limit, older turns are summarized and recent turns stay verbatim, cut on a whole turn.
+const COMPACT_TURN = Math.ceil(COMPACT_TOKEN_LIMIT / 20);
+const big = [...conversation(30, COMPACT_TURN), user("now", "what next?")];
+const plan = compactionPlan(big);
+assert(plan !== undefined, "a long conversation should be compacted");
+const throughIndex = big.findIndex((message) => message.id === plan!.throughMessageId);
+assert(big[throughIndex + 1]?.role === "user", "the kept part must open on a user message");
+assert(plan!.messages.at(-1)?.id === plan!.throughMessageId && plan!.messages[0].id === "u0", "the plan covers the view up to the cut");
+assert(throughIndex < big.length - 2, "recent turns must stay verbatim");
+
+// The model then sees the summary in place of the compacted turns, and the rest as it was.
+const compacted = [...big, compactionMessage("compact_1", plan!.throughMessageId, "SUMMARY: user wants a forecast")];
+const view = modelContextMessages(compacted);
+assert(view[0].id === big[throughIndex + 1].id && text(view[0]).includes("SUMMARY: user wants a forecast"), "the summary opens the view");
+assert(!view.some((message) => message.id === "u0" || isCompaction(message)), "compacted turns and the marker stay out of the view");
+assert(view.at(-1)?.id === "now", "newest message dropped after compaction");
+assert(compactionPlan(compacted) === undefined, "a compacted conversation should not compact again right away");
+
+// A reset after a compaction wins, and a compaction whose last message is gone is ignored.
+assert(modelContextMessages([...compacted, contextResetMessage("reset_c"), user("fresh", "hi")]).map((m) => m.id).join() === "fresh", "a later reset must win");
+const orphan = modelContextMessages([user("a", "1"), compactionMessage("compact_x", "missing", "lost"), user("b", "2")]);
+assert(orphan.map((m) => m.id).join() === "a,b" && !JSON.stringify(orphan).includes("lost"), "an orphaned compaction should be ignored");
 
 // Saved signed thinking is dropped: Anthropic rejects it once the prefix before it changes.
 const signed = { openrouter: { reasoning_details: [{ type: "reasoning.text", text: "plan", signature: "sig" }] } };
@@ -115,9 +123,9 @@ const thinkingTurn = (id: string, steps: number): UIMessage => ({
     { type: "tool-browser", toolCallId: `${id}-${step}`, state: "output-available", input: {}, output: { ok: true }, callProviderMetadata: signed },
   ]).flat(),
 } as unknown as UIMessage);
-const olderThinking = JSON.stringify(await convertToModelMessages(compactMessagesForModel([user("q1", "hi"), thinkingTurn("old", 1), user("q2", "again")])));
+const olderThinking = JSON.stringify(await convertToModelMessages(messagesForModel([user("q1", "hi"), thinkingTurn("old", 1), user("q2", "again")])));
 assert(!olderThinking.includes("signature") && !olderThinking.includes("old thought"), "earlier thinking must not reach the model");
-const resumed = JSON.stringify(await convertToModelMessages(compactMessagesForModel([user("q1", "hi"), thinkingTurn("old", 1), user("q2", "go"), thinkingTurn("now", 2)])));
+const resumed = JSON.stringify(await convertToModelMessages(messagesForModel([user("q1", "hi"), thinkingTurn("old", 1), user("q2", "go"), thinkingTurn("now", 2)])));
 assert(resumed.includes("now thought 0") && resumed.includes("now thought 1") && !resumed.includes("old thought"), "a resumed turn keeps all its thinking, earlier turns none");
 
 console.log("context window verification passed");

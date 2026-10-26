@@ -30,7 +30,8 @@ import {
 import { getDeniModel } from "./llm";
 import { groupContext, groupRecipients } from "./group-chat";
 import { discordTargetGroup, groupMembers } from "./groups";
-import { compactMessagesForModel, mergeThreadMessages } from "./messages";
+import { messagesForModel, mergeThreadMessages } from "./messages";
+import { compactThread } from "./compaction";
 import { messagesWithReplyContext } from "./message-actions";
 import { parseRunMode } from "./model";
 import { createNotification } from "./notifications";
@@ -193,6 +194,7 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
   try {
     const { model, providerOptions, modelId } = await getDeniModel(userId, runMode);
     const group = thread.kind === "group";
+    const modelHistory = await compactThread({ userId, threadId: thread.id, bot, messages });
     const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: !group, locale });
     const result = streamText({
       model,
@@ -202,7 +204,7 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
           store.skills,
           store.bots.map((item) => ({ id: item.id, name: item.name, job: item.job })),
         ) + (group ? groupNote(bot.name) : ""),
-      messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(group ? groupContext(messages, bot.id) : messages))),
+      messages: await convertToModelMessages(messagesForModel(messagesWithReplyContext(group ? groupContext(modelHistory, bot.id) : modelHistory))),
       tools,
       toolApproval: deniToolApproval({ userId, jobId: job.id, locale }),
       stopWhen: isLoopFinished(),

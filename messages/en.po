@@ -874,6 +874,11 @@ msgid "New conversation · earlier messages are not sent"
 msgstr "New conversation · earlier messages are not sent"
 
 #: app/components/chat-thread.tsx
+msgctxt "fC9DxU"
+msgid "Earlier messages were summarized to save tokens"
+msgstr "Earlier messages were summarized to save tokens"
+
+#: app/components/chat-thread.tsx
 msgctxt "W-q5ue"
 msgid "{job}. No workflow is required. Write as if you were asking a colleague. I will research on the computer, leave artifacts in files, and ask for approval only when needed."
 msgstr "{job}. No workflow is required. Write as if you were asking a colleague. I will research on the computer, leave artifacts in files, and ask for approval only when needed."

@@ -17,6 +17,7 @@ import type { StickToBottomContext } from "use-stick-to-bottom";
 import { easeOut } from "@/lib/motion";
 import { LinkSimpleIcon, RobotIcon, StopIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import {
+  ArchiveIcon,
   BookOpenIcon,
   ClockIcon,
   DownloadIcon,
@@ -83,7 +84,7 @@ import {
 import { usesBubbleBreaks } from "@/lib/message-bubbles";
 import { createReactionState, type ReactionMap } from "@/lib/reaction-state";
 import { messageAuthor, type MessageAuthor } from "@/lib/group-chat";
-import { isContextReset, workedMsOf } from "@/lib/messages";
+import { isCompaction, isContextReset, workedMsOf } from "@/lib/messages";
 import { RUN_MODES, type RunMode } from "@/lib/model";
 import { isUsageLimitError } from "@/lib/plans";
 import type {
@@ -729,6 +730,8 @@ export function ChatThread({
             messages.map((message, index) => {
               if (isContextReset(message))
                 return <ContextResetDivider key={message.id} />;
+              if (isCompaction(message))
+                return <CompactionDivider key={message.id} />;
               const author = messageAuthor(message);
               const memberState = author ? groupStatuses[author.id] : undefined;
               const groupReplyActive =
@@ -1156,6 +1159,20 @@ function ContextResetDivider() {
       <span className="flex items-center gap-1.5">
         <RotateCcwIcon size={11} />
         {t("New conversation · earlier messages are not sent")}
+      </span>
+      <span className="h-px flex-1 bg-foreground/10" />
+    </div>
+  );
+}
+
+function CompactionDivider() {
+  const t = useExtracted();
+  return (
+    <div role="separator" className="flex items-center gap-3 py-1 text-[11px] text-muted-foreground">
+      <span className="h-px flex-1 bg-foreground/10" />
+      <span className="flex items-center gap-1.5">
+        <ArchiveIcon size={11} />
+        {t("Earlier messages were summarized to save tokens")}
       </span>
       <span className="h-px flex-1 bg-foreground/10" />
     </div>

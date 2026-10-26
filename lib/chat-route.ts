@@ -20,7 +20,8 @@ import { getDeniModel } from "@/lib/llm";
 import { parseRunMode } from "@/lib/model";
 import { loadMessages, mutateStore, readStore, saveMessages } from "@/lib/store";
 import { assertCanUseTokens, isUsageLimitError, recordModelUsage } from "@/lib/usage";
-import { compactMessagesForModel, mergeThreadMessages, workedMsOf } from "@/lib/messages";
+import { messagesForModel, mergeThreadMessages, workedMsOf } from "@/lib/messages";
+import { compactThread } from "@/lib/compaction";
 import {
   checkpointJob,
   claimJob,
@@ -199,6 +200,7 @@ export async function handleChat(req: Request) {
   // Concurrent group replies may already follow this input in stored history.
   // The UI stream must still create this bot's own answer, not continue theirs.
   const streamHistory = requestMessage ? [...messages.filter((message) => message.id !== requestMessage.id), requestMessage] : messages;
+  const modelHistory = await compactThread({ userId, threadId: thread.id, bot, messages });
   const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: thread.kind !== "group", locale });
   let writeRunStatus: ((status: "working" | "finalizing" | "waiting" | "completed" | "failed") => void) | undefined;
   let finalizationPromise: Promise<boolean> | undefined;
@@ -284,7 +286,7 @@ export async function handleChat(req: Request) {
         job: item.job,
       })),
     ) + (thread.kind === "group" ? `\nYou are speaking as ${bot.name} in a group chat. Respond only as yourself, from your role. Other teammates may answer in parallel; do not impersonate them or start extra handoffs for this group message.` : ""),
-    messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(thread.kind === "group" ? groupContext(messages, bot.id) : messages))),
+    messages: await convertToModelMessages(messagesForModel(messagesWithReplyContext(thread.kind === "group" ? groupContext(modelHistory, bot.id) : modelHistory))),
     tools,
     toolApproval: deniToolApproval({ userId, jobId: job.id, locale }),
     stopWhen: isLoopFinished(),

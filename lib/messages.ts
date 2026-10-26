@@ -1,15 +1,7 @@
 import type { UIMessage } from "ai";
 
-const RECENT_COUNT = 10;
 const MAX_REASONING_MODEL = 2_000;
 const MAX_TOOL_UI = 400;
-const MAX_TOOL_MODEL_RECENT = 6_000;
-const MAX_TOOL_MODEL_OLD = 1_500;
-// The last two turns keep tool output nearly whole. The model answered from the full result, and a
-// follow-up that sees only a fragment of it reads that answer as made up. A reply's results share
-// one budget, so a turn of many large results stays bounded.
-const MAX_TOOL_MODEL_LATEST = 80_000;
-const MAX_TOOL_MODEL_LATEST_TOTAL = 120_000;
 
 function isToolPart(part: { type: string }) {
   return part.type.startsWith("tool-") || part.type === "dynamic-tool";
@@ -37,13 +29,8 @@ function slimJson(value: unknown, max: number): unknown {
   } catch {
     return { truncated: true };
   }
-  // Keep the start of the result itself. With only a bare flag, the model reads its earlier
-  // answer as unsupported by any result and takes it back on the next turn.
-  const text = resultText(value);
-  const keep: Record<string, unknown> = {
-    truncated: `Only the first ${max} of ${text.length} characters are kept here. The reply written right after this call saw the whole result. Call the tool again for the rest.`,
-    preview: truncateString(text, max),
-  };
+  // The client only needs a glimpse of a large result; the model always gets it whole.
+  const keep: Record<string, unknown> = { truncated: true, preview: truncateString(resultText(value), max) };
   for (const key of ["url", "title", "path", "error", "ok", "exitCode", "name", "action"]) {
     if (key in rec) keep[key] = rec[key];
   }
@@ -134,16 +121,38 @@ export function isContextReset(message: UIMessage) {
   return message.role === "system" && (message.metadata as { kind?: unknown } | undefined)?.kind === CONTEXT_RESET;
 }
 
-// History is trimmed once it passes the limit, down to the target. The gap between the two
-// keeps the cut in place for many turns, so the cached prompt prefix keeps being reused.
-// Instructions, tool definitions, and recent tool output come on top, so a request stays
-// around 200k tokens.
+const COMPACTION = "compaction";
+
+type CompactionMetadata = { kind: typeof COMPACTION; at: string; throughMessageId: string; summary: string };
+
+/**
+ * A divider stored in the thread once a long conversation is compacted. The model sees its
+ * summary in place of every message up to and including throughMessageId.
+ */
+export function compactionMessage(id: string, throughMessageId: string, summary: string): UIMessage {
+  const metadata: CompactionMetadata = { kind: COMPACTION, at: new Date().toISOString(), throughMessageId, summary };
+  return { id, role: "system", parts: [], metadata };
+}
+
+export function isCompaction(message: UIMessage) {
+  return message.role === "system" && (message.metadata as { kind?: unknown } | undefined)?.kind === COMPACTION;
+}
+
+// A conversation is compacted once the model's view of it passes the limit, keeping about the
+// last COMPACT_KEEP_TOKENS of turns verbatim. Tool results are never shortened, so the model
+// always sees what it based its answers on; the cut stays put between compactions, so the cached
+// prompt prefix keeps being reused.
+export const COMPACT_TOKEN_LIMIT = 150_000;
+const COMPACT_KEEP_TOKENS = 50_000;
+// If compaction fails, whole turns are trimmed from the front once the history passes the limit,
+// down to the target.
 export const HISTORY_TOKEN_LIMIT = 180_000;
 export const HISTORY_TOKEN_TARGET = 100_000;
 const TRIMMED_NOTE = "[Earlier messages in this conversation were left out to save tokens. Call conversationHistory for a summary of them or to search them.]";
+const COMPACTED_NOTE = "[Earlier messages in this conversation were compacted into the summary below. Call conversationHistory to search or read them in full when you need a detail the summary leaves out.]";
 
 /** Rough count: about four ASCII characters per token, and one token per other character. */
-function estimateTokens(text: string) {
+export function estimateTokens(text: string) {
   const other = text.replace(/[\x00-\x7f]/g, "").length;
   return Math.ceil((text.length - other) / 4) + other;
 }
@@ -156,8 +165,6 @@ function json(value: unknown) {
   }
 }
 
-// Measured as if every message were old, so a message weighs the same on every turn and the
-// cut point does not drift as it ages out of the recent window.
 function messageTokens(message: UIMessage) {
   let total = 4;
   for (const part of message.parts) {
@@ -165,23 +172,44 @@ function messageTokens(message: UIMessage) {
     else if (part.type === "reasoning") total += estimateTokens(truncateString(part.text, MAX_REASONING_MODEL));
     else if (isToolPart(part)) {
       const tool = part as { input?: unknown; output?: unknown };
-      total += estimateTokens(json(tool.input)) + estimateTokens(json(slimJson(tool.output, MAX_TOOL_MODEL_OLD)));
+      total += estimateTokens(json(tool.input)) + estimateTokens(json(tool.output));
     } else total += estimateTokens(json(part).slice(0, 4_000));
   }
   return total;
 }
 
 /**
- * What the model sees of a thread: everything after the latest reset, trimmed to a token
- * budget. Turns are only dropped whole, from the front, so the window always opens on a user
- * message and always keeps the newest one. Each cut depends only on the messages before it,
- * so it stays put as the conversation grows.
+ * Where the model's view of a thread opens: after the latest reset, or after what the latest
+ * compaction since then summarized. A compaction whose last message is gone is skipped.
  */
-function contextWindow(messages: UIMessage[]) {
+function windowStart(messages: UIMessage[]) {
+  const reset = messages.findLastIndex(isContextReset);
+  for (let index = messages.length - 1; index > reset; index--) {
+    if (!isCompaction(messages[index])) continue;
+    const { throughMessageId, summary } = messages[index].metadata as CompactionMetadata;
+    const through = messages.findIndex((message) => message.id === throughMessageId);
+    if (through > reset && typeof summary === "string") return { start: through + 1, summary };
+  }
+  return { start: reset + 1, summary: undefined };
+}
+
+function visiblePositions(messages: UIMessage[], start: number) {
   const positions: number[] = [];
-  for (let index = messages.findLastIndex(isContextReset) + 1; index < messages.length; index++) {
+  for (let index = start; index < messages.length; index++) {
     if (messages[index].role !== "system") positions.push(index);
   }
+  return positions;
+}
+
+/**
+ * What the model sees of a thread: the latest compaction's summary and everything after it,
+ * trimmed to a token budget if compaction could not keep up. Turns are only dropped whole, from
+ * the front, so the window always opens on a user message and always keeps the newest one. Each
+ * cut depends only on the messages before it, so it stays put as the conversation grows.
+ */
+function contextWindow(messages: UIMessage[]) {
+  const { start: from, summary } = windowStart(messages);
+  const positions = visiblePositions(messages, from);
   const weights = positions.map((position) => messageTokens(messages[position]));
   let start = 0;
   let total = 0;
@@ -197,7 +225,34 @@ function contextWindow(messages: UIMessage[]) {
       if (rest <= HISTORY_TOKEN_TARGET) break;
     }
   }
-  return { positions: positions.slice(start), trimmed: start > 0 };
+  return { positions: positions.slice(start), trimmed: start > 0, summary };
+}
+
+/**
+ * The messages to summarize once the model's view passes COMPACT_TOKEN_LIMIT: from the start of
+ * the view up to the last whole turn that leaves about COMPACT_KEEP_TOKENS of recent turns as
+ * they are. The latest user message and everything after it are always kept.
+ */
+export function compactionPlan(messages: UIMessage[]) {
+  const { start, summary } = windowStart(messages);
+  const positions = visiblePositions(messages, start);
+  const weights = positions.map((position) => messageTokens(messages[position]));
+  const total = weights.reduce((sum, weight) => sum + weight, summary ? estimateTokens(summary) : 0);
+  if (total <= COMPACT_TOKEN_LIMIT) return undefined;
+  let keepFrom: number | undefined;
+  let tail = 0;
+  for (let index = positions.length - 1; index >= 0; index--) {
+    tail += weights[index];
+    if (messages[positions[index]].role !== "user") continue;
+    if (keepFrom !== undefined && tail > COMPACT_KEEP_TOKENS) break;
+    keepFrom = index;
+  }
+  if (!keepFrom) return undefined;
+  return {
+    previousSummary: summary,
+    messages: positions.slice(0, keepFrom).map((position) => messages[position]),
+    throughMessageId: messages[positions[keepFrom - 1]].id,
+  };
 }
 
 /** Index of the first message the model sees; everything before it is reachable only through conversationHistory. */
@@ -206,11 +261,12 @@ export function modelContextStart(messages: UIMessage[]) {
 }
 
 export function modelContextMessages(messages: UIMessage[]): UIMessage[] {
-  const { positions, trimmed } = contextWindow(messages);
+  const { positions, trimmed, summary } = contextWindow(messages);
   const scoped = positions.map((position) => messages[position]);
-  if (!trimmed) return scoped;
+  const notes = [trimmed ? TRIMMED_NOTE : "", summary ? `${COMPACTED_NOTE}\n\n${summary}` : ""].filter(Boolean);
+  if (!notes.length || !scoped.length) return scoped;
   const [first, ...rest] = scoped;
-  return [{ ...first, parts: [{ type: "text", text: TRIMMED_NOTE }, ...first.parts] }, ...rest];
+  return [{ ...first, parts: [...notes.map((text) => ({ type: "text" as const, text })), ...first.parts] }, ...rest];
 }
 
 /** Drops reasoning; OpenRouter also reads its signatures from tool call metadata. */
@@ -235,27 +291,12 @@ function reasoningForModel(messages: UIMessage[]): UIMessage[] {
   return messages.map((message, index) => (index === messages.length - 1 && message.role === "assistant" ? message : withoutReasoning(message)));
 }
 
-/** Slim tool output and drop stale reasoning for the model, after cutting the thread to its context window. */
-export function compactMessagesForModel(thread: UIMessage[]): UIMessage[] {
-  const messages = reasoningForModel(modelContextMessages(thread));
-  const startRecent = Math.max(0, messages.length - RECENT_COUNT);
-  const startLatest = messages.flatMap((message, index) => (message.role === "user" ? [index] : [])).at(-2) ?? 0;
-  return messages.map((message, messageIndex) => {
-    let budget = MAX_TOOL_MODEL_LATEST_TOTAL;
-    return {
-      ...message,
-      parts: message.parts.map((part) => {
-        if (!isToolPart(part) || !("output" in part)) return part;
-        const output = (part as { output?: unknown }).output;
-        let max = messageIndex >= startRecent ? MAX_TOOL_MODEL_RECENT : MAX_TOOL_MODEL_OLD;
-        if (messageIndex >= startLatest) {
-          max = Math.max(max, Math.min(MAX_TOOL_MODEL_LATEST, budget));
-          budget -= Math.min(json(output).length, max);
-        }
-        return { ...part, output: slimJson(output, max) } as UIMessage["parts"][number];
-      }),
-    };
-  });
+/**
+ * The thread as the model sees it: its context window with stale reasoning dropped. Tool results
+ * stay whole, as the model saw them when it answered; compaction keeps the total in check.
+ */
+export function messagesForModel(thread: UIMessage[]): UIMessage[] {
+  return reasoningForModel(modelContextMessages(thread));
 }
 
 export function mergeThreadMessages(persisted: UIMessage[], incoming: UIMessage[]): UIMessage[] {

@@ -10,7 +10,8 @@ import { loadMessages, mutateStore, readStore, saveMessages } from "./store";
 import { createNotification } from "./notifications";
 import { setComputer } from "./computer";
 import { assertCanUseTokens, isUsageLimitError, recordModelSteps } from "./usage";
-import { compactMessagesForModel } from "./messages";
+import { messagesForModel } from "./messages";
+import { compactThread } from "./compaction";
 import { parseRunMode } from "./model";
 import type { AgentJob } from "./types";
 import { messagesWithReplyContext } from "./message-actions";
@@ -85,6 +86,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
       userId,
       typeof job.payload.runMode === "string" ? parseRunMode(job.payload.runMode) : undefined,
     );
+    const modelHistory = await compactThread({ userId, threadId: job.threadId, bot, messages });
     const result = await generateText({
       model,
       instructions: buildInstructions(
@@ -92,7 +94,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
         store.skills,
         store.bots.map((item) => ({ id: item.id, name: item.name, job: item.job })),
       ),
-      messages: await convertToModelMessages(compactMessagesForModel(messagesWithReplyContext(isGroup ? groupContext(messages, bot.id) : messages))),
+      messages: await convertToModelMessages(messagesForModel(messagesWithReplyContext(isGroup ? groupContext(modelHistory, bot.id) : modelHistory))),
       tools: createDeniTools({ userId, bot, threadId: job.threadId, jobId: job.id, allowHandoff: !isGroup, locale }),
       // Only a text reply is saved below, so an approval card could never be answered and the
       // job would stay in waiting_approval. Deny those actions; the reply explains what is left.

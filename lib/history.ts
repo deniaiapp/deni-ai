@@ -54,7 +54,7 @@ function searchableText(message: UIMessage) {
   return [messageText(message), ...calls].join("\n");
 }
 
-function speaker(message: UIMessage, bot: Pick<Bot, "name">) {
+export function speaker(message: UIMessage, bot: Pick<Bot, "name">) {
   return message.role === "user" ? "Person" : (messageAuthor(message)?.name ?? bot.name);
 }
 
