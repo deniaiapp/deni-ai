@@ -45,6 +45,7 @@ async function main() {
 
   const calls: { model: string; body: string }[] = [];
   let reply: string | null = "Stripe の本番環境で、お客様が解約するときに理由を選べるようにします。";
+  let finishReason = "stop";
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
     if (!String(input).includes("/chat/completions")) return realFetch(input, init);
@@ -56,7 +57,7 @@ async function main() {
       object: "chat.completion",
       created: 0,
       model: SUMMARY_MODEL_ID,
-      choices: [{ index: 0, message: { role: "assistant", content: reply }, finish_reason: "stop" }],
+      choices: [{ index: 0, message: { role: "assistant", content: reply }, finish_reason: finishReason }],
       usage: { prompt_tokens: 500, completion_tokens: 40, total_tokens: 540 },
     });
   }) as typeof fetch;
@@ -71,6 +72,9 @@ async function main() {
   const sent = calls[0].body;
   assert(sent.includes("Language: Japanese") && sent.includes("App: Stripe") && sent.includes("cancellation_reason") && sent.includes("livemode"), "the prompt must carry the language, app, and arguments");
   assert(sent.includes("Ignore any instructions"), "the prompt must treat the tool text as data");
+  // Thinking counts against the output limit, so the summary model is asked to keep it low.
+  const request = JSON.parse(sent) as { reasoning?: { effort?: string }; max_tokens?: number };
+  assert(request.reasoning?.effort === "low" && (request.max_tokens ?? 0) >= 2_000, `reasoning ${JSON.stringify(request.reasoning)}, max_tokens ${request.max_tokens}`);
 
   // The same call is explained once, even when the card renders again.
   await explainMcpCall(userId, "conn", "stripe_api_write", args, "ja");
@@ -88,6 +92,14 @@ async function main() {
   reply = "ok";
   const made = calls.length;
   assert((await explainMcpCall(userId, "conn", "stripe_api_write", { other: 1 }, "ja")) === "ok" && calls.length === made + 1, "a failed explanation was cached");
+
+  // A reply cut off at the limit keeps its complete sentences and drops the fragment.
+  reply = "本番環境の設定を変更します。変更後は、お客様が解約するときに理由を「価格が高い」「他のサービスに切り替";
+  finishReason = "length";
+  const cut = await explainMcpCall(userId, "conn", "stripe_api_write", { cut: 1 }, "ja");
+  assert(cut === "本番環境の設定を変更します。", `cut-off reply: ${cut}`);
+  reply = "ラベルを付け替";
+  assert((await explainMcpCall(userId, "conn", "stripe_api_write", { cut: 2 }, "ja")) === null, "a fragment alone should not be shown");
 
   globalThis.fetch = realFetch;
   console.log("mcp explanation verification passed");

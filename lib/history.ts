@@ -141,7 +141,7 @@ async function summary(userId: string, threadId: string, history: NonNullable<Aw
     model,
     system: SUMMARY_SYSTEM,
     prompt: `${previous ? `Summary so far:\n${previous}\n\n` : ""}${partial ? "(The oldest messages are left out.)\n\n" : ""}New messages:\n${transcript}`,
-    maxOutputTokens: 1_500,
+    maxOutputTokens: 4_000,
   });
   await recordModelSteps(userId, result.steps, modelId);
   const text = result.text.trim();

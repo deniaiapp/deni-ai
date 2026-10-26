@@ -74,7 +74,7 @@ async function summarize(userId: string, threadId: string, bot: Pick<Bot, "name"
   const { chunks, partial } = chunked(plan.messages.map((message) => transcriptEntry(message, bot)));
   const { model, modelId } = await getSummaryModel(userId);
   const ask = async (parts: string[]) => {
-    const result = await generateText({ model, system: COMPACT_SYSTEM, prompt: parts.filter(Boolean).join("\n\n"), maxOutputTokens: 4_000 });
+    const result = await generateText({ model, system: COMPACT_SYSTEM, prompt: parts.filter(Boolean).join("\n\n"), maxOutputTokens: 8_000 });
     await recordModelSteps(userId, result.steps, modelId);
     return result.text.trim();
   };

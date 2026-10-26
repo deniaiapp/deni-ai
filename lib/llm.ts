@@ -43,7 +43,9 @@ export async function getSummaryModel(userId: string) {
     throw new Error("OPENROUTER_API_KEY is missing");
   }
   return {
-    model: createOpenRouter({ apiKey })(SUMMARY_MODEL_ID, { usage: { include: true } }),
+    // Haiku 5.5 thinks by default, and thinking counts against maxOutputTokens: a short limit cut
+    // answers off mid-sentence. Housekeeping needs little of it.
+    model: createOpenRouter({ apiKey })(SUMMARY_MODEL_ID, { usage: { include: true }, reasoning: { effort: "low" } }),
     modelId: SUMMARY_MODEL_ID,
   };
 }

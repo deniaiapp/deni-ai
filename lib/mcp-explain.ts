@@ -55,8 +55,13 @@ async function explain(userId: string, id: string, name: string, args: Record<st
       Object.keys(described.names).length ? `Readable names for IDs in the arguments: ${JSON.stringify(described.names)}` : "",
       `Arguments:\n${argumentsText.length > ARGUMENTS_LIMIT ? `${argumentsText.slice(0, ARGUMENTS_LIMIT)}…` : argumentsText}`,
     ].filter(Boolean).join("\n\n"),
-    maxOutputTokens: 400,
+    // Room for thinking as well as the answer, which is a couple of sentences.
+    maxOutputTokens: 2_000,
   });
   await recordModelSteps(userId, result.steps, modelId);
-  return result.text.trim() || null;
+  const text = result.text.trim();
+  if (result.finishReason !== "length") return text || null;
+  // Cut off anyway: keep the complete sentences, never a fragment.
+  const end = Math.max(...["。", ".", "!", "?", "！", "？"].map((mark) => text.lastIndexOf(mark)));
+  return end > 0 ? text.slice(0, end + 1) : null;
 }
