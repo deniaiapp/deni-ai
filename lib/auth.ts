@@ -36,6 +36,10 @@ const deniAiOAuth = deniAiSignInConfigured()
             scopes: ["openid", "profile", "email"],
             pkce: true,
             authentication: "post",
+            // The profile comes from userinfo (the id token carries no email), which names the
+            // user `sub`, not `id`. It is the Deni AI user id that usage calls are keyed by.
+            // An empty subject is rejected by Better Auth, so a profile without `sub` cannot link.
+            accountSubject: ({ profile }) => profile.sub ?? "",
           },
         ],
       }),
