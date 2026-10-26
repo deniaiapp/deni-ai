@@ -1319,6 +1319,7 @@ const MessageBlock = memo(function MessageBlock({
                   className={`group/message flex min-w-0 max-w-full scroll-mt-4 flex-col gap-1 rounded-xl outline-none ${message.role === "user" ? "items-end" : "items-start"}`}
                 >
                   <MessageActions
+                    side={message.role === "user" ? "end" : "start"}
                     text={bubble.text}
                     reactions={reactions[bubble.key] ?? []}
                     disabled={!canAct}

@@ -8,8 +8,10 @@ import type { MessageReaction } from "@/lib/message-actions";
 import { QUICK_REACTIONS } from "@/lib/emoji-catalog";
 import ReactionPicker from "./reaction-picker";
 
-export function MessageActions({ text, reactions, onReply, onReact, children, disabled = false }: {
+export function MessageActions({ text, reactions, onReply, onReact, children, disabled = false, side = "start" }: {
   text: string;
+  /** The side the bubble sits on; on touch screens the actions go under it, on that side. */
+  side?: "start" | "end";
   reactions: string[];
   onReply: () => void;
   onReact: (emoji: MessageReaction, selected: boolean) => Promise<void>;
@@ -47,9 +49,11 @@ export function MessageActions({ text, reactions, onReply, onReact, children, di
   }
 
   return <Tooltip.Provider delay={220} timeout={100}><div className="flex min-w-0 max-w-full flex-col gap-1">
-    <div className="flex min-w-0 max-w-full items-start gap-1.5">
-      <div className="min-w-0 flex-1">{children}</div>
-      <div className={`flex shrink-0 items-center gap-0.5 pt-1 transition-opacity duration-150 ${disabled ? "invisible pointer-events-none" : open || copied ? "opacity-100" : "pointer-events-none opacity-0 group-hover/message:pointer-events-auto group-hover/message:opacity-100 group-focus-within/message:pointer-events-auto group-focus-within/message:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"}`} role="group" aria-label={t("Message actions")}>
+    {/* Touch screens show the actions all the time, so they sit under the message instead of
+        taking width beside it. */}
+    <div className={`flex min-w-0 max-w-full items-start gap-1.5 [@media(hover:none)]:flex-col [@media(hover:none)]:gap-0.5 ${side === "end" ? "[@media(hover:none)]:items-end" : ""}`}>
+      <div className="min-w-0 flex-1 [@media(hover:none)]:max-w-full [@media(hover:none)]:flex-none">{children}</div>
+      <div className={`flex shrink-0 items-center gap-0.5 pt-1 [@media(hover:none)]:pt-0 transition-opacity duration-150 ${disabled ? "invisible pointer-events-none" : open || copied ? "opacity-100" : "pointer-events-none opacity-0 group-hover/message:pointer-events-auto group-hover/message:opacity-100 group-focus-within/message:pointer-events-auto group-focus-within/message:opacity-100 [@media(hover:none)]:pointer-events-auto [@media(hover:none)]:opacity-100"}`} role="group" aria-label={t("Message actions")}>
       <ActionTooltip label={t("Reply")}><button type="button" className={buttonClass} aria-label={t("Reply")} disabled={disabled} onClick={onReply}><Reply size={15} /></button></ActionTooltip>
       <Popover.Root open={open} onOpenChange={(value) => { setOpen(value); if (!value) setExpanded(false); }}>
         <ActionTooltip label={t("React")}><Popover.Trigger className={buttonClass} aria-label={t("React")} disabled={disabled}>
