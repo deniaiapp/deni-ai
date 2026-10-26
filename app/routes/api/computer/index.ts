@@ -87,7 +87,7 @@ async function GET({ request: req }: { request: Request }) {
       files,
       shells: store.shells ?? [],
       viewport: { width: 1280, height: 800 },
-      usage: liveUsageSnapshot(store, userId),
+      usage: await liveUsageSnapshot(store, userId),
     },
     { headers: { "Cache-Control": "no-store", "Server-Timing": `auth;dur=${(authenticatedAt - requestStartedAt).toFixed(1)}, rate_limit;dur=${(limitedAt - authenticatedAt).toFixed(1)}, computer;dur=${(computerSyncedAt - limitedAt).toFixed(1)}, data;dur=${(performance.now() - computerSyncedAt).toFixed(1)}` } },
   );
@@ -115,7 +115,7 @@ async function POST({ request: req }: { request: Request }) {
         userId,
         computerForJob(lastComputer(userId) ?? store.computer, jobId),
       ),
-      usage: liveUsageSnapshot(store, userId),
+      usage: await liveUsageSnapshot(store, userId),
     });
   }
   await screenshot(userId, body.jobId?.trim() || undefined);
@@ -125,7 +125,7 @@ async function POST({ request: req }: { request: Request }) {
       userId,
       computerForJob(lastComputer(userId) ?? store.computer, body.jobId?.trim() || undefined),
     ),
-    usage: liveUsageSnapshot(store, userId),
+    usage: await liveUsageSnapshot(store, userId),
   });
 }
 

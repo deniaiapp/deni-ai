@@ -4,7 +4,16 @@ export const DENI_MODEL_LABEL = "Run Default";
 
 /** Summarizes history the model no longer sees. Haiku 5.5 costs 1/20 of Sonnet 5.5 per token. */
 export const SUMMARY_MODEL_ID = "anthropic/claude-haiku-5.5";
-export const SUMMARY_TOKEN_MULTIPLIER = 0.05;
+
+/**
+ * USD per million tokens. Only a fallback: usage is billed at the cost OpenRouter
+ * reports for each request, and these apply when a response carries none.
+ */
+export const MODEL_PRICES_USD_PER_MTOK: Record<string, { input: number; output: number }> = {
+  "anthropic/claude-sonnet-5.5": { input: 3, output: 15 },
+  "anthropic/claude-opus-5.5": { input: 6, output: 30 },
+  "anthropic/claude-haiku-5.5": { input: 0.15, output: 0.75 },
+};
 
 export const RUN_MODE_IDS = ["default", "high", "xhigh", "max", "plus-default", "plus-high", "plus-xhigh", "plus-max"] as const;
 export type RunMode = (typeof RUN_MODE_IDS)[number];
@@ -17,7 +26,8 @@ export const RUN_MODES: Record<
     modelId: string;
     label: string;
     effort: ReasoningEffort;
-    tokenMultiplier: number;
+    /** Approximate cost of a turn relative to Run Default, shown in the mode picker. */
+    costMultiplier: number;
     hint: string;
   }
 > = {
@@ -26,7 +36,7 @@ export const RUN_MODES: Record<
     modelId: DENI_MODEL_ID,
     label: "Run Default",
     effort: "medium",
-    tokenMultiplier: 1,
+    costMultiplier: 1,
     hint: "Default",
   },
   high: {
@@ -34,56 +44,56 @@ export const RUN_MODES: Record<
     modelId: DENI_MODEL_ID,
     label: "Run High",
     effort: "high",
-    tokenMultiplier: 1.2,
-    hint: "1.2× tokens",
+    costMultiplier: 1.2,
+    hint: "1.2× cost",
   },
   xhigh: {
     id: "xhigh",
     modelId: DENI_MODEL_ID,
     label: "Run xhigh",
     effort: "xhigh",
-    tokenMultiplier: 1.4,
-    hint: "1.4× tokens",
+    costMultiplier: 1.4,
+    hint: "1.4× cost",
   },
   max: {
     id: "max",
     modelId: DENI_MODEL_ID,
     label: "Run Max",
     effort: "max",
-    tokenMultiplier: 1.6,
-    hint: "1.6× tokens",
+    costMultiplier: 1.6,
+    hint: "1.6× cost",
   },
   "plus-default": {
     id: "plus-default",
     modelId: "anthropic/claude-opus-5.5",
     label: "Run+ Default",
     effort: "medium",
-    tokenMultiplier: 2,
-    hint: "2× tokens",
+    costMultiplier: 2,
+    hint: "2× cost",
   },
   "plus-high": {
     id: "plus-high",
     modelId: "anthropic/claude-opus-5.5",
     label: "Run+ High",
     effort: "high",
-    tokenMultiplier: 2.2,
-    hint: "2.2× tokens",
+    costMultiplier: 2.2,
+    hint: "2.2× cost",
   },
   "plus-xhigh": {
     id: "plus-xhigh",
     modelId: "anthropic/claude-opus-5.5",
     label: "Run+ xhigh",
     effort: "xhigh",
-    tokenMultiplier: 2.4,
-    hint: "2.4× tokens",
+    costMultiplier: 2.4,
+    hint: "2.4× cost",
   },
   "plus-max": {
     id: "plus-max",
     modelId: "anthropic/claude-opus-5.5",
     label: "Run+ Max",
     effort: "max",
-    tokenMultiplier: 2.6,
-    hint: "2.6× tokens",
+    costMultiplier: 2.6,
+    hint: "2.6× cost",
   },
 };
 

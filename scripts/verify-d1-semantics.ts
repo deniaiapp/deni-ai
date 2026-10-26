@@ -38,17 +38,23 @@ async function main() {
   const jobs = await import("../lib/jobs");
   const rateLimit = await import("../lib/rate-limit");
 
+  // A plain counter kept in the store document; the store keeps fields it does not know.
+  const counted = (value: object) => value as { testCounter?: number };
+  const bump = (value: object, by: number) => {
+    counted(value).testCounter = (counted(value).testCounter ?? 0) + by;
+  };
+
   // 1. Concurrent mutations on one user never lose an update.
   await store.readStore("u1");
   await Promise.all(
     Array.from({ length: 25 }, (_, i) =>
       store.mutateStore("u1", (s) => {
-        s.usage!.tokens += 1;
+        bump(s, 1);
         s.computer.activity.unshift({ at: new Date().toISOString(), botId: null, label: `n${i}` } as never);
       }),
     ),
   );
-  assert((await store.readStore("u1")).usage!.tokens === 25, "mutateStore lost updates");
+  assert(counted(await store.readStore("u1")).testCounter === 25, "mutateStore lost updates");
 
   // 2. A writer outside this process bumps the version mid-mutation: the callback is re-run
   // against fresh data instead of overwriting the other writer.
@@ -58,13 +64,13 @@ async function main() {
     if (runs === 1) {
       const [row] = await db.select().from(userStores).where(eq(userStores.userId, "u1"));
       const external = structuredClone(row!.data);
-      external.usage!.tokens += 100;
+      bump(external, 100);
       await db.update(userStores).set({ data: external, version: row!.version + 1 }).where(eq(userStores.userId, "u1"));
     }
-    s.usage!.tokens += 1;
+    bump(s, 1);
   });
   assert(runs === 2, `expected the callback to re-run once, ran ${runs}`);
-  assert((await store.readStore("u1")).usage!.tokens === 126, "compare-and-swap overwrote an external write");
+  assert(counted(await store.readStore("u1")).testCounter === 126, "compare-and-swap overwrote an external write");
 
   // 3. Event sequences stay unique and gapless under concurrency.
   const job = await jobs.createJob({ userId: "u1", threadId: "t1", botId: "b1", kind: "chat", payload: {}, idempotencyKey: "k1" });
@@ -91,9 +97,8 @@ async function main() {
   }
   assert(JSON.stringify(results) === JSON.stringify([true, true, true, false]), `rate limit window: ${results}`);
 
-  // 7. JSON queries: due routines and the Stripe customer lookup.
+  // 7. JSON queries: due routines.
   await store.mutateStore("u1", (s) => {
-    s.billing!.stripeCustomerId = "cus_123";
     s.routines.push(
       { id: "r1", botId: "b", threadId: "t", name: "n", instructions: "", cron: "* * * * *", timezone: "UTC", enabled: true, lastRunAt: null, nextRunAt: "2026-01-01T00:00:00.000Z", lastError: null, createdAt: "" },
       { id: "r2", botId: "b", threadId: "t", name: "n", instructions: "", cron: "* * * * *", timezone: "UTC", enabled: false, lastRunAt: null, nextRunAt: "2026-01-01T00:00:00.000Z", lastError: null, createdAt: "" },
@@ -102,8 +107,6 @@ async function main() {
   await store.readStore("u2");
   assert(JSON.stringify(await store.listDueRoutineUserIds(new Date("2026-06-01T00:00:00Z"))) === '["u1"]', "due routine lookup");
   assert((await store.listDueRoutineUserIds(new Date("2025-06-01T00:00:00Z"))).length === 0, "future routine reported as due");
-  assert((await store.findUserIdByStripeCustomer("cus_123")) === "u1", "stripe customer lookup");
-  assert((await store.findUserIdByStripeCustomer("cus_nope")) === null, "unknown stripe customer");
 
   // 8. saveMessages merges and deleteGroupThread removes everything atomically.
   await store.mutateStore("u1", (s) => {

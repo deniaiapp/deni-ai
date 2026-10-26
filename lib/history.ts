@@ -9,7 +9,7 @@ import { isContextReset, modelContextStart } from "./messages";
 import { withoutBubbleBreaks } from "./message-bubbles";
 import { loadMessages, mutateStore, readStore } from "./store";
 import type { Bot } from "./types";
-import { recordTokenUsage } from "./usage";
+import { recordModelSteps } from "./usage";
 
 export type HistoryRequest = { action: "summary" | "search" | "read"; query?: string; messageId?: string };
 
@@ -136,14 +136,14 @@ async function summary(userId: string, threadId: string, history: NonNullable<Aw
   const partial = transcript.length > SUMMARY_INPUT_LIMIT;
   if (partial) transcript = transcript.slice(-SUMMARY_INPUT_LIMIT);
 
-  const { model, tokenMultiplier } = await getSummaryModel(userId);
+  const { model, modelId } = await getSummaryModel(userId);
   const result = await generateText({
     model,
     system: SUMMARY_SYSTEM,
     prompt: `${previous ? `Summary so far:\n${previous}\n\n` : ""}${partial ? "(The oldest messages are left out.)\n\n" : ""}New messages:\n${transcript}`,
     maxOutputTokens: 1_500,
   });
-  await recordTokenUsage(userId, result.usage, { multiplier: tokenMultiplier });
+  await recordModelSteps(userId, result.steps, modelId);
   const text = result.text.trim();
   if (!text) return { error: "The summary came back empty. Use search instead." };
   await mutateStore(userId, (next) => {

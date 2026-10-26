@@ -27,7 +27,7 @@ function TermsPage() {
           {t("You must not use Deni Run to create, edit, or distribute sexual or intimate imagery of a real person without their consent, including AI-generated imagery, or any sexual content involving minors. We remove such content and suspend and report the accounts involved.")}
         </p>
         <p>
-          {t("Usage limits apply by plan. Paid subscriptions renew monthly until canceled through the billing portal. Fees are charged by Stripe. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms.")}
+          {t("Usage limits follow the plan of your linked Deni AI account. Plans, payments, and cancellation are handled by Deni AI under its terms. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms.")}
         </p>
         <p>
           {t.rich("Computer sessions, files, and memory stay scoped to your account. You can export or delete that data from <link>Account</link>. Deleting your account also removes the login stored for this service.", {

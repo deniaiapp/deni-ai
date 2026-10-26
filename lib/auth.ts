@@ -3,10 +3,11 @@ import "@tanstack/react-start/server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { tanstackStartCookies } from "better-auth/tanstack-start";
-import { twoFactor } from "better-auth/plugins";
+import { genericOAuth, twoFactor } from "better-auth/plugins";
 import { passkey } from "@better-auth/passkey";
 import { db } from "@/db";
 import * as authSchema from "@/db/auth-schema";
+import { DENI_AI_PROVIDER_ID, deniAiSignInConfigured, deniAiUrl } from "./deni-ai";
 import { isLocalAuthBypass, LOCAL_USER_EMAIL, LOCAL_USER_ID } from "./local-auth";
 import { OTP_PERIOD_MINUTES, sendTwoFactorEmail } from "./two-factor-delivery";
 import {
@@ -17,6 +18,29 @@ import {
 } from "./two-factor-hooks";
 
 const appUrl = process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL;
+
+// Deni AI is an OAuth/OIDC provider (its oauthProvider plugin). Its account carries the
+// plan and the usage budget, so every Deni Run user links one.
+const deniAiOAuth = deniAiSignInConfigured()
+  ? [
+      genericOAuth({
+        config: [
+          {
+            providerId: DENI_AI_PROVIDER_ID,
+            name: "Deni AI",
+            clientId: process.env.DENI_AI_CLIENT_ID!.trim(),
+            clientSecret: process.env.DENI_AI_CLIENT_SECRET!.trim(),
+            authorizationUrl: `${deniAiUrl()}/api/auth/oauth2/authorize`,
+            tokenUrl: `${deniAiUrl()}/api/auth/oauth2/token`,
+            userInfoUrl: `${deniAiUrl()}/api/auth/oauth2/userinfo`,
+            scopes: ["openid", "profile", "email"],
+            pkce: true,
+            authentication: "post",
+          },
+        ],
+      }),
+    ]
+  : [];
 
 export const auth = betterAuth({
   appName: "Deni Run",
@@ -64,7 +88,9 @@ export const auth = betterAuth({
   account: {
     accountLinking: {
       enabled: true,
-      trustedProviders: ["google", "github"],
+      trustedProviders: ["google", "github", DENI_AI_PROVIDER_ID],
+      // A signed-in user may connect a Deni AI account registered under another email.
+      allowDifferentEmails: true,
     },
   },
   user: {
@@ -118,6 +144,7 @@ export const auth = betterAuth({
         },
       },
     }),
+    ...deniAiOAuth,
     tanstackStartCookies(),
   ],
 });

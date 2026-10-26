@@ -15,10 +15,11 @@ import { reportError } from "@/lib/report";
 import { buildInstructions, createDeniTools, deniToolApproval } from "@/lib/agent";
 import { getApiKey } from "@/lib/config";
 import { setComputer } from "@/lib/computer";
+import { DeniAiUnavailableError } from "@/lib/deni-ai";
 import { getDeniModel } from "@/lib/llm";
 import { parseRunMode } from "@/lib/model";
 import { loadMessages, mutateStore, readStore, saveMessages } from "@/lib/store";
-import { assertCanUseTokens, isUsageLimitError, recordTokenUsage } from "@/lib/usage";
+import { assertCanUseTokens, isUsageLimitError, recordModelUsage } from "@/lib/usage";
 import { compactMessagesForModel, mergeThreadMessages, workedMsOf } from "@/lib/messages";
 import {
   checkpointJob,
@@ -106,6 +107,10 @@ export async function handleChat(req: Request) {
     if (isUsageLimitError(error)) {
       return new Response(await localizeUsageLimit(userId, error), { status: 402 });
     }
+    if (error instanceof DeniAiUnavailableError) {
+      console.error("deni ai usage check", error.cause ?? error);
+      return new Response(translateMessage(await getLocale(), error.message), { status: 503 });
+    }
     throw error;
   }
 
@@ -121,7 +126,7 @@ export async function handleChat(req: Request) {
     });
   }
 
-  const { model, providerOptions, tokenMultiplier } = await getDeniModel(userId, runMode);
+  const { model, providerOptions, modelId } = await getDeniModel(userId, runMode);
   const idempotencyKey =
     body.idempotencyKey?.trim() ||
     `chat:${thread.id}:${incoming.at(-1)?.id || Date.now()}`;
@@ -299,7 +304,7 @@ export async function handleChat(req: Request) {
       void Promise.allSettled([
         heartbeatJob(userId, job.id),
         checkpointJob(userId, job.id, checkpoint),
-        recordTokenUsage(userId, step.usage, { multiplier: tokenMultiplier }),
+        recordModelUsage(userId, step, modelId),
       ]).then((results) => {
         for (const result of results) {
           if (result.status === "rejected") console.error("persist chat step", result.reason);

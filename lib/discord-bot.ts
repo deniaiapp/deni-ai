@@ -245,10 +245,10 @@ async function handleApprovalButton(interaction: ButtonInteraction, parsed: NonN
 }
 
 function runModeParams(mode: ReturnType<typeof parseRunMode>, tr: Translate) {
-  const { label, tokenMultiplier, effort } = RUN_MODES[mode];
+  const { label, costMultiplier, effort } = RUN_MODES[mode];
   return {
     mode: `${label} (${effort})`,
-    cost: tr("{multiplier}× tokens", { multiplier: tokenMultiplier }),
+    cost: tr("~{multiplier}× cost", { multiplier: costMultiplier }),
   };
 }
 

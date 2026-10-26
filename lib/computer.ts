@@ -34,7 +34,7 @@ import {
 } from "./workspace";
 import type { ComputerState, ShellRecord } from "./types";
 import { createId, nowIso } from "./ids";
-import { assertCanStartBrowser, consumeUsage, isBrowserLimitReached } from "./usage";
+import { assertCanStartBrowser, isBrowserLimitReached, recordTimeUsage } from "./usage";
 
 const execAsync = promisify(exec);
 const VIEWPORT = { width: 1280, height: 800 };
@@ -462,7 +462,7 @@ async function getExistingBrowserSession(userId: string, jobId?: string): Promis
       return reconnectSteelSession(userId, jobId);
     }
     touchSteelSession(userId, session);
-    await billBrowserTime(userId, session, { allowOver: true, minDeltaMs: 5_000 }).catch(
+    await billBrowserTime(userId, session, { minDeltaMs: 5_000 }).catch(
       () => undefined,
     );
     if (await isBrowserLimitReached(userId, pendingBrowserMs(userId))) {
@@ -480,7 +480,7 @@ async function getExistingBrowserSession(userId: string, jobId?: string): Promis
 async function billBrowserTime(
   userId: string,
   session: BrowserSession,
-  opts?: { allowOver?: boolean; minDeltaMs?: number },
+  opts?: { minDeltaMs?: number },
 ) {
   const now = Date.now();
   const previous = session.lastBilledAt || session.startedAt || now;
@@ -489,7 +489,7 @@ async function billBrowserTime(
   if (opts?.minDeltaMs && delta < opts.minDeltaMs) return;
   session.lastBilledAt = now;
   browserBilledAt().set(session.scopeKey, now);
-  await consumeUsage(userId, { browserMs: delta }, { allowOver: opts?.allowOver });
+  await recordTimeUsage(userId, "browser", delta);
 }
 
 async function ensureBrowser(userId: string, jobId?: string): Promise<BrowserSession> {
@@ -583,7 +583,7 @@ async function invalidateBrowserSession(userId: string, session: BrowserSession)
 async function closeBrowserSession(userId: string, session: BrowserSession) {
   session.closed = true;
   if (session.idleTimer) clearTimeout(session.idleTimer);
-  await billBrowserTime(userId, session, { allowOver: true }).catch(() => undefined);
+  await billBrowserTime(userId, session).catch(() => undefined);
   browserBilledAt().delete(session.scopeKey);
   if (session.steel && session.steelSessionId) {
     await session.steel.sessions.release(session.steelSessionId).catch(() => undefined);
@@ -817,7 +817,7 @@ async function runE2BCommand(
   } finally {
     await downloadWorkspaceFromSandbox(sandbox, root);
     await syncCommandWorkspace(userId, root);
-    await billUserSandbox(userId, true).catch(() => undefined);
+    await billUserSandbox(userId).catch(() => undefined);
   }
 }
 

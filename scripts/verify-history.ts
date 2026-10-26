@@ -25,20 +25,29 @@ async function main() {
   process.env.LOCAL_DB_PATH = path.join(tempDir, "test.sqlite");
   process.env.APP_ENCRYPTION_KEY ||= "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=";
   process.env.OPENROUTER_API_KEY = "test-key";
+  // Usage is reported to Deni AI; the fetch mock below answers for it.
+  process.env.DENI_AI_URL = "https://deni.test";
+  process.env.DENI_RUN_SERVICE_SECRET = "test-service-secret";
 
   const { db } = await import("../db");
-  const { user } = await import("../db/schema");
+  const { account, user } = await import("../db/schema");
   const store = await import("../lib/store");
   const { lookBack } = await import("../lib/history");
   const { resetThreadContext } = await import("../lib/thread-context");
   const { createDeniTools } = await import("../lib/agent");
-  const { SUMMARY_MODEL_ID, SUMMARY_TOKEN_MULTIPLIER } = await import("../lib/model");
+  const { SUMMARY_MODEL_ID } = await import("../lib/model");
   const { HISTORY_TOKEN_LIMIT } = await import("../lib/messages");
 
   const calls: { model: string; body: string }[] = [];
+  const reported: { userId: string; metric: string; costUsd: number }[] = [];
   const replies: string[] = [];
   const realFetch = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+    if (String(input).startsWith("https://deni.test/api/integrations/deni-run/usage")) {
+      assert(new Headers(init?.headers).get("authorization") === "Bearer test-service-secret", "usage report without the service secret");
+      reported.push(JSON.parse(String(init?.body)));
+      return Response.json({ tier: "free", periodEnd: "2026-11-01T00:00:00.000Z", limitUsd: 10, usedUsd: 0.01, remainingUsd: 9.99, breakdownUsd: { model: 0.01, browser: 0, computer: 0 }, manageUrl: "https://deni.test/settings/billing" });
+    }
     if (!String(input).includes("/chat/completions")) return realFetch(input, init);
     const body = String(init?.body ?? "");
     calls.push({ model: JSON.parse(body).model, body });
@@ -50,12 +59,13 @@ async function main() {
       created: 0,
       model: SUMMARY_MODEL_ID,
       choices: [{ index: 0, message: { role: "assistant", content }, finish_reason: "stop" }],
-      usage: { prompt_tokens: 1_000, completion_tokens: 200, total_tokens: 1_200 },
+      usage: { prompt_tokens: 1_000, completion_tokens: 200, total_tokens: 1_200, cost: 0.0042 },
     });
   }) as typeof fetch;
 
   const userId = "h1";
   await db.insert(user).values({ id: userId, name: userId, email: "h1@example.com", emailVerified: true });
+  await db.insert(account).values({ id: "acc-h1", accountId: "deni-h1", providerId: "deni-ai", userId });
   const initial = await store.readStore(userId);
   const thread = initial.threads.find((item) => item.kind === "dm" && item.botIds[0] === "ops");
   assert(Boolean(thread), "seeded ops DM missing");
@@ -90,15 +100,16 @@ async function main() {
   assert(typeof (await ask({ action: "read", messageId: "nope" })).error === "string", "unknown message opened");
   assert(typeof (await ask({ action: "search" })).error === "string", "search without a query");
 
-  // The first summary covers the hidden part, uses the cheap model, and is billed at its rate.
-  const tokensBefore = (await store.readStore(userId)).usage?.tokens ?? 0;
+  // The first summary covers the hidden part, uses the cheap model, and its cost is reported to Deni AI.
   replies.push("- Invoice INV-4471 was discussed.");
   const first = await ask({ action: "summary" });
   assert(first.summary === "- Invoice INV-4471 was discussed." && calls.length === 1, `first summary: ${JSON.stringify(first)}`);
   assert(calls[0].model === SUMMARY_MODEL_ID, `summary model: ${calls[0].model}`);
   assert(calls[0].body.includes("INV-4471") && !calls[0].body.includes("ZEBRA"), "summary input must be the hidden part only");
-  const tokensAfter = (await store.readStore(userId)).usage?.tokens ?? 0;
-  assert(tokensAfter - tokensBefore === Math.round(1_200 * SUMMARY_TOKEN_MULTIPLIER), `billed ${tokensAfter - tokensBefore} tokens`);
+  assert(
+    reported.length === 1 && reported[0].userId === "deni-h1" && reported[0].metric === "model" && reported[0].costUsd === 0.0042,
+    `reported ${JSON.stringify(reported)}`,
+  );
 
   // Asking again reuses the stored summary.
   const again = await ask({ action: "summary" });

@@ -42,10 +42,6 @@ import { Route as TwoFactorSetupRouteImport } from "./routes/two-factor/setup";
 import { Route as ApiArtifactsIndexRouteImport } from "./routes/api/artifacts/index";
 import { Route as ApiArtifactsIdRouteImport } from "./routes/api/artifacts/$id";
 import { Route as ApiAuthSplatRouteImport } from "./routes/api/auth/$";
-import { Route as ApiBillingCheckoutRouteImport } from "./routes/api/billing/checkout";
-import { Route as ApiBillingPortalRouteImport } from "./routes/api/billing/portal";
-import { Route as ApiBillingSyncRouteImport } from "./routes/api/billing/sync";
-import { Route as ApiBillingWebhookRouteImport } from "./routes/api/billing/webhook";
 import { Route as ApiBotsIndexRouteImport } from "./routes/api/bots/index";
 import { Route as ApiBotsIdRouteImport } from "./routes/api/bots/$id";
 import { Route as ApiComputerIndexRouteImport } from "./routes/api/computer/index";
@@ -230,26 +226,6 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: "/api/auth/$",
   getParentRoute: () => rootRouteImport,
 } as any);
-const ApiBillingCheckoutRoute = ApiBillingCheckoutRouteImport.update({
-  id: "/api/billing/checkout",
-  path: "/api/billing/checkout",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ApiBillingPortalRoute = ApiBillingPortalRouteImport.update({
-  id: "/api/billing/portal",
-  path: "/api/billing/portal",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ApiBillingSyncRoute = ApiBillingSyncRouteImport.update({
-  id: "/api/billing/sync",
-  path: "/api/billing/sync",
-  getParentRoute: () => rootRouteImport,
-} as any);
-const ApiBillingWebhookRoute = ApiBillingWebhookRouteImport.update({
-  id: "/api/billing/webhook",
-  path: "/api/billing/webhook",
-  getParentRoute: () => rootRouteImport,
-} as any);
 const ApiBotsIndexRoute = ApiBotsIndexRouteImport.update({
   id: "/api/bots/",
   path: "/api/bots/",
@@ -364,10 +340,6 @@ export interface FileRoutesByFullPath {
   "/two-factor/": typeof TwoFactorIndexRoute;
   "/api/artifacts/$id": typeof ApiArtifactsIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
-  "/api/billing/checkout": typeof ApiBillingCheckoutRoute;
-  "/api/billing/portal": typeof ApiBillingPortalRoute;
-  "/api/billing/sync": typeof ApiBillingSyncRoute;
-  "/api/billing/webhook": typeof ApiBillingWebhookRoute;
   "/api/bots/$id": typeof ApiBotsIdRoute;
   "/api/computer/files": typeof ApiComputerFilesRoute;
   "/api/computer/input": typeof ApiComputerInputRoute;
@@ -419,10 +391,6 @@ export interface FileRoutesByTo {
   "/two-factor": typeof TwoFactorIndexRoute;
   "/api/artifacts/$id": typeof ApiArtifactsIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
-  "/api/billing/checkout": typeof ApiBillingCheckoutRoute;
-  "/api/billing/portal": typeof ApiBillingPortalRoute;
-  "/api/billing/sync": typeof ApiBillingSyncRoute;
-  "/api/billing/webhook": typeof ApiBillingWebhookRoute;
   "/api/bots/$id": typeof ApiBotsIdRoute;
   "/api/computer/files": typeof ApiComputerFilesRoute;
   "/api/computer/input": typeof ApiComputerInputRoute;
@@ -475,10 +443,6 @@ export interface FileRoutesById {
   "/two-factor/": typeof TwoFactorIndexRoute;
   "/api/artifacts/$id": typeof ApiArtifactsIdRoute;
   "/api/auth/$": typeof ApiAuthSplatRoute;
-  "/api/billing/checkout": typeof ApiBillingCheckoutRoute;
-  "/api/billing/portal": typeof ApiBillingPortalRoute;
-  "/api/billing/sync": typeof ApiBillingSyncRoute;
-  "/api/billing/webhook": typeof ApiBillingWebhookRoute;
   "/api/bots/$id": typeof ApiBotsIdRoute;
   "/api/computer/files": typeof ApiComputerFilesRoute;
   "/api/computer/input": typeof ApiComputerInputRoute;
@@ -532,10 +496,6 @@ export interface FileRouteTypes {
     | "/two-factor/"
     | "/api/artifacts/$id"
     | "/api/auth/$"
-    | "/api/billing/checkout"
-    | "/api/billing/portal"
-    | "/api/billing/sync"
-    | "/api/billing/webhook"
     | "/api/bots/$id"
     | "/api/computer/files"
     | "/api/computer/input"
@@ -587,10 +547,6 @@ export interface FileRouteTypes {
     | "/two-factor"
     | "/api/artifacts/$id"
     | "/api/auth/$"
-    | "/api/billing/checkout"
-    | "/api/billing/portal"
-    | "/api/billing/sync"
-    | "/api/billing/webhook"
     | "/api/bots/$id"
     | "/api/computer/files"
     | "/api/computer/input"
@@ -642,10 +598,6 @@ export interface FileRouteTypes {
     | "/two-factor/"
     | "/api/artifacts/$id"
     | "/api/auth/$"
-    | "/api/billing/checkout"
-    | "/api/billing/portal"
-    | "/api/billing/sync"
-    | "/api/billing/webhook"
     | "/api/bots/$id"
     | "/api/computer/files"
     | "/api/computer/input"
@@ -698,10 +650,6 @@ export interface RootRouteChildren {
   TwoFactorIndexRoute: typeof TwoFactorIndexRoute;
   ApiArtifactsIdRoute: typeof ApiArtifactsIdRoute;
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute;
-  ApiBillingCheckoutRoute: typeof ApiBillingCheckoutRoute;
-  ApiBillingPortalRoute: typeof ApiBillingPortalRoute;
-  ApiBillingSyncRoute: typeof ApiBillingSyncRoute;
-  ApiBillingWebhookRoute: typeof ApiBillingWebhookRoute;
   ApiBotsIdRoute: typeof ApiBotsIdRoute;
   ApiComputerFilesRoute: typeof ApiComputerFilesRoute;
   ApiComputerInputRoute: typeof ApiComputerInputRoute;
@@ -954,34 +902,6 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof ApiAuthSplatRouteImport;
       parentRoute: typeof rootRouteImport;
     };
-    "/api/billing/checkout": {
-      id: "/api/billing/checkout";
-      path: "/api/billing/checkout";
-      fullPath: "/api/billing/checkout";
-      preLoaderRoute: typeof ApiBillingCheckoutRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/billing/portal": {
-      id: "/api/billing/portal";
-      path: "/api/billing/portal";
-      fullPath: "/api/billing/portal";
-      preLoaderRoute: typeof ApiBillingPortalRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/billing/sync": {
-      id: "/api/billing/sync";
-      path: "/api/billing/sync";
-      fullPath: "/api/billing/sync";
-      preLoaderRoute: typeof ApiBillingSyncRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
-    "/api/billing/webhook": {
-      id: "/api/billing/webhook";
-      path: "/api/billing/webhook";
-      fullPath: "/api/billing/webhook";
-      preLoaderRoute: typeof ApiBillingWebhookRouteImport;
-      parentRoute: typeof rootRouteImport;
-    };
     "/api/bots/": {
       id: "/api/bots/";
       path: "/api/bots";
@@ -1130,10 +1050,6 @@ const rootRouteChildren: RootRouteChildren = {
   TwoFactorIndexRoute: TwoFactorIndexRoute,
   ApiArtifactsIdRoute: ApiArtifactsIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
-  ApiBillingCheckoutRoute: ApiBillingCheckoutRoute,
-  ApiBillingPortalRoute: ApiBillingPortalRoute,
-  ApiBillingSyncRoute: ApiBillingSyncRoute,
-  ApiBillingWebhookRoute: ApiBillingWebhookRoute,
   ApiBotsIdRoute: ApiBotsIdRoute,
   ApiComputerFilesRoute: ApiComputerFilesRoute,
   ApiComputerInputRoute: ApiComputerInputRoute,

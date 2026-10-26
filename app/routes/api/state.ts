@@ -24,7 +24,7 @@ async function GET() {
     routines: store.routines,
     computer: withBrowserLive(userId, store.computer),
     shells: store.shells ?? listShells(userId),
-    usage: liveUsageSnapshot(store, userId),
+    usage: await liveUsageSnapshot(store, userId),
   }, { headers: { "Cache-Control": "no-store", "Server-Timing": `auth;dur=${(authenticatedAt - startedAt).toFixed(1)}, data;dur=${(performance.now() - authenticatedAt).toFixed(1)}` } });
 }
 

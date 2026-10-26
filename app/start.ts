@@ -21,7 +21,6 @@ function isPublicPath(pathname: string) {
   if (publicExact.has(pathname)) return true;
   if (pathname.startsWith("/integrations/")) return true;
   if (pathname.startsWith("/api/auth")) return true;
-  if (pathname === "/api/billing/webhook") return true;
   if (pathname === "/api/health") return true;
   // Checks the session itself; in development it first hands tunnel callbacks back to localhost.
   if (pathname === "/api/mcp/oauth/callback") return true;

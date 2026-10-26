@@ -151,7 +151,7 @@ export function ConnectorLanding({ id }: { id: LandingConnectorId }) {
 
         <Section title={t("How it works")}>
           <ol className="list-decimal space-y-1 pl-5">
-            <li>{t("Click “Add to {name}” and sign in to Deni Run with Google or GitHub.", { name })}</li>
+            <li>{t("Click “Add to {name}” and sign in to Deni Run with your Deni AI account, Google, or GitHub.", { name })}</li>
             <li>{t("{name} asks you to allow access. Deni Run never sees your {name} password.", { name })}</li>
             <li>{t("Back in your workspace, give any teammate a task that needs {name}.", { name })}</li>
           </ol>

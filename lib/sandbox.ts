@@ -2,7 +2,7 @@ import "@tanstack/react-start/server-only";
 
 import { Sandbox } from "e2b";
 import { mutateStore, readStore } from "./store";
-import { assertCanStartComputer, consumeUsage, isComputerLimitReached } from "./usage";
+import { assertCanStartComputer, isComputerLimitReached, recordTimeUsage } from "./usage";
 
 type UserSandbox = {
   sandbox: Sandbox;
@@ -44,7 +44,7 @@ function sandboxTimeoutMs() {
 async function billSandboxTime(
   userId: string,
   handle: UserSandbox,
-  opts?: { allowOver?: boolean; minDeltaMs?: number },
+  opts?: { minDeltaMs?: number },
 ) {
   const now = Date.now();
   const previous = handle.lastBilledAt || handle.startedAt || now;
@@ -53,7 +53,7 @@ async function billSandboxTime(
   if (opts?.minDeltaMs && delta < opts.minDeltaMs) return;
   handle.lastBilledAt = now;
   sandboxBilledAt().set(userId, now);
-  await consumeUsage(userId, { computerMs: delta }, { allowOver: opts?.allowOver });
+  await recordTimeUsage(userId, "computer", delta);
 }
 
 export function hasUserSandbox(userId: string) {
@@ -65,18 +65,18 @@ export async function billLiveSandbox(userId: string) {
   if (!existing) return;
   const handle = await existing.catch(() => null);
   if (!handle) return;
-  await billSandboxTime(userId, handle, { allowOver: true, minDeltaMs: 5_000 });
+  await billSandboxTime(userId, handle, { minDeltaMs: 5_000 });
   if (await isComputerLimitReached(userId, pendingComputerMs(userId))) {
     await stopUserSandbox(userId);
   }
 }
 
-export async function billUserSandbox(userId: string, allowOver = false) {
+export async function billUserSandbox(userId: string) {
   const existing = sandboxes().get(userId);
   if (!existing) return;
   const handle = await existing.catch(() => null);
   if (!handle) return;
-  await billSandboxTime(userId, handle, { allowOver });
+  await billSandboxTime(userId, handle);
 }
 
 export async function getUserSandbox(userId: string) {
@@ -117,7 +117,7 @@ export async function stopUserSandbox(userId: string) {
     const handle = await promise.catch(() => null);
     if (handle) {
       if (handle.idleTimer) clearTimeout(handle.idleTimer);
-      await billSandboxTime(userId, handle, { allowOver: true }).catch(() => undefined);
+      await billSandboxTime(userId, handle).catch(() => undefined);
       sandboxBilledAt().delete(userId);
       await handle.sandbox.pause({ keepMemory: false }).catch(() => undefined);
       return { stopped: true as const };

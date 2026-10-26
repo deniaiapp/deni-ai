@@ -201,14 +201,16 @@ export const ja: Record<string, string> = {
   "Reconnect {service} in Plugins.": "プラグインで{service}を再接続してください。",
 
   // Usage limits
-  "Monthly token limit reached ({limit} on {plan}). Upgrade to keep chatting.":
-    "今月のトークン上限に達しました({plan}プランで{limit})。チャットを続けるにはアップグレードしてください。",
-  "Monthly browser time limit reached ({limit} min on {plan}). Upgrade to keep using the browser.":
-    "今月のブラウザ時間の上限に達しました({plan}プランで{limit}分)。ブラウザを使い続けるにはアップグレードしてください。",
-  "Monthly computer time limit reached ({limit} min on {plan}). Upgrade to keep using the terminal.":
-    "今月のコンピューター時間の上限に達しました({plan}プランで{limit}分)。ターミナルを使い続けるにはアップグレードしてください。",
-  "Teammate limit reached ({limit} on {plan}). Upgrade to add more teammates.":
-    "チームメイトの上限に達しました({plan}プランで{limit}人)。追加するにはアップグレードしてください。",
+  "Connect your Deni AI account to use Deni Run.":
+    "Deni Run を使うには Deni AI アカウントを連携してください。",
+  "This month's Deni AI usage is used up on {plan}. Upgrade your Deni AI plan to keep going.":
+    "{plan}プランの今月の Deni AI 利用枠を使い切りました。続けるには Deni AI のプランをアップグレードしてください。",
+  "Teammate limit reached ({limit} on {plan}). Upgrade your Deni AI plan to add more teammates.":
+    "チームメイトの上限に達しました({plan}プランで{limit}人)。追加するには Deni AI のプランをアップグレードしてください。",
+  "Deni AI is unavailable. Try again in a moment.":
+    "Deni AI に接続できません。しばらくしてからもう一度お試しください。",
+  "Deni AI usage is not configured on this deployment.":
+    "このデプロイでは Deni AI の使用量連携が設定されていません。",
 
   // Webhook
   "webhook is not configured": "Webhook が設定されていません",
@@ -238,7 +240,7 @@ export const ja: Record<string, string> = {
   "Now talking to {name}.": "{name} さんと話しています。",
   "Now using {mode}. {cost}": "{mode} に切り替えました。{cost}",
   "Current setting: {mode}. {cost}": "現在の設定: {mode}。{cost}",
-  "{multiplier}× tokens": "トークン消費 {multiplier}倍",
+  "~{multiplier}× cost": "コスト 約{multiplier}倍",
   "{name} is still working or waiting for you. Finish or stop that task, then reset.": "{name} さんは作業中か、あなたの対応を待っています。そのタスクを終えるか停止してから、リセットしてください。",
   "The conversation with {name} is already fresh.": "{name} さんとの会話はすでに新しい状態です。",
   "Started a new conversation with {name}. Earlier messages stay in the app but are no longer sent.": "{name} さんとの会話をリセットしました。これまでのメッセージはアプリに残りますが、今後は送信されません。",

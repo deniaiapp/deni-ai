@@ -43,7 +43,7 @@ Use one allowed scope, or several in the order they matter: `chore(web,api,db)`.
 | `api` | Route handlers |
 | `db` | Schema and migrations |
 | `auth` | Better Auth and session gates |
-| `billing` | Stripe, plans, usage limits |
+| `billing` | Deni AI plans, usage budget |
 | `agent` | Model, tools, scheduler, handoffs |
 | `computer` | Browser, sandbox, workspace files |
 | `docker` | Image, Compose, container entrypoint |

@@ -1,6 +1,6 @@
 import { useExtracted } from "@/i18n/react";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +9,10 @@ import { BackupCodesPanel, usePasskeyErrorMessage } from "./auth-form";
 import { authClient } from "@/lib/auth-client";
 import { supportEmail, supportMailto } from "@/lib/site";
 
-export function AccountScreen() {
+export function AccountScreen({ deniAiUrl }: { deniAiUrl: string }) {
   const t = useExtracted();
   const { data: session, refetch } = authClient.useSession();
+  const [deniAiLinked, setDeniAiLinked] = useState<boolean | null>(null);
   const user = session?.user;
   const usesAuthenticator = user?.twoFactorMethod !== "email" && user?.twoFactorMethod !== "passkey";
   const passkeyError = usePasskeyErrorMessage();
@@ -23,6 +24,30 @@ export function AccountScreen() {
   const [notice, setNotice] = useState("");
   const email = supportEmail();
   const mail = supportMailto();
+
+  useEffect(() => {
+    let cancelled = false;
+    void authClient.listAccounts().then(({ data }) => {
+      if (!cancelled) setDeniAiLinked(Boolean(data?.some((item) => item.providerId === "deni-ai")));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function connectDeniAi() {
+    setBusy("deni-ai");
+    setError("");
+    const { error: nextError } = await authClient.linkSocial({
+      provider: "deni-ai",
+      callbackURL: "/account",
+      errorCallbackURL: "/account",
+    });
+    if (nextError) {
+      setError(nextError.message || t("Could not connect your Deni AI account"));
+      setBusy(null);
+    }
+  }
 
   async function saveName() {
     const next = name.trim() || user?.name || "";
@@ -87,9 +112,41 @@ export function AccountScreen() {
         <div>
           <h1 className="text-2xl font-semibold">{t("Account")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            {t("{email} · signed in with Google or GitHub.", { email: user?.email ?? t("Signed in") })}
+            {t("{email} · signed in with Deni AI, Google, or GitHub.", { email: user?.email ?? t("Signed in") })}
           </p>
         </div>
+        </StaggerItem>
+
+        <StaggerItem hover>
+        <section className="rounded-xl border border-foreground/10 bg-surface p-5">
+          <h2 className="text-[0.925rem] font-semibold">{t("Deni AI account")}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {deniAiLinked
+              ? t("Connected. Your plan and Deni Run usage are managed in Deni AI, next to Deni AI chat and Flixa.")
+              : t("Deni Run uses the plan of your Deni AI account. Connect one to keep using teammates, the browser, and the computer.")}
+          </p>
+          {deniAiLinked ? (
+            <a
+              href={`${deniAiUrl}/settings/billing`}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-4 inline-flex h-8 items-center rounded-lg bg-foreground/10 px-3 text-sm hover:bg-foreground/15"
+            >
+              {t("Manage plan and usage")}
+            </a>
+          ) : (
+            <Button
+              type="button"
+              variant="primary"
+              className="mt-4"
+              loading={busy === "deni-ai"}
+              disabled={deniAiLinked === null}
+              onClick={() => void connectDeniAi()}
+            >
+              {t("Connect Deni AI account")}
+            </Button>
+          )}
+        </section>
         </StaggerItem>
 
         <StaggerItem hover>
@@ -123,10 +180,10 @@ export function AccountScreen() {
             {!user?.twoFactorEnabled
               ? t("Finish setup so this account can open the workspace.")
               : user.twoFactorMethod === "email"
-                ? t("A code sent to {email} is required after Google or GitHub sign-in.", { email: user.email })
+                ? t("A code sent to {email} is required after you sign in.", { email: user.email })
                 : user.twoFactorMethod === "passkey"
-                  ? t("You confirm with a passkey after Google or GitHub sign-in. Add one on a second device in case you lose this one.")
-                  : t("An authenticator app is required after Google or GitHub sign-in.")}
+                  ? t("You confirm with a passkey after you sign in. Add one on a second device in case you lose this one.")
+                  : t("An authenticator app is required after you sign in.")}
           </p>
           {user?.twoFactorEnabled ? (
             <div className="mt-4 flex flex-col gap-3">

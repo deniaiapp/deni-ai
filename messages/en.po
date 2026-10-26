@@ -30,6 +30,11 @@ msgid "Account menu"
 msgstr "Account menu"
 
 #: app/components/account-menu.tsx
+msgctxt "K49R3q"
+msgid "Connect Deni AI"
+msgstr "Connect Deni AI"
+
+#: app/components/account-menu.tsx
 msgctxt "fz0x1F"
 msgid "{plan} · {percent}% remaining"
 msgstr "{plan} · {percent}% remaining"
@@ -47,10 +52,9 @@ msgid "Plan and usage"
 msgstr "Plan and usage"
 
 #: app/components/account-menu.tsx
-#: app/components/upgrade-screen.tsx
-msgctxt "5N04mo"
-msgid "Upgrade to Pro"
-msgstr "Upgrade to Pro"
+msgctxt "c5-JRM"
+msgid "Upgrade plan"
+msgstr "Upgrade plan"
 
 #: app/components/account-menu.tsx
 msgctxt "GAGFKL"
@@ -136,6 +140,11 @@ msgid "Delete my data"
 msgstr "Delete my data"
 
 #: app/components/account-screen.tsx
+msgctxt "IQ0zJA"
+msgid "Could not connect your Deni AI account"
+msgstr "Could not connect your Deni AI account"
+
+#: app/components/account-screen.tsx
 msgctxt "UWeLlR"
 msgid "Could not update name"
 msgstr "Could not update name"
@@ -157,9 +166,38 @@ msgid "Back to workspace"
 msgstr "Back to workspace"
 
 #: app/components/account-screen.tsx
-msgctxt "Zmcjcz"
-msgid "{email} · signed in with Google or GitHub."
-msgstr "{email} · signed in with Google or GitHub."
+msgctxt "TZ0JNH"
+msgid "{email} · signed in with Deni AI, Google, or GitHub."
+msgstr "{email} · signed in with Deni AI, Google, or GitHub."
+
+#: app/components/account-screen.tsx
+msgctxt "wZd3lb"
+msgid "Deni AI account"
+msgstr "Deni AI account"
+
+#: app/components/account-screen.tsx
+msgctxt "6lq92O"
+msgid "Connected. Your plan and Deni Run usage are managed in Deni AI, next to Deni AI chat and Flixa."
+msgstr "Connected. Your plan and Deni Run usage are managed in Deni AI, next to Deni AI chat and Flixa."
+
+#: app/components/account-screen.tsx
+#: app/components/billing-dialog.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "vI41QX"
+msgid "Deni Run uses the plan of your Deni AI account. Connect one to keep using teammates, the browser, and the computer."
+msgstr "Deni Run uses the plan of your Deni AI account. Connect one to keep using teammates, the browser, and the computer."
+
+#: app/components/account-screen.tsx
+msgctxt "if1jfR"
+msgid "Manage plan and usage"
+msgstr "Manage plan and usage"
+
+#: app/components/account-screen.tsx
+#: app/components/billing-dialog.tsx
+#: app/components/upgrade-screen.tsx
+msgctxt "WWouHT"
+msgid "Connect Deni AI account"
+msgstr "Connect Deni AI account"
 
 #: app/components/account-screen.tsx
 msgctxt "itPgxd"
@@ -192,20 +230,20 @@ msgid "Finish setup so this account can open the workspace."
 msgstr "Finish setup so this account can open the workspace."
 
 #: app/components/account-screen.tsx
-msgctxt "6ThU6H"
-msgid "A code sent to {email} is required after Google or GitHub sign-in."
-msgstr "A code sent to {email} is required after Google or GitHub sign-in."
+msgctxt "9zkjQ9"
+msgid "A code sent to {email} is required after you sign in."
+msgstr "A code sent to {email} is required after you sign in."
 
 #: app/components/account-screen.tsx
-msgctxt "dtmdY6"
-msgid "You confirm with a passkey after Google or GitHub sign-in. Add one on a second device in case you lose this one."
-msgstr "You confirm with a passkey after Google or GitHub sign-in. Add one on a second device in case you lose this one."
+msgctxt "-cgSi2"
+msgid "You confirm with a passkey after you sign in. Add one on a second device in case you lose this one."
+msgstr "You confirm with a passkey after you sign in. Add one on a second device in case you lose this one."
 
 #: app/components/account-screen.tsx
 #: app/components/auth-form.tsx
-msgctxt "P0s1jE"
-msgid "An authenticator app is required after Google or GitHub sign-in."
-msgstr "An authenticator app is required after Google or GitHub sign-in."
+msgctxt "qtAlGN"
+msgid "An authenticator app is required after you sign in."
+msgstr "An authenticator app is required after you sign in."
 
 #: app/components/account-screen.tsx
 msgctxt "SFHRua"
@@ -348,9 +386,9 @@ msgid "Sign-in was cancelled or failed. Try again."
 msgstr "Sign-in was cancelled or failed. Try again."
 
 #: app/components/auth-form.tsx
-msgctxt "VhBfck"
-msgid "Continue with Google or GitHub, then confirm it is you once more."
-msgstr "Continue with Google or GitHub, then confirm it is you once more."
+msgctxt "abq1vZ"
+msgid "Continue with your Deni AI account, Google, or GitHub, then confirm it is you once more."
+msgstr "Continue with your Deni AI account, Google, or GitHub, then confirm it is you once more."
 
 #: app/components/auth-form.tsx
 msgctxt "mXc8V6"
@@ -361,6 +399,11 @@ msgstr "New here? <link>Create an account</link>"
 msgctxt "xotCDt"
 msgid "Already have an account? <link>Sign in</link>"
 msgstr "Already have an account? <link>Sign in</link>"
+
+#: app/components/auth-form.tsx
+msgctxt "--D-qA"
+msgid "Continue with Deni AI"
+msgstr "Continue with Deni AI"
 
 #: app/components/auth-form.tsx
 msgctxt "FJ6r9E"
@@ -513,9 +556,9 @@ msgid "Set up two-factor authentication"
 msgstr "Set up two-factor authentication"
 
 #: app/components/auth-form.tsx
-msgctxt "4__exi"
-msgid "After Google or GitHub sign-in, you confirm it is you once more. Choose how."
-msgstr "After Google or GitHub sign-in, you confirm it is you once more. Choose how."
+msgctxt "CIHWKn"
+msgid "After you sign in, you confirm it is you once more. Choose how."
+msgstr "After you sign in, you confirm it is you once more. Choose how."
 
 #: app/components/auth-form.tsx
 msgctxt "WYATYp"
@@ -599,34 +642,47 @@ msgid "Upload icon"
 msgstr "Upload icon"
 
 #: app/components/billing-dialog.tsx
-msgctxt "i43vh-"
-msgid "{plan} plan · {period} UTC"
-msgstr "{plan} plan · {period} UTC"
+msgctxt "wv8EiK"
+msgid "Deni AI Chat"
+msgstr "Deni AI Chat"
 
 #: app/components/billing-dialog.tsx
-msgctxt "q_-b76"
-msgid "renews {date}"
-msgstr "renews {date}"
+msgctxt "INCsXu"
+msgid "Flixa"
+msgstr "Flixa"
 
 #: app/components/billing-dialog.tsx
-#: app/components/upgrade-screen.tsx
-msgctxt "P6EE_a"
-msgid "Tokens"
-msgstr "Tokens"
+msgctxt "anePcs"
+msgid "Deni Run"
+msgstr "Deni Run"
 
 #: app/components/billing-dialog.tsx
-msgctxt "fS9BhU"
-msgid "Browser minutes"
-msgstr "Browser minutes"
+msgctxt "kD4Yq4"
+msgid "Monthly usage"
+msgstr "Monthly usage"
 
 #: app/components/billing-dialog.tsx
-msgctxt "P1IEKh"
-msgid "Computer minutes"
-msgstr "Computer minutes"
+msgctxt "06vwLy"
+msgid "{percent}% used"
+msgstr "{percent}% used"
+
+#: app/components/billing-dialog.tsx
+msgctxt "Bonnmc"
+msgid "Deni AI {plan} plan · {period} UTC"
+msgstr "Deni AI {plan} plan · {period} UTC"
+
+#: app/components/billing-dialog.tsx
+msgctxt "_9dtPA"
+msgid "resets {date}"
+msgstr "resets {date}"
+
+#: app/components/billing-dialog.tsx
+msgctxt "gvcn2B"
+msgid "Usage is not metered on this deployment."
+msgstr "Usage is not metered on this deployment."
 
 #: app/components/billing-dialog.tsx
 #: app/components/sidebar.tsx
-#: app/components/upgrade-screen.tsx
 msgctxt "hDxIJm"
 msgid "Teammates"
 msgstr "Teammates"
@@ -646,21 +702,14 @@ msgstr "Close"
 
 #: app/components/billing-dialog.tsx
 #: app/components/upgrade-screen.tsx
-msgctxt "wLCwU4"
-msgid "Manage billing"
-msgstr "Manage billing"
+msgctxt "CMrDXv"
+msgid "Manage plan on Deni AI"
+msgstr "Manage plan on Deni AI"
 
 #: app/components/billing-dialog.tsx
-#: app/components/upgrade-screen.tsx
-msgctxt "epeZNJ"
-msgid "Upgrade to Pro · ${price}/mo"
-msgstr "Upgrade to Pro · ${price}/mo"
-
-#: app/components/billing-dialog.tsx
-#: app/components/upgrade-screen.tsx
-msgctxt "ZNYO98"
-msgid "Stripe is not configured on this deployment. Limits still apply to the Free plan."
-msgstr "Stripe is not configured on this deployment. Limits still apply to the Free plan."
+msgctxt "F7jaKL"
+msgid "Your Deni AI plan covers Deni AI chat, Flixa, and Deni Run. See all usage in Deni AI settings."
+msgstr "Your Deni AI plan covers Deni AI chat, Flixa, and Deni Run. See all usage in Deni AI settings."
 
 #: app/components/chat-thread.tsx
 msgctxt "frgrwx"
@@ -1432,9 +1481,9 @@ msgid "Max"
 msgstr "Max"
 
 #: app/components/chat-thread.tsx
-msgctxt "r_LXBB"
-msgid "{multiplier}× tokens"
-msgstr "{multiplier}× tokens"
+msgctxt "ZNCzCt"
+msgid "~{multiplier}× cost"
+msgstr "~{multiplier}× cost"
 
 #: app/components/chat-thread.tsx
 #: app/components/computer-panel.tsx
@@ -1483,7 +1532,6 @@ msgid "Computer and routines"
 msgstr "Computer and routines"
 
 #: app/components/computer-panel.tsx
-#: app/components/upgrade-screen.tsx
 #: app/components/workspace.tsx
 msgctxt "GufTjD"
 msgid "Computer"
@@ -2153,9 +2201,9 @@ msgid "How it works"
 msgstr "How it works"
 
 #: app/components/connector-landing.tsx
-msgctxt "a_km9y"
-msgid "Click “Add to {name}” and sign in to Deni Run with Google or GitHub."
-msgstr "Click “Add to {name}” and sign in to Deni Run with Google or GitHub."
+msgctxt "zKL18S"
+msgid "Click “Add to {name}” and sign in to Deni Run with your Deni AI account, Google, or GitHub."
+msgstr "Click “Add to {name}” and sign in to Deni Run with your Deni AI account, Google, or GitHub."
 
 #: app/components/connector-landing.tsx
 msgctxt "UxVTE_"
@@ -2395,9 +2443,9 @@ msgid "Connect Gmail, Google Drive, or GitHub so a teammate can search, read, an
 msgstr "Connect Gmail, Google Drive, or GitHub so a teammate can search, read, and draft or send on your behalf. Each is off until you connect it."
 
 #: app/components/landing.tsx
-msgctxt "4MFLiq"
-msgid "Sign in with Google or GitHub, then confirm it is you with a passkey, an emailed code, or an authenticator app."
-msgstr "Sign in with Google or GitHub, then confirm it is you with a passkey, an emailed code, or an authenticator app."
+msgctxt "WxsrL3"
+msgid "Sign in with your Deni AI account, then confirm it is you with a passkey, an emailed code, or an authenticator app."
+msgstr "Sign in with your Deni AI account, then confirm it is you with a passkey, an emailed code, or an authenticator app."
 
 #: app/components/landing.tsx
 msgctxt "y4vBsI"
@@ -2410,26 +2458,18 @@ msgid "Follow the live screen, approve risky steps, and collect the results in y
 msgstr "Follow the live screen, approve risky steps, and collect the results in your workspace."
 
 #: app/components/landing.tsx
-msgctxt "Z3X7Uc"
-msgid "Monthly limits reset at the start of each UTC month."
-msgstr "Monthly limits reset at the start of each UTC month."
+msgctxt "FXeShH"
+msgid "Deni Run is included with every Deni AI plan. Deni AI chat, Flixa, and Deni Run share the plan's monthly usage, which resets at the start of each UTC month."
+msgstr "Deni Run is included with every Deni AI plan. Deni AI chat, Flixa, and Deni Run share the plan's monthly usage, which resets at the start of each UTC month."
 
 #: app/components/landing.tsx
-msgctxt "V8OnRy"
-msgid "{count} tokens / month"
-msgstr "{count} tokens / month"
+#: app/components/upgrade-screen.tsx
+msgctxt "AK7Ks8"
+msgid "/ month of usage"
+msgstr "/ month of usage"
 
 #: app/components/landing.tsx
-msgctxt "-qqZhD"
-msgid "{count} browser minutes"
-msgstr "{count} browser minutes"
-
-#: app/components/landing.tsx
-msgctxt "ySrqJm"
-msgid "{count} computer minutes"
-msgstr "{count} computer minutes"
-
-#: app/components/landing.tsx
+#: app/components/upgrade-screen.tsx
 msgctxt "zk8iSN"
 msgid "Up to {count} teammates"
 msgstr "Up to {count} teammates"
@@ -2443,22 +2483,6 @@ msgstr "Isolated files, browser, and terminal"
 msgctxt "huqKGl"
 msgid "Create account"
 msgstr "Create account"
-
-#: app/components/landing.tsx
-#: app/components/upgrade-screen.tsx
-msgctxt "Vn2ud4"
-msgid "/ month"
-msgstr "/ month"
-
-#: app/components/landing.tsx
-msgctxt "HV3Goi"
-msgid "Same private computer, higher ceiling"
-msgstr "Same private computer, higher ceiling"
-
-#: app/components/landing.tsx
-msgctxt "liqo9V"
-msgid "Start Pro"
-msgstr "Start Pro"
 
 #: app/components/landing.tsx
 #: app/components/public-layout.tsx
@@ -2481,10 +2505,9 @@ msgid "Terms"
 msgstr "Terms"
 
 #: app/components/landing.tsx
-#: app/components/upgrade-screen.tsx
-msgctxt "0h_lPM"
-msgid "Upgrade"
-msgstr "Upgrade"
+msgctxt "Q5CLtp"
+msgid "Plans"
+msgstr "Plans"
 
 #: app/components/mcp-approval.tsx
 msgctxt "0mS8ff"
@@ -3501,114 +3524,44 @@ msgid "No skills yet."
 msgstr "No skills yet."
 
 #: app/components/upgrade-screen.tsx
+msgctxt "V5vN40"
+msgid "Connect your Deni AI account"
+msgstr "Connect your Deni AI account"
+
+#: app/components/upgrade-screen.tsx
 msgctxt "Afrot4"
 msgid "Teammate limit reached"
 msgstr "Teammate limit reached"
 
 #: app/components/upgrade-screen.tsx
-msgctxt "WFUu-6"
-msgid "You've used {used} of {limit} teammates on {plan}. Pro includes {pro}."
-msgstr "You've used {used} of {limit} teammates on {plan}. Pro includes {pro}."
+msgctxt "bwbVx3"
+msgid "You've used {used} of {limit} teammates on Deni AI {plan}. Upgrade your Deni AI plan to add more."
+msgstr "You've used {used} of {limit} teammates on Deni AI {plan}. Upgrade your Deni AI plan to add more."
 
 #: app/components/upgrade-screen.tsx
-msgctxt "nHLZZq"
-msgid "Token limit reached"
-msgstr "Token limit reached"
+msgctxt "dkHsWF"
+msgid "Monthly usage used up"
+msgstr "Monthly usage used up"
 
 #: app/components/upgrade-screen.tsx
-msgctxt "_0wIjW"
-msgid "You've used {used} of {limit} tokens on {plan} this month."
-msgstr "You've used {used} of {limit} tokens on {plan} this month."
+msgctxt "yTZx0l"
+msgid "You've used {percent}% of this month's usage on Deni AI {plan}, shared by Deni AI chat, Flixa, and Deni Run."
+msgstr "You've used {percent}% of this month's usage on Deni AI {plan}, shared by Deni AI chat, Flixa, and Deni Run."
 
 #: app/components/upgrade-screen.tsx
-msgctxt "ddKuob"
-msgid "Browser time limit reached"
-msgstr "Browser time limit reached"
+msgctxt "n7RatK"
+msgid "Deni Run is included with Deni AI"
+msgstr "Deni Run is included with Deni AI"
 
 #: app/components/upgrade-screen.tsx
-msgctxt "_klU1V"
-msgid "You've used {used} of {limit} browser minutes on {plan} this month."
-msgstr "You've used {used} of {limit} browser minutes on {plan} this month."
+msgctxt "_j_tpR"
+msgid "One Deni AI subscription covers Deni AI chat, Flixa, and Deni Run, which share the plan's monthly usage."
+msgstr "One Deni AI subscription covers Deni AI chat, Flixa, and Deni Run, which share the plan's monthly usage."
 
 #: app/components/upgrade-screen.tsx
-msgctxt "YGZssW"
-msgid "Computer time limit reached"
-msgstr "Computer time limit reached"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "A62Dva"
-msgid "You've used {used} of {limit} computer minutes on {plan} this month."
-msgstr "You've used {used} of {limit} computer minutes on {plan} this month."
-
-#: app/components/upgrade-screen.tsx
-msgctxt "jvPWrj"
-msgid "Same private computer. More teammates, tokens, and time on the browser and terminal."
-msgstr "Same private computer. More teammates, tokens, and time on the browser and terminal."
-
-#: app/components/upgrade-screen.tsx
-msgctxt "P-8WQA"
-msgid "25 teammates"
-msgstr "25 teammates"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "i5EU9h"
-msgid "Name specialists, keep memory on each one, and hand work off instead of stretching a single bot."
-msgstr "Name specialists, keep memory on each one, and hand work off instead of stretching a single bot."
-
-#: app/components/upgrade-screen.tsx
-msgctxt "IWT2o2"
-msgid "150M tokens / month"
-msgstr "150M tokens / month"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "bgBjJu"
-msgid "Longer threads, more handoffs, and routines that can finish without stopping mid-task."
-msgstr "Longer threads, more handoffs, and routines that can finish without stopping mid-task."
-
-#: app/components/upgrade-screen.tsx
-msgctxt "5SSqKv"
-msgid "10 hours of browser time"
-msgstr "10 hours of browser time"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "rde8Gr"
-msgid "600 minutes to research, fill forms, and watch the live screen — 20× Free."
-msgstr "600 minutes to research, fill forms, and watch the live screen — 20× Free."
-
-#: app/components/upgrade-screen.tsx
-msgctxt "BUJ2OC"
-msgid "10 hours of computer time"
-msgstr "10 hours of computer time"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "RHmadt"
-msgid "600 minutes of terminal and files on your isolated sandbox."
-msgstr "600 minutes of terminal and files on your isolated sandbox."
-
-#: app/components/upgrade-screen.tsx
-msgctxt "k2FVr_"
-msgid "The same private computer"
-msgstr "The same private computer"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "1SmbRL"
-msgid "Browser, workspace, and Linux sandbox stay scoped to your account. Pro only raises the ceiling."
-msgstr "Browser, workspace, and Linux sandbox stay scoped to your account. Pro only raises the ceiling."
-
-#: app/components/upgrade-screen.tsx
-msgctxt "v6t6lE"
-msgid "You're on Pro"
-msgstr "You're on Pro"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "gG68f4"
-msgid "Your account already has the higher monthly ceiling. Manage billing if you need invoices or cancellation."
-msgstr "Your account already has the higher monthly ceiling. Manage billing if you need invoices or cancellation."
-
-#: app/components/upgrade-screen.tsx
-msgctxt "3oXm6f"
-msgid "What Pro includes"
-msgstr "What Pro includes"
+msgctxt "i1WysG"
+msgid "Deni Run on each Deni AI plan"
+msgstr "Deni Run on each Deni AI plan"
 
 #: app/components/upgrade-screen.tsx
 msgctxt "ZBALng"
@@ -3616,39 +3569,14 @@ msgid "Current plan"
 msgstr "Current plan"
 
 #: app/components/upgrade-screen.tsx
-msgctxt "tf1lIh"
-msgid "Free"
-msgstr "Free"
+msgctxt "WrOwf3"
+msgid "Monthly usage is shared by Deni AI chat, Flixa, and Deni Run, and resets at the start of each UTC month. Deni Run spends it with model, browser, and computer cost. Plan prices and checkout are on Deni AI."
+msgstr "Monthly usage is shared by Deni AI chat, Flixa, and Deni Run, and resets at the start of each UTC month. Deni Run spends it with model, browser, and computer cost. Plan prices and checkout are on Deni AI."
 
 #: app/components/upgrade-screen.tsx
-msgctxt "R_eOkj"
-msgid "Pro"
-msgstr "Pro"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "E3oB-t"
-msgid "Browser"
-msgstr "Browser"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "CFgeHP"
-msgid "{count} min"
-msgstr "{count} min"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "Xoz5dY"
-msgid "Monthly limits reset at the start of each UTC month. Cancel anytime."
-msgstr "Monthly limits reset at the start of each UTC month. Cancel anytime."
-
-#: app/components/upgrade-screen.tsx
-msgctxt "EOgl4B"
-msgid "Could not open billing"
-msgstr "Could not open billing"
-
-#: app/components/upgrade-screen.tsx
-msgctxt "wqyizR"
-msgid "Start Pro · ${price}/mo"
-msgstr "Start Pro · ${price}/mo"
+msgctxt "mcJ3ka"
+msgid "Get started with Deni AI"
+msgstr "Get started with Deni AI"
 
 #: app/components/workspace.tsx
 msgctxt "66I97y"
@@ -3774,33 +3702,6 @@ msgstr "Artifact not found"
 msgctxt "H6cAuM"
 msgid "threadId, path, and title are required"
 msgstr "threadId, path, and title are required"
-
-#: app/routes/api/billing/checkout.ts
-#: app/routes/api/billing/portal.ts
-#: app/routes/api/billing/sync.ts
-msgctxt "7o8Vnj"
-msgid "Billing is not configured yet"
-msgstr "Billing is not configured yet"
-
-#: app/routes/api/billing/portal.ts
-msgctxt "Rqx0bS"
-msgid "No billing account yet"
-msgstr "No billing account yet"
-
-#: app/routes/api/billing/webhook.ts
-msgctxt "psyCqT"
-msgid "webhook is not configured"
-msgstr "webhook is not configured"
-
-#: app/routes/api/billing/webhook.ts
-msgctxt "rCW5d_"
-msgid "missing signature"
-msgstr "missing signature"
-
-#: app/routes/api/billing/webhook.ts
-msgctxt "p90_sR"
-msgid "invalid signature"
-msgstr "invalid signature"
 
 #: app/routes/api/bots/$id.ts
 #: app/routes/api/bots/index.ts
@@ -4302,14 +4203,14 @@ msgid "Messages and tasks you give teammates, teammate settings and memory, rout
 msgstr "Messages and tasks you give teammates, teammate settings and memory, routines, skills, connected tool settings, files in your workspace, and screenshots of the computer session."
 
 #: app/routes/privacy.tsx
-msgctxt "HNafWa"
-msgid "Billing data."
-msgstr "Billing data."
+msgctxt "VpQ9oT"
+msgid "Plan and usage data."
+msgstr "Plan and usage data."
 
 #: app/routes/privacy.tsx
-msgctxt "SCuuas"
-msgid "If you subscribe to Pro, Stripe collects your payment details. We store only your plan, Stripe customer and subscription IDs, and usage counters. We never see or store your card number."
-msgstr "If you subscribe to Pro, Stripe collects your payment details. We store only your plan, Stripe customer and subscription IDs, and usage counters. We never see or store your card number."
+msgctxt "NGe3_z"
+msgid "Your plan comes from the Deni AI account you link. We store the link to that account and send Deni AI the cost of your usage; Deni AI keeps the usage totals and handles payments. We never see or store your card number."
+msgstr "Your plan comes from the Deni AI account you link. We store the link to that account and send Deni AI the cost of your usage; Deni AI keeps the usage totals and handles payments. We never see or store your card number."
 
 #: app/routes/privacy.tsx
 msgctxt "bl_WHw"
@@ -4342,9 +4243,9 @@ msgid "Google Sign-In."
 msgstr "Google Sign-In."
 
 #: app/routes/privacy.tsx
-msgctxt "-zVhSJ"
-msgid "When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service."
-msgstr "When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service."
+msgctxt "XdA3Vq"
+msgid "When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, and contact you about the service."
+msgstr "When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, and contact you about the service."
 
 #: app/routes/privacy.tsx
 msgctxt "2p4qSu"
@@ -4482,9 +4383,9 @@ msgid "Slack, Notion, Linear, the other connectors, and custom MCP servers you c
 msgstr "Slack, Notion, Linear, the other connectors, and custom MCP servers you connect: receive the requests a teammate makes for a task you gave it, under each service’s own terms and privacy policy."
 
 #: app/routes/privacy.tsx
-msgctxt "A54dst"
-msgid "Stripe: billing. Receives your email address and payment details."
-msgstr "Stripe: billing. Receives your email address and payment details."
+msgctxt "RC7jeM"
+msgid "Deni AI: sign-in, your plan, and usage. Receives your Deni AI account ID and the cost of your usage (model, browser, and computer time)."
+msgstr "Deni AI: sign-in, your plan, and usage. Receives your Deni AI account ID and the cost of your usage (model, browser, and computer time)."
 
 #: app/routes/privacy.tsx
 msgctxt "VU8epg"
@@ -4537,9 +4438,9 @@ msgid "7. Retention and deletion"
 msgstr "7. Retention and deletion"
 
 #: app/routes/privacy.tsx
-msgctxt "WSq4pI"
-msgid "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation."
-msgstr "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation."
+msgctxt "ihl_Pq"
+msgid "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Backups and logs are overwritten on their normal rotation."
+msgstr "We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Backups and logs are overwritten on their normal rotation."
 
 #: app/routes/privacy.tsx
 msgctxt "3xC8Ih"
@@ -4809,9 +4710,9 @@ msgid "You must not use Deni Run to create, edit, or distribute sexual or intima
 msgstr "You must not use Deni Run to create, edit, or distribute sexual or intimate imagery of a real person without their consent, including AI-generated imagery, or any sexual content involving minors. We remove such content and suspend and report the accounts involved."
 
 #: app/routes/terms.tsx
-msgctxt "F5hHF3"
-msgid "Usage limits apply by plan. Paid subscriptions renew monthly until canceled through the billing portal. Fees are charged by Stripe. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms."
-msgstr "Usage limits apply by plan. Paid subscriptions renew monthly until canceled through the billing portal. Fees are charged by Stripe. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms."
+msgctxt "6E7da4"
+msgid "Usage limits follow the plan of your linked Deni AI account. Plans, payments, and cancellation are handled by Deni AI under its terms. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms."
+msgstr "Usage limits follow the plan of your linked Deni AI account. Plans, payments, and cancellation are handled by Deni AI under its terms. We may suspend accounts that abuse infrastructure, exceed fair use, or violate these terms."
 
 #: app/routes/terms.tsx
 msgctxt "BARVqC"
@@ -4839,14 +4740,14 @@ msgid "Contact:"
 msgstr "Contact:"
 
 #: app/routes/upgrade.tsx
-msgctxt "kEgsaX"
-msgid "Upgrade to Pro · Deni Run"
-msgstr "Upgrade to Pro · Deni Run"
+msgctxt "27k2xW"
+msgid "Plans · Deni Run"
+msgstr "Plans · Deni Run"
 
 #: app/routes/upgrade.tsx
-msgctxt "aKq-bu"
-msgid "More teammates, tokens, and computer time on a private computer."
-msgstr "More teammates, tokens, and computer time on a private computer."
+msgctxt "KTL4Zy"
+msgid "Deni Run is included with every Deni AI plan."
+msgstr "Deni Run is included with every Deni AI plan."
 
 #: components/ai-elements/conversation.tsx
 msgctxt "zu9kMq"
@@ -5269,24 +5170,19 @@ msgid "Reconnect {service} in Plugins."
 msgstr "Reconnect {service} in Plugins."
 
 #: lib/localize-error.ts
-msgctxt "r0AFNc"
-msgid "Monthly token limit reached ({limit} on {plan}). Upgrade to keep chatting."
-msgstr "Monthly token limit reached ({limit} on {plan}). Upgrade to keep chatting."
+msgctxt "LG6CZG"
+msgid "Connect your Deni AI account to use Deni Run."
+msgstr "Connect your Deni AI account to use Deni Run."
 
 #: lib/localize-error.ts
-msgctxt "8XEouI"
-msgid "Monthly browser time limit reached ({limit} min on {plan}). Upgrade to keep using the browser."
-msgstr "Monthly browser time limit reached ({limit} min on {plan}). Upgrade to keep using the browser."
+msgctxt "n6LLuf"
+msgid "This month's Deni AI usage is used up on {plan}. Upgrade your Deni AI plan to keep going."
+msgstr "This month's Deni AI usage is used up on {plan}. Upgrade your Deni AI plan to keep going."
 
 #: lib/localize-error.ts
-msgctxt "dH9YEG"
-msgid "Monthly computer time limit reached ({limit} min on {plan}). Upgrade to keep using the terminal."
-msgstr "Monthly computer time limit reached ({limit} min on {plan}). Upgrade to keep using the terminal."
-
-#: lib/localize-error.ts
-msgctxt "6EJO1G"
-msgid "Teammate limit reached ({limit} on {plan}). Upgrade to add more teammates."
-msgstr "Teammate limit reached ({limit} on {plan}). Upgrade to add more teammates."
+msgctxt "oNI1r-"
+msgid "Teammate limit reached ({limit} on {plan}). Upgrade your Deni AI plan to add more teammates."
+msgstr "Teammate limit reached ({limit} on {plan}). Upgrade your Deni AI plan to add more teammates."
 
 #: lib/rate-limit.ts
 msgctxt "GhZx8v"

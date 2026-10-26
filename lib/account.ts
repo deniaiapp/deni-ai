@@ -4,7 +4,6 @@ import { rm } from "node:fs/promises";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { user, verification } from "@/db/auth-schema";
-import { cancelUserSubscription } from "./billing";
 import { releaseBrowser, stopSandbox } from "./computer";
 import { userDataDir } from "./paths";
 import { deleteUserRecords, loadAllMessages, readStore } from "./store";
@@ -38,7 +37,6 @@ export async function exportAccount(userId: string) {
 }
 
 export async function deleteAccount(userId: string) {
-  await cancelUserSubscription(userId);
   await stopSandbox(userId).catch(() => undefined);
   await releaseBrowser(userId, undefined, { all: true }).catch(() => undefined);
   await deleteAllUserStorage(userId).catch(() => undefined);

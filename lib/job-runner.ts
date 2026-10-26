@@ -9,7 +9,7 @@ import { nowIso } from "./ids";
 import { loadMessages, mutateStore, readStore, saveMessages } from "./store";
 import { createNotification } from "./notifications";
 import { setComputer } from "./computer";
-import { assertCanUseTokens, isUsageLimitError, recordTokenUsage } from "./usage";
+import { assertCanUseTokens, isUsageLimitError, recordModelSteps } from "./usage";
 import { compactMessagesForModel } from "./messages";
 import { parseRunMode } from "./model";
 import type { AgentJob } from "./types";
@@ -81,7 +81,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
       botId: bot.id,
       jobId: job.id,
     });
-    const { model, providerOptions, tokenMultiplier } = await getDeniModel(
+    const { model, providerOptions, modelId } = await getDeniModel(
       userId,
       typeof job.payload.runMode === "string" ? parseRunMode(job.payload.runMode) : undefined,
     );
@@ -110,7 +110,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
         if (!current || current.status === "cancelled") throw new Error(tr("Job cancelled or conversation deleted"));
       },
     });
-    await recordTokenUsage(userId, result.usage, { multiplier: tokenMultiplier });
+    await recordModelSteps(userId, result.steps, modelId);
     const current = await getJob(userId, job.id);
     if (current?.status === "cancelled") return current;
     const assistant: UIMessage = {

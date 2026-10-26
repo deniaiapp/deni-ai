@@ -79,20 +79,16 @@ export async function localizeError(error: unknown, fallback?: string): Promise<
   return translateMessage(await getLocale(), message);
 }
 
-/** Usage limits are phrased from the plan limits at the time of the request. */
+/** Usage limits are phrased from the Deni AI plan at the time of the request. */
 export async function localizeUsageLimit(userId: string, error: UsageLimitError): Promise<string> {
   const t = await getExtracted();
+  if (error.metric === "link") return t("Connect your Deni AI account to use Deni Run.");
   const usage = await getUsageSnapshot(userId);
+  if (!usage) return translateMessage(await getLocale(), error.message);
   const plan = usage.planName;
-  switch (error.metric) {
-    case "tokens":
-      return t("Monthly token limit reached ({limit} on {plan}). Upgrade to keep chatting.", { limit: usage.tokens.limit.toLocaleString(), plan });
-    case "browser":
-      return t("Monthly browser time limit reached ({limit} min on {plan}). Upgrade to keep using the browser.", { limit: String(usage.browserMinutes.limit), plan });
-    case "computer":
-      return t("Monthly computer time limit reached ({limit} min on {plan}). Upgrade to keep using the terminal.", { limit: String(usage.computerMinutes.limit), plan });
-    default:
-      return t("Teammate limit reached ({limit} on {plan}). Upgrade to add more teammates.", { limit: String(usage.teammates.limit), plan });
+  if (error.metric === "budget") {
+    return t("This month's Deni AI usage is used up on {plan}. Upgrade your Deni AI plan to keep going.", { plan });
   }
+  return t("Teammate limit reached ({limit} on {plan}). Upgrade your Deni AI plan to add more teammates.", { limit: String(usage.teammates.limit), plan });
 }
 

@@ -171,9 +171,8 @@ export function Workspace() {
   }, []);
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [billingOpen, setBillingOpen] = useState(false);
-  const [billingBusy, setBillingBusy] = useState(false);
   const teammateLimitReached = Boolean(usage && bots.length >= usage.teammates.limit);
-  const canUpgrade = usage?.plan !== "pro";
+  const canUpgrade = usage?.plan !== "max";
   const router = useRouter();
 
   const refreshJobs = useCallback(async () => {
@@ -871,26 +870,7 @@ export function Workspace() {
         onSaved={(routine) => setRoutines((current) => current.some((item) => item.id === routine.id) ? current.map((item) => item.id === routine.id ? routine : item) : [...current, routine])}
         onDeleted={(id) => setRoutines((current) => current.filter((item) => item.id !== id))}
       />
-      <BillingDialog
-        open={billingOpen}
-        usage={usage}
-        busy={billingBusy}
-        onClose={() => setBillingOpen(false)}
-        onUpgrade={() => {
-          setBillingOpen(false);
-          void router.navigate({ to: "/upgrade" });
-        }}
-        onManage={async () => {
-          setBillingBusy(true);
-          try {
-            const res = await fetch("/api/billing/portal", { method: "POST" });
-            const json = (await res.json()) as { url?: string };
-            if (json.url) window.location.href = json.url;
-          } finally {
-            setBillingBusy(false);
-          }
-        }}
-      />
+      <BillingDialog open={billingOpen} usage={usage} onClose={() => setBillingOpen(false)} />
     </SidebarProvider>
   );
 }

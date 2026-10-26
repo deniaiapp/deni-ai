@@ -112,16 +112,19 @@ export type AppConfig = {
   runMode?: RunMode;
 };
 
-export type PlanId = "free" | "pro";
-
+/**
+ * Legacy Deni Run Stripe billing. Plans now come from Deni AI; old stores keep
+ * these fields so former subscriptions can still be found and cancelled.
+ */
 export type Billing = {
-  plan: PlanId;
+  plan: "free" | "pro";
   stripeCustomerId: string | null;
   stripeSubscriptionId: string | null;
   stripeStatus: string | null;
   currentPeriodEnd: string | null;
 };
 
+/** Legacy local usage counters; usage is now metered by Deni AI. */
 export type UsagePeriod = {
   month: string;
   tokens: number;

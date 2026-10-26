@@ -2,10 +2,65 @@ import { useExtracted } from "@/i18n/react";
 import { motion } from "motion/react";
 import { Button } from "@/components/ui/button";
 import { LoadingFallback } from "@/components/ui/loading";
+import { authClient } from "@/lib/auth-client";
 import { easeOut } from "@/lib/motion";
 import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import type { UsageSnapshot } from "@/lib/plans";
-import { formatTokenCount, PLANS } from "@/lib/plans";
+import { cn } from "@/lib/utils";
+import { useState } from "react";
+
+type PoolPart = keyof UsageSnapshot["pool"]["parts"];
+
+const POOL_PARTS: PoolPart[] = ["chat", "flixa", "run"];
+
+/** Same colors as Deni AI's usage view, so each part reads the same in both apps. */
+const POOL_PART_COLORS: Record<PoolPart, string> = {
+  chat: "bg-sky-500",
+  flixa: "bg-violet-500",
+  run: "bg-emerald-500",
+};
+
+/** The shared monthly pool as one stacked bar with a legend; percentages only. */
+function PoolMeter({ pool }: { pool: UsageSnapshot["pool"] }) {
+  const t = useExtracted();
+  const labels: Record<PoolPart, string> = {
+    chat: t("Deni AI Chat"),
+    flixa: t("Flixa"),
+    run: t("Deni Run"),
+  };
+  const scale = pool.usedPercent > 100 ? 100 / pool.usedPercent : 1;
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex justify-between text-sm">
+        <span className="text-secondary-foreground">{t("Monthly usage")}</span>
+        <span className="text-muted-foreground">
+          {t("{percent}% used", { percent: pool.usedPercent.toFixed(1) })}
+        </span>
+      </div>
+      <div className="flex h-1.5 overflow-hidden rounded-full bg-foreground/10">
+        {POOL_PARTS.map((part) =>
+          pool.parts[part] > 0 ? (
+            <motion.div
+              key={part}
+              className={cn("h-full", POOL_PART_COLORS[part])}
+              initial={{ width: 0 }}
+              animate={{ width: `${pool.parts[part] * scale}%` }}
+              transition={{ duration: 0.5, ease: easeOut }}
+            />
+          ) : null,
+        )}
+      </div>
+      <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+        {POOL_PARTS.map((part) => (
+          <li key={part} className="inline-flex items-center gap-1.5">
+            <span className={cn("size-2 rounded-full", POOL_PART_COLORS[part])} aria-hidden />
+            {labels[part]} {pool.parts[part].toFixed(1)}%
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function Meter({
   label,
@@ -39,23 +94,29 @@ function Meter({
   );
 }
 
+/** Starts linking a Deni AI account; returns to the workspace when done. */
+export function useConnectDeniAi() {
+  const [busy, setBusy] = useState(false);
+  async function connect() {
+    setBusy(true);
+    const { error } = await authClient.linkSocial({ provider: "deni-ai", callbackURL: "/" });
+    if (error) setBusy(false);
+  }
+  return { busy, connect };
+}
+
+/** Deni Run usage against the Deni AI plan; the plan itself is managed in Deni AI. */
 export function BillingDialog({
   open,
   usage,
-  busy,
   onClose,
-  onUpgrade,
-  onManage,
 }: {
   open: boolean;
   usage: UsageSnapshot | null;
-  busy: boolean;
   onClose: () => void;
-  onUpgrade: () => void;
-  onManage: () => void;
 }) {
   const t = useExtracted();
-  const pro = PLANS.pro;
+  const { busy, connect } = useConnectDeniAi();
   return (
     <Dialog
       open={open}
@@ -67,30 +128,25 @@ export function BillingDialog({
         <div className="mb-4">
           <DialogTitle className="text-lg font-semibold">{t("Plan and usage")}</DialogTitle>
         </div>
-        {usage ? (
+        {usage && !usage.linked ? (
+          <p className="text-sm text-muted-foreground">
+            {t("Deni Run uses the plan of your Deni AI account. Connect one to keep using teammates, the browser, and the computer.")}
+          </p>
+        ) : usage ? (
           <div className="flex flex-col gap-4">
             <p className="text-sm text-muted-foreground">
-              {t("{plan} plan · {period} UTC", { plan: usage.planName, period: usage.period })}
-              {usage.currentPeriodEnd
-                ? ` · ${t("renews {date}", { date: new Date(usage.currentPeriodEnd).toLocaleDateString() })}`
+              {t("Deni AI {plan} plan · {period} UTC", { plan: usage.planName, period: usage.period })}
+              {usage.periodEnd
+                ? ` · ${t("resets {date}", { date: new Date(usage.periodEnd).toLocaleDateString() })}`
                 : null}
             </p>
-            <Meter
-              label={t("Tokens")}
-              used={usage.tokens.used}
-              limit={usage.tokens.limit}
-              format={formatTokenCount}
-            />
-            <Meter
-              label={t("Browser minutes")}
-              used={usage.browserMinutes.used}
-              limit={usage.browserMinutes.limit}
-            />
-            <Meter
-              label={t("Computer minutes")}
-              used={usage.computerMinutes.used}
-              limit={usage.computerMinutes.limit}
-            />
+            {usage.metered ? (
+              <PoolMeter pool={usage.pool} />
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                {t("Usage is not metered on this deployment.")}
+              </p>
+            )}
             <Meter label={t("Teammates")} used={usage.teammates.used} limit={usage.teammates.limit} />
           </div>
         ) : (
@@ -98,27 +154,23 @@ export function BillingDialog({
         )}
         <div className="mt-6 flex justify-end gap-2">
           <DialogClose render={<Button variant="secondary" />}>{t("Close")}</DialogClose>
-          {usage?.plan === "pro" ? (
-            <Button type="button" variant="primary" loading={busy} onClick={onManage}>
-              {t("Manage billing")}
+          {usage && !usage.linked ? (
+            <Button type="button" variant="primary" loading={busy} onClick={() => void connect()}>
+              {t("Connect Deni AI account")}
             </Button>
-          ) : (
+          ) : usage ? (
             <Button
               type="button"
               variant="primary"
-              loading={busy}
-              onClick={onUpgrade}
-              disabled={!usage?.stripeConfigured}
+              onClick={() => window.open(usage.manageUrl, "_blank", "noopener,noreferrer")}
             >
-              {t("Upgrade to Pro · ${price}/mo", { price: String(pro.priceUsd) })}
+              {t("Manage plan on Deni AI")}
             </Button>
-          )}
+          ) : null}
         </div>
-        {usage && usage.plan === "free" && !usage.stripeConfigured ? (
-          <p className="mt-3 text-xs text-muted-foreground">
-            {t("Stripe is not configured on this deployment. Limits still apply to the Free plan.")}
-          </p>
-        ) : null}
+        <p className="mt-3 text-xs text-muted-foreground">
+          {t("Your Deni AI plan covers Deni AI chat, Flixa, and Deni Run. See all usage in Deni AI settings.")}
+        </p>
       </DialogContent>
     </Dialog>
   );

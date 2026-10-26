@@ -108,20 +108,24 @@ Local development browser profile: `.deni/users/<user-hash>/browser-profile`
 
 ## SaaS architecture
 
-Better Auth provides authentication in-process. Sign-in is Google or GitHub, then a second factor the user picks at setup: a passkey, an emailed code, or an authenticator app (TOTP). Passkeys must be unlocked with a fingerprint, face, or screen lock PIN, can also sign in on their own, and work only on accounts that chose them; switching methods deletes them. The passkey relying party is the hostname of `BETTER_AUTH_URL`, so passkeys registered on one domain do not work on another. Email codes are offered when `RESEND_API_KEY` and `EMAIL_FROM` are set, turn on only after the user enters the first code, and are limited to 5 per account per 15 minutes. Users, sessions, linked OAuth accounts, authenticator secrets, and passkey public keys live in Postgres. All bots, threads, routines, skills, computer state, and encrypted user configuration are stored in Postgres with that user ID as the tenant key.
+Better Auth provides authentication in-process. Sign-in is a Deni AI account (OAuth/OIDC against Deni AI), Google, or GitHub, then a second factor the user picks at setup: a passkey, an emailed code, or an authenticator app (TOTP). Passkeys must be unlocked with a fingerprint, face, or screen lock PIN, can also sign in on their own, and work only on accounts that chose them; switching methods deletes them. The passkey relying party is the hostname of `BETTER_AUTH_URL`, so passkeys registered on one domain do not work on another. Email codes are offered when `RESEND_API_KEY` and `EMAIL_FROM` are set, turn on only after the user enters the first code, and are limited to 5 per account per 15 minutes. Users, sessions, linked OAuth accounts, authenticator secrets, and passkey public keys live in Postgres. All bots, threads, routines, skills, computer state, and encrypted user configuration are stored in Postgres with that user ID as the tenant key.
 
 Workspace files and screenshots use the configured S3-compatible bucket (Cloudflare R2), namespaced by user. Browser automation uses a persistent Steel profile per user. Terminal commands run inside a per-user E2B sandbox.
 
-Usage is metered per account and month (UTC):
+Deni Run has no billing of its own. Every user links a Deni AI account, whose plan sets one monthly (UTC) usage pool, priced in USD and shared by Deni AI chat, Flixa, and Deni Run. Deni Run spends it with model calls at the cost OpenRouter reports and browser (Steel) and computer (E2B) time at `DENI_RUN_BROWSER_USD_PER_HOUR` / `DENI_RUN_COMPUTER_USD_PER_HOUR` (defaults 0.10 and 0.15). Deni AI keeps the ledger; both apps show the pool as percentages, split by product (Deni AI chat, Flixa, Deni Run). Usage is not split into basic and premium models:
 
-| | Free | Pro ($8/mo) |
-| --- | --- | --- |
-| Tokens | 10M | 150M |
-| Browser minutes (Steel) | 30 | 600 |
-| Computer minutes (E2B) | 30 | 600 |
-| Teammates | 5 | 25 |
+| Deni AI plan | Free | Plus | Pro | Max |
+| --- | --- | --- | --- | --- |
+| Monthly usage pool | $10 | $100 | $200 | $300 |
+| Teammates | 5 | 15 | 25 | 50 |
 
-Set `STRIPE_SECRET_KEY`, `STRIPE_PRICE_PRO`, and `STRIPE_WEBHOOK_SECRET` to enable upgrades. Create a Stripe Price for the Pro plan and point the webhook at `/api/billing/webhook` (`checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`).
+Setup:
+
+1. In Deni AI, register the OAuth client: `pnpm run tools:register-oauth-client --name="Deni Run" --redirect-uri={BETTER_AUTH_URL}/api/auth/callback/deni-ai`, and set the printed client id as Deni AI's `DENI_RUN_OAUTH_CLIENT_ID`.
+2. Here, set `DENI_AI_URL`, `DENI_AI_CLIENT_ID`, and `DENI_AI_CLIENT_SECRET` (sign-in and account linking).
+3. Set the same random `DENI_RUN_SERVICE_SECRET` in both apps (usage checks and reports to `{DENI_AI_URL}/api/integrations/deni-run/usage`).
+
+Work is refused until the account is linked or once the pool is spent (by any of the three products). Without `DENI_RUN_SERVICE_SECRET` a development server runs unmetered; production refuses work.
 
 Run the scheduler on exactly one dedicated worker instance with `DENI_SCHEDULER=true`. Do not enable it on every web replica.
 

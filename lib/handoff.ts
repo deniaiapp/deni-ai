@@ -7,7 +7,7 @@ import { compactMessagesForModel } from "./messages";
 import { loadMessages, mutateStore, readStore, saveMessages } from "./store";
 import type { HandoffSnapshot, HandoffStep } from "./types";
 import { translateError, translateMessage, translatorFor } from "./i18n-server";
-import { assertCanUseTokens, isUsageLimitError, recordTokenUsage } from "./usage";
+import { assertCanUseTokens, isUsageLimitError, recordModelUsage } from "./usage";
 import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "./message-bubbles";
 
 type HandoffRun = HandoffSnapshot & { userId: string; locale?: string };
@@ -167,7 +167,7 @@ async function executeHandoff(run: HandoffRun, messages: UIMessage[]) {
     return;
   }
 
-  const { model, providerOptions, tokenMultiplier } = await getDeniModel(run.userId);
+  const { model, providerOptions, modelId } = await getDeniModel(run.userId);
   const result = streamText({
     model,
     instructions: `${buildInstructions(
@@ -198,9 +198,7 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
       addStep(run, { kind: "thinking", label: tr("Thinking"), status: "active" });
     },
     onStepEnd: async (step) => {
-      await recordTokenUsage(run.userId, step.usage, { multiplier: tokenMultiplier }).catch(
-        () => undefined,
-      );
+      await recordModelUsage(run.userId, step, modelId).catch(() => undefined);
       if (step.reasoningText?.trim()) {
         addStep(run, {
           kind: "thinking",

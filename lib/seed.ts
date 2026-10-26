@@ -127,19 +127,6 @@ export function emptyStore(): Store {
     },
     shells: [],
     handoffs: [],
-    billing: {
-      plan: "free",
-      stripeCustomerId: null,
-      stripeSubscriptionId: null,
-      stripeStatus: null,
-      currentPeriodEnd: null,
-    },
-    usage: {
-      month: `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`,
-      tokens: 0,
-      browserMs: 0,
-      computerMs: 0,
-    },
   };
 }
 

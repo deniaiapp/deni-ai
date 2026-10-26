@@ -1,6 +1,6 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { getApiKey } from "./config";
-import { parseRunMode, RUN_MODES, SUMMARY_MODEL_ID, SUMMARY_TOKEN_MULTIPLIER, type RunMode } from "./model";
+import { parseRunMode, RUN_MODES, SUMMARY_MODEL_ID, type RunMode } from "./model";
 import { readStore } from "./store";
 
 export async function getDeniModel(userId: string, runMode?: RunMode) {
@@ -24,8 +24,9 @@ export async function getDeniModel(userId: string, runMode?: RunMode) {
     headers: { "anthropic-beta": "thinking-binding-controls-2026-08-01" },
   });
   return {
-    model: openrouter(mode.modelId),
-    tokenMultiplier: mode.tokenMultiplier,
+    // Report each request's cost: Deni Run usage is billed in USD against the Deni AI plan.
+    model: openrouter(mode.modelId, { usage: { include: true } }),
+    modelId: mode.modelId,
     runMode: mode.id,
     providerOptions: {
       openrouter: {
@@ -41,5 +42,8 @@ export async function getSummaryModel(userId: string) {
   if (!apiKey) {
     throw new Error("OPENROUTER_API_KEY is missing");
   }
-  return { model: createOpenRouter({ apiKey })(SUMMARY_MODEL_ID), tokenMultiplier: SUMMARY_TOKEN_MULTIPLIER };
+  return {
+    model: createOpenRouter({ apiKey })(SUMMARY_MODEL_ID, { usage: { include: true } }),
+    modelId: SUMMARY_MODEL_ID,
+  };
 }

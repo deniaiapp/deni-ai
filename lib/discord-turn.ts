@@ -39,7 +39,7 @@ import { reportError } from "./report";
 import { loadMessages, readStore, saveMessages } from "./store";
 import { resetThreadContext } from "./thread-context";
 import type { AgentJob, Bot, Store, Thread } from "./types";
-import { assertCanUseTokens, recordTokenUsage } from "./usage";
+import { assertCanUseTokens, recordModelUsage } from "./usage";
 import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "./message-bubbles";
 
 /** What the Discord layer should show after a turn. It never needs to know about jobs or UI messages. */
@@ -191,7 +191,7 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
   };
 
   try {
-    const { model, providerOptions, tokenMultiplier } = await getDeniModel(userId, runMode);
+    const { model, providerOptions, modelId } = await getDeniModel(userId, runMode);
     const group = thread.kind === "group";
     const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: !group, locale });
     const result = streamText({
@@ -219,7 +219,7 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
         void Promise.allSettled([
           heartbeatJob(userId, job.id),
           checkpointJob(userId, job.id, checkpoint),
-          recordTokenUsage(userId, step.usage, { multiplier: tokenMultiplier }),
+          recordModelUsage(userId, step, modelId),
         ]).then((results) => {
           for (const item of results) if (item.status === "rejected") console.error("persist discord step", item.reason);
         });

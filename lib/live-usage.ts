@@ -6,7 +6,7 @@ import type { Store } from "./types";
 import { usageSnapshot } from "./usage";
 
 export function liveUsageSnapshot(store: Store, userId: string) {
-  return usageSnapshot(store, {
+  return usageSnapshot(userId, store, {
     pendingBrowserMs: pendingBrowserMs(userId),
     pendingComputerMs: pendingComputerMs(userId),
   });

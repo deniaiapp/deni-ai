@@ -1,6 +1,6 @@
 import { useExtracted } from "@/i18n/react";
 import { Link } from "@tanstack/react-router";
-import { formatTokenCount, PLANS } from "@/lib/plans";
+import { DENI_TIERS, formatUsd, TIER_BUDGET_USD, TIER_NAMES, TIER_TEAMMATES } from "@/lib/plans";
 import { LanguageSwitcher } from "./language-switcher";
 
 const rise = "deni-rise";
@@ -13,8 +13,6 @@ function delay(ms: number) {
 
 export function Landing({ signedIn = false }: { signedIn?: boolean }) {
   const t = useExtracted();
-  const free = PLANS.free;
-  const pro = PLANS.pro;
   const startHref = signedIn ? "/" : "/sign-up";
 
   return (
@@ -128,7 +126,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
         <h2 className="text-2xl font-semibold">{t("How it works")}</h2>
         <ol className="mt-6 grid gap-4 md:grid-cols-3">
           {[
-            t("Sign in with Google or GitHub, then confirm it is you with a passkey, an emailed code, or an authenticator app."),
+            t("Sign in with your Deni AI account, then confirm it is you with a passkey, an emailed code, or an authenticator app."),
             t("Give a teammate a task, such as researching a topic, filling in a form, or organizing files."),
             t("Follow the live screen, approve risky steps, and collect the results in your workspace."),
           ].map((body, index) => (
@@ -143,47 +141,32 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
       <section id="pricing" className="mx-auto max-w-5xl px-6 pb-24">
         <h2 className="text-2xl font-semibold">{t("Pricing")}</h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          {t("Monthly limits reset at the start of each UTC month.")}
+          {t("Deni Run is included with every Deni AI plan. Deni AI chat, Flixa, and Deni Run share the plan's monthly usage, which resets at the start of each UTC month.")}
         </p>
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
-          <article className="rounded-xl border border-foreground/10 bg-surface p-6 transition-transform duration-200 hover:-translate-y-1">
-            <h3 className="text-lg font-semibold">{free.name}</h3>
-            <p className="mt-1 text-3xl font-semibold">$0</p>
-            <ul className="mt-5 space-y-2 text-sm text-secondary-foreground">
-              <li>{t("{count} tokens / month", { count: formatTokenCount(free.tokens) })}</li>
-              <li>{t("{count} browser minutes", { count: String(free.browserMinutes) })}</li>
-              <li>{t("{count} computer minutes", { count: String(free.computerMinutes) })}</li>
-              <li>{t("Up to {count} teammates", { count: String(free.teammates) })}</li>
-              <li>{t("Isolated files, browser, and terminal")}</li>
-            </ul>
-            <Link
-              to={startHref}
-              className="mt-6 inline-flex rounded-lg bg-foreground/10 px-4 py-2 text-sm transition-transform hover:bg-foreground/15 active:scale-[0.98]"
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {DENI_TIERS.map((tier) => (
+            <article
+              key={tier}
+              className="rounded-xl border border-foreground/10 bg-surface p-6 transition-transform duration-200 hover:-translate-y-1"
             >
-              {signedIn ? t("Open workspace") : t("Create account")}
-            </Link>
-          </article>
-          <article className="rounded-xl border border-foreground/20 bg-surface-23 p-6 transition-transform duration-200 hover:-translate-y-1">
-            <h3 className="text-lg font-semibold">{pro.name}</h3>
-            <p className="mt-1 text-3xl font-semibold">
-              ${pro.priceUsd}
-              <span className="text-sm font-normal text-muted-foreground"> {t("/ month")}</span>
-            </p>
-            <ul className="mt-5 space-y-2 text-sm text-secondary-foreground">
-              <li>{t("{count} tokens / month", { count: formatTokenCount(pro.tokens) })}</li>
-              <li>{t("{count} browser minutes", { count: String(pro.browserMinutes) })}</li>
-              <li>{t("{count} computer minutes", { count: String(pro.computerMinutes) })}</li>
-              <li>{t("Up to {count} teammates", { count: String(pro.teammates) })}</li>
-              <li>{t("Same private computer, higher ceiling")}</li>
-            </ul>
-            <Link
-              to="/upgrade"
-              className="mt-6 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
-            >
-              {t("Start Pro")}
-            </Link>
-          </article>
+              <h3 className="text-lg font-semibold">{TIER_NAMES[tier]}</h3>
+              <p className="mt-1 text-3xl font-semibold">
+                {formatUsd(TIER_BUDGET_USD[tier])}
+                <span className="text-sm font-normal text-muted-foreground"> {t("/ month of usage")}</span>
+              </p>
+              <ul className="mt-5 space-y-2 text-sm text-secondary-foreground">
+                <li>{t("Up to {count} teammates", { count: String(TIER_TEAMMATES[tier]) })}</li>
+                <li>{t("Isolated files, browser, and terminal")}</li>
+              </ul>
+            </article>
+          ))}
         </div>
+        <Link
+          to={startHref}
+          className="mt-6 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-transform hover:bg-primary/80 active:scale-[0.98]"
+        >
+          {signedIn ? t("Open workspace") : t("Create account")}
+        </Link>
       </section>
 
       <footer className="border-t border-foreground/10 px-6 py-8 text-xs text-muted-foreground">
@@ -202,7 +185,7 @@ export function Landing({ signedIn = false }: { signedIn?: boolean }) {
             {t("Terms")}
           </Link>
           <Link to="/upgrade" className="hover:text-foreground">
-            {t("Upgrade")}
+            {t("Plans")}
           </Link>
           <Link to="/account" className="hover:text-foreground">
             {t("Account")}

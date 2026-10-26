@@ -60,8 +60,8 @@ function PrivacyPage() {
             {t("Messages and tasks you give teammates, teammate settings and memory, routines, skills, connected tool settings, files in your workspace, and screenshots of the computer session.")}
           </p>
           <p>
-            <strong className="font-medium text-foreground">{t("Billing data.")}</strong>{" "}
-            {t("If you subscribe to Pro, Stripe collects your payment details. We store only your plan, Stripe customer and subscription IDs, and usage counters. We never see or store your card number.")}
+            <strong className="font-medium text-foreground">{t("Plan and usage data.")}</strong>{" "}
+            {t("Your plan comes from the Deni AI account you link. We store the link to that account and send Deni AI the cost of your usage; Deni AI keeps the usage totals and handles payments. We never see or store your card number.")}
           </p>
           <p>
             <strong className="font-medium text-foreground">{t("Discord data.")}</strong>{" "}
@@ -76,7 +76,7 @@ function PrivacyPage() {
         <Section title={t("2. Google user data")}>
           <p>
             <strong className="font-medium text-foreground">{t("Google Sign-In.")}</strong>{" "}
-            {t("When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, send billing receipts through Stripe, and contact you about the service.")}
+            {t("When you sign in with Google we request only the openid, email, and profile scopes and receive your name, email address, profile picture, and Google account ID. We use them to create and identify your account, show your name and picture in the app, link a GitHub login to the same account when you choose to, and contact you about the service.")}
           </p>
           <p>
             <strong className="font-medium text-foreground">{t("Optional Gmail and Google Drive plugins.")}</strong>{" "}
@@ -136,7 +136,7 @@ function PrivacyPage() {
             <li>{t("Google and GitHub: sign-in and the plugins you connect. We send them only the requests needed to sign you in or to carry out an action you asked for, such as sending an email.")}</li>
             <li>{t("Discord: if you link it, Discord carries the direct messages you and the bot exchange, including files and screenshots you request and notifications about background work if you keep them on, under Discord’s own terms and privacy policy. Do not send anything you would not want Discord to process. Message content is used only to answer you and is not used to train AI models.")}</li>
             <li>{t("Slack, Notion, Linear, the other connectors, and custom MCP servers you connect: receive the requests a teammate makes for a task you gave it, under each service’s own terms and privacy policy.")}</li>
-            <li>{t("Stripe: billing. Receives your email address and payment details.")}</li>
+            <li>{t("Deni AI: sign-in, your plan, and usage. Receives your Deni AI account ID and the cost of your usage (model, browser, and computer time).")}</li>
             <li>{t("Resend: delivers sign-in codes if you choose email for two-factor. Receives your email address and the code.")}</li>
             <li>{t("OpenRouter and the model providers it routes to: AI model requests. Receive the messages, files, page content, and, if you connected Gmail, Google Drive, Slack, Notion, Linear, or another connector or MCP server, the content a teammate retrieves from it for a task. They are used only to respond to that task and are not used by us to train models. We do not send your Google profile data.")}</li>
             <li>{t("Steel: cloud browser sessions, which load the websites your teammate visits.")}</li>
@@ -157,7 +157,7 @@ function PrivacyPage() {
 
         <Section title={t("7. Retention and deletion")}>
           <p>
-            {t.rich("We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account cancels any subscription and removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Records that tax or accounting law requires, such as Stripe invoices, are kept by Stripe for the legally required period. Backups and logs are overwritten on their normal rotation.", {
+            {t.rich("We keep your data while your account is active. You can export a copy of stored account data, or delete your account, from <link>Account</link> at any time. Deleting the account removes your login, sessions, conversations, teammates, routines, skills, computer state, workspace files, and screenshots from our database and object storage. Backups and logs are overwritten on their normal rotation.", {
               link: accountLink,
             })}
           </p>

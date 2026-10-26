@@ -90,17 +90,6 @@ export async function listDueRoutineUserIds(at = new Date()) {
   return rows.map((row) => row[0]);
 }
 
-export async function findUserIdByStripeCustomer(customerId: string) {
-  const rows = await rawRows<[string]>(
-    `SELECT user_id
-     FROM user_stores
-     WHERE json_extract(data, '$.billing.stripeCustomerId') = ?
-     LIMIT 1`,
-    [customerId],
-  );
-  return rows[0]?.[0] ?? null;
-}
-
 function normalizeStore(store: Store) {
   store.config.model = DENI_MODEL_ID;
   store.config.runMode = parseRunMode(store.config.runMode);
@@ -112,20 +101,6 @@ function normalizeStore(store: Store) {
   store.computer.steelDebugUrl ??= null;
   store.computer.activeJobId ??= null;
   store.computer.workspaces ??= {};
-  store.billing ??= {
-    plan: "free",
-    stripeCustomerId: null,
-    stripeSubscriptionId: null,
-    stripeStatus: null,
-    currentPeriodEnd: null,
-  };
-  const month = `${new Date().getUTCFullYear()}-${String(new Date().getUTCMonth() + 1).padStart(2, "0")}`;
-  if (!store.usage || store.usage.month !== month) {
-    store.usage = { month, tokens: 0, browserMs: 0, computerMs: 0 };
-  }
-  store.usage.tokens ??= 0;
-  store.usage.browserMs ??= 0;
-  store.usage.computerMs ??= 0;
   if (store.historySummaries) {
     // Drop summaries of deleted conversations, whichever route deleted them.
     const live = new Set(store.threads.map((thread) => thread.id));

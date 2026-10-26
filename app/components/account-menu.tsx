@@ -60,11 +60,9 @@ export function AccountMenu({
   const [busy, setBusy] = useState<"export" | "delete" | "signout" | null>(null);
   const [error, setError] = useState("");
   const name = user?.name || user?.email || t("Account");
-  const onPro = usage?.plan === "pro";
+  const onTopPlan = usage?.plan === "max";
   const remainingPercent = usage
-    ? usage.tokens.limit > 0
-      ? Math.round(Math.max(0, Math.min(100, (1 - usage.tokens.used / usage.tokens.limit) * 100)))
-      : 0
+    ? Math.round(Math.max(0, Math.min(100, 100 - usage.pool.usedPercent)))
     : null;
   const exporting = busy === "export";
   const signingOut = busy === "signout";
@@ -132,9 +130,11 @@ export function AccountMenu({
           <span className="flex min-w-0 flex-1 flex-col">
             <span className="min-w-0 truncate text-sm text-foreground">{name}</span>
             <span className="min-w-0 truncate text-xs text-muted-foreground">
-              {usage
-                ? t("{plan} · {percent}% remaining", { plan: usage.planName, percent: String(remainingPercent) })
-                : t("Account")}
+              {usage && !usage.linked
+                ? t("Connect Deni AI")
+                : usage
+                  ? t("{plan} · {percent}% remaining", { plan: usage.planName, percent: String(remainingPercent) })
+                  : t("Account")}
             </span>
           </span>
         </DropdownMenuTrigger>
@@ -152,10 +152,10 @@ export function AccountMenu({
             <CreditCard />
             {t("Plan and usage")}
           </DropdownMenuItem>
-          {onPro ? null : (
+          {onTopPlan ? null : (
             <DropdownMenuItem disabled={exporting || signingOut} onClick={() => void router.navigate({ to: "/upgrade" })}>
               <Sparkles />
-              {t("Upgrade to Pro")}
+              {t("Upgrade plan")}
             </DropdownMenuItem>
           )}
           <DropdownMenuItem disabled={exporting || signingOut} onClick={() => void router.navigate({ to: "/account" })}>

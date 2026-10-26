@@ -50,6 +50,15 @@ function GoogleIcon() {
   );
 }
 
+function DeniAiIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
+      <rect width="24" height="24" rx="6" className="fill-foreground" />
+      <path d="M8 6.5h3.6c3.3 0 5.4 2.1 5.4 5.5s-2.1 5.5-5.4 5.5H8z" className="fill-background" />
+    </svg>
+  );
+}
+
 function GitHubIcon() {
   return (
     <svg viewBox="0 0 24 24" className="size-4 fill-current" aria-hidden="true">
@@ -269,10 +278,10 @@ export function SocialAuth({
   const router = useRouter();
   const passkeySupported = usePasskeySupport();
   const passkeyError = usePasskeyErrorMessage();
-  const [busy, setBusy] = useState<"google" | "github" | "passkey" | null>(null);
+  const [busy, setBusy] = useState<"deni-ai" | "google" | "github" | "passkey" | null>(null);
   const [localError, setLocalError] = useState("");
 
-  async function signIn(provider: "google" | "github") {
+  async function signIn(provider: "deni-ai" | "google" | "github") {
     setBusy(provider);
     setLocalError("");
     const { error: nextError } = await authClient.signIn.social({
@@ -309,7 +318,7 @@ export function SocialAuth({
   return (
     <AuthCard
       title={title}
-      description={t("Continue with Google or GitHub, then confirm it is you once more.")}
+      description={t("Continue with your Deni AI account, Google, or GitHub, then confirm it is you once more.")}
       footer={
         <p className="text-center text-xs text-muted-foreground">
           {mode === "sign-in" ? (
@@ -332,6 +341,19 @@ export function SocialAuth({
         </p>
       }
     >
+      {/* Deni AI holds the plan and usage budget, so it is the primary way in. */}
+      <Button
+        type="button"
+        variant="primary"
+        size="md"
+        className="w-full"
+        loading={busy === "deni-ai"}
+        disabled={busy !== null}
+        onClick={() => void signIn("deni-ai")}
+      >
+        {busy === "deni-ai" ? null : <DeniAiIcon />}
+        {t("Continue with Deni AI")}
+      </Button>
       <Button
         type="button"
         variant="outline"
@@ -828,8 +850,8 @@ export function TwoFactorSetupForm({
       title={t("Set up two-factor authentication")}
       description={
         offersEasierMethods
-          ? t("After Google or GitHub sign-in, you confirm it is you once more. Choose how.")
-          : t("An authenticator app is required after Google or GitHub sign-in.")
+          ? t("After you sign in, you confirm it is you once more. Choose how.")
+          : t("An authenticator app is required after you sign in.")
       }
       footer={<SignOutLink />}
     >

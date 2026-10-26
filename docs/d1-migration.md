@@ -30,7 +30,7 @@ Interactive transactions (`db.transaction`, `BEGIN`) are refused by the executor
 Worker, because they cannot span separate HTTP calls.
 
 `mutateStore` callbacks can run more than once when two processes race. Keep them free of
-side effects that are unsafe to repeat. Stripe checkout already reuses open sessions.
+side effects that are unsafe to repeat.
 
 ## One-time setup
 
