@@ -93,6 +93,17 @@ const replayed = (output: unknown) =>
 assert(replayed({ content: [{ type: "text", text: `LIN-42 is Done. ${"detail ".repeat(2_000)}` }] }).includes("LIN-42 is Done."), "a large MCP result lost its text");
 assert(replayed(Array.from({ length: 50 }, (_, index) => ({ number: index, title: `Issue ${index}`, body: "b".repeat(300) }))).includes("Issue 0"), "a large list result lost its items");
 
+// The previous turn's results stay whole, so a follow-up sees every item the answer was based on.
+const subscriptions = { content: [{ type: "text", text: JSON.stringify(Array.from({ length: 10 }, (_, index) => ({ id: `sub_${index}`, status: "active", note: "x".repeat(4_000) }))) }] };
+const resultTurn = (id: string): UIMessage[] => [
+  user(`${id}-q`, "list subscriptions"),
+  { id, role: "assistant", parts: [{ type: "tool-mcp", toolCallId: `${id}-call`, state: "output-available", input: {}, output: subscriptions }] } as unknown as UIMessage,
+];
+const followUp = JSON.stringify(compactMessagesForModel([...resultTurn("prev"), user("f", "forecast next month?")]));
+assert(followUp.includes("sub_9"), "the previous turn's result was cut");
+const later = JSON.stringify(compactMessagesForModel([...resultTurn("old"), ...conversation(3, 50), user("f", "and now?")]));
+assert(!later.includes("sub_9") && later.includes("sub_0") && later.includes("saw the whole result"), "an older result should be cut with a note saying so");
+
 // Saved signed thinking is dropped: Anthropic rejects it once the prefix before it changes.
 const signed = { openrouter: { reasoning_details: [{ type: "reasoning.text", text: "plan", signature: "sig" }] } };
 const thinkingTurn = (id: string, steps: number): UIMessage => ({

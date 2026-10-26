@@ -5,6 +5,11 @@ const MAX_REASONING_MODEL = 2_000;
 const MAX_TOOL_UI = 400;
 const MAX_TOOL_MODEL_RECENT = 6_000;
 const MAX_TOOL_MODEL_OLD = 1_500;
+// The last two turns keep tool output nearly whole. The model answered from the full result, and a
+// follow-up that sees only a fragment of it reads that answer as made up. A reply's results share
+// one budget, so a turn of many large results stays bounded.
+const MAX_TOOL_MODEL_LATEST = 80_000;
+const MAX_TOOL_MODEL_LATEST_TOTAL = 120_000;
 
 function isToolPart(part: { type: string }) {
   return part.type.startsWith("tool-") || part.type === "dynamic-tool";
@@ -34,7 +39,11 @@ function slimJson(value: unknown, max: number): unknown {
   }
   // Keep the start of the result itself. With only a bare flag, the model reads its earlier
   // answer as unsupported by any result and takes it back on the next turn.
-  const keep: Record<string, unknown> = { truncated: true, preview: truncateString(resultText(value), max) };
+  const text = resultText(value);
+  const keep: Record<string, unknown> = {
+    truncated: `Only the first ${max} of ${text.length} characters are kept here. The reply written right after this call saw the whole result. Call the tool again for the rest.`,
+    preview: truncateString(text, max),
+  };
   for (const key of ["url", "title", "path", "error", "ok", "exitCode", "name", "action"]) {
     if (key in rec) keep[key] = rec[key];
   }
@@ -230,18 +239,22 @@ function reasoningForModel(messages: UIMessage[]): UIMessage[] {
 export function compactMessagesForModel(thread: UIMessage[]): UIMessage[] {
   const messages = reasoningForModel(modelContextMessages(thread));
   const startRecent = Math.max(0, messages.length - RECENT_COUNT);
-  return mapMessageParts(messages, (part, messageIndex) => {
-    const recent = messageIndex >= startRecent;
-    if (isToolPart(part) && "output" in part) {
-      return {
-        ...part,
-        output: slimJson(
-          (part as { output?: unknown }).output,
-          recent ? MAX_TOOL_MODEL_RECENT : MAX_TOOL_MODEL_OLD,
-        ),
-      } as UIMessage["parts"][number];
-    }
-    return part;
+  const startLatest = messages.flatMap((message, index) => (message.role === "user" ? [index] : [])).at(-2) ?? 0;
+  return messages.map((message, messageIndex) => {
+    let budget = MAX_TOOL_MODEL_LATEST_TOTAL;
+    return {
+      ...message,
+      parts: message.parts.map((part) => {
+        if (!isToolPart(part) || !("output" in part)) return part;
+        const output = (part as { output?: unknown }).output;
+        let max = messageIndex >= startRecent ? MAX_TOOL_MODEL_RECENT : MAX_TOOL_MODEL_OLD;
+        if (messageIndex >= startLatest) {
+          max = Math.max(max, Math.min(MAX_TOOL_MODEL_LATEST, budget));
+          budget -= Math.min(json(output).length, max);
+        }
+        return { ...part, output: slimJson(output, max) } as UIMessage["parts"][number];
+      }),
+    };
   });
 }
 
