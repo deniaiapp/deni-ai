@@ -334,6 +334,41 @@ body {
   animation-delay: 0.3s;
 }
 
+@keyframes deni-typing-bounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
+}
+
+.typing-dots > span {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: var(--color-neutral-231);
+  animation: deni-typing-bounce 1.2s infinite ease-in-out;
+}
+
+.typing-dots > span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typing-dots > span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typing-dots > span {
+    animation-name: deni-dot-pulse;
+  }
+}
+
 /* Keep code and other explicitly monospaced content at its normal spacing. */
 .font-mono,
 code,

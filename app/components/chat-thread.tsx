@@ -2,6 +2,7 @@ import { useChat } from "@ai-sdk/react";
 import { useExtracted } from "@/i18n/react";
 import { type UIMessage } from "ai";
 import {
+  Fragment,
   memo,
   useCallback,
   useMemo,
@@ -17,7 +18,6 @@ import { easeOut } from "@/lib/motion";
 import { LinkSimpleIcon, RobotIcon, StopIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import {
   BookOpenIcon,
-  BrainIcon,
   ClockIcon,
   DownloadIcon,
   FolderIcon,
@@ -36,12 +36,8 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import {
-  ChainOfThought,
-  ChainOfThoughtContent,
-  ChainOfThoughtHeader,
   ChainOfThoughtSearchResult,
   ChainOfThoughtSearchResults,
-  ChainOfThoughtStep,
 } from "@/components/ai-elements/chain-of-thought";
 import {
   Confirmation,
@@ -397,6 +393,10 @@ export function ChatThread({
   const waitingForUser = chatRunStatus === "waiting";
   const showBusyIndicator =
     busy && chatRunStatus !== "completed" && chatRunStatus !== "failed";
+  const replyInProgress =
+    thread.kind === "group"
+      ? Object.values(groupStatuses).some((item) => item.status === "working")
+      : showBusyIndicator && !savingResult && !waitingForUser;
 
   const refreshTaskData = useCallback(
     async (signal?: AbortSignal, forceJobs = false) => {
@@ -770,6 +770,7 @@ export function ChatThread({
               );
             })
           )}
+          {replyInProgress ? <TypingIndicator /> : null}
           {showBusyIndicator && (waitingForUser || savingResult) ? (
             <span className="text-xs text-muted-foreground">
               {waitingForUser ? t("Waiting for your help") : t("Saving result")}
@@ -1228,15 +1229,10 @@ const MessageBlock = memo(function MessageBlock({
     if (minutes < 60) return t("Worked for {count}m", { count: String(minutes) });
     return t("Worked for {count}h", { count: String(Math.round(minutes / 60)) });
   };
-  const lastPart = message.parts.at(-1);
-  const reasoningIsStreaming =
-    isLastMessage && isStreaming && lastPart?.type === "reasoning";
   const pluginActionLabels = usePluginActionLabels();
   const cotSteps = buildCotSteps(
     toolLabel,
-    t("Reasoning"),
     message.parts,
-    reasoningIsStreaming,
     handoffs,
     bots,
     (name, input, approved) =>
@@ -1278,58 +1274,6 @@ const MessageBlock = memo(function MessageBlock({
               {author?.name ?? t("Teammate")}
             </span>
           </div>
-        ) : null}
-        {cotSteps.length > 0 ? (
-          <ChainOfThought defaultOpen={cotWorking}>
-            <ChainOfThoughtHeader>
-              {cotWorking ? (
-                <>
-                  {t("Working")}
-                  <AnimatedDots />
-                </>
-              ) : workedMs != null ? (
-                formatWorkedDuration(workedMs)
-              ) : (
-                t("Thinking")
-              )}
-            </ChainOfThoughtHeader>
-            <ChainOfThoughtContent>
-              {cotSteps.map((step) => (
-                <ChainOfThoughtStep
-                  key={step.key}
-                  icon={step.icon}
-                  label={step.label}
-                  description={step.description}
-                  status={step.status}
-                >
-                  {step.sites && step.sites.length > 0 ? (
-                    <ChainOfThoughtSearchResults>
-                      {step.sites.map((site) =>
-                        site.href ? (
-                          <a
-                            key={site.href}
-                            href={site.href}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            title={site.title ?? site.href}
-                            className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-foreground/40"
-                          >
-                            <ChainOfThoughtSearchResult className="cursor-pointer hover:bg-foreground/15">
-                              {site.host}
-                            </ChainOfThoughtSearchResult>
-                          </a>
-                        ) : (
-                          <ChainOfThoughtSearchResult key={site.host}>
-                            {site.host}
-                          </ChainOfThoughtSearchResult>
-                        ),
-                      )}
-                    </ChainOfThoughtSearchResults>
-                  ) : null}
-                </ChainOfThoughtStep>
-              ))}
-            </ChainOfThoughtContent>
-          </ChainOfThought>
         ) : null}
         <div
           className={
@@ -1387,20 +1331,92 @@ const MessageBlock = memo(function MessageBlock({
                 </div>
               ));
             }
+            const step = cotSteps.find((item) => item.partIndex === index);
             return (
-              <PartView
-                key={`${message.id}-${index}`}
-                part={part}
-                onApprove={onApprove}
-                isAnimating={isLastMessage && isStreaming}
-              />
+              <Fragment key={`${message.id}-${index}`}>
+                {step ? <StepLine step={step} /> : null}
+                <PartView
+                  part={part}
+                  onApprove={onApprove}
+                  isAnimating={isLastMessage && isStreaming}
+                />
+              </Fragment>
             );
           })}
+          {cotSteps.length > 0 && !cotWorking && workedMs != null ? (
+            <span className="px-1 text-xs text-muted-foreground">
+              {formatWorkedDuration(workedMs)}
+            </span>
+          ) : null}
         </div>
       </Message>
     </motion.div>
   );
 });
+
+/** One tool step, shown in the timeline between the bubbles of a reply. */
+function StepLine({ step }: { step: CotStep }) {
+  const Icon = step.icon;
+  return (
+    <div
+      className={`flex min-w-0 gap-2 px-1 py-0.5 text-xs ${step.status === "active" ? "text-foreground" : "text-muted-foreground"} fade-in-0 animate-in`}
+    >
+      <Icon className="mt-px size-3.5 shrink-0" />
+      <div className="min-w-0 flex-1 space-y-1.5">
+        <div className="break-words">
+          {step.label}
+          {step.status === "active" ? <AnimatedDots /> : null}
+        </div>
+        {step.description ? (
+          <div className="break-words text-muted-foreground">{step.description}</div>
+        ) : null}
+        {step.sites && step.sites.length > 0 ? (
+          <ChainOfThoughtSearchResults>
+            {step.sites.map((site) =>
+              site.href ? (
+                <a
+                  key={site.href}
+                  href={site.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title={site.title ?? site.href}
+                  className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-foreground/40"
+                >
+                  <ChainOfThoughtSearchResult className="cursor-pointer hover:bg-foreground/15">
+                    {site.host}
+                  </ChainOfThoughtSearchResult>
+                </a>
+              ) : (
+                <ChainOfThoughtSearchResult key={site.host}>
+                  {site.host}
+                </ChainOfThoughtSearchResult>
+              ),
+            )}
+          </ChainOfThoughtSearchResults>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+/** Three bouncing dots in a reply bubble while the teammate is still working. */
+function TypingIndicator() {
+  const t = useExtracted();
+  return (
+    <motion.div
+      role="status"
+      aria-label={t("Working")}
+      className="typing-dots flex w-fit items-center gap-1 rounded-2xl bg-surface-37 px-3.5 py-3"
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2, ease: easeOut }}
+    >
+      <span />
+      <span />
+      <span />
+    </motion.div>
+  );
+}
 
 function MessageReferenceCard({
   reference,
@@ -1450,6 +1466,7 @@ type ToolPart = {
 
 type CotStep = {
   key: string;
+  partIndex: number;
   icon: LucideIcon;
   label: string;
   description?: ReactNode;
@@ -1457,11 +1474,10 @@ type CotStep = {
   status: "complete" | "active" | "pending";
 };
 
+/** Tool steps of a reply, each placed after the text that came before it. Reasoning is not shown. */
 function buildCotSteps(
   toolLabel: ReturnType<typeof useToolDisplayLabel>,
-  reasoningLabel: string,
   parts: UIMessage["parts"],
-  reasoningIsStreaming: boolean,
   handoffs?: Record<string, HandoffSnapshot>,
   bots?: Bot[],
   approvalNote?: (name: string, input: unknown, approved: boolean) => string,
@@ -1469,23 +1485,6 @@ function buildCotSteps(
   const steps: CotStep[] = [];
 
   parts.forEach((part, index) => {
-    if (part.type === "reasoning") {
-      const text = "text" in part ? String(part.text ?? "") : "";
-      if (!text) return;
-      const { title, body } = splitReasoningTitle(text);
-      const isLastPart = index === parts.length - 1;
-      steps.push({
-        key: `reasoning-${index}`,
-        icon: BrainIcon,
-        label: title ?? reasoningLabel,
-        description: body ? (
-          <MessageResponse>{body}</MessageResponse>
-        ) : undefined,
-        status: reasoningIsStreaming && isLastPart ? "active" : "complete",
-      });
-      return;
-    }
-
     if (!part.type.startsWith("tool-") && part.type !== "dynamic-tool") return;
     const toolPart = part as ToolPart;
     const name =
@@ -1517,6 +1516,7 @@ function buildCotSteps(
         : undefined;
     steps.push({
       key: toolPart.toolCallId ?? `tool-${index}`,
+      partIndex: index,
       icon: toolStepIcon(name),
       label: toolLabel(name, input, state, liveHandoff, bots),
       description:
@@ -1548,14 +1548,6 @@ function liveHandoffFor(
       : null;
   const id = typeof output?.handoffId === "string" ? output.handoffId : "";
   return id ? handoffs?.[id] : undefined;
-}
-
-function splitReasoningTitle(text: string): { title?: string; body?: string } {
-  const trimmed = text.trimStart();
-  const match = trimmed.match(/^\*\*(.+?)\*\*\s*/);
-  if (!match) return { body: text || undefined };
-  const rest = trimmed.slice(match[0].length).trim();
-  return { title: match[1].trim(), body: rest || undefined };
 }
 
 function toolStepIcon(name: string): LucideIcon {
