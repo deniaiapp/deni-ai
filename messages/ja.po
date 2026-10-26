@@ -1023,9 +1023,34 @@ msgid "Checking {service} tools"
 msgstr "{service} のツールを確認しています"
 
 #: app/components/chat-thread.tsx
-msgctxt "S6VGXb"
-msgid "Couldn't use {service}: {tool}"
-msgstr "{service}: {tool} を実行できませんでした"
+msgctxt "E2Tb7t"
+msgid "Couldn't check {service}"
+msgstr "{service} を確認できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "GwEKHG"
+msgid "Checked {service}"
+msgstr "{service} を確認しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "L12xES"
+msgid "Checking {service}"
+msgstr "{service} を確認しています"
+
+#: app/components/chat-thread.tsx
+msgctxt "k5uG-J"
+msgid "Couldn't update {service}"
+msgstr "{service} を更新できませんでした"
+
+#: app/components/chat-thread.tsx
+msgctxt "0UMr_K"
+msgid "Updated {service}"
+msgstr "{service} を更新しました"
+
+#: app/components/chat-thread.tsx
+msgctxt "rTO8FJ"
+msgid "Updating {service}"
+msgstr "{service} を更新しています"
 
 #: app/components/chat-thread.tsx
 msgctxt "3sZpoK"
@@ -1033,19 +1058,9 @@ msgid "Couldn't use {service}"
 msgstr "{service} を使えませんでした"
 
 #: app/components/chat-thread.tsx
-msgctxt "kz-9Zg"
-msgid "Used {service}: {tool}"
-msgstr "{service}: {tool} を実行しました"
-
-#: app/components/chat-thread.tsx
 msgctxt "LkWhzP"
 msgid "Used {service}"
 msgstr "{service} を使いました"
-
-#: app/components/chat-thread.tsx
-msgctxt "zZgHe6"
-msgid "{service}: {tool}"
-msgstr "{service}: {tool}"
 
 #: app/components/chat-thread.tsx
 msgctxt "fotcnQ"

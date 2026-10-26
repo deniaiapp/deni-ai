@@ -101,6 +101,17 @@ export function mcpToolTitle(tool: string, service?: string) {
   return words.join(" ");
 }
 
+const writeWords = new Set(["add", "archive", "cancel", "comment", "create", "delete", "edit", "insert", "invite", "move", "pay", "post", "publish", "refund", "remove", "reply", "send", "set", "submit", "update", "upload", "upsert", "write"]);
+const readWords = new Set(["check", "describe", "fetch", "find", "get", "list", "lookup", "query", "read", "retrieve", "search", "view"]);
+
+/** Whether an MCP tool reads or changes data, judged from the words of its name: "api_read" reads. */
+export function mcpToolKind(tool: string): "read" | "write" | undefined {
+  const words = mcpToolTitle(tool).split(" ");
+  if (words.some((word) => writeWords.has(word))) return "write";
+  if (words.some((word) => readWords.has(word))) return "read";
+  return undefined;
+}
+
 /** "channel_id" reads as "Channel ID". */
 export function mcpArgumentTitle(key: string) {
   const text = key.replace(/([a-z])([A-Z])/g, "$1 $2").replace(/[_\-.]+/g, " ").trim().toLowerCase();

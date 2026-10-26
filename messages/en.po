@@ -1023,9 +1023,34 @@ msgid "Checking {service} tools"
 msgstr "Checking {service} tools"
 
 #: app/components/chat-thread.tsx
-msgctxt "S6VGXb"
-msgid "Couldn't use {service}: {tool}"
-msgstr "Couldn't use {service}: {tool}"
+msgctxt "E2Tb7t"
+msgid "Couldn't check {service}"
+msgstr "Couldn't check {service}"
+
+#: app/components/chat-thread.tsx
+msgctxt "GwEKHG"
+msgid "Checked {service}"
+msgstr "Checked {service}"
+
+#: app/components/chat-thread.tsx
+msgctxt "L12xES"
+msgid "Checking {service}"
+msgstr "Checking {service}"
+
+#: app/components/chat-thread.tsx
+msgctxt "k5uG-J"
+msgid "Couldn't update {service}"
+msgstr "Couldn't update {service}"
+
+#: app/components/chat-thread.tsx
+msgctxt "0UMr_K"
+msgid "Updated {service}"
+msgstr "Updated {service}"
+
+#: app/components/chat-thread.tsx
+msgctxt "rTO8FJ"
+msgid "Updating {service}"
+msgstr "Updating {service}"
 
 #: app/components/chat-thread.tsx
 msgctxt "3sZpoK"
@@ -1033,19 +1058,9 @@ msgid "Couldn't use {service}"
 msgstr "Couldn't use {service}"
 
 #: app/components/chat-thread.tsx
-msgctxt "kz-9Zg"
-msgid "Used {service}: {tool}"
-msgstr "Used {service}: {tool}"
-
-#: app/components/chat-thread.tsx
 msgctxt "LkWhzP"
 msgid "Used {service}"
 msgstr "Used {service}"
-
-#: app/components/chat-thread.tsx
-msgctxt "zZgHe6"
-msgid "{service}: {tool}"
-msgstr "{service}: {tool}"
 
 #: app/components/chat-thread.tsx
 msgctxt "fotcnQ"

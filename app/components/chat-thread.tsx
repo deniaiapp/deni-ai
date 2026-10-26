@@ -70,7 +70,7 @@ import { Avatar } from "./sidebar";
 import { MessageActions } from "./message-actions";
 import { useConnectDeniAi } from "./billing-dialog";
 import { usePluginActionLabels } from "./plugin-action-labels";
-import { mcpArgumentPreview, mcpToolTitle, useMcpConnectionNames } from "./mcp-tool-labels";
+import { mcpArgumentPreview, mcpToolKind, mcpToolTitle, useMcpConnectionNames } from "./mcp-tool-labels";
 import { McpApprovalDetails } from "./mcp-approval";
 import {
   messageActionKey,
@@ -1524,7 +1524,7 @@ function buildCotSteps(
           ? errorText
           : liveHandoff?.status === "running" && liveHandoff.currentLabel
             ? liveHandoff.currentLabel
-            : answered,
+            : answered ?? (name === "mcp" ? mcpStepDetail(input) : undefined),
       sites: failed ? undefined : stepSites(name, toolPart.output, input),
       status:
         liveHandoff?.status === "running" || isToolRunning(state)
@@ -1792,10 +1792,18 @@ function useToolDisplayLabel() {
       if (failed) return t("Couldn't check {service} tools", { service });
       return completed ? t("Checked {service} tools", { service }) : t("Checking {service} tools", { service });
     }
-    const tool = mcpToolTitle(inputValue(input, "name") ?? "", service);
-    if (failed) return tool ? t("Couldn't use {service}: {tool}", { service, tool }) : t("Couldn't use {service}", { service });
-    if (completed) return tool ? t("Used {service}: {tool}", { service, tool }) : t("Used {service}", { service });
-    return tool ? t("{service}: {tool}", { service, tool }) : t("Using {service}", { service });
+    // The tool name and its arguments go in the step's detail line (mcpStepDetail).
+    const kind = mcpToolKind(inputValue(input, "name") ?? "");
+    if (kind === "read") {
+      if (failed) return t("Couldn't check {service}", { service });
+      return completed ? t("Checked {service}", { service }) : t("Checking {service}", { service });
+    }
+    if (kind === "write") {
+      if (failed) return t("Couldn't update {service}", { service });
+      return completed ? t("Updated {service}", { service }) : t("Updating {service}", { service });
+    }
+    if (failed) return t("Couldn't use {service}", { service });
+    return completed ? t("Used {service}", { service }) : t("Using {service}", { service });
   }
 
   if (name === "browser" || name.toLowerCase().includes("browser")) {
@@ -1878,6 +1886,11 @@ function toolApprovalDetail(name: string, input: unknown, pluginActionLabels: Re
   }
   if (name === "mcp") return snippet(mcpArgumentPreview(inputRecord(input, "arguments")).summary, 220);
   return undefined;
+}
+
+/** What an MCP call worked on, such as "Path: /v1/customers", or else the tool's own name. */
+function mcpStepDetail(input: unknown) {
+  return snippet(mcpArgumentPreview(inputRecord(input, "arguments")).summary, 160) ?? (mcpToolTitle(inputValue(input, "name") ?? "") || undefined);
 }
 
 function snippet(value?: string, max = 72) {
