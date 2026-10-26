@@ -1,5 +1,4 @@
 import { cjk } from "@streamdown/cjk";
-import { code } from "@streamdown/code";
 import type { UIMessage } from "ai";
 import type { ComponentProps, HTMLAttributes, RefObject } from "react";
 import { memo, useEffect, useLayoutEffect, useRef, useState } from "react";
@@ -63,7 +62,7 @@ export const MessageContent = ({ children, className, ...props }: MessageContent
 
 export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
-const basePlugins = { cjk, code };
+const basePlugins = { cjk };
 
 type ParagraphProps = ComponentProps<"p"> & ExtraProps;
 
@@ -82,28 +81,35 @@ function Paragraph({ className, ...props }: ParagraphProps) {
 
 const components = { p: Paragraph };
 
+// Highlighting (Shiki), math, and diagrams load the first time a message needs them, so the
+// workspace bundle stays small.
+type CodePlugin = typeof import("@streamdown/code").code;
 type MathPlugin = typeof import("@streamdown/math").math;
 type MermaidPlugin = typeof import("@streamdown/mermaid").mermaid;
 
 export const MessageResponse = memo(
   ({ className, children, ...props }: MessageResponseProps) => {
     const text = typeof children === "string" ? children : "";
+    const codeNeeded = text.includes("```");
     const mermaidNeeded = text.includes("```mermaid");
     const mathNeeded = text.includes("$") || text.includes("\\(");
-    const [loaded, setLoaded] = useState<{ math?: MathPlugin; mermaid?: MermaidPlugin }>({});
+    const [loaded, setLoaded] = useState<{ code?: CodePlugin; math?: MathPlugin; mermaid?: MermaidPlugin }>({});
 
     useEffect(() => {
+      const wantCode = codeNeeded && !loaded.code;
       const wantMath = mathNeeded && !loaded.math;
       const wantMermaid = mermaidNeeded && !loaded.mermaid;
-      if (!wantMath && !wantMermaid) return;
+      if (!wantCode && !wantMath && !wantMermaid) return;
       let cancelled = false;
       void Promise.all([
+        wantCode ? import("@streamdown/code") : null,
         wantMath ? import("@streamdown/math") : null,
         wantMermaid ? import("@streamdown/mermaid") : null,
-      ]).then(([mathMod, mermaidMod]) => {
+      ]).then(([codeMod, mathMod, mermaidMod]) => {
         if (cancelled) return;
         setLoaded((current) => ({
           ...current,
+          ...(codeMod ? { code: codeMod.code } : {}),
           ...(mathMod ? { math: mathMod.math } : {}),
           ...(mermaidMod ? { mermaid: mermaidMod.mermaid } : {}),
         }));
@@ -111,9 +117,10 @@ export const MessageResponse = memo(
       return () => {
         cancelled = true;
       };
-    }, [mathNeeded, mermaidNeeded, loaded.math, loaded.mermaid]);
+    }, [codeNeeded, mathNeeded, mermaidNeeded, loaded.code, loaded.math, loaded.mermaid]);
 
     const extra = {
+      ...(codeNeeded && loaded.code ? { code: loaded.code } : {}),
       ...(mathNeeded && loaded.math ? { math: loaded.math } : {}),
       ...(mermaidNeeded && loaded.mermaid ? { mermaid: loaded.mermaid } : {}),
     };

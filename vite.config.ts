@@ -4,6 +4,7 @@ import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
 import { defineConfig, loadEnv } from "vite";
 import i18n from "./vite-plugins/i18n.ts";
+import workspacePreload from "./vite-plugins/workspace-preload.ts";
 
 // NEXT_PUBLIC_* names are kept from the Next.js setup so deployments keep working. Like Next.js,
 // they are inlined at build time, on the client and the server.
@@ -30,6 +31,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       tailwindcss(),
       i18n(),
+      workspacePreload(),
       tanstackStart({
         srcDirectory: "app",
         router: { quoteStyle: "double", semicolons: true },

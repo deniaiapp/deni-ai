@@ -4,6 +4,7 @@ import { lazy, Suspense } from "react";
 import { PageLoading } from "@/components/page-loading";
 import { getAuthSession } from "@/lib/auth";
 import { connectorId } from "@/lib/connect-intent";
+import workspaceChunk from "virtual:workspace-chunk";
 import { Landing } from "../components/landing";
 
 const Workspace = lazy(() => import("../components/workspace").then((mod) => ({ default: mod.Workspace })));
@@ -20,7 +21,9 @@ const loadHome = createServerFn({ method: "GET" })
       return { signedIn: false };
     }
     if (!session.user.twoFactorEnabled) throw redirect({ to: "/two-factor/setup" });
-    return { signedIn: true };
+    // The account menu shows these, so the page does not ask for the session again.
+    const { name, email, image } = session.user as { name: string; email: string; image?: string | null };
+    return { signedIn: true, account: { name, email, image: image ?? null }, workspaceChunk };
   });
 
 export const Route = createFileRoute("/")({
@@ -29,6 +32,12 @@ export const Route = createFileRoute("/")({
   }),
   loaderDeps: ({ search }) => search,
   loader: ({ deps }) => loadHome({ data: deps }),
+  // Signed in, the page will need the workspace: fetch its chunk alongside the main bundle.
+  head: ({ loaderData }) => ({
+    links: loaderData && "workspaceChunk" in loaderData && loaderData.workspaceChunk
+      ? [{ rel: "modulepreload", href: loaderData.workspaceChunk }]
+      : [],
+  }),
   component: HomePage,
 });
 
