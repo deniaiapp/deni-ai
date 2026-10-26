@@ -456,7 +456,7 @@ A multi-stage `Dockerfile` is included for self-hosting (e.g. Dokploy):
 
 - **Install:** pnpm 12.8.1 (`pnpm-lock.yaml`, `pnpm-workspace.yaml`), with a frozen lockfile.
 - **Build:** Node 26 runs `next build` (standalone output). Typecheck is skipped in the image (`SKIP_TYPECHECK=1`) so tsc does not fight Turbopack on small VPS CPUs — run `pnpm run typecheck` locally or in CI.
-- The Node builder mounts pnpm-installed dependencies from the install stage instead of copying `node_modules`, avoiding a large per-deploy file copy.
+- Dependencies are installed in the build stage itself, so `node_modules` is an ordinary cached layer (reused while `pnpm-lock.yaml` is unchanged). Do not bind-mount `node_modules` into the `next build` step: Turbopack compiles about 6x slower from a read-only BuildKit bind mount.
 - **Run:** Node 26 serves `.next/standalone` on port **3000**
 - **Background jobs:** the server itself runs usage recovery and Max Mode meter retries when they are due (at least hourly), the storage cleanup every hour and the model health probes every 5 minutes; no cron or `CRON_SECRET` is needed (see the notes in step 3 of Getting Started)
 - Turbopack's `.next/cache` is stored in a BuildKit cache mount, so later deploys on the **same Dokploy host** compile incrementally. Do not enable “disable cache” / `--no-cache` in the service settings.

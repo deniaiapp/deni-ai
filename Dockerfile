@@ -26,27 +26,26 @@
 #   docker run --rm -p 3000:3000 --env-file .env.production deni-ai
 
 # ---------------------------------------------------------------------------
-# Install dependencies (pnpm workspaces + pnpm-lock.yaml)
+# Install dependencies (pnpm workspaces + pnpm-lock.yaml), then build.
+# Dependencies are installed in the build stage itself: `node_modules` is an
+# ordinary layer (cached while the lockfile is unchanged), with no COPY of
+# thousands of files and no bind mount. Turbopack compiles about 6x slower
+# reading `node_modules` from a read-only BuildKit bind mount.
 # ---------------------------------------------------------------------------
-FROM node:26-slim AS deps
+FROM node:26-slim AS builder
 WORKDIR /app
 RUN npm install --global pnpm@latest
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/disposable-email-domains ./packages/disposable-email-domains
+# Install before NODE_ENV=production so devDependencies (Tailwind, PostCSS, the
+# React Compiler plugin) are present for the build.
 RUN --mount=type=cache,id=deni-ai-pnpm,target=/pnpm/store \
   pnpm install --frozen-lockfile --store-dir=/pnpm/store
 
-# ---------------------------------------------------------------------------
-# Build (Next.js production build)
-# Node.js runs Next's compiler and workers.
-# ---------------------------------------------------------------------------
-FROM node:26-slim AS builder
-WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1 \
   NODE_ENV=production \
   SKIP_TYPECHECK=1
 
-COPY --from=deps /app/packages ./packages
 COPY . .
 
 # Dokploy / `docker build --build-arg` inject service env here.
@@ -121,14 +120,10 @@ ENV DATABASE_URL=$DATABASE_URL \
 # already exists in the environment, even as an empty string (which an unset ARG becomes).
 # Non-empty build args (Dokploy / --build-arg) still take precedence.
 
-# Mount dependencies from the install stage instead of copying thousands of
-# files into the Node builder. This avoids a slow 40+ second node_modules COPY;
-# the mount is available for the build and is not copied into the runtime image.
 # Persist Turbopack's filesystem cache across Dokploy deploys on this host.
 # After a successful build, keep only the cache directory it just wrote: each
 # Next.js version/config gets its own directory, and stale ones only add size.
-RUN --mount=type=bind,from=deps,source=/app/node_modules,target=/app/node_modules \
-  --mount=type=cache,id=deni-ai-next,target=/app/.next/cache \
+RUN --mount=type=cache,id=deni-ai-next,target=/app/.next/cache \
   for v in NEXT_PUBLIC_BETTER_AUTH_URL NEXT_PUBLIC_TURNSTILE_SITE_KEY \
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY NEXT_PUBLIC_BILLING_DISABLED NEXT_PUBLIC_SENTRY_DSN; do \
     [ -n "$(printenv "$v")" ] || unset "$v"; \
