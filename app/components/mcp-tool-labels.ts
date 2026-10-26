@@ -89,6 +89,43 @@ export function useMcpToolDescription(connectionId: string | undefined, tool: st
   return description;
 }
 
+const explanations = new Map<string, Promise<string | null>>();
+
+/**
+ * A plain-language sentence on what an MCP call will do, written by the summary model for the
+ * approval card. Undefined while it loads, null when none could be written.
+ */
+export function useMcpExplanation(connectionId: string | undefined, tool: string | undefined, args?: Record<string, unknown>) {
+  const [explanation, setExplanation] = useState<{ key: string; text: string | null } | null>(null);
+  const argsKey = JSON.stringify(args ?? {});
+  const key = `${connectionId}:${tool}:${argsKey}`;
+  useEffect(() => {
+    if (!connectionId || !tool) return;
+    let request = explanations.get(key);
+    if (!request) {
+      request = fetch("/api/mcp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "explain", id: connectionId, tool, arguments: JSON.parse(argsKey) }),
+      })
+        .then((response) => (response.ok ? (response.json() as Promise<{ explanation?: string | null }>) : null))
+        .then((json) => json?.explanation ?? null)
+        .catch(() => null);
+      explanations.set(key, request);
+    }
+    let active = true;
+    void request.then((text) => {
+      if (text === null) explanations.delete(key);
+      if (active) setExplanation({ key, text });
+    });
+    return () => {
+      active = false;
+    };
+  }, [connectionId, tool, argsKey, key]);
+  if (!connectionId || !tool) return null;
+  return explanation?.key === key ? explanation.text : undefined;
+}
+
 /** "slack_send_message" on Slack reads as "send message". */
 export function mcpToolTitle(tool: string, service?: string) {
   const prefix = service?.toLowerCase().replace(/[^a-z0-9]+/g, "");

@@ -2528,19 +2528,39 @@ msgid "Plans"
 msgstr "Plans"
 
 #: app/components/mcp-approval.tsx
-msgctxt "0mS8ff"
-msgid "run a tool"
-msgstr "run a tool"
+msgctxt "bs0ODz"
+msgid "Wants to change data in {service}"
+msgstr "Wants to change data in {service}"
 
 #: app/components/mcp-approval.tsx
-msgctxt "2-ppTp"
-msgid "Wants to {action} in {service}"
-msgstr "Wants to {action} in {service}"
+msgctxt "-C-zeY"
+msgid "Wants to look up data in {service}"
+msgstr "Wants to look up data in {service}"
 
 #: app/components/mcp-approval.tsx
-msgctxt "KzBusX"
-msgid "This may delete or overwrite data in {service}."
-msgstr "This may delete or overwrite data in {service}."
+msgctxt "gCCQL4"
+msgid "Wants to use {service}"
+msgstr "Wants to use {service}"
+
+#: app/components/mcp-approval.tsx
+msgctxt "ILPDFc"
+msgid "Checking what this will do…"
+msgstr "Checking what this will do…"
+
+#: app/components/mcp-approval.tsx
+msgctxt "LmqeBE"
+msgid "Explained by AI"
+msgstr "Explained by AI"
+
+#: app/components/mcp-approval.tsx
+msgctxt "M8kJGM"
+msgid "This can change or delete data in {service}, and it may not be possible to undo."
+msgstr "This can change or delete data in {service}, and it may not be possible to undo."
+
+#: app/components/mcp-approval.tsx
+msgctxt "e9uDQ_"
+msgid "Technical details"
+msgstr "Technical details"
 
 #: app/components/mcp-settings.tsx
 msgctxt "vBjft2"

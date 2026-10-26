@@ -13,7 +13,8 @@ import {
 } from "@/lib/mcp";
 import { limitOrResponse } from "@/lib/rate-limit";
 import { oauthBaseUrl } from "@/lib/site";
-import { getExtracted } from "@/i18n/server";
+import { getExtracted, getLocale } from "@/i18n/server";
+import { explainMcpCall } from "@/lib/mcp-explain";
 import { localizeError } from "@/lib/localize-error";
 
 async function GET() {
@@ -31,7 +32,7 @@ async function POST({ request: req }: { request: Request }) {
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const body = (await req.json().catch(() => ({}))) as {
-    action?: "save" | "test" | "delete" | "connect" | "tools" | "describe" | "always-allow";
+    action?: "save" | "test" | "delete" | "connect" | "tools" | "describe" | "explain" | "always-allow";
     id?: string;
     catalogId?: string;
     tool?: string;
@@ -58,6 +59,13 @@ async function POST({ request: req }: { request: Request }) {
       if (!body.id || !body.tool) return Response.json({ error: t("ID is required") }, { status: 400 });
       const args = body.arguments && typeof body.arguments === "object" && !Array.isArray(body.arguments) ? body.arguments : undefined;
       return Response.json(await describeMcpTool(userId, body.id, body.tool, args));
+    }
+    if (body.action === "explain") {
+      if (!body.id || !body.tool) return Response.json({ error: t("ID is required") }, { status: 400 });
+      const limited = await limitOrResponse(userId, "mcp-explain", 60);
+      if (limited) return limited;
+      const args = body.arguments && typeof body.arguments === "object" && !Array.isArray(body.arguments) ? body.arguments : undefined;
+      return Response.json({ explanation: await explainMcpCall(userId, body.id, body.tool, args, await getLocale()) });
     }
     if (body.action === "always-allow") {
       if (!body.id || !body.tool || typeof body.enabled !== "boolean") return Response.json({ error: t("Invalid permission") }, { status: 400 });

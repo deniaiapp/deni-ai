@@ -2528,19 +2528,39 @@ msgid "Plans"
 msgstr "プラン"
 
 #: app/components/mcp-approval.tsx
-msgctxt "0mS8ff"
-msgid "run a tool"
-msgstr "ツールを実行"
+msgctxt "bs0ODz"
+msgid "Wants to change data in {service}"
+msgstr "{service} の内容を変更しようとしています"
 
 #: app/components/mcp-approval.tsx
-msgctxt "2-ppTp"
-msgid "Wants to {action} in {service}"
-msgstr "{service} で「{action}」を実行しようとしています"
+msgctxt "-C-zeY"
+msgid "Wants to look up data in {service}"
+msgstr "{service} の情報を確認しようとしています"
 
 #: app/components/mcp-approval.tsx
-msgctxt "KzBusX"
-msgid "This may delete or overwrite data in {service}."
-msgstr "{service} のデータを削除または上書きする可能性があります。"
+msgctxt "gCCQL4"
+msgid "Wants to use {service}"
+msgstr "{service} を使おうとしています"
+
+#: app/components/mcp-approval.tsx
+msgctxt "ILPDFc"
+msgid "Checking what this will do…"
+msgstr "何をするのか確認しています…"
+
+#: app/components/mcp-approval.tsx
+msgctxt "LmqeBE"
+msgid "Explained by AI"
+msgstr "AI による説明"
+
+#: app/components/mcp-approval.tsx
+msgctxt "M8kJGM"
+msgid "This can change or delete data in {service}, and it may not be possible to undo."
+msgstr "{service} のデータが変更・削除され、元に戻せない場合があります。"
+
+#: app/components/mcp-approval.tsx
+msgctxt "e9uDQ_"
+msgid "Technical details"
+msgstr "詳しい内容"
 
 #: app/components/mcp-settings.tsx
 msgctxt "vBjft2"
