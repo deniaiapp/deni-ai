@@ -870,15 +870,17 @@ export function ChatThread({
           </div>
         ) : null}
         <PromptInput
-          className="mx-auto w-full flex-row items-end gap-1 rounded-3xl border border-foreground/15 p-1.5 shadow-[0_2px_12px_color-mix(in_srgb,var(--color-black)_20%,transparent)] focus-within:border-foreground/30"
+          className="mx-auto w-full flex-col items-stretch gap-0 rounded-3xl border border-foreground/15 p-1.5 shadow-[0_2px_12px_color-mix(in_srgb,var(--color-black)_20%,transparent)] focus-within:border-foreground/30"
           onSubmit={(e) => {
             e.preventDefault();
             submit();
           }}
         >
-          <div className="shrink-0 pb-1.5 pl-1">
+          {/* The model choice sits above the text, so the text keeps the full width. */}
+          <div className="flex px-1.5 pt-0.5">
             <RunModePicker value={runMode} onChange={onRunModeChange} />
           </div>
+          <div className="flex items-end gap-1">
           <PromptInputTextarea
             ref={inputRef}
             className="min-h-9 min-w-0 flex-1 rounded-2xl border-0 bg-transparent px-2 py-2 focus-visible:border-transparent"
@@ -956,6 +958,7 @@ export function ChatThread({
               )}
             </PromptInputSubmit>
           </PromptInputToolbar>
+          </div>
         </PromptInput>
       </div>
     </section>
