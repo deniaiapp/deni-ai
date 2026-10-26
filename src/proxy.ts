@@ -26,6 +26,7 @@ const AUTH_REQUIRED_PREFIXES = [
   "/compare",
   "/new",
   "/flixa/authorize",
+  "/oauth",
 ] as const;
 
 function hasSessionCookie(request: NextRequest) {

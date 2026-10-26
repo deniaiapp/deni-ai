@@ -1,4 +1,4 @@
-import { AlertTriangle, Coins } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 import { useExtracted, useLocale } from "next-intl";
 import {
   OPENAI_LONG_CONTEXT_INPUT_THRESHOLD,
@@ -10,6 +10,7 @@ import {
   type ModelDefinition,
 } from "@/lib/constants";
 import { translateModelDescription } from "@/lib/model-description-copy";
+import { UsageTierBadge } from "@/components/chat/usage-tier-badge";
 import { authorLabels } from "./models-author-labels";
 
 export function ModelsGrid({
@@ -116,24 +117,10 @@ export function ModelsGrid({
                                 })}
                         </span>
                       )}
-                      {"tokenMultiplier" in model &&
-                        typeof model.tokenMultiplier === "number" &&
-                        model.tokenMultiplier > 1 && (
-                          <span
-                            className="inline-flex items-center gap-0.5 text-[10px] font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                            title={t("Each token counts {multiplier}× toward your usage", {
-                              multiplier: String(model.tokenMultiplier),
-                            })}
-                          >
-                            <Coins className="size-3" aria-hidden="true" />
-                            {model.tokenMultiplier}x
-                          </span>
-                        )}
-                      {"premium" in model && model.premium && (
-                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                          Pro
-                        </span>
-                      )}
+                      <UsageTierBadge
+                        tier={"usageTier" in model ? model.usageTier : undefined}
+                        className="bg-amber-500/10"
+                      />
                     </div>
                   </div>
                   {"description" in model && model.description && (
@@ -156,7 +143,7 @@ export function ModelsGrid({
                           })}`
                         : ""}
                       {"supportsProMode" in model && model.supportsProMode
-                        ? ` · ${t("Pro mode: {multiplier}× premium usage", {
+                        ? ` · ${t("Pro mode: {multiplier}× usage", {
                             multiplier: String(OPENAI_PRO_MODE_MULTIPLIER),
                           })}`
                         : ""}

@@ -45,7 +45,7 @@ import {
   saveTeamBillingRecord,
   withTeamBillingLock,
 } from "@/lib/team-billing-record";
-import { getUsageLimitConfig } from "@/lib/usage";
+import { getUsagePoolUnits } from "@/lib/usage";
 import {
   type ProtectedContext,
   protectedProcedure,
@@ -606,18 +606,20 @@ export const organizationRouter = router({
           : [];
       const usageByMember = new Map<string, { basic: number; premium: number }>();
       const tier = isMaxTeamPlan(subscription.planId ?? "") ? "max" : "pro";
-      const basicIncluded = getUsageLimitConfig("basic", tier).limit ?? 0;
-      const premiumIncluded = getUsageLimitConfig("premium", tier).limit ?? 0;
+      const poolIncluded = getUsagePoolUnits(tier);
 
       for (const row of usageRows) {
         const current = usageByMember.get(row.userId) ?? { basic: 0, premium: 0 };
-        if (row.category === "basic") {
-          current.basic = Math.max(row.used - basicIncluded, 0);
-        }
-        if (row.category === "premium") {
-          current.premium = Math.max(row.used - premiumIncluded, 0);
-        }
+        if (row.category === "basic") current.basic = row.used;
+        if (row.category === "premium") current.premium = row.used;
         usageByMember.set(row.userId, current);
+      }
+      // Both categories draw on one pool: what exceeds it is split by each one's share.
+      for (const [userId, used] of usageByMember) {
+        const total = used.basic + used.premium;
+        const over = Math.max(total - poolIncluded, 0);
+        const basicOver = total > 0 ? Math.round((over * used.basic) / total) : 0;
+        usageByMember.set(userId, { basic: basicOver, premium: over - basicOver });
       }
 
       return {

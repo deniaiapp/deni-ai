@@ -10,6 +10,8 @@ export * from "./device-auth";
 export * from "./memory";
 export * from "./max-mode-meter-event";
 export * from "./model-comparison";
+export * from "./oauth-provider";
+export * from "./product-usage";
 export * from "./project";
 export * from "./reset-credit";
 export * from "./security-activity";

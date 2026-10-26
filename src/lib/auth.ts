@@ -1,4 +1,5 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
+import { oauthProvider } from "@better-auth/oauth-provider";
 import { passkey } from "@better-auth/passkey";
 import { betterAuth, type GenericEndpointContext } from "better-auth";
 import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
@@ -30,7 +31,7 @@ import { orgInvitationEmailSubject } from "@/emails/org-invitation-email-subject
 import { PasswordResetEmail, passwordResetEmailSubject } from "@/emails/password-reset-email";
 import { VerificationEmail, verificationEmailSubject } from "@/emails/verification-email";
 import { env } from "@/env";
-import { TWO_FACTOR_PATH } from "@/lib/auth-paths";
+import { OAUTH_CONSENT_PATH, OAUTH_LOGIN_PATH, TWO_FACTOR_PATH } from "@/lib/auth-paths";
 import { toSafeRedirectPath } from "@/lib/auth-redirect";
 import { resolveClientIp } from "@/lib/client-ip";
 import { checkSignupLimits, recordSignupRisk } from "@/lib/signup-risk";
@@ -70,6 +71,8 @@ const githubClientId = env.GITHUB_CLIENT_ID?.trim();
 const githubClientSecret = env.GITHUB_CLIENT_SECRET?.trim();
 const turnstileSecretKey = env.TURNSTILE_SECRET_KEY?.trim();
 const turnstileSiteKey = env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
+
+const deniRunOAuthClientId = env.DENI_RUN_OAUTH_CLIENT_ID?.trim();
 
 const socialProviders = {
   ...(googleClientId && googleClientSecret
@@ -241,6 +244,21 @@ export const auth = betterAuth({
   // and gate team invitation emails before they are created or resent.
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/oauth2/authorize" || ctx.path === "/oauth2/consent") {
+        // Guest accounts have placeholder identities and no plan: they must not
+        // sign in to Deni Run or other clients. The login page asks them to sign in.
+        const session = await getSessionFromCtx(ctx);
+        if (session?.user.isAnonymous) {
+          const query = new URLSearchParams(
+            Object.entries((ctx.query ?? {}) as Record<string, unknown>).flatMap(([key, value]) =>
+              typeof value === "string" ? [[key, value]] : [],
+            ),
+          );
+          throw ctx.redirect(`${OAUTH_LOGIN_PATH}?${query.toString()}`);
+        }
+        return;
+      }
+
       if (ctx.path === "/organization/invite-member") {
         const session = await getSessionFromCtx(ctx);
         // Without a session the endpoint itself rejects the request.
@@ -403,6 +421,17 @@ export const auth = betterAuth({
     passkey(),
     haveIBeenPwned(),
     lastLoginMethod(),
+    // Deni AI is the identity provider for Deni Run (and other first-party apps).
+    // Clients are registered with `pnpm run tools:register-oauth-client`.
+    oauthProvider({
+      loginPage: OAUTH_LOGIN_PATH,
+      consentPage: OAUTH_CONSENT_PATH,
+      // Opaque access tokens and HS256 id tokens: no JWKS table or key rotation to run.
+      disableJwtPlugin: true,
+      // Clients are created by operators only; no dynamic registration.
+      allowDynamicClientRegistration: false,
+      cachedTrustedClients: new Set(deniRunOAuthClientId ? [deniRunOAuthClientId] : []),
+    }),
     organization({
       // Guests have placeholder emails and must not own teams (or their billing).
       allowUserToCreateOrganization: (user) => !user.isAnonymous,

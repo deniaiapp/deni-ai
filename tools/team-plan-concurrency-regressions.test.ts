@@ -36,7 +36,7 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/lib/billing-config", () => ({ isBillingDisabled: false }));
-vi.mock("@/lib/usage", () => ({ getUsageLimitConfig: vi.fn() }));
+vi.mock("@/lib/usage", () => ({ getUsagePoolUnits: vi.fn() }));
 vi.mock("@/lib/stripe", () => ({
   stripe: {
     prices: {

@@ -42,7 +42,7 @@ function BillingPageContent() {
   const localizeError = useLocalizeError();
   const {
     activePlanId,
-    basicUsage,
+    usageItem,
     cancel,
     cancelDate,
     cancelReceipt,
@@ -73,7 +73,6 @@ function BillingPageContent() {
     plusInterval,
     plusMonthly,
     portal,
-    premiumUsage,
     proInterval,
     proLifetime,
     proMonthly,
@@ -139,9 +138,9 @@ function BillingPageContent() {
         usageTierLabel={usageTierLabel}
         isLoading={usageQuery.isLoading}
         errorMessage={usageQuery.error ? localizeError(usageQuery.error) : undefined}
-        basicUsage={basicUsage}
-        premiumUsage={premiumUsage}
+        usageItem={usageItem}
         maxModeEnabled={maxModeQuery.data?.enabled}
+        pool={usageQuery.data?.pool}
       />
 
       <CardVerificationCard

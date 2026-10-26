@@ -59,7 +59,7 @@ export function TeamMaxModeDefaultPolicySection({
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1">
-          <Label>{t("Default basic token limit")}</Label>
+          <Label>{t("Default token limit")}</Label>
           <Input
             className="h-8"
             defaultValue={formatTokenLimit(policy.maxModeLimitBasic)}
@@ -72,25 +72,6 @@ export function TeamMaxModeDefaultPolicySection({
                 maxModeLimitBasic: policy.maxModeLimitBasic,
                 maxModeLimitPremium: policy.maxModeLimitPremium,
                 category: "basic",
-                value: event.currentTarget.value,
-              })
-            }
-          />
-        </div>
-        <div className="space-y-1">
-          <Label>{t("Default premium token limit")}</Label>
-          <Input
-            className="h-8"
-            defaultValue={formatTokenLimit(policy.maxModeLimitPremium)}
-            disabled={disabled}
-            inputMode="numeric"
-            placeholder={t("Unlimited")}
-            onBlur={(event) =>
-              onLimitChange({
-                maxModeEnabled: policy.maxModeEnabled,
-                maxModeLimitBasic: policy.maxModeLimitBasic,
-                maxModeLimitPremium: policy.maxModeLimitPremium,
-                category: "premium",
                 value: event.currentTarget.value,
               })
             }

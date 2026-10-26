@@ -9,9 +9,7 @@ import {
   ArchiveIcon,
   Bot,
   ChevronDownIcon,
-  Coins,
   CreditCard,
-  Gem,
   LogIn,
   SearchIcon,
   Sparkle,
@@ -38,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { ModelOption } from "./chat-composer";
+import { UsageTierBadge } from "./usage-tier-badge";
 
 type ModelDescriptionLabels = {
   xaiMostIntelligentModel: string;
@@ -70,10 +69,9 @@ function ModelIcon({
   model,
   className,
 }: {
-  model: { author: ModelOption["author"]; premium?: boolean };
+  model: { author: ModelOption["author"] };
   className?: string;
 }) {
-  if (model.premium) return <Gem className={cn("size-3.5", className)} aria-hidden="true" />;
   switch (model.author) {
     case "openai":
       return <Openai aria-hidden="true" />;
@@ -311,7 +309,6 @@ function ModelPickerItem({
   modelDescriptionLabels: ModelDescriptionLabels;
   modelDescriptionCopy: Record<string, string>;
 }) {
-  const t = useExtracted();
   const description =
     "description" in model
       ? translateModelDescription(model, modelDescriptionCopy)
@@ -346,20 +343,7 @@ function ModelPickerItem({
             {deprecationLabel}
           </Badge>
         )}
-        {"tokenMultiplier" in model &&
-          typeof model.tokenMultiplier === "number" &&
-          model.tokenMultiplier > 1 && (
-            <Badge
-              variant="secondary"
-              className="bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[10px] leading-none py-0.5 h-auto"
-              title={t("Each token counts {multiplier}× toward your usage", {
-                multiplier: String(model.tokenMultiplier),
-              })}
-            >
-              <Coins className="size-3" aria-hidden="true" />
-              {model.tokenMultiplier}x
-            </Badge>
-          )}
+        <UsageTierBadge tier={"usageTier" in model ? model.usageTier : undefined} />
       </span>
 
       {description && (
@@ -417,13 +401,13 @@ function ModelPickerTriggerLabel({
 }) {
   const t = useExtracted();
   const { warning } = useModelDeprecationCopy(selectedModel?.deprecation);
-  const multiplier =
-    selectedModel && "tokenMultiplier" in selectedModel ? selectedModel.tokenMultiplier : undefined;
+  const usageTier =
+    selectedModel && "usageTier" in selectedModel ? selectedModel.usageTier : undefined;
 
   return (
     <>
       <span className="flex items-center [&_svg]:size-3.5">
-        <ModelIcon model={selectedModel ?? { author: "openai", premium: false }} />
+        <ModelIcon model={selectedModel ?? { author: "openai" }} />
       </span>
       <span className="max-w-30 truncate text-sm">{selectedModel?.name ?? t("Select model")}</span>
       {status === "unavailable" && <ModelStatusBadge status={status} />}
@@ -437,18 +421,7 @@ function ModelPickerTriggerLabel({
           <TriangleAlert className="size-3" aria-hidden="true" />
         </Badge>
       )}
-      {typeof multiplier === "number" && multiplier > 1 && (
-        <Badge
-          variant="secondary"
-          className="bg-amber-500/15 text-amber-700 dark:text-amber-400 text-[10px] leading-none px-1 py-0.5 h-auto"
-          title={t("Each token counts {multiplier}× toward your usage", {
-            multiplier: String(multiplier),
-          })}
-        >
-          <Coins className="size-3 mr-0.5" aria-hidden="true" />
-          {multiplier}x
-        </Badge>
-      )}
+      <UsageTierBadge tier={usageTier} compact className="px-1" />
       <ChevronDownIcon className="size-3 opacity-50 shrink-0" aria-hidden="true" />
     </>
   );

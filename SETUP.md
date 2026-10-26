@@ -247,26 +247,27 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Available scripts
 
-| Command                       | Description                          |
-| ----------------------------- | ------------------------------------ |
-| `pnpm dev`                    | Start Next.js dev server             |
-| `pnpm run build`              | Typecheck + production build         |
-| `pnpm start`                  | Start production server              |
-| `pnpm run lint`               | oxlint                               |
-| `pnpm run lint:fix`           | oxlint with auto-fix                 |
-| `pnpm run format`             | Format with oxfmt                    |
-| `pnpm run typecheck`          | TypeScript check (`tsc --noEmit`)    |
-| `pnpm run db:generate`        | Generate Drizzle migrations          |
-| `pnpm run db:migrate`         | Migrate using `.env`                 |
-| `pnpm run db:migrate:dev`     | Migrate using `.env.local`           |
-| `pnpm run db:push`            | Push schema (dev)                    |
-| `pnpm run auth:generate`      | Regenerate better-auth schema        |
-| `pnpm run disposable:refresh` | Refresh disposable-email domain list |
-| `pnpm run tools:codename`     | Generate version codenames           |
-| `pnpm run tools:update-types` | Add missing Lucide type exports      |
-| `pnpm run tools:commit`       | AI-assisted conventional commits     |
-| `pnpm run doctor`             | Run react-doctor diagnostics         |
-| `pnpm test`                   | Run local regression tests (Vitest)  |
+| Command                                | Description                          |
+| -------------------------------------- | ------------------------------------ |
+| `pnpm dev`                             | Start Next.js dev server             |
+| `pnpm run build`                       | Typecheck + production build         |
+| `pnpm start`                           | Start production server              |
+| `pnpm run lint`                        | oxlint                               |
+| `pnpm run lint:fix`                    | oxlint with auto-fix                 |
+| `pnpm run format`                      | Format with oxfmt                    |
+| `pnpm run typecheck`                   | TypeScript check (`tsc --noEmit`)    |
+| `pnpm run db:generate`                 | Generate Drizzle migrations          |
+| `pnpm run db:migrate`                  | Migrate using `.env`                 |
+| `pnpm run db:migrate:dev`              | Migrate using `.env.local`           |
+| `pnpm run db:push`                     | Push schema (dev)                    |
+| `pnpm run auth:generate`               | Regenerate better-auth schema        |
+| `pnpm run disposable:refresh`          | Refresh disposable-email domain list |
+| `pnpm run tools:codename`              | Generate version codenames           |
+| `pnpm run tools:update-types`          | Add missing Lucide type exports      |
+| `pnpm run tools:commit`                | AI-assisted conventional commits     |
+| `pnpm run tools:register-oauth-client` | Register an OAuth client (Deni Run)  |
+| `pnpm run doctor`                      | Run react-doctor diagnostics         |
+| `pnpm test`                            | Run local regression tests (Vitest)  |
 
 TypeScript scripts run through `tsx`. Unlike Bun, Node.js does not automatically load
 root environment files: the package scripts explicitly load `.env.local` when appropriate,
@@ -361,6 +362,59 @@ Report the configuration in use without changing anything (exits non-zero when i
 pnpm run tools:stripe-portal --check
 ```
 
+## Combined usage: Deni AI Chat, Flixa, and Deni Run
+
+One Deni AI subscription covers all three products, and they spend **one monthly
+pool** per plan (`src/lib/usage-pool.ts`): Free $10, Plus $100, Pro $200, Max $300
+(verified Free $15, flagged Free $2; guests keep their separate request allowance).
+The pool is counted in usage units, 1M units = $0.50:
+
+- **Deni AI Chat and Flixa** spend weighted tokens (token weights times the model's
+  usage tier). Usage is **not split into basic and premium**: every request is recorded
+  on the `basic` row of `usage_quota` (`SHARED_USAGE_CATEGORY`), whose limit is what the
+  pool leaves after Deni Run (and any `premium` row from before the change), so a
+  request is refused once the pool as a whole is spent. Max Mode overage is metered at
+  the basic rate, and team Max Mode has one token cap (the basic one). Each settled
+  request also adds to `product_usage` (`product` = `chat` or `flixa`), which splits the
+  quota between the two products. flixa-backend uses the same pool and writes its rows
+  with raw SQL, so apply this migration before deploying it.
+- **Deni Run** spends its provider cost, recorded in `product_usage` with `product` =
+  `run` (`metric` = `model` / `browser` / `computer`, in micro-dollars = 2 units each).
+
+The pool resets at the start of each UTC month; reset credits clear the chat/Flixa rows,
+not Deni Run's spend. **Settings → Billing**, the settings sidebar, and the account
+menu show the pool as one bar colored by product (Deni AI Chat, Flixa, Deni Run), in
+percentages only.
+
+Rolling the shared pool out to an existing deployment, mid-period:
+
+1. Apply the migration (`pnpm run db:migrate`), then deploy Deni AI and flixa-backend.
+2. Move this period's premium usage into the shared row:
+   `pnpm run tools:merge-premium-usage` (dry run), then add `--apply`. Premium usage
+   counts at `--factor` (default 2; per-request models are not stored, so it cannot be
+   recomputed exactly). Until it runs, old premium usage counts at 1x. It is idempotent.
+3. Deni Run starts from zero: its old local counters are no longer read, and its spend
+   is recorded in Deni AI from the deploy on.
+
+At the start of a new month every row resets anyway, so step 2 only matters for the
+rest of the current period.
+
+Deni Run signs users in with Deni AI through the better-auth OAuth provider plugin
+(`/api/auth/oauth2/*`; login page `/oauth/authorize`, consent page `/oauth/consent`; guest
+accounts are refused). To connect a Deni Run deployment:
+
+1. Apply the migration (OAuth provider and `product_usage` tables).
+2. Register the client: `pnpm run tools:register-oauth-client --name="Deni Run"
+   --redirect-uri=https://run.deniai.app/api/auth/callback/deni-ai` (load the target
+   environment, e.g. `pnpm exec tsx --env-file=.env tools/register-oauth-client.ts ...` for
+   production). It skips the consent screen and prints the client id and secret once.
+3. Set `DENI_RUN_OAUTH_CLIENT_ID` here, and `DENI_AI_CLIENT_ID` / `DENI_AI_CLIENT_SECRET` in
+   Deni Run.
+4. Set the same random `DENI_RUN_SERVICE_SECRET` in both apps. Deni Run then calls
+   `GET /api/integrations/deni-run/usage?userId=<Deni AI user id>` before work and
+   `POST /api/integrations/deni-run/usage` with `{ userId, metric, costUsd }` after it
+   (`Authorization: Bearer <DENI_RUN_SERVICE_SECRET>`).
+
 ## Database schema
 
 Schemas live under `src/db/schema/`. Main domains:
@@ -374,6 +428,8 @@ Schemas live under `src/db/schema/`. Main domains:
 | **project**           | Project context; legacy file records retained |
 | **billing**           | Stripe subscriptions / payment data           |
 | **usage**             | Platform usage and limits                     |
+| **product-usage**     | Monthly usage per product (Chat, Flixa, Run)  |
+| **oauth-provider**    | OAuth provider clients, tokens, consents      |
 | **reset-credit**      | Usage reset credit balances                   |
 | **team-usage-policy** | Team usage policies                           |
 | **device-auth**       | Device / desktop auth                         |

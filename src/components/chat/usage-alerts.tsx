@@ -19,9 +19,8 @@ interface UsageAlertsProps {
     billingDisabled: boolean;
   };
   usage: {
-    remaining: number | null | undefined;
-    unitLabel: string;
-    categoryLabel: string;
+    /** Share of the monthly pool left; percentages only, no amounts. */
+    remainingPercent: number | null;
     tierLabel: string;
   };
   enableMaxMode: { mutate: () => void; isPending: boolean };
@@ -66,25 +65,17 @@ export function UsageAlerts({ status, usage, enableMaxMode, onRefreshUsage }: Us
                     "You've reached your limit. Enable Max Mode to continue with pay-per-use pricing.",
                   )
                 : status.isUsageBlocked
-                  ? t("You've hit the {category} usage limit on your {tier} plan.", {
-                      category: usage.categoryLabel,
+                  ? t("You've hit this month's usage limit on your {tier} plan.", {
                       tier: usage.tierLabel,
                     })
-                  : usage.remaining === null || usage.remaining === undefined
-                    ? t("Only a few {category} {unit} left on your {tier} plan.", {
-                        category: usage.categoryLabel,
-                        unit: usage.unitLabel,
+                  : usage.remainingPercent === null
+                    ? t("Only a little of this month's usage is left on your {tier} plan.", {
                         tier: usage.tierLabel,
                       })
-                    : t(
-                        "Only {count, plural, one {#} other {#}} {category} {unit} left on your {tier} plan.",
-                        {
-                          count: usage.remaining,
-                          category: usage.categoryLabel,
-                          unit: usage.unitLabel,
-                          tier: usage.tierLabel,
-                        },
-                      )}
+                    : t("Only {percent}% of this month's usage is left on your {tier} plan.", {
+                        percent: Math.max(usage.remainingPercent, 0.1).toFixed(1),
+                        tier: usage.tierLabel,
+                      })}
             </p>
             {showVerifyCard && (
               <p>

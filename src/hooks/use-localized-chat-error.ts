@@ -69,8 +69,6 @@ export function useLocalizedChatError() {
         return t("Only GPT-6 Luna is available for guest sessions. Log in to use more models.");
       case "Pro mode is not available for guest sessions.":
         return t("Pro mode is not available for guest sessions. Log in to use it.");
-      case "Premium models are not available for guest sessions.":
-        return t("Premium models are not available for guest sessions. Log in to use them.");
       case "Fast, Pro, and Deep Research are not available for guest sessions.":
         return t(
           "Fast, Pro, and Deep Research are not available for guest sessions. Log in to use them.",

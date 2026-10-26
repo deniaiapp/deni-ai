@@ -150,7 +150,7 @@ export function ComparisonSettingsControls({
             ))}
           {model?.supportsProMode && (
             <FieldDescription className="text-xs">
-              {t("Pro mode uses deeper multi-pass reasoning ({multiplier}× premium usage)", {
+              {t("Pro mode uses deeper multi-pass reasoning ({multiplier}× usage)", {
                 multiplier: String(OPENAI_PRO_MODE_MULTIPLIER),
               })}
             </FieldDescription>

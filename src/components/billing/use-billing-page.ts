@@ -238,8 +238,8 @@ export function useBillingPage() {
   const selectedPlusPlan = plusInterval === "monthly" ? plusMonthly : plusYearly;
   const selectedProPlan = proInterval === "monthly" ? proMonthly : proYearly;
   const selectedMaxPlan = maxInterval === "monthly" ? maxMonthly : maxYearly;
-  const basicUsage = usage.find((entry) => entry.category === "basic");
-  const premiumUsage = usage.find((entry) => entry.category === "premium");
+  // One shared pool: the summary has a single usage entry.
+  const usageItem = usage[0];
   const cancelReceipt = {
     sessionId: statusQuery.data?.stripeCustomerId ?? activePlanId ?? "cancel",
     ...getReceiptCopy(activePlanId, "/settings/billing", t("Home")),
@@ -255,7 +255,7 @@ export function useBillingPage() {
 
   return {
     activePlanId,
-    basicUsage,
+    usageItem,
     cancel,
     cancelDate,
     cancelReceipt,
@@ -286,7 +286,6 @@ export function useBillingPage() {
     plusInterval,
     plusMonthly,
     portal,
-    premiumUsage,
     proInterval,
     proLifetime,
     proMonthly,

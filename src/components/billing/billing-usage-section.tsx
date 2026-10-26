@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import { Progress } from "../ui/progress";
 import { Spinner } from "../ui/spinner";
 import { AttachmentStorageUsage } from "./attachment-storage-usage";
+import { CombinedUsageMeter, type UsagePoolView } from "./product-usage";
 
 export type UsageItem = {
   category: "basic" | "premium";
@@ -91,16 +92,17 @@ export function BillingUsageSection({
   usageTierLabel,
   isLoading,
   errorMessage,
-  basicUsage,
-  premiumUsage,
+  usageItem,
   maxModeEnabled,
+  pool,
 }: {
   usageTierLabel: string;
   isLoading: boolean;
   errorMessage?: string | null;
-  basicUsage: UsageItem | undefined;
-  premiumUsage: UsageItem | undefined;
+  usageItem: UsageItem | undefined;
   maxModeEnabled?: boolean;
+  /** The pool shared by Deni AI chat, Flixa, and Deni Run; null for guests. */
+  pool?: UsagePoolView | null;
 }) {
   const t = useExtracted();
 
@@ -124,12 +126,11 @@ export function BillingUsageSection({
           <p className="text-sm text-destructive">{errorMessage}</p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2">
-            <UsageRow label={t("Basic models")} item={basicUsage} maxModeEnabled={maxModeEnabled} />
-            <UsageRow
-              label={t("Premium models")}
-              item={premiumUsage}
-              maxModeEnabled={maxModeEnabled}
-            />
+            {pool ? (
+              <CombinedUsageMeter pool={pool} maxModeEnabled={maxModeEnabled} />
+            ) : (
+              <UsageRow label={t("Usage")} item={usageItem} maxModeEnabled={maxModeEnabled} />
+            )}
             <AttachmentStorageUsage />
           </div>
         )}

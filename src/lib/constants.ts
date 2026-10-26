@@ -70,13 +70,35 @@ export type ModelDeprecation = {
   tentative?: boolean;
 };
 
+/**
+ * Usage tiers and the quota multiplier of each. Flixa (flixa-backend
+ * utils/agent/usage-tiers.ts) uses the same ladder; keep them in sync.
+ */
+export const USAGE_TIER_MULTIPLIERS = {
+  1: 1,
+  2: 1.5,
+  3: 2,
+  4: 3,
+  5: 4,
+  6: 5,
+  7: 6,
+  8: 8,
+  9: 10,
+  10: 12,
+} as const;
+
+export type UsageTier = keyof typeof USAGE_TIER_MULTIPLIERS;
+
+export function getUsageTierMultiplier(tier: UsageTier | undefined): number {
+  return tier ? USAGE_TIER_MULTIPLIERS[tier] : 1;
+}
+
 export type ModelDefinition = {
   name: string;
   value: string;
   author: Author;
   description?: string;
   featured?: boolean;
-  premium?: boolean;
   /**
    * When true, the model is limited to paid tiers (Plus / Pro / Max / Team).
    * Card verification on the Free plan does not unlock it.
@@ -92,12 +114,12 @@ export type ModelDefinition = {
   efforts: ModelEfforts;
   contextWindow?: number;
   /**
-   * Multiplier applied to the model's token consumption when billing
-   * usage. `undefined` and `1` both mean "no multiplier". Values > 1
-   * cause each token to count as that many tokens toward the user's
-   * monthly quota and are surfaced to users in the UI.
+   * Usage tier (see {@link USAGE_TIER_MULTIPLIERS}): each token counts as the
+   * tier's multiplier toward the user's monthly quota. `undefined` means
+   * Tier 1 (1×).
+   * Shown to users as "Tier N" in the UI.
    */
-  tokenMultiplier?: number;
+  usageTier?: UsageTier;
   /**
    * When true, the model supports OpenAI Pro reasoning mode
    * (`reasoning.mode: "pro"`), available on GPT-5.6 and GPT-6. Enabling Pro
@@ -133,8 +155,13 @@ export function formatModelDeprecationDate(date: string, locale: string): string
   }).format(parsedDate);
 }
 
-// Quota cost tiers use the mean standard input/output price per 1M tokens:
-// < $5 = 1x, < $10 = 1.5x, < $20 = 2x, < $40 = 3x, < $60 = 4x, otherwise 5x.
+// Usage tiers follow the mean standard input/output price per 1M tokens:
+// < $5 = Tier 1 (1x), < $10 = Tier 2 (1.5x), < $20 = Tier 3 (2x), < $40 = Tier 4 (3x),
+// < $60 = Tier 5 (4x), < $80 = Tier 6 (5x), otherwise Tier 7 (6x); Tiers 8-10 (8x, 10x,
+// 12x) continue the ladder. Models that used the premium quota before usage was merged
+// into one pool are rated at twice their price tier's multiplier (premium usage was
+// worth about twice as much): 1.5x -> Tier 4 (3x), 2x -> Tier 5 (4x), 3x -> Tier 7 (6x).
+// Exception: Claude Sonnet 5.5 stays Tier 2 (1.5x).
 // Rates checked 2026-09-23 against:
 // https://developers.openai.com/api/docs/pricing
 // https://platform.claude.com/docs/en/about-claude/pricing
@@ -142,7 +169,7 @@ export function formatModelDeprecationDate(date: string, locale: string): string
 // https://console.groq.com/docs/models
 // https://openrouter.ai/api/v1/models (routed model variants)
 // Pro/Fast mode and long-context multipliers are applied separately.
-// Exception: Sol models are rated 3x, above their price tier, because they carry
+// Exception: Sol models are rated Tier 4 (3x), above their price tier, because they carry
 // most basic usage (GPT-6.x Sol: about $0.67 per 1M quota units).
 const catalogModels: readonly ModelDefinition[] = [
   {
@@ -150,10 +177,9 @@ const catalogModels: readonly ModelDefinition[] = [
     value: "gpt-6-astra",
     supportsProMode: true,
     supportsFastMode: true,
-    tokenMultiplier: 3,
+    usageTier: 7,
     author: "openai",
     description: "OpenAI flagship for complex reasoning, coding, and agentic work.",
-    premium: true,
     paidOnly: true,
     featured: true,
     efforts: ["low", "medium", "high", "max"],
@@ -162,7 +188,7 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-6 Sol",
     value: "gpt-6-sol",
-    tokenMultiplier: 3,
+    usageTier: 4,
     author: "openai",
     description: "High-end GPT-6 model for demanding reasoning, coding, and agentic work.",
     efforts: ["none", "low", "medium", "high", "xhigh", "max"],
@@ -173,7 +199,7 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-6.1 Sol",
     value: "gpt-6.1-sol",
-    tokenMultiplier: 3,
+    usageTier: 4,
     author: "openai",
     description: "High-end GPT-6.1 model for demanding reasoning, coding, and agentic work.",
     featured: true,
@@ -185,7 +211,7 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-6 Luna",
     value: "gpt-6-luna",
-    tokenMultiplier: 1,
+    usageTier: 1,
     author: "openai",
     description: "Fast, cost-efficient GPT-6 model for high-volume tasks.",
     featured: true,
@@ -197,7 +223,7 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-5.6 Sol",
     value: "gpt-5.6-sol",
-    tokenMultiplier: 3,
+    usageTier: 4,
     author: "openai",
     proOnly: true,
     description: "OpenAI flagship for complex reasoning, coding, and agentic work.",
@@ -209,7 +235,7 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-5.6 Terra",
     value: "gpt-5.6-terra",
-    tokenMultiplier: 1.5,
+    usageTier: 2,
     author: "openai",
     proOnly: true,
     description: "Balanced GPT-5.6 model for everyday work at half the cost of Sol.",
@@ -221,7 +247,7 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "GPT-5.6 Luna",
     value: "gpt-5.6-luna",
-    tokenMultiplier: 1,
+    usageTier: 1,
     author: "openai",
     proOnly: true,
     description: "Fastest, most affordable GPT-5.6 model for high-volume tasks.",
@@ -234,7 +260,7 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "Gemini 3.8 Flash",
     value: "gemini-3.8-flash",
-    tokenMultiplier: 1,
+    usageTier: 1,
     author: "google",
     description: "Best for coding and agentic tasks",
     featured: true,
@@ -244,7 +270,7 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "Gemini 3.5 Flash Lite",
     value: "gemini-3.5-flash-lite",
-    tokenMultiplier: 1,
+    usageTier: 1,
     author: "google",
     description: "Best for high volume tasks",
     efforts: ["minimal", "low", "medium", "high"],
@@ -253,10 +279,9 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "Claude Opus 5.5",
     value: "claude-opus-5.5",
-    tokenMultiplier: 2,
+    usageTier: 5,
     author: "anthropic",
     description: "Anthropic's flagship for agentic coding, computer use, and knowledge work.",
-    premium: true,
     featured: true,
     efforts: ["low", "medium", "high", "max"],
     contextWindow: 1_000_000,
@@ -264,11 +289,10 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "Claude Fable 5.1",
     value: "claude-fable-5.1",
-    tokenMultiplier: 3,
+    usageTier: 7,
     author: "anthropic",
     description:
       "Successor to Claude Fable 5 for long-running agentic coding, knowledge work, and research.",
-    premium: true,
     paidOnly: true,
     featured: true,
     efforts: ["low", "medium", "high", "max"],
@@ -277,10 +301,9 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "Claude Fable 5",
     value: "claude-fable-5",
-    tokenMultiplier: 3,
+    usageTier: 7,
     author: "anthropic",
     description: "Anthropic's most capable model for long-horizon agentic work.",
-    premium: true,
     paidOnly: true,
     efforts: ["low", "medium", "high", "max"],
     contextWindow: 1_000_000,
@@ -288,20 +311,18 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "Claude Opus 5",
     value: "claude-opus-5",
-    tokenMultiplier: 2,
+    usageTier: 5,
     author: "anthropic",
     description: "For complex agentic coding and enterprise work.",
-    premium: true,
     efforts: ["low", "medium", "high", "max"],
     contextWindow: 1_000_000,
   },
   {
     name: "Claude Sonnet 5.5",
     value: "claude-sonnet-5.5",
-    tokenMultiplier: 1.5,
+    usageTier: 2,
     author: "anthropic",
     description: "Fast, balanced model for coding, agents, and everyday knowledge work.",
-    premium: true,
     featured: true,
     efforts: ["low", "medium", "high", "xhigh", "max"],
     contextWindow: 1_000_000,
@@ -309,17 +330,16 @@ const catalogModels: readonly ModelDefinition[] = [
   {
     name: "Claude Sonnet 5",
     value: "claude-sonnet-5",
-    tokenMultiplier: 1.5,
+    usageTier: 4,
     author: "anthropic",
     description: "Balanced Claude 5 model for coding, writing, and everyday agentic work.",
-    premium: true,
     efforts: ["low", "medium", "high", "max"],
     contextWindow: 1_000_000,
   },
   {
     name: "Claude Haiku 5.5",
     value: "claude-haiku-5.5",
-    tokenMultiplier: 1,
+    usageTier: 1,
     author: "anthropic",
     description: "Fast, lightweight Claude 5 model for everyday chat and quick reasoning.",
     featured: true,
@@ -478,11 +498,7 @@ export function getModelContextWindow(modelId: string) {
 }
 
 export function getModelTokenMultiplier(modelId: string): number {
-  const multiplier = getModelDefinition(modelId)?.tokenMultiplier;
-  if (typeof multiplier !== "number" || !Number.isFinite(multiplier) || multiplier < 1) {
-    return 1;
-  }
-  return multiplier;
+  return getUsageTierMultiplier(getModelDefinition(modelId)?.usageTier);
 }
 
 /**

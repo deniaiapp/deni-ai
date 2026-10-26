@@ -484,6 +484,13 @@
       "when": 1792820488796,
       "tag": "0068_busy_spacker_dave",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1793005621503,
+      "tag": "0069_clumsy_khan",
+      "breakpoints": true
     }
   ]
 }

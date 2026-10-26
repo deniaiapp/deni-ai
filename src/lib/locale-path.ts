@@ -14,6 +14,7 @@ const APP_PATH_PREFIXES = [
   "/compare",
   "/new",
   "/flixa/authorize",
+  "/oauth",
   "/api",
   "/auth",
   "/account",

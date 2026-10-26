@@ -317,10 +317,8 @@ export function ChatInterface({
     isUsageBlocked,
     canEnableMaxMode,
     isSubmitBlocked,
-    usageCategoryLabel,
     usageTierLabel,
-    remainingUsage,
-    usageUnitLabel,
+    remainingPercent,
     enableMaxMode,
   } = useUsageStatus({ model, availableModels, proMode });
 
@@ -556,9 +554,7 @@ export function ChatInterface({
               billingDisabled,
             }}
             usage={{
-              remaining: remainingUsage,
-              unitLabel: usageUnitLabel,
-              categoryLabel: usageCategoryLabel,
+              remainingPercent,
               tierLabel: usageTierLabel,
             }}
             enableMaxMode={enableMaxMode}

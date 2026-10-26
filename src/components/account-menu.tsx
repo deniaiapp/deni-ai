@@ -20,6 +20,7 @@ import { Progress } from "@/components/ui/progress";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { authClient } from "@/lib/auth-client";
+import { CombinedUsageBar } from "@/components/billing/product-usage";
 import { trpc } from "@/lib/trpc/react";
 import { liveUsageQueryOptions } from "@/lib/usage-query-options";
 import { cn } from "@/lib/utils";
@@ -152,8 +153,7 @@ export function AccountMenu() {
   const maxModeEligible =
     !billingDisabled && (maxModeQuery.data?.eligible ?? usageQuery.data?.maxModeEligible ?? false);
 
-  const basicUsage = usageQuery.data?.usage.find((entry) => entry.category === "basic");
-  const premiumUsage = usageQuery.data?.usage.find((entry) => entry.category === "premium");
+  const usageItem = usageQuery.data?.usage[0];
   const usageTier = usageQuery.data?.tier ?? "free";
   const usageTierLabel =
     usageTier === "free"
@@ -240,16 +240,15 @@ export function AccountMenu() {
                 <p className="text-xs text-destructive">{t("Failed to load usage.")}</p>
               ) : (
                 <div className="space-y-2.5">
-                  <AccountUsageRow
-                    label={t("Basic")}
-                    item={basicUsage}
-                    maxModeEnabled={maxModeEnabled}
-                  />
-                  <AccountUsageRow
-                    label={t("Premium")}
-                    item={premiumUsage}
-                    maxModeEnabled={maxModeEnabled}
-                  />
+                  {usageQuery.data?.pool ? (
+                    <CombinedUsageBar pool={usageQuery.data.pool} maxModeEnabled={maxModeEnabled} />
+                  ) : (
+                    <AccountUsageRow
+                      label={t("Usage")}
+                      item={usageItem}
+                      maxModeEnabled={maxModeEnabled}
+                    />
+                  )}
                 </div>
               )}
               {!isAnonymous && !billingDisabled && (

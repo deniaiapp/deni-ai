@@ -14,7 +14,12 @@ import {
 import { createDeniOpenRouter } from "@/lib/openrouter-provider";
 import { isModelProviderAvailable } from "@/lib/platform-capabilities";
 import { platformCapabilities } from "@/lib/platform-capabilities.server";
-import { getUsageSummary, type UsageCategory, UsageLimitError } from "@/lib/usage";
+import {
+  getUsageSummary,
+  SHARED_USAGE_CATEGORY,
+  type UsageCategory,
+  UsageLimitError,
+} from "@/lib/usage";
 import { capGuestReasoningEffort } from "./usage-estimate";
 
 const openaiEffortOptions = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
@@ -166,9 +171,9 @@ export async function resolveChatModelContext({
   const useFastMode = Boolean(
     fastMode && selectedModel.supportsFastMode && providerId === "openai" && usesOpenRouter,
   );
-  const isPremiumModel = Boolean(selectedModel.premium);
-  // Pro mode always bills against premium quota (even when the base model is basic).
-  const usageCategory: UsageCategory = isPremiumModel || useProMode ? "premium" : "basic";
+  // Usage is not split by model class: every request spends the one shared pool (the
+  // model's usage tier and Pro mode scale the amount), recorded on the "basic" row.
+  const usageCategory: UsageCategory = SHARED_USAGE_CATEGORY;
   // Guests stay on the guest allowlist; verified free accounts unlock the full catalog.
   // All model requests count toward platform usage.
   try {
@@ -195,12 +200,8 @@ export async function resolveChatModelContext({
       });
     }
 
-    if (isAnonymous && usageCategory === "premium") {
-      throw new ChatRouteError(403, {
-        error: useProMode
-          ? "Pro mode is not available for guest sessions."
-          : "Premium models are not available for guest sessions.",
-      });
+    if (isAnonymous && useProMode) {
+      throw new ChatRouteError(403, { error: "Pro mode is not available for guest sessions." });
     }
 
     const categoryUsage = usageSummary.usage.find((usage) => usage.category === usageCategory);

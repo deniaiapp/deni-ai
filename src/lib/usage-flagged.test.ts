@@ -45,28 +45,30 @@ beforeEach(() => {
 });
 
 const summary = () => getUsageSummary({ userId: "user", now: new Date("2026-06-10") });
-const limits = async () => (await summary()).usage.map(({ limit }) => limit);
+// One pool for all usage ($ x 2M units, see usage-pool.ts).
+const limits = async () => (await summary()).pool?.limit;
 
-test("an unflagged Free account gets the normal Free limits", async () => {
-  expect(await limits()).toEqual([10_000_000, 2_000_000]);
+test("an unflagged Free account gets the normal Free pool", async () => {
+  expect(await limits()).toBe(20_000_000);
+  expect((await summary()).usage.map(({ limit }) => limit)).toEqual([20_000_000]);
 });
 
-test("a Free account flagged at sign-up gets the reduced limits", async () => {
+test("a Free account flagged at sign-up gets the reduced pool", async () => {
   state.flagged = true;
-  expect(await limits()).toEqual([3_000_000, 500_000]);
+  expect(await limits()).toBe(4_000_000);
 });
 
 test("verifying a payment method lifts the reduction", async () => {
   state.flagged = true;
   state.fingerprint = "fp_card";
-  expect(await limits()).toEqual([25_000_000, 10_000_000]);
+  expect(await limits()).toBe(30_000_000);
 });
 
-test("a removed card keeps its fingerprint but no longer lifts the Free limits", async () => {
+test("a removed card keeps its fingerprint but no longer lifts the Free pool", async () => {
   state.flagged = true;
   state.fingerprint = "fp_card";
   state.cardRemovedAt = new Date("2026-06-01");
-  expect(await limits()).toEqual([3_000_000, 500_000]);
+  expect(await limits()).toBe(4_000_000);
   expect((await summary()).hasVerifiedPaymentMethod).toBe(false);
 });
 

@@ -135,12 +135,9 @@ export function ChatComposer({
     });
   };
 
-  const proModeTitle = t(
-    "Pro mode uses deeper multi-pass reasoning ({multiplier}× premium usage)",
-    {
-      multiplier: String(OPENAI_PRO_MODE_MULTIPLIER),
-    },
-  );
+  const proModeTitle = t("Pro mode uses deeper multi-pass reasoning ({multiplier}× usage)", {
+    multiplier: String(OPENAI_PRO_MODE_MULTIPLIER),
+  });
   const fastModeTitle = t(
     "Fast mode uses priority processing for lower latency ({multiplier}× usage)",
     {

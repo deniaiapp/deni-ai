@@ -9,12 +9,12 @@ import { liveUsageQueryOptions } from "@/lib/usage-query-options";
 export function useUsageStatus(params: {
   model: string;
   availableModels: ModelOption[];
-  /** When true on a Pro-capable model, usage is billed as premium. */
+  /** Pro mode on a Pro-capable model (its usage is scaled, from the same pool). */
   proMode?: boolean;
 }) {
   const t = useExtracted();
   const localizeError = useLocalizeError();
-  const { model, availableModels, proMode = false } = params;
+  const { model, availableModels } = params;
   const { features } = usePlatformCapabilities();
 
   const usageQuery = trpc.billing.usage.useQuery(undefined, {
@@ -22,16 +22,18 @@ export function useUsageStatus(params: {
   });
 
   const selectedModel = availableModels.find((m) => m.value === model);
-  const usesProMode = Boolean(proMode && selectedModel?.supportsProMode);
-  const usageCategory =
-    selectedModel?.premium || usesProMode ? ("premium" as const) : ("basic" as const);
-  const categoryUsage = usageQuery.data?.usage.find((usage) => usage.category === usageCategory);
+  // One shared pool: the summary's single usage entry is what is left of it.
+  const categoryUsage = usageQuery.data?.usage[0];
   const remainingUsage = categoryUsage?.remaining;
   const usageLimit = categoryUsage?.limit;
   const usageUnit = categoryUsage?.unit ?? "requests";
   const usageTier = usageQuery.data?.tier ?? "free";
   const isSignupLimited = usageQuery.data?.signupLimited ?? false;
 
+  const remainingPercent =
+    remainingUsage == null || usageLimit == null || usageLimit <= 0
+      ? null
+      : Math.max(0, Math.min(100, (remainingUsage / usageLimit) * 100));
   const remaining = remainingUsage;
   const limit = usageLimit;
   const lowUsageThreshold =
@@ -52,7 +54,6 @@ export function useUsageStatus(params: {
     remainingUsage !== null &&
     remainingUsage !== undefined &&
     remainingUsage <= 0;
-  const usageCategoryLabel = usageCategory === "premium" ? t("Premium") : t("Basic");
   const usageTierLabel =
     usageTier === "free"
       ? t("Free")
@@ -88,9 +89,9 @@ export function useUsageStatus(params: {
     isUsageBlocked,
     canEnableMaxMode,
     isSubmitBlocked,
-    usageCategoryLabel,
     usageTierLabel,
     remainingUsage,
+    remainingPercent,
     usageUnit,
     usageUnitLabel,
     enableMaxMode,

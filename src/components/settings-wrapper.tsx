@@ -7,6 +7,7 @@ import type React from "react";
 import { DocumentTitle } from "@/components/document-title";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
+import { CombinedUsageMeter } from "@/components/billing/product-usage";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { authClient } from "@/lib/auth-client";
 import { formatAppDate } from "@/lib/format-date";
@@ -155,49 +156,55 @@ export default function SettingsWrapper({ children }: { children: React.ReactNod
                         : "—",
                     })}
                   </span>
-                  {usages?.map((usageItem) => {
-                    const maxModeEnabled = features.billing && (usage?.maxModeEnabled ?? false);
-                    const unitLabel = usageItem.unit === "tokens" ? t("tokens") : t("requests");
-                    const hasLimit =
-                      !maxModeEnabled && usageItem.limit !== null && usageItem.limit > 0;
-                    const usedPercent = hasLimit
-                      ? Math.min((usageItem.used / (usageItem.limit ?? 1)) * 100, 100)
-                      : 0;
-                    const remainingPercent = Math.max(100 - usedPercent, 0);
-                    const summaryLabel = maxModeEnabled
-                      ? `${formatCompactUsageValue(usageItem.used)} ${unitLabel}`
-                      : hasLimit
-                        ? t("{percent}% used", { percent: usedPercent.toFixed(1) })
-                        : `${formatCompactUsageValue(usageItem.used)} ${unitLabel}`;
-                    const progress = hasLimit ? usedPercent : 0;
-                    const remainingLabel = maxModeEnabled
-                      ? t("Unlimited")
-                      : hasLimit
-                        ? t("{percent}% remaining", { percent: remainingPercent.toFixed(1) })
-                        : t("Unlimited");
-                    const periodEndLabel = usageItem.periodEnd
-                      ? formatAppDate(usageItem.periodEnd, locale)
-                      : null;
-                    return (
-                      <div key={usageItem.category} className="space-y-2 text-sm py-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="capitalize">
-                            {usageItem.category === "basic"
-                              ? t("Basic models")
-                              : t("Premium models")}
-                          </span>
-                          <span className="tabular-nums text-muted-foreground">{summaryLabel}</span>
+                  {usage?.pool ? (
+                    <CombinedUsageMeter
+                      pool={usage.pool}
+                      maxModeEnabled={features.billing && usage.maxModeEnabled}
+                      className="py-1"
+                    />
+                  ) : (
+                    usages?.map((usageItem) => {
+                      const maxModeEnabled = features.billing && (usage?.maxModeEnabled ?? false);
+                      const unitLabel = usageItem.unit === "tokens" ? t("tokens") : t("requests");
+                      const hasLimit =
+                        !maxModeEnabled && usageItem.limit !== null && usageItem.limit > 0;
+                      const usedPercent = hasLimit
+                        ? Math.min((usageItem.used / (usageItem.limit ?? 1)) * 100, 100)
+                        : 0;
+                      const remainingPercent = Math.max(100 - usedPercent, 0);
+                      const summaryLabel = maxModeEnabled
+                        ? `${formatCompactUsageValue(usageItem.used)} ${unitLabel}`
+                        : hasLimit
+                          ? t("{percent}% used", { percent: usedPercent.toFixed(1) })
+                          : `${formatCompactUsageValue(usageItem.used)} ${unitLabel}`;
+                      const progress = hasLimit ? usedPercent : 0;
+                      const remainingLabel = maxModeEnabled
+                        ? t("Unlimited")
+                        : hasLimit
+                          ? t("{percent}% remaining", { percent: remainingPercent.toFixed(1) })
+                          : t("Unlimited");
+                      const periodEndLabel = usageItem.periodEnd
+                        ? formatAppDate(usageItem.periodEnd, locale)
+                        : null;
+                      return (
+                        <div key={usageItem.category} className="space-y-2 text-sm py-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span>{t("Usage")}</span>
+                            <span className="tabular-nums text-muted-foreground">
+                              {summaryLabel}
+                            </span>
+                          </div>
+                          <Progress value={progress} className="h-2" />
+                          <div className="flex items-center justify-between text-xs text-muted-foreground">
+                            <span>{remainingLabel}</span>
+                            {periodEndLabel && (
+                              <span>{t("Resets {date}", { date: periodEndLabel })}</span>
+                            )}
+                          </div>
                         </div>
-                        <Progress value={progress} className="h-2" />
-                        <div className="flex items-center justify-between text-xs text-muted-foreground">
-                          <span>{remainingLabel}</span>
-                          {periodEndLabel && (
-                            <span>{t("Resets {date}", { date: periodEndLabel })}</span>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </CardContent>
             </Card>

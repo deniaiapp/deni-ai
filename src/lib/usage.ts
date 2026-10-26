@@ -4,6 +4,7 @@ import { db } from "@/db/drizzle";
 import {
   billing,
   member,
+  productUsage,
   teamMemberUsagePolicy,
   teamUsagePolicy,
   usageQuota,
@@ -14,13 +15,28 @@ import { isSignupFlagged } from "@/lib/signup-risk";
 import { canonicalTeamBillingRow } from "@/lib/team-billing-record";
 
 import { isMaxModeEligible, deliverMaxModeUsageReport } from "./max-mode";
+import { recordProductUsage, usageMonthStart } from "./product-usage-ledger";
+import {
+  FLAGGED_FREE_POOL_USD,
+  USAGE_POOL_USD,
+  USAGE_UNITS_PER_USD_MICRO,
+  usdToUsageUnits,
+  VERIFIED_FREE_POOL_USD,
+} from "./usage-pool";
 import { enqueueMaxModeMeterEvent } from "./max-mode-meter-events";
 import { isBillingDisabled } from "./billing-config";
 import { requestUsageAndMeterCheck } from "./usage-and-meter-schedule";
 
 const ACTIVE_BILLING_STATUSES = new Set(["active", "trialing", "past_due", "paid"]);
 
+/**
+ * Quota row categories. Usage is no longer split by model class: every request
+ * (Deni AI chat and Flixa) is recorded on {@link SHARED_USAGE_CATEGORY}. "premium"
+ * remains for rows, reservations, and Max Mode meters written before the change.
+ */
 export type UsageCategory = "basic" | "premium";
+
+export const SHARED_USAGE_CATEGORY: UsageCategory = "basic";
 export type SubscriptionTier = "free" | "plus" | "pro" | "max";
 export type UsageUnit = "requests" | "tokens";
 type UsageRecord = typeof usageQuota.$inferSelect;
@@ -43,41 +59,6 @@ function withUsageLock<T>(
   );
 }
 
-const USAGE_CATEGORIES: UsageCategory[] = ["basic", "premium"];
-
-const USAGE_LIMITS: Record<
-  UsageCategory,
-  Record<SubscriptionTier, { limit: number | null; unit: UsageUnit }>
-> = {
-  basic: {
-    free: { limit: 10_000_000, unit: "tokens" },
-    plus: { limit: 100_000_000, unit: "tokens" },
-    pro: { limit: 250_000_000, unit: "tokens" },
-    max: { limit: 500_000_000, unit: "tokens" },
-  },
-  premium: {
-    free: { limit: 2_000_000, unit: "tokens" },
-    plus: { limit: 50_000_000, unit: "tokens" },
-    pro: { limit: 150_000_000, unit: "tokens" },
-    max: { limit: 200_000_000, unit: "tokens" },
-  },
-};
-
-// Boosted limits for free-tier users who have a verified payment method on file
-// (anti-abuse: card verification is a non-trivial trust signal).
-const VERIFIED_FREE_LIMITS: Record<UsageCategory, { limit: number; unit: UsageUnit }> = {
-  basic: { limit: 25_000_000, unit: "tokens" },
-  premium: { limit: 10_000_000, unit: "tokens" },
-};
-
-// Free accounts whose sign-up looked like part of a batch (see signup-risk.ts) get a
-// smaller allowance until a payment method is verified, which restores the normal
-// verified boost above. Enough to try the product; not enough to farm.
-const FLAGGED_FREE_LIMITS: Record<UsageCategory, { limit: number; unit: UsageUnit }> = {
-  basic: { limit: 3_000_000, unit: "tokens" },
-  premium: { limit: 500_000, unit: "tokens" },
-};
-
 export const GUEST_USAGE_MULTIPLIER = 2;
 
 /** Weighted basic tokens charged per successful `search` tool call. */
@@ -95,8 +76,64 @@ const GUEST_USAGE_LIMITS: Record<UsageCategory, { limit: number; unit: UsageUnit
   premium: { limit: 0, unit: "requests" },
 };
 
-export function getUsageLimitConfig(category: UsageCategory, tier: SubscriptionTier) {
-  return USAGE_LIMITS[category][tier];
+/** The plan's monthly pool in usage units, shared by chat, Flixa, and Deni Run (usage-pool.ts). */
+export function getUsagePoolUnits(tier: SubscriptionTier) {
+  return usdToUsageUnits(USAGE_POOL_USD[tier]);
+}
+
+function poolUnitsFor(tierInfo: TierInfo) {
+  if (tierInfo.tier === "free" && tierInfo.hasVerifiedPaymentMethod)
+    return usdToUsageUnits(VERIFIED_FREE_POOL_USD);
+  // Free accounts whose sign-up looked like part of a batch (see signup-risk.ts) get a
+  // smaller pool until a payment method is verified. Enough to try; not enough to farm.
+  if (tierInfo.tier === "free" && tierInfo.signupFlagged)
+    return usdToUsageUnits(FLAGGED_FREE_POOL_USD);
+  return getUsagePoolUnits(tierInfo.tier);
+}
+
+/** A quota row's usage in the current window (0 once its period or unit has moved on). */
+function liveUsed(record: UsageRecord | undefined, now: Date, unit: UsageUnit) {
+  if (!record || record.unit !== unit) return 0;
+  if (!record.periodEnd || record.periodEnd <= now) return 0;
+  return Number(record.used);
+}
+
+/**
+ * This month's per-product ledger: Deni AI chat and Flixa in usage units (their split of
+ * the quota rows) and Deni Run's spend converted from micro-dollars.
+ */
+async function monthLedger(userId: string, now: Date, database: UsageDatabase) {
+  const rows = await database
+    .select({ product: productUsage.product, unit: productUsage.unit, used: productUsage.used })
+    .from(productUsage)
+    .where(
+      and(eq(productUsage.userId, userId), eq(productUsage.periodStart, usageMonthStart(now))),
+    );
+  const ledger = { chat: 0, flixa: 0, run: 0 };
+  for (const row of rows) {
+    if (row.product === "run" && row.unit === "usd_micros")
+      ledger.run += Number(row.used) * USAGE_UNITS_PER_USD_MICRO;
+    else if ((row.product === "chat" || row.product === "flixa") && row.unit === "tokens")
+      ledger[row.product] += Number(row.used);
+  }
+  ledger.run = Math.round(ledger.run);
+  return ledger;
+}
+
+/** Deni Run's spend this month (its ledger is in micro-dollars), in usage units. */
+async function runUsageUnits(userId: string, now: Date, database: UsageDatabase) {
+  const [row] = await database
+    .select({ total: sql<number | null>`coalesce(sum(${productUsage.used}), 0)` })
+    .from(productUsage)
+    .where(
+      and(
+        eq(productUsage.userId, userId),
+        eq(productUsage.product, "run"),
+        eq(productUsage.unit, "usd_micros"),
+        eq(productUsage.periodStart, usageMonthStart(now)),
+      ),
+    );
+  return Math.round(Number(row?.total ?? 0) * USAGE_UNITS_PER_USD_MICRO);
 }
 
 export class UsageLimitError extends Error {
@@ -359,11 +396,17 @@ function isUsageUnit(value: string | null | undefined): value is UsageUnit {
   return value === "requests" || value === "tokens";
 }
 
+/**
+ * Chat, Flixa, and Deni Run share one pool per plan. A category's limit is what
+ * the pool has left after the other category and Deni Run, so a request is refused
+ * once the pool as a whole is spent. Guests keep their own request allowance.
+ */
 async function calculateUsageState({
   userId,
   category,
   now,
-  existingRecord,
+  records: providedRecords,
+  runUnits: providedRunUnits,
   isAnonymous = false,
   database = db,
   tierInfo: providedTierInfo,
@@ -371,31 +414,31 @@ async function calculateUsageState({
   userId: string;
   category: UsageCategory;
   now: Date;
-  existingRecord?: UsageRecord;
+  /** All of the user's quota rows, when the caller already has them. */
+  records?: UsageRecord[];
+  runUnits?: number;
   isAnonymous?: boolean;
   database?: UsageDatabase;
   tierInfo?: TierInfo;
 }) {
   const tierInfo = providedTierInfo ?? (await getTierInfo(userId, now, database));
-  const baseConfig = isAnonymous
-    ? GUEST_USAGE_LIMITS[category]
-    : USAGE_LIMITS[category][tierInfo.tier];
-  const config =
-    !isAnonymous && tierInfo.tier === "free" && tierInfo.hasVerifiedPaymentMethod
-      ? VERIFIED_FREE_LIMITS[category]
-      : !isAnonymous && tierInfo.tier === "free" && tierInfo.signupFlagged
-        ? FLAGGED_FREE_LIMITS[category]
-        : baseConfig;
-  const { limit, unit } = config;
+  const records =
+    providedRecords ??
+    (await database.select().from(usageQuota).where(eq(usageQuota.userId, userId)));
+  const current = records.find((row) => row.category === category);
 
-  const current =
-    existingRecord ??
-    (await database
-      .select()
-      .from(usageQuota)
-      .where(and(eq(usageQuota.userId, userId), eq(usageQuota.category, category)))
-      .limit(1)
-      .then((rows) => rows[0]));
+  let limit: number | null;
+  let unit: UsageUnit;
+  if (isAnonymous) {
+    ({ limit, unit } = GUEST_USAGE_LIMITS[category]);
+  } else {
+    unit = "tokens";
+    const runUnits = providedRunUnits ?? (await runUsageUnits(userId, now, database));
+    const others = records
+      .filter((row) => row.category !== category)
+      .reduce((sum, row) => sum + liveUsed(row, now, unit), runUnits);
+    limit = Math.max(poolUnitsFor(tierInfo) - others, 0);
+  }
 
   const targetPeriodEnd = isAnonymous ? null : resolvePeriodEnd(now);
   const storedUnit = isUsageUnit(current?.unit) ? current.unit : null;
@@ -415,7 +458,8 @@ async function calculateUsageState({
   return {
     tierInfo,
     unit,
-    limit,
+    // Callers and their tests treat a limit as nullable (no limit).
+    limit: limit as number | null,
     current,
     targetPeriodEnd,
     shouldReset,
@@ -730,6 +774,18 @@ export async function settleUsage({
           ),
         );
     }
+    // The per-product ledger keeps Chat's share of the quota shared with Flixa.
+    await recordProductUsage(
+      {
+        userId,
+        product: "chat",
+        metric: reservation.category,
+        unit: period.unit,
+        amount,
+        at: reservation.createdAt,
+      },
+      database,
+    );
     if (maxModeAmount > 0) {
       if (!reservation.stripeCustomerId || !reservation.billingId)
         throw new Error("Usage reservation has no billing identity.");
@@ -853,8 +909,17 @@ export type UsageSnapshot = {
   periodEnd: Date | null;
 };
 
+/** The shared monthly pool, in usage units (usage-pool.ts); null for guests. */
+export type UsagePoolSnapshot = {
+  limit: number;
+  /** Use by product: Deni AI chat, Flixa, and Deni Run. */
+  used: { chat: number; flixa: number; run: number };
+  periodEnd: Date;
+};
+
 export type UsageSummary = {
   tier: SubscriptionTier;
+  pool: UsagePoolSnapshot | null;
   planId: string | null;
   status: string | null;
   periodEnd: Date | null;
@@ -879,48 +944,62 @@ export async function getUsageSummary({
   isAnonymous?: boolean;
 }): Promise<UsageSummary> {
   const nowDate = now;
-  const [tierInfo, records] = await Promise.all([
+  const [tierInfo, records, ledger] = await Promise.all([
     getTierInfo(userId, nowDate),
     db.select().from(usageQuota).where(eq(usageQuota.userId, userId)),
+    isAnonymous ? Promise.resolve({ chat: 0, flixa: 0, run: 0 }) : monthLedger(userId, nowDate, db),
   ]);
 
-  const usage = await Promise.all(
-    USAGE_CATEGORIES.map(async (category) => {
-      const state = await calculateUsageState({
-        userId,
-        category,
-        now: nowDate,
-        existingRecord: records.find((row) => row.category === category),
-        isAnonymous,
-        tierInfo,
-      });
+  const state = await calculateUsageState({
+    userId,
+    category: SHARED_USAGE_CATEGORY,
+    now: nowDate,
+    records,
+    runUnits: ledger.run,
+    isAnonymous,
+    tierInfo,
+  });
 
-      if (state.limit === null) {
-        return {
-          category,
+  // Chat and Flixa share the quota rows (rows from before the change may still hold
+  // "premium" usage this month); the ledger says how much of it each product spent.
+  const quotaUsed = records.reduce((sum, row) => sum + liveUsed(row, nowDate, "tokens"), 0);
+  const ledgerTokens = ledger.chat + ledger.flixa;
+  const flixaUsed = ledgerTokens > 0 ? Math.round((quotaUsed * ledger.flixa) / ledgerTokens) : 0;
+  const pool = isAnonymous
+    ? null
+    : {
+        limit: poolUnitsFor(tierInfo),
+        used: { chat: quotaUsed - flixaUsed, flixa: flixaUsed, run: ledger.run },
+        periodEnd: resolvePeriodEnd(nowDate),
+      };
+  const poolUsed = pool ? pool.used.chat + pool.used.flixa + pool.used.run : 0;
+
+  // One entry for the one pool (guests: their request allowance).
+  const usage: UsageSnapshot[] = [
+    pool
+      ? {
+          category: SHARED_USAGE_CATEGORY,
+          unit: "tokens",
+          limit: pool.limit,
+          used: poolUsed,
+          remaining: Math.max(pool.limit - poolUsed, 0),
+          periodStart: state.periodStart,
+          periodEnd: pool.periodEnd,
+        }
+      : {
+          category: SHARED_USAGE_CATEGORY,
           unit: state.unit,
-          limit: null,
-          used: 0,
-          remaining: null,
+          limit: state.limit,
+          used: state.limit === null ? 0 : state.used,
+          remaining: state.limit === null ? null : Math.max(state.limit - state.used, 0),
           periodStart: state.periodStart,
           periodEnd: state.targetPeriodEnd,
-        };
-      }
-
-      return {
-        category,
-        unit: state.unit,
-        limit: state.limit,
-        used: state.used,
-        remaining: Math.max(state.limit - state.used, 0),
-        periodStart: state.periodStart,
-        periodEnd: state.targetPeriodEnd,
-      };
-    }),
-  );
+        },
+  ];
 
   return {
     tier: tierInfo.tier,
+    pool,
     planId: tierInfo.planId,
     status: tierInfo.status,
     periodEnd: tierInfo.periodEnd,

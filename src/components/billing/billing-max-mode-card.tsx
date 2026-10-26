@@ -63,30 +63,17 @@ export function BillingMaxModeCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+        {/* One shared pool: overage is one usage line (premium holds pre-change usage). */}
+        <div className="grid gap-4">
           <div className="rounded-xl border border-border p-4">
-            <div className="text-sm text-muted-foreground">{t("Basic model tokens")}</div>
+            <div className="text-sm text-muted-foreground">{t("Max Mode usage")}</div>
             <div className="mt-1 flex items-baseline gap-2">
               <span className="text-2xl font-semibold">
-                {formatCompactUsageValue(data.usageBasic ?? 0)}
+                {formatCompactUsageValue((data.usageBasic ?? 0) + (data.usagePremium ?? 0))}
               </span>
               <span className="text-sm text-muted-foreground">
                 {t("{price} / {tokens} tokens", {
                   price: formatMaxModeCurrency(data.pricing.basic ?? 1),
-                  tokens: formatCompactUsageValue(data.pricing.unitTokens ?? 1_000),
-                })}
-              </span>
-            </div>
-          </div>
-          <div className="rounded-xl border border-border p-4">
-            <div className="text-sm text-muted-foreground">{t("Premium model tokens")}</div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-2xl font-semibold">
-                {formatCompactUsageValue(data.usagePremium ?? 0)}
-              </span>
-              <span className="text-sm text-muted-foreground">
-                {t("{price} / {tokens} tokens", {
-                  price: formatMaxModeCurrency(data.pricing.premium ?? 5),
                   tokens: formatCompactUsageValue(data.pricing.unitTokens ?? 1_000),
                 })}
               </span>

@@ -1,3 +1,4 @@
+import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { passkeyClient } from "@better-auth/passkey/client";
 import {
   anonymousClient,
@@ -32,5 +33,7 @@ export const authClient = createAuthClient({
     lastLoginMethodClient(),
     passkeyClient(),
     organizationClient(),
+    // Sends the signed authorization query from /oauth/* pages with consent requests.
+    oauthProviderClient(),
   ],
 });

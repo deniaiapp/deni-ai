@@ -3,6 +3,7 @@
 import { useExtracted } from "next-intl";
 
 import { getPlanTier, type BillingPlanId } from "@/lib/billing";
+import { USAGE_POOL_USD } from "@/lib/usage-pool";
 
 export type BillingPlanCopy = {
   tagline: string;
@@ -10,17 +11,15 @@ export type BillingPlanCopy = {
   badge?: string;
 };
 
-// Multipliers vs. the next-lower tier. Kept here in sync with USAGE_LIMITS
-// in src/lib/usage.ts. Displaying ratios against the adjacent tier (rather
-// than raw token counts or always-vs-Free) keeps the copy meaningful as
-// the weighting scheme evolves and makes upgrade value tangible.
-//   plus  → vs Free  (basic 100/10=10, premium 50/2=25)
-//   pro   → vs Plus  (basic 250/100=2.5, premium 150/50=3)
-//   max   → vs Pro   (basic 500/250=2, premium 200/150≈1.3)
+// Multipliers vs. the next-lower tier, from the shared monthly pool in
+// src/lib/usage-pool.ts (Free $10, Plus $100, Pro $200, Max $300). Ratios against
+// the adjacent tier keep the copy meaningful and make upgrade value tangible.
+const poolRatio = (tier: keyof typeof USAGE_POOL_USD, vs: keyof typeof USAGE_POOL_USD) =>
+  Math.round((USAGE_POOL_USD[tier] / USAGE_POOL_USD[vs]) * 10) / 10;
 const PLAN_USAGE_MULTIPLIERS = {
-  plus: { basic: 10, premium: 25, vs: "Free" as const },
-  pro: { basic: 2.5, premium: 3, vs: "Plus" as const },
-  max: { basic: 2, premium: 1.3, vs: "Pro" as const },
+  plus: { pool: poolRatio("plus", "free"), vs: "Free" as const },
+  pro: { pool: poolRatio("pro", "plus"), vs: "Plus" as const },
+  max: { pool: poolRatio("max", "pro"), vs: "Pro" as const },
 } as const;
 
 export function useBillingPlanCopy(planId: BillingPlanId): BillingPlanCopy;
@@ -36,18 +35,17 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
   const tier = getPlanTier(planId);
   const comparisonHighlights =
     tier === "pro" || tier === "team" ? [t("Compare two models side by side")] : [];
+  // One monthly pool covers Deni AI chat, Flixa, and Deni Run on every plan.
+  const runHighlight = t("One usage pool for Deni AI chat, Flixa, and Deni Run");
 
   switch (planId) {
     case "plus_monthly":
       return {
         tagline: t("Get unbelievable usage limits"),
         highlights: [
-          t("{multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.plus.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.plus.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.plus.premium),
+          runHighlight,
+          t("{multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.plus.pool),
             plan: PLAN_USAGE_MULTIPLIERS.plus.vs,
           }),
           t("No ads experience"),
@@ -59,12 +57,9 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
       return {
         tagline: t("Incredible deal"),
         highlights: [
-          t("{multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.plus.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.plus.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.plus.premium),
+          runHighlight,
+          t("{multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.plus.pool),
             plan: PLAN_USAGE_MULTIPLIERS.plus.vs,
           }),
           t("With priority support"),
@@ -76,13 +71,10 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
       return {
         tagline: t("Great deals even for power users"),
         highlights: [
+          runHighlight,
           t("Includes all Plus features"),
-          t("{multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.premium),
+          t("{multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
           ...comparisonHighlights,
@@ -94,13 +86,10 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
       return {
         tagline: t("You like us, and we like you too!"),
         highlights: [
+          runHighlight,
           t("Includes all Plus features"),
-          t("{multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.premium),
+          t("{multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
           ...comparisonHighlights,
@@ -112,13 +101,10 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
       return {
         tagline: t("Get unbelievable usage limits"),
         highlights: [
+          runHighlight,
           t("Includes all Pro features"),
-          t("About {multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.max.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.premium),
+          t("About {multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
             plan: PLAN_USAGE_MULTIPLIERS.max.vs,
           }),
           ...comparisonHighlights,
@@ -130,13 +116,10 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         tagline: t("Incredible deal"),
         badge: t("Most cost-effective"),
         highlights: [
+          runHighlight,
           t("Includes all Pro features"),
-          t("About {multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.max.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.premium),
+          t("About {multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
             plan: PLAN_USAGE_MULTIPLIERS.max.vs,
           }),
           ...comparisonHighlights,
@@ -148,13 +131,10 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         tagline: t("One payment. Long-term Pro access."),
         badge: t("Buy once"),
         highlights: [
+          runHighlight,
           t("Includes all Plus features"),
-          t("{multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.premium),
+          t("{multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
           ...comparisonHighlights,
@@ -166,14 +146,11 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
       return {
         tagline: t("Give your whole team Pro-tier access with per-seat pricing."),
         highlights: [
+          runHighlight,
           ...comparisonHighlights,
           t("Pro benefits for every team member"),
-          t("{multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.premium),
+          t("{multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
           t("Max Mode pay-per-use available"),
@@ -186,14 +163,11 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         tagline: t("Give your whole team Pro-tier access with per-seat pricing."),
         badge: t("Most cost-effective"),
         highlights: [
+          runHighlight,
           ...comparisonHighlights,
           t("Pro benefits for every team member"),
-          t("{multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.premium),
+          t("{multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
           t("Max Mode pay-per-use available"),
@@ -205,14 +179,11 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
       return {
         tagline: t("Give your whole team Max-tier access with per-seat pricing."),
         highlights: [
+          runHighlight,
           ...comparisonHighlights,
           t("Max benefits for every team member"),
-          t("{multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.max.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.premium),
+          t("{multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
             plan: PLAN_USAGE_MULTIPLIERS.max.vs,
           }),
           t("Max Mode pay-per-use available"),
@@ -225,14 +196,11 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         tagline: t("Give your whole team Max-tier access with per-seat pricing."),
         badge: t("Most cost-effective"),
         highlights: [
+          runHighlight,
           ...comparisonHighlights,
           t("Max benefits for every team member"),
-          t("{multiplier}× more basic-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.basic),
-            plan: PLAN_USAGE_MULTIPLIERS.max.vs,
-          }),
-          t("{multiplier}× more premium-model usage than {plan}", {
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.premium),
+          t("{multiplier}× more monthly usage than {plan}", {
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
             plan: PLAN_USAGE_MULTIPLIERS.max.vs,
           }),
           t("Max Mode pay-per-use available"),

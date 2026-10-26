@@ -132,7 +132,7 @@ export function BillingResetCard() {
               {t("Usage reset credits")}
             </CardTitle>
             <CardDescription className="mt-1">
-              {t("Reset credits can clear your basic and premium usage immediately.")}
+              {t("Reset credits can clear your Deni AI chat and Flixa usage immediately.")}
             </CardDescription>
           </div>
           <Badge variant="secondary" className="shrink-0 tabular-nums">

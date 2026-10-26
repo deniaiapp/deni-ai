@@ -120,7 +120,7 @@ export function TeamMaxModeCard({
           <Spinner />
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border p-3">
                 <p className="text-xs text-muted-foreground">{t("Status")}</p>
                 <p className="mt-1 text-sm font-medium">
@@ -128,15 +128,12 @@ export function TeamMaxModeCard({
                 </p>
               </div>
               <div className="rounded-xl border p-3">
-                <p className="text-xs text-muted-foreground">{t("Basic Max Mode usage")}</p>
+                <p className="text-xs text-muted-foreground">{t("Max Mode usage")}</p>
                 <p className="mt-1 text-sm font-medium">
-                  {numberFormatter.format(settings?.usageBasic ?? 0)} {t("tokens")}
-                </p>
-              </div>
-              <div className="rounded-xl border p-3">
-                <p className="text-xs text-muted-foreground">{t("Premium Max Mode usage")}</p>
-                <p className="mt-1 text-sm font-medium">
-                  {numberFormatter.format(settings?.usagePremium ?? 0)} {t("tokens")}
+                  {numberFormatter.format(
+                    (settings?.usageBasic ?? 0) + (settings?.usagePremium ?? 0),
+                  )}{" "}
+                  {t("tokens")}
                 </p>
               </div>
             </div>
@@ -151,11 +148,10 @@ export function TeamMaxModeCard({
             )}
 
             <div className="space-y-2">
-              <div className="hidden grid-cols-[minmax(0,1fr)_88px_120px_120px] gap-3 px-3 text-xs font-medium text-muted-foreground md:grid">
+              <div className="hidden grid-cols-[minmax(0,1fr)_88px_120px] gap-3 px-3 text-xs font-medium text-muted-foreground md:grid">
                 <span>{t("Member")}</span>
                 <span>{t("Enabled")}</span>
-                <span>{t("Basic token limit")}</span>
-                <span>{t("Premium token limit")}</span>
+                <span>{t("Token limit")}</span>
               </div>
               {settings?.members.map((memberPolicy) => (
                 <TeamMaxModeMemberRow
