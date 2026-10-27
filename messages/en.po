@@ -713,6 +713,56 @@ msgctxt "F7jaKL"
 msgid "Your Deni AI plan covers Deni AI chat, Flixa, and Deni Run. See all usage in Deni AI settings."
 msgstr "Your Deni AI plan covers Deni AI chat, Flixa, and Deni Run. See all usage in Deni AI settings."
 
+#: app/components/chat-composer-controls.tsx
+msgctxt "lKv8ex"
+msgid "Default"
+msgstr "Default"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "AxMhQr"
+msgid "High"
+msgstr "High"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "x8d3rq"
+msgid "xhigh"
+msgstr "xhigh"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "kkjl2v"
+msgid "Max"
+msgstr "Max"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "6tqdyX"
+msgid "Fast and capable for everyday work"
+msgstr "Fast and capable for everyday work"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "Qb6959"
+msgid "A stronger model for harder, longer tasks · ~{multiplier}× cost"
+msgstr "A stronger model for harder, longer tasks · ~{multiplier}× cost"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "rhSI1_"
+msgid "Model"
+msgstr "Model"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "ZNCzCt"
+msgid "~{multiplier}× cost"
+msgstr "~{multiplier}× cost"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "Iwh1dn"
+msgid "Reasoning level"
+msgstr "Reasoning level"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "L8zY0q"
+msgid "Voice input"
+msgstr "Voice input"
+
 #: app/components/chat-thread.tsx
 msgctxt "frgrwx"
 msgid "Could not submit approval."
@@ -808,11 +858,6 @@ msgid "Cancel reply"
 msgstr "Cancel reply"
 
 #: app/components/chat-thread.tsx
-msgctxt "Dat5EN"
-msgid "Enter to send · Shift+Enter for a new line"
-msgstr "Enter to send · Shift+Enter for a new line"
-
-#: app/components/chat-thread.tsx
 msgctxt "j4HzNR"
 msgid "Message {name} · @everyone"
 msgstr "Message {name} · @everyone"
@@ -823,14 +868,9 @@ msgid "Message {name}"
 msgstr "Message {name}"
 
 #: app/components/chat-thread.tsx
-msgctxt "RANC4_"
-msgid "Stop response"
-msgstr "Stop response"
-
-#: app/components/chat-thread.tsx
-msgctxt "Xx0WZV"
-msgid "Send message"
-msgstr "Send message"
+msgctxt "Dat5EN"
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr "Enter to send · Shift+Enter for a new line"
 
 #: app/components/chat-thread.tsx
 #: app/components/upgrade-screen.tsx
@@ -1477,31 +1517,6 @@ msgstr "Always allow"
 msgctxt "htvX-Z"
 msgid "Deny"
 msgstr "Deny"
-
-#: app/components/chat-thread.tsx
-msgctxt "lKv8ex"
-msgid "Default"
-msgstr "Default"
-
-#: app/components/chat-thread.tsx
-msgctxt "AxMhQr"
-msgid "High"
-msgstr "High"
-
-#: app/components/chat-thread.tsx
-msgctxt "x8d3rq"
-msgid "xhigh"
-msgstr "xhigh"
-
-#: app/components/chat-thread.tsx
-msgctxt "kkjl2v"
-msgid "Max"
-msgstr "Max"
-
-#: app/components/chat-thread.tsx
-msgctxt "ZNCzCt"
-msgid "~{multiplier}× cost"
-msgstr "~{multiplier}× cost"
 
 #: app/components/chat-thread.tsx
 #: app/components/computer-panel.tsx
@@ -3736,6 +3751,17 @@ msgctxt "H6cAuM"
 msgid "threadId, path, and title are required"
 msgstr "threadId, path, and title are required"
 
+#: app/routes/api/attachments.ts
+msgctxt "8dMKqr"
+msgid "Choose a file to attach"
+msgstr "Choose a file to attach"
+
+#: app/routes/api/attachments.ts
+#: components/ai-elements/prompt-input.tsx
+msgctxt "QWi6b9"
+msgid "Files must be 10 MB or smaller"
+msgstr "Files must be 10 MB or smaller"
+
 #: app/routes/api/bots/$id.ts
 #: app/routes/api/bots/index.ts
 msgctxt "YeQIlr"
@@ -4782,6 +4808,11 @@ msgctxt "KTL4Zy"
 msgid "Deni Run is included with every Deni AI plan."
 msgstr "Deni Run is included with every Deni AI plan."
 
+#: components/ai-elements/attachments.tsx
+msgctxt "T0e6Lh"
+msgid "Remove {name}"
+msgstr "Remove {name}"
+
 #: components/ai-elements/conversation.tsx
 msgctxt "zu9kMq"
 msgid "No messages yet"
@@ -4793,19 +4824,49 @@ msgid "Start a conversation to see messages here"
 msgstr "Start a conversation to see messages here"
 
 #: components/ai-elements/prompt-input.tsx
+msgctxt "oBWja6"
+msgid "Add photos or files"
+msgstr "Add photos or files"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "W2c8OA"
+msgid "You can attach up to {count} files"
+msgstr "You can attach up to {count} files"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "f00p_7"
+msgid "Upload failed"
+msgstr "Upload failed"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "XhFiWi"
+msgid "Attachments are still uploading"
+msgstr "Attachments are still uploading"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "2jjdVz"
+msgid "Upload files"
+msgstr "Upload files"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "9mHH9E"
+msgid "What would you like to do?"
+msgstr "What would you like to do?"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "IzCVhG"
+msgid "More options"
+msgstr "More options"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "hsYvDX"
+msgid "Uploading"
+msgstr "Uploading"
+
+#: components/ai-elements/prompt-input.tsx
 msgctxt "9WRlF4"
 msgid "Send"
 msgstr "Send"
-
-#: components/ai-elements/prompt-input.tsx
-msgctxt "C2CIgC"
-msgid "Sending"
-msgstr "Sending"
-
-#: components/ai-elements/prompt-input.tsx
-msgctxt "62nsdy"
-msgid "Retry"
-msgstr "Retry"
 
 #: components/routine-labels.ts
 msgctxt "mJR06P"

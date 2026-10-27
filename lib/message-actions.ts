@@ -1,5 +1,6 @@
 import type { UIMessage } from "ai";
 import emojiRegex from "emoji-regex";
+import { messageAttachments } from "./message-attachments";
 import { splitAssistantBubbles, usesBubbleBreaks, withoutBubbleBreaks } from "./message-bubbles";
 
 export type MessageReaction = string;
@@ -60,13 +61,24 @@ export function resolveReplyReferences(incoming: UIMessage[], persisted: UIMessa
   });
 }
 
-// Keep the visible user message untouched; supply the reference as context only
-// when converting the persisted conversation into model input.
+// Keep the visible user message untouched; supply the reference and attached files
+// as context only when converting the persisted conversation into model input.
 export function messagesWithReplyContext(messages: UIMessage[]): UIMessage[] {
   return messages.map((message) => {
+    if (message.role !== "user") return message;
     const ref = replyReference(message);
-    if (message.role !== "user" || !ref) return message;
-    return { ...message, parts: [{ type: "text" as const, text: `Referenced ${ref.role} message (conversation context):\n${ref.text}` }, ...message.parts] };
+    const attachments = messageAttachments(message);
+    if (!ref && !attachments.length) return message;
+    return {
+      ...message,
+      parts: [
+        ...(ref ? [{ type: "text" as const, text: `Referenced ${ref.role} message (conversation context):\n${ref.text}` }] : []),
+        ...message.parts,
+        ...(attachments.length
+          ? [{ type: "text" as const, text: `[Attached files saved in the workspace: ${attachments.map((file) => file.path).join(", ")}]` }]
+          : []),
+      ],
+    };
   });
 }
 

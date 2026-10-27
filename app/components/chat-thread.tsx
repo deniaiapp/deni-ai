@@ -57,18 +57,18 @@ import {
   MessageContent,
   MessageResponse,
 } from "@/components/ai-elements/message";
-import {
-  PromptInput,
-  PromptInputSubmit,
-  PromptInputTextarea,
-  PromptInputToolbar,
-} from "@/components/ai-elements/prompt-input";
+import { Attachment, Attachments } from "@/components/ai-elements/attachments";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Empty } from "@/components/ui/empty";
-import { Spinner } from "@/components/ui/spinner";
 import { Avatar } from "./sidebar";
 import { MessageActions } from "./message-actions";
+import { Composer, type ComposerMessage } from "./composer";
+import {
+  ChatComposerActionMenu,
+  ChatComposerTools,
+  ChatComposerVoiceInput,
+} from "./chat-composer-controls";
 import { useConnectDeniAi } from "./billing-dialog";
 import { usePluginActionLabels } from "./plugin-action-labels";
 import { mcpArgumentPreview, mcpToolKind, mcpToolTitle, useMcpConnectionNames } from "./mcp-tool-labels";
@@ -82,10 +82,11 @@ import {
   type MessageReaction,
 } from "@/lib/message-actions";
 import { usesBubbleBreaks } from "@/lib/message-bubbles";
+import { messageAttachments } from "@/lib/message-attachments";
 import { createReactionState, type ReactionMap } from "@/lib/reaction-state";
 import { messageAuthor, type MessageAuthor } from "@/lib/group-chat";
 import { isCompaction, isContextReset, workedMsOf } from "@/lib/messages";
-import { RUN_MODES, type RunMode } from "@/lib/model";
+import type { RunMode } from "@/lib/model";
 import { isUsageLimitError } from "@/lib/plans";
 import type {
   AgentJob,
@@ -109,13 +110,6 @@ import {
   subscribeGroupReplyStatuses,
   approveGroupTool,
 } from "@/lib/chat-sessions";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 
 const draftCache = new Map<string, string>();
 const scrollCache = new Map<string, number>();
@@ -208,6 +202,7 @@ export function ChatThread({
   const [mentionCursor, setMentionCursor] = useState(-1);
   const [mentionIndex, setMentionIndex] = useState(0);
   const [approvalError, setApprovalError] = useState<string | null>(null);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const groupMembers = bots.filter((member) =>
     thread.botIds.includes(member.id),
   );
@@ -572,16 +567,22 @@ export function ChatThread({
     return () => onBusyChange(false);
   }, [busy, onBusyChange]);
 
-  function submit() {
+  function submit({ files }: ComposerMessage) {
     const text = input.trim();
-    if (!text || busy) return;
+    // Files alone run no turn, the same as in Discord; they wait for a message.
+    if (!text || busy) return false;
     setChatSessionRunStatus(thread.id, "working");
     setInput("");
     clearThreadDraft(draftCache, thread.id);
     setMentionCursor(-1);
+    setAttachmentError(null);
+    const metadata = {
+      ...(replyTarget ? { replyTo: replyTarget } : {}),
+      ...(files.length ? { attachments: files } : {}),
+    };
     sendMessage({
       text,
-      ...(replyTarget ? { metadata: { replyTo: replyTarget } } : {}),
+      ...(Object.keys(metadata).length ? { metadata } : {}),
     });
     setReplyTarget(null);
     replyCache.delete(thread.id);
@@ -869,97 +870,91 @@ export function ChatThread({
             </button>
           </div>
         ) : null}
-        <PromptInput
-          className="mx-auto w-full flex-col items-stretch gap-0 rounded-3xl border border-foreground/15 p-1.5 shadow-[0_2px_12px_color-mix(in_srgb,var(--color-black)_20%,transparent)] focus-within:border-foreground/30"
-          onSubmit={(e) => {
-            e.preventDefault();
-            submit();
-          }}
-        >
-          {/* The model choice sits above the text, so the text keeps the full width. */}
-          <div className="flex px-1.5 pt-0.5">
-            <RunModePicker value={runMode} onChange={onRunModeChange} />
+        {attachmentError ? (
+          <div
+            role="alert"
+            className="mb-2 flex items-center gap-2 rounded-xl border border-destructive/30 px-3 py-2 text-xs text-destructive"
+          >
+            <WarningCircleIcon weight="fill" className="size-4 shrink-0" />
+            <span className="min-w-0 flex-1">{attachmentError}</span>
+            <button
+              type="button"
+              aria-label={t("Dismiss")}
+              onClick={() => setAttachmentError(null)}
+              className="rounded-md p-1 hover:bg-foreground/10"
+            >
+              <XIcon size={13} />
+            </button>
           </div>
-          <div className="flex items-end gap-1">
-          <PromptInputTextarea
-            ref={inputRef}
-            className="min-h-9 min-w-0 flex-1 rounded-2xl border-0 bg-transparent px-2 py-2 focus-visible:border-transparent"
-            title={t("Enter to send · Shift+Enter for a new line")}
-            value={input}
-            onChange={(e) => {
-              const next = e.currentTarget.value;
-              setInput(next);
-              setThreadDraft(draftCache, thread.id, next);
-              setMentionCursor(e.currentTarget.selectionStart);
-              setMentionIndex(0);
-            }}
-            onClick={(event) => {
+        ) : null}
+        <Composer
+          className="mx-auto"
+          value={input}
+          onValueChange={(next) => {
+            setInput(next);
+            setThreadDraft(draftCache, thread.id, next);
+          }}
+          onSubmit={submit}
+          onStop={stopTask}
+          onError={setAttachmentError}
+          status={status}
+          globalDrop
+          multiple
+          placeholder={
+            thread.kind === "group"
+              ? t("Message {name} · @everyone", { name: thread.title })
+              : t("Message {name}", { name: bot.name })
+          }
+          textareaProps={{
+            ref: inputRef,
+            title: t("Enter to send · Shift+Enter for a new line"),
+            "aria-label": t("Message {name}", {
+              name: thread.kind === "group" ? thread.title : bot.name,
+            }),
+            "aria-controls": mentionOptions.length ? `mentions-${thread.id}` : undefined,
+            "aria-activedescendant": mentionOptions.length
+              ? `mention-${thread.id}-${mentionIndex}`
+              : undefined,
+            onChange: (event) => {
               setMentionCursor(event.currentTarget.selectionStart);
               setMentionIndex(0);
-            }}
-            onKeyDown={(event) => {
-              if (!mentionOptions.length || event.nativeEvent.isComposing)
-                return;
+            },
+            onClick: (event) => {
+              setMentionCursor(event.currentTarget.selectionStart);
+              setMentionIndex(0);
+            },
+            onKeyDown: (event) => {
+              if (!mentionOptions.length || event.nativeEvent.isComposing) return;
               if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                 event.preventDefault();
                 setMentionIndex(
                   (value) =>
-                    (value +
-                      (event.key === "ArrowDown" ? 1 : -1) +
-                      mentionOptions.length) %
+                    (value + (event.key === "ArrowDown" ? 1 : -1) + mentionOptions.length) %
                     mentionOptions.length,
                 );
               } else if (event.key === "Enter" || event.key === "Tab") {
                 event.preventDefault();
                 insertMention(
-                  mentionOptions[
-                    Math.min(mentionIndex, mentionOptions.length - 1)
-                  ].name,
+                  mentionOptions[Math.min(mentionIndex, mentionOptions.length - 1)].name,
                 );
               } else if (event.key === "Escape") {
                 event.preventDefault();
                 setMentionCursor(-1);
               }
-            }}
-            aria-controls={
-              mentionOptions.length ? `mentions-${thread.id}` : undefined
-            }
-            aria-activedescendant={
-              mentionOptions.length
-                ? `mention-${thread.id}-${mentionIndex}`
-                : undefined
-            }
-            onSubmit={submit}
-            placeholder={
-              thread.kind === "group"
-                ? t("Message {name} · @everyone", { name: thread.title })
-                : t("Message {name}", { name: bot.name })
-            }
-            aria-label={t("Message {name}", { name: thread.kind === "group" ? thread.title : bot.name })}
-          />
-          <PromptInputToolbar className="shrink-0 pb-0.5 pr-0.5">
-            <PromptInputSubmit
-              className="size-8 rounded-full p-0"
-              aria-label={
-                status === "streaming" || status === "submitted"
-                  ? t("Stop response")
-                  : t("Send message")
-              }
-              status={status}
-              onStop={stopTask}
-              disabled={status === "ready" && !input.trim()}
-            >
-              {status === "submitted" ? (
-                <Spinner size="sm" />
-              ) : status === "streaming" ? (
-                <StopIcon size={16} />
-              ) : (
-                <SendIcon size={16} />
-              )}
-            </PromptInputSubmit>
-          </PromptInputToolbar>
-          </div>
-        </PromptInput>
+            },
+          }}
+          actionMenuItems={<ChatComposerActionMenu value={runMode} onChange={onRunModeChange} />}
+          voiceInput={
+            <ChatComposerVoiceInput
+              value={input}
+              onValueChange={(next) => {
+                setInput(next);
+                setThreadDraft(draftCache, thread.id, next);
+              }}
+            />
+          }
+          tools={<ChatComposerTools value={runMode} onChange={onRunModeChange} />}
+        />
       </div>
     </section>
   );
@@ -1264,6 +1259,7 @@ const MessageBlock = memo(function MessageBlock({
   const liveWorkedMs = useWorkedDuration(workKey, cotWorking);
   const workedMs = workedMsOf(message) ?? liveWorkedMs;
   const replyTo = replyReference(message);
+  const attachments = message.role === "user" ? messageAttachments(message) : [];
   const canAct =
     !actionsDisabled &&
     (message.role === "user" || message.role === "assistant");
@@ -1308,6 +1304,17 @@ const MessageBlock = memo(function MessageBlock({
               botName={t("Teammate")}
               onLocate={onLocate}
             />
+          ) : null}
+          {attachments.length ? (
+            <Attachments className="justify-end">
+              {attachments.map((file) => (
+                <Attachment
+                  key={file.path}
+                  data={file}
+                  title={file.path}
+                />
+              ))}
+            </Attachments>
           ) : null}
           {message.parts.map((part, index) => {
             const partBubbles = bubbles.filter(
@@ -1963,64 +1970,6 @@ function ApprovalActions({
         {t("Deny")}
       </ConfirmationAction>
     </ConfirmationActions>
-  );
-}
-
-function RunModePicker({
-  value,
-  onChange,
-}: {
-  value: RunMode;
-  onChange: (mode: RunMode) => void | Promise<void>;
-}) {
-  const t = useExtracted();
-  const isPlus = value.startsWith("plus-");
-  const level = (isPlus ? value.slice(5) : value) as "default" | "high" | "xhigh" | "max";
-  const levelLabels = { default: t("Default"), high: t("High"), xhigh: t("xhigh"), max: t("Max") };
-  const levels = ["default", "high", "xhigh", "max"] as const;
-  const selectMode = (mode: RunMode) => {
-    void onChange(mode);
-  };
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-left text-xs text-foreground/50 transition-colors hover:bg-foreground/5 hover:text-foreground">
-        {isPlus ? "Run+" : "Run"} {levelLabels[level]}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" className="w-56">
-        {levels.map((id) => {
-          const mode = RUN_MODES[isPlus ? `plus-${id}` as RunMode : id];
-          return (
-            <DropdownMenuItem
-              key={id}
-              onClick={() => selectMode(mode.id)}
-              className={mode.id === value ? "bg-surface-active" : undefined}
-            >
-              <span className="flex min-w-0 flex-col">
-                <span>{levelLabels[id]}</span>
-                <span className="text-[11px] text-muted-foreground">{t("~{multiplier}× cost", { multiplier: String(mode.costMultiplier) })}</span>
-              </span>
-            </DropdownMenuItem>
-          );
-        })}
-        <DropdownMenuSeparator />
-        <div className="flex gap-1 p-1">
-          {(["Run", "Run+"] as const).map((family) => (
-            <DropdownMenuItem
-              key={family}
-              closeOnClick={false} // Keep the menu open to choose a level above.
-              onClick={() => {
-                if ((family === "Run+") !== isPlus) {
-                  selectMode(family === "Run+" ? `plus-${level}` : level);
-                }
-              }}
-              className={`flex-1 justify-center ${(family === "Run+") === isPlus ? "bg-surface-active" : ""}`}
-            >
-              {family}
-            </DropdownMenuItem>
-          ))}
-        </div>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }
 

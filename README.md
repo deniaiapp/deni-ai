@@ -92,6 +92,11 @@ Dockerfile-only deploys: build type **Dockerfile**, port `3000`, health check `/
 4. Ask "Summarize the inbox every Monday at 9:00" to create a routine
 5. Open **MCP connections** to add a streamable HTTP or SSE server, test discovery, and then ask a teammate to use it
 
+The message box works like Deni AI's: **+** attaches photos or files (also by drag and drop or
+paste, up to 10 files of 10 MB each). They are saved under `/inbox/web/` in the workspace and the
+teammate is told where they are. The row under the text, shown while the box is in use, picks Run
+or Run+ and the reasoning level; on narrow screens the level is in the **+** menu.
+
 In a group conversation, type `@` to pick a teammate. `@everyone` calls every member;
 `@Research` calls only that teammate. Messages without a mention go to all group
 members in parallel. Each response shows its author's avatar and name.

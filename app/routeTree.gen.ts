@@ -20,6 +20,7 @@ import { Route as SupportRouteImport } from "./routes/support";
 import { Route as TermsRouteImport } from "./routes/terms";
 import { Route as UpgradeRouteImport } from "./routes/upgrade";
 import { Route as ApiAccountRouteImport } from "./routes/api/account";
+import { Route as ApiAttachmentsRouteImport } from "./routes/api/attachments";
 import { Route as ApiChatRouteImport } from "./routes/api/chat";
 import { Route as ApiDiscordRouteImport } from "./routes/api/discord";
 import { Route as ApiGroupChatRouteImport } from "./routes/api/group-chat";
@@ -113,6 +114,11 @@ const UpgradeRoute = UpgradeRouteImport.update({
 const ApiAccountRoute = ApiAccountRouteImport.update({
   id: "/api/account",
   path: "/api/account",
+  getParentRoute: () => rootRouteImport,
+} as any);
+const ApiAttachmentsRoute = ApiAttachmentsRouteImport.update({
+  id: "/api/attachments",
+  path: "/api/attachments",
   getParentRoute: () => rootRouteImport,
 } as any);
 const ApiChatRoute = ApiChatRouteImport.update({
@@ -325,6 +331,7 @@ export interface FileRoutesByFullPath {
   "/terms": typeof TermsRoute;
   "/upgrade": typeof UpgradeRoute;
   "/api/account": typeof ApiAccountRoute;
+  "/api/attachments": typeof ApiAttachmentsRoute;
   "/api/chat": typeof ApiChatRoute;
   "/api/discord": typeof ApiDiscordRoute;
   "/api/group-chat": typeof ApiGroupChatRoute;
@@ -377,6 +384,7 @@ export interface FileRoutesByTo {
   "/terms": typeof TermsRoute;
   "/upgrade": typeof UpgradeRoute;
   "/api/account": typeof ApiAccountRoute;
+  "/api/attachments": typeof ApiAttachmentsRoute;
   "/api/chat": typeof ApiChatRoute;
   "/api/discord": typeof ApiDiscordRoute;
   "/api/group-chat": typeof ApiGroupChatRoute;
@@ -430,6 +438,7 @@ export interface FileRoutesById {
   "/terms": typeof TermsRoute;
   "/upgrade": typeof UpgradeRoute;
   "/api/account": typeof ApiAccountRoute;
+  "/api/attachments": typeof ApiAttachmentsRoute;
   "/api/chat": typeof ApiChatRoute;
   "/api/discord": typeof ApiDiscordRoute;
   "/api/group-chat": typeof ApiGroupChatRoute;
@@ -484,6 +493,7 @@ export interface FileRouteTypes {
     | "/terms"
     | "/upgrade"
     | "/api/account"
+    | "/api/attachments"
     | "/api/chat"
     | "/api/discord"
     | "/api/group-chat"
@@ -536,6 +546,7 @@ export interface FileRouteTypes {
     | "/terms"
     | "/upgrade"
     | "/api/account"
+    | "/api/attachments"
     | "/api/chat"
     | "/api/discord"
     | "/api/group-chat"
@@ -588,6 +599,7 @@ export interface FileRouteTypes {
     | "/terms"
     | "/upgrade"
     | "/api/account"
+    | "/api/attachments"
     | "/api/chat"
     | "/api/discord"
     | "/api/group-chat"
@@ -641,6 +653,7 @@ export interface RootRouteChildren {
   TermsRoute: typeof TermsRoute;
   UpgradeRoute: typeof UpgradeRoute;
   ApiAccountRoute: typeof ApiAccountRoute;
+  ApiAttachmentsRoute: typeof ApiAttachmentsRoute;
   ApiChatRoute: typeof ApiChatRoute;
   ApiDiscordRoute: typeof ApiDiscordRoute;
   ApiGroupChatRoute: typeof ApiGroupChatRoute;
@@ -759,6 +772,13 @@ declare module "@tanstack/react-router" {
       path: "/api/account";
       fullPath: "/api/account";
       preLoaderRoute: typeof ApiAccountRouteImport;
+      parentRoute: typeof rootRouteImport;
+    };
+    "/api/attachments": {
+      id: "/api/attachments";
+      path: "/api/attachments";
+      fullPath: "/api/attachments";
+      preLoaderRoute: typeof ApiAttachmentsRouteImport;
       parentRoute: typeof rootRouteImport;
     };
     "/api/chat": {
@@ -1049,6 +1069,7 @@ const rootRouteChildren: RootRouteChildren = {
   TermsRoute: TermsRoute,
   UpgradeRoute: UpgradeRoute,
   ApiAccountRoute: ApiAccountRoute,
+  ApiAttachmentsRoute: ApiAttachmentsRoute,
   ApiChatRoute: ApiChatRoute,
   ApiDiscordRoute: ApiDiscordRoute,
   ApiGroupChatRoute: ApiGroupChatRoute,

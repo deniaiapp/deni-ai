@@ -713,6 +713,56 @@ msgctxt "F7jaKL"
 msgid "Your Deni AI plan covers Deni AI chat, Flixa, and Deni Run. See all usage in Deni AI settings."
 msgstr "Deni AI のプランで Deni AI チャット、Flixa、Deni Run をまとめて利用できます。すべての使用量は Deni AI の設定で確認できます。"
 
+#: app/components/chat-composer-controls.tsx
+msgctxt "lKv8ex"
+msgid "Default"
+msgstr "デフォルト"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "AxMhQr"
+msgid "High"
+msgstr "高"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "x8d3rq"
+msgid "xhigh"
+msgstr "xhigh"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "kkjl2v"
+msgid "Max"
+msgstr "最大"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "6tqdyX"
+msgid "Fast and capable for everyday work"
+msgstr "日常の作業に、速くて頼れるモデル"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "Qb6959"
+msgid "A stronger model for harder, longer tasks · ~{multiplier}× cost"
+msgstr "難しく長い作業向けの、より強力なモデル · コスト 約{multiplier}倍"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "rhSI1_"
+msgid "Model"
+msgstr "モデル"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "ZNCzCt"
+msgid "~{multiplier}× cost"
+msgstr "コスト 約{multiplier}倍"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "Iwh1dn"
+msgid "Reasoning level"
+msgstr "推論レベル"
+
+#: app/components/chat-composer-controls.tsx
+msgctxt "L8zY0q"
+msgid "Voice input"
+msgstr "音声入力"
+
 #: app/components/chat-thread.tsx
 msgctxt "frgrwx"
 msgid "Could not submit approval."
@@ -808,11 +858,6 @@ msgid "Cancel reply"
 msgstr "返信をキャンセル"
 
 #: app/components/chat-thread.tsx
-msgctxt "Dat5EN"
-msgid "Enter to send · Shift+Enter for a new line"
-msgstr "Enterで送信 · Shift+Enterで改行"
-
-#: app/components/chat-thread.tsx
 msgctxt "j4HzNR"
 msgid "Message {name} · @everyone"
 msgstr "{name}にメッセージ · @everyone"
@@ -823,14 +868,9 @@ msgid "Message {name}"
 msgstr "{name}にメッセージ"
 
 #: app/components/chat-thread.tsx
-msgctxt "RANC4_"
-msgid "Stop response"
-msgstr "応答を停止"
-
-#: app/components/chat-thread.tsx
-msgctxt "Xx0WZV"
-msgid "Send message"
-msgstr "メッセージを送信"
+msgctxt "Dat5EN"
+msgid "Enter to send · Shift+Enter for a new line"
+msgstr "Enterで送信 · Shift+Enterで改行"
 
 #: app/components/chat-thread.tsx
 #: app/components/upgrade-screen.tsx
@@ -1477,31 +1517,6 @@ msgstr "常に許可"
 msgctxt "htvX-Z"
 msgid "Deny"
 msgstr "拒否"
-
-#: app/components/chat-thread.tsx
-msgctxt "lKv8ex"
-msgid "Default"
-msgstr "デフォルト"
-
-#: app/components/chat-thread.tsx
-msgctxt "AxMhQr"
-msgid "High"
-msgstr "高"
-
-#: app/components/chat-thread.tsx
-msgctxt "x8d3rq"
-msgid "xhigh"
-msgstr "xhigh"
-
-#: app/components/chat-thread.tsx
-msgctxt "kkjl2v"
-msgid "Max"
-msgstr "最大"
-
-#: app/components/chat-thread.tsx
-msgctxt "ZNCzCt"
-msgid "~{multiplier}× cost"
-msgstr "コスト 約{multiplier}倍"
 
 #: app/components/chat-thread.tsx
 #: app/components/computer-panel.tsx
@@ -3736,6 +3751,17 @@ msgctxt "H6cAuM"
 msgid "threadId, path, and title are required"
 msgstr "threadId、path、title は必須です"
 
+#: app/routes/api/attachments.ts
+msgctxt "8dMKqr"
+msgid "Choose a file to attach"
+msgstr "添付するファイルを選んでください"
+
+#: app/routes/api/attachments.ts
+#: components/ai-elements/prompt-input.tsx
+msgctxt "QWi6b9"
+msgid "Files must be 10 MB or smaller"
+msgstr "ファイルは 10 MB 以下にしてください"
+
 #: app/routes/api/bots/$id.ts
 #: app/routes/api/bots/index.ts
 msgctxt "YeQIlr"
@@ -4782,6 +4808,11 @@ msgctxt "KTL4Zy"
 msgid "Deni Run is included with every Deni AI plan."
 msgstr "Deni Run はすべての Deni AI プランに含まれています。"
 
+#: components/ai-elements/attachments.tsx
+msgctxt "T0e6Lh"
+msgid "Remove {name}"
+msgstr "{name} を削除"
+
 #: components/ai-elements/conversation.tsx
 msgctxt "zu9kMq"
 msgid "No messages yet"
@@ -4793,19 +4824,49 @@ msgid "Start a conversation to see messages here"
 msgstr "会話を始めると、ここにメッセージが表示されます"
 
 #: components/ai-elements/prompt-input.tsx
+msgctxt "oBWja6"
+msgid "Add photos or files"
+msgstr "写真やファイルを追加"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "W2c8OA"
+msgid "You can attach up to {count} files"
+msgstr "添付できるファイルは {count} 個までです"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "f00p_7"
+msgid "Upload failed"
+msgstr "アップロードに失敗しました"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "XhFiWi"
+msgid "Attachments are still uploading"
+msgstr "添付ファイルをアップロードしています"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "2jjdVz"
+msgid "Upload files"
+msgstr "ファイルをアップロード"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "9mHH9E"
+msgid "What would you like to do?"
+msgstr "何をしますか？"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "IzCVhG"
+msgid "More options"
+msgstr "その他のオプション"
+
+#: components/ai-elements/prompt-input.tsx
+msgctxt "hsYvDX"
+msgid "Uploading"
+msgstr "アップロード中"
+
+#: components/ai-elements/prompt-input.tsx
 msgctxt "9WRlF4"
 msgid "Send"
 msgstr "送信"
-
-#: components/ai-elements/prompt-input.tsx
-msgctxt "C2CIgC"
-msgid "Sending"
-msgstr "送信中"
-
-#: components/ai-elements/prompt-input.tsx
-msgctxt "62nsdy"
-msgid "Retry"
-msgstr "再試行"
 
 #: components/routine-labels.ts
 msgctxt "mJR06P"
