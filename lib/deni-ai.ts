@@ -164,11 +164,16 @@ export async function fetchDeniRunUsage(deniUserId: string, opts?: { fresh?: boo
 export async function reportDeniRunCost(deniUserId: string, metric: DeniRunCostMetric, costUsd: number) {
   if (!Number.isFinite(costUsd) || costUsd <= 0) return;
   const key = `${deniUserId}:${metric}`;
+  // Take the pending cost out before sending, so a concurrent report cannot send it again.
   const total = (pendingCost().get(key) ?? 0) + costUsd;
-  pendingCost().set(key, total);
-  const usage = await callUsageApi({ method: "POST", body: { userId: deniUserId, metric, costUsd: total } });
-  pendingCost().set(key, Math.max(0, (pendingCost().get(key) ?? 0) - total));
-  if (!pendingCost().get(key)) pendingCost().delete(key);
+  pendingCost().delete(key);
+  let usage: DeniRunUsage;
+  try {
+    usage = await callUsageApi({ method: "POST", body: { userId: deniUserId, metric, costUsd: total } });
+  } catch (error) {
+    pendingCost().set(key, (pendingCost().get(key) ?? 0) + total);
+    throw error;
+  }
   usageCache().set(deniUserId, { usage, expiresAt: Date.now() + USAGE_CACHE_MS });
   return usage;
 }

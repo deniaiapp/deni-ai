@@ -213,16 +213,32 @@ type ModelUsage = {
   inputTokens?: number | undefined;
   outputTokens?: number | undefined;
   totalTokens?: number | undefined;
+  /** The provider's own usage object; OpenRouter's says `is_byok`. */
+  raw?: unknown;
 };
 
-/** The cost OpenRouter reported for a model call, else an estimate from list prices. */
+type OpenRouterUsage = { cost?: unknown; costDetails?: { upstreamInferenceCost?: unknown } };
+
+function usdAmount(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+}
+
+/**
+ * The cost OpenRouter reported for a model call, else an estimate from list prices. With a
+ * provider key on OpenRouter (BYOK), `cost` is only OpenRouter's fee, often 0, and the provider's
+ * own charge is reported separately as the upstream inference cost.
+ */
 export function modelCostUsd(
   result: { usage?: ModelUsage; providerMetadata?: unknown },
   modelId: string,
 ) {
-  const reported = (result.providerMetadata as { openrouter?: { usage?: { cost?: unknown } } } | undefined)
-    ?.openrouter?.usage?.cost;
-  if (typeof reported === "number" && Number.isFinite(reported) && reported >= 0) return reported;
+  const usage = (result.providerMetadata as { openrouter?: { usage?: OpenRouterUsage } } | undefined)?.openrouter
+    ?.usage;
+  const reported = usdAmount(usage?.cost);
+  const byok = (result.usage?.raw as { is_byok?: unknown } | undefined)?.is_byok === true;
+  const upstream = usdAmount(usage?.costDetails?.upstreamInferenceCost);
+  if (reported !== undefined && !byok) return reported;
+  if (reported !== undefined && upstream !== undefined) return reported + upstream;
   const price = MODEL_PRICES_USD_PER_MTOK[modelId];
   if (!price || !result.usage) return 0;
   const input = result.usage.inputTokens ?? 0;
