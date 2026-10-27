@@ -9,8 +9,10 @@ type PositionerProps = Pick<
   "side" | "sideOffset" | "align" | "alignOffset" | "collisionPadding"
 >;
 
+// Long menus scroll inside the space left on screen (--available-height from the positioner)
+// instead of being cut off.
 const popupClassName = cn(
-  "z-50 overflow-hidden rounded-lg border border-foreground/10 bg-surface-28 p-1 text-neutral-236 shadow-xl outline-none",
+  "z-50 max-h-(--available-height) overflow-x-hidden overflow-y-auto overscroll-contain rounded-lg border border-foreground/10 bg-surface-28 p-1 text-neutral-236 shadow-xl outline-none",
   "data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95",
   "data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
 );

@@ -288,9 +288,10 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
         <DropdownMenuTrigger render={<AlwaysAllowTrigger label={t("Always allow tools for {name}", { name: connection.name })} />}>
           <span className="truncate">{toolAlwaysAllowSummary(connection.id)}</span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="max-h-80 max-w-80">
+        <DropdownMenuContent align="end" className="max-h-[min(20rem,var(--available-height))] max-w-80">
           <DropdownMenuGroup>
-            <DropdownMenuGroupLabel>{t("Run without asking")}</DropdownMenuGroupLabel>
+            {/* Stays in view while a long list of tools scrolls under it. */}
+            <DropdownMenuGroupLabel className="sticky -top-1 z-10 bg-surface-28">{t("Run without asking")}</DropdownMenuGroupLabel>
             {!list || list.status === "loading" ? <DropdownMenuLabel>{t("Loading tools…")}</DropdownMenuLabel>
               : list.status === "error" ? <DropdownMenuLabel className="text-destructive-300">{list.error}</DropdownMenuLabel>
               : tools.length === 0 ? <DropdownMenuLabel>{trustsReadOnly ? t("Every tool on this server is read-only.") : t("This server has no tools.")}</DropdownMenuLabel>
