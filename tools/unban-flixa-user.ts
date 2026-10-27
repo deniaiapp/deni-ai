@@ -4,8 +4,8 @@ const SCRIPT_TIMEOUT_MS = 30_000;
 
 function printUsage(): void {
   console.log(`Usage:
-  bun run tools/unban-flixa-user.ts <email>
-  bun run tools:unban-flixa-user -- <email>
+  pnpm exec tsx tools/unban-flixa-user.ts <email>
+  pnpm run tools:unban-flixa-user -- <email>
 
 Removes the Flixa ban for the Deni AI user with the given email.
 API keys are not restored — the user must log in again to issue a new key.
@@ -16,8 +16,8 @@ Requires DENI_DATABASE_URL.
 
 function parseEmail(argv: string[]): string | null {
   const args = argv.filter((arg) => arg !== "--");
-  // bun run tools/unban-flixa-user.ts user@example.com
-  // or: bun run tools:unban-flixa-user -- user@example.com
+  // pnpm exec tsx tools/unban-flixa-user.ts user@example.com
+  // or: pnpm run tools:unban-flixa-user -- user@example.com
   const email = args[0]?.trim();
   if (!email || email === "-h" || email === "--help") {
     return null;
@@ -26,8 +26,8 @@ function parseEmail(argv: string[]): string | null {
 }
 
 async function main(): Promise<void> {
-  // Bun.argv: [bun, script, ...args]
-  const rawArgs = Bun.argv.slice(2);
+  // process.argv: [node, script, ...args]
+  const rawArgs = process.argv.slice(2);
   const wantsHelp = rawArgs.some((arg) => arg === "-h" || arg === "--help");
   const email = parseEmail(rawArgs);
   if (!email) {

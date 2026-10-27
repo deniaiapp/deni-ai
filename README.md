@@ -2,7 +2,7 @@
 
 OpenAI API style backend with `/v1/agent/chat/completions` router proxying directly to OpenRouter or an OpenAI-compatible upstream.
 
-Built with **TypeScript**, **Hono**, and **Bun**.
+Built with **TypeScript**, **Hono**, and **Node.js**.
 
 ## Features
 
@@ -13,16 +13,13 @@ Built with **TypeScript**, **Hono**, and **Bun**.
 - Error handling in OpenAI format
 - TypeScript for type safety
 - Hono web framework (fast & lightweight)
-- Bun runtime (ultra-fast JavaScript runtime)
+- Node.js 26+ runtime (TypeScript run via `tsx`, production bundle via esbuild)
 - Support for all OpenRouter models
 
 ## Prerequisites
 
-Install [Bun](https://bun.sh):
-
-```bash
-curl -fsSL https://bun.sh/install | bash
-```
+- [Node.js](https://nodejs.org) 26 or newer
+- [pnpm](https://pnpm.io) 12
 
 ## Installation
 
@@ -137,8 +134,10 @@ for settlement. The estimated usage remains reserved until settlement completes.
 
 ### Quota reservation and interrupted streams
 
-Requests atomically reserve estimated weighted tokens in `usage_quota.used`
-before contacting a provider. The estimate includes the supplied output limit,
+Requests atomically reserve estimated usage units (weighted tokens; 1M units =
+$0.50 of the shared monthly pool) in `usage_quota.used` before contacting a
+provider. Quota rows, Flixa's `product_usage` rows, and the usage endpoint's
+`unit` field all use `units`. The estimate includes the supplied output limit,
 or the model catalog's maximum output (16,384 tokens when unavailable). Requests
 whose estimate does not fit the remaining allowance receive 429; use a smaller
 output limit or wait for in-flight requests to finish. The usage endpoint includes
@@ -162,8 +161,8 @@ connect to `DENI_DATABASE_URL`.
 
 ### Client IPs and reverse proxies
 
-IP rate limits, admin audit logs, and `ADMIN_IP_ALLOWLIST` use Bun's actual socket
-peer by default. Forwarded headers are ignored unless that peer matches
+IP rate limits, admin audit logs, and `ADMIN_IP_ALLOWLIST` use the actual socket
+peer (Node's `socket.remoteAddress`) by default. Forwarded headers are ignored unless that peer matches
 `TRUSTED_PROXY_IPS` (comma-separated exact IPv4/IPv6 addresses or CIDRs).
 
 For a local reverse proxy, for example:
@@ -245,10 +244,10 @@ See the full list at [OpenRouter Models](https://openrouter.ai/models).
 ### Start Server
 
 ```bash
-bun start
+pnpm start
 ```
 
-For automatic restart after a Bun crash:
+For automatic restart after a server crash:
 
 ```bash
 pnpm run start:supervised
@@ -266,7 +265,14 @@ without restarting when you press Ctrl+C.
 For development with auto-reload:
 
 ```bash
-bun dev
+pnpm dev
+```
+
+To build and run the bundled server:
+
+```bash
+pnpm run build
+pnpm run start:dist
 ```
 
 ### Type Checking
@@ -275,11 +281,17 @@ bun dev
 pnpm run typecheck
 ```
 
+### Tests
+
+```bash
+pnpm test
+```
+
 ## Project Structure
 
 ```
 flixa-backend/
-├── server.ts                  # Main server file (Hono + Bun)
+├── server.ts                  # Main server file (Hono + Node.js)
 ├── tsconfig.json              # TypeScript configuration
 ├── routes/
 │   └── v1/

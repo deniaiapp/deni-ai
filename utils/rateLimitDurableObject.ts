@@ -6,7 +6,7 @@
  * every request for a key to the same object gives a globally consistent count.
  *
  * Deliberately a plain class (no `extends DurableObject` from
- * "cloudflare:workers") so Bun can still import and typecheck the app. The
+ * "cloudflare:workers") so Node can still import and typecheck the app. The
  * Workers runtime accepts any class with `constructor(state, env)` + `fetch`.
  *
  * Protocol: `POST /consume` with JSON `{ max, windowMs }`; responds with a

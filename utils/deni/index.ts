@@ -12,7 +12,7 @@ export {
   validateDeniApiKey,
 } from './auth';
 export type { ApiKeyValidationResult, RequestAuthSummary } from './auth';
-export { getDeniBillingProfile, getDeniUsageInfo, getUpgradeUrl, getUsageUnitForTier, getVerifyUrl, reserveUsageQuota, settleUsageQuota } from './usage';
+export { getDeniBillingProfile, getDeniUsageInfo, getUpgradeUrl, getVerifyUrl, USAGE_UNIT, reserveUsageQuota, settleUsageQuota } from './usage';
 export type { UsageTier, UsageUnit, UsageReservation } from './usage';
 export type { DeniUsageInfo, BillingRow, UsageQuotaRow } from './types';
 export { getModelCategory, hasQuotaForModel, getRequiredTierForModel, isTierSufficient } from './models';

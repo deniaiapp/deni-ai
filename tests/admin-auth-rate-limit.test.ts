@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { afterEach, beforeEach, test } from "node:test";
 import { Hono } from "hono";
 import { adminAuth } from "../middleware/adminAuth";
 import { adminLoginRateLimitMiddleware } from "../middleware/rateLimit";
@@ -14,15 +15,15 @@ const env = {
   RATE_LIMIT_ADMIN_LOGIN_MAX: "2",
   TRUSTED_PROXY_IPS: "",
 };
-const original = Object.fromEntries(Object.keys(env).map((key) => [key, Bun.env[key]]));
+const original = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]));
 beforeEach(() => {
-  Object.assign(Bun.env, env);
+  Object.assign(process.env, env);
   clearRateLimitBuckets();
 });
 afterEach(() => {
   for (const [key, value] of Object.entries(original)) {
-    if (value === undefined) delete Bun.env[key];
-    else Bun.env[key] = value;
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
   }
   clearRateLimitBuckets();
 });
@@ -46,13 +47,16 @@ function request(hono: Hono, path: string, options: RequestInit = {}, ip = "203.
 test("Basic auth shares the form login limit across admin routes", async () => {
   const hono = app();
   const headers = { Authorization: `Basic ${btoa("admin:wrong")}`, Accept: "application/json" };
-  expect((await request(hono, "/admin/lookup", { headers })).status).toBe(401);
-  expect((await request(hono, "/admin/rules", { headers })).status).toBe(401);
+  assert.equal((await request(hono, "/admin/lookup", { headers })).status, 401);
+  assert.equal((await request(hono, "/admin/rules", { headers })).status, 401);
   const blocked = await request(hono, "/admin/lookup", { headers });
-  expect(blocked.status).toBe(429);
-  expect(Number(blocked.headers.get("retry-after"))).toBeGreaterThan(0);
-  expect((await request(hono, "/admin/login", { method: "POST" })).status).toBe(429);
-  expect((await request(hono, "/admin/login", { method: "POST" }, "203.0.113.6")).status).toBe(200);
+  assert.equal(blocked.status, 429);
+  assert.ok(Number(blocked.headers.get("retry-after")) > 0);
+  assert.equal((await request(hono, "/admin/login", { method: "POST" })).status, 429);
+  assert.equal(
+    (await request(hono, "/admin/login", { method: "POST" }, "203.0.113.6")).status,
+    200,
+  );
 });
 
 test("forged IP headers cannot reset the login bucket or bypass allowlist", async () => {
@@ -62,22 +66,23 @@ test("forged IP headers cannot reset the login bucket or bypass allowlist", asyn
       method: "POST",
       headers: { "cf-connecting-ip": `192.0.2.${i}` },
     });
-    expect(result.status).toBe(i < 2 ? 200 : 429);
+    assert.equal(result.status, i < 2 ? 200 : 429);
   }
-  Bun.env.ADMIN_IP_ALLOWLIST = "192.0.2.1";
-  expect(
+  process.env.ADMIN_IP_ALLOWLIST = "192.0.2.1";
+  assert.equal(
     (await request(hono, "/admin/lookup", { headers: { "x-forwarded-for": "192.0.2.1" } })).status,
-  ).toBe(403);
+    403,
+  );
 });
 
 test("valid sessions still work after the credential attempt limit is reached", async () => {
-  Bun.env.RATE_LIMIT_ADMIN_LOGIN_MAX = "1";
+  process.env.RATE_LIMIT_ADMIN_LOGIN_MAX = "1";
   const hono = app();
   const response = await request(hono, "/admin/lookup", {
     headers: { Authorization: `Basic ${btoa(`admin:${env.ADMIN_PASSWORD}`)}` },
   });
-  expect(response.status).toBe(200);
+  assert.equal(response.status, 200);
   const cookie = response.headers.get("set-cookie")!.split(";")[0];
-  expect((await request(hono, "/admin/login", { method: "POST" })).status).toBe(429);
-  expect((await request(hono, "/admin/lookup", { headers: { Cookie: cookie } })).status).toBe(200);
+  assert.equal((await request(hono, "/admin/login", { method: "POST" })).status, 429);
+  assert.equal((await request(hono, "/admin/lookup", { headers: { Cookie: cookie } })).status, 200);
 });

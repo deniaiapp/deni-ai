@@ -1,4 +1,5 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { beforeEach, describe, test } from "node:test";
 import { Hono } from "hono";
 import { validateAgentApiKey } from "../middleware/validateAgentAuth";
 
@@ -12,7 +13,7 @@ function app(): Hono {
 
 describe("missing_api_key", () => {
   beforeEach(() => {
-    delete Bun.env.FLIXA_AUTH_DISABLED;
+    delete process.env.FLIXA_AUTH_DISABLED;
   });
 
   test("tells Codex how to send env_key", async () => {
@@ -23,14 +24,14 @@ describe("missing_api_key", () => {
         originator: "codex_cli_rs",
       },
     });
-    expect(res.status).toBe(401);
+    assert.equal(res.status, 401);
     const body = (await res.json()) as {
       error: { code: string; message: string };
     };
-    expect(body.error.code).toBe("missing_api_key");
-    expect(body.error.message).toContain("env_key");
-    expect(body.error.message).toContain("requires_openai_auth = false");
-    expect(body.error.message).toContain("http_headers");
+    assert.equal(body.error.code, "missing_api_key");
+    assert.ok(body.error.message.includes("env_key"));
+    assert.ok(body.error.message.includes("requires_openai_auth = false"));
+    assert.ok(body.error.message.includes("http_headers"));
   });
 
   test("tells Windows Codex TUI to pin Authorization in config.toml", async () => {
@@ -42,10 +43,10 @@ describe("missing_api_key", () => {
         originator: "codex-tui",
       },
     });
-    expect(res.status).toBe(401);
+    assert.equal(res.status, 401);
     const body = (await res.json()) as { error: { message: string } };
-    expect(body.error.message).toContain("http_headers");
-    expect(body.error.message).toContain("Codex TUI");
+    assert.ok(body.error.message.includes("http_headers"));
+    assert.ok(body.error.message.includes("Codex TUI"));
   });
 
   test("keeps the Flixa extension message for first-party clients", async () => {
@@ -53,8 +54,8 @@ describe("missing_api_key", () => {
       method: "POST",
       headers: { "x-flixa-client": "vscode/1.0" },
     });
-    expect(res.status).toBe(401);
+    assert.equal(res.status, 401);
     const body = (await res.json()) as { error: { message: string } };
-    expect(body.error.message).toContain("Flixa extension");
+    assert.ok(body.error.message.includes("Flixa extension"));
   });
 });

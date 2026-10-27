@@ -143,9 +143,7 @@ type ErrorBody = {
 };
 
 function resolveDefaultBaseUrl() {
-  const envBaseUrl =
-    (typeof process !== 'undefined' && process.env?.FLIXA_API_URL) ||
-    (globalThis as { Bun?: { env?: Record<string, string> } }).Bun?.env?.FLIXA_API_URL;
+  const envBaseUrl = typeof process !== 'undefined' ? process.env?.FLIXA_API_URL : undefined;
   return envBaseUrl || 'http://localhost:3000';
 }
 

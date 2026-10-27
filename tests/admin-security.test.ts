@@ -1,4 +1,5 @@
-import { describe, expect, spyOn, test } from "bun:test";
+import assert from "node:assert/strict";
+import { describe, mock, test } from "node:test";
 import { Hono } from "hono";
 import { adminAuth } from "../middleware/adminAuth";
 import {
@@ -10,56 +11,56 @@ import {
 
 describe("isAdminIpAllowed", () => {
   test("allows all when allowlist empty", () => {
-    delete Bun.env.ADMIN_IP_ALLOWLIST;
-    expect(isAdminIpAllowed("1.2.3.4")).toBe(true);
-    expect(isAdminIpAllowed("unknown")).toBe(true);
+    delete process.env.ADMIN_IP_ALLOWLIST;
+    assert.equal(isAdminIpAllowed("1.2.3.4"), true);
+    assert.equal(isAdminIpAllowed("unknown"), true);
   });
 
   test("matches exact IP and CIDR", () => {
-    Bun.env.ADMIN_IP_ALLOWLIST = "203.0.113.10,10.0.0.0/8";
-    expect(isAdminIpAllowed("203.0.113.10")).toBe(true);
-    expect(isAdminIpAllowed("10.1.2.3")).toBe(true);
-    expect(isAdminIpAllowed("11.0.0.1")).toBe(false);
-    expect(isAdminIpAllowed("unknown")).toBe(false);
-    delete Bun.env.ADMIN_IP_ALLOWLIST;
+    process.env.ADMIN_IP_ALLOWLIST = "203.0.113.10,10.0.0.0/8";
+    assert.equal(isAdminIpAllowed("203.0.113.10"), true);
+    assert.equal(isAdminIpAllowed("10.1.2.3"), true);
+    assert.equal(isAdminIpAllowed("11.0.0.1"), false);
+    assert.equal(isAdminIpAllowed("unknown"), false);
+    delete process.env.ADMIN_IP_ALLOWLIST;
   });
 
   test("handles IPv4-mapped IPv6", () => {
-    Bun.env.ADMIN_IP_ALLOWLIST = "203.0.113.10";
-    expect(isAdminIpAllowed("::ffff:203.0.113.10")).toBe(true);
-    delete Bun.env.ADMIN_IP_ALLOWLIST;
+    process.env.ADMIN_IP_ALLOWLIST = "203.0.113.10";
+    assert.equal(isAdminIpAllowed("::ffff:203.0.113.10"), true);
+    delete process.env.ADMIN_IP_ALLOWLIST;
   });
 });
 
 describe("assessAdminPassword", () => {
   test("flags short and common passwords", () => {
-    expect(assessAdminPassword(undefined).ok).toBe(false);
-    expect(assessAdminPassword("short").warnings.length).toBeGreaterThan(0);
-    expect(assessAdminPassword("password").warnings.some((w) => w.includes("weak"))).toBe(
-      true,
-    );
-    expect(
+    assert.equal(assessAdminPassword(undefined).ok, false);
+    assert.ok(assessAdminPassword("short").warnings.length > 0);
+    assert.equal(assessAdminPassword("password").warnings.some((w) => w.includes("weak")), true);
+    assert.equal(
       assessAdminPassword("xK9$mQ2pL7vN4wR8tY1z").ok ||
         assessAdminPassword("xK9$mQ2pL7vN4wR8tY1z").warnings.length === 0,
-    ).toBe(true);
+      true,
+    );
   });
 });
 
 describe("verifyAdminCredentialsSecure", () => {
   test("accepts matching credentials and rejects mismatches", async () => {
-    expect(
+    assert.equal(
       await verifyAdminCredentialsSecure("admin", "s3cret-long", "admin", "s3cret-long"),
-    ).toBe(true);
-    expect(
+      true,
+    );
+    assert.equal(
       await verifyAdminCredentialsSecure("admin", "wrong", "admin", "s3cret-long"),
-    ).toBe(false);
-    expect(
+      false,
+    );
+    assert.equal(
       await verifyAdminCredentialsSecure("nope", "s3cret-long", "admin", "s3cret-long"),
-    ).toBe(false);
+      false,
+    );
     // Different lengths still return false without throwing
-    expect(
-      await verifyAdminCredentialsSecure("a", "b", "admin", "s3cret-long"),
-    ).toBe(false);
+    assert.equal(await verifyAdminCredentialsSecure("a", "b", "admin", "s3cret-long"), false);
   });
 });
 
@@ -68,13 +69,13 @@ async function captureAudit(fn: () => unknown): Promise<string[]> {
   const record = (...args: unknown[]) => {
     lines.push(args.map(String).join(" "));
   };
-  const warnSpy = spyOn(console, "warn").mockImplementation(record);
-  const infoSpy = spyOn(console, "info").mockImplementation(record);
+  const warnSpy = mock.method(console, "warn", record);
+  const infoSpy = mock.method(console, "info", record);
   try {
     await fn();
   } finally {
-    warnSpy.mockRestore();
-    infoSpy.mockRestore();
+    warnSpy.mock.restore();
+    infoSpy.mock.restore();
   }
   return lines;
 }
@@ -89,7 +90,7 @@ describe("logAdminAudit", () => {
         reason: "form",
       }),
     );
-    expect(lines).toEqual([
+    assert.deepEqual(lines, [
       "[AdminAuth] login_failed ip=203.0.113.5 path=/admin/login user=admin reason=form",
     ]);
   });
@@ -103,9 +104,10 @@ describe("logAdminAudit", () => {
         reason: "basic",
       }),
     );
-    expect(lines).toHaveLength(1);
-    expect(lines[0]).not.toMatch(/[\r\n]/);
-    expect(lines[0]).toBe(
+    assert.equal(lines.length, 1);
+    assert.doesNotMatch(lines[0], /[\r\n]/);
+    assert.equal(
+      lines[0],
       "[AdminAuth] login_failed ip=203.0.113.5 path=/admin/x\\x0d\\x0a[AdminAuth] login_ok ip=1.2.3.4 " +
         "user=evil\\x0a[AdminAuth] login_ok ip=1.2.3.4 user=admin reason=basic",
     );
@@ -117,7 +119,7 @@ describe("logAdminAudit", () => {
         path: "/admin/a\u0000b\u001bc\u007fd\u0085e\u2028f\u2029g",
       }),
     );
-    expect(lines).toEqual([
+    assert.deepEqual(lines, [
       "[AdminAuth] unauthorized path=/admin/a\\x00b\\x1bc\\x7fd\\x85e\\u2028f\\u2029g",
     ]);
   });
@@ -127,7 +129,7 @@ describe("logAdminAudit", () => {
     const lines = await captureAudit(() =>
       logAdminAudit("login_failed", { username, reason: "form" }),
     );
-    expect(lines).toEqual([
+    assert.deepEqual(lines, [
       "[AdminAuth] login_failed user=evil\\x0a[AdminAuth] login_ok user=admin,x reason=form",
     ]);
   });
@@ -135,7 +137,7 @@ describe("logAdminAudit", () => {
   test("caps logged path length", async () => {
     const path = `/admin/${"a".repeat(2000)}`;
     const lines = await captureAudit(() => logAdminAudit("unauthorized", { path }));
-    expect(lines).toEqual([`[AdminAuth] unauthorized path=${path.slice(0, 512)}`]);
+    assert.deepEqual(lines, [`[AdminAuth] unauthorized path=${path.slice(0, 512)}`]);
   });
 
   test("Basic auth failure cannot inject lines via username or decoded path", async () => {
@@ -148,8 +150,8 @@ describe("logAdminAudit", () => {
       ADMIN_IP_ALLOWLIST: "",
       TRUSTED_PROXY_IPS: "",
     };
-    const original = Object.fromEntries(Object.keys(env).map((key) => [key, Bun.env[key]]));
-    Object.assign(Bun.env, env);
+    const original = Object.fromEntries(Object.keys(env).map((key) => [key, process.env[key]]));
+    Object.assign(process.env, env);
     try {
       const hono = new Hono();
       hono.use("/admin/*", adminAuth);
@@ -167,16 +169,16 @@ describe("logAdminAudit", () => {
         );
         status = response.status;
       });
-      expect(status).toBe(401);
-      expect(lines).toEqual([
+      assert.equal(status, 401);
+      assert.deepEqual(lines, [
         "[AdminAuth] login_failed ip=203.0.113.5 path=/admin/x\\x1by\\x85z " +
           "user=evil\\x0a[AdminAuth] basic_ok ip=1.2.3.4 reason=basic",
         "[AdminAuth] unauthorized ip=203.0.113.5 path=/admin/x\\x1by\\x85z",
       ]);
     } finally {
       for (const [key, value] of Object.entries(original)) {
-        if (value === undefined) delete Bun.env[key];
-        else Bun.env[key] = value;
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
       }
     }
   });

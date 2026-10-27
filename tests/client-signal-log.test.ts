@@ -1,4 +1,5 @@
-import { describe, expect, test, beforeEach } from "bun:test";
+import assert from "node:assert/strict";
+import { beforeEach, describe, test } from "node:test";
 import {
   clearClientSignalLogs,
   getClientSignalLogStats,
@@ -32,10 +33,10 @@ describe("clientSignalLog", () => {
     });
 
     const all = queryClientSignalLogs({ limit: 10 });
-    expect(all).toHaveLength(2);
-    expect(all[0]!.userId).toBe("user-b");
-    expect(all[1]!.userId).toBe("user-a");
-    expect(getClientSignalLogStats().count).toBe(2);
+    assert.equal(all.length, 2);
+    assert.equal(all[0]!.userId, "user-b");
+    assert.equal(all[1]!.userId, "user-a");
+    assert.equal(getClientSignalLogStats().count, 2);
   });
 
   test("filters by userId substring, client, and outcome", () => {
@@ -67,13 +68,11 @@ describe("clientSignalLog", () => {
       headers: {},
     });
 
-    expect(queryClientSignalLogs({ userId: "abc" })).toHaveLength(2);
-    expect(queryClientSignalLogs({ client: "codex" })).toHaveLength(1);
-    expect(queryClientSignalLogs({ client: "none" })[0]!.userId).toBe("zzz");
-    expect(queryClientSignalLogs({ outcome: "missing_banned" })).toHaveLength(
-      1,
-    );
-    expect(queryClientSignalLogs({ allowed: false })).toHaveLength(1);
+    assert.equal(queryClientSignalLogs({ userId: "abc" }).length, 2);
+    assert.equal(queryClientSignalLogs({ client: "codex" }).length, 1);
+    assert.equal(queryClientSignalLogs({ client: "none" })[0]!.userId, "zzz");
+    assert.equal(queryClientSignalLogs({ outcome: "missing_banned" }).length, 1);
+    assert.equal(queryClientSignalLogs({ allowed: false }).length, 1);
   });
 
   test("filters by redacted apiKey substring", () => {
@@ -98,8 +97,8 @@ describe("clientSignalLog", () => {
       headers: {},
     });
 
-    expect(queryClientSignalLogs({ apiKey: "abc1" })).toHaveLength(1);
-    expect(queryClientSignalLogs({ apiKey: "abc1" })[0]!.userId).toBe("user-a");
-    expect(queryClientSignalLogs({ apiKey: "deni_" })).toHaveLength(2);
+    assert.equal(queryClientSignalLogs({ apiKey: "abc1" }).length, 1);
+    assert.equal(queryClientSignalLogs({ apiKey: "abc1" })[0]!.userId, "user-a");
+    assert.equal(queryClientSignalLogs({ apiKey: "deni_" }).length, 2);
   });
 });

@@ -1,4 +1,6 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
+import { format } from "node:util";
 import { Hono } from "hono";
 import { validateAnthropicRequest } from "../middleware/validateAnthropicRequest";
 
@@ -33,17 +35,17 @@ describe("anthropic messages model selection", () => {
       thinking: { type: "enabled", budget_tokens: 1024 },
     });
 
-    expect(status).toBe(200);
-    expect(body.fallbacks).toBeUndefined();
-    expect(body.models).toBeUndefined();
-    expect(body.preset).toBeUndefined();
-    expect(body.route).toBeUndefined();
-    expect(body.model).toBe("claude-sonnet-4.6");
-    expect(body.max_tokens).toBe(64);
-    expect(body.temperature).toBe(0.2);
-    expect(body.metadata).toEqual({ user_id: "u1" });
-    expect(body.stop_sequences).toEqual(["END"]);
-    expect(body.thinking).toEqual({ type: "enabled", budget_tokens: 1024 });
+    assert.equal(status, 200);
+    assert.equal(body.fallbacks, undefined);
+    assert.equal(body.models, undefined);
+    assert.equal(body.preset, undefined);
+    assert.equal(body.route, undefined);
+    assert.equal(body.model, "claude-sonnet-4.6");
+    assert.equal(body.max_tokens, 64);
+    assert.equal(body.temperature, 0.2);
+    assert.deepEqual(body.metadata, { user_id: "u1" });
+    assert.deepEqual(body.stop_sequences, ["END"]);
+    assert.deepEqual(body.thinking, { type: "enabled", budget_tokens: 1024 });
   });
 
   test("filters plugins by id, keeping only ones that select no model", async () => {
@@ -68,15 +70,15 @@ describe("anthropic messages model selection", () => {
       ],
     });
 
-    expect(status).toBe(200);
-    expect(body.plugins).toEqual(kept);
+    assert.equal(status, 200);
+    assert.deepEqual(body.plugins, kept);
   });
 
   test("leaves plugins absent when the client sent none", async () => {
     const { status, body } = await send({});
 
-    expect(status).toBe(200);
-    expect("plugins" in body).toBe(false);
+    assert.equal(status, 200);
+    assert.equal("plugins" in body, false);
   });
 
   test("accepts custom, Anthropic built-in and non-model OpenRouter tools", async () => {
@@ -96,19 +98,15 @@ describe("anthropic messages model selection", () => {
       { type: "openrouter:datetime", parameters: { timezone: "UTC" } },
       { type: "openrouter:web_search", parameters: { engine: "exa", max_results: 5 } },
       { type: "openrouter:web_fetch", parameters: { max_uses: 2 } },
-      { type: "openrouter:bash" },
-      { type: "openrouter:shell", parameters: { engine: "openrouter" } },
-      { type: "openrouter:apply_patch" },
-      { type: "openrouter:files" },
       { type: "openrouter:experimental__search_models", parameters: { max_results: 5 } },
     ];
     const { status, body } = await send({ tools });
 
-    expect(status).toBe(200);
-    expect(body.tools).toEqual(tools);
+    assert.equal(status, 200);
+    assert.deepEqual(body.tools, tools);
   });
 
-  test.each([
+  for (const tool of [
     { type: "advisor_20260301", name: "advisor", model: "claude-opus-4-8" },
     { type: "openrouter:advisor", parameters: { model: "openai/gpt-5.5" } },
     { type: "openrouter:advisor" },
@@ -117,16 +115,22 @@ describe("anthropic messages model selection", () => {
     { type: "openrouter:image_generation", parameters: { model: "openai/gpt-image-1" } },
     { type: "openrouter:some_future_tool" },
     { type: "OpenRouter:advisor" },
+    { type: "openrouter:bash" },
+    { type: "openrouter:shell", parameters: { engine: "openrouter" } },
+    { type: "openrouter:apply_patch" },
+    { type: "openrouter:files" },
     { type: "openrouter:web_search", parameters: { model: "openai/gpt-5.5" } },
     { name: "lookup", model: "openai/gpt-5.5", input_schema: { type: "object" } },
-  ])("rejects tool that selects a model: %j", async (tool) => {
-    const { status, body } = await send({
-      tools: [{ name: "read_file", input_schema: { type: "object" } }, tool],
-    });
+  ]) {
+    test(format("rejects tool that selects a model or uses shared storage: %j", tool), async () => {
+      const { status, body } = await send({
+        tools: [{ name: "read_file", input_schema: { type: "object" } }, tool],
+      });
 
-    expect(status).toBe(400);
-    expect(body.error.type).toBe("invalid_request_error");
-    expect(body.error.param).toBe("tools[1]");
-    expect(body.error.code).toBe("invalid_tool");
-  });
+      assert.equal(status, 400);
+      assert.equal(body.error.type, "invalid_request_error");
+      assert.equal(body.error.param, "tools[1]");
+      assert.equal(body.error.code, "invalid_tool");
+    });
+  }
 });

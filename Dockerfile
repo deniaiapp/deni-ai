@@ -1,13 +1,15 @@
-FROM node:22-alpine AS deps
+FROM node:26-alpine AS deps
 
 WORKDIR /app
 
-RUN npm install -g pnpm@12.10.1
+RUN npm install -g pnpm@12.15.0
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile --prod
+# Dev dependencies are needed for the esbuild step. Install scripts are skipped:
+# the bundle only needs sources, and wrangler's workerd binary is not used here.
+RUN pnpm install --frozen-lockfile --ignore-scripts
 
-FROM oven/bun:1-alpine AS build
+FROM node:26-alpine AS build
 
 WORKDIR /app
 
@@ -17,17 +19,20 @@ COPY middleware ./middleware
 COPY routes ./routes
 COPY utils ./utils
 
-RUN bun build server.ts --outdir ./dist --target bun --minify
+RUN node_modules/.bin/esbuild server.ts --bundle --platform=node --format=esm --target=node26 \
+  --outdir=./dist --external:pg-native --minify \
+  --banner:js="import { createRequire as __flixaCreateRequire } from 'node:module'; const require = __flixaCreateRequire(import.meta.url);"
 
-FROM oven/bun:1-alpine AS app
+FROM node:26-alpine AS app
 
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-COPY --from=build /app/dist/server.js ./server.js
+# Self-contained ESM bundle; .mjs so Node does not need a package.json "type".
+COPY --from=build /app/dist/server.js ./server.mjs
 
 EXPOSE 3000
 
-CMD ["bun", "server.js"]
+CMD ["node", "server.mjs"]

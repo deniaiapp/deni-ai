@@ -1,4 +1,5 @@
 import { Context, Next } from "hono";
+import { isDisallowedOpenRouterToolType } from "../utils/agent/serverToolPolicy";
 
 interface AnthropicRequestBody {
   model?: string;
@@ -24,19 +25,6 @@ const ALLOWED_OPENROUTER_PLUGIN_IDS: ReadonlySet<string> = new Set([
   "context-compression",
 ]);
 
-// OpenRouter server tools that run no other model. Any other `openrouter:*`
-// type (advisor, fusion, subagent, image_generation, unknown) is rejected.
-const ALLOWED_OPENROUTER_TOOL_TYPES: ReadonlySet<string> = new Set([
-  "openrouter:datetime",
-  "openrouter:web_search",
-  "openrouter:web_fetch",
-  "openrouter:bash",
-  "openrouter:shell",
-  "openrouter:apply_patch",
-  "openrouter:files",
-  "openrouter:experimental__search_models",
-]);
-
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -47,9 +35,9 @@ function toolSelectsModel(tool: unknown): boolean {
   if (typeof tool.type === "string") {
     const type = tool.type.toLowerCase();
     if (type.startsWith("advisor_")) return true;
-    if (type.startsWith("openrouter:") && !ALLOWED_OPENROUTER_TOOL_TYPES.has(tool.type)) {
-      return true;
-    }
+    // Model-running and shared-state (bash, shell, apply_patch, files)
+    // OpenRouter server tools; see ALLOWED_OPENROUTER_TOOL_TYPES.
+    if (isDisallowedOpenRouterToolType(type)) return true;
   }
 
   return (
@@ -219,7 +207,7 @@ export async function validateAnthropicRequest(c: Context, next: Next) {
         return c.json(
           {
             error: {
-              message: `Tool at index ${index} is not supported: tools that select or run another model are not allowed`,
+              message: `Tool at index ${index} is not supported: tools that select or run another model, or use shared server-side storage, are not allowed`,
               type: "invalid_request_error",
               param: `tools[${index}]`,
               code: "invalid_tool",

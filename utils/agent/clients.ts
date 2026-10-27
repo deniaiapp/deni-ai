@@ -38,6 +38,11 @@ export function isOpenAIModel(model: string): boolean {
   return model.toLowerCase().startsWith('openai/');
 }
 
+/** True when getClient routes the model to OpenRouter (shared OPENROUTER_API_KEY). */
+export function isOpenRouterRoutedModel(model: string): boolean {
+  return !isOpenAIModel(model) && model.includes('/');
+}
+
 export function getClient(model: string): ClientResult {
   // OpenAI models (e.g. "openai/gpt-6-luna") go through Deni AI API
   if (isOpenAIModel(model)) {
@@ -49,9 +54,7 @@ export function getClient(model: string): ClientResult {
   }
 
   // Other models with a slash (e.g. "anthropic/claude-3.5-sonnet") go through OpenRouter
-  const useOpenRouter = model.includes('/');
-
-  if (useOpenRouter) {
+  if (isOpenRouterRoutedModel(model)) {
     if (!process.env.OPENROUTER_API_KEY) {
 
       return { error: 'OPENROUTER_API_KEY is required for OpenRouter models' };

@@ -1,25 +1,33 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import assert from "node:assert/strict";
+import { after, before, beforeEach, describe, mock, test } from "node:test";
 import { PGlite } from "@electric-sql/pglite";
 import type { Pool } from "pg";
-import * as database from "../utils/deni/db";
-import { reserveUsageQuota, settleUsageQuota } from "../utils/deni/usage";
-import { UsageEstimate } from "../utils/agent/usageEstimation";
-import { finalizeUsage, releaseReservedUsage } from "../utils/agent/usageAccounting";
 import type { AgentAuthContext } from "../middleware/validateAgentAuth";
-import * as authMiddleware from "../middleware/validateAgentAuth";
 import { Hono } from "hono";
+
+// Swap getDeniPool and validateAgentAuth for mocks before any module that
+// imports them is loaded.
+const database = await import("../utils/deni/db");
+const getDeniPool = mock.fn(database.getDeniPool);
+mock.module("../utils/deni/db", { exports: { ...database, getDeniPool } });
+const authMiddleware = await import("../middleware/validateAgentAuth");
+const validateAgentAuth = mock.fn(authMiddleware.validateAgentAuth);
+mock.module("../middleware/validateAgentAuth", {
+  exports: { ...authMiddleware, validateAgentAuth },
+});
+const { reserveUsageQuota, settleUsageQuota } = await import("../utils/deni/usage");
+const { UsageEstimate } = await import("../utils/agent/usageEstimation");
+const { finalizeUsage, releaseReservedUsage } = await import("../utils/agent/usageAccounting");
 
 // Executes production SQL in isolated PostgreSQL/WASM. No external DB or keys.
 const db = new PGlite();
-let poolSpy: ReturnType<typeof spyOn>;
-let authSpy: ReturnType<typeof spyOn>;
 let app: Hono;
 let activeAuth: AgentAuthContext;
-const oldAsync = Bun.env.FLIXA_USAGE_FINALIZE_ASYNC;
-const oldProviderKey = Bun.env.OPENROUTER_API_KEY;
-const oldDeniKey = Bun.env.DENI_AI_API_KEY;
+const oldAsync = process.env.FLIXA_USAGE_FINALIZE_ASYNC;
+const oldProviderKey = process.env.OPENROUTER_API_KEY;
+const oldDeniKey = process.env.DENI_AI_API_KEY;
 
-beforeAll(async () => {
+before(async () => {
   await db.exec(`CREATE TABLE usage_quota (
     user_id TEXT NOT NULL, category TEXT NOT NULL, plan_tier TEXT NOT NULL,
     limit_amount BIGINT, unit TEXT NOT NULL, used BIGINT NOT NULL,
@@ -37,35 +45,36 @@ beforeAll(async () => {
     "CREATE UNIQUE INDEX product_usage_user_period_idx ON product_usage (user_id, product, metric, unit, period_start)",
   );
   await db.exec("CREATE TABLE signup_risk (user_id TEXT PRIMARY KEY)");
-  poolSpy = spyOn(database, "getDeniPool").mockReturnValue({
+  const pool = {
     query: (sql: string, values: unknown[]) => db.query(sql, values),
-  } as unknown as Pool);
+  } as unknown as Pool;
+  getDeniPool.mock.mockImplementation(() => pool);
   await reserveUsageQuota("bootstrap", "premium", "free", false, 1);
-  authSpy = spyOn(authMiddleware, "validateAgentAuth").mockImplementation(async (c, next) => {
+  validateAgentAuth.mock.mockImplementation(async (c, next) => {
     activeAuth = await authContext();
     c.set("agentAuth", activeAuth);
     await next();
   });
   const { agentRouter } = await import("../routes/v1/agent");
   app = new Hono().route("/v1", agentRouter);
-}, 30_000);
+}, { timeout: 30_000 });
 
 beforeEach(async () => {
-  Bun.env.FLIXA_USAGE_FINALIZE_ASYNC = "false";
-  Bun.env.OPENROUTER_API_KEY = "local-test-key";
-  Bun.env.DENI_AI_API_KEY = "deni_local_test_key";
+  process.env.FLIXA_USAGE_FINALIZE_ASYNC = "false";
+  process.env.OPENROUTER_API_KEY = "local-test-key";
+  process.env.DENI_AI_API_KEY = "deni_local_test_key";
   await db.exec("TRUNCATE usage_quota, flixa_usage_reservation, product_usage");
 });
 
-afterAll(async () => {
-  poolSpy?.mockRestore();
-  authSpy?.mockRestore();
-  if (oldAsync === undefined) delete Bun.env.FLIXA_USAGE_FINALIZE_ASYNC;
-  else Bun.env.FLIXA_USAGE_FINALIZE_ASYNC = oldAsync;
-  if (oldProviderKey === undefined) delete Bun.env.OPENROUTER_API_KEY;
-  else Bun.env.OPENROUTER_API_KEY = oldProviderKey;
-  if (oldDeniKey === undefined) delete Bun.env.DENI_AI_API_KEY;
-  else Bun.env.DENI_AI_API_KEY = oldDeniKey;
+after(async () => {
+  getDeniPool.mock.restore();
+  validateAgentAuth.mock.restore();
+  if (oldAsync === undefined) delete process.env.FLIXA_USAGE_FINALIZE_ASYNC;
+  else process.env.FLIXA_USAGE_FINALIZE_ASYNC = oldAsync;
+  if (oldProviderKey === undefined) delete process.env.OPENROUTER_API_KEY;
+  else process.env.OPENROUTER_API_KEY = oldProviderKey;
+  if (oldDeniKey === undefined) delete process.env.DENI_AI_API_KEY;
+  else process.env.DENI_AI_API_KEY = oldDeniKey;
   await db.close();
 });
 
@@ -89,13 +98,13 @@ async function authContext(): Promise<AgentAuthContext> {
     false,
     estimate.reservationAmount,
   );
-  expect(result.allowed).toBe(true);
+  assert.equal(result.allowed, true);
   return {
     userId: "test-user",
     modelId: model,
     modelCategory: "premium",
     tier: "free",
-    usageUnit: "tokens",
+    usageUnit: "units",
     usageReserved: true,
     usageReservation: result.reservation,
     usageEstimate: estimate,
@@ -112,8 +121,8 @@ describe("atomic usage reservations", () => {
     const results = await Promise.all(
       Array.from({ length: 20 }, () => reserveUsageQuota("test-user", "premium", "free", false, 1)),
     );
-    expect(results.filter((r) => r.allowed)).toHaveLength(1);
-    expect(await used()).toBe(20_000_000);
+    assert.equal(results.filter((r) => r.allowed).length, 1);
+    assert.equal(await used(), 20_000_000);
   });
 
   test("concurrent first requests cannot exceed the quota", async () => {
@@ -122,8 +131,8 @@ describe("atomic usage reservations", () => {
         reserveUsageQuota("test-user", "premium", "free", false, 2_000_000),
       ),
     );
-    expect(results.filter((r) => r.allowed)).toHaveLength(10);
-    expect(await used()).toBe(20_000_000);
+    assert.equal(results.filter((r) => r.allowed).length, 10);
+    assert.equal(await used(), 20_000_000);
   });
 
   test("basic usage and Deni Run spend the same pool", async () => {
@@ -132,23 +141,29 @@ describe("atomic usage reservations", () => {
     await db.exec(`INSERT INTO product_usage (user_id, product, metric, unit, period_start, used)
       VALUES ('test-user', 'run', 'model', 'usd_micros',
         date_trunc('month', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC', 2500000)`);
-    expect((await reserveUsageQuota("test-user", "premium", "free", false, 5_000_001)).allowed).toBe(false);
-    expect((await reserveUsageQuota("test-user", "premium", "free", false, 5_000_000)).allowed).toBe(true);
+    assert.equal(
+      (await reserveUsageQuota("test-user", "premium", "free", false, 5_000_001)).allowed,
+      false,
+    );
+    assert.equal(
+      (await reserveUsageQuota("test-user", "premium", "free", false, 5_000_000)).allowed,
+      true,
+    );
   });
 
   test("settles differences exactly once, including duplicate concurrent retries", async () => {
     const { reservation } = await reserveUsageQuota("test-user", "premium", "free", false, 100);
     await Promise.all([settleUsageQuota(reservation!, 30), settleUsageQuota(reservation!, 30)]);
-    expect(await used()).toBe(30);
+    assert.equal(await used(), 30);
     const second = await reserveUsageQuota("test-user", "premium", "free", false, 100);
     await settleUsageQuota(second.reservation!, 200);
-    expect(await used()).toBe(230);
+    assert.equal(await used(), 230);
     // Flixa's share of the shared quota is recorded once per settled receipt.
-    const ledger = await db.query<{ product: string; metric: string; used: number }>(
-      "SELECT product, metric, used FROM product_usage WHERE user_id = 'test-user'",
+    const ledger = await db.query<{ product: string; metric: string; unit: string; used: number }>(
+      "SELECT product, metric, unit, used FROM product_usage WHERE user_id = 'test-user'",
     );
-    expect(ledger.rows.map((row) => ({ ...row, used: Number(row.used) }))).toEqual([
-      { product: "flixa", metric: "premium", used: 230 },
+    assert.deepEqual(ledger.rows.map((row) => ({ ...row, used: Number(row.used) })), [
+      { product: "flixa", metric: "premium", unit: "units", used: 230 },
     ]);
   });
 
@@ -156,7 +171,7 @@ describe("atomic usage reservations", () => {
     const auth = await authContext();
     await releaseReservedUsage(auth);
     await releaseReservedUsage(auth);
-    expect(await used()).toBe(0);
+    assert.equal(await used(), 0);
   });
 
   test("old receipts cannot subtract from a new month", async () => {
@@ -164,14 +179,28 @@ describe("atomic usage reservations", () => {
     await db.exec("UPDATE usage_quota SET period_end = '2000-01-01'");
     await reserveUsageQuota("test-user", "premium", "free", false, 80);
     await settleUsageQuota(old.reservation!, 0);
-    expect(await used()).toBe(80);
+    assert.equal(await used(), 80);
   });
 
   test("old receipts cannot subtract from a new tier", async () => {
     const old = await reserveUsageQuota("test-user", "premium", "free", false, 100);
     await reserveUsageQuota("test-user", "premium", "plus", false, 80);
     await settleUsageQuota(old.reservation!, 0);
-    expect(await used()).toBe(80);
+    assert.equal(await used(), 80);
+  });
+
+  test("a legacy-unit quota row is reset and stored in units", async () => {
+    await db.exec(`INSERT INTO usage_quota
+      (user_id, category, plan_tier, limit_amount, unit, used, period_start, period_end)
+      VALUES ('test-user', 'premium', 'free', 20000000, 'tokens', 19999999, NOW(), NOW() + INTERVAL '1 day')`);
+    const result = await reserveUsageQuota("test-user", "premium", "free", false, 80);
+    assert.equal(result.allowed, true);
+    assert.equal(result.unit, "units");
+    assert.equal(await used(), 80);
+    const row = await db.query<{ unit: string }>(
+      "SELECT unit FROM usage_quota WHERE user_id = 'test-user' AND category = 'premium'",
+    );
+    assert.equal(row.rows[0]?.unit, "units");
   });
 
   test("receipt creation failure rolls back the quota debit", async () => {
@@ -180,8 +209,8 @@ describe("atomic usage reservations", () => {
       "ALTER TABLE flixa_usage_reservation ADD CONSTRAINT test_fail CHECK (amount < 150)",
     );
     try {
-      await expect(reserveUsageQuota("test-user", "premium", "free", false, 200)).rejects.toThrow();
-      expect(await used()).toBe(100);
+      await assert.rejects(reserveUsageQuota("test-user", "premium", "free", false, 200));
+      assert.equal(await used(), 100);
     } finally {
       await db.exec("ALTER TABLE flixa_usage_reservation DROP CONSTRAINT test_fail");
     }
@@ -192,17 +221,19 @@ describe("stream accounting", () => {
   test("only forwarded output limits can reduce the reservation", () => {
     const model = "openai/gpt-5.6-luna";
     const body = { max_tokens: 1000, max_output_tokens: 1, max_completion_tokens: 1 };
-    expect(new UsageEstimate(body, model, "chat").reservationAmount).toBe(
+    assert.equal(
+      new UsageEstimate(body, model, "chat").reservationAmount,
       new UsageEstimate({ max_tokens: 1000 }, model).reservationAmount,
     );
-    expect(new UsageEstimate(body, model, "messages").reservationAmount).toBe(
+    assert.equal(
+      new UsageEstimate(body, model, "messages").reservationAmount,
       new UsageEstimate({ max_tokens: 1000 }, model).reservationAmount,
     );
-    expect(new UsageEstimate(body, model, "responses").reservationAmount).toBeLessThan(
-      new UsageEstimate(body, model, "chat").reservationAmount,
+    assert.ok(
+      new UsageEstimate(body, model, "responses").reservationAmount < new UsageEstimate(body, model, "chat").reservationAmount,
     );
-    expect(new UsageEstimate(body, model, "compact").reservationAmount).toBeGreaterThan(
-      new UsageEstimate(body, model, "chat").reservationAmount,
+    assert.ok(
+      new UsageEstimate(body, model, "compact").reservationAmount > new UsageEstimate(body, model, "chat").reservationAmount,
     );
   });
 
@@ -210,9 +241,9 @@ describe("stream accounting", () => {
     const auth = await authContext();
     auth.usageEstimate!.observe({ choices: [{ delta: { content: "abcdefgh" } }] });
     await finalizeUsage(auth, {}, false);
-    expect(await used()).toBe(auth.usageEstimate!.inputTokens + 2 * 5);
+    assert.equal(await used(), auth.usageEstimate!.inputTokens + 2 * 5);
     await releaseReservedUsage(auth);
-    expect(await used()).toBe(auth.usageEstimate!.inputTokens + 2 * 5);
+    assert.equal(await used(), auth.usageEstimate!.inputTokens + 2 * 5);
   });
 
   test("Anthropic interruption preserves cache reads and estimates partial output", async () => {
@@ -223,7 +254,7 @@ describe("stream accounting", () => {
       { input_tokens: 10, cache_read_input_tokens: 1000, output_tokens: 1 },
       false,
     );
-    expect(await used()).toBe(210);
+    assert.equal(await used(), 210);
   });
 
   test("actual completion usage wins over fallback estimates", async () => {
@@ -232,13 +263,13 @@ describe("stream accounting", () => {
     const usage = { prompt_tokens: 10, completion_tokens: 2 };
     auth.usageEstimate!.observe({ choices: [], usage });
     await finalizeUsage(auth, usage, false);
-    expect(await used()).toBe(20);
+    assert.equal(await used(), 20);
   });
 
   test("valid zero usage refunds the full hold", async () => {
     const auth = await authContext();
     await finalizeUsage(auth, { input_tokens: 0, output_tokens: 0 });
-    expect(await used()).toBe(0);
+    assert.equal(await used(), 0);
   });
 
   test("tracks tool arguments and reasoning without counting protocol bytes", () => {
@@ -249,16 +280,12 @@ describe("stream accounting", () => {
       choices: [{ delta: { tool_calls: [{ function: { arguments: "ijkl" } }] } }],
     });
     estimate.observe({ type: "response.created", response: { id: "ignored" } });
-    expect(estimate.outputTokens).toBe(3);
+    assert.equal(estimate.outputTokens, 3);
   });
 });
 
 function mockFetch(implementation: (...args: Parameters<typeof fetch>) => Promise<Response>) {
-  return spyOn(globalThis, "fetch").mockImplementation(
-    Object.assign(implementation, {
-      preconnect: globalThis.fetch.preconnect,
-    }),
-  );
+  return mock.method(globalThis, "fetch", implementation);
 }
 
 describe("Responses route streaming", () => {
@@ -289,15 +316,15 @@ describe("Responses route streaming", () => {
     });
     try {
       const response = await request();
-      expect(response.status).toBe(200);
+      assert.equal(response.status, 200);
       const reader = response.body!.getReader();
       const chunk = await reader.read();
-      expect(new TextDecoder().decode(chunk.value)).toContain("abcdefgh");
+      assert.ok(new TextDecoder().decode(chunk.value).includes("abcdefgh"));
       await reader.cancel();
-      expect(upstreamSignal?.aborted).toBe(true);
-      expect(await used()).toBe(activeAuth.usageEstimate!.inputTokens + 10);
+      assert.equal(upstreamSignal?.aborted, true);
+      assert.equal(await used(), activeAuth.usageEstimate!.inputTokens + 10);
     } finally {
-      fetchSpy.mockRestore();
+      fetchSpy.mock.restore();
     }
   });
 
@@ -320,14 +347,17 @@ describe("Responses route streaming", () => {
     );
     try {
       const response = await request();
-      expect(response.status).toBe(200);
+      assert.equal(response.status, 200);
       const reader = response.body!.getReader();
       await reader.read();
       controller!.error(new Error("local simulated upstream disconnect"));
-      await expect(reader.read()).rejects.toThrow("local simulated upstream disconnect");
-      expect(await used()).toBe(activeAuth.usageEstimate!.inputTokens + 10);
+      await assert.rejects(
+        reader.read(),
+        (error: unknown) => error instanceof Error && error.message.includes("local simulated upstream disconnect"),
+      );
+      assert.equal(await used(), activeAuth.usageEstimate!.inputTokens + 10);
     } finally {
-      fetchSpy.mockRestore();
+      fetchSpy.mock.restore();
     }
   });
 
@@ -351,11 +381,11 @@ describe("Responses route streaming", () => {
     );
     try {
       const response = await request();
-      expect(response.status).toBe(200);
-      expect(await response.text()).toContain("response.completed");
-      expect(await used()).toBe(38);
+      assert.equal(response.status, 200);
+      assert.ok((await response.text()).includes("response.completed"));
+      assert.equal(await used(), 38);
     } finally {
-      fetchSpy.mockRestore();
+      fetchSpy.mock.restore();
     }
   });
 
@@ -363,10 +393,10 @@ describe("Responses route streaming", () => {
     const fetchSpy = mockFetch(async () => new Response("upstream unavailable", { status: 503 }));
     try {
       const response = await request();
-      expect(response.status).toBe(503);
-      expect(await used()).toBe(0);
+      assert.equal(response.status, 503);
+      assert.equal(await used(), 0);
     } finally {
-      fetchSpy.mockRestore();
+      fetchSpy.mock.restore();
     }
   });
 });

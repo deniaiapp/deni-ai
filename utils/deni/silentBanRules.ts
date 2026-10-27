@@ -66,6 +66,8 @@ export type SilentBanHit = {
 
 export type SilentBanEvalResult =
   | { action: "none" }
+  // Rules or hit counters could not be read/written (DB error).
+  | { action: "error" }
   | {
       action: "counted";
       ruleId: string;
@@ -752,7 +754,9 @@ export async function resetSilentBanHits(options: {
  * - Matching rules increment a per-user hit counter.
  * - When any rule reaches `hitsBeforeBan`, the user is banned and `action: "banned"` is returned.
  * - Until then, the request is allowed through (`action: "counted"` or `"none"`).
- * - Fail-open on DB errors so a rules outage does not lock everyone out.
+ * - Fail-closed on DB errors (`action: "error"`): otherwise a DB outage, or a
+ *   flood that exhausts the pool, would let rule-matching clients through
+ *   uncounted. The caller rejects the request like any other auth DB error.
  */
 export async function evaluateSilentBanRules(
   userId: string,
@@ -812,7 +816,7 @@ export async function evaluateSilentBanRules(
 
     return lastCounted ?? { action: "none" };
   } catch (error) {
-    console.error("[SilentBan] evaluate failed (fail-open):", error);
-    return { action: "none" };
+    console.error("[SilentBan] evaluate failed (fail-closed):", error);
+    return { action: "error" };
   }
 }

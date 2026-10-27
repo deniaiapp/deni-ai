@@ -3,7 +3,8 @@ import type { DeniUsageInfo, BillingRow, UsageQuotaRow } from "./types";
 import type { ModelCategory } from "./models";
 
 export type UsageTier = "free" | "plus" | "pro" | "max";
-export type UsageUnit = "requests" | "tokens";
+/** The only quota unit: pool usage units (1M units = $0.50). */
+export type UsageUnit = "units";
 
 // Active billing statuses
 const ACTIVE_STATUSES = [
@@ -38,9 +39,7 @@ const USAGE_UNITS_PER_USD = 2_000_000;
 /** Deni Run's ledger (product_usage, product 'run') is in micro-dollars. */
 const USAGE_UNITS_PER_USD_MICRO = USAGE_UNITS_PER_USD / 1_000_000;
 
-export function getUsageUnitForTier(_tier: UsageTier): UsageUnit {
-  return "tokens";
-}
+export const USAGE_UNIT: UsageUnit = "units";
 
 function getPoolUnits(
   tier: UsageTier,
@@ -74,9 +73,9 @@ async function getPoolUsage(userId: string): Promise<PoolUsage> {
   }>(
     `SELECT
        COALESCE((SELECT SUM(used) FROM usage_quota WHERE user_id = $1 AND category = 'basic'
-         AND unit = 'tokens' AND period_end IS NOT NULL AND period_end > NOW()), 0) AS basic,
+         AND unit = 'units' AND period_end IS NOT NULL AND period_end > NOW()), 0) AS basic,
        COALESCE((SELECT SUM(used) FROM usage_quota WHERE user_id = $1 AND category = 'premium'
-         AND unit = 'tokens' AND period_end IS NOT NULL AND period_end > NOW()), 0) AS premium,
+         AND unit = 'units' AND period_end IS NOT NULL AND period_end > NOW()), 0) AS premium,
        COALESCE((SELECT SUM(used) FROM product_usage WHERE user_id = $1 AND product = 'run'
          AND unit = 'usd_micros'
          AND period_start = date_trunc('month', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'), 0)
@@ -136,12 +135,11 @@ function shouldResetUsageRow(
   quotaRow: Pick<UsageQuotaRow, "period_end" | "plan_tier" | "unit">,
   now: Date,
   tier: UsageTier,
-  unit: UsageUnit,
 ): boolean {
   const isPeriodExpired =
     quotaRow.period_end && new Date(quotaRow.period_end) <= now;
   const hasTierChanged = quotaRow.plan_tier !== tier;
-  const hasUnitChanged = quotaRow.unit !== unit;
+  const hasUnitChanged = quotaRow.unit !== USAGE_UNIT;
   return Boolean(isPeriodExpired || hasTierChanged || hasUnitChanged);
 }
 
@@ -361,19 +359,19 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
 
   const now = new Date();
   const defaultPeriodEnd = getNextMonthFirstDay().toISOString();
-  const unit = getUsageUnitForTier(tier);
+  const unit = USAGE_UNIT;
   const usage: DeniUsageInfo["usage"] = [];
 
   // Usage is not split by model class. Both entries report the one pool and its total
   // use; the "premium" entry is kept so older extension and CLI versions keep working.
   const quotaUsed = (category: ModelCategory) => {
     const row = usageResult.rows.find((r) => r.category === category);
-    return row && !shouldResetUsageRow(row, now, tier, unit) ? Number(row.used) : 0;
+    return row && !shouldResetUsageRow(row, now, tier) ? Number(row.used) : 0;
   };
   const totalUsed = quotaUsed("basic") + quotaUsed("premium") + poolUsage.run;
   for (const category of ["basic", "premium"] as const) {
     const quotaRow = usageResult.rows.find((r) => r.category === category);
-    const current = quotaRow && !shouldResetUsageRow(quotaRow, now, tier, unit);
+    const current = quotaRow && !shouldResetUsageRow(quotaRow, now, tier);
     usage.push({
       category,
       unit,
@@ -440,7 +438,7 @@ async function ensureReservationTable(): Promise<void> {
   await reservationTableReady;
 }
 
-/** Reserve estimated weighted tokens, including concurrent first requests.
+/** Reserve estimated usage units (weighted tokens), including concurrent first requests.
  * The quota update and receipt creation are one atomic PostgreSQL statement.
  */
 export async function reserveUsageQuota(
@@ -460,7 +458,7 @@ export async function reserveUsageQuota(
     throw new Error("Usage reservation must be a positive safe integer");
   }
   const limit = await getCategoryLimit(userId, category, tier, hasVerifiedPaymentMethod);
-  const unit = getUsageUnitForTier(tier);
+  const unit = USAGE_UNIT;
   if (amount > limit) return { allowed: false, remaining: limit, reserved: false, unit };
   await ensureReservationTable();
   const id = crypto.randomUUID();
@@ -523,12 +521,12 @@ export async function settleUsageQuota(
        FROM receipt
        WHERE q.user_id = $3 AND q.category = $4
          AND q.user_id::text = receipt.user_id AND q.category::text = receipt.category
-         AND q.plan_tier::text = receipt.plan_tier AND q.unit = 'tokens'
+         AND q.plan_tier::text = receipt.plan_tier AND q.unit = 'units'
          AND EXTRACT(EPOCH FROM q.period_start)::text = receipt.period_start
        RETURNING q.user_id
      )
      INSERT INTO product_usage (user_id, product, metric, unit, period_start, used)
-     SELECT receipt.user_id, 'flixa', receipt.category, 'tokens',
+     SELECT receipt.user_id, 'flixa', receipt.category, 'units',
             date_trunc('month', receipt.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',
             $2::bigint
      FROM receipt

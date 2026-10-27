@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 import {
   extractApiKey,
   extractApiKeyFromHeaders,
@@ -9,34 +10,32 @@ import {
 
 describe("extractApiKey", () => {
   test("prefers x-api-key over Authorization", () => {
-    expect(extractApiKey("Bearer ignored", "deni_from_header")).toBe(
-      "deni_from_header",
-    );
+    assert.equal(extractApiKey("Bearer ignored", "deni_from_header"), "deni_from_header");
   });
 
   test("reads Bearer tokens and ignores Basic", () => {
-    expect(extractApiKey("Bearer deni_abc", undefined)).toBe("deni_abc");
-    expect(extractApiKey("Bearer   deni_abc  ", undefined)).toBe("deni_abc");
-    expect(extractApiKey("bearer deni_abc", undefined)).toBe("deni_abc");
-    expect(extractApiKey("deni_raw_without_scheme", undefined)).toBe(
-      "deni_raw_without_scheme",
-    );
-    expect(extractApiKey("Basic dXNlcjpwYXNz", undefined)).toBeNull();
-    expect(extractApiKey("Bearer ", undefined)).toBeNull();
-    expect(extractApiKey(undefined, undefined)).toBeNull();
+    assert.equal(extractApiKey("Bearer deni_abc", undefined), "deni_abc");
+    assert.equal(extractApiKey("Bearer   deni_abc  ", undefined), "deni_abc");
+    assert.equal(extractApiKey("bearer deni_abc", undefined), "deni_abc");
+    assert.equal(extractApiKey("deni_raw_without_scheme", undefined), "deni_raw_without_scheme");
+    assert.equal(extractApiKey("Basic dXNlcjpwYXNz", undefined), null);
+    assert.equal(extractApiKey("Bearer ", undefined), null);
+    assert.equal(extractApiKey(undefined, undefined), null);
   });
 });
 
 describe("extractApiKeyFromHeaders", () => {
   test("reads api-key and x-openai-api-key when Authorization is missing", () => {
-    expect(
+    assert.equal(
       extractApiKeyFromHeaders(new Headers({ "api-key": "deni_from_api_key" })),
-    ).toBe("deni_from_api_key");
-    expect(
+      "deni_from_api_key",
+    );
+    assert.equal(
       extractApiKeyFromHeaders(
         new Headers({ "x-openai-api-key": "deni_from_openai" }),
       ),
-    ).toBe("deni_from_openai");
+      "deni_from_openai",
+    );
   });
 });
 
@@ -46,40 +45,36 @@ describe("summarizeRequestAuth", () => {
     const summary = summarizeRequestAuth(
       new Headers({ Authorization: `Bearer ${raw}` }),
     );
-    expect(summary).toEqual({
+    assert.deepEqual(summary, {
       hasAuthorization: true,
       authorizationScheme: "Bearer",
       hasXApiKey: false,
       hasApiKey: false,
       hasOpenaiApiKey: false,
     });
-    expect(JSON.stringify(summary)).not.toContain(raw);
+    assert.ok(!JSON.stringify(summary).includes(raw));
   });
 });
 
 describe("redactApiKey", () => {
   test("returns a prefix…suffix fingerprint and never the full secret", () => {
     const raw = "deni_abcdefghijklmnopqrstuvwxyz012345";
-    expect(redactApiKey(raw)).toBe("deni_abc…2345");
-    expect(redactApiKey(raw)?.includes("defghijklmnopqrstuvwxyz01")).toBe(
-      false,
-    );
+    assert.equal(redactApiKey(raw), "deni_abc…2345");
+    assert.equal(redactApiKey(raw)?.includes("defghijklmnopqrstuvwxyz01"), false);
   });
 
   test("short or missing keys stay unusable", () => {
-    expect(redactApiKey(null)).toBeNull();
-    expect(redactApiKey("")).toBeNull();
-    expect(redactApiKey("shortkey")).toBe("shor…");
+    assert.equal(redactApiKey(null), null);
+    assert.equal(redactApiKey(""), null);
+    assert.equal(redactApiKey("shortkey"), "shor…");
   });
 });
 
 describe("redactApiKeyFromHeaders", () => {
   test("redacts Bearer and x-api-key the same way", () => {
     const raw = "deni_abcdefghijklmnopqrstuvwxyz012345";
-    expect(redactApiKeyFromHeaders(`Bearer ${raw}`, undefined)).toBe(
-      "deni_abc…2345",
-    );
-    expect(redactApiKeyFromHeaders(undefined, raw)).toBe("deni_abc…2345");
-    expect(redactApiKeyFromHeaders("Basic dXNlcjpwYXNz", undefined)).toBeNull();
+    assert.equal(redactApiKeyFromHeaders(`Bearer ${raw}`, undefined), "deni_abc…2345");
+    assert.equal(redactApiKeyFromHeaders(undefined, raw), "deni_abc…2345");
+    assert.equal(redactApiKeyFromHeaders("Basic dXNlcjpwYXNz", undefined), null);
   });
 });

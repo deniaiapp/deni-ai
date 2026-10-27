@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 import {
   getFunctionToolName,
   modelReservesCollaborationTools,
@@ -15,17 +16,17 @@ import {
 
 describe("reserved collaboration tools", () => {
   test("detects GPT-5 family models that reserve collaboration tools", () => {
-    expect(modelReservesCollaborationTools("openai/gpt-5.6-sol")).toBe(true);
-    expect(modelReservesCollaborationTools("openai/gpt-5.6-terra")).toBe(true);
-    expect(modelReservesCollaborationTools("openai/gpt-5.6-luna")).toBe(true);
-    expect(modelReservesCollaborationTools("gpt-5-6-terra")).toBe(true);
-    expect(modelReservesCollaborationTools("openai/gpt-5.5")).toBe(true);
-    expect(modelReservesCollaborationTools("openai/gpt-5.4")).toBe(true);
-    expect(modelReservesCollaborationTools("openai/gpt-5.3-codex")).toBe(true);
-    expect(modelReservesCollaborationTools("gpt-5.2")).toBe(true);
-    expect(modelReservesCollaborationTools("openai/gpt-6-astra")).toBe(true);
-    expect(modelReservesCollaborationTools("anthropic/claude-sonnet-4.6")).toBe(false);
-    expect(modelReservesCollaborationTools("openai/gpt-4.1")).toBe(false);
+    assert.equal(modelReservesCollaborationTools("openai/gpt-5.6-sol"), true);
+    assert.equal(modelReservesCollaborationTools("openai/gpt-5.6-terra"), true);
+    assert.equal(modelReservesCollaborationTools("openai/gpt-5.6-luna"), true);
+    assert.equal(modelReservesCollaborationTools("gpt-5-6-terra"), true);
+    assert.equal(modelReservesCollaborationTools("openai/gpt-5.5"), true);
+    assert.equal(modelReservesCollaborationTools("openai/gpt-5.4"), true);
+    assert.equal(modelReservesCollaborationTools("openai/gpt-5.3-codex"), true);
+    assert.equal(modelReservesCollaborationTools("gpt-5.2"), true);
+    assert.equal(modelReservesCollaborationTools("openai/gpt-6-astra"), true);
+    assert.equal(modelReservesCollaborationTools("anthropic/claude-sonnet-4.6"), false);
+    assert.equal(modelReservesCollaborationTools("openai/gpt-4.1"), false);
   });
 
   test("rewrites reserved tools for Terra, Luna, and GPT-5.5", () => {
@@ -52,10 +53,11 @@ describe("reserved collaboration tools", () => {
       };
 
       sanitizeReservedCollaborationInResponsesRequest(request);
-      expect(getFunctionToolName((request.tools as unknown[])[0])).toBe(
+      assert.equal(
+        getFunctionToolName((request.tools as unknown[])[0]),
         `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
       );
-      expect(JSON.stringify(request)).not.toContain("collaboration.spawn_agent");
+      assert.ok(!JSON.stringify(request).includes("collaboration.spawn_agent"));
     }
   });
 
@@ -85,18 +87,20 @@ describe("reserved collaboration tools", () => {
 
     const stats = sanitizeReservedCollaborationInResponsesRequest(request);
 
-    expect(stats.toolsRewritten).toBe(2);
-    expect(getFunctionToolName((request.tools as unknown[])[0])).toBe(
+    assert.equal(stats.toolsRewritten, 2);
+    assert.equal(
+      getFunctionToolName((request.tools as unknown[])[0]),
       `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
     );
-    expect(getFunctionToolName((request.tools as unknown[])[1])).toBe(
+    assert.equal(
+      getFunctionToolName((request.tools as unknown[])[1]),
       `${SAFE_COLLABORATION_PREFIX}wait_agent`,
     );
-    expect(request.tool_choice).toEqual({
+    assert.deepEqual(request.tool_choice, {
       type: "function",
       function: { name: `${SAFE_COLLABORATION_PREFIX}spawn_agent` },
     });
-    expect(JSON.stringify(request)).not.toContain("collaboration.spawn_agent");
+    assert.ok(!JSON.stringify(request).includes("collaboration.spawn_agent"));
   });
 
   test("rewrites function-call history and reverses response names", () => {
@@ -119,8 +123,8 @@ describe("reserved collaboration tools", () => {
     ];
 
     const rewritten = rewriteCollaborationNamesInInput(history);
-    expect(rewritten.rewritten).toBe(2);
-    expect(JSON.stringify(rewritten.input)).not.toContain("collaboration.");
+    assert.equal(rewritten.rewritten, 2);
+    assert.ok(!JSON.stringify(rewritten.input).includes("collaboration."));
 
     const response = rewriteCollaborationNamesInResponsesPayload({
       output: [
@@ -130,7 +134,7 @@ describe("reserved collaboration tools", () => {
         },
       ],
     }) as { output: Array<{ name: string }> };
-    expect(response.output[0].name).toBe("collaboration.spawn_agent");
+    assert.equal(response.output[0].name, "collaboration.spawn_agent");
 
     const chat = rewriteCollaborationNamesInChatPayload({
       choices: [
@@ -151,7 +155,7 @@ describe("reserved collaboration tools", () => {
         message: { tool_calls: Array<{ function: { name: string } }> };
       }>;
     };
-    expect(chat.choices[0].message.tool_calls[0].function.name).toBe("collaboration.wait_agent");
+    assert.equal(chat.choices[0].message.tool_calls[0].function.name, "collaboration.wait_agent");
   });
 
   test("rewrites streamed response event blocks", () => {
@@ -162,13 +166,15 @@ describe("reserved collaboration tools", () => {
       },
     })}`;
 
-    expect(rewriteCollaborationNamesInSseEventBlock(event)).toContain("collaboration.spawn_agent");
+    assert.ok(
+      rewriteCollaborationNamesInSseEventBlock(event).includes("collaboration.spawn_agent"),
+    );
   });
 
   test("mapping is idempotent and reversible", () => {
     const outbound = rewriteCollaborationNameOutbound("collaboration.spawn_agent");
-    expect(rewriteCollaborationNameOutbound(outbound)).toBe(outbound);
-    expect(rewriteCollaborationNameInbound(outbound)).toBe("collaboration.spawn_agent");
+    assert.equal(rewriteCollaborationNameOutbound(outbound), outbound);
+    assert.equal(rewriteCollaborationNameInbound(outbound), "collaboration.spawn_agent");
   });
 
   test("flattens Codex collaboration namespace tools into safe functions", () => {
@@ -204,8 +210,8 @@ describe("reserved collaboration tools", () => {
 
     const stats = sanitizeReservedCollaborationInResponsesRequest(request);
 
-    expect(stats.toolsRewritten).toBe(2);
-    expect(request.tools).toEqual([
+    assert.equal(stats.toolsRewritten, 2);
+    assert.deepEqual(request.tools, [
       {
         type: "function",
         name: `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
@@ -225,8 +231,8 @@ describe("reserved collaboration tools", () => {
       },
       { type: "function", name: "read_file" },
     ]);
-    expect(JSON.stringify(request)).not.toContain("collaboration.spawn_agent");
-    expect(JSON.stringify(request.tools)).not.toContain('"collaboration"');
+    assert.ok(!JSON.stringify(request).includes("collaboration.spawn_agent"));
+    assert.ok(!JSON.stringify(request.tools).includes('"collaboration"'));
   });
 
   test("rewrites both top-level and nested function names", () => {
@@ -246,8 +252,9 @@ describe("reserved collaboration tools", () => {
     sanitizeReservedCollaborationInResponsesRequest(request);
 
     const tool = (request.tools as Array<Record<string, unknown>>)[0];
-    expect(tool.name).toBe(`${SAFE_COLLABORATION_PREFIX}spawn_agent`);
-    expect((tool.function as { name: string }).name).toBe(
+    assert.equal(tool.name, `${SAFE_COLLABORATION_PREFIX}spawn_agent`);
+    assert.equal(
+      (tool.function as { name: string }).name,
       `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
     );
   });
@@ -267,7 +274,7 @@ describe("reserved collaboration tools", () => {
 
     sanitizeReservedCollaborationInResponsesRequest(request);
 
-    expect(request.tools).toEqual([
+    assert.deepEqual(request.tools, [
       {
         type: "function",
         name: `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
@@ -289,29 +296,28 @@ describe("reserved collaboration tools", () => {
       ],
     }) as { output: Array<{ name: string }> };
 
-    expect(response.output[0].name).toBe("collaboration.spawn_agent");
+    assert.equal(response.output[0].name, "collaboration.spawn_agent");
   });
 
   test("restores separatorless names from older proxy deployments", () => {
     const legacyName = "flixa_collabspawn_agent";
 
-    expect(rewriteCollaborationNameInbound(legacyName)).toBe(
-      "collaboration.spawn_agent",
-    );
-    expect(rewriteCollaborationNameOutbound(legacyName)).toBe(
+    assert.equal(rewriteCollaborationNameInbound(legacyName), "collaboration.spawn_agent");
+    assert.equal(
+      rewriteCollaborationNameOutbound(legacyName),
       `${SAFE_COLLABORATION_PREFIX}spawn_agent`,
     );
 
     const response = rewriteCollaborationNamesInResponsesPayload({
       output: [{ type: "function_call", name: legacyName }],
     }) as { output: Array<{ name: string }> };
-    expect(response.output[0].name).toBe("collaboration.spawn_agent");
+    assert.equal(response.output[0].name, "collaboration.spawn_agent");
 
     const event = `data: ${JSON.stringify({
       item: { type: "function_call", name: legacyName },
     })}`;
-    expect(rewriteCollaborationNamesInSseEventBlock(event)).toContain(
-      "collaboration.spawn_agent",
+    assert.ok(
+      rewriteCollaborationNamesInSseEventBlock(event).includes("collaboration.spawn_agent"),
     );
   });
 
@@ -328,7 +334,7 @@ describe("reserved collaboration tools", () => {
       output: Array<{ type: string; namespace: string; name: string }>;
     };
 
-    expect(response.output[0]).toEqual({
+    assert.deepEqual(response.output[0], {
       type: "function_call",
       namespace: "collaboration",
       name: "spawn_agent",
@@ -341,7 +347,7 @@ describe("reserved collaboration tools", () => {
         name: "spawn_agent",
       },
     ]);
-    expect(request.input).toEqual([
+    assert.deepEqual(request.input, [
       {
         type: "function_call",
         namespace: SAFE_COLLABORATION_NAMESPACE,

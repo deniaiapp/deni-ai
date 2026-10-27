@@ -8,23 +8,94 @@ export type ApiKeyValidationResult =
 export const GUEST_ACCOUNT_ERROR_MESSAGE =
   'Guest accounts are not supported. Please sign in with a permanent account.';
 
-function getCacheTtlMs(): number {
-  const raw = process.env.FLIXA_AUTH_CACHE_TTL_MS;
-  if (!raw) return 60_000;
+function getNonNegativeIntEnv(envKey: string, fallback: number): number {
+  const raw = process.env[envKey];
+  if (!raw) return fallback;
   const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 60_000;
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
 }
 
-const AUTH_CACHE_TTL_MS = getCacheTtlMs();
+const AUTH_CACHE_TTL_MS = getNonNegativeIntEnv('FLIXA_AUTH_CACHE_TTL_MS', 60_000);
+const AUTH_NEGATIVE_CACHE_TTL_MS = getNonNegativeIntEnv(
+  'FLIXA_AUTH_NEGATIVE_CACHE_TTL_MS',
+  30_000,
+);
 const AUTH_CACHE_MAX_ENTRIES = 10_000;
 const LAST_USED_UPDATE_INTERVAL_MS = 5 * 60_000;
+// Keys are short opaque tokens; anything longer is never hashed or queried.
+const MAX_API_KEY_LENGTH = 256;
 
 // Short-TTL cache of successful key validations. Saves one SELECT (+ JOIN)
-// per request on hot keys. Only valid results are cached so revocations take
-// effect within AUTH_CACHE_TTL_MS and invalid-key spam cannot grow the map.
+// per request on hot keys, so revocations take effect within AUTH_CACHE_TTL_MS.
 const keyValidationCache = new Map<string, { userId: string; expiresAt: number }>();
+// Short-TTL cache of "not found" / "expired" answers, so replaying a bad key
+// does not hit the DB each time. Bounded like keyValidationCache. DB errors
+// and guest accounts (which may upgrade) are not cached.
+type CachedInvalidResult = Extract<ApiKeyValidationResult, { valid: false }>;
+const invalidKeyCache = new Map<string, { result: CachedInvalidResult; expiresAt: number }>();
 const keyValidationInFlight = new Map<string, Promise<ApiKeyValidationResult>>();
 const lastUsedWriteAt = new Map<string, number>();
+
+// Uncached key lookups may hold at most this many pool connections (pool max
+// defaults to 10), so a flood of distinct bad keys cannot starve usage, ban
+// and other queries. Extra lookups wait in a bounded queue, then get db_error.
+const MAX_CONCURRENT_KEY_LOOKUPS = Math.max(
+  1,
+  getNonNegativeIntEnv('FLIXA_AUTH_MAX_CONCURRENT_LOOKUPS', 8),
+);
+const MAX_QUEUED_KEY_LOOKUPS = getNonNegativeIntEnv('FLIXA_AUTH_MAX_QUEUED_LOOKUPS', 64);
+let activeKeyLookups = 0;
+const queuedKeyLookups: Array<() => void> = [];
+
+/** Wait for a lookup slot; false when the queue is full. */
+async function acquireKeyLookupSlot(): Promise<boolean> {
+  if (activeKeyLookups < MAX_CONCURRENT_KEY_LOOKUPS) {
+    activeKeyLookups += 1;
+    return true;
+  }
+
+  if (queuedKeyLookups.length >= MAX_QUEUED_KEY_LOOKUPS) {
+    return false;
+  }
+
+  // releaseKeyLookupSlot hands its slot straight to the next waiter.
+  await new Promise<void>((resolve) => queuedKeyLookups.push(resolve));
+  return true;
+}
+
+function releaseKeyLookupSlot(): void {
+  const next = queuedKeyLookups.shift();
+  if (next) {
+    next();
+    return;
+  }
+  activeKeyLookups -= 1;
+}
+
+function cacheInvalidKey(keyHash: string, result: CachedInvalidResult): void {
+  if (AUTH_NEGATIVE_CACHE_TTL_MS <= 0) return;
+
+  if (invalidKeyCache.size >= AUTH_CACHE_MAX_ENTRIES) {
+    invalidKeyCache.clear();
+  }
+
+  invalidKeyCache.set(keyHash, {
+    result,
+    expiresAt: Date.now() + AUTH_NEGATIVE_CACHE_TTL_MS,
+  });
+}
+
+function getCachedInvalidKey(keyHash: string): CachedInvalidResult | null {
+  const entry = invalidKeyCache.get(keyHash);
+  if (!entry) return null;
+
+  if (entry.expiresAt <= Date.now()) {
+    invalidKeyCache.delete(keyHash);
+    return null;
+  }
+
+  return entry.result;
+}
 
 function cacheValidKey(keyHash: string, userId: string): void {
   if (AUTH_CACHE_TTL_MS <= 0) return;
@@ -58,6 +129,7 @@ function getCachedValidKey(keyHash: string): string | null {
 export function invalidateUserAuthCache(userId?: string): void {
   if (!userId) {
     keyValidationCache.clear();
+    invalidKeyCache.clear();
     lastUsedWriteAt.clear();
     return;
   }
@@ -213,7 +285,7 @@ export function hashApiKey(rawKey: string): string {
  * Validate a Deni API key and return the associated user ID
  */
 export async function validateDeniApiKey(rawKey: string): Promise<ApiKeyValidationResult> {
-  if (!rawKey.startsWith('deni_')) {
+  if (!rawKey.startsWith('deni_') || rawKey.length > MAX_API_KEY_LENGTH) {
     return { valid: false, error: 'Invalid API key format', code: 'invalid_key' };
   }
 
@@ -225,13 +297,22 @@ export async function validateDeniApiKey(rawKey: string): Promise<ApiKeyValidati
     return { valid: true, userId: cachedUserId };
   }
 
+  const cachedInvalid = getCachedInvalidKey(keyHash);
+  if (cachedInvalid !== null) {
+    return cachedInvalid;
+  }
+
   const existing = keyValidationInFlight.get(keyHash);
   if (existing) return existing;
 
   const validation = (async (): Promise<ApiKeyValidationResult> => {
-    const pool = getDeniPool();
+    if (!(await acquireKeyLookupSlot())) {
+      console.error('API key validation error: too many concurrent lookups');
+      return { valid: false, error: 'Database error during validation', code: 'db_error' };
+    }
 
     try {
+      const pool = getDeniPool();
       const result = await pool.query<{
         user_id: string;
         expires_at: Date | null;
@@ -245,7 +326,13 @@ export async function validateDeniApiKey(rawKey: string): Promise<ApiKeyValidati
       );
 
       if (result.rows.length === 0) {
-        return { valid: false, error: 'API key not found', code: 'invalid_key' };
+        const notFound: CachedInvalidResult = {
+          valid: false,
+          error: 'API key not found',
+          code: 'invalid_key',
+        };
+        cacheInvalidKey(keyHash, notFound);
+        return notFound;
       }
 
       const { user_id, expires_at, is_anonymous } = result.rows[0];
@@ -256,7 +343,13 @@ export async function validateDeniApiKey(rawKey: string): Promise<ApiKeyValidati
 
       // Check expiration
       if (expires_at && new Date(expires_at) < new Date()) {
-        return { valid: false, error: 'API key has expired', code: 'expired_key' };
+        const expired: CachedInvalidResult = {
+          valid: false,
+          error: 'API key has expired',
+          code: 'expired_key',
+        };
+        cacheInvalidKey(keyHash, expired);
+        return expired;
       }
 
       // Cache only until shortly before expiration so an expiring key is not
@@ -274,6 +367,8 @@ export async function validateDeniApiKey(rawKey: string): Promise<ApiKeyValidati
     } catch (error) {
       console.error('API key validation error:', error);
       return { valid: false, error: 'Database error during validation', code: 'db_error' };
+    } finally {
+      releaseKeyLookupSlot();
     }
   })();
 

@@ -4,6 +4,7 @@ import {
   getDeniUsageInfo,
   getUpgradeUrl,
   getVerifyUrl,
+  USAGE_UNIT,
   validateDeniApiKey,
 } from '../../utils/deni';
 import { isAuthDisabledMode } from '../../utils/authMode';
@@ -26,7 +27,7 @@ function getAuthDisabledUsageInfo() {
     maxModeEligible: true,
     usage: (['basic', 'premium'] as const).map((category) => ({
       category,
-      unit: 'tokens' as const,
+      unit: USAGE_UNIT,
       limit: null,
       used: 0,
       remaining: null,

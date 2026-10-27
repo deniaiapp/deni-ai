@@ -9,9 +9,9 @@ const DEFAULT_REASON = "manual";
 
 function printUsage(): void {
   console.log(`Usage:
-  bun run tools/ban-flixa-user.ts --email <email> [--reason <reason>]
-  bun run tools/ban-flixa-user.ts --user-id <userId> [--reason <reason>]
-  bun run tools:ban-flixa-user -- --email <email> [--reason <reason>]
+  pnpm exec tsx tools/ban-flixa-user.ts --email <email> [--reason <reason>]
+  pnpm exec tsx tools/ban-flixa-user.ts --user-id <userId> [--reason <reason>]
+  pnpm run tools:ban-flixa-user -- --email <email> [--reason <reason>]
 
 Manually bans a Deni AI user from Flixa and revokes all of their API keys.
 Default reason is "${DEFAULT_REASON}".
@@ -91,7 +91,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 }
 
 async function main(): Promise<void> {
-  const rawArgs = Bun.argv.slice(2);
+  const rawArgs = process.argv.slice(2);
   const parsed = parseArgs(rawArgs);
   if (!parsed.ok) {
     printUsage();

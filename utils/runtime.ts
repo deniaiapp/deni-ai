@@ -3,7 +3,7 @@ import type { Pool } from "pg";
 
 /**
  * Per-request runtime hooks. Only populated on Cloudflare Workers (see
- * worker.ts); on Bun every helper falls back to process-wide behaviour.
+ * worker.ts); on Node every helper falls back to process-wide behaviour.
  */
 export type RequestRuntime = {
   waitUntil(promise: Promise<unknown>): void;
@@ -21,7 +21,7 @@ export function getRequestRuntime(): RequestRuntime | undefined {
   return requestRuntime.getStore();
 }
 
-/** Keep background work alive after the response (Workers) or just let it run (Bun). */
+/** Keep background work alive after the response (Workers) or just let it run (Node). */
 export function keepAlive(promise: Promise<unknown>): void {
   requestRuntime.getStore()?.waitUntil(promise.catch(() => {}));
 }

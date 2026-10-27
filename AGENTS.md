@@ -1,17 +1,18 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`app.ts` builds the Hono app (middleware plus the `/v1` routers). `server.ts` is the Bun entrypoint and `worker.ts` the Cloudflare Workers entrypoint; both only wrap `app.ts`. Read config via `process.env` (never `Bun.env`) so code runs on both runtimes. Route handlers live in `routes/v1/` (`agent.ts`, `deni.ts`, `models.ts`). Shared request guards live in `middleware/`. Domain logic is grouped under `utils/`: `utils/agent/` for model routing and upstream clients, `utils/deni/` for auth, billing, usage, and DB access, and `utils/flixa-sdk.ts` for the local client.
+`app.ts` builds the Hono app (middleware plus the `/v1` routers). `server.ts` is the Node.js entrypoint (`@hono/node-server`) and `worker.ts` the Cloudflare Workers entrypoint; both only wrap `app.ts`. Read config via `process.env` so code runs on both runtimes. Route handlers live in `routes/v1/` (`agent.ts`, `deni.ts`, `models.ts`). Shared request guards live in `middleware/`. Domain logic is grouped under `utils/`: `utils/agent/` for model routing and upstream clients, `utils/deni/` for auth, billing, usage, and DB access, and `utils/flixa-sdk.ts` for the local client.
 
 There is no dedicated `src/` folder; keep new modules close to the feature they support. Follow the existing split: route layer in `routes/`, reusable logic in `utils/`, cross-cutting concerns in `middleware/`.
 
 ## Build, Test, and Development Commands
-Install dependencies with `pnpm install`.
+Requires Node.js 26+ and pnpm. Install dependencies with `pnpm install`. TypeScript runs directly through `tsx`; `.env` is loaded if present.
 
-- `bun run server.ts` or `pnpm start`: start the API locally.
-- `bun --watch server.ts` or `pnpm dev`: start with auto-reload.
-- `bun --env-file=.env.production --watch server.ts`: run against production-style env vars.
-- `bun build server.ts --outdir ./dist --target bun`: create a build output in `dist/`.
+- `pnpm start`: start the API locally (`tsx server.ts`).
+- `pnpm dev`: start with auto-reload (`tsx watch`).
+- `pnpm run dev:prod-env`: run against `.env.production` env vars.
+- `pnpm run build`: bundle `server.ts` with esbuild into `dist/server.js` (run it with `pnpm run start:dist`).
+- `pnpm test`: run the test suite (`node:test` via `tsx --test`).
 - `pnpm run typecheck`: run TypeScript checks with `tsc --noEmit`.
 - `pnpm run dev:worker` / `pnpm run deploy:worker`: run on local workerd / deploy to Cloudflare Workers (`wrangler.toml`). DB goes through the `DENI_DB` Hyperdrive binding; secrets via `pnpm exec wrangler secret put <NAME>`.
 - `pnpm exec oxlint .` and `pnpm exec oxfmt . --check`: optional lint/format validation using installed tools.
@@ -26,7 +27,7 @@ Use TypeScript and keep modules small and single-purpose. Match the surrounding 
 Prefer explicit return types on exported functions and keep API error payloads consistent with current Hono handlers.
 
 ## Testing Guidelines
-There is no automated test suite configured yet. At minimum, run `pnpm run typecheck` before opening a PR. For endpoint changes, verify manually with `curl` or a REST client against `/health`, `/v1/agent/chat/completions`, or the affected `/v1/deni/*` route.
+Tests live in `tests/*.test.ts` and use `node:test` with `node:assert/strict`; run them with `pnpm test`. Module-level mocks use `mock.module()` (enabled by `--experimental-test-module-mocks` in the test script). At minimum, run `pnpm run typecheck` and `pnpm test` before opening a PR. For endpoint changes, verify manually with `curl` or a REST client against `/health`, `/v1/agent/chat/completions`, or the affected `/v1/deni/*` route.
 
 If you add tests, place them near the feature or under a top-level `tests/` directory and use descriptive names such as `deni-usage.test.ts`.
 

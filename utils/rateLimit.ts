@@ -1,7 +1,7 @@
 /**
  * Fixed-window rate limiter.
  *
- * - Bun / single process: process-local in-memory buckets (`consumeRateLimit`).
+ * - Node / single process: process-local in-memory buckets (`consumeRateLimit`).
  * - Cloudflare Workers: when `configureDurableRateLimit(namespace)` has been
  *   called, `consumeRateLimitAsync` routes each `${scope}:${key}` to its own
  *   Durable Object (`RateLimiterDO`) so limits hold across isolates.

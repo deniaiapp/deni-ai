@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { afterEach, beforeEach, describe, test } from "node:test";
 import {
   createAdminSessionToken,
   verifyAdminSessionToken,
@@ -8,17 +9,17 @@ const PASSWORD = "test-password-not-a-secret";
 const SECRET = "test-session-secret-0123456789abcdef-not-real";
 
 const keys = ["ADMIN_PASSWORD", "ADMIN_SESSION_SECRET"] as const;
-const original = Object.fromEntries(keys.map((key) => [key, Bun.env[key]]));
+const original = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
 
 beforeEach(() => {
-  Bun.env.ADMIN_PASSWORD = PASSWORD;
-  delete Bun.env.ADMIN_SESSION_SECRET;
+  process.env.ADMIN_PASSWORD = PASSWORD;
+  delete process.env.ADMIN_SESSION_SECRET;
 });
 
 afterEach(() => {
   for (const [key, value] of Object.entries(original)) {
-    if (value === undefined) delete Bun.env[key];
-    else Bun.env[key] = value;
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
   }
 });
 
@@ -89,74 +90,75 @@ function futureExp(): number {
 describe("admin session signing key without ADMIN_SESSION_SECRET", () => {
   test("issued tokens verify and are signed with a PBKDF2-derived key", async () => {
     const token = await createAdminSessionToken();
-    expect(await verifyAdminSessionToken(token)).toBe(true);
+    assert.equal(await verifyAdminSessionToken(token), true);
 
     const payload = token.split(".").slice(0, 3).join(".");
-    expect(token).toBe(await signWith(await pbkdf2Key(PASSWORD), payload));
-    expect(token).not.toBe(await signWith(rawPasswordKey(PASSWORD), payload));
+    assert.equal(token, await signWith(await pbkdf2Key(PASSWORD), payload));
+    assert.notEqual(token, await signWith(rawPasswordKey(PASSWORD), payload));
   });
 
   test("tokens signed with the raw password key are rejected", async () => {
     const exp = futureExp();
     const key = rawPasswordKey(PASSWORD);
-    expect(
+    assert.equal(
       await verifyAdminSessionToken(await signWith(key, `v2.${exp}.0123456789abcdef`)),
-    ).toBe(false);
-    expect(await verifyAdminSessionToken(await signWith(key, `v1.${exp}`))).toBe(false);
+      false,
+    );
+    assert.equal(await verifyAdminSessionToken(await signWith(key, `v1.${exp}`)), false);
   });
 
   test("legacy v1 tokens signed with the current key still verify", async () => {
     const token = await signWith(await pbkdf2Key(PASSWORD), `v1.${futureExp()}`);
-    expect(await verifyAdminSessionToken(token)).toBe(true);
+    assert.equal(await verifyAdminSessionToken(token), true);
   });
 
   test("changing ADMIN_PASSWORD invalidates existing sessions", async () => {
     const token = await createAdminSessionToken();
-    Bun.env.ADMIN_PASSWORD = `${PASSWORD}-rotated`;
-    expect(await verifyAdminSessionToken(token)).toBe(false);
-    Bun.env.ADMIN_PASSWORD = PASSWORD;
-    expect(await verifyAdminSessionToken(token)).toBe(true);
+    process.env.ADMIN_PASSWORD = `${PASSWORD}-rotated`;
+    assert.equal(await verifyAdminSessionToken(token), false);
+    process.env.ADMIN_PASSWORD = PASSWORD;
+    assert.equal(await verifyAdminSessionToken(token), true);
   });
 });
 
 describe("admin session signing key with ADMIN_SESSION_SECRET", () => {
   test("issued tokens verify and are keyed by the secret", async () => {
-    Bun.env.ADMIN_SESSION_SECRET = SECRET;
+    process.env.ADMIN_SESSION_SECRET = SECRET;
     const token = await createAdminSessionToken();
-    expect(await verifyAdminSessionToken(token)).toBe(true);
+    assert.equal(await verifyAdminSessionToken(token), true);
 
     const payload = token.split(".").slice(0, 3).join(".");
-    expect(token).toBe(await signWith(await secretKey(SECRET, PASSWORD), payload));
-    expect(token).not.toBe(await signWith(rawPasswordKey(PASSWORD), payload));
+    assert.equal(token, await signWith(await secretKey(SECRET, PASSWORD), payload));
+    assert.notEqual(token, await signWith(rawPasswordKey(PASSWORD), payload));
   });
 
   test("changing or removing the secret invalidates existing sessions", async () => {
-    Bun.env.ADMIN_SESSION_SECRET = SECRET;
+    process.env.ADMIN_SESSION_SECRET = SECRET;
     const token = await createAdminSessionToken();
 
-    Bun.env.ADMIN_SESSION_SECRET = `${SECRET}-rotated`;
-    expect(await verifyAdminSessionToken(token)).toBe(false);
+    process.env.ADMIN_SESSION_SECRET = `${SECRET}-rotated`;
+    assert.equal(await verifyAdminSessionToken(token), false);
 
-    delete Bun.env.ADMIN_SESSION_SECRET;
-    expect(await verifyAdminSessionToken(token)).toBe(false);
+    delete process.env.ADMIN_SESSION_SECRET;
+    assert.equal(await verifyAdminSessionToken(token), false);
 
-    Bun.env.ADMIN_SESSION_SECRET = SECRET;
-    expect(await verifyAdminSessionToken(token)).toBe(true);
+    process.env.ADMIN_SESSION_SECRET = SECRET;
+    assert.equal(await verifyAdminSessionToken(token), true);
   });
 
   test("changing ADMIN_PASSWORD still invalidates existing sessions", async () => {
-    Bun.env.ADMIN_SESSION_SECRET = SECRET;
+    process.env.ADMIN_SESSION_SECRET = SECRET;
     const token = await createAdminSessionToken();
-    Bun.env.ADMIN_PASSWORD = `${PASSWORD}-rotated`;
-    expect(await verifyAdminSessionToken(token)).toBe(false);
+    process.env.ADMIN_PASSWORD = `${PASSWORD}-rotated`;
+    assert.equal(await verifyAdminSessionToken(token), false);
   });
 
   test("tokens signed with the raw password key are rejected", async () => {
-    Bun.env.ADMIN_SESSION_SECRET = SECRET;
+    process.env.ADMIN_SESSION_SECRET = SECRET;
     const token = await signWith(
       rawPasswordKey(PASSWORD),
       `v2.${futureExp()}.0123456789abcdef`,
     );
-    expect(await verifyAdminSessionToken(token)).toBe(false);
+    assert.equal(await verifyAdminSessionToken(token), false);
   });
 });

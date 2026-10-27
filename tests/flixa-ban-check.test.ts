@@ -1,22 +1,29 @@
-import { afterAll, beforeAll, beforeEach, describe, expect, spyOn, test } from "bun:test";
+import assert from "node:assert/strict";
+import { after, before, beforeEach, describe, mock, test } from "node:test";
 import type { Pool } from "pg";
 import { Hono } from "hono";
-import * as database from "../utils/deni/db";
-import { hashApiKey } from "../utils/deni/auth";
-import { BANNED_ERROR_MESSAGE, invalidateBanCache } from "../utils/deni/ban";
-import {
-  validateAgentApiKey,
-  validateAgentAuth,
-} from "../middleware/validateAgentAuth";
+
+// Swap getDeniPool for a mock before any module that imports it is loaded.
+const database = await import("../utils/deni/db");
+const getDeniPool = mock.fn(database.getDeniPool);
+mock.module("../utils/deni/db", { exports: { ...database, getDeniPool } });
+const { hashApiKey } = await import("../utils/deni/auth");
+const { BANNED_ERROR_MESSAGE, invalidateBanCache } = await import("../utils/deni/ban");
+const { invalidateSilentBanRulesCache } = await import("../utils/deni/silentBanRules");
+const { validateAgentApiKey, validateAgentAuth } = await import(
+  "../middleware/validateAgentAuth"
+);
 
 // In-memory stand-in for the Deni pool. No external DB or keys.
 type BanLookupMode = "not_banned" | "banned" | "throw";
 let banLookupMode: BanLookupMode = "not_banned";
 let banTableSetupThrows = false;
+// Silent-ban rules: "none" configured, one matching rule, or DB errors.
+type SilentRulesMode = "none" | "matching_rule" | "rules_throw" | "hit_throw";
+let silentRulesMode: SilentRulesMode = "none";
 const keyOwners = new Map<string, string>();
-let poolSpy: ReturnType<typeof spyOn>;
 let keyCounter = 0;
-const oldAuthDisabled = Bun.env.FLIXA_AUTH_DISABLED;
+const oldAuthDisabled = process.env.FLIXA_AUTH_DISABLED;
 
 async function fakeQuery(sql: string, values?: unknown[]) {
   if (sql.includes("FROM api_key k")) {
@@ -37,7 +44,26 @@ async function fakeQuery(sql: string, values?: unknown[]) {
       ? { rows: [{ user_id: userId }], rowCount: 1 }
       : { rows: [], rowCount: 0 };
   }
-  // last_used_at touch, silent-ban tables and rules (none configured), etc.
+  if (sql.includes("FROM flixa_silent_ban_rule")) {
+    if (silentRulesMode === "rules_throw") throw new Error("connection timeout");
+    if (silentRulesMode === "none") return { rows: [], rowCount: 0 };
+    const row = {
+      id: "rule-1",
+      name: "codex",
+      enabled: true,
+      hits_before_ban: 3,
+      reason: "silent_rule:codex",
+      conditions: [{ target: "user-agent", op: "contains", value: "codex_cli_rs" }],
+      created_at: new Date(0),
+      updated_at: new Date(0),
+    };
+    return { rows: [row], rowCount: 1 };
+  }
+  if (sql.includes("INSERT INTO flixa_silent_ban_hit")) {
+    if (silentRulesMode === "hit_throw") throw new Error("connection timeout");
+    return { rows: [{ hit_count: 1 }], rowCount: 1 };
+  }
+  // last_used_at touch, silent-ban table setup, etc.
   return { rows: [], rowCount: 0 };
 }
 
@@ -78,24 +104,25 @@ function inferenceApp(): Hono {
   return hono;
 }
 
-beforeAll(() => {
-  poolSpy = spyOn(database, "getDeniPool").mockReturnValue({
-    query: fakeQuery,
-  } as unknown as Pool);
+before(() => {
+  const pool = { query: fakeQuery } as unknown as Pool;
+  getDeniPool.mock.mockImplementation(() => pool);
 });
 
 beforeEach(() => {
-  delete Bun.env.FLIXA_AUTH_DISABLED;
+  delete process.env.FLIXA_AUTH_DISABLED;
   banLookupMode = "not_banned";
   banTableSetupThrows = false;
+  silentRulesMode = "none";
   served = 0;
   invalidateBanCache();
+  invalidateSilentBanRulesCache();
 });
 
-afterAll(() => {
-  poolSpy?.mockRestore();
-  if (oldAuthDisabled === undefined) delete Bun.env.FLIXA_AUTH_DISABLED;
-  else Bun.env.FLIXA_AUTH_DISABLED = oldAuthDisabled;
+after(() => {
+  getDeniPool.mock.restore();
+  if (oldAuthDisabled === undefined) delete process.env.FLIXA_AUTH_DISABLED;
+  else process.env.FLIXA_AUTH_DISABLED = oldAuthDisabled;
 });
 
 const dbErrorBody = {
@@ -111,18 +138,18 @@ describe("flixa ban check", () => {
   test("fails closed with 503 when the ban lookup errors", async () => {
     banLookupMode = "throw";
     const res = await request(modelsApp(), "/v1/models", newKey());
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual(dbErrorBody);
-    expect(served).toBe(0);
+    assert.equal(res.status, 503);
+    assert.deepEqual(await res.json(), dbErrorBody);
+    assert.equal(served, 0);
   });
 
   test("fails closed when ban table setup and lookup both error", async () => {
     banTableSetupThrows = true;
     banLookupMode = "throw";
     const res = await request(modelsApp(), "/v1/models", newKey());
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual(dbErrorBody);
-    expect(served).toBe(0);
+    assert.equal(res.status, 503);
+    assert.deepEqual(await res.json(), dbErrorBody);
+    assert.equal(served, 0);
   });
 
   test("does not serve inference requests when the ban lookup errors", async () => {
@@ -133,35 +160,35 @@ describe("flixa ban check", () => {
       newKey(),
       "POST",
     );
-    expect(res.status).toBe(503);
-    expect(await res.json()).toEqual(dbErrorBody);
-    expect(served).toBe(0);
+    assert.equal(res.status, 503);
+    assert.deepEqual(await res.json(), dbErrorBody);
+    assert.equal(served, 0);
   });
 
   test("does not cache a failed lookup", async () => {
     const app = modelsApp();
     const key = newKey();
     banLookupMode = "throw";
-    expect((await request(app, "/v1/models", key)).status).toBe(503);
+    assert.equal((await request(app, "/v1/models", key)).status, 503);
 
     banLookupMode = "not_banned";
     const res = await request(app, "/v1/models", key);
-    expect(res.status).toBe(200);
-    expect(served).toBe(1);
+    assert.equal(res.status, 200);
+    assert.equal(served, 1);
   });
 
   test("serves users that are not banned", async () => {
     const res = await request(modelsApp(), "/v1/models", newKey());
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
-    expect(served).toBe(1);
+    assert.equal(res.status, 200);
+    assert.deepEqual(await res.json(), { ok: true });
+    assert.equal(served, 1);
   });
 
   test("rejects banned users with the unchanged 403 response", async () => {
     banLookupMode = "banned";
     const res = await request(modelsApp(), "/v1/models", newKey());
-    expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({
+    assert.equal(res.status, 403);
+    assert.deepEqual(await res.json(), {
       error: {
         message: BANNED_ERROR_MESSAGE,
         type: "authentication_error",
@@ -169,17 +196,45 @@ describe("flixa ban check", () => {
         code: "service_unavailable",
       },
     });
-    expect(served).toBe(0);
+    assert.equal(served, 0);
+  });
+
+  test("fails closed when silent-ban rules cannot be loaded", async () => {
+    silentRulesMode = "rules_throw";
+    const res = await request(modelsApp(), "/v1/models", newKey());
+    assert.equal(res.status, 503);
+    assert.deepEqual(await res.json(), dbErrorBody);
+    assert.equal(served, 0);
+  });
+
+  test("fails closed when a silent-ban hit cannot be counted", async () => {
+    silentRulesMode = "hit_throw";
+    const res = await request(
+      inferenceApp(),
+      "/v1/agent/chat/completions",
+      newKey(),
+      "POST",
+    );
+    assert.equal(res.status, 503);
+    assert.deepEqual(await res.json(), dbErrorBody);
+    assert.equal(served, 0);
+  });
+
+  test("still serves requests counted below the silent-ban threshold", async () => {
+    silentRulesMode = "matching_rule";
+    const res = await request(modelsApp(), "/v1/models", newKey());
+    assert.equal(res.status, 200);
+    assert.equal(served, 1);
   });
 
   test("keeps serving a cached ban answer when a later lookup would error", async () => {
     const app = modelsApp();
     const key = newKey();
     banLookupMode = "banned";
-    expect((await request(app, "/v1/models", key)).status).toBe(403);
+    assert.equal((await request(app, "/v1/models", key)).status, 403);
 
     banLookupMode = "throw";
-    expect((await request(app, "/v1/models", key)).status).toBe(403);
-    expect(served).toBe(0);
+    assert.equal((await request(app, "/v1/models", key)).status, 403);
+    assert.equal(served, 0);
   });
 });

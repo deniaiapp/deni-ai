@@ -1,6 +1,8 @@
 import { Context, Next } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
+import { isOpenRouterRoutedModel } from "../utils/agent/clients";
 import { resolveAvailableModelId } from "../utils/agent/models";
+import { findResponsesToolPolicyViolation } from "../utils/agent/serverToolPolicy";
 
 interface ChatRequestBody {
   messages?: unknown[];
@@ -109,6 +111,26 @@ function invalidRequest(
     },
     { status },
   );
+}
+
+/**
+ * Reject server tools that run other models or reach shared OpenRouter
+ * state. `model` must already be resolved to the id getClient routes on.
+ */
+function validateResponsesToolPolicy(
+  c: Context,
+  body: ResponsesRequestBody | ResponsesCompactRequestBody,
+  model: string,
+) {
+  const violation = findResponsesToolPolicyViolation(
+    body,
+    isOpenRouterRoutedModel(model) ? "openrouter" : "other",
+  );
+  if (!violation) {
+    return null;
+  }
+
+  return invalidRequest(c, violation.message, violation.param, "invalid_tool");
 }
 
 function validateNumericParams(
@@ -891,9 +913,15 @@ export async function validateResponsesRequest(c: Context, next: Next) {
       );
     }
 
+    const resolvedModel = resolveAvailableModelId(model);
+    const toolPolicyError = validateResponsesToolPolicy(c, body, resolvedModel);
+    if (toolPolicyError) {
+      return toolPolicyError;
+    }
+
     c.set("validatedBody", {
       ...body,
-      model: resolveAvailableModelId(model),
+      model: resolvedModel,
     });
     await next();
   } catch {
@@ -964,9 +992,15 @@ export async function validateResponsesCompactRequest(c: Context, next: Next) {
       );
     }
 
+    const resolvedModel = resolveAvailableModelId(model);
+    const toolPolicyError = validateResponsesToolPolicy(c, body, resolvedModel);
+    if (toolPolicyError) {
+      return toolPolicyError;
+    }
+
     c.set("validatedBody", {
       ...body,
-      model: resolveAvailableModelId(model),
+      model: resolvedModel,
     });
     await next();
   } catch {

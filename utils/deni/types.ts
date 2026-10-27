@@ -1,3 +1,5 @@
+import type { UsageUnit } from './usage';
+
 export interface DeniUsageInfo {
   tier: 'free' | 'plus' | 'pro' | "max";
   planId: string | null;
@@ -12,7 +14,7 @@ export interface DeniUsageInfo {
   maxModeEligible: boolean;
   usage: Array<{
     category: 'basic' | 'premium';
-    unit: 'requests' | 'tokens';
+    unit: UsageUnit;
     limit: number | null;
     used: number;
     remaining: number | null;
@@ -44,7 +46,7 @@ export interface UsageQuotaRow {
   category: string;
   plan_tier: 'free' | 'plus' | 'pro' | 'max';
   limit_amount: number | null;
-  unit: 'requests' | 'tokens';
+  unit: UsageUnit;
   used: number;
   period_start: Date;
   period_end: Date | null;

@@ -2,20 +2,23 @@
   "name": "flixa-backend",
   "version": "1.0.0",
   "description": "OpenAI API style backend with /v1/agent router",
+  "type": "module",
   "main": "server.ts",
   "scripts": {
-    "start": "bun run server.ts",
-    "start:supervised": "bun run tools/supervise-server.ts",
-    "dev": "bun --watch server.ts",
-    "dev:prod-env": "bun --env-file=.env.production --watch server.ts",
-    "build": "bun build server.ts --outdir ./dist --target bun",
+    "start": "tsx --env-file-if-exists=.env server.ts",
+    "start:dist": "node --env-file-if-exists=.env dist/server.js",
+    "start:supervised": "tsx --env-file-if-exists=.env tools/supervise-server.ts",
+    "dev": "tsx watch --env-file-if-exists=.env server.ts",
+    "dev:prod-env": "tsx watch --env-file=.env.production server.ts",
+    "build": "esbuild server.ts --bundle --platform=node --format=esm --target=node26 --outdir=dist --external:pg-native --banner:js=\"import { createRequire as __flixaCreateRequire } from 'node:module'; const require = __flixaCreateRequire(import.meta.url);\"",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test --experimental-test-module-mocks \"tests/**/*.test.ts\"",
     "dev:worker": "wrangler dev",
     "deploy:worker": "wrangler deploy",
-    "performance:benchmark": "bun run tools/performance-benchmark.ts",
-    "tools:revoke-anonymous-api-keys": "bun run tools/revoke-anonymous-api-keys.ts",
-    "tools:ban-flixa-user": "bun run tools/ban-flixa-user.ts",
-    "tools:unban-flixa-user": "bun run tools/unban-flixa-user.ts"
+    "performance:benchmark": "tsx tools/performance-benchmark.ts",
+    "tools:revoke-anonymous-api-keys": "tsx --env-file-if-exists=.env tools/revoke-anonymous-api-keys.ts",
+    "tools:ban-flixa-user": "tsx --env-file-if-exists=.env tools/ban-flixa-user.ts",
+    "tools:unban-flixa-user": "tsx --env-file-if-exists=.env tools/unban-flixa-user.ts"
   },
   "keywords": [
     "openai",
@@ -23,29 +26,32 @@
     "agent",
     "router",
     "hono",
-    "bun"
+    "node"
   ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.116.0",
-    "@openrouter/sdk": "^1.2.29",
-    "hono": "^4.13.1",
-    "openai": "^7.4.0",
-    "pg": "^8.23.0"
+    "@anthropic-ai/sdk": "^0.137.0",
+    "@hono/node-server": "^2.1.5",
+    "@openrouter/sdk": "^1.5.7",
+    "hono": "^4.13.14",
+    "openai": "^7.43.0",
+    "pg": "^8.23.1"
   },
   "engines": {
-    "node": "22.22.0"
+    "node": ">=26"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261010.1",
-    "@electric-sql/pglite": "^0.5.8",
-    "@types/bun": "^1.3.14",
-    "@types/pg": "^8.21.0",
-    "oxfmt": "^0.63.0",
-    "oxlint": "^1.78.0",
+    "@cloudflare/workers-types": "^5.20261026.1",
+    "@electric-sql/pglite": "^0.5.11",
+    "@types/node": "^26.6.5",
+    "@types/pg": "^8.23.1",
+    "esbuild": "^0.28.2",
+    "oxfmt": "^0.74.0",
+    "oxlint": "^1.89.0",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "wrangler": "^4.149.0"
+    "wrangler": "^4.152.0"
   },
-  "packageManager": "pnpm@12.10.1"
+  "packageManager": "pnpm@12.15.0"
 }

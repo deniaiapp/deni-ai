@@ -1,4 +1,5 @@
-import { expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { test } from "node:test";
 import {
   flattenResponsesInputItems,
   normalizeResponsesInputItems,
@@ -14,12 +15,12 @@ test("flattens nested Responses input item batches without changing content arra
     ],
   ];
 
-  expect(flattenResponsesInputItems(input)).toEqual([
+  assert.deepEqual(flattenResponsesInputItems(input), [
     { type: "message", role: "user", content: textContent },
     { type: "function_call", call_id: "call_1", arguments: "{}" },
     { type: "function_call_output", call_id: "call_1", output: "ok" },
   ]);
-  expect(textContent).toEqual([{ type: "input_text", text: "hello" }]);
+  assert.deepEqual(textContent, [{ type: "input_text", text: "hello" }]);
 });
 
 test("flattens wide and deeply nested Responses input in a single pass", () => {
@@ -34,20 +35,20 @@ test("flattens wide and deeply nested Responses input in a single pass", () => {
   const flattened = flattenResponsesInputItems(input) as unknown[];
   const elapsedMs = performance.now() - started;
 
-  expect(flattened.length).toBe(100_001);
-  expect(flattened[99_999]).toBe(99_999);
-  expect(flattened[100_000]).toEqual({ type: "message", role: "user", content: "deep" });
-  expect(elapsedMs).toBeLessThan(2_000);
+  assert.equal(flattened.length, 100_001);
+  assert.equal(flattened[99_999], 99_999);
+  assert.deepEqual(flattened[100_000], { type: "message", role: "user", content: "deep" });
+  assert.ok(elapsedMs < 2_000);
 });
 
 test("returns non-nested Responses input unchanged", () => {
   const input = [{ type: "message", role: "user", content: "hi" }];
-  expect(flattenResponsesInputItems(input)).toBe(input);
-  expect(flattenResponsesInputItems("hi")).toBe("hi");
+  assert.equal(flattenResponsesInputItems(input), input);
+  assert.equal(flattenResponsesInputItems("hi"), "hi");
 });
 
 test("converts Codex app tool outputs without call ids into message context", () => {
-  expect(
+  assert.deepEqual(
     normalizeResponsesInputItems([
       {
         type: "function_call_output",
@@ -62,16 +63,17 @@ test("converts Codex app tool outputs without call ids into message context", ()
         output: [{ type: "output_text", text: "ok" }],
       },
     ]),
-  ).toEqual([
-    {
-      type: "message",
-      role: "user",
-      content: "<codex_delegation>worker result</codex_delegation>",
-    },
-    {
-      type: "function_call_output",
-      call_id: "call_1",
-      output: '[{"type":"output_text","text":"ok"}]',
-    },
-  ]);
+    [
+      {
+        type: "message",
+        role: "user",
+        content: "<codex_delegation>worker result</codex_delegation>",
+      },
+      {
+        type: "function_call_output",
+        call_id: "call_1",
+        output: '[{"type":"output_text","text":"ok"}]',
+      },
+    ],
+  );
 });

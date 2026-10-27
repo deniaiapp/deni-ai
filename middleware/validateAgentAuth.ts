@@ -1,5 +1,5 @@
 import { UsageEstimate } from "../utils/agent/usageEstimation";
-import type { UsageReservation } from "../utils/deni/usage";
+import { USAGE_UNIT, type UsageReservation, type UsageUnit } from "../utils/deni/usage";
 import { Context, Next } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {
@@ -37,7 +37,7 @@ export interface AgentAuthContext {
   modelId: string;
   tier: 'free' | 'plus' | 'pro' | "max";
   modelCategory: 'basic' | 'premium';
-  usageUnit: 'requests' | 'tokens';
+  usageUnit: UsageUnit;
   usageReserved: boolean;
   usageReservation?: UsageReservation;
   usageEstimate?: UsageEstimate;
@@ -145,6 +145,25 @@ function forbiddenAuthResponse(
 }
 
 /**
+ * Same response as a DB error during API key validation, so ban checks are
+ * not exposed.
+ */
+function dbErrorAuthResponse(c: Context): Response {
+  const errorResponse = getAuthErrorResponseConfig('db_error');
+  return c.json(
+    {
+      error: {
+        message: authErrorMessage('db_error', 'Database error during validation'),
+        type: errorResponse.type,
+        param: null,
+        code: 'db_error',
+      },
+    },
+    { status: errorResponse.status },
+  );
+}
+
+/**
  * After a key is valid, reject banned users and ban accounts that call the
  * agent API without an allowed client signal (Codex / Claude Code / OpenCode / Zed / Flixa).
  *
@@ -173,20 +192,8 @@ async function enforceFlixaAccessPolicy(
   try {
     banned = await isUserBannedFromFlixa(userId);
   } catch {
-    // Ban status unknown (DB error): fail closed. Same response as a DB
-    // error during API key validation (do not expose ban checks).
-    const errorResponse = getAuthErrorResponseConfig('db_error');
-    return c.json(
-      {
-        error: {
-          message: authErrorMessage('db_error', 'Database error during validation'),
-          type: errorResponse.type,
-          param: null,
-          code: 'db_error',
-        },
-      },
-      { status: errorResponse.status },
-    );
+    // Ban status unknown (DB error): fail closed.
+    return dbErrorAuthResponse(c);
   }
 
   if (banned) {
@@ -207,6 +214,10 @@ async function enforceFlixaAccessPolicy(
     c.req.path,
     c.req.method,
   );
+  if (silentBan.action === 'error') {
+    // Rules could not be evaluated (DB error): fail closed.
+    return dbErrorAuthResponse(c);
+  }
   if (silentBan.action === 'banned') {
     recordClientSignalLog({
       ...logBase,
@@ -384,7 +395,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
       modelId: model,
       tier: 'max',
       modelCategory,
-      usageUnit: 'tokens',
+      usageUnit: USAGE_UNIT,
       usageReserved: false,
       hasVerifiedPaymentMethod: true,
       tokenUsageMultiplier: getModelTokenUsageMultiplier(model),
@@ -438,7 +449,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
     return c.json(
       {
         error: {
-          message: `Insufficient monthly usage left to reserve this request (${usageEstimate.reservationAmount} estimated tokens). Please upgrade your plan or wait for the usage reset.`,
+          message: `Insufficient monthly usage left to reserve this request (${usageEstimate.reservationAmount} estimated usage units). Please upgrade your plan or wait for the usage reset.`,
           type: 'quota_exceeded',
           param: null,
           code: 'USAGE_LIMIT_EXCEEDED',

@@ -1,4 +1,5 @@
-import { describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 import {
   matchSilentBanCondition,
   matchSilentBanRule,
@@ -14,17 +15,11 @@ function headers(init: Record<string, string>): Headers {
 describe("resolveSilentBanTarget", () => {
   test("resolves path, method, and headers (with optional header: prefix)", () => {
     const h = headers({ "user-agent": "curl/8.0", "x-client": "bot" });
-    expect(resolveSilentBanTarget("path", h, "/v1/agent", "POST")).toBe(
-      "/v1/agent",
-    );
-    expect(resolveSilentBanTarget("method", h, "/v1/agent", "post")).toBe(
-      "POST",
-    );
-    expect(resolveSilentBanTarget("user-agent", h, "/", "GET")).toBe("curl/8.0");
-    expect(resolveSilentBanTarget("header:x-client", h, "/", "GET")).toBe(
-      "bot",
-    );
-    expect(resolveSilentBanTarget("missing", h, "/", "GET")).toBeNull();
+    assert.equal(resolveSilentBanTarget("path", h, "/v1/agent", "POST"), "/v1/agent");
+    assert.equal(resolveSilentBanTarget("method", h, "/v1/agent", "post"), "POST");
+    assert.equal(resolveSilentBanTarget("user-agent", h, "/", "GET"), "curl/8.0");
+    assert.equal(resolveSilentBanTarget("header:x-client", h, "/", "GET"), "bot");
+    assert.equal(resolveSilentBanTarget("missing", h, "/", "GET"), null);
   });
 });
 
@@ -34,146 +29,161 @@ describe("matchSilentBanCondition", () => {
 
   test("contains / not_contains on user-agent", () => {
     const h = headers({ "user-agent": "python-requests/2.31.0" });
-    expect(
+    assert.equal(
       matchSilentBanCondition(
         { target: "user-agent", op: "contains", value: "python-requests" },
         h,
         path,
         method,
       ),
-    ).toBe(true);
-    expect(
+      true,
+    );
+    assert.equal(
       matchSilentBanCondition(
         { target: "user-agent", op: "not_contains", value: "python-requests" },
         h,
         path,
         method,
       ),
-    ).toBe(false);
-    expect(
+      false,
+    );
+    assert.equal(
       matchSilentBanCondition(
         { target: "user-agent", op: "contains", value: "curl" },
         h,
         path,
         method,
       ),
-    ).toBe(false);
+      false,
+    );
   });
 
   test("equals is case-insensitive by default", () => {
     const h = headers({ "x-app": "CLI" });
-    expect(
+    assert.equal(
       matchSilentBanCondition(
         { target: "x-app", op: "equals", value: "cli" },
         h,
         path,
         method,
       ),
-    ).toBe(true);
-    expect(
+      true,
+    );
+    assert.equal(
       matchSilentBanCondition(
         { target: "x-app", op: "equals", value: "cli", caseSensitive: true },
         h,
         path,
         method,
       ),
-    ).toBe(false);
+      false,
+    );
   });
 
   test("starts_with / ends_with / regex", () => {
     const h = headers({ "user-agent": "curl/8.5.0" });
-    expect(
+    assert.equal(
       matchSilentBanCondition(
         { target: "user-agent", op: "starts_with", value: "curl/" },
         h,
         path,
         method,
       ),
-    ).toBe(true);
-    expect(
+      true,
+    );
+    assert.equal(
       matchSilentBanCondition(
         { target: "user-agent", op: "ends_with", value: "8.5.0" },
         h,
         path,
         method,
       ),
-    ).toBe(true);
-    expect(
+      true,
+    );
+    assert.equal(
       matchSilentBanCondition(
         { target: "user-agent", op: "regex", value: "^curl/\\d" },
         h,
         path,
         method,
       ),
-    ).toBe(true);
+      true,
+    );
   });
 
   test("exists / not_exists", () => {
     const h = headers({ "x-client": "yes" });
-    expect(
+    assert.equal(
       matchSilentBanCondition(
         { target: "x-client", op: "exists" },
         h,
         path,
         method,
       ),
-    ).toBe(true);
-    expect(
+      true,
+    );
+    assert.equal(
       matchSilentBanCondition(
         { target: "x-missing", op: "exists" },
         h,
         path,
         method,
       ),
-    ).toBe(false);
-    expect(
+      false,
+    );
+    assert.equal(
       matchSilentBanCondition(
         { target: "x-missing", op: "not_exists" },
         h,
         path,
         method,
       ),
-    ).toBe(true);
+      true,
+    );
   });
 
   test("missing header: not_contains / not_equals succeed", () => {
     const h = headers({});
-    expect(
+    assert.equal(
       matchSilentBanCondition(
         { target: "user-agent", op: "not_contains", value: "curl" },
         h,
         path,
         method,
       ),
-    ).toBe(true);
-    expect(
+      true,
+    );
+    assert.equal(
       matchSilentBanCondition(
         { target: "user-agent", op: "contains", value: "curl" },
         h,
         path,
         method,
       ),
-    ).toBe(false);
+      false,
+    );
   });
 
   test("path and method targets", () => {
     const h = headers({});
-    expect(
+    assert.equal(
       matchSilentBanCondition(
         { target: "path", op: "contains", value: "/agent/" },
         h,
         path,
         method,
       ),
-    ).toBe(true);
-    expect(
+      true,
+    );
+    assert.equal(
       matchSilentBanCondition(
         { target: "method", op: "equals", value: "post" },
         h,
         path,
         method,
       ),
-    ).toBe(true);
+      true,
+    );
   });
 });
 
@@ -188,11 +198,9 @@ describe("matchSilentBanRule", () => {
       { target: "x-client", op: "equals", value: "scraper" },
     ];
 
-    expect(
-      matchSilentBanRule({ enabled: true, conditions }, h, "/v1/a", "POST"),
-    ).toBe(true);
+    assert.equal(matchSilentBanRule({ enabled: true, conditions }, h, "/v1/a", "POST"), true);
 
-    expect(
+    assert.equal(
       matchSilentBanRule(
         {
           enabled: true,
@@ -205,45 +213,47 @@ describe("matchSilentBanRule", () => {
         "/v1/a",
         "POST",
       ),
-    ).toBe(false);
+      false,
+    );
 
-    expect(
-      matchSilentBanRule({ enabled: false, conditions }, h, "/v1/a", "POST"),
-    ).toBe(false);
+    assert.equal(matchSilentBanRule({ enabled: false, conditions }, h, "/v1/a", "POST"), false);
 
-    expect(
-      matchSilentBanRule({ enabled: true, conditions: [] }, h, "/v1/a", "POST"),
-    ).toBe(false);
+    assert.equal(matchSilentBanRule({ enabled: true, conditions: [] }, h, "/v1/a", "POST"), false);
   });
 });
 
 describe("validateSilentBanConditions", () => {
   test("rejects empty / invalid ops / missing value", () => {
-    expect(validateSilentBanConditions([])).toEqual({
+    assert.deepEqual(validateSilentBanConditions([]), {
       ok: false,
       error: "conditions must include at least one condition",
     });
-    expect(
+    assert.partialDeepStrictEqual(
       validateSilentBanConditions([{ target: "ua", op: "nope", value: "x" }]),
-    ).toMatchObject({ ok: false });
-    expect(
+      { ok: false },
+    );
+    assert.partialDeepStrictEqual(
       validateSilentBanConditions([{ target: "user-agent", op: "contains" }]),
-    ).toMatchObject({ ok: false });
-    expect(
+      { ok: false },
+    );
+    assert.partialDeepStrictEqual(
       validateSilentBanConditions([
         { target: "user-agent", op: "contains", value: "curl" },
       ]),
-    ).toMatchObject({ ok: true });
-    expect(
+      { ok: true },
+    );
+    assert.partialDeepStrictEqual(
       validateSilentBanConditions([{ target: "x-foo", op: "exists" }]),
-    ).toMatchObject({ ok: true });
+      { ok: true },
+    );
   });
 
   test("rejects invalid regex", () => {
-    expect(
+    assert.partialDeepStrictEqual(
       validateSilentBanConditions([
         { target: "user-agent", op: "regex", value: "(" },
       ]),
-    ).toMatchObject({ ok: false });
+      { ok: false },
+    );
   });
 });

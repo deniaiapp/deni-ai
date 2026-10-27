@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, test } from "bun:test";
+import assert from "node:assert/strict";
+import { afterEach, describe, test } from "node:test";
 import { Hono } from "hono";
 import { accessLog } from "../middleware/accessLog";
 import { logErrorResponses } from "../middleware/logErrorResponses";
@@ -6,7 +7,7 @@ import { logErrorResponses } from "../middleware/logErrorResponses";
 const rawKey = "deni_abcdefghijklmnopqrstuvwxyz012345";
 
 afterEach(() => {
-  delete Bun.env.FLIXA_AUTH_DISABLED;
+  delete process.env.FLIXA_AUTH_DISABLED;
 });
 
 describe("accessLog", () => {
@@ -25,15 +26,15 @@ describe("accessLog", () => {
       const res = await app.request("/v1/ping", {
         headers: { Authorization: `Bearer ${rawKey}` },
       });
-      expect(res.status).toBe(200);
+      assert.equal(res.status, 200);
     } finally {
       console.log = originalLog;
     }
 
     const outgoing = lines.find((line) => line.startsWith("--> GET /v1/ping"));
-    expect(outgoing).toBeDefined();
-    expect(outgoing).toContain("key=deni_abc…2345");
-    expect(outgoing).not.toContain(rawKey);
+    assert.notEqual(outgoing, undefined);
+    assert.ok(outgoing!.includes("key=deni_abc…2345"));
+    assert.ok(!outgoing!.includes(rawKey));
   });
 });
 
@@ -55,7 +56,7 @@ describe("logErrorResponses", () => {
       const res = await app.request("/v1/fail", {
         headers: { "x-api-key": rawKey },
       });
-      expect(res.status).toBe(401);
+      assert.equal(res.status, 401);
     } finally {
       console.error = originalError;
     }
@@ -64,12 +65,12 @@ describe("logErrorResponses", () => {
       (item): item is Record<string, unknown> =>
         Boolean(item) && typeof item === "object",
     );
-    expect(payload?.apiKey).toBe("deni_abc…2345");
-    expect(payload?.auth).toMatchObject({
+    assert.equal(payload?.apiKey, "deni_abc…2345");
+    assert.partialDeepStrictEqual(payload?.auth, {
       hasAuthorization: false,
       hasXApiKey: true,
     });
-    expect(payload?.headerNames).toEqual(expect.arrayContaining(["x-api-key"]));
-    expect(JSON.stringify(payload)).not.toContain(rawKey);
+    assert.ok(Array.isArray(payload?.headerNames) && payload.headerNames.includes("x-api-key"));
+    assert.ok(!JSON.stringify(payload).includes(rawKey));
   });
 });

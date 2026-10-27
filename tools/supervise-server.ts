@@ -1,13 +1,16 @@
 /**
- * Keep the Bun server available after a runtime crash.
+ * Keep the Node server available after a runtime crash.
  *
  * Usage:
- *   bun run start:supervised
- *   bun run start:supervised -- --port 3000
+ *   pnpm run start:supervised
+ *   pnpm run start:supervised -- --port 3000
  *
  * The supervisor exits on a clean server exit or after Ctrl+C. Non-zero exits
  * are treated as crashes and restarted with a bounded exponential backoff.
  */
+
+import { spawn, type ChildProcess } from "node:child_process";
+import { once } from "node:events";
 
 const DEFAULT_RESTART_DELAY_MS = 2_000;
 const MAX_RESTART_DELAY_MS = 30_000;
@@ -18,10 +21,10 @@ function sleep(ms: number): Promise<void> {
 }
 
 function getServerArgs(): string[] {
-  return Bun.argv.slice(2);
+  return process.argv.slice(2);
 }
 
-let currentProcess: Bun.Subprocess | null = null;
+let currentProcess: ChildProcess | null = null;
 let stopping = false;
 
 function stop(signal: "SIGINT" | "SIGTERM"): void {
@@ -41,7 +44,7 @@ process.on("SIGTERM", () => stop("SIGTERM"));
 const serverArgs = getServerArgs();
 
 if (serverArgs.includes("--help") || serverArgs.includes("-h")) {
-  console.log("Usage: bun run start:supervised -- [server.ts arguments]");
+  console.log("Usage: pnpm run start:supervised -- [server.ts arguments]");
   process.exit(0);
 }
 
@@ -53,16 +56,20 @@ while (!stopping) {
     `[Supervisor] starting server: ${["server.ts", ...serverArgs].join(" ")}`,
   );
 
-  currentProcess = Bun.spawn(
-    [process.execPath, "run", "server.ts", ...serverArgs],
-    {
-      stdin: "inherit",
-      stdout: "inherit",
-      stderr: "inherit",
-    },
+  // Run the TypeScript entrypoint through tsx's loader on the same Node binary.
+  // Env vars (including any loaded via --env-file) are inherited.
+  currentProcess = spawn(
+    process.execPath,
+    ["--import", "tsx", "server.ts", ...serverArgs],
+    { stdio: "inherit" },
   );
 
-  const exitCode = await currentProcess.exited;
+  const [code, signal] = (await once(currentProcess, "exit")) as [
+    number | null,
+    NodeJS.Signals | null,
+  ];
+  // A signal-terminated child has no exit code; treat it as a crash.
+  const exitCode = code ?? (signal ? `signal ${signal}` : 1);
   currentProcess = null;
 
   if (stopping) {
@@ -91,5 +98,3 @@ while (!stopping) {
 }
 
 console.log("[Supervisor] stopped.");
-
-export {};
