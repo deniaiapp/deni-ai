@@ -123,6 +123,7 @@ export function getSentryOptions(): SentryOptions {
       /window\.webkit\.messageHandlers/,
       // DOM rewritten under React by page translators or extensions.
       /Failed to execute 'removeChild' on 'Node'/,
+      /Failed to execute 'insertBefore' on 'Node'/,
       /The object can not be found here/,
       // WebExtension messaging from a closed tab; the app never calls runtime.sendMessage.
       /Invalid call to runtime\.sendMessage\(\)/,
@@ -139,8 +140,9 @@ export function getSentryOptions(): SentryOptions {
       /Failed to parse body as FormData/,
       // Desktop shell denies its opener plugin for external links; not raised by app code.
       /not allowed by ACL/,
-      // Expected tool failure that is already reported back to the model and the user.
+      // Expected tool failures that are already reported back to the model and the user.
       /^Error: Web search timed out/,
+      /^Error: Web search is unavailable because the usage limit was reached/,
     ],
     // Extension and in-app browser scripts that are not part of the app bundle.
     denyUrls: [

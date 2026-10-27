@@ -101,3 +101,33 @@ test("a markdown.new timeout still falls back to a direct page fetch", async () 
   );
   expect(results).toEqual([expect.objectContaining({ content: "Direct page text" })]);
 });
+
+test("parallel searches take turns on usage writes", async () => {
+  let active = 0;
+  let peak = 0;
+  vi.mocked(consumeUsage).mockImplementation(async ({ reservationId }) => {
+    active++;
+    peak = Math.max(peak, active);
+    await new Promise((resolve) => setTimeout(resolve, 5));
+    active--;
+    return {
+      reservationId,
+      tier: "pro",
+      unit: "tokens",
+      limit: 300_000_000,
+      remaining: 100_000,
+      maxModeAmount: 0,
+      usedMaxMode: false,
+      period,
+    };
+  });
+  const search = createSearchTool({ userId: "user", isAnonymous: false });
+  const options = { toolCallId: "call", messages: [], context: {} };
+  await Promise.all([
+    search.execute!({ query: "one" }, options),
+    search.execute!({ query: "two" }, options),
+    search.execute!({ query: "three" }, options),
+  ]);
+  expect(consumeUsage).toHaveBeenCalledTimes(3);
+  expect(peak).toBe(1);
+});

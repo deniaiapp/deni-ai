@@ -81,7 +81,25 @@ async function attachPageContent(result: SearchHit, signal: AbortSignal): Promis
   }
 }
 
+/**
+ * Usage writes lock the user's row. Parallel search calls in one turn would each hold a
+ * pooled connection while waiting on that lock, so they take turns instead.
+ */
+function createSerialQueue() {
+  let tail: Promise<unknown> = Promise.resolve();
+  return <T>(run: () => Promise<T>): Promise<T> => {
+    const result = tail.then(run);
+    tail = result.catch(() => {});
+    return result;
+  };
+}
+
 export function createSearchTool(usage?: ChatToolUsageContext) {
+  const serialize = createSerialQueue();
+  const reserve = (context: ChatToolUsageContext) => serialize(() => chargeSearchUsage(context));
+  const settle = (context: ChatToolUsageContext, reserved: SearchCharge, amount: number) =>
+    serialize(() => settleSearchUsage(context, reserved, amount));
+
   return tool({
     description:
       "Search the web and get page content for the top results. Use this whenever current, local, or easily-changed facts would improve the answer — news, prices, docs, people, products, or anything you are not confident about — even if the user did not ask you to search. Skip it for casual chat or questions you can answer confidently from general knowledge. Each call consumes a fixed amount of the user's usage quota, so prefer one well-chosen query over several overlapping ones. Prefer the browse tool when you need the full content of a specific URL.",
@@ -103,7 +121,7 @@ export function createSearchTool(usage?: ChatToolUsageContext) {
       try {
         const outcome = await withDeadline(SEARCH_TOTAL_TIMEOUT_MS, abortSignal, async (signal) => {
           if (usage) {
-            charge = await chargeSearchUsage(usage);
+            charge = await reserve(usage);
           }
 
           const EXA_API_KEY = env.EXA_API_KEY;
@@ -136,7 +154,7 @@ export function createSearchTool(usage?: ChatToolUsageContext) {
 
           if (response.status === 429) {
             if (charge && charge.amount > 0 && usage) {
-              await settleSearchUsage(usage, charge, 0);
+              await settle(usage, charge, 0);
               charge = undefined;
             }
             return [];
@@ -170,15 +188,15 @@ export function createSearchTool(usage?: ChatToolUsageContext) {
               .map((result) => ({ ...result, content: result.description })),
           ];
         });
-        if (charge && usage) await settleSearchUsage(usage, charge, charge.amount);
+        if (charge && usage) await settle(usage, charge, charge.amount);
         return outcome;
       } catch (error) {
         if (results.length > 0) {
-          if (charge && usage) await settleSearchUsage(usage, charge, charge.amount);
+          if (charge && usage) await settle(usage, charge, charge.amount);
           return results.map((result) => ({ ...result, content: result.description }));
         }
         if (charge && charge.amount > 0 && usage) {
-          await settleSearchUsage(usage, charge, 0);
+          await settle(usage, charge, 0);
         }
         if (error instanceof UsageLimitError) {
           throw new Error("Web search is unavailable because the usage limit was reached.");

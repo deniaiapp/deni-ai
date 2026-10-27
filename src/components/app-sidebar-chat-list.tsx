@@ -136,7 +136,7 @@ function groupChatsByRecency(items: ChatListItem[]) {
   ];
   const buckets = new Map<ChatRecencyBucketKey, ChatListItem[]>();
 
-  for (const item of items.toSorted((a, b) => compareDesc(a.updated_at, b.updated_at))) {
+  for (const item of [...items].sort((a, b) => compareDesc(a.updated_at, b.updated_at))) {
     const key = getRecencyBucketKey(item.updated_at);
     const existing = buckets.get(key);
 
@@ -176,10 +176,10 @@ function groupChatsByFolder(items: ChatListItem[]) {
   }
 
   return Array.from(folderMap.entries())
-    .toSorted(([left], [right]) => left.localeCompare(right))
+    .sort(([left], [right]) => left.localeCompare(right))
     .map(([folder, folderItems]) => ({
       folder,
-      items: folderItems.toSorted((a, b) => compareDesc(a.updated_at, b.updated_at)),
+      items: folderItems.sort((a, b) => compareDesc(a.updated_at, b.updated_at)),
     }));
 }
 
@@ -655,9 +655,10 @@ export function AppSidebarChatList({
   );
   const [activeDragChat, setActiveDragChat] = useState<ChatDragPayload | null>(null);
 
+  // Not toSorted(): browsers before Chrome 110 / Safari 16 lack it and the sidebar crashes.
   const pinnedChats = chats
     .filter((item) => item.pinned)
-    .toSorted((a, b) => compareDesc(a.updated_at, b.updated_at));
+    .sort((a, b) => compareDesc(a.updated_at, b.updated_at));
   const folderChats = chats.filter((item) => !item.pinned && item.folder);
   const ungroupedChats = chats.filter((item) => !item.pinned && !item.folder);
   const folderGroups = mergeFolderGroups(groupChatsByFolder(folderChats), customFolders);

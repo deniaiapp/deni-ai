@@ -12,27 +12,12 @@
  *
  * Needs DATABASE_URL, UPLOADTHING_TOKEN and the R2_* settings.
  */
-import { createHmac } from "node:crypto";
 import { and, eq, gt, isNotNull, notLike } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 import * as schema from "../src/db/schema";
 import { createFileStorage, storageConfigFrom } from "../src/lib/stored-files";
-
-/** `apiKey` and `appId` of an UploadThing token (base64 JSON), or `null`. */
-function parseUploadThingToken(token: string | undefined) {
-  if (!token) return null;
-  try {
-    const decoded: unknown = JSON.parse(Buffer.from(token, "base64").toString("utf8"));
-    if (typeof decoded !== "object" || decoded === null) return null;
-    const { apiKey, appId } = decoded as Record<string, unknown>;
-    return typeof apiKey === "string" && typeof appId === "string" && /^[a-z0-9]+$/i.test(appId)
-      ? { apiKey, appId: appId.toLowerCase() }
-      : null;
-  } catch {
-    return null;
-  }
-}
+import { downloadUploadThingFile, parseUploadThingToken } from "./uploadthing-api";
 
 const databaseUrl = process.env.DATABASE_URL;
 const uploadThing = parseUploadThingToken(process.env.UPLOADTHING_TOKEN);
@@ -46,24 +31,10 @@ if (!databaseUrl || !uploadThing || !storageConfig) {
 
 const apply = process.argv.slice(2).includes("--apply");
 const CONCURRENCY = 4;
-const SIGNED_URL_TTL_SECONDS = 600;
-const DOWNLOAD_TIMEOUT_MS = 120_000;
 
 const db = drizzle({ connection: { url: databaseUrl, max: 1, prepare: false }, schema });
 const storage = createFileStorage(storageConfig);
 const { attachment, accountExport } = schema;
-
-/**
- * A signed URL of a private UploadThing file, as `UTApi.generateSignedURL`
- * builds it: the URL with its expiry, HMAC-SHA256-signed with the API key.
- */
-function uploadThingSignedUrl(key: string): string {
-  const url = new URL(`https://${uploadThing!.appId}.ufs.sh/f/${encodeURIComponent(key)}`);
-  url.searchParams.append("expires", String(Date.now() + SIGNED_URL_TTL_SECONDS * 1000));
-  const signature = createHmac("sha256", uploadThing!.apiKey).update(url.toString()).digest("hex");
-  url.searchParams.append("signature", `hmac-sha256=${signature}`);
-  return url.href;
-}
 
 type StoredFile = { key: string; mediaType: string; disposition: "inline" | "attachment" };
 
@@ -103,22 +74,14 @@ const files: StoredFile[] = [
 async function copy({ key, mediaType, disposition }: StoredFile): Promise<number | null> {
   if (await storage.exists(key)) return null;
   if (!apply) return 0;
-  const response = await fetch(uploadThingSignedUrl(key), {
-    signal: AbortSignal.timeout(DOWNLOAD_TIMEOUT_MS),
-  });
-  if (!response.ok) {
-    await response.body?.cancel();
-    throw new Error(`UploadThing answered ${response.status}`);
-  }
-  const body = new Uint8Array(await response.arrayBuffer());
-  const length = Number(response.headers.get("content-length"));
-  if (Number.isFinite(length) && length > 0 && length !== body.byteLength) {
-    throw new Error(`Truncated download (${body.byteLength} of ${length} bytes)`);
-  }
+  const { body, contentType, contentDisposition } = await downloadUploadThingFile(
+    uploadThing!,
+    key,
+  );
   // Keep the name and type UploadThing served the file with.
   await storage.put(key, body, {
-    contentType: response.headers.get("content-type") || mediaType,
-    contentDisposition: response.headers.get("content-disposition") || disposition,
+    contentType: contentType || mediaType,
+    contentDisposition: contentDisposition || disposition,
   });
   return body.byteLength;
 }

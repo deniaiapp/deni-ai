@@ -26,6 +26,8 @@
     "tools:merge-premium-usage": "tsx --env-file=.env ./tools/merge-premium-usage.ts",
     "tools:purge-anonymous": "tsx --env-file=.env ./tools/purge-anonymous.ts",
     "tools:migrate-uploadthing-to-r2": "tsx --env-file=.env ./tools/migrate-uploadthing-to-r2.ts",
+    "tools:audit-uploadthing-storage": "tsx --env-file=.env ./tools/audit-uploadthing-storage.ts",
+    "tools:migrate-legacy-chat-files": "tsx --env-file=.env ./tools/migrate-legacy-chat-files.ts",
     "disposable:refresh": "pnpm --filter @deni-ai/disposable-email-domains refresh",
     "test": "vitest run",
     "doctor": "react-doctor"
