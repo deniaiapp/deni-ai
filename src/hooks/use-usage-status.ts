@@ -26,7 +26,6 @@ export function useUsageStatus(params: {
   const categoryUsage = usageQuery.data?.usage[0];
   const remainingUsage = categoryUsage?.remaining;
   const usageLimit = categoryUsage?.limit;
-  const usageUnit = categoryUsage?.unit ?? "requests";
   const usageTier = usageQuery.data?.tier ?? "free";
   const isSignupLimited = usageQuery.data?.signupLimited ?? false;
 
@@ -62,7 +61,6 @@ export function useUsageStatus(params: {
         : usageTier === "max"
           ? t("Max")
           : t("Pro");
-  const usageUnitLabel = usageUnit === "tokens" ? t("tokens") : t("requests");
   const maxModeEligible = features.billing && (usageQuery.data?.maxModeEligible ?? false);
   const canEnableMaxMode = features.billing && maxModeEligible && !maxModeEnabled && isUsageBlocked;
   const isSubmitBlocked = !selectedModel || (isUsageBlocked && !maxModeEnabled);
@@ -92,8 +90,6 @@ export function useUsageStatus(params: {
     usageTierLabel,
     remainingUsage,
     remainingPercent,
-    usageUnit,
-    usageUnitLabel,
     enableMaxMode,
   };
 }

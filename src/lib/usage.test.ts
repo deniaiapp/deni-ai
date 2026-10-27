@@ -236,7 +236,7 @@ beforeEach(() => {
     userId: "user",
     category: "basic",
     used: limit - 10,
-    unit: "tokens",
+    unit: "units",
     periodStart: now,
     periodEnd: new Date("2026-07-01"),
   } as Quota;
@@ -419,7 +419,7 @@ test("replayed reserve and settlement calls are idempotent", async () => {
   expect(state.events[0].amount).toBe(10);
   expect(state.quota!.used).toBe(limit + 10);
 });
-test("a guest reservation cannot refund a converted token quota", async () => {
+test("a reservation cannot refund a quota row stored in a legacy unit", async () => {
   state.quota = null;
   await consumeUsage({
     userId: "user",
@@ -442,7 +442,7 @@ test("empty guest quotas are protected against parallel creation", async () => {
         userId: "user",
         category: "basic",
         reservationId,
-        amount: 30,
+        amount: 600_000,
         isAnonymous: true,
         now,
       }),

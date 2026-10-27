@@ -135,7 +135,6 @@ beforeEach(() => {
     model: {},
     providerOptions: {},
     usageCategory: "basic",
-    usageUnit: "requests",
     usesOpenRouter: false,
   });
   mocks.getChat.mockResolvedValue({ title: "Chat", projectId: null, messages: [] });

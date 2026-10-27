@@ -133,7 +133,6 @@ vi.mock("@/app/api/chat/_lib/model", async () => {
       },
       providerOptions: {},
       usageCategory: "basic",
-      usageUnit: state.guest ? "requests" : "tokens",
       usesOpenRouter: false,
     }),
   };
@@ -560,13 +559,13 @@ test("normal completion settles once and finalizes the owned transcript", async 
   expect(clearChatGenerationState).toHaveBeenCalledOnce();
 });
 
-test("a guest stop before output refunds the request unit", async () => {
+test("a guest stop before output is fully refunded", async () => {
   state.guest = true;
   state.output = false;
   state.usage = false;
   await run();
-  expect(state.consumed).toBe(1);
-  expect(state.refunded).toBe(1);
+  expect(state.consumed).toBeGreaterThan(0);
+  expect(state.refunded).toBe(state.consumed);
   expect(state.reported).toBe(0);
 });
 
@@ -588,7 +587,7 @@ test("a failed settlement keeps the streamed answer in the transcript", async ()
   expect(clearChatGenerationState).toHaveBeenCalledOnce();
 });
 
-test("guests cannot send oversized prompts for one request unit", async () => {
+test("guests cannot send oversized prompts in one request", async () => {
   state.guest = true;
   const response = await POST(chatRequest("x".repeat(4 * GUEST_MAX_PROMPT_TOKENS)));
   expect(response.status).toBe(413);
@@ -598,7 +597,7 @@ test("guests cannot send oversized prompts for one request unit", async () => {
   expect(updateChat).not.toHaveBeenCalled();
 });
 
-test("guests cannot send several PDFs by URL for one request unit", async () => {
+test("guests cannot send several PDFs by URL in one request", async () => {
   state.guest = true;
   const pdf = (name: string) => ({
     type: "file" as const,
@@ -636,7 +635,7 @@ test("a guest PDF counts by the size downloaded before the check", async () => {
   expect(streamText).toHaveBeenCalledOnce();
 });
 
-test("guests cannot send a large inline PDF for one request unit", async () => {
+test("guests cannot send a large inline PDF in one request", async () => {
   state.guest = true;
   // About 300 KB, decoded.
   const url = `data:application/pdf;base64,${"A".repeat(400_000)}`;

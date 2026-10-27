@@ -13,7 +13,7 @@ import { CombinedUsageMeter, type UsagePoolView } from "./product-usage";
 
 export type UsageItem = {
   category: "basic" | "premium";
-  unit: "requests" | "tokens";
+  unit: "units";
   limit: number | null;
   used: number;
   remaining: number | null;
@@ -33,7 +33,7 @@ function UsageRow({
   const locale = useLocale();
   if (!item) return null;
 
-  const unitLabel = item.unit === "tokens" ? t("tokens") : t("requests");
+  const unitLabel = t("units");
   const hasLimit = item.limit !== null && item.limit > 0;
   const usedPercent = hasLimit ? Math.min((item.used / (item.limit ?? 1)) * 100, 100) : 0;
   const remainingPercent = Math.max(100 - usedPercent, 0);

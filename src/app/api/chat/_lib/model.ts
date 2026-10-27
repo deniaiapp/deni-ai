@@ -64,7 +64,6 @@ type ResolvedChatModelContext = {
   model: LanguageModel;
   usesOpenRouter: boolean;
   usageCategory: UsageCategory;
-  usageUnit: "requests" | "tokens";
   providerOptions: ChatProviderOptions;
 };
 
@@ -150,7 +149,6 @@ export async function resolveChatModelContext({
     });
   }
 
-  let usageUnit: "requests" | "tokens" = "requests";
   const providerId = selectedModel.provider ?? selectedModel.author;
   const deniApiKey = env.DENI_API_KEY?.trim();
   const deniApiBaseUrl = env.DENI_API_BASE_URL;
@@ -209,7 +207,6 @@ export async function resolveChatModelContext({
     }
 
     const categoryUsage = usageSummary.usage.find((usage) => usage.category === usageCategory);
-    usageUnit = categoryUsage?.unit ?? "requests";
     const isLimitReached =
       categoryUsage?.remaining !== null &&
       categoryUsage?.remaining !== undefined &&
@@ -395,7 +392,6 @@ export async function resolveChatModelContext({
     model,
     usesOpenRouter,
     usageCategory,
-    usageUnit,
     providerOptions,
   };
 }

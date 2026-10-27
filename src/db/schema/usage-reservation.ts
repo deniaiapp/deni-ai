@@ -8,7 +8,7 @@ export const usageReservation = pgTable(
     id: text("id").primaryKey(),
     userId: text("user_id").notNull(),
     category: text("category", { enum: ["basic", "premium"] }).notNull(),
-    unit: text("unit", { enum: ["requests", "tokens"] }).notNull(),
+    unit: text("unit", { enum: ["units"] }).notNull(),
     periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
     periodEnd: timestamp("period_end", { withTimezone: true }),
     reservedAmount: bigint("reserved_amount", { mode: "number" }).notNull(),

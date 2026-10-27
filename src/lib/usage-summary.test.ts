@@ -49,7 +49,7 @@ vi.mock("@/db/drizzle", () => ({
               rows = ["basic", "premium"].map((category) => ({
                 category,
                 used: 123,
-                unit: "tokens",
+                unit: "units",
                 periodStart: new Date("2026-06-01"),
                 periodEnd: new Date("2026-07-01"),
               }));
@@ -91,8 +91,8 @@ test.each([false, true])(
 test("the pool is split by product from this month's ledger", async () => {
   state.team = false;
   state.ledger = [
-    { product: "chat", unit: "tokens", used: 100 },
-    { product: "flixa", unit: "tokens", used: 300 },
+    { product: "chat", unit: "units", used: 100 },
+    { product: "flixa", unit: "units", used: 300 },
     // $1.50 of Deni Run = 3M units.
     { product: "run", unit: "usd_micros", used: 1_500_000 },
   ];

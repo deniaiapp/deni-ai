@@ -38,7 +38,12 @@ export type UsageCategory = "basic" | "premium";
 
 export const SHARED_USAGE_CATEGORY: UsageCategory = "basic";
 export type SubscriptionTier = "free" | "plus" | "pro" | "max";
-export type UsageUnit = "requests" | "tokens";
+/**
+ * Quota rows count usage units (usage-pool.ts): weighted tokens for chat and Flixa,
+ * converted provider cost for Deni Run. Rows stored as "tokens" or "requests" before
+ * 2026-11 read as a different unit and reset.
+ */
+export type UsageUnit = "units";
 type UsageRecord = typeof usageQuota.$inferSelect;
 type UsageDatabase = Pick<typeof db, "select" | "insert" | "update">;
 
@@ -59,21 +64,13 @@ function withUsageLock<T>(
   );
 }
 
-export const GUEST_USAGE_MULTIPLIER = 2;
+/** Usage units charged per successful `search` tool call. */
+export const SEARCH_TOOL_USAGE_COST = 10_000;
 
-/** Weighted basic tokens charged per successful `search` tool call. */
-export const SEARCH_TOOL_TOKEN_COST = 10_000;
-
-/** Guest request units charged per successful `search` tool call. */
-export const SEARCH_TOOL_REQUEST_COST = 1;
-
-export function getSearchToolUsageAmount(isAnonymous: boolean): number {
-  return isAnonymous ? SEARCH_TOOL_REQUEST_COST : SEARCH_TOOL_TOKEN_COST;
-}
-
-const GUEST_USAGE_LIMITS: Record<UsageCategory, { limit: number; unit: UsageUnit }> = {
-  basic: { limit: 20 * GUEST_USAGE_MULTIPLIER, unit: "requests" },
-  premium: { limit: 0, unit: "requests" },
+/** A guest's allowance in usage units. It never resets (guest rows have no period end). */
+const GUEST_USAGE_LIMITS: Record<UsageCategory, number> = {
+  basic: 1_000_000,
+  premium: 0,
 };
 
 /** The plan's monthly pool in usage units, shared by chat, Flixa, and Deni Run (usage-pool.ts). */
@@ -113,7 +110,7 @@ async function monthLedger(userId: string, now: Date, database: UsageDatabase) {
   for (const row of rows) {
     if (row.product === "run" && row.unit === "usd_micros")
       ledger.run += Number(row.used) * USAGE_UNITS_PER_USD_MICRO;
-    else if ((row.product === "chat" || row.product === "flixa") && row.unit === "tokens")
+    else if ((row.product === "chat" || row.product === "flixa") && row.unit === "units")
       ledger[row.product] += Number(row.used);
   }
   ledger.run = Math.round(ledger.run);
@@ -393,13 +390,13 @@ function resolvePeriodEnd(now: Date) {
 }
 
 function isUsageUnit(value: string | null | undefined): value is UsageUnit {
-  return value === "requests" || value === "tokens";
+  return value === "units";
 }
 
 /**
  * Chat, Flixa, and Deni Run share one pool per plan. A category's limit is what
  * the pool has left after the other category and Deni Run, so a request is refused
- * once the pool as a whole is spent. Guests keep their own request allowance.
+ * once the pool as a whole is spent. Guests keep their own allowance.
  */
 async function calculateUsageState({
   userId,
@@ -427,12 +424,11 @@ async function calculateUsageState({
     (await database.select().from(usageQuota).where(eq(usageQuota.userId, userId)));
   const current = records.find((row) => row.category === category);
 
+  const unit: UsageUnit = "units";
   let limit: number | null;
-  let unit: UsageUnit;
   if (isAnonymous) {
-    ({ limit, unit } = GUEST_USAGE_LIMITS[category]);
+    limit = GUEST_USAGE_LIMITS[category];
   } else {
-    unit = "tokens";
     const runUnits = providedRunUnits ?? (await runUsageUnits(userId, now, database));
     const others = records
       .filter((row) => row.category !== category)
@@ -962,9 +958,9 @@ export async function getUsageSummary({
 
   // Chat and Flixa share the quota rows (rows from before the change may still hold
   // "premium" usage this month); the ledger says how much of it each product spent.
-  const quotaUsed = records.reduce((sum, row) => sum + liveUsed(row, nowDate, "tokens"), 0);
-  const ledgerTokens = ledger.chat + ledger.flixa;
-  const flixaUsed = ledgerTokens > 0 ? Math.round((quotaUsed * ledger.flixa) / ledgerTokens) : 0;
+  const quotaUsed = records.reduce((sum, row) => sum + liveUsed(row, nowDate, "units"), 0);
+  const ledgerUnits = ledger.chat + ledger.flixa;
+  const flixaUsed = ledgerUnits > 0 ? Math.round((quotaUsed * ledger.flixa) / ledgerUnits) : 0;
   const pool = isAnonymous
     ? null
     : {
@@ -974,12 +970,12 @@ export async function getUsageSummary({
       };
   const poolUsed = pool ? pool.used.chat + pool.used.flixa + pool.used.run : 0;
 
-  // One entry for the one pool (guests: their request allowance).
+  // One entry for the one pool (guests: their own allowance).
   const usage: UsageSnapshot[] = [
     pool
       ? {
           category: SHARED_USAGE_CATEGORY,
-          unit: "tokens",
+          unit: "units",
           limit: pool.limit,
           used: poolUsed,
           remaining: Math.max(pool.limit - poolUsed, 0),

@@ -165,7 +165,7 @@ export default function SettingsWrapper({ children }: { children: React.ReactNod
                   ) : (
                     usages?.map((usageItem) => {
                       const maxModeEnabled = features.billing && (usage?.maxModeEnabled ?? false);
-                      const unitLabel = usageItem.unit === "tokens" ? t("tokens") : t("requests");
+                      const unitLabel = t("units");
                       const hasLimit =
                         !maxModeEnabled && usageItem.limit !== null && usageItem.limit > 0;
                       const usedPercent = hasLimit

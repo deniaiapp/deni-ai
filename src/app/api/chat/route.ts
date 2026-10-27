@@ -254,7 +254,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: GENERIC_CHAT_REQUEST_ERROR }, { status: 500 });
   }
 
-  const { model, providerOptions, usageCategory, usageUnit, usesOpenRouter } = modelContext;
+  const { model, providerOptions, usageCategory, usesOpenRouter } = modelContext;
 
   // Pro / Fast are available for OpenAI models routed through OpenRouter.
   const modelDef = getModelDefinition(baseModel);
@@ -451,7 +451,6 @@ export async function POST(req: Request) {
     );
   };
   const resolveUsageAmount = () => {
-    if (usageUnit !== "tokens") return hasAssistantOutput ? 1 : 0;
     return Math.max(finalUsageAmount + resolveUnfinishedStepAmount(), hasAssistantOutput ? 1 : 0);
   };
   const modelReservationId = `${generationId}:model`;
@@ -599,18 +598,6 @@ export async function POST(req: Request) {
       }
     }
     projectPrompt = isComparison ? null : await buildProjectPrompt(chat.projectId, userId);
-    if (usageUnit === "requests") {
-      consumedUsageAmount = 1;
-      await consumeUsage({
-        userId,
-        category: usageCategory,
-        reservationId: modelReservationId,
-        isAnonymous,
-        amount: consumedUsageAmount,
-      });
-      usageConsumed = true;
-      watchUsage();
-    }
   } catch (error) {
     await rollbackPendingAssistantState();
     await refundConsumedUsage();
@@ -666,55 +653,53 @@ export async function POST(req: Request) {
   let result: ReturnType<typeof streamText<typeof tools>>;
 
   try {
-    if (usageUnit === "tokens") {
-      // Attachment floors are only reserved: a cut-off call is billed at its
-      // prompt text or the input the provider reported for it, so they can never
-      // make stopping cost more.
-      basePromptTokens = estimatePromptTextTokens({ modelMessages, systemPrompt });
-      // A recent report applies only while this prompt still starts with the one
-      // it was for; an edited or branched transcript can be smaller.
-      promptFingerprints = fingerprintPromptPrefixes({
-        // Signed attachment URLs change every request; the files behind them do not.
-        modelMessages: withStableAttachmentUrls(modelMessages, resolvedAttachments.cacheKeys),
+    // Attachment floors are only reserved: a cut-off call is billed at its
+    // prompt text or the input the provider reported for it, so they can never
+    // make stopping cost more.
+    basePromptTokens = estimatePromptTextTokens({ modelMessages, systemPrompt });
+    // A recent report applies only while this prompt still starts with the one
+    // it was for; an edited or branched transcript can be smaller.
+    promptFingerprints = fingerprintPromptPrefixes({
+      // Signed attachment URLs change every request; the files behind them do not.
+      modelMessages: withStableAttachmentUrls(modelMessages, resolvedAttachments.cacheKeys),
+      systemPrompt,
+      toolNames: Object.keys(tools),
+    });
+    const reportedPrompt = recentPromptUsage.prompt;
+    if (
+      reportedPrompt &&
+      promptFingerprints[reportedPrompt.messageCount] === reportedPrompt.fingerprint
+    ) {
+      reportedPromptTokens = reportedPrompt.inputTokens;
+      // The provider counted the prompt this one starts with. A text estimate
+      // of that same prefix can exceed its real size and would bill tokens the
+      // prompt does not have at the full rate, so only the messages after it
+      // are estimated.
+      const reportedPrefixTokens = estimatePromptTextTokens({
+        modelMessages: modelMessages.slice(0, reportedPrompt.messageCount),
         systemPrompt,
-        toolNames: Object.keys(tools),
       });
-      const reportedPrompt = recentPromptUsage.prompt;
-      if (
-        reportedPrompt &&
-        promptFingerprints[reportedPrompt.messageCount] === reportedPrompt.fingerprint
-      ) {
-        reportedPromptTokens = reportedPrompt.inputTokens;
-        // The provider counted the prompt this one starts with. A text estimate
-        // of that same prefix can exceed its real size and would bill tokens the
-        // prompt does not have at the full rate, so only the messages after it
-        // are estimated.
-        const reportedPrefixTokens = estimatePromptTextTokens({
-          modelMessages: modelMessages.slice(0, reportedPrompt.messageCount),
-          systemPrompt,
-        });
-        basePromptTokens =
-          reportedPrompt.inputTokens + Math.max(0, basePromptTokens - reportedPrefixTokens);
-      }
-      consumedUsageAmount = estimateTokenReservation({
-        estimatedPromptTokens:
-          estimatePromptInputTokens({ modelMessages, systemPrompt }) +
-          estimateUrlAttachmentTokens(modelMessages),
-        modelId: baseModel,
-        proMode,
-        fastMode,
-      });
-      await consumeUsage({
-        userId,
-        category: usageCategory,
-        reservationId: modelReservationId,
-        isAnonymous,
-        amount: consumedUsageAmount,
-      });
-      usageConsumed = true;
-      watchUsage();
-      usageRefunded = false;
+      basePromptTokens =
+        reportedPrompt.inputTokens + Math.max(0, basePromptTokens - reportedPrefixTokens);
     }
+    consumedUsageAmount = estimateTokenReservation({
+      estimatedPromptTokens:
+        estimatePromptInputTokens({ modelMessages, systemPrompt }) +
+        estimateUrlAttachmentTokens(modelMessages),
+      modelId: baseModel,
+      proMode,
+      fastMode,
+    });
+    await consumeUsage({
+      userId,
+      category: usageCategory,
+      reservationId: modelReservationId,
+      isAnonymous,
+      amount: consumedUsageAmount,
+    });
+    usageConsumed = true;
+    watchUsage();
+    usageRefunded = false;
 
     const generationSignal = generationAbortController.signal;
     result = streamText({

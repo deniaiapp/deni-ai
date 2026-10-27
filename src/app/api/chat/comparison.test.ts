@@ -88,7 +88,6 @@ beforeEach(() => {
     model: {},
     providerOptions: {},
     usageCategory: "basic",
-    usageUnit: "requests",
     usesOpenRouter: false,
   });
   mocks.getChat.mockResolvedValue(null);
@@ -111,7 +110,7 @@ test("comparison needs no chat row and still checks normal quota", async () => {
   const response = await POST(request(true));
   expect(response.status).toBe(402);
   expect(mocks.consume).toHaveBeenCalledWith(
-    expect.objectContaining({ userId: "user", amount: 1 }),
+    expect.objectContaining({ userId: "user", category: "basic" }),
   );
   expect(mocks.getChat).not.toHaveBeenCalled();
   expect(mocks.updateChat).not.toHaveBeenCalled();

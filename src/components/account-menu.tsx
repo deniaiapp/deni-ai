@@ -29,7 +29,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 
 type UsageCategoryItem = {
   category: "basic" | "premium";
-  unit: "requests" | "tokens";
+  unit: "units";
   limit: number | null;
   used: number;
   remaining: number | null;
