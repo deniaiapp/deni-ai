@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@sentry/nextjs", () => ({ init: vi.fn(), captureRequestError: vi.fn() }));
 vi.mock("@/lib/sentry-options", () => ({ getSentryOptions: () => ({}) }));
 vi.mock("@/lib/abort-diagnostics", () => ({ installAbortDiagnostics: vi.fn() }));
+vi.mock("@/lib/process-warnings", () => ({ installProcessWarningFilter: vi.fn() }));
 vi.mock("@/lib/model-health-scheduler", () => ({
   startModelHealthScheduler: mocks.startModelHealthScheduler,
 }));
