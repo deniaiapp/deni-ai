@@ -1525,7 +1525,6 @@ msgid "Deny"
 msgstr "Deny"
 
 #: app/components/chat-thread.tsx
-#: app/components/computer-panel.tsx
 msgctxt "NhDwgx"
 msgid "in progress"
 msgstr "in progress"
@@ -1595,11 +1594,6 @@ msgstr "Terminal"
 msgctxt "ZjmERS"
 msgid "Log"
 msgstr "Log"
-
-#: app/components/computer-panel.tsx
-msgctxt "nLdxaG"
-msgid "Working on your task"
-msgstr "Working on your task"
 
 #: app/components/computer-panel.tsx
 msgctxt "cA0m7F"

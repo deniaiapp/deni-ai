@@ -340,8 +340,9 @@ export function ComputerPanel({
   const stamp = computer.screenshotAt ?? "none";
   const screenshotQuery = `${jobId ? `&jobId=${encodeURIComponent(jobId)}` : ""}`;
   const statusLabel =
+    // The step detail (such as calling an MCP tool) belongs to the conversation, not this badge.
     computer.status === "working"
-      ? computer.workingLabel || t("Working")
+      ? t("Working")
       : computer.status === "takeover"
         ? t("Your help is needed")
         : computer.status === "error"
@@ -387,7 +388,6 @@ export function ComputerPanel({
         </div>
         <Badge variant={statusVariant} appearance="dot">
           {statusLabel}
-          {computer.status === "working" ? <AnimatedDots /> : null}
         </Badge>
       </header>
 
@@ -420,8 +420,9 @@ export function ComputerPanel({
         {visibleTab === "screen" && !showScreen ? (
           <div className="space-y-3 p-4">
             <div className="flex aspect-video flex-col items-center justify-center gap-3 rounded-lg border border-foreground/5 bg-surface-25 px-5 text-center">
-              {computer.status === "working" ? <Spinner size="sm" /> : <TerminalIcon size={24} className="text-neutral-101" />}
-              <span className="text-xs text-neutral-160">{computer.status === "working" ? computer.workingLabel || t("Working on your task") : t("No browser open")}</span>
+              {/* No browser is open, so nothing on this screen is moving; the badge says if work is going on. */}
+              <TerminalIcon size={24} className="text-neutral-101" />
+              <span className="text-xs text-neutral-160">{t("No browser open")}</span>
             </div>
             <p className="text-center text-xs text-muted-foreground">{botName ? t("{name}'s screen", { name: botName }) : t("Computer screen")}</p>
             <p className="px-2 text-center text-xs leading-relaxed text-neutral-111">{t("The screen appears here when your teammate opens the browser.")}</p>
@@ -897,17 +898,6 @@ function RoutineList({ routines, onOpen }: { routines: Routine[]; onOpen?: (id?:
         </div>
       )}
     </section>
-  );
-}
-
-function AnimatedDots() {
-  const t = useExtracted();
-  return (
-    <span aria-label={t("in progress")} className="animated-dots ml-1" role="img">
-      <span>.</span>
-      <span>.</span>
-      <span>.</span>
-    </span>
   );
 }
 

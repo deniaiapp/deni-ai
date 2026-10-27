@@ -1525,7 +1525,6 @@ msgid "Deny"
 msgstr "拒否"
 
 #: app/components/chat-thread.tsx
-#: app/components/computer-panel.tsx
 msgctxt "NhDwgx"
 msgid "in progress"
 msgstr "処理中"
@@ -1595,11 +1594,6 @@ msgstr "ターミナル"
 msgctxt "ZjmERS"
 msgid "Log"
 msgstr "ログ"
-
-#: app/components/computer-panel.tsx
-msgctxt "nLdxaG"
-msgid "Working on your task"
-msgstr "タスクを実行中"
 
 #: app/components/computer-panel.tsx
 msgctxt "cA0m7F"
