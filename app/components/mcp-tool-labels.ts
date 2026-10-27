@@ -174,7 +174,12 @@ export function mcpArgumentPreview(args: unknown) {
   if (!args || typeof args !== "object" || Array.isArray(args)) return { summary: undefined, body: undefined };
   let body: string | undefined;
   const parts: string[] = [];
-  for (const [key, value] of Object.entries(args as Record<string, unknown>)) {
+  const record = args as Record<string, unknown>;
+  // Earlier server versions replaced large arguments with { truncated, preview }; neither is the
+  // person's data.
+  const slimmed = record.truncated === true;
+  for (const [key, value] of Object.entries(record)) {
+    if (slimmed && (key === "truncated" || key === "preview")) continue;
     if (!body && isMcpBodyArgument(key, value)) {
       body = value as string;
       continue;

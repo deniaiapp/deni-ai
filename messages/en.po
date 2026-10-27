@@ -955,6 +955,26 @@ msgid "Teammate"
 msgstr "Teammate"
 
 #: app/components/chat-thread.tsx
+msgctxt "lLiHiw"
+msgid "{count} actions"
+msgstr "{count} actions"
+
+#: app/components/chat-thread.tsx
+msgctxt "fKsrKg"
+msgid "{count} failed"
+msgstr "{count} failed"
+
+#: app/components/chat-thread.tsx
+msgctxt "qyJtWy"
+msgid "Show less"
+msgstr "Show less"
+
+#: app/components/chat-thread.tsx
+msgctxt "Z184O6"
+msgid "Show {count} more"
+msgstr "Show {count} more"
+
+#: app/components/chat-thread.tsx
 #: app/components/computer-panel.tsx
 msgctxt "gAR0at"
 msgid "Working"

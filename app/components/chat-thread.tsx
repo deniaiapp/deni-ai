@@ -32,6 +32,7 @@ import {
   WrenchIcon,
   CornerUpLeftIcon,
   XIcon,
+  ChevronRightIcon,
   Loader2Icon,
   UsersIcon,
   type LucideIcon,
@@ -1245,14 +1246,18 @@ const MessageBlock = memo(function MessageBlock({
     return t("Worked for {count}h", { count: String(Math.round(minutes / 60)) });
   };
   const pluginActionLabels = usePluginActionLabels();
-  const cotSteps = buildCotSteps(
-    toolLabel,
+  const cotSteps = groupRepeatedSteps(
+    buildCotSteps(
+      toolLabel,
+      message.parts,
+      handoffs,
+      bots,
+      (name, input, approved) =>
+        [approved ? t("Approved") : t("Declined"), toolApprovalDetail(name, input, pluginActionLabels)].filter(Boolean).join(" · "),
+    ),
     message.parts,
-    handoffs,
-    bots,
-    (name, input, approved) =>
-      [approved ? t("Approved") : t("Declined"), toolApprovalDetail(name, input, pluginActionLabels)].filter(Boolean).join(" · "),
   );
+  const stepRuns = groupStepRuns(cotSteps, message.parts);
   const cotWorking = cotSteps.length > 0 && isLastMessage && isStreaming;
   // The saved duration covers the whole run and survives a reload; the local timer only fills in
   // until the finish metadata arrives.
@@ -1359,10 +1364,10 @@ const MessageBlock = memo(function MessageBlock({
                 </div>
               ));
             }
-            const step = cotSteps.find((item) => item.partIndex === index);
+            const run = stepRuns.find((item) => item[0].partIndex === index);
             return (
               <Fragment key={`${message.id}-${index}`}>
-                {step ? <StepLine step={step} /> : null}
+                {run ? <StepRun steps={run} /> : null}
                 <PartView
                   part={part}
                   onApprove={onApprove}
@@ -1382,9 +1387,75 @@ const MessageBlock = memo(function MessageBlock({
   );
 });
 
+// Merged steps list this many details before the rest are folded away.
+const STEP_DETAILS_SHOWN = 3;
+
+/**
+ * Steps with nothing shown between them, folded into one line. The teammate's own progress
+ * lines say what it is doing; the steps stay one click away. A single step is shown as is.
+ */
+function StepRun({ steps }: { steps: CotStep[] }) {
+  const t = useExtracted();
+  const [expanded, setExpanded] = useState(false);
+  if (steps.length === 1) return <StepLine step={steps[0]} />;
+  const total = steps.reduce((sum, step) => sum + (step.count ?? 1), 0);
+  const failed = steps.filter((step) => step.failed).length;
+  const active = steps.findLast((step) => step.status === "active");
+  return (
+    <div className="flex min-w-0 flex-col">
+      <button
+        type="button"
+        aria-expanded={expanded}
+        onClick={() => setExpanded((value) => !value)}
+        className={`flex min-w-0 items-center gap-2 rounded-md px-1 py-0.5 text-left text-xs outline-none hover:text-foreground focus-visible:ring-2 focus-visible:ring-foreground/40 ${active ? "text-foreground" : "text-muted-foreground"}`}
+      >
+        <ChevronRightIcon
+          className={`size-3.5 shrink-0 transition-transform motion-reduce:transition-none ${expanded ? "rotate-90" : ""}`}
+          aria-hidden="true"
+        />
+        <span className="min-w-0 truncate">
+          {active ? (
+            <>
+              {active.label}
+              <AnimatedDots />
+            </>
+          ) : (
+            t("{count} actions", { count: String(total) })
+          )}
+        </span>
+        {active ? (
+          <span className="shrink-0 tabular-nums text-muted-foreground/70">
+            {t("{count} actions", { count: String(total) })}
+          </span>
+        ) : null}
+        {failed > 0 ? (
+          <span className="shrink-0 text-destructive">
+            {t("{count} failed", { count: String(failed) })}
+          </span>
+        ) : null}
+      </button>
+      {expanded ? (
+        <div className="ml-2.5 border-l border-foreground/10 pl-2">
+          {steps.map((step) => (
+            <StepLine key={step.key} step={step} />
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /** One tool step, shown in the timeline between the bubbles of a reply. */
 function StepLine({ step }: { step: CotStep }) {
+  const t = useExtracted();
+  const [expanded, setExpanded] = useState(false);
   const Icon = step.icon;
+  // Identical details, such as the same approval note on every call, are listed once.
+  const details = (step.details ?? [step.description]).filter(
+    (detail, index, all) =>
+      detail != null && detail !== "" && (typeof detail !== "string" || all.indexOf(detail) === index),
+  );
+  const hidden = expanded ? 0 : Math.max(0, details.length - STEP_DETAILS_SHOWN);
   return (
     <div
       className={`flex min-w-0 gap-2 px-1 py-0.5 text-xs ${step.status === "active" ? "text-foreground" : "text-muted-foreground"} fade-in-0 animate-in`}
@@ -1393,10 +1464,33 @@ function StepLine({ step }: { step: CotStep }) {
       <div className="min-w-0 flex-1 space-y-1.5">
         <div className="break-words">
           {step.label}
+          {step.count ? (
+            <span className="ml-1.5 tabular-nums text-muted-foreground/70">×{step.count}</span>
+          ) : null}
           {step.status === "active" ? <AnimatedDots /> : null}
         </div>
-        {step.description ? (
-          <div className="break-words text-muted-foreground">{step.description}</div>
+        {details.length === 1 ? (
+          <div className="break-words text-muted-foreground">{details[0]}</div>
+        ) : details.length > 1 ? (
+          <ul className="space-y-1 text-muted-foreground">
+            {details.slice(0, details.length - hidden).map((detail, index) => (
+              <li key={index} className="break-words">
+                {detail}
+              </li>
+            ))}
+            {hidden > 0 || expanded ? (
+              <li>
+                <button
+                  type="button"
+                  aria-expanded={expanded}
+                  onClick={() => setExpanded((value) => !value)}
+                  className="rounded text-muted-foreground/80 underline-offset-2 outline-none hover:text-foreground hover:underline focus-visible:ring-2 focus-visible:ring-foreground/40"
+                >
+                  {expanded ? t("Show less") : t("Show {count} more", { count: String(hidden) })}
+                </button>
+              </li>
+            ) : null}
+          </ul>
         ) : null}
         {step.sites && step.sites.length > 0 ? (
           <ChainOfThoughtSearchResults>
@@ -1500,7 +1594,71 @@ type CotStep = {
   description?: ReactNode;
   sites?: StepSite[];
   status: "complete" | "active" | "pending";
+  failed?: boolean;
+  /** Repeated steps merged into this one: how many, each one's description, and the last part. */
+  count?: number;
+  details?: ReactNode[];
+  lastPartIndex?: number;
 };
+
+/** Parts that render nothing, so steps on either side of them read as one run. */
+function isSilentPart(part: UIMessage["parts"][number]) {
+  return part.type === "step-start" || part.type === "reasoning" || (part.type === "text" && !part.text.trim());
+}
+
+/** Splits steps into runs with nothing shown between them, each folded into one line. */
+function groupStepRuns(steps: CotStep[], parts: UIMessage["parts"]): CotStep[][] {
+  const runs: CotStep[][] = [];
+  for (const step of steps) {
+    const run = runs.at(-1);
+    const previous = run?.at(-1);
+    if (
+      run &&
+      previous &&
+      parts.slice((previous.lastPartIndex ?? previous.partIndex) + 1, step.partIndex).every(isSilentPart)
+    ) {
+      run.push(step);
+    } else {
+      runs.push([step]);
+    }
+  }
+  return runs;
+}
+
+/**
+ * Merges finished steps that repeat the same action back to back, such as sending several
+ * emails, into one line with a count and each one's details.
+ */
+function groupRepeatedSteps(steps: CotStep[], parts: UIMessage["parts"]): CotStep[] {
+  const grouped: CotStep[] = [];
+  for (const step of steps) {
+    const previous = grouped.at(-1);
+    const repeats =
+      previous !== undefined &&
+      previous.label === step.label &&
+      previous.icon === step.icon &&
+      previous.status === "complete" &&
+      step.status === "complete" &&
+      !previous.failed &&
+      !step.failed &&
+      parts.slice((previous.lastPartIndex ?? previous.partIndex) + 1, step.partIndex).every(isSilentPart);
+    if (!previous || !repeats) {
+      grouped.push(step);
+      continue;
+    }
+    const sites = [...(previous.sites ?? []), ...(step.sites ?? [])];
+    grouped[grouped.length - 1] = {
+      ...previous,
+      count: (previous.count ?? 1) + 1,
+      details: [...(previous.details ?? [previous.description]), step.description],
+      lastPartIndex: step.partIndex,
+      sites: sites.filter(
+        (site, index) => sites.findIndex((item) => item.host === site.host && item.href === site.href) === index,
+      ),
+    };
+  }
+  return grouped;
+}
 
 /** Tool steps of a reply, each placed after the text that came before it. Reasoning is not shown. */
 function buildCotSteps(
@@ -1554,6 +1712,7 @@ function buildCotSteps(
             ? liveHandoff.currentLabel
             : answered ?? (name === "mcp" ? mcpStepDetail(input) : undefined),
       sites: failed ? undefined : stepSites(name, toolPart.output, input),
+      failed,
       status:
         liveHandoff?.status === "running" || isToolRunning(state)
           ? "active"

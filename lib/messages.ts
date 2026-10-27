@@ -82,7 +82,26 @@ function slimToolInput(input: unknown) {
     else if (value != null) keep[key] = value;
   }
   // MCP approval cards show where a call goes and the text it writes, also after a reload.
-  if (rec.arguments && typeof rec.arguments === "object") keep.arguments = slimJson(rec.arguments, MAX_TOOL_UI);
+  if (rec.arguments && typeof rec.arguments === "object") keep.arguments = slimArguments(rec.arguments);
+  return keep;
+}
+
+/**
+ * Shortens each MCP argument on its own, so a long body never hides short ones such as the
+ * recipient and subject, and the client never sees a placeholder in place of the arguments.
+ */
+function slimArguments(args: object): unknown {
+  if (Array.isArray(args)) return slimJson(args, MAX_TOOL_UI);
+  const keep: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(args).slice(0, 20)) {
+    if (typeof value === "string") keep[key] = truncateString(value, MAX_TOOL_UI);
+    else if (value == null || typeof value !== "object") keep[key] = value;
+    else {
+      const text = json(value);
+      // A large nested value is left out; the step and the approval card only summarize.
+      if (text.length <= 200) keep[key] = value;
+    }
+  }
   return keep;
 }
 
