@@ -201,6 +201,9 @@ export async function handleChat(req: Request) {
   // The UI stream must still create this bot's own answer, not continue theirs.
   const streamHistory = requestMessage ? [...messages.filter((message) => message.id !== requestMessage.id), requestMessage] : messages;
   const modelHistory = await compactThread({ userId, threadId: thread.id, bot, messages });
+  // A new turn starts from a clean slate: an error left by an earlier run would otherwise stay
+  // on the computer panel until the computer next did something.
+  if (store.computer.lastError) void setComputer(userId, { lastError: null }).catch(() => undefined);
   const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: thread.kind !== "group", locale });
   let writeRunStatus: ((status: "working" | "finalizing" | "waiting" | "completed" | "failed") => void) | undefined;
   let finalizationPromise: Promise<boolean> | undefined;
@@ -255,11 +258,11 @@ export async function handleChat(req: Request) {
         const message = translateError(locale, error);
         writeRunStatus?.("failed");
         await finishJob(userId, job.id, "failed", { error: message }).catch(() => undefined);
+        // A failed save is the chat's error, shown there and in the notification, not the computer's.
         await setComputer(userId, {
           status: "idle",
           workingLabel: "",
           workingBotId: null,
-          lastError: message,
           jobId: job.id,
         }).catch(() => undefined);
         await createNotification({
@@ -329,11 +332,11 @@ export async function handleChat(req: Request) {
       const current = await getJob(userId, job.id);
       if (current?.status === "running") {
         writeRunStatus?.("failed");
+        // A failed model call is the chat's error, shown there and in the notification, not the computer's.
         await setComputer(userId, {
           status: "idle",
           workingLabel: "",
           workingBotId: null,
-          lastError: t("The model call failed"),
           jobId: job.id,
         }).catch(() => undefined);
         await finishJob(userId, job.id, "failed", {

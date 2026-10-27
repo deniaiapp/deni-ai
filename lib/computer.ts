@@ -245,8 +245,10 @@ export async function setComputer(
       jobId,
       activeJobId: _activeJobId,
       workspaces: _workspaces,
-      ...rest
+      ...patchRest
     } = patch;
+    // An error belongs to the work that hit it: new work clears it unless it reports its own.
+    const rest = patchRest.status === "working" && patchRest.lastError === undefined ? { ...patchRest, lastError: null } : patchRest;
     const explicitStatus = rest.status;
 
     const applyGlobalPatch = () => {

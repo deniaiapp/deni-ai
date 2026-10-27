@@ -171,7 +171,8 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
     if (failureHandled) return;
     failureHandled = true;
     const message = translateError(locale, error);
-    await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, lastError: message, jobId: job.id }).catch(() => undefined);
+    // The turn's error goes to the chat and the notification; a computer error was already recorded by its tool.
+    await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId: job.id }).catch(() => undefined);
     // deniToolApproval may already have parked the job before the reply could be saved.
     const failed = await transitionJob(userId, job.id, ["running", "finalizing", "waiting_approval", "waiting_takeover"], {
       status: "failed",
@@ -195,6 +196,9 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
     const { model, providerOptions, modelId } = await getDeniModel(userId, runMode);
     const group = thread.kind === "group";
     const modelHistory = await compactThread({ userId, threadId: thread.id, bot, messages });
+    // A new turn starts from a clean slate: an error left by an earlier run would otherwise stay
+    // on the computer panel until the computer next did something.
+    if (store.computer.lastError) void setComputer(userId, { lastError: null }).catch(() => undefined);
     const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: !group, locale });
     const result = streamText({
       model,
