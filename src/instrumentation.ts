@@ -11,6 +11,8 @@ export async function register() {
   Sentry.init(getSentryOptions());
   const { installAbortDiagnostics } = await import("@/lib/abort-diagnostics");
   installAbortDiagnostics();
+  const { installProcessWarningFilter } = await import("@/lib/process-warnings");
+  installProcessWarningFilter();
   // `next dev` would spend provider tokens on every restart and run billing and
   // storage jobs against the development database; use the cron routes there.
   if (process.env.NODE_ENV === "production") {

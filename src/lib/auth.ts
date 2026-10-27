@@ -555,6 +555,19 @@ export const auth = betterAuth({
       : []),
   ],
   socialProviders,
+  logger: {
+    log(level, message, ...args) {
+      // Sign-in and password-reset attempts for unregistered emails are routine
+      // traffic, not actionable warnings.
+      if (level === "warn" && message.endsWith("User not found")) {
+        return;
+      }
+      const line = `${new Date().toISOString()} ${level.toUpperCase()} [Better Auth]: ${message}`;
+      if (level === "error") console.error(line, ...args);
+      else if (level === "warn") console.warn(line, ...args);
+      else console.log(line, ...args);
+    },
+  },
   rateLimit: {
     enabled: true,
     window: 60, // time window in seconds

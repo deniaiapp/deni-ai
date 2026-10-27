@@ -1,4 +1,8 @@
-import { createOpenAI, type OpenAIResponsesProviderOptions } from "@ai-sdk/openai";
+import {
+  createOpenAI,
+  type OpenAIChatLanguageModelOptions,
+  type OpenAIResponsesProviderOptions,
+} from "@ai-sdk/openai";
 import type { XaiResponsesProviderOptions } from "@ai-sdk/xai";
 import type { LanguageModel, ModelMessage, SystemModelMessage } from "ai";
 import { streamText } from "ai";
@@ -330,11 +334,18 @@ export async function resolveChatModelContext({
       throw new ChatRouteError(400, { error: "Unknown provider" });
   }
 
-  const openaiProviderOptions: OpenAIResponsesProviderOptions | undefined = openaiReasoningEffort
-    ? {
-        reasoningEffort: openaiReasoningEffort,
-        reasoningSummary: "detailed",
-      }
+  // The Deni AI API is called through Chat Completions, which has no reasoning
+  // summary option (the AI SDK warns on every request if it is set).
+  const openaiProviderOptions:
+    | OpenAIResponsesProviderOptions
+    | OpenAIChatLanguageModelOptions
+    | undefined = openaiReasoningEffort
+    ? usesOpenRouter
+      ? {
+          reasoningEffort: openaiReasoningEffort,
+          reasoningSummary: "detailed",
+        }
+      : { reasoningEffort: openaiReasoningEffort }
     : undefined;
 
   const directProviderOptions = {

@@ -1,5 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import { generateObject, type UIMessage } from "ai";
+import { generateText, Output, type UIMessage } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db/drizzle";
@@ -431,9 +431,9 @@ export async function maybeAutoSaveMemories({
   }
   const existingBlock = formatExistingMemoriesForAgent(existingMemories);
 
-  const { object } = await generateObject({
+  const { output } = await generateText({
     model: memoryModel,
-    schema: memoryExtractionSchema,
+    output: Output.object({ schema: memoryExtractionSchema }),
     system: MEMORY_EXTRACTION_SYSTEM,
     // Existing memories first so the model grounds against them before reading the chat.
     prompt: [
@@ -447,12 +447,12 @@ export async function maybeAutoSaveMemories({
     ].join("\n"),
   });
 
-  if (!object.hasNew) {
+  if (!output.hasNew) {
     return;
   }
 
   const candidateMemories: string[] = [];
-  for (const memory of object.memories) {
+  for (const memory of output.memories) {
     const trimmed = memory.trim();
     if (!trimmed) continue;
     if (existingMemories.some((existing) => isNearDuplicateMemory(trimmed, existing))) {
