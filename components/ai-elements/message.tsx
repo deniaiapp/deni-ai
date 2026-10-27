@@ -47,13 +47,14 @@ export const MessageContent = ({ children, className, ...props }: MessageContent
     <div
       className={cn(
         "flex max-w-full flex-col gap-2 text-sm",
-        "group-[.is-user]:w-max group-[.is-user]:rounded-3xl group-[.is-user]:bg-neutral-80 group-[.is-user]:text-foreground",
+        // Long unbroken text such as a URL wraps inside the bubble instead of pushing it sideways.
+        "group-[.is-user]:w-max group-[.is-user]:rounded-3xl group-[.is-user]:bg-neutral-80 group-[.is-user]:text-foreground group-[.is-user]:wrap-anywhere group-[.is-user]:[&_pre]:overflow-x-auto",
         "group-[.is-assistant]:min-w-0 group-[.is-assistant]:w-fit group-[.is-assistant]:rounded-2xl group-[.is-assistant]:bg-surface-37 group-[.is-assistant]:text-neutral-231",
         className,
       )}
       {...props}
     >
-      <div ref={bodyRef} className={multiline ? "px-4.5 py-3.5" : "px-3.5 py-2.5"}>
+      <div ref={bodyRef} className={cn("min-w-0", multiline ? "px-4.5 py-3.5" : "px-3.5 py-2.5")}>
         {children}
       </div>
     </div>
