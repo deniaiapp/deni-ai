@@ -1,6 +1,6 @@
 import { useExtracted } from "@/i18n/react";
-import { useEffect, useState } from "react";
-import { CheckCircle2Icon, ChevronDownIcon, CircleAlertIcon, LayoutGridIcon, LogInIcon, PlugIcon, TrashIcon, WrenchIcon } from "lucide-react";
+import { useEffect, useState, type ComponentProps } from "react";
+import { CheckCircle2Icon, ChevronDownIcon, CircleAlertIcon, LayoutGridIcon, LogInIcon, PlugIcon, ShieldCheckIcon, TrashIcon, WrenchIcon } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -15,7 +15,8 @@ import { pluginWriteActions, type PluginKind } from "@/lib/plugin-actions";
 import { mcpCatalog, type McpCatalogEntry } from "@/lib/mcp-catalog";
 import { ConnectorGallery, useConnectorDescriptions } from "./connector-gallery";
 import { ConnectorLogo } from "./connector-logos";
-import { DiscordCard, fetchDiscordStatus, type DiscordStatus } from "./discord-settings";
+import { AppRow, AppRowMenu } from "./app-row";
+import { DiscordRow, fetchDiscordStatus, type DiscordStatus } from "./discord-settings";
 import { usePluginActionLabels } from "./plugin-action-labels";
 
 type BuiltinPlugin = { kind: PluginKind; connected: boolean; writeAccess: boolean; alwaysAllow: string[] };
@@ -44,6 +45,17 @@ function needsSignIn(connection: McpConnection) {
 function isConnected(connection: McpConnection) {
   if (needsSignIn(connection)) return false;
   return connection.oauth === "signed-in" || (connection.oauth === null && connection.lastTestAt != null && connection.lastError == null);
+}
+
+/** The small button that opens an app's Always allow choices; it shows the current choice. */
+function AlwaysAllowTrigger({ label, ...props }: ComponentProps<typeof Button> & { label: string }) {
+  return (
+    <Button type="button" size="xs" variant="ghost" className="min-w-0 max-w-40 gap-1 text-muted-foreground" title={label} aria-label={label} {...props}>
+      <ShieldCheckIcon className="size-3.5 shrink-0" aria-hidden="true" />
+      {props.children}
+      <ChevronDownIcon className="size-3 shrink-0 opacity-60" aria-hidden="true" />
+    </Button>
+  );
 }
 
 export function McpSettings({ open, onOpenChange, signInReturn = null, autoConnect = null, onAutoConnectStarted }: {
@@ -272,12 +284,9 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
     const list = toolLists[connection.id];
     const allowed = alwaysAllow[connection.id] ?? [];
     const tools = list?.status === "ready" ? list.tools.filter((tool) => !trustsReadOnly || tool.annotations?.readOnlyHint !== true) : [];
-    return <div className="flex items-center justify-between gap-3 text-sm">
-      <span>{t("Always allow")}</span>
-      <DropdownMenu onOpenChange={(next) => { if (next) void loadTools(connection.id); }}>
-        <DropdownMenuTrigger render={<Button type="button" size="sm" variant="outline" className="min-w-0 max-w-64" aria-label={t("Always allow tools for {name}", { name: connection.name })} />}>
+    return <DropdownMenu onOpenChange={(next) => { if (next) void loadTools(connection.id); }}>
+        <DropdownMenuTrigger render={<AlwaysAllowTrigger label={t("Always allow tools for {name}", { name: connection.name })} />}>
           <span className="truncate">{toolAlwaysAllowSummary(connection.id)}</span>
-          <ChevronDownIcon data-icon="inline-end" className="size-4 shrink-0" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="max-h-80 max-w-80">
           <DropdownMenuGroup>
@@ -291,8 +300,22 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
           </DropdownMenuGroup>
           {trustsReadOnly ? <DropdownMenuLabel className="mt-1 border-t border-foreground/10 pt-2">{t("Read-only tools already run without asking.")}</DropdownMenuLabel> : null}
         </DropdownMenuContent>
-      </DropdownMenu>
-    </div>;
+      </DropdownMenu>;
+  }
+
+  /** Always allow for a built-in plugin's write actions, in the same compact form. */
+  function pluginAlwaysAllow(plugin: BuiltinPlugin) {
+    return <DropdownMenu>
+      <DropdownMenuTrigger render={<AlwaysAllowTrigger label={t("Always allow tools for {name}", { name: pluginLabels[plugin.kind] })} />}>
+        <span className="truncate">{alwaysAllowSummary(plugin)}</span>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuGroup>
+          <DropdownMenuGroupLabel>{t("Run without asking")}</DropdownMenuGroupLabel>
+          {builtinActions[plugin.kind].map((action) => <DropdownMenuCheckboxItem key={action} checked={plugin.alwaysAllow.includes(action)} onCheckedChange={(checked) => void setAlwaysAllow(plugin.kind, action, checked)}>{actionLabels[action] ?? action}</DropdownMenuCheckboxItem>)}
+        </DropdownMenuGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>;
   }
 
   const customConnections = connections.filter((connection) => connection.catalogId == null);
@@ -388,33 +411,6 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
             {notice.tone === "error" ? <CircleAlertIcon /> : <CheckCircle2Icon />}
             <AlertDescription>{notice.text}</AlertDescription>
           </Alert> : null}
-          <div className="grid gap-3">
-            {plugins.map((plugin) => <div key={plugin.kind} className="rounded-xl border border-foreground/10 bg-surface-raised p-4">
-              <div className="flex items-center justify-between gap-3"><div><h3 className="font-semibold">{pluginLabels[plugin.kind]}</h3><p className="text-xs text-muted-foreground">{plugin.connected ? t("Connected · search and read") : t("Not connected")}</p></div>
-                <Button type="button" size="sm" variant={plugin.connected ? "outline" : "primary"} onClick={() => void connect(plugin.kind, false)}>{plugin.connected ? t("Reconnect") : t("Connect")}</Button>
-              </div>
-              {plugin.connected ? <div className="mt-3 space-y-3 border-t border-foreground/10 pt-3">
-                {!plugin.writeAccess && plugin.kind !== "github" ? <Button type="button" size="sm" variant="outline" onClick={() => void connect(plugin.kind, true)}>{t("Enable write access")}</Button> : null}
-                {plugin.writeAccess ? <div className="flex items-center justify-between gap-3 text-sm">
-                  <span>{t("Always allow")}</span>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger render={<Button type="button" size="sm" variant="outline" className="min-w-0 max-w-64" />}>
-                      <span className="truncate">{alwaysAllowSummary(plugin)}</span>
-                      <ChevronDownIcon data-icon="inline-end" className="size-4 shrink-0" />
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuGroup>
-                        <DropdownMenuGroupLabel>{t("Run without asking")}</DropdownMenuGroupLabel>
-                        {builtinActions[plugin.kind].map((action) => <DropdownMenuCheckboxItem key={action} checked={plugin.alwaysAllow.includes(action)} onCheckedChange={(checked) => void setAlwaysAllow(plugin.kind, action, checked)}>{actionLabels[action] ?? action}</DropdownMenuCheckboxItem>)}
-                      </DropdownMenuGroup>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div> : null}
-                <div><Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void disconnect(plugin.kind)}>{t("Disconnect")}</Button></div>
-              </div> : null}
-            </div>)}
-            <DiscordCard status={discord} onStatusChange={setDiscord} />
-          </div>
           <section aria-labelledby="mcp-connectors-heading" className="space-y-3">
             <div className="flex items-start justify-between gap-3">
               <div>
@@ -423,37 +419,73 @@ export function McpSettings({ open, onOpenChange, signInReturn = null, autoConne
               </div>
               <Button type="button" size="sm" variant="outline" icon={LayoutGridIcon} onClick={() => setGalleryOpen(true)}>{t("Browse connectors")}</Button>
             </div>
-            <div className="grid gap-3">
-              {addedConnectors.length === 0 ? <button type="button" onClick={() => setGalleryOpen(true)} className="rounded-xl border border-dashed border-foreground/15 p-4 text-left text-sm text-muted-foreground transition-colors hover:bg-foreground/5">
-                {t("No connectors yet. Browse {count} apps such as Slack, Notion, Jira, and Sentry.", { count: String(mcpCatalog.length) })}
-              </button> : null}
+            {/* Built-in plugins, added connectors, and Discord share one compact list. */}
+            <div className="divide-y divide-foreground/10 rounded-xl border border-foreground/10 bg-surface-raised">
+              {plugins.map((plugin) => (
+                <AppRow
+                  key={plugin.kind}
+                  logo={<ConnectorLogo id={plugin.kind} className="size-5" />}
+                  name={pluginLabels[plugin.kind]}
+                  status={plugin.connected ? t("Connected") : t("Not connected")}
+                  actions={plugin.connected ? (
+                    <>
+                      {plugin.writeAccess ? pluginAlwaysAllow(plugin) : null}
+                      <AppRowMenu
+                        name={pluginLabels[plugin.kind]}
+                        items={[
+                          ...(!plugin.writeAccess && plugin.kind !== "github" ? [{ label: t("Enable write access"), onSelect: () => void connect(plugin.kind, true) }] : []),
+                          { label: t("Reconnect"), onSelect: () => void connect(plugin.kind, false) },
+                          { label: t("Disconnect"), destructive: true, disabled: busy, onSelect: () => void disconnect(plugin.kind) },
+                        ]}
+                      />
+                    </>
+                  ) : (
+                    <Button type="button" size="xs" variant="primary" onClick={() => void connect(plugin.kind, false)}>{t("Connect")}</Button>
+                  )}
+                />
+              ))}
               {addedConnectors.map((entry) => {
                 const connection = connections.find((item) => item.catalogId === entry.id);
                 const connected = connection ? isConnected(connection) : false;
                 const expired = connection ? needsSignIn(connection) : false;
                 const error = connectorErrors[entry.id];
-                const status = connected ? t("Connected") : expired ? t("Needs sign-in again") : t("Not connected");
-                return <div key={entry.id} className="rounded-xl border border-foreground/10 bg-surface-raised p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white ring-1 ring-foreground/10"><ConnectorLogo id={entry.id} className="size-6" /></span>
-                      <div className="min-w-0">
-                        <h4 className="font-semibold">{entry.name}</h4>
-                        <p className="text-xs text-muted-foreground">{connectorDescriptions[entry.id]}</p>
-                        <p className={`text-xs ${expired ? "text-warning-300" : "text-muted-foreground"}`}>{status}</p>
-                      </div>
-                    </div>
-                    <Button type="button" size="sm" variant={connected ? "outline" : "primary"} loading={signingIn === entry.id} disabled={signingIn != null && signingIn !== entry.id} onClick={() => void signIn({ catalogId: entry.id })} aria-label={connected || expired ? t("Reconnect {name}", { name: entry.name }) : t("Connect {name}", { name: entry.name })}>
-                      {connected || expired ? t("Reconnect") : t("Connect")}
-                    </Button>
-                  </div>
-                  {error ? <p role="alert" className="mt-2 text-xs text-destructive-300">{error}</p> : null}
-                  {connection && (connected || expired) ? <div className="mt-3 space-y-3 border-t border-foreground/10 pt-3">
-                    {connected ? toolAlwaysAllow(connection) : null}
-                    <div><Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void disconnectConnection(connection)}>{t("Disconnect")}</Button></div>
-                  </div> : null}
-                </div>;
+                return (
+                  <AppRow
+                    key={entry.id}
+                    logo={<ConnectorLogo id={entry.id} className="size-5" />}
+                    name={<span title={connectorDescriptions[entry.id]}>{entry.name}</span>}
+                    status={connected ? t("Connected") : expired ? t("Needs sign-in again") : t("Not connected")}
+                    warn={expired}
+                    actions={connected ? (
+                      <>
+                        {connection ? toolAlwaysAllow(connection) : null}
+                        <AppRowMenu
+                          name={entry.name}
+                          items={[
+                            { label: t("Reconnect"), disabled: signingIn != null, onSelect: () => void signIn({ catalogId: entry.id }) },
+                            ...(connection ? [{ label: t("Disconnect"), destructive: true, disabled: busy, onSelect: () => void disconnectConnection(connection) }] : []),
+                          ]}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <Button type="button" size="xs" variant="primary" loading={signingIn === entry.id} disabled={signingIn != null && signingIn !== entry.id} onClick={() => void signIn({ catalogId: entry.id })} aria-label={expired ? t("Reconnect {name}", { name: entry.name }) : t("Connect {name}", { name: entry.name })}>
+                          {expired ? t("Reconnect") : t("Connect")}
+                        </Button>
+                        {connection ? <AppRowMenu name={entry.name} items={[{ label: t("Disconnect"), destructive: true, disabled: busy, onSelect: () => void disconnectConnection(connection) }]} /> : null}
+                      </>
+                    )}
+                  >
+                    {error ? <p role="alert" className="mt-2 text-xs text-destructive-300">{error}</p> : null}
+                  </AppRow>
+                );
               })}
+              {addedConnectors.length === 0 ? (
+                <button type="button" onClick={() => setGalleryOpen(true)} className="block w-full px-3 py-3 text-left text-sm text-muted-foreground transition-colors hover:bg-foreground/5">
+                  {t("No connectors yet. Browse {count} apps such as Slack, Notion, Jira, and Sentry.", { count: String(mcpCatalog.length) })}
+                </button>
+              ) : null}
+              <DiscordRow status={discord} onStatusChange={setDiscord} />
             </div>
           </section>
           {message ? <p className="text-sm text-secondary-foreground">{message}</p> : null}

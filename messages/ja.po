@@ -328,6 +328,11 @@ msgctxt "LQHT4G"
 msgid "set NEXT_PUBLIC_SUPPORT_EMAIL on this deployment."
 msgstr "このデプロイでは NEXT_PUBLIC_SUPPORT_EMAIL を設定してください。"
 
+#: app/components/app-row.tsx
+msgctxt "1YbvPM"
+msgid "More actions for {name}"
+msgstr "{name} のその他の操作"
+
 #: app/components/auth-form.tsx
 msgctxt "Tza51f"
 msgid "Deni Run backup codes"
@@ -1514,7 +1519,6 @@ msgid "Approve"
 msgstr "承認"
 
 #: app/components/chat-thread.tsx
-#: app/components/mcp-settings.tsx
 msgctxt "lr3QX_"
 msgid "Always allow"
 msgstr "常に許可"
@@ -2309,9 +2313,9 @@ msgid "Linked to {name} · talk to teammates in Discord DMs"
 msgstr "{name} と連携済み · Discord の DM でチームメイトと話せます"
 
 #: app/components/discord-settings.tsx
-msgctxt "tTpLsN"
-msgid "Not linked"
-msgstr "未連携"
+msgctxt "F-tT_7"
+msgid "Talk to teammates in Discord DMs"
+msgstr "Discord の DM でチームメイトと話せます"
 
 #: app/components/discord-settings.tsx
 msgctxt "4PKxPs"
@@ -2319,9 +2323,9 @@ msgid "Unlink"
 msgstr "連携を解除"
 
 #: app/components/discord-settings.tsx
-msgctxt "FMb851"
-msgid "Create link code"
-msgstr "連携コードを作成"
+msgctxt "JBWS0c"
+msgid "Link"
+msgstr "連携する"
 
 #: app/components/discord-settings.tsx
 msgctxt "IuW7u3"
@@ -2332,16 +2336,6 @@ msgstr "Discord アカウントにボットを追加:"
 msgctxt "-OXqB4"
 msgid "Open the bot on Discord"
 msgstr "Discord でボットを開く"
-
-#: app/components/discord-settings.tsx
-msgctxt "531YPO"
-msgid "Create a link code with the button above."
-msgstr "上のボタンでリンクコードを作成します。"
-
-#: app/components/discord-settings.tsx
-msgctxt "RzX1b1"
-msgid "Send the code to the bot in a direct message."
-msgstr "そのコードをボットにダイレクトメッセージで送ります。"
 
 #: app/components/discord-settings.tsx
 msgctxt "NOt03J"
@@ -2731,9 +2725,20 @@ msgid "Connect built-in services for search and reading. Writing requires a sepa
 msgstr "検索と閲覧のために組み込みサービスに接続します。書き込みは、そのアクションで「常に許可」を有効にしない限り、個別の承認が必要です。"
 
 #: app/components/mcp-settings.tsx
-msgctxt "SaKXK4"
-msgid "Connected · search and read"
-msgstr "接続済み · 検索と閲覧"
+#: app/routes/integrations/index.tsx
+msgctxt "2mMJRv"
+msgid "Connectors"
+msgstr "コネクタ"
+
+#: app/components/mcp-settings.tsx
+msgctxt "jEfLW3"
+msgid "Connect apps in one click. You sign in on their site; Deni Run never sees your password."
+msgstr "ワンクリックでアプリを接続できます。ログインは各サービスのサイトで行うため、Deni Runがパスワードを見ることはありません。"
+
+#: app/components/mcp-settings.tsx
+msgctxt "8Q-Q5L"
+msgid "Browse connectors"
+msgstr "コネクタを探す"
 
 #: app/components/mcp-settings.tsx
 msgctxt "PuU15u"
@@ -2749,22 +2754,6 @@ msgstr "書き込みを有効にする"
 msgctxt "qj1uhz"
 msgid "Disconnect"
 msgstr "接続を解除"
-
-#: app/components/mcp-settings.tsx
-#: app/routes/integrations/index.tsx
-msgctxt "2mMJRv"
-msgid "Connectors"
-msgstr "コネクタ"
-
-#: app/components/mcp-settings.tsx
-msgctxt "jEfLW3"
-msgid "Connect apps in one click. You sign in on their site; Deni Run never sees your password."
-msgstr "ワンクリックでアプリを接続できます。ログインは各サービスのサイトで行うため、Deni Runがパスワードを見ることはありません。"
-
-#: app/components/mcp-settings.tsx
-msgctxt "8Q-Q5L"
-msgid "Browse connectors"
-msgstr "コネクタを探す"
 
 #: app/components/mcp-settings.tsx
 msgctxt "FfVRAG"

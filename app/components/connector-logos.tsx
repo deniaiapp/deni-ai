@@ -1,6 +1,6 @@
 import type { ComponentProps, JSX } from "react";
 import {
-  siAirtable, siAtlassian, siClickup, siCloudflare, siDropbox, siHuggingface, siIntercom, siMiro, siNeon, siPaypal,
+  siAirtable, siAtlassian, siClickup, siCloudflare, siDiscord, siDropbox, siGithub, siGmail, siGoogledrive, siHuggingface, siIntercom, siMiro, siNeon, siPaypal,
   siPosthog, siSentry, siSquare, siStripe, siSupabase, siWebflow, siWix, siZapier, type SimpleIcon,
 } from "simple-icons";
 import { mcpCatalogEntry } from "@/lib/mcp-catalog";
@@ -54,6 +54,11 @@ const logos: Record<string, (props: LogoProps) => JSX.Element> = { notion: Notio
 
 /** Marks from Simple Icons (CC0), bundled with the app. Colors that vanish on white are darkened. */
 const simpleIcons: Record<string, { icon: SimpleIcon; color?: string }> = {
+  // Built-in plugins and Discord sit in the same list as the connectors.
+  github: { icon: siGithub },
+  gmail: { icon: siGmail },
+  drive: { icon: siGoogledrive },
+  discord: { icon: siDiscord },
   atlassian: { icon: siAtlassian },
   clickup: { icon: siClickup },
   airtable: { icon: siAirtable },

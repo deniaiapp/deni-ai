@@ -3,6 +3,8 @@ import { CircleHelp } from "lucide-react";
 import { useState } from "react";
 import { Popover } from "@base-ui/react/popover";
 import { Button } from "@/components/ui/button";
+import { AppRow, AppRowMenu } from "./app-row";
+import { ConnectorLogo } from "./connector-logos";
 
 export type DiscordStatus = {
   configured: boolean;
@@ -20,8 +22,8 @@ export async function fetchDiscordStatus(): Promise<DiscordStatus | null> {
   }
 }
 
-/** Loaded by the Plugins dialog together with the other cards so they all appear at once. */
-export function DiscordCard({ status, onStatusChange }: { status: DiscordStatus | null; onStatusChange: (status: DiscordStatus) => void }) {
+/** Loaded by the Plugins dialog together with the other apps so they all appear at once. */
+export function DiscordRow({ status, onStatusChange }: { status: DiscordStatus | null; onStatusChange: (status: DiscordStatus) => void }) {
   const t = useExtracted();
   const [issued, setIssued] = useState<LinkCode | null>(null);
   const [busy, setBusy] = useState(false);
@@ -61,54 +63,47 @@ export function DiscordCard({ status, onStatusChange }: { status: DiscordStatus 
     }
   }
 
+  const help = (
+    <Popover.Root>
+      <Popover.Trigger aria-label={hint} className="rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2"><CircleHelp className="size-4" /></Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Positioner side="bottom" align="end" sideOffset={6} collisionPadding={12} className="z-[70]">
+          <Popover.Popup className="max-w-xs rounded-xl border border-foreground/10 bg-surface-32 p-3 text-xs font-normal text-secondary-foreground shadow-xl outline-none">{hint}</Popover.Popup>
+        </Popover.Positioner>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+
+  // Discord is how people talk to teammates, not a data source, but it is linked from the same list.
   return (
-    <div className="rounded-xl border border-foreground/10 bg-surface-raised p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h3 className="flex items-center gap-1.5 font-semibold">
-            Discord
-            {status.link ? (
-              <Popover.Root>
-                <Popover.Trigger aria-label={hint} className="rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2"><CircleHelp className="size-4" /></Popover.Trigger>
-                <Popover.Portal>
-                  <Popover.Positioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-[70]">
-                    <Popover.Popup className="max-w-xs rounded-xl border border-foreground/10 bg-surface-32 p-3 text-xs font-normal text-secondary-foreground shadow-xl outline-none">{hint}</Popover.Popup>
-                  </Popover.Positioner>
-                </Popover.Portal>
-              </Popover.Root>
-            ) : null}
-          </h3>
-          <p className="text-xs text-muted-foreground">
-            {status.link ? t("Linked to {name} · talk to teammates in Discord DMs", { name: status.link.username }) : t("Not linked")}
-          </p>
-        </div>
-        {status.link ? (
-          <Button type="button" size="sm" variant="destructive" disabled={busy} onClick={() => void unlink()}>{t("Unlink")}</Button>
-        ) : (
-          <Button type="button" size="sm" variant="primary" loading={busy} onClick={() => void createCode()}>{t("Create link code")}</Button>
-        )}
-      </div>
-      {!status.link ? (
-        <ol className="mt-3 list-decimal space-y-1 border-t border-foreground/10 pl-5 pt-3 text-xs text-muted-foreground">
-          {status.inviteUrl ? (
-            <li>
-              {t("Add the bot to your Discord account:")}{" "}
-              <a className="text-foreground underline" href={status.inviteUrl} target="_blank" rel="noreferrer">{t("Open the bot on Discord")}</a>
-            </li>
-          ) : null}
-          <li>{t("Create a link code with the button above.")}</li>
-          <li>{t("Send the code to the bot in a direct message.")}</li>
-        </ol>
-      ) : null}
+    <AppRow
+      logo={<ConnectorLogo id="discord" className="size-5" />}
+      name="Discord"
+      status={status.link ? t("Linked to {name} · talk to teammates in Discord DMs", { name: status.link.username }) : t("Talk to teammates in Discord DMs")}
+      actions={status.link ? (
+        <>
+          {help}
+          <AppRowMenu name="Discord" items={[{ label: t("Unlink"), destructive: true, disabled: busy, onSelect: () => void unlink() }]} />
+        </>
+      ) : (
+        <Button type="button" size="xs" variant="primary" loading={busy} onClick={() => void createCode()}>{t("Link")}</Button>
+      )}
+    >
       {!status.link && issued ? (
-        <div className="mt-3 space-y-2 border-t border-foreground/10 pt-3 text-sm">
+        <div className="mt-2 space-y-2 rounded-lg bg-foreground/5 p-3 text-sm">
           <p className="font-mono text-2xl font-semibold tracking-widest">{issued.code}</p>
-          <p className="text-xs text-muted-foreground">
-            {t("Send this code to the bot in a Discord direct message. It works once and expires in 10 minutes.")}
-          </p>
+          <ol className="list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
+            {status.inviteUrl ? (
+              <li>
+                {t("Add the bot to your Discord account:")}{" "}
+                <a className="text-foreground underline" href={status.inviteUrl} target="_blank" rel="noreferrer">{t("Open the bot on Discord")}</a>
+              </li>
+            ) : null}
+            <li>{t("Send this code to the bot in a Discord direct message. It works once and expires in 10 minutes.")}</li>
+          </ol>
         </div>
       ) : null}
-      {message ? <p className="mt-2 text-sm text-secondary-foreground">{message}</p> : null}
-    </div>
+      {message ? <p className="mt-2 text-xs text-secondary-foreground">{message}</p> : null}
+    </AppRow>
   );
 }
