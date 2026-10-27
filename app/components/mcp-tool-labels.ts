@@ -93,16 +93,24 @@ const explanations = new Map<string, Promise<string | null>>();
 
 /**
  * A plain-language sentence on what an MCP call will do, written by the summary model for the
- * approval card. Undefined while it loads, null when none could be written.
+ * approval card. Undefined while it loads, null when none could be written or none was asked for.
  */
-export function useMcpExplanation(connectionId: string | undefined, tool: string | undefined, args?: Record<string, unknown>) {
+export function useMcpExplanation(
+  connectionId: string | undefined,
+  tool: string | undefined,
+  args?: Record<string, unknown>,
+  { request: requestAllowed = true }: { request?: boolean } = {},
+) {
   const [explanation, setExplanation] = useState<{ key: string; text: string | null } | null>(null);
   const argsKey = JSON.stringify(args ?? {});
   const key = `${connectionId}:${tool}:${argsKey}`;
+  // Without a request, only an explanation this page already asked for is shown.
+  const available = requestAllowed || explanations.has(key);
   useEffect(() => {
     if (!connectionId || !tool) return;
     let request = explanations.get(key);
     if (!request) {
+      if (!requestAllowed) return;
       request = fetch("/api/mcp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -121,8 +129,8 @@ export function useMcpExplanation(connectionId: string | undefined, tool: string
     return () => {
       active = false;
     };
-  }, [connectionId, tool, argsKey, key]);
-  if (!connectionId || !tool) return null;
+  }, [connectionId, tool, argsKey, key, requestAllowed]);
+  if (!connectionId || !tool || !available) return null;
   return explanation?.key === key ? explanation.text : undefined;
 }
 

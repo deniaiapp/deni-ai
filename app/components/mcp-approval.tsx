@@ -17,10 +17,24 @@ import {
  * changes data, a plain-language explanation from the summary model, and the text it will
  * write. The tool's own description and raw arguments stay under "Technical details".
  */
-export function McpApprovalDetails({ connectionId, tool, args }: { connectionId?: string; tool?: string; args?: Record<string, unknown> }) {
+export function McpApprovalDetails({
+  connectionId,
+  tool,
+  args,
+  explain = true,
+}: {
+  connectionId?: string;
+  tool?: string;
+  args?: Record<string, unknown>;
+  /**
+   * Off for answered approvals: each explanation is a model call, and history can hold many. One
+   * already loaded on this page is still shown.
+   */
+  explain?: boolean;
+}) {
   const t = useExtracted();
   const described = useMcpToolDescription(connectionId, tool, args);
-  const explanation = useMcpExplanation(connectionId, tool, args);
+  const explanation = useMcpExplanation(connectionId, tool, args, { request: explain });
   const service = described?.connection.name ?? t("a connected app");
   const definition = described?.tool;
   const names = described?.names ?? {};

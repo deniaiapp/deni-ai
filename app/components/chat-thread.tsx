@@ -32,6 +32,7 @@ import {
   WrenchIcon,
   CornerUpLeftIcon,
   XIcon,
+  CheckIcon,
   ChevronRightIcon,
   Loader2Icon,
   UsersIcon,
@@ -43,9 +44,10 @@ import {
 } from "@/components/ai-elements/chain-of-thought";
 import {
   Confirmation,
+  ConfirmationAccepted,
   ConfirmationAction,
   ConfirmationActions,
-  ConfirmationRequest,
+  ConfirmationRejected,
   ConfirmationTitle,
 } from "@/components/ai-elements/confirmation";
 import {
@@ -1245,16 +1247,8 @@ const MessageBlock = memo(function MessageBlock({
     if (minutes < 60) return t("Worked for {count}m", { count: String(minutes) });
     return t("Worked for {count}h", { count: String(Math.round(minutes / 60)) });
   };
-  const pluginActionLabels = usePluginActionLabels();
   const cotSteps = groupRepeatedSteps(
-    buildCotSteps(
-      toolLabel,
-      message.parts,
-      handoffs,
-      bots,
-      (name, input, approved) =>
-        [approved ? t("Approved") : t("Declined"), toolApprovalDetail(name, input, pluginActionLabels)].filter(Boolean).join(" · "),
-    ),
+    buildCotSteps(toolLabel, message.parts, handoffs, bots),
     message.parts,
   );
   const stepRuns = groupStepRuns(cotSteps, message.parts);
@@ -1666,7 +1660,6 @@ function buildCotSteps(
   parts: UIMessage["parts"],
   handoffs?: Record<string, HandoffSnapshot>,
   bots?: Bot[],
-  approvalNote?: (name: string, input: unknown, approved: boolean) => string,
 ): CotStep[] {
   const steps: CotStep[] = [];
 
@@ -1685,21 +1678,11 @@ function buildCotSteps(
 
     if (name === "requestTakeover") return;
     if (name === "handoffStatus") return;
-    if (
-      toolPart.approval &&
-      !toolPart.approval.isAutomatic &&
-      state === "approval-requested"
-    ) {
-      return;
-    }
+    // Approvals stay as their card, before and after they are answered.
+    if (toolPart.approval && !toolPart.approval.isAutomatic) return;
 
     const liveHandoff =
       name === "messageBot" ? liveHandoffFor(toolPart, handoffs) : undefined;
-    // Answered approvals are listed here instead of as a card in the reply.
-    const answered =
-      toolPart.approval && !toolPart.approval.isAutomatic && typeof toolPart.approval.approved === "boolean"
-        ? approvalNote?.(name, input, toolPart.approval.approved)
-        : undefined;
     steps.push({
       key: toolPart.toolCallId ?? `tool-${index}`,
       partIndex: index,
@@ -1710,7 +1693,9 @@ function buildCotSteps(
           ? errorText
           : liveHandoff?.status === "running" && liveHandoff.currentLabel
             ? liveHandoff.currentLabel
-            : answered ?? (name === "mcp" ? mcpStepDetail(input) : undefined),
+            : name === "mcp"
+              ? mcpStepDetail(input)
+              : undefined,
       sites: failed ? undefined : stepSites(name, toolPart.output, input),
       failed,
       status:
@@ -1868,40 +1853,56 @@ function PartView({
     const errorText =
       toolPart.errorText ??
       (toolPart.error != null ? formatDetail(toolPart.error) : "");
-    const displayLabel = toolLabel(name, input, state);
     if (toolPart.approval && !toolPart.approval.isAutomatic) {
       const approval = toolPart.approval;
       const detail = toolApprovalDetail(name, input, pluginActionLabels);
-      // Once answered, the step is shown under the Worked header instead.
-      if (state !== "approval-requested") return null;
+      const answered = state !== "approval-requested";
+      // Once answered, the same card stays with the answer in place of the buttons.
       return (
         <Confirmation approval={approval} state={state}>
-          <ConfirmationRequest>
-            {name === "mcp" ? (
-              <McpApprovalDetails
-                connectionId={inputValue(input, "connectionId")}
-                tool={inputValue(input, "name")}
-                args={inputRecord(input, "arguments") as Record<string, unknown> | undefined}
-              />
-            ) : <ConfirmationTitle>{displayLabel}</ConfirmationTitle>}
-            {detail && name !== "mcp" ? (
-              <p className="font-mono text-xs text-secondary-foreground">{detail}</p>
-            ) : null}
-            {name === "builtInPlugin" && inputValue(input, "body") ? <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-foreground/5 p-2 text-xs">{inputValue(input, "body")}</pre> : null}
-            <ApprovalActions
-              onApprove={() => onApprove(approval.id, true)}
-              onDeny={() => onApprove(approval.id, false)}
-              onAlwaysAllow={name === "builtInPlugin" ? async () => {
-                const response = await fetch("/api/plugins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: inputValue(input, "kind"), action: inputValue(input, "action"), enabled: true }) });
-                if (!response.ok) throw new Error((await response.json()).error ?? t("Could not save permission."));
-                onApprove(approval.id, true);
-              } : name === "mcp" && inputValue(input, "name") ? async () => {
-                const response = await fetch("/api/mcp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "always-allow", id: inputValue(input, "connectionId"), tool: inputValue(input, "name"), enabled: true }) });
-                if (!response.ok) throw new Error((await response.json()).error ?? t("Could not save permission."));
-                onApprove(approval.id, true);
-              } : undefined}
+          {name === "mcp" ? (
+            <McpApprovalDetails
+              connectionId={inputValue(input, "connectionId")}
+              tool={inputValue(input, "name")}
+              args={inputRecord(input, "arguments") as Record<string, unknown> | undefined}
+              explain={!answered}
             />
-          </ConfirmationRequest>
+          ) : (
+            // The title it had while waiting, so the answered card reads the same.
+            <ConfirmationTitle>{toolLabel(name, input, "approval-requested")}</ConfirmationTitle>
+          )}
+          {detail && name !== "mcp" ? (
+            <p className="font-mono text-xs text-secondary-foreground">{detail}</p>
+          ) : null}
+          {name === "builtInPlugin" && inputValue(input, "body") ? <pre className="max-h-40 overflow-auto whitespace-pre-wrap rounded-lg bg-foreground/5 p-2 text-xs">{inputValue(input, "body")}</pre> : null}
+          <ApprovalActions
+            onApprove={() => onApprove(approval.id, true)}
+            onDeny={() => onApprove(approval.id, false)}
+            onAlwaysAllow={name === "builtInPlugin" ? async () => {
+              const response = await fetch("/api/plugins", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ kind: inputValue(input, "kind"), action: inputValue(input, "action"), enabled: true }) });
+              if (!response.ok) throw new Error((await response.json()).error ?? t("Could not save permission."));
+              onApprove(approval.id, true);
+            } : name === "mcp" && inputValue(input, "name") ? async () => {
+              const response = await fetch("/api/mcp", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "always-allow", id: inputValue(input, "connectionId"), tool: inputValue(input, "name"), enabled: true }) });
+              if (!response.ok) throw new Error((await response.json()).error ?? t("Could not save permission."));
+              onApprove(approval.id, true);
+            } : undefined}
+          />
+          <ConfirmationAccepted>
+            <p className="flex items-center gap-1.5 self-end text-xs text-muted-foreground">
+              <CheckIcon className="size-3.5" aria-hidden="true" />
+              {t("Approved")}
+            </p>
+          </ConfirmationAccepted>
+          <ConfirmationRejected>
+            <p className="flex items-center gap-1.5 self-end text-xs text-muted-foreground">
+              <XIcon className="size-3.5" aria-hidden="true" />
+              {t("Declined")}
+            </p>
+          </ConfirmationRejected>
+          {state === "output-error" && errorText ? (
+            <p className="text-xs text-destructive-300">{errorText}</p>
+          ) : null}
         </Confirmation>
       );
     }
