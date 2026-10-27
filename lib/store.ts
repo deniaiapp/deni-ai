@@ -290,6 +290,63 @@ export async function deleteGroupThread(userId: string, threadId: string): Promi
   return Boolean(computer);
 }
 
+/**
+ * Empty a conversation for good: its messages, reactions, deliverables list, and the records of
+ * its tasks. The teammate, its memory, routines, and the files in the workspace stay. Returns
+ * false when the conversation does not exist.
+ */
+export async function clearThreadHistory(userId: string, threadId: string): Promise<boolean> {
+  validateThreadId(threadId);
+  const computer = await withUserLock(userId, async () => {
+    for (let attempt = 0; attempt < WRITE_ATTEMPTS; attempt++) {
+      const [row] = await db.select().from(userStores).where(eq(userStores.userId, userId));
+      const store = row ? structuredClone(row.data) : null;
+      const thread = store?.threads.find((item) => item.id === threadId);
+      if (!row || !store || !thread) return null;
+      const jobs = await db
+        .select({ id: agentJobs.id })
+        .from(agentJobs)
+        .where(and(eq(agentJobs.userId, userId), eq(agentJobs.threadId, threadId)));
+      const jobIds = jobs.map((job) => job.id);
+      thread.reactions = {};
+      thread.lastPreview = "";
+      thread.updatedAt = nowIso();
+      // The look-back summary would bring the deleted conversation back to the model.
+      if (store.historySummaries) delete store.historySummaries[threadId];
+      for (const id of jobIds) if (store.computer.workspaces) delete store.computer.workspaces[id];
+      // Same version guard as deleteGroupThread: every delete only runs if this write did.
+      const next = row.version + 1;
+      const guard = sql`exists (select 1 from user_stores where user_id = ${userId} and version = ${next})`;
+      const statements = [
+        db
+          .update(userStores)
+          .set({ data: store, updatedAt: new Date(), version: next })
+          .where(and(eq(userStores.userId, userId), eq(userStores.version, row.version))),
+        ...(jobIds.length
+          ? [
+              db.delete(jobEvents).where(and(eq(jobEvents.userId, userId), inArray(jobEvents.jobId, jobIds), guard)),
+              db.delete(appNotifications).where(and(eq(appNotifications.userId, userId), inArray(appNotifications.jobId, jobIds), guard)),
+              db.delete(browserWorkspaces).where(and(eq(browserWorkspaces.userId, userId), inArray(browserWorkspaces.jobId, jobIds), guard)),
+            ]
+          : []),
+        db.delete(jobArtifacts).where(and(eq(jobArtifacts.userId, userId), eq(jobArtifacts.threadId, threadId), guard)),
+        db.delete(agentJobs).where(and(eq(agentJobs.userId, userId), eq(agentJobs.threadId, threadId), guard)),
+        db.delete(threadMessages).where(and(eq(threadMessages.userId, userId), eq(threadMessages.threadId, threadId), guard)),
+      ];
+      await db.batch(statements as [(typeof statements)[number], ...(typeof statements)[number][]]);
+      const [after] = await db
+        .select({ version: userStores.version })
+        .from(userStores)
+        .where(eq(userStores.userId, userId));
+      if (after?.version === next) return store.computer;
+      await backoff(attempt);
+    }
+    throw new Error("The workspace is busy. Please try again.");
+  });
+  if (computer) emitComputer(userId, computer);
+  return Boolean(computer);
+}
+
 export async function deleteUserRecords(userId: string) {
   await db.delete(jobEvents).where(eq(jobEvents.userId, userId));
   await db.delete(agentJobs).where(eq(agentJobs.userId, userId));

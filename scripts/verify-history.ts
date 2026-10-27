@@ -33,7 +33,7 @@ async function main() {
   const { account, user } = await import("../db/schema");
   const store = await import("../lib/store");
   const { lookBack } = await import("../lib/history");
-  const { resetThreadContext } = await import("../lib/thread-context");
+  const { clearThread, resetThreadContext } = await import("../lib/thread-context");
   const { createDeniTools } = await import("../lib/agent");
   const { SUMMARY_MODEL_ID } = await import("../lib/model");
   const { HISTORY_TOKEN_LIMIT } = await import("../lib/messages");
@@ -135,6 +135,22 @@ async function main() {
   });
   const pruned = await store.readStore(userId);
   assert(!pruned.historySummaries?.gone && Boolean(pruned.historySummaries?.[threadId]), "summaries were not pruned to live threads");
+
+  // Clearing deletes the conversation itself: messages, reactions, and the look-back summary.
+  await store.mutateStore(userId, (next) => {
+    const thread = next.threads.find((item) => item.id === threadId);
+    if (thread) thread.reactions = { "id:x": ["👍"] };
+  });
+  assert((await clearThread(userId, threadId)) === "reset", "clear refused");
+  assert((await store.loadMessages(userId, threadId)).length === 0, "messages survived a clear");
+  const cleared = await store.readStore(userId);
+  const clearedThread = cleared.threads.find((item) => item.id === threadId);
+  assert(Boolean(clearedThread) && Object.keys(clearedThread?.reactions ?? {}).length === 0 && !clearedThread?.lastPreview, "reactions or preview survived a clear");
+  assert(!cleared.historySummaries?.[threadId], "the look-back summary survived a clear");
+  assert((await ask({ action: "search", query: "zebra" }) as { results: unknown[] }).results.length === 0, "cleared messages are still searchable");
+  assert((await clearThread(userId, "missing-thread")) === "missing", "clearing a missing thread should say so");
+  await store.saveMessages(userId, threadId, [{ id: "after-clear", role: "user", parts: [{ type: "text", text: "a fresh start" }] }]);
+  assert((await store.loadMessages(userId, threadId)).length === 1, "the cleared conversation could not be used again");
 
   assert(replies.length === 0, "unused scripted summaries");
   globalThis.fetch = realFetch;

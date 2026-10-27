@@ -3,7 +3,7 @@ import "@tanstack/react-start/server-only";
 import { createId } from "./ids";
 import { hasActiveThreadJob } from "./jobs";
 import { contextResetMessage, isContextReset } from "./messages";
-import { loadMessages, readStore, saveMessages } from "./store";
+import { clearThreadHistory, loadMessages, readStore, saveMessages } from "./store";
 
 export type ThreadResetResult = "reset" | "unchanged" | "busy" | "missing";
 
@@ -20,4 +20,15 @@ export async function resetThreadContext(userId: string, threadId: string): Prom
   if (!last || isContextReset(last)) return "unchanged";
   await saveMessages(userId, threadId, [contextResetMessage(createId("reset"))]);
   return "reset";
+}
+
+/**
+ * Delete everything said in the conversation, unlike resetThreadContext, which keeps it on
+ * screen. Refused while a task is running or waiting, for the same reason.
+ */
+export async function clearThread(userId: string, threadId: string): Promise<ThreadResetResult> {
+  const store = await readStore(userId);
+  if (!store.threads.some((thread) => thread.id === threadId)) return "missing";
+  if (await hasActiveThreadJob(userId, threadId)) return "busy";
+  return (await clearThreadHistory(userId, threadId)) ? "reset" : "missing";
 }

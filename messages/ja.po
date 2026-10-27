@@ -796,6 +796,12 @@ msgid "Reset conversation"
 msgstr "会話をリセット"
 
 #: app/components/chat-thread.tsx
+#: app/components/sidebar.tsx
+msgctxt "AVb-qu"
+msgid "Clear conversation"
+msgstr "会話を完全に消去"
+
+#: app/components/chat-thread.tsx
 msgctxt "40zwh7"
 msgid "@everyone to ask everyone · @name to ask a teammate"
 msgstr "@everyone で全員に、@名前 で特定のチームメイトに依頼できます"
@@ -3635,6 +3641,16 @@ msgstr "コンピューターを読み込み中…"
 msgctxt "HtRP6Y"
 msgid "Could not reset the conversation."
 msgstr "会話をリセットできませんでした。"
+
+#: app/components/workspace.tsx
+msgctxt "TMZhvd"
+msgid "Clear the conversation with {name}? All messages, reactions, and the deliverables list will be deleted. Memory, routines, and workspace files stay. This cannot be undone."
+msgstr "{name} との会話を完全に消去しますか？メッセージ、リアクション、成果物の一覧がすべて削除されます。メモリ、ルーティン、ワークスペースのファイルは残ります。元に戻せません。"
+
+#: app/components/workspace.tsx
+msgctxt "QL5XAE"
+msgid "Could not clear the conversation."
+msgstr "会話を消去できませんでした。"
 
 #: app/components/workspace.tsx
 msgctxt "B12JBq"

@@ -57,6 +57,7 @@ export type TeammateMenuAction =
   | "remove-section"
   | "unread"
   | "reset"
+  | "clear"
   | "edit"
   | "duplicate"
   | "hide"
@@ -371,6 +372,10 @@ function TeammateRow({
         <ContextMenuItem onClick={() => onAction("reset")}>
           <RotateCcw />
           {t("Reset conversation")}
+        </ContextMenuItem>
+        <ContextMenuItem variant="destructive" onClick={() => onAction("clear")}>
+          <Trash2 />
+          {t("Clear conversation")}
         </ContextMenuItem>
         <ContextMenuItem onClick={() => onAction("edit")}>
           <Pencil />

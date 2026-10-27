@@ -30,7 +30,7 @@ import type {
   AppNotification,
   AgentJob,
 } from "@/lib/types";
-import { ChatThread, forgetChatThread } from "./chat-thread";
+import { ChatThread, clearChatThreadState, forgetChatThread } from "./chat-thread";
 import { SetupScreen } from "./setup-screen";
 import { BillingDialog } from "./billing-dialog";
 import { Sidebar, type TeammateMenuAction } from "./sidebar";
@@ -488,10 +488,57 @@ export function Workspace() {
     [t],
   );
 
+  // Bumped when a conversation is cleared, so its view mounts again with nothing left over.
+  const [threadEpochs, setThreadEpochs] = useState<Record<string, number>>({});
+
+  const clearConversation = useCallback(
+    async (thread: Thread, name: string) => {
+      if (
+        !window.confirm(
+          t(
+            "Clear the conversation with {name}? All messages, reactions, and the deliverables list will be deleted. Memory, routines, and workspace files stay. This cannot be undone.",
+            { name },
+          ),
+        )
+      )
+        return;
+      setActionError(null);
+      setActionBusyId(thread.id);
+      try {
+        const response = await fetch(`/api/threads/${encodeURIComponent(thread.id)}/reset`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ clear: true }),
+        });
+        const data = (await response.json().catch(() => ({}))) as { error?: string; messages?: UIMessage[] };
+        if (!response.ok) throw new Error(data.error || t("Could not clear the conversation."));
+        const nextMessages = data.messages ?? [];
+        setMessagesByThread((current) => cacheThreadMessages(current, thread.id, nextMessages));
+        if (activeThreadRef.current === thread.id) setMessages(nextMessages);
+        syncChatSessionMessages(thread.id, nextMessages);
+        updateThreadJobs(thread.id, []);
+        clearChatThreadState(thread.id);
+        setThreads((list) =>
+          list.map((item) => (item.id === thread.id ? { ...item, reactions: {}, lastPreview: "" } : item)),
+        );
+        setThreadEpochs((current) => ({ ...current, [thread.id]: (current[thread.id] ?? 0) + 1 }));
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : t("Could not clear the conversation."));
+      } finally {
+        setActionBusyId(null);
+      }
+    },
+    [t, updateThreadJobs],
+  );
+
   const handleTeammateAction = useCallback(
     async (thread: Thread, bot: Bot, action: TeammateMenuAction) => {
       if (action === "reset") {
         await resetConversation(thread);
+        return;
+      }
+      if (action === "clear") {
+        await clearConversation(thread, thread.kind === "group" ? thread.title : bot.name);
         return;
       }
       if (action === "pin") {
@@ -619,6 +666,7 @@ export function Workspace() {
       openTeammatePaywall,
       patchThread,
       resetConversation,
+      clearConversation,
       routines,
       t,
       teammateLimitReached,
@@ -729,7 +777,7 @@ export function Workspace() {
 
         {activeThread && activeBot && threadReady ? (
           <ChatThread
-            key={activeThread.id}
+            key={`${activeThread.id}:${threadEpochs[activeThread.id] ?? 0}`}
             thread={activeThread}
             bot={activeBot}
             bots={bots}
@@ -745,6 +793,12 @@ export function Workspace() {
             onBusyChange={handleChatBusyChange}
             onActiveJobChange={setActiveJobId}
             onResetConversation={() => void resetConversation(activeThread)}
+            onClearConversation={() =>
+              void clearConversation(
+                activeThread,
+                activeThread.kind === "group" ? activeThread.title : activeBot.name,
+              )
+            }
             resetting={actionBusyId === activeThread.id}
             chat={activeChat!}
             backgroundJobs={jobsByThread[activeThread.id] ?? []}

@@ -29,6 +29,7 @@ import {
   SparklesIcon,
   TerminalIcon,
   RotateCcwIcon,
+  Trash2Icon,
   WrenchIcon,
   CornerUpLeftIcon,
   XIcon,
@@ -121,6 +122,13 @@ const reactionStates = new Map<
   ReturnType<typeof createReactionState>
 >();
 
+/** After a conversation is cleared: drop its scroll, reply, and reactions, but keep the draft. */
+export function clearChatThreadState(threadId: string) {
+  scrollCache.delete(threadId);
+  replyCache.delete(threadId);
+  reactionStates.delete(threadId);
+}
+
 export function forgetChatThread(threadId: string) {
   draftCache.delete(threadId);
   scrollCache.delete(threadId);
@@ -167,6 +175,7 @@ export function ChatThread({
   onBusyChange,
   onActiveJobChange,
   onResetConversation,
+  onClearConversation,
   resetting = false,
   backgroundJobs,
   onJobsChange,
@@ -180,6 +189,7 @@ export function ChatThread({
   onBusyChange: (busy: boolean) => void;
   onActiveJobChange?: (jobId: string | null) => void;
   onResetConversation?: () => void;
+  onClearConversation?: () => void;
   resetting?: boolean;
   backgroundJobs?: AgentJob[];
   onJobsChange?: (jobs: AgentJob[]) => void;
@@ -652,18 +662,32 @@ export function ChatThread({
             {t("Waiting for your help…")}
           </span>
         ) : onResetConversation ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            icon={RotateCcwIcon}
-            loading={resetting}
-            disabled={busy || messages.length === 0 || isContextReset(messages[messages.length - 1])}
-            title={t("Earlier messages stay here but are no longer sent to the model.")}
-            onClick={onResetConversation}
-          >
-            {t("Reset conversation")}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              icon={RotateCcwIcon}
+              loading={resetting}
+              disabled={busy || messages.length === 0 || isContextReset(messages[messages.length - 1])}
+              title={t("Earlier messages stay here but are no longer sent to the model.")}
+              onClick={onResetConversation}
+            >
+              {t("Reset conversation")}
+            </Button>
+            {onClearConversation ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                icon={Trash2Icon}
+                disabled={busy || resetting || messages.length === 0}
+                title={t("Clear conversation")}
+                aria-label={t("Clear conversation")}
+                onClick={onClearConversation}
+              />
+            ) : null}
+          </div>
         ) : null}
       </motion.header>
 

@@ -4,16 +4,18 @@ import { getApiUserId, unauthorizedResponse } from "@/lib/api-auth";
 import { slimMessagesForClient } from "@/lib/messages";
 import { limitOrResponse } from "@/lib/rate-limit";
 import { loadMessages } from "@/lib/store";
-import { resetThreadContext } from "@/lib/thread-context";
+import { clearThread, resetThreadContext } from "@/lib/thread-context";
 
-async function POST({ params }: { params: { id: string } }) {
+/** Resets what the model sees, or with { clear: true } deletes the conversation's history. */
+async function POST({ request, params }: { request: Request; params: { id: string } }) {
   const t = await getExtracted();
   const userId = await getApiUserId();
   if (!userId) return unauthorizedResponse();
   const limited = await limitOrResponse(userId, "thread-reset", 20);
   if (limited) return limited;
   const { id } = params;
-  const result = await resetThreadContext(userId, id);
+  const body = (await request.json().catch(() => ({}))) as { clear?: unknown };
+  const result = body.clear === true ? await clearThread(userId, id) : await resetThreadContext(userId, id);
   if (result === "missing") return Response.json({ error: t("Conversation not found.") }, { status: 404 });
   if (result === "busy") {
     return Response.json({ error: t("Stop or finish the current task before resetting the conversation.") }, { status: 409 });

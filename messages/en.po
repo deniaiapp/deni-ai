@@ -796,6 +796,12 @@ msgid "Reset conversation"
 msgstr "Reset conversation"
 
 #: app/components/chat-thread.tsx
+#: app/components/sidebar.tsx
+msgctxt "AVb-qu"
+msgid "Clear conversation"
+msgstr "Clear conversation"
+
+#: app/components/chat-thread.tsx
 msgctxt "40zwh7"
 msgid "@everyone to ask everyone · @name to ask a teammate"
 msgstr "@everyone to ask everyone · @name to ask a teammate"
@@ -3635,6 +3641,16 @@ msgstr "Loading computer…"
 msgctxt "HtRP6Y"
 msgid "Could not reset the conversation."
 msgstr "Could not reset the conversation."
+
+#: app/components/workspace.tsx
+msgctxt "TMZhvd"
+msgid "Clear the conversation with {name}? All messages, reactions, and the deliverables list will be deleted. Memory, routines, and workspace files stay. This cannot be undone."
+msgstr "Clear the conversation with {name}? All messages, reactions, and the deliverables list will be deleted. Memory, routines, and workspace files stay. This cannot be undone."
+
+#: app/components/workspace.tsx
+msgctxt "QL5XAE"
+msgid "Could not clear the conversation."
+msgstr "Could not clear the conversation."
 
 #: app/components/workspace.tsx
 msgctxt "B12JBq"
