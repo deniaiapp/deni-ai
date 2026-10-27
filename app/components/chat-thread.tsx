@@ -74,7 +74,7 @@ import {
 } from "./chat-composer-controls";
 import { useConnectDeniAi } from "./billing-dialog";
 import { usePluginActionLabels } from "./plugin-action-labels";
-import { mcpArgumentPreview, mcpToolKind, mcpToolTitle, useMcpConnectionNames } from "./mcp-tool-labels";
+import { mcpToolKind, useMcpConnectionNames } from "./mcp-tool-labels";
 import { McpApprovalDetails } from "./mcp-approval";
 import {
   messageActionKey,
@@ -1693,9 +1693,7 @@ function buildCotSteps(
           ? errorText
           : liveHandoff?.status === "running" && liveHandoff.currentLabel
             ? liveHandoff.currentLabel
-            : name === "mcp"
-              ? mcpStepDetail(input)
-              : undefined,
+            : undefined,
       sites: failed ? undefined : stepSites(name, toolPart.output, input),
       failed,
       status:
@@ -1981,7 +1979,7 @@ function useToolDisplayLabel() {
       if (failed) return t("Couldn't check {service} tools", { service });
       return completed ? t("Checked {service} tools", { service }) : t("Checking {service} tools", { service });
     }
-    // The tool name and its arguments go in the step's detail line (mcpStepDetail).
+    // Steps name only the app; the call's arguments are not shown.
     const kind = mcpToolKind(inputValue(input, "name") ?? "");
     if (kind === "read") {
       if (failed) return t("Couldn't check {service}", { service });
@@ -2073,13 +2071,7 @@ function toolApprovalDetail(name: string, input: unknown, pluginActionLabels: Re
     const path = inputValue(input, "path");
     return path ? snippet(path) : undefined;
   }
-  if (name === "mcp") return snippet(mcpArgumentPreview(inputRecord(input, "arguments")).summary, 220);
   return undefined;
-}
-
-/** What an MCP call worked on, such as "Path: /v1/customers", or else the tool's own name. */
-function mcpStepDetail(input: unknown) {
-  return snippet(mcpArgumentPreview(inputRecord(input, "arguments")).summary, 160) ?? (mcpToolTitle(inputValue(input, "name") ?? "") || undefined);
 }
 
 function snippet(value?: string, max = 72) {

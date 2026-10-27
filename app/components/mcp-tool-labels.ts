@@ -179,23 +179,3 @@ export function mcpArgumentValue(value: unknown) {
   if (Array.isArray(value) && value.every((item) => typeof item !== "object")) return value.join(", ");
   return JSON.stringify(value);
 }
-
-/** Short `key: value` summary and the long text body of an MCP tool call's arguments. */
-export function mcpArgumentPreview(args: unknown) {
-  if (!args || typeof args !== "object" || Array.isArray(args)) return { summary: undefined, body: undefined };
-  let body: string | undefined;
-  const parts: string[] = [];
-  const record = args as Record<string, unknown>;
-  // Earlier server versions replaced large arguments with { truncated, preview }; neither is the
-  // person's data.
-  const slimmed = record.truncated === true;
-  for (const [key, value] of Object.entries(record)) {
-    if (slimmed && (key === "truncated" || key === "preview")) continue;
-    if (!body && isMcpBodyArgument(key, value)) {
-      body = value as string;
-      continue;
-    }
-    if (value !== null && value !== undefined) parts.push(`${mcpArgumentTitle(key)}: ${mcpArgumentValue(value)}`);
-  }
-  return { summary: parts.join(" · ") || undefined, body };
-}
