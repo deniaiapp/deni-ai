@@ -1865,6 +1865,7 @@ function PartView({
               connectionId={inputValue(input, "connectionId")}
               tool={inputValue(input, "name")}
               args={inputRecord(input, "arguments") as Record<string, unknown> | undefined}
+              toolCallId={toolPart.toolCallId}
               explain={!answered}
             />
           ) : (

@@ -2,6 +2,9 @@ import "@tanstack/react-start/server-only";
 
 import { createHash } from "node:crypto";
 import { generateText } from "ai";
+import { and, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { mcpExplanations } from "@/db/schema";
 import type { Locale } from "@/i18n/config";
 import { getSummaryModel } from "./llm";
 import { describeMcpTool } from "./mcp";
@@ -24,19 +27,53 @@ const cache = new Map<string, Promise<string | null>>();
  * descriptions and arguments are written for developers; the card shows them under this. Null
  * when the summary model is unavailable, so the card falls back to the details alone.
  */
-export function explainMcpCall(userId: string, id: string, name: string, args: Record<string, unknown> | undefined, locale: Locale) {
-  const key = createHash("sha256").update(JSON.stringify([userId, id, name, args ?? {}, locale])).digest("hex");
+export function explainMcpCall(userId: string, id: string, name: string, args: Record<string, unknown> | undefined, locale: Locale, options: { toolCallId?: string; savedOnly?: boolean } = {}) {
+  const { toolCallId, savedOnly = false } = options;
+  // A tool call is explained once and kept; its arguments reach the client shortened after a
+  // reload, so the call's ID identifies it rather than the arguments.
+  const key = createHash("sha256").update(JSON.stringify(toolCallId ? [userId, "call", toolCallId, locale, savedOnly] : [userId, id, name, args ?? {}, locale])).digest("hex");
   let pending = cache.get(key);
   if (!pending) {
-    pending = explain(userId, id, name, args, locale).catch((error: unknown) => {
+    pending = (async () => {
+      const saved = toolCallId ? await savedExplanation(userId, toolCallId, locale) : null;
+      if (saved || savedOnly) return saved;
+      const text = await explain(userId, id, name, args, locale);
+      if (text && toolCallId) await saveExplanation(userId, toolCallId, locale, text);
+      return text;
+    })().catch((error: unknown) => {
       console.error("explain mcp call", error);
       cache.delete(key);
       return null;
     });
     if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value!);
     cache.set(key, pending);
+    // Nothing saved yet is not remembered, so the card asks again once one is written.
+    if (savedOnly) void pending.then((text) => { if (!text) cache.delete(key); });
   }
   return pending;
+}
+
+async function savedExplanation(userId: string, toolCallId: string, locale: Locale) {
+  try {
+    const [row] = await db
+      .select({ text: mcpExplanations.text })
+      .from(mcpExplanations)
+      .where(and(eq(mcpExplanations.userId, userId), eq(mcpExplanations.toolCallId, toolCallId), eq(mcpExplanations.locale, locale)))
+      .limit(1);
+    return row?.text ?? null;
+  } catch (error) {
+    // Before the migration is applied the card works as before, without the saved copy.
+    console.error("read mcp explanation", error);
+    return null;
+  }
+}
+
+async function saveExplanation(userId: string, toolCallId: string, locale: Locale, text: string) {
+  try {
+    await db.insert(mcpExplanations).values({ userId, toolCallId, locale, text }).onConflictDoNothing();
+  } catch (error) {
+    console.error("save mcp explanation", error);
+  }
 }
 
 async function explain(userId: string, id: string, name: string, args: Record<string, unknown> | undefined, locale: Locale) {

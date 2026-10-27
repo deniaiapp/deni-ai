@@ -21,20 +21,23 @@ export function McpApprovalDetails({
   connectionId,
   tool,
   args,
+  toolCallId,
   explain = true,
 }: {
   connectionId?: string;
   tool?: string;
   args?: Record<string, unknown>;
+  /** Names the call, so its explanation is saved once and shown again after a reload. */
+  toolCallId?: string;
   /**
-   * Off for answered approvals: each explanation is a model call, and history can hold many. One
-   * already loaded on this page is still shown.
+   * Off for answered approvals: they show the saved explanation and never ask the summary model
+   * for a new one, since history can hold many.
    */
   explain?: boolean;
 }) {
   const t = useExtracted();
   const described = useMcpToolDescription(connectionId, tool, args);
-  const explanation = useMcpExplanation(connectionId, tool, args, { request: explain });
+  const explanation = useMcpExplanation(connectionId, tool, args, { request: explain, toolCallId });
   const service = described?.connection.name ?? t("a connected app");
   const definition = described?.tool;
   const names = described?.names ?? {};
@@ -66,7 +69,10 @@ export function McpApprovalDetails({
         <div className="grid min-w-0 gap-1">
           <p className="font-semibold">{headline}</p>
           {explanation === undefined ? (
-            <p className="animate-pulse text-sm text-muted-foreground">{t("Checking what this will do…")}</p>
+            // An answered card only reads the saved text; it has nothing to wait for.
+            explain ? (
+              <p className="animate-pulse text-sm text-muted-foreground">{t("Checking what this will do…")}</p>
+            ) : null
           ) : explanation ? (
             <p className="flex gap-1.5 text-sm">
               <SparkleIcon weight="fill" className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-label={t("Explained by AI")} />

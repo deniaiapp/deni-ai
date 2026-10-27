@@ -101,6 +101,26 @@ async function main() {
   reply = "ラベルを付け替";
   assert((await explainMcpCall(userId, "conn", "stripe_api_write", { cut: 2 }, "ja")) === null, "a fragment alone should not be shown");
 
+  // A tool call's explanation is saved: answered cards read it back after a restart, even with
+  // shortened arguments, and never ask the summary model for a new one.
+  finishReason = "stop";
+  reply = "Gmail で1件のメールを送ります。";
+  const { mcpExplanations } = await import("../db/schema");
+  assert((await explainMcpCall(userId, "conn", "send_email", { to: "a@example.com" }, "ja", { savedOnly: true, toolCallId: "call_1" })) === null, "nothing should be saved yet");
+  const beforeSave = calls.length;
+  assert((await explainMcpCall(userId, "conn", "send_email", { to: "a@example.com", body: "x".repeat(500) }, "ja", { toolCallId: "call_1" })) === reply, "the call should be explained");
+  assert(calls.length === beforeSave + 1, "the call should ask the model once");
+  const rows = await db.select().from(mcpExplanations);
+  assert(rows.length === 1 && rows[0].toolCallId === "call_1" && rows[0].text === reply, `saved rows: ${JSON.stringify(rows)}`);
+  const { explainMcpCall: afterRestart } = await import(`../lib/mcp-explain?restart=${Date.now()}`);
+  reply = "should not be used";
+  const saved = await afterRestart(userId, "conn", "send_email", { to: "a@example.com", body: "x".repeat(400) }, "ja", { savedOnly: true, toolCallId: "call_1" });
+  assert(saved === "Gmail で1件のメールを送ります。", `saved explanation: ${saved}`);
+  assert(calls.length === beforeSave + 1, "reading a saved explanation should not ask the model");
+  assert((await afterRestart(userId, "conn", "send_email", {}, "ja", { savedOnly: true, toolCallId: "call_other" })) === null, "another call has no saved explanation");
+  assert((await afterRestart(userId, "conn", "send_email", {}, "en", { savedOnly: true, toolCallId: "call_1" })) === null, "another language has its own explanation");
+  assert(calls.length === beforeSave + 1, "saved-only reads should never ask the model");
+
   globalThis.fetch = realFetch;
   console.log("mcp explanation verification passed");
 }

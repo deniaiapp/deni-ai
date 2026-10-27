@@ -23,6 +23,7 @@ async function main() {
     "job_artifacts",
     "job_events",
     "mcp_connections",
+    "mcp_explanations",
     "passkey",
     "rate_limits",
     "session",

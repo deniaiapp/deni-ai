@@ -93,43 +93,46 @@ const explanations = new Map<string, Promise<string | null>>();
 
 /**
  * A plain-language sentence on what an MCP call will do, written by the summary model for the
- * approval card. Undefined while it loads, null when none could be written or none was asked for.
+ * approval card and saved with the tool call. Undefined while it loads, null when there is none.
+ * With request off, only a saved explanation is read and no new one is written.
  */
 export function useMcpExplanation(
   connectionId: string | undefined,
   tool: string | undefined,
   args?: Record<string, unknown>,
-  { request: requestAllowed = true }: { request?: boolean } = {},
+  { request: write = true, toolCallId }: { request?: boolean; toolCallId?: string } = {},
 ) {
   const [explanation, setExplanation] = useState<{ key: string; text: string | null } | null>(null);
   const argsKey = JSON.stringify(args ?? {});
-  const key = `${connectionId}:${tool}:${argsKey}`;
-  // Without a request, only an explanation this page already asked for is shown.
-  const available = requestAllowed || explanations.has(key);
+  // The call's ID names it: after a reload its arguments reach the page shortened.
+  const key = toolCallId ? `call:${toolCallId}` : `${connectionId}:${tool}:${argsKey}`;
+  // A call without an ID has nothing saved, so only one this page already asked for is shown.
+  const available = write || Boolean(toolCallId) || explanations.has(key);
   useEffect(() => {
-    if (!connectionId || !tool) return;
-    let request = explanations.get(key);
+    if (!connectionId || !tool || !available) return;
+    const savedOnly = !write && !explanations.has(key);
+    const cacheKey = savedOnly ? `saved:${key}` : key;
+    let request = explanations.get(cacheKey);
     if (!request) {
-      if (!requestAllowed) return;
       request = fetch("/api/mcp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "explain", id: connectionId, tool, arguments: JSON.parse(argsKey) }),
+        body: JSON.stringify({ action: "explain", id: connectionId, tool, arguments: JSON.parse(argsKey), toolCallId, savedOnly }),
       })
         .then((response) => (response.ok ? (response.json() as Promise<{ explanation?: string | null }>) : null))
         .then((json) => json?.explanation ?? null)
         .catch(() => null);
-      explanations.set(key, request);
+      explanations.set(cacheKey, request);
     }
     let active = true;
     void request.then((text) => {
-      if (text === null) explanations.delete(key);
+      if (text === null) explanations.delete(cacheKey);
       if (active) setExplanation({ key, text });
     });
     return () => {
       active = false;
     };
-  }, [connectionId, tool, argsKey, key, requestAllowed]);
+  }, [connectionId, tool, argsKey, key, write, available, toolCallId]);
   if (!connectionId || !tool || !available) return null;
   return explanation?.key === key ? explanation.text : undefined;
 }

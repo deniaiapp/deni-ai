@@ -138,6 +138,20 @@ export const mcpConnections = sqliteTable(
   ],
 );
 
+// The approval card's plain-language explanation of an MCP call, written once by the summary
+// model and kept so the card reads the same after it is answered and after a reload.
+export const mcpExplanations = sqliteTable(
+  "mcp_explanations",
+  {
+    userId: text("user_id").notNull(),
+    toolCallId: text("tool_call_id").notNull(),
+    locale: text("locale").notNull(),
+    text: text("text").notNull(),
+    createdAt: createdNow("created_at"),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.toolCallId, table.locale] })],
+);
+
 export const jobArtifacts = sqliteTable(
   "job_artifacts",
   {

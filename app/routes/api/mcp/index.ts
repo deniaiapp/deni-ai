@@ -37,6 +37,8 @@ async function POST({ request: req }: { request: Request }) {
     catalogId?: string;
     tool?: string;
     arguments?: Record<string, unknown>;
+    toolCallId?: string;
+    savedOnly?: boolean;
     name?: string;
     url?: string;
     transport?: "streamable-http" | "sse";
@@ -62,10 +64,19 @@ async function POST({ request: req }: { request: Request }) {
     }
     if (body.action === "explain") {
       if (!body.id || !body.tool) return Response.json({ error: t("ID is required") }, { status: 400 });
-      const limited = await limitOrResponse(userId, "mcp-explain", 60);
+      // Answered cards only read a saved explanation, so a long history gets a looser limit.
+      const limited = body.savedOnly === true
+        ? await limitOrResponse(userId, "mcp-explain-saved", 300)
+        : await limitOrResponse(userId, "mcp-explain", 60);
       if (limited) return limited;
       const args = body.arguments && typeof body.arguments === "object" && !Array.isArray(body.arguments) ? body.arguments : undefined;
-      return Response.json({ explanation: await explainMcpCall(userId, body.id, body.tool, args, await getLocale()) });
+      const toolCallId = typeof body.toolCallId === "string" && body.toolCallId.length <= 200 ? body.toolCallId : undefined;
+      return Response.json({
+        explanation: await explainMcpCall(userId, body.id, body.tool, args, await getLocale(), {
+          toolCallId,
+          savedOnly: body.savedOnly === true,
+        }),
+      });
     }
     if (body.action === "always-allow") {
       if (!body.id || !body.tool || typeof body.enabled !== "boolean") return Response.json({ error: t("Invalid permission") }, { status: 400 });
