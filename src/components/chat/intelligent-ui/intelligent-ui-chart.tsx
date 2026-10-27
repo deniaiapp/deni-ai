@@ -443,7 +443,7 @@ function PieChart({ chart }: { chart: ChartBlock }) {
   if (values.length > MAX_SLICES) {
     const order = values
       .map((value, index) => ({ value, index }))
-      .toSorted((left, right) => right.value - left.value);
+      .sort((left, right) => right.value - left.value);
     const kept = order.slice(0, MAX_SLICES - 1);
     const rest = order.slice(MAX_SLICES - 1).reduce((sum, entry) => sum + entry.value, 0);
     labels = [...kept.map((entry) => chart.labels[entry.index]), t("Other")];

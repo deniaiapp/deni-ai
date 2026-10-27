@@ -43,7 +43,7 @@ export function mergeFolderGroups<TItem>(
     folderMap.set(folder, { folder, items: [] });
   }
 
-  return Array.from(folderMap.values()).toSorted((left, right) =>
+  return Array.from(folderMap.values()).sort((left, right) =>
     left.folder.localeCompare(right.folder),
   );
 }

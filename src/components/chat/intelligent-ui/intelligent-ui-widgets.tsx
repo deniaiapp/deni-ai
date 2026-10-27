@@ -222,7 +222,7 @@ export function IntelligentUiTable({ block }: { block: IntelligentUiBlockOf<"tab
   const formatCell = useCellFormatter();
   const [sort, setSort] = useState<{ column: number; descending: boolean } | null>(null);
   const rows = sort
-    ? block.rows.toSorted((left, right) => {
+    ? [...block.rows].sort((left, right) => {
         const result = compareCells(left[sort.column], right[sort.column]);
         return sort.descending ? -result : result;
       })
