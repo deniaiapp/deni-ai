@@ -40,6 +40,7 @@ import {
   MAX_MODE_CREDIT_MIN,
   updateMaxModeAutoTopUp,
 } from "@/lib/max-mode-credits";
+import { planDisplayCurrency, priceInCurrency } from "@/lib/plan-currency";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
 import { stripe } from "@/lib/stripe";
 import { createBillingPortalSession } from "@/lib/stripe-portal";
@@ -161,7 +162,12 @@ async function getPricesForPlans(plans: BillingPlan[]) {
 
   const results = await Promise.all(
     batches.map((batch) =>
-      stripe.prices.list({ lookup_keys: batch, active: true, limit: batch.length }),
+      stripe.prices.list({
+        lookup_keys: batch,
+        active: true,
+        limit: batch.length,
+        expand: ["data.currency_options"],
+      }),
     ),
   );
   for (const price of results.flatMap((result) => result.data)) {
@@ -193,7 +199,8 @@ async function getFlashOfferCoupon() {
   }
 
   try {
-    return await stripe.coupons.retrieve(couponId);
+    // Amount-off coupons list their other currencies' amounts in currency_options.
+    return await stripe.coupons.retrieve(couponId, { expand: ["currency_options"] });
   } catch (error) {
     console.warn("Failed to load flash offer coupon", error);
     return null;
@@ -227,16 +234,16 @@ function applyCouponToAmount(
     return amount ?? null;
   }
 
-  if (coupon.currency && currency && coupon.currency.toLowerCase() !== currency.toLowerCase()) {
-    return amount;
-  }
-
   if (coupon.percent_off != null) {
     return Math.max(0, Math.round(amount * (1 - coupon.percent_off / 100)));
   }
 
-  if (coupon.amount_off != null) {
-    return Math.max(0, amount - coupon.amount_off);
+  const amountOff =
+    !coupon.currency || !currency || coupon.currency.toLowerCase() === currency.toLowerCase()
+      ? coupon.amount_off
+      : coupon.currency_options?.[currency.toLowerCase()]?.amount_off;
+  if (amountOff != null) {
+    return Math.max(0, amount - amountOff);
   }
 
   return amount;
@@ -505,21 +512,23 @@ export const billingRouter = router({
       resolveFlashOffer(billingRecord),
       getPricesForPlans(individualPlans),
     ]);
+    const displayCurrency = planDisplayCurrency(ctx.country);
     const plans = individualPlans.map((plan, index) => {
       const price = prices[index];
       const mode = deriveModeFromPrice(price);
+      const { amount, currency } = priceInCurrency(price, displayCurrency);
       const discountedAmount =
         flashOffer && isFlashOfferPlan(plan.id)
-          ? applyCouponToAmount(price.unit_amount, flashOffer.coupon, price.currency)
-          : price.unit_amount;
+          ? applyCouponToAmount(amount, flashOffer.coupon, currency)
+          : amount;
       return {
         id: plan.id,
         lookupKey: plan.lookupKey,
         mode,
         priceId: price.id,
         amount: discountedAmount,
-        originalAmount: discountedAmount !== price.unit_amount ? price.unit_amount : null,
-        currency: price.currency,
+        originalAmount: discountedAmount !== amount ? amount : null,
+        currency,
         interval: price.recurring?.interval ?? null,
         intervalCount: price.recurring?.interval_count ?? 1,
         isTeamPlan: false,
