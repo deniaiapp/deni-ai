@@ -628,6 +628,11 @@ msgid "Icon"
 msgstr "アイコン"
 
 #: app/components/avatar-field.tsx
+msgctxt "CW4O0j"
+msgid "Character"
+msgstr "キャラクター"
+
+#: app/components/avatar-field.tsx
 #: app/components/reaction-picker.tsx
 msgctxt "34NuzG"
 msgid "Emoji"
@@ -647,6 +652,46 @@ msgstr "リセット"
 msgctxt "sZTv2D"
 msgid "Upload icon"
 msgstr "アイコンをアップロード"
+
+#: app/components/avatar-field.tsx
+msgctxt "T0Ypz8"
+msgid "Navi"
+msgstr "ナビ"
+
+#: app/components/avatar-field.tsx
+msgctxt "zLKxRB"
+msgid "Loupe"
+msgstr "ルーペ"
+
+#: app/components/avatar-field.tsx
+msgctxt "8nh9JU"
+msgid "Gear"
+msgstr "ギア"
+
+#: app/components/avatar-field.tsx
+msgctxt "UzhfLp"
+msgid "Quill"
+msgstr "クイル"
+
+#: app/components/avatar-field.tsx
+msgctxt "RIRKWG"
+msgid "Spark"
+msgstr "スパーク"
+
+#: app/components/avatar-field.tsx
+msgctxt "S_V50K"
+msgid "Tally"
+msgstr "タリー"
+
+#: app/components/avatar-field.tsx
+msgctxt "x1K1lH"
+msgid "Sprout"
+msgstr "スプラウト"
+
+#: app/components/avatar-field.tsx
+msgctxt "hARaFV"
+msgid "Luna"
+msgstr "ルナ"
 
 #: app/components/billing-dialog.tsx
 msgctxt "wv8EiK"
@@ -3779,6 +3824,12 @@ msgid "Default teammates cannot be deleted"
 msgstr "デフォルトのチームメイトは削除できません"
 
 #: app/routes/api/bots/index.ts
+#: app/routes/api/state.ts
+msgctxt "Ct2wra"
+msgid "Send me a task"
+msgstr "タスクを送ってください"
+
+#: app/routes/api/bots/index.ts
 #: app/routes/api/routines.ts
 msgctxt "_4pQDl"
 msgid "Name is required."
@@ -3987,6 +4038,36 @@ msgstr "同じ名前のスキルがすでに存在します。"
 msgctxt "KaE7gK"
 msgid "Skill not found."
 msgstr "スキルが見つかりません。"
+
+#: app/routes/api/state.ts
+msgctxt "gcty4G"
+msgid "Chief"
+msgstr "チーフ"
+
+#: app/routes/api/state.ts
+msgctxt "4F4xND"
+msgid "Team coordination"
+msgstr "チームのまとめ役"
+
+#: app/routes/api/state.ts
+msgctxt "JEe7dV"
+msgid "Research"
+msgstr "リサーチ"
+
+#: app/routes/api/state.ts
+msgctxt "8ozGbD"
+msgid "Research and reports"
+msgstr "調査とレポート"
+
+#: app/routes/api/state.ts
+msgctxt "MQbmj7"
+msgid "Operations"
+msgstr "オペレーション"
+
+#: app/routes/api/state.ts
+msgctxt "6WxW7S"
+msgid "Computer execution"
+msgstr "コンピューター操作"
 
 #: app/routes/api/threads/$id/index.ts
 msgctxt "rDFiEI"

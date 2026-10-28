@@ -36,7 +36,7 @@ export function isDefaultTeammate(id: string) {
 }
 
 /** A new teammate and its DM, within the plan's teammate limit. */
-export async function createTeammate(userId: string, input: TeammateInput): Promise<CreateTeammateResult> {
+export async function createTeammate(userId: string, input: TeammateInput, options?: { preview?: string }): Promise<CreateTeammateResult> {
   const name = input.name?.trim();
   if (input.icon !== undefined && !validAvatarIcon(input.icon)) return { ok: false, reason: "invalid_icon" };
   if (!name) return { ok: false, reason: "name_required" };
@@ -67,7 +67,7 @@ export async function createTeammate(userId: string, input: TeammateInput): Prom
     botIds: [bot.id],
     createdAt: at,
     updatedAt: at,
-    lastPreview: "Send me a task",
+    lastPreview: options?.preview ?? "Send me a task",
     pinned: false,
     unread: false,
     hidden: false,

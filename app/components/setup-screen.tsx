@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { AppMark } from "./app-mark";
 
 export function SetupScreen({ onReady }: { onReady: () => void }) {
   const t = useExtracted();
@@ -37,7 +38,7 @@ export function SetupScreen({ onReady }: { onReady: () => void }) {
     <main className="flex min-h-full items-center justify-center bg-background px-6 py-16">
       <FadeIn className="w-full max-w-lg">
       <Card className="w-full p-6">
-        <span className="text-sm text-muted-foreground">Deni Run</span>
+        <AppMark />
         <div className="mt-2">
           <h1 className="text-lg font-semibold text-foreground">
             {t("AI teammates.")}

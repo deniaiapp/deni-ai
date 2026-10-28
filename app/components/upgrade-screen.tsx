@@ -14,6 +14,7 @@ import {
   type UsageSnapshot,
 } from "@/lib/plans";
 import { useConnectDeniAi } from "./billing-dialog";
+import { AppMark } from "./app-mark";
 
 function useHeadline(reason: UsageMetric | undefined, usage: UsageSnapshot | null) {
   const t = useExtracted();
@@ -67,8 +68,8 @@ export function UpgradeScreen({
     <main className="h-full overflow-y-auto bg-background text-foreground">
       <FadeIn>
         <header className="mx-auto flex max-w-5xl items-center justify-between px-6 py-5">
-          <Link to="/" className="text-[0.925rem] font-semibold hover:text-foreground">
-            Deni Run
+          <Link to="/">
+            <AppMark />
           </Link>
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground">
             {signedIn ? t("Back to workspace") : t("Back")}

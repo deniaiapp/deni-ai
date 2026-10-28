@@ -62,7 +62,7 @@ export function AccountMenu({
   const [busy, setBusy] = useState<"export" | "delete" | "signout" | null>(null);
   const [error, setError] = useState("");
   const name = user?.name || user?.email || t("Account");
-  const onTopPlan = usage?.plan === "max";
+  const onTopPlan = usage?.plan === "pro";
   const remainingPercent = usage
     ? Math.round(Math.max(0, Math.min(100, 100 - usage.pool.usedPercent)))
     : null;

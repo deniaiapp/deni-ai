@@ -1,4 +1,4 @@
-import type { AgentJob } from "./types";
+import type { AgentJob, AppNotification } from "./types";
 
 export type JobVisualState = "running" | "waiting" | "attention";
 
@@ -90,6 +90,12 @@ export function shouldMarkThreadUnread(
       ["completed", "failed", "cancelled"].includes(nextStatus) &&
       threadId !== activeThreadId,
   );
+}
+
+/** Unread notifications about jobs in the open thread. The person already sees those results there. */
+export function notificationsSeenInThread(notifications: AppNotification[], threadJobs: AgentJob[] | undefined) {
+  const jobIds = new Set((threadJobs ?? []).map((job) => job.id));
+  return notifications.filter((item) => !item.readAt && item.jobId && jobIds.has(item.jobId)).map((item) => item.id);
 }
 
 export function canCommitThreadResponse(activeThreadId: string | null, responseThreadId: string) {

@@ -17,7 +17,8 @@ While Grok Bot provides a cloud VM, Deni Run gives each account an isolated comp
 - Per-task browser pages with the account login profile and workspace files shared safely
 - Generic streamable HTTP/SSE MCP connections with encrypted credentials and approval-gated calls
 - Deliverable cards with safe text preview, download, and revision requests
-- Persistent in-app notifications for completed, failed, approval, and takeover states
+- Persistent in-app notifications for completed, failed, approval, and takeover states, read automatically for the conversation on screen
+- Animated character icons for teammates and groups (they hold still when the system asks for reduced motion); the default teammates start with their own, and their untouched names follow the workspace language
 - Chat with teammates in Discord direct messages, with Approve and Deny buttons for gated actions
 
 ## Setup
@@ -119,10 +120,10 @@ Workspace files and screenshots use the configured S3-compatible bucket (Cloudfl
 
 Deni Run has no billing of its own. Every user links a Deni AI account, whose plan sets one monthly (UTC) usage pool, priced in USD and shared by Deni AI chat, Flixa, and Deni Run. Deni Run spends it with model calls at the cost OpenRouter reports and browser (Steel) and computer (E2B) time at `DENI_RUN_BROWSER_USD_PER_HOUR` / `DENI_RUN_COMPUTER_USD_PER_HOUR` (defaults 0.10 and 0.15). Deni AI keeps the ledger; both apps show the pool as percentages, split by product (Deni AI chat, Flixa, Deni Run). Usage is not split into basic and premium models:
 
-| Deni AI plan | Free | Plus | Pro | Max |
+| Deni AI plan | Free | Go | Plus | Pro |
 | --- | --- | --- | --- | --- |
-| Monthly usage pool | $10 | $100 | $200 | $300 |
-| Teammates | 5 | 15 | 25 | 50 |
+| Monthly usage pool | $10 | $30 | $100 | $200 |
+| Teammates | 5 | 10 | 15 | 25 |
 
 Setup:
 

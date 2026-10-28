@@ -26,6 +26,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { authClient } from "@/lib/auth-client";
 import { LanguageSwitcher } from "./language-switcher";
+import { AppMark } from "./app-mark";
 
 function GoogleIcon() {
   return (
@@ -249,8 +250,8 @@ function AuthCard({
         <LanguageSwitcher />
       </div>
       <FadeIn className="flex w-full max-w-sm flex-col gap-6">
-        <Link to="/" className="text-center text-sm font-medium text-foreground">
-          Deni Run
+        <Link to="/" className="mx-auto">
+          <AppMark className="size-10" />
         </Link>
         <Card className="gap-6 p-6">
           <CardHeader className="items-center text-center">

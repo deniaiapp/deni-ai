@@ -3,29 +3,29 @@
  * usage pool (priced in USD) shared by Deni AI chat, Flixa, and Deni Run. Deni AI
  * keeps the ledger; Deni Run spends the pool with its model, browser, and computer cost.
  */
-export const DENI_TIERS = ["free", "plus", "pro", "max"] as const;
+export const DENI_TIERS = ["free", "go", "plus", "pro"] as const;
 export type DeniTier = (typeof DENI_TIERS)[number];
 
 export const TIER_NAMES: Record<DeniTier, string> = {
   free: "Free",
+  go: "Go",
   plus: "Plus",
   pro: "Pro",
-  max: "Max",
 };
 
 /** Mirrors USAGE_POOL_USD in Deni AI (src/lib/usage-pool.ts); Deni AI is authoritative. */
 export const TIER_BUDGET_USD: Record<DeniTier, number> = {
   free: 10,
+  go: 30,
   plus: 100,
   pro: 200,
-  max: 300,
 };
 
 export const TIER_TEAMMATES: Record<DeniTier, number> = {
   free: 5,
+  go: 10,
   plus: 15,
   pro: 25,
-  max: 50,
 };
 
 export function isDeniTier(value: unknown): value is DeniTier {

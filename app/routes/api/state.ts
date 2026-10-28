@@ -9,6 +9,22 @@ import { slimMessagesForClient } from "@/lib/messages";
 import { parseRunMode } from "@/lib/model";
 import { listNotifications } from "@/lib/notifications";
 import { loadMessages, mutateStore, readStore } from "@/lib/store";
+import { applyTeammateCopy, type TeammateCopy } from "@/lib/teammate-copy";
+import { locales, type Locale } from "@/i18n/config";
+import { getExtracted, getLocale } from "@/i18n/server";
+
+/** The starting names of the default teammates in one language. */
+async function teammateCopy(locale: Locale): Promise<TeammateCopy> {
+  const t = await getExtracted({ locale });
+  return {
+    bots: {
+      chief: { name: t("Chief"), job: t("Team coordination") },
+      research: { name: t("Research"), job: t("Research and reports") },
+      ops: { name: t("Operations"), job: t("Computer execution") },
+    },
+    preview: t("Send me a task"),
+  };
+}
 
 async function GET({ request }: { request: Request }) {
   const startedAt = performance.now();
@@ -16,6 +32,12 @@ async function GET({ request }: { request: Request }) {
   if (!userId) return unauthorizedResponse();
   const authenticatedAt = performance.now();
   const store = await readStore(userId);
+  const [locale, copies] = await Promise.all([getLocale(), Promise.all(locales.map(teammateCopy))]);
+  const current = copies[locales.indexOf(locale)] ?? copies[0];
+  // Untouched default teammates follow the language the workspace is opened in.
+  if (current && applyTeammateCopy(store, copies, current)) {
+    await mutateStore(userId, (latest) => void applyTeammateCopy(latest, copies, current));
+  }
   // Opening the workspace asks for everything its first screen needs in one round, read in
   // parallel: each separate request would wait on its own database round trips.
   const boot = new URL(request.url).searchParams.get("boot") === "1";

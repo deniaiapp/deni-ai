@@ -2,6 +2,8 @@ import type { Bot, Store, Thread } from "./types";
 import { createId, nowIso } from "./ids";
 import { defaultTimezone } from "./paths";
 import { DENI_MODEL_ID } from "./model";
+import { characterIcon } from "./avatar";
+import { DEFAULT_TEAMMATE_CHARACTERS } from "./teammate-copy";
 
 function bot(id: string, name: string, job: string, instructions: string, accent: string): Bot {
   const at = nowIso();
@@ -11,6 +13,7 @@ function bot(id: string, name: string, job: string, instructions: string, accent
     job,
     instructions,
     accent,
+    icon: DEFAULT_TEAMMATE_CHARACTERS[id] ? characterIcon(DEFAULT_TEAMMATE_CHARACTERS[id]) : null,
     createdAt: at,
     updatedAt: at,
     memory: [],

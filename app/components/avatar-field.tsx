@@ -1,15 +1,17 @@
 import { useExtracted } from "@/i18n/react";
 import { useRef, useState } from "react";
 import { Popover } from "@base-ui/react/popover";
-import { ImagePlus, Smile, X } from "lucide-react";
+import { ImagePlus, PawPrint, Smile, X } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { AVATAR_CHARACTERS, type AvatarCharacter, characterIcon, characterImage } from "@/lib/avatar";
 import ReactionPicker from "./reaction-picker";
 
 export function AvatarField({ name, accent = "#555555", value, onChange, disabled, onBusyChange }: { name: string; accent?: string; value: string | null; onChange: (value: string | null) => void; disabled?: boolean; onBusyChange?: (busy: boolean) => void }) {
   const t = useExtracted();
   const fileInput = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
+  const [charactersOpen, setCharactersOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   async function chooseImage(file?: File) {
@@ -37,6 +39,19 @@ export function AvatarField({ name, accent = "#555555", value, onChange, disable
     <span className="text-sm font-medium">{t("Icon")}</span>
     <div className="flex flex-wrap items-center gap-2">
       <span className="mr-1 [&>span]:size-12"><Avatar name={name || "?"} accent={accent} icon={value} /></span>
+      <Popover.Root open={charactersOpen} onOpenChange={setCharactersOpen}>
+        <Popover.Trigger disabled={disabled || busy} render={<Button type="button" variant="outline" size="xs" icon={PawPrint} />}>{t("Character")}</Popover.Trigger>
+        <Popover.Portal><Popover.Positioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-[70]"><Popover.Popup className="grid grid-cols-4 gap-1 rounded-2xl border border-foreground/10 bg-surface-32 p-3 shadow-xl outline-none">
+          {AVATAR_CHARACTERS.map((character) => {
+            const icon = characterIcon(character);
+            const label = characterName(t, character);
+            return <button key={character} type="button" aria-pressed={value === icon} onClick={() => { onChange(icon); setCharactersOpen(false); }} className="group flex w-14 flex-col items-center gap-1 rounded-lg p-1 text-[0.7rem] text-secondary-foreground outline-none hover:bg-foreground/5 focus-visible:ring-2 focus-visible:ring-primary/70 aria-pressed:text-foreground">
+              <img src={characterImage(character)} alt="" draggable={false} className="size-12 rounded-xl ring-2 ring-transparent transition group-hover:ring-foreground/30 group-aria-pressed:ring-primary" />
+              {label}
+            </button>;
+          })}
+        </Popover.Popup></Popover.Positioner></Popover.Portal>
+      </Popover.Root>
       <Popover.Root open={open} onOpenChange={setOpen}>
         <Popover.Trigger disabled={disabled || busy} render={<Button type="button" variant="outline" size="xs" icon={Smile} />}>{t("Emoji")}</Popover.Trigger>
         <Popover.Portal><Popover.Positioner side="bottom" align="start" sideOffset={6} collisionPadding={12} className="z-[70]"><Popover.Popup className="overflow-hidden rounded-2xl border border-foreground/10 bg-surface-32 shadow-xl outline-none"><ReactionPicker onBack={() => setOpen(false)} onSelect={(emoji) => { onChange(emoji); setOpen(false); }} /></Popover.Popup></Popover.Positioner></Popover.Portal>
@@ -47,4 +62,17 @@ export function AvatarField({ name, accent = "#555555", value, onChange, disable
     </div>
     {error ? <p role="alert" className="text-xs text-destructive-300">{error}</p> : null}
   </div>;
+}
+
+function characterName(t: ReturnType<typeof useExtracted>, character: AvatarCharacter) {
+  switch (character) {
+    case "navi": return t("Navi");
+    case "loupe": return t("Loupe");
+    case "gear": return t("Gear");
+    case "quill": return t("Quill");
+    case "spark": return t("Spark");
+    case "tally": return t("Tally");
+    case "sprout": return t("Sprout");
+    case "luna": return t("Luna");
+  }
 }

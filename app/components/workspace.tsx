@@ -36,7 +36,7 @@ import { BillingDialog } from "./billing-dialog";
 import { Sidebar, type TeammateMenuAction } from "./sidebar";
 import type { UsageSnapshot } from "@/lib/plans";
 import { parseRunMode, type RunMode } from "@/lib/model";
-import { canCommitThreadResponse, groupJobsByThread, isActiveJob, jobVisualState, mergeJobSnapshots, shouldMarkThreadUnread } from "@/lib/job-view";
+import { canCommitThreadResponse, groupJobsByThread, isActiveJob, jobVisualState, mergeJobSnapshots, notificationsSeenInThread, shouldMarkThreadUnread } from "@/lib/job-view";
 import { cacheThreadMessages } from "@/lib/thread-state";
 import { discardChatSession, getChatSession, syncChatSessionMessages, updateChatSessionJobState } from "@/lib/chat-sessions";
 import { McpSettings, type McpSignInReturn } from "./mcp-settings";
@@ -163,6 +163,9 @@ export function Workspace() {
   const [usage, setUsage] = useState<UsageSnapshot | null>(null);
   const [runMode, setRunMode] = useState<RunMode>("default");
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  // Notifications read because their conversation was open. A poll that started before the
+  // read was saved must not bring them back.
+  const seenNotificationIds = useRef(new Set<string>());
   const markNotificationRead = useCallback(async (id?: string) => {
     await fetch("/api/notifications", {
       method: "PATCH",
@@ -178,7 +181,7 @@ export function Workspace() {
   const [actionBusyId, setActionBusyId] = useState<string | null>(null);
   const [billingOpen, setBillingOpen] = useState(false);
   const teammateLimitReached = Boolean(usage && bots.length >= usage.teammates.limit);
-  const canUpgrade = usage?.plan !== "max";
+  const canUpgrade = usage?.plan !== "pro";
   const router = useRouter();
 
   const applyJobs = useCallback((json: { jobs?: AgentJob[]; notifications?: AppNotification[] }) => {
@@ -191,7 +194,10 @@ export function Workspace() {
       updateChatSessionJobState(threadId, jobs.some(isActiveJob));
     }
     const polledNotifications = json.notifications;
-    if (polledNotifications) setNotifications((current) => (sameJson(current, polledNotifications) ? current : polledNotifications));
+    if (polledNotifications) {
+      const fresh = polledNotifications.filter((item) => !seenNotificationIds.current.has(item.id));
+      setNotifications((current) => (sameJson(current, fresh) ? current : fresh));
+    }
     const nextStatuses: Record<string, string> = {};
     const completedInactive = new Set<string>();
     for (const job of mergedJobs) {
@@ -228,6 +234,17 @@ export function Workspace() {
   useEffect(() => {
     activeThreadRef.current = activeThreadId;
   }, [activeThreadId]);
+
+  // A finished task in the conversation on screen is already in front of the person; do not
+  // leave it waiting in the inbox as well.
+  useEffect(() => {
+    if (!activeThreadId || document.visibilityState === "hidden") return;
+    for (const id of notificationsSeenInThread(notifications, jobsByThread[activeThreadId])) {
+      if (seenNotificationIds.current.has(id)) continue;
+      seenNotificationIds.current.add(id);
+      void markNotificationRead(id).catch(() => seenNotificationIds.current.delete(id));
+    }
+  }, [activeThreadId, jobsByThread, notifications, markNotificationRead]);
 
   useEffect(() => {
     messagesByThreadRef.current = messagesByThread;

@@ -1,4 +1,4 @@
-import { canCommitThreadResponse, groupJobsByThread, isActiveJob, jobVisualState, latestJob, mergeJobSnapshots, shouldMarkThreadUnread } from "../lib/job-view";
+import { canCommitThreadResponse, groupJobsByThread, isActiveJob, jobVisualState, latestJob, mergeJobSnapshots, notificationsSeenInThread, shouldMarkThreadUnread } from "../lib/job-view";
 import { hasPendingWorkflowWait } from "../lib/chat-run-state";
 import { mergeThreadMessages } from "../lib/messages";
 import { cacheThreadMessages, clearThreadDraft, getThreadDraft, setThreadDraft } from "../lib/thread-state";
@@ -40,6 +40,13 @@ if (shouldMarkThreadUnread(undefined, "completed", "thread-a", "thread-b")) thro
 if (!shouldMarkThreadUnread("running", "completed", "thread-a", "thread-b")) throw new Error("inactive completion did not become unread");
 if (shouldMarkThreadUnread("running", "completed", "thread-a", "thread-a")) throw new Error("open thread became unread");
 if (!shouldMarkThreadUnread("finalizing", "completed", "thread-a", "thread-b")) throw new Error("saving completion did not become unread");
+const notification = (id: string, jobId: string | null, readAt: string | null = null) => ({ id, jobId, kind: "completed" as const, title: "", body: "", readAt, createdAt: "2026-09-05T00:00:00.000Z" });
+const seen = notificationsSeenInThread(
+  [notification("open", "job-a"), notification("other", "job-b"), notification("read", "job-a", "2026-09-05T00:00:01.000Z"), notification("no-job", null)],
+  [base("job-a", "thread-a", "completed")],
+);
+if (seen.join() !== "open") throw new Error(`open thread notifications were not picked: ${seen.join()}`);
+if (notificationsSeenInThread([notification("open", "job-a")], undefined).length) throw new Error("notification without thread jobs was picked");
 const terminal = { ...a, status: "completed" as const, finishedAt: "2026-09-05T00:00:02.000Z", updatedAt: "2026-09-05T00:00:02.000Z" };
 const staleRunning = { ...a, updatedAt: "2026-09-05T00:00:01.000Z" };
 if (mergeJobSnapshots([terminal], [staleRunning])[0]?.status !== "completed") throw new Error("stale running poll rolled back a terminal job");

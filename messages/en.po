@@ -628,6 +628,11 @@ msgid "Icon"
 msgstr "Icon"
 
 #: app/components/avatar-field.tsx
+msgctxt "CW4O0j"
+msgid "Character"
+msgstr "Character"
+
+#: app/components/avatar-field.tsx
 #: app/components/reaction-picker.tsx
 msgctxt "34NuzG"
 msgid "Emoji"
@@ -647,6 +652,46 @@ msgstr "Reset"
 msgctxt "sZTv2D"
 msgid "Upload icon"
 msgstr "Upload icon"
+
+#: app/components/avatar-field.tsx
+msgctxt "T0Ypz8"
+msgid "Navi"
+msgstr "Navi"
+
+#: app/components/avatar-field.tsx
+msgctxt "zLKxRB"
+msgid "Loupe"
+msgstr "Loupe"
+
+#: app/components/avatar-field.tsx
+msgctxt "8nh9JU"
+msgid "Gear"
+msgstr "Gear"
+
+#: app/components/avatar-field.tsx
+msgctxt "UzhfLp"
+msgid "Quill"
+msgstr "Quill"
+
+#: app/components/avatar-field.tsx
+msgctxt "RIRKWG"
+msgid "Spark"
+msgstr "Spark"
+
+#: app/components/avatar-field.tsx
+msgctxt "S_V50K"
+msgid "Tally"
+msgstr "Tally"
+
+#: app/components/avatar-field.tsx
+msgctxt "x1K1lH"
+msgid "Sprout"
+msgstr "Sprout"
+
+#: app/components/avatar-field.tsx
+msgctxt "hARaFV"
+msgid "Luna"
+msgstr "Luna"
 
 #: app/components/billing-dialog.tsx
 msgctxt "wv8EiK"
@@ -3779,6 +3824,12 @@ msgid "Default teammates cannot be deleted"
 msgstr "Default teammates cannot be deleted"
 
 #: app/routes/api/bots/index.ts
+#: app/routes/api/state.ts
+msgctxt "Ct2wra"
+msgid "Send me a task"
+msgstr "Send me a task"
+
+#: app/routes/api/bots/index.ts
 #: app/routes/api/routines.ts
 msgctxt "_4pQDl"
 msgid "Name is required."
@@ -3987,6 +4038,36 @@ msgstr "A skill with this name already exists."
 msgctxt "KaE7gK"
 msgid "Skill not found."
 msgstr "Skill not found."
+
+#: app/routes/api/state.ts
+msgctxt "gcty4G"
+msgid "Chief"
+msgstr "Chief"
+
+#: app/routes/api/state.ts
+msgctxt "4F4xND"
+msgid "Team coordination"
+msgstr "Team coordination"
+
+#: app/routes/api/state.ts
+msgctxt "JEe7dV"
+msgid "Research"
+msgstr "Research"
+
+#: app/routes/api/state.ts
+msgctxt "8ozGbD"
+msgid "Research and reports"
+msgstr "Research and reports"
+
+#: app/routes/api/state.ts
+msgctxt "MQbmj7"
+msgid "Operations"
+msgstr "Operations"
+
+#: app/routes/api/state.ts
+msgctxt "6WxW7S"
+msgid "Computer execution"
+msgstr "Computer execution"
 
 #: app/routes/api/threads/$id/index.ts
 msgctxt "rDFiEI"

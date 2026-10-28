@@ -18,7 +18,7 @@ async function POST({ request: req }: { request: Request }) {
     instructions?: string;
     icon?: string | null;
   };
-  const result = await createTeammate(userId, body);
+  const result = await createTeammate(userId, body, { preview: t("Send me a task") });
   if (!result.ok) {
     if (result.reason === "invalid_icon") return Response.json({ error: t("Invalid icon") }, { status: 400 });
     if (result.reason === "name_required") return Response.json({ error: t("Name is required.") }, { status: 400 });

@@ -46,6 +46,7 @@ import { cn } from "@/lib/utils";
 import type { Bot, Routine, Skill, Thread } from "@/lib/types";
 import type { UsageSnapshot } from "@/lib/plans";
 import { AccountMenu } from "./account-menu";
+import { AppMark } from "./app-mark";
 import { Avatar } from "@/components/ui/avatar";
 export { Avatar } from "@/components/ui/avatar";
 
@@ -137,7 +138,7 @@ export function Sidebar({
     <>
       <SidebarHeader className="h-[54px] shrink-0 gap-2 bg-surface">
         <div className="min-w-0 flex-1 whitespace-normal">
-          <h1 className="text-sm font-semibold text-neutral-189">Deni Run</h1>
+          <h1 className="flex"><AppMark /></h1>
         </div>
         <button type="button" onClick={onNewBot} aria-label={t("New teammate")} title={t("New teammate")} className="flex size-8 items-center justify-center rounded-lg text-primary transition-colors hover:bg-primary/10 focus-visible:outline-2 focus-visible:outline-primary/60 dark:text-sidebar-primary">
           <PlusIcon size={18} />
