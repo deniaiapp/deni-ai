@@ -227,7 +227,9 @@ export function AccountMenu() {
                 </span>
               </div>
               {usageQuery.isLoading ? (
-                <p className="text-xs text-muted-foreground">{t("Loading usage…")}</p>
+                <div className="flex justify-center py-1">
+                  <Spinner aria-label={t("Loading…")} className="text-muted-foreground" />
+                </div>
               ) : usageQuery.isError ? (
                 <p className="text-xs text-destructive">{t("Failed to load usage.")}</p>
               ) : (

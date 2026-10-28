@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useExtracted } from "use-intl";
 
 import { getPlanTier, type BillingPlanId } from "@/lib/billing";
@@ -5,7 +6,7 @@ import { USAGE_POOL_USD } from "@/lib/usage-pool";
 
 export type BillingPlanCopy = {
   tagline: string;
-  highlights: string[];
+  highlights: ReactNode[];
   badge?: string;
 };
 
@@ -20,6 +21,11 @@ const PLAN_USAGE_MULTIPLIERS = {
   max: { pool: poolRatio("max", "pro"), vs: "Pro" as const },
 } as const;
 
+/** Key phrases inside a highlight, drawn at full contrast. */
+const b = (chunks: ReactNode) => (
+  <strong className="font-semibold text-foreground">{chunks}</strong>
+);
+
 export function useBillingPlanCopy(planId: BillingPlanId): BillingPlanCopy;
 export function useBillingPlanCopy(planId: null): null;
 export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCopy | null;
@@ -32,9 +38,14 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
 
   const tier = getPlanTier(planId);
   const comparisonHighlights =
-    tier === "pro" || tier === "team" ? [t("Compare two models side by side")] : [];
+    tier === "pro" || tier === "team"
+      ? [t.rich("<b>Compare two models</b> side by side", { b })]
+      : [];
   // One monthly pool covers Deni AI chat, Flixa, and Deni Run on every plan.
-  const runHighlight = t("One usage pool for Deni AI chat, Flixa, and Deni Run");
+  const runHighlight = t.rich(
+    "One usage pool for <b>Deni AI chat</b>, <b>Flixa</b>, and <b>Deni Run</b>",
+    { b },
+  );
 
   switch (planId) {
     case "plus_monthly":
@@ -42,13 +53,14 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         tagline: t("Get unbelievable usage limits"),
         highlights: [
           runHighlight,
-          t("{multiplier}× more monthly usage than {plan}", {
+          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.plus.pool),
             plan: PLAN_USAGE_MULTIPLIERS.plus.vs,
           }),
-          t("No ads experience"),
-          t("Get more models in Deni AI Flixa"),
-          t("For trying Deni AI"),
+          t.rich("<b>No ads</b> experience", { b }),
+          t.rich("Get <b>more models</b> in Deni AI Flixa", { b }),
+          t.rich("<b>For trying</b> Deni AI", { b }),
         ],
       };
     case "plus_yearly":
@@ -56,7 +68,8 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         tagline: t("Incredible deal"),
         highlights: [
           runHighlight,
-          t("{multiplier}× more monthly usage than {plan}", {
+          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.plus.pool),
             plan: PLAN_USAGE_MULTIPLIERS.plus.vs,
           }),
@@ -71,13 +84,14 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         highlights: [
           runHighlight,
           t("Includes all Plus features"),
-          t("{multiplier}× more monthly usage than {plan}", {
+          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
           ...comparisonHighlights,
-          t("Max Mode pay-per-use available"),
-          t("For power users"),
+          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
+          t.rich("For <b>power users</b>", { b }),
         ],
       };
     case "pro_yearly":
@@ -86,13 +100,14 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         highlights: [
           runHighlight,
           t("Includes all Plus features"),
-          t("{multiplier}× more monthly usage than {plan}", {
+          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
           ...comparisonHighlights,
-          t("Max Mode pay-per-use available"),
-          t("For power users"),
+          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
+          t.rich("For <b>power users</b>", { b }),
         ],
       };
     case "max_monthly":
@@ -101,12 +116,13 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         highlights: [
           runHighlight,
           t("Includes all Pro features"),
-          t("About {multiplier}× more monthly usage than {plan}", {
+          t.rich("About <b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
             plan: PLAN_USAGE_MULTIPLIERS.max.vs,
           }),
           ...comparisonHighlights,
-          t("For power users"),
+          t.rich("For <b>power users</b>", { b }),
         ],
       };
     case "max_yearly":
@@ -116,12 +132,13 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         highlights: [
           runHighlight,
           t("Includes all Pro features"),
-          t("About {multiplier}× more monthly usage than {plan}", {
+          t.rich("About <b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
             plan: PLAN_USAGE_MULTIPLIERS.max.vs,
           }),
           ...comparisonHighlights,
-          t("For power users"),
+          t.rich("For <b>power users</b>", { b }),
         ],
       };
     case "pro_lifetime":
@@ -131,12 +148,13 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
         highlights: [
           runHighlight,
           t("Includes all Plus features"),
-          t("{multiplier}× more monthly usage than {plan}", {
+          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
           ...comparisonHighlights,
-          t("Max Mode pay-per-use available"),
+          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
           t("No recurring subscription"),
         ],
       };
@@ -147,11 +165,12 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
           runHighlight,
           ...comparisonHighlights,
           t("Pro benefits for every team member"),
-          t("{multiplier}× more monthly usage than {plan}", {
+          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
-          t("Max Mode pay-per-use available"),
+          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
           t("Per-seat billing — pay only for active members"),
           t("Centralized billing and member management"),
         ],
@@ -164,11 +183,12 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
           runHighlight,
           ...comparisonHighlights,
           t("Pro benefits for every team member"),
-          t("{multiplier}× more monthly usage than {plan}", {
+          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
-          t("Max Mode pay-per-use available"),
+          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
           t("Per-seat billing — pay only for active members"),
           t("Centralized billing and member management"),
         ],
@@ -180,11 +200,12 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
           runHighlight,
           ...comparisonHighlights,
           t("Max benefits for every team member"),
-          t("{multiplier}× more monthly usage than {plan}", {
+          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
             plan: PLAN_USAGE_MULTIPLIERS.max.vs,
           }),
-          t("Max Mode pay-per-use available"),
+          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
           t("Per-seat billing — pay only for active members"),
           t("Centralized billing and member management"),
         ],
@@ -197,11 +218,12 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
           runHighlight,
           ...comparisonHighlights,
           t("Max benefits for every team member"),
-          t("{multiplier}× more monthly usage than {plan}", {
+          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
             plan: PLAN_USAGE_MULTIPLIERS.max.vs,
           }),
-          t("Max Mode pay-per-use available"),
+          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
           t("Per-seat billing — pay only for active members"),
           t("Centralized billing and member management"),
         ],

@@ -528,12 +528,8 @@ export function AdsSettings() {
           </Alert>
         )}
         {campaigns === null && !loadError && (
-          <div
-            role="status"
-            className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground"
-          >
-            <Spinner aria-hidden="true" className="size-4" />
-            <span>{t("Loading ads…")}</span>
+          <div className="flex justify-center py-12 text-muted-foreground">
+            <Spinner aria-label={t("Loading…")} />
           </div>
         )}
         {campaigns?.length === 0 && !loadError && (

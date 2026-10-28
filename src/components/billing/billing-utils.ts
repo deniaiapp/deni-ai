@@ -140,24 +140,3 @@ export function useTierLabel() {
     return t("Plus");
   };
 }
-
-export function usePlanFitCopy() {
-  const t = useExtracted();
-
-  return (planId: BillingPlanId) => {
-    const tier = getPlanTier(planId);
-    if (tier === "max") {
-      return t("Best when limits are blocking your daily work.");
-    }
-    if (tier === "pro") {
-      return t("Best for regular projects and premium model usage.");
-    }
-    if (tier === "team") {
-      return isMaxTeamPlan(planId)
-        ? t("Best for teams that need Max-tier usage.")
-        : t("Best for shared workspaces and centralized billing.");
-    }
-
-    return t("Best first upgrade from the free plan.");
-  };
-}

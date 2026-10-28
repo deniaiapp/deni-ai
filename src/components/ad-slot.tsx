@@ -97,14 +97,12 @@ export function AdSlot({
   if (isLoading) {
     return (
       <div
-        role="status"
         className={cn(
-          "flex min-h-20 items-center justify-center gap-2 rounded-xl border border-border/60 text-sm text-muted-foreground",
+          "flex min-h-20 items-center justify-center rounded-xl border border-border/60 text-muted-foreground",
           className,
         )}
       >
-        <Spinner aria-hidden="true" />
-        {t("Loading ads…")}
+        <Spinner aria-label={t("Loading…")} />
       </div>
     );
   }
