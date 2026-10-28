@@ -87,7 +87,7 @@ export function useLocalizeError() {
         ...mapKeys(t("CAPTCHA verification failed. Please try again."), "VERIFICATION_FAILED"),
         ...mapKeys(
           t(
-            "Gmail addresses must sign in with Google. Please use the Continue with Google button.",
+            "Gmail addresses must sign in with Google or GitHub. Please use the Continue with Google or Continue with GitHub button.",
           ),
           "EMAIL_USE_GOOGLE_OAUTH",
         ),
@@ -100,7 +100,7 @@ export function useLocalizeError() {
         ...mapKeys(t("Please enter a valid email address."), "EMAIL_INVALID"),
         ...mapKeys(
           t(
-            "Please use a major email provider (Outlook, iCloud, Proton, etc.) or a restricted educational address (e.g. .edu, .ac.jp, .ac.uk, .edu.au). Gmail requires Continue with Google. To request adding another email domain, contact contact@deniai.app.",
+            "Please use a major email provider (Outlook, iCloud, Proton, etc.) or a restricted educational address (e.g. .edu, .ac.jp, .ac.uk, .edu.au). Gmail requires Continue with Google or GitHub. To request adding another email domain, contact contact@deniai.app.",
           ),
           "EMAIL_DOMAIN_NOT_ALLOWED",
         ),

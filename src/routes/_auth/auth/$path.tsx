@@ -2,6 +2,7 @@ import { viewPaths } from "@better-auth-ui/core";
 import { magicLinkPlugin } from "@better-auth-ui/core/plugins/magic-link";
 import { createFileRoute, notFound } from "@tanstack/react-router";
 import { Auth } from "@/components/auth/auth";
+import { OAuthErrorAlert } from "@/components/auth/oauth-error-alert";
 import { GuestSignInButton } from "@/components/guest-sign-in-button";
 import { TWO_FACTOR_VIEW_PATH } from "@/lib/auth-paths";
 
@@ -31,6 +32,7 @@ function AuthPage() {
       className="flex min-h-screen w-full grow flex-col items-center justify-center gap-4 p-4 md:p-6"
       id="main-content"
     >
+      <OAuthErrorAlert />
       <Auth path={path} />
       {showGuest ? <GuestSignInButton className="w-full max-w-sm" size="sm" /> : null}
     </main>
