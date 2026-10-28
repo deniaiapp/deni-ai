@@ -5,8 +5,11 @@ const mocks = vi.hoisted(() => ({
   startModelHealthScheduler: vi.fn(),
   startBackgroundJobScheduler: vi.fn(),
 }));
-vi.mock("@sentry/tanstackstart-react", () => ({ init: vi.fn() }));
-vi.mock("@/lib/sentry-options", () => ({ getSentryOptions: () => ({}) }));
+vi.mock("@/lib/sentry-options", () => ({
+  getSentryOptions: () => ({}),
+  loadSentry: async () => null,
+  sentryIntegrations: () => [],
+}));
 vi.mock("@/lib/abort-diagnostics", () => ({ installAbortDiagnostics: vi.fn() }));
 vi.mock("@/lib/process-warnings", () => ({ installProcessWarningFilter: vi.fn() }));
 vi.mock("@/lib/model-health-scheduler", () => ({

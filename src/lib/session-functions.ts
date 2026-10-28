@@ -1,13 +1,15 @@
 import { createIsomorphicFn, createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
-import { auth } from "@/lib/auth";
 
 export type AuthState = {
   signedIn: boolean;
   isAnonymous: boolean;
 };
 
+// better-auth pulls in the database, mail templates and Stripe; load it on the
+// first session check rather than with every module that imports this file.
 const getAuthStateFn = createServerFn({ method: "GET" }).handler(async (): Promise<AuthState> => {
+  const { auth } = await import("@/lib/auth");
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
   return {
     signedIn: Boolean(session?.session),

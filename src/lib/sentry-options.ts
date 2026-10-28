@@ -1,10 +1,6 @@
-import {
-  consoleLoggingIntegration,
-  type ErrorEvent,
-  type init,
-  type Log,
-} from "@sentry/tanstackstart-react";
+import type { ErrorEvent, init, Log } from "@sentry/tanstackstart-react";
 
+type SentrySdk = typeof import("@sentry/tanstackstart-react");
 type SentryOptions = NonNullable<Parameters<typeof init>[0]>;
 type BeforeSendSpan = NonNullable<SentryOptions["beforeSendSpan"]>;
 
@@ -110,6 +106,10 @@ function scrubLog(log: Log): Log {
  * (`Sentry.logger` plus console warn/error), and sampled traces. No session
  * replay and no default PII (Sentry default). Sentry stays disabled until
  * NEXT_PUBLIC_SENTRY_DSN is set and NODE_ENV is production.
+ *
+ * Integrations come from `sentryIntegrations()` once the SDK is loaded; this
+ * module only imports Sentry types so callers can skip loading the SDK when
+ * Sentry is disabled.
  */
 export function getSentryOptions(): SentryOptions {
   const dsn = import.meta.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
@@ -160,6 +160,24 @@ export function getSentryOptions(): SentryOptions {
     beforeSend: scrubEvent,
     beforeSendSpan: scrubSpan,
     beforeSendLog: scrubLog,
-    integrations: [consoleLoggingIntegration({ levels: ["warn", "error"] })],
   };
+}
+
+/** Integrations shared by server and browser. */
+export function sentryIntegrations(Sentry: SentrySdk) {
+  return [Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] })];
+}
+
+/**
+ * Loads the SDK only when Sentry is enabled, so development servers and builds
+ * without a DSN never pay for it.
+ */
+export async function loadSentry(): Promise<SentrySdk | null> {
+  if (!getSentryOptions().enabled) return null;
+  return import("@sentry/tanstackstart-react");
+}
+
+/** Reports an error when Sentry is enabled; a no-op otherwise. */
+export function reportError(error: unknown) {
+  void loadSentry().then((Sentry) => Sentry?.captureException(error));
 }

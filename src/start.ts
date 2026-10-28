@@ -10,6 +10,7 @@ import {
   stripJaPrefix,
 } from "@/lib/locale-path";
 import { signInPath } from "@/lib/sign-in-redirect";
+import { compressResponse } from "@/server/compression";
 
 const SESSION_COOKIE = "better-auth.session_token";
 const SECURE_SESSION_COOKIE = `__Secure-${SESSION_COOKIE}`;
@@ -132,6 +133,12 @@ const serverFnCsrf = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
 });
 
+/** Gzips HTML and API responses (Next.js compressed them by default; Nitro does not). */
+const compression = createMiddleware().server(async ({ request, next }) => {
+  const result = await next();
+  return { ...result, response: compressResponse(request, result.response) };
+});
+
 export const startInstance = createStart(() => ({
-  requestMiddleware: [serverFnCsrf, localeAndAuthRedirects],
+  requestMiddleware: [compression, serverFnCsrf, localeAndAuthRedirects],
 }));

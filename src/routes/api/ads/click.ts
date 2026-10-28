@@ -1,10 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { GET } from "@/server/http/ads/click/route";
 
 export const Route = createFileRoute("/api/ads/click")({
   server: {
     handlers: {
-      GET: ({ request }) => GET(request),
+      GET: async ({ request }) => (await import("@/server/http/ads/click/route")).GET(request),
     },
   },
 });

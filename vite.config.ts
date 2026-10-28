@@ -3,7 +3,9 @@ import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import viteReact from "@vitejs/plugin-react";
 import { nitro } from "nitro/vite";
-import { defineConfig, loadEnv } from "vite";
+import { readFileSync } from "node:fs";
+import { parseEnv } from "node:util";
+import { defineConfig } from "vite";
 import { extractMessages } from "./vite/extract-messages.ts";
 import { routeRules } from "./vite/route-rules.ts";
 
@@ -13,16 +15,35 @@ import { routeRules } from "./vite/route-rules.ts";
 const envFileState = ((globalThis as { __deniEnvFileKeys?: Set<string> }).__deniEnvFileKeys ??=
   new Set());
 
+/**
+ * Next.js precedence, highest first. Vite's own loadEnv ranks `.env.[mode]`
+ * above `.env.local`, which would bake production URLs from .env.production
+ * into local builds.
+ */
+function envFiles(mode: string) {
+  return [`.env.${mode}.local`, ...(mode === "test" ? [] : [".env.local"]), `.env.${mode}`, ".env"];
+}
+
+function readEnvFile(file: string): Record<string, string> {
+  try {
+    return parseEnv(readFileSync(file, "utf8")) as Record<string, string>;
+  } catch {
+    return {};
+  }
+}
+
 export default defineConfig(({ mode }) => {
-  // Server code reads process.env; load .env, .env.local and .env.[mode] like
-  // Next.js did (.env.local wins over .env). Variables set in the shell win.
-  // Vite's loadEnv also prefers process.env, so drop file-loaded keys first.
+  // Server code reads process.env, and Vite fills import.meta.env from
+  // process.env before .env files, so loading the files here keeps server and
+  // browser values identical. Variables set in the shell win.
   for (const key of envFileState) delete process.env[key];
   envFileState.clear();
-  for (const [key, value] of Object.entries(loadEnv(mode, process.cwd(), ""))) {
-    if (process.env[key] === undefined) {
-      process.env[key] = value;
-      envFileState.add(key);
+  for (const file of envFiles(mode)) {
+    for (const [key, value] of Object.entries(readEnvFile(file))) {
+      if (process.env[key] === undefined) {
+        process.env[key] = value;
+        envFileState.add(key);
+      }
     }
   }
 
@@ -41,6 +62,23 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    environments: {
+      client: {
+        build: {
+          rolldownOptions: {
+            output: {
+              // Automatic splitting alone emits ~160 sub-2KB common chunks (single
+              // icons, helpers) shared between route chunks, so a page waits on
+              // 100+ requests. Copy those small chunks into the chunks that use
+              // them instead; each page still loads only the code it needs.
+              codeSplitting: {
+                experimentalInlineCommonChunks: { maxSize: 4 * 1024 },
+              },
+            },
+          },
+        },
+      },
+    },
     plugins: [
       // Must run before TanStack's route code splitting copies component code.
       extractMessages({
@@ -53,6 +91,8 @@ export default defineConfig(({ mode }) => {
       tanstackStart(),
       nitro({
         routeRules,
+        // Serve prebuilt .gz/.br copies of JS, CSS and other static files.
+        compressPublicAssets: { gzip: true, brotli: true },
         // The AI SDK loads `undici` through createRequire(), which tracing cannot see.
         traceDeps: ["undici"],
       }),

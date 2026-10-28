@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { GET } from "@/server/http/cron/max-mode-meter-events/route";
 
 export const Route = createFileRoute("/api/cron/max-mode-meter-events")({
   server: {
     handlers: {
-      GET: ({ request }) => GET(request),
+      GET: async ({ request }) =>
+        (await import("@/server/http/cron/max-mode-meter-events/route")).GET(request),
     },
   },
 });

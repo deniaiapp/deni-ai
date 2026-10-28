@@ -1,9 +1,9 @@
-import * as Sentry from "@sentry/tanstackstart-react";
 import { type ErrorComponentProps, useRouter } from "@tanstack/react-router";
 import { TriangleAlert } from "lucide-react";
 import { Link, usePathname } from "@/lib/navigation";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Button } from "@/components/ui/button";
+import { reportError } from "@/lib/sentry-options";
 import { isStaleDeploymentError, reloadForStaleDeployment } from "@/lib/stale-deployment";
 import { versions } from "@/lib/version";
 
@@ -60,7 +60,7 @@ export function ErrorPage({ error }: ErrorComponentProps) {
       return;
     }
     console.error(error);
-    Sentry.captureException(error);
+    reportError(error);
   }, [error]);
 
   // No useMemo: the React Compiler memoizes this automatically.

@@ -1,7 +1,6 @@
-import * as Sentry from "@sentry/tanstackstart-react";
 import { createRouter } from "@tanstack/react-router";
 import { Spinner } from "@/components/ui/spinner";
-import { getSentryOptions } from "@/lib/sentry-options";
+import { getSentryOptions, loadSentry, sentryIntegrations } from "@/lib/sentry-options";
 import { routeTree } from "./routeTree.gen";
 
 /**
@@ -46,14 +45,16 @@ export function getRouter() {
 
   if (!router.isServer && !sentryInitialized) {
     sentryInitialized = true;
-    const options = getSentryOptions();
-    Sentry.init({
-      ...options,
-      integrations: [
-        ...(Array.isArray(options.integrations) ? options.integrations : []),
-        Sentry.tanstackRouterBrowserTracingIntegration(router),
-      ],
-    });
+    // Loaded only when enabled, as its own chunk off the critical path.
+    void loadSentry().then((Sentry) =>
+      Sentry?.init({
+        ...getSentryOptions(),
+        integrations: [
+          ...sentryIntegrations(Sentry),
+          Sentry.tanstackRouterBrowserTracingIntegration(router),
+        ],
+      }),
+    );
   }
 
   return router;

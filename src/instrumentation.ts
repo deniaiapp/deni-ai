@@ -1,9 +1,9 @@
-import * as Sentry from "@sentry/tanstackstart-react";
-import { getSentryOptions } from "@/lib/sentry-options";
+import { getSentryOptions, loadSentry, sentryIntegrations } from "@/lib/sentry-options";
 
 /** One-time server startup: error reporting, diagnostics, and in-process schedulers. */
 export async function register() {
-  Sentry.init(getSentryOptions());
+  const Sentry = await loadSentry();
+  Sentry?.init({ ...getSentryOptions(), integrations: sentryIntegrations(Sentry) });
   const { installAbortDiagnostics } = await import("@/lib/abort-diagnostics");
   installAbortDiagnostics();
   const { installProcessWarningFilter } = await import("@/lib/process-warnings");
