@@ -2,7 +2,7 @@ import { getDeniPool } from "./db";
 import type { DeniUsageInfo, BillingRow, UsageQuotaRow } from "./types";
 import type { ModelCategory } from "./models";
 
-export type UsageTier = "free" | "plus" | "pro" | "max";
+export type UsageTier = "free" | "go" | "plus" | "pro";
 /** The only quota unit: pool usage units (1M units = $0.50). */
 export type UsageUnit = "units";
 
@@ -16,8 +16,6 @@ const ACTIVE_STATUSES = [
   "paid",
 ];
 
-const MAX_TEAM_PLAN_IDS = ["max_team_monthly", "max_team_yearly"] as const;
-
 const BILLING_PRIORITY_ORDER = `CASE
   WHEN status IN ('active', 'trialing', 'past_due', 'incomplete', 'unpaid', 'paid') THEN 0
   WHEN status = 'canceled' AND current_period_end IS NOT NULL AND current_period_end > NOW() THEN 1
@@ -29,9 +27,9 @@ END`;
 // Deni Run's cost are both counted in usage units (1M units = $0.50).
 const USAGE_POOL_USD: Record<UsageTier, number> = {
   free: 10,
+  go: 30,
   plus: 100,
   pro: 200,
-  max: 300,
 };
 const VERIFIED_FREE_POOL_USD = 15;
 const FLAGGED_FREE_POOL_USD = 2;
@@ -171,17 +169,13 @@ function determineTier(billing: BillingRow | null, isTeam: boolean): UsageTier {
 
   if (!isActive) return "free";
 
-  // Team billing is pro by default, except for Max Teams plans.
-  if (isTeam) {
-    return MAX_TEAM_PLAN_IDS.some((maxTeamPlanId) => maxTeamPlanId === plan_id)
-      ? "max"
-      : "pro";
-  }
+  // Team billing (Pro for Teams) is pro.
+  if (isTeam) return "pro";
 
-  // Personal billing: check plan_id
+  // Personal billing: check plan_id. Removed Max plans (max_*) fall back to free.
   if (plan_id?.startsWith("pro")) return "pro";
-  if (plan_id?.startsWith("max")) return "max";
   if (plan_id?.startsWith("plus")) return "plus";
+  if (plan_id?.startsWith("go_")) return "go";
   return "free";
 }
 
@@ -228,10 +222,7 @@ async function fetchBillingProfile(userId: string): Promise<BillingProfile> {
        INNER JOIN member m ON b.organization_id = m.organization_id
        WHERE m.user_id = $1
          AND b.organization_id IS NOT NULL
-         AND (
-           b.plan_id LIKE 'pro_team%'
-           OR b.plan_id IN ('max_team_monthly', 'max_team_yearly')
-         )
+         AND b.plan_id LIKE 'pro_team%'
        ORDER BY ${BILLING_PRIORITY_ORDER.replaceAll("status", "b.status").replaceAll("current_period_end", "b.current_period_end")}, b.current_period_end DESC NULLS LAST
        LIMIT 1
      ), personal_billing AS (

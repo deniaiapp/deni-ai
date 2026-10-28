@@ -35,7 +35,7 @@ import {
 export interface AgentAuthContext {
   userId: string;
   modelId: string;
-  tier: 'free' | 'plus' | 'pro' | "max";
+  tier: 'free' | 'go' | 'plus' | 'pro';
   modelCategory: 'basic' | 'premium';
   usageUnit: UsageUnit;
   usageReserved: boolean;
@@ -393,7 +393,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
     c.set('agentAuth', {
       userId: keyValidation.userId,
       modelId: model,
-      tier: 'max',
+      tier: 'pro',
       modelCategory,
       usageUnit: USAGE_UNIT,
       usageReserved: false,
@@ -456,7 +456,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
           category: modelCategory,
           tier,
           canVerifyForBoost: tier === 'free' && !billingProfile.hasVerifiedPaymentMethod,
-          canUpgrade: tier !== 'max',
+          canUpgrade: tier !== 'pro',
           verifyUrl: getVerifyUrl(),
           upgradeUrl: getUpgradeUrl(),
         },

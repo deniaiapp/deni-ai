@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { getModelCategory, getRequiredTierForModel } from "../utils/deni/models";
+import { getModelCategory, getRequiredTierForModel, isTierSufficient } from "../utils/deni/models";
 import {
   ANTHROPIC_MODEL_DEFINITIONS,
   getLongContextUsageMultiplier,
@@ -173,6 +173,13 @@ describe("Codex long-context model support", () => {
     assert.equal(getRequiredTierForModel("openai/gpt-6-luna"), null);
     assert.equal(getRequiredTierForModel("openai/gpt-5.5"), "plus");
     assert.equal(getRequiredTierForModel("anthropic/claude-opus-4.8"), "plus");
+  });
+
+  test("Go reaches free-tier models only", () => {
+    assert.equal(isTierSufficient("go", "plus"), false);
+    assert.equal(isTierSufficient("go", "pro"), false);
+    assert.equal(isTierSufficient("plus", "plus"), true);
+    assert.equal(isTierSufficient("pro", "plus"), true);
   });
 
   test("charges Sonnet 5.5 at 1.5x on the free plan only", () => {

@@ -30,8 +30,11 @@ export interface ModelDefinition {
   longContextThreshold?: number;
   /** Multiplier applied when prompt tokens exceed longContextThreshold. */
   longContextUsageMultiplier?: number;
-  tier: "free" | "plus" | "pro" | "max";
+  tier: "free" | "plus" | "pro";
 }
+
+/** A user's plan tier: the model tiers plus Go, which unlocks only free-tier models. */
+export type PlanTier = ModelDefinition["tier"] | "go";
 
 /** Long-context surcharge for OpenAI 1M-context models (prompts > 272K tokens). */
 const OPENAI_1M_LONG_CONTEXT = {
@@ -561,7 +564,7 @@ function getPromptTokenCount(usage: unknown): number | null {
  */
 export function getModelTokenUsageMultiplier(
   modelId: string,
-  tier?: ModelDefinition["tier"],
+  tier?: PlanTier,
 ): number {
   const definition = getModelDefinition(modelId);
   const usageTier =
@@ -609,7 +612,7 @@ export function getLongContextUsageMultiplier(
 export function getEffectiveTokenUsageMultiplier(
   modelId: string,
   usage?: unknown,
-  tier?: ModelDefinition["tier"],
+  tier?: PlanTier,
 ): number {
   const base = getModelTokenUsageMultiplier(modelId, tier);
   if (usage === undefined) {

@@ -6,7 +6,7 @@ export type ModelCategory = "basic" | "premium";
 // Each entry maps a pattern to the minimum tier required
 const TIER_RESTRICTED_MODELS: Array<{
   pattern: RegExp;
-  minTier: "plus" | "pro" | "max";
+  minTier: "plus" | "pro";
 }> = [
   // claude-sonnet-4-5 requires plus or higher
   { pattern: /claude-sonnet-4[.-]5/i, minTier: "plus" },
@@ -28,7 +28,7 @@ export function getModelCategory(_model: string): ModelCategory {
  * Check if user's tier allows access to a specific model.
  * Returns null if no restriction, or the minimum tier required if restricted.
  */
-export function getRequiredTierForModel(model: string): "plus" | "pro" | "max" | null {
+export function getRequiredTierForModel(model: string): "plus" | "pro" | null {
   const definition = getModelDefinition(model);
   if (definition && definition.tier !== 'free') {
     return definition.tier;
@@ -46,11 +46,12 @@ export function getRequiredTierForModel(model: string): "plus" | "pro" | "max" |
 /**
  * Check if a user's tier meets the minimum required tier for a model
  */
-const TIER_LEVELS: Record<string, number> = { free: 0, plus: 1, pro: 2, max: 3 };
+// Go unlocks the same models as Free (Deni AI's verified-free catalog), never Plus models.
+const TIER_LEVELS: Record<string, number> = { free: 0, go: 1, plus: 2, pro: 3 };
 
 export function isTierSufficient(
-  userTier: "free" | "plus" | "pro" | "max",
-  requiredTier: "plus" | "pro" | "max",
+  userTier: "free" | "go" | "plus" | "pro",
+  requiredTier: "plus" | "pro",
 ): boolean {
   return (TIER_LEVELS[userTier] ?? 0) >= (TIER_LEVELS[requiredTier] ?? 0);
 }

@@ -14,7 +14,7 @@ const router = new Hono();
 function getAuthDisabledUsageInfo() {
   const now = new Date().toISOString();
   return {
-    tier: 'max' as const,
+    tier: 'pro' as const,
     hasVerifiedPaymentMethod: true,
     cardVerifiedAt: null,
     verifyUrl: getVerifyUrl(),

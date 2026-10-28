@@ -1,7 +1,7 @@
 import {
   getModelDefinition,
   getEffectiveTokenUsageMultiplier,
-  type ModelDefinition,
+  type PlanTier,
 } from "./models";
 import { computeMeteredTokens } from "./usageMetering";
 
@@ -23,7 +23,7 @@ export class UsageEstimate {
     body: Record<string, unknown>,
     model: string,
     protocol: "chat" | "responses" | "messages" | "compact" = "chat",
-    tier?: ModelDefinition["tier"],
+    tier?: PlanTier,
   ) {
     const input = JSON.stringify({
       messages: body.messages,

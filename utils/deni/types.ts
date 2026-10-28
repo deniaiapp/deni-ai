@@ -1,7 +1,7 @@
 import type { UsageUnit } from './usage';
 
 export interface DeniUsageInfo {
-  tier: 'free' | 'plus' | 'pro' | "max";
+  tier: 'free' | 'go' | 'plus' | 'pro';
   planId: string | null;
   status: string | null;
   hasVerifiedPaymentMethod: boolean;
@@ -44,7 +44,7 @@ export interface BillingRow {
 
 export interface UsageQuotaRow {
   category: string;
-  plan_tier: 'free' | 'plus' | 'pro' | 'max';
+  plan_tier: 'free' | 'go' | 'plus' | 'pro';
   limit_amount: number | null;
   unit: UsageUnit;
   used: number;
