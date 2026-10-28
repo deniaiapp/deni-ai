@@ -1,6 +1,6 @@
 import type { ErrorEvent, init, Log } from "@sentry/tanstackstart-react";
 
-type SentrySdk = typeof import("@sentry/tanstackstart-react");
+type SentrySdk = typeof import("@/lib/sentry-sdk");
 type SentryOptions = NonNullable<Parameters<typeof init>[0]>;
 type BeforeSendSpan = NonNullable<SentryOptions["beforeSendSpan"]>;
 
@@ -174,7 +174,7 @@ export function sentryIntegrations(Sentry: SentrySdk) {
  */
 export async function loadSentry(): Promise<SentrySdk | null> {
   if (!getSentryOptions().enabled) return null;
-  return import("@sentry/tanstackstart-react");
+  return import("@/lib/sentry-sdk");
 }
 
 /** Reports an error when Sentry is enabled; a no-op otherwise. */

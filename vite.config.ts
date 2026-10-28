@@ -62,23 +62,6 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
-    environments: {
-      client: {
-        build: {
-          rolldownOptions: {
-            output: {
-              // Automatic splitting alone emits ~160 sub-2KB common chunks (single
-              // icons, helpers) shared between route chunks, so a page waits on
-              // 100+ requests. Copy those small chunks into the chunks that use
-              // them instead; each page still loads only the code it needs.
-              codeSplitting: {
-                experimentalInlineCommonChunks: { maxSize: 4 * 1024 },
-              },
-            },
-          },
-        },
-      },
-    },
     plugins: [
       // Must run before TanStack's route code splitting copies component code.
       extractMessages({
@@ -98,14 +81,17 @@ export default defineConfig(({ mode }) => {
       }),
       viteReact({ compiler: true }),
       // Uploads source maps only when SENTRY_AUTH_TOKEN is set (SENTRY_ORG and
-      // SENTRY_PROJECT come from the environment).
+      // SENTRY_PROJECT come from the environment), then deletes them. Without a
+      // token no maps are generated: they would be served publicly from /assets.
       sentryTanstackStart({
         authToken: process.env.SENTRY_AUTH_TOKEN,
         org: process.env.SENTRY_ORG,
         project: process.env.SENTRY_PROJECT,
         silent: !process.env.CI,
         telemetry: false,
-        sourcemaps: { filesToDeleteAfterUpload: ["**/*.map"] },
+        sourcemaps: process.env.SENTRY_AUTH_TOKEN
+          ? { filesToDeleteAfterUpload: ["**/*.map"] }
+          : { disable: true },
         autoInstrumentMiddleware: true,
       }),
     ],

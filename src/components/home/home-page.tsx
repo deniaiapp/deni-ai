@@ -1,37 +1,7 @@
-import type { AppLocale } from "@/i18n/locales";
-import {
-  HOME_ALTERNATE_NAMES,
-  HOME_DESCRIPTION,
-  HOME_DESCRIPTION_JA,
-  HOME_TITLE,
-  HOME_TITLE_JA,
-  pageHead,
-} from "@/lib/seo";
+import { HOME_ALTERNATE_NAMES } from "@/lib/seo";
 import { useExtracted } from "use-intl";
 import { ClientHome } from "./home-client";
 import { HomeFeaturedBadge, type HomeFeaturedPost } from "./home-featured-badge";
-
-/** Head tags shared by `/home` and `/ja`. */
-export function homeHead(locale: AppLocale) {
-  const title = locale === "ja" ? HOME_TITLE_JA : HOME_TITLE;
-  const description = locale === "ja" ? HOME_DESCRIPTION_JA : HOME_DESCRIPTION;
-
-  return pageHead({
-    title,
-    absoluteTitle: true,
-    description,
-    alternates: { path: "/home", locale },
-    openGraph: {
-      title,
-      description,
-      locale: locale === "ja" ? "ja_JP" : "en_US",
-    },
-    twitter: {
-      title,
-      description,
-    },
-  });
-}
 
 function HomeJsonLd() {
   const t = useExtracted();

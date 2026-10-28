@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { HomePage, homeHead } from "@/components/home/home-page";
+import { homeHead } from "@/components/home/home-head";
+import { HomePage } from "@/components/home/home-page";
 import { getFeaturedBlogPostFn } from "@/lib/blog/blog-functions";
 
 export const Route = createFileRoute("/{-$locale}/home")({

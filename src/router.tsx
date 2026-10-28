@@ -33,6 +33,16 @@ function DefaultPending() {
 
 let sentryInitialized = false;
 
+/** Runs `task` once the page has loaded and the main thread is idle. */
+function afterPageLoad(task: () => void) {
+  const schedule = () =>
+    "requestIdleCallback" in window
+      ? requestIdleCallback(task, { timeout: 2000 })
+      : setTimeout(task, 0);
+  if (document.readyState === "complete") schedule();
+  else window.addEventListener("load", schedule, { once: true });
+}
+
 export function getRouter() {
   const router = createRouter({
     routeTree,
@@ -45,16 +55,19 @@ export function getRouter() {
 
   if (!router.isServer && !sentryInitialized) {
     sentryInitialized = true;
-    // Loaded only when enabled, as its own chunk off the critical path.
-    void loadSentry().then((Sentry) =>
-      Sentry?.init({
-        ...getSentryOptions(),
-        integrations: [
-          ...sentryIntegrations(Sentry),
-          Sentry.tanstackRouterBrowserTracingIntegration(router),
-        ],
-      }),
-    );
+    // Loaded only when enabled, after the page has loaded so the SDK never
+    // competes with the first render (errors before that are not reported).
+    afterPageLoad(() => {
+      void loadSentry().then((Sentry) =>
+        Sentry?.init({
+          ...getSentryOptions(),
+          integrations: [
+            ...sentryIntegrations(Sentry),
+            Sentry.tanstackRouterBrowserTracingIntegration(router),
+          ],
+        }),
+      );
+    });
   }
 
   return router;

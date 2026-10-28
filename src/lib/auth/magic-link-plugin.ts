@@ -4,8 +4,16 @@ import {
   type MagicLinkPluginOptions,
 } from "@better-auth-ui/core/plugins/magic-link";
 
-import { MagicLink } from "@/components/auth/magic-link";
-import { MagicLinkButton } from "@/components/auth/magic-link-button";
+import { dynamic } from "@/lib/dynamic";
+
+// Views load when an auth or settings screen renders them: plugins are
+// registered app-wide, so static imports would ship them with every page.
+const MagicLink = dynamic(() =>
+  import("@/components/auth/magic-link").then((mod) => mod.MagicLink),
+);
+const MagicLinkButton = dynamic(() =>
+  import("@/components/auth/magic-link-button").then((mod) => mod.MagicLinkButton),
+);
 
 export const magicLinkPlugin = createAuthPlugin(
   coreMagicLinkPlugin.id,
