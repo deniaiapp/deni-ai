@@ -1,11 +1,8 @@
-"use client";
-
 import { CheckoutElementsProvider, useCheckout } from "@stripe/react-stripe-js/checkout";
 import type { Appearance, Stripe } from "@stripe/stripe-js";
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { startTransition, useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";

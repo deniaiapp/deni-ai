@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   startModelHealthScheduler: vi.fn(),
   startBackgroundJobScheduler: vi.fn(),
 }));
-vi.mock("@sentry/nextjs", () => ({ init: vi.fn(), captureRequestError: vi.fn() }));
+vi.mock("@sentry/tanstackstart-react", () => ({ init: vi.fn() }));
 vi.mock("@/lib/sentry-options", () => ({ getSentryOptions: () => ({}) }));
 vi.mock("@/lib/abort-diagnostics", () => ({ installAbortDiagnostics: vi.fn() }));
 vi.mock("@/lib/process-warnings", () => ({ installProcessWarningFilter: vi.fn() }));
@@ -20,8 +20,6 @@ beforeEach(() => {
   mocks.startModelHealthScheduler.mockReset();
   mocks.startBackgroundJobScheduler.mockReset();
   vi.stubEnv("NODE_ENV", "production");
-  vi.stubEnv("NEXT_RUNTIME", "nodejs");
-  vi.stubEnv("NEXT_PHASE", undefined);
   vi.stubEnv("VERCEL", undefined);
 });
 afterEach(() => {

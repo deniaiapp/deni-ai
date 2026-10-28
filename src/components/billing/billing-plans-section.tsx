@@ -1,8 +1,6 @@
-"use client";
-
 import { Users } from "lucide-react";
-import Link from "next/link";
-import { useExtracted } from "next-intl";
+import { Link } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import type { ClientPlan, IndividualPlanId } from "@/lib/billing";
 import { cn } from "@/lib/utils";
 import { PlanCard } from "./billing-plan-card";

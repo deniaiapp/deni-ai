@@ -1,4 +1,4 @@
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { toDisplayChatRequestError } from "@/lib/chat-request-error";
 
 /** Translates the English chat error strings returned by `/api/chat`. */
@@ -81,7 +81,7 @@ export function useLocalizedChatError() {
         return t(
           "Files this large are not available for guest sessions. Remove the attachment or log in to send it.",
         );
-      // Also another account's attachment (src/app/api/chat/route.ts).
+      // Also another account's attachment (src/server/http/chat/route.ts).
       case "Invalid or oversized attachment":
         return t(
           "An attachment in this chat can't be used. It may be too large, unsupported, or unavailable.",

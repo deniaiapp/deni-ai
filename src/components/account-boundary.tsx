@@ -1,5 +1,3 @@
-"use client";
-
 import { useQueryClient } from "@tanstack/react-query";
 import { Fragment, type ReactNode, useLayoutEffect, useState } from "react";
 import {
@@ -11,6 +9,7 @@ import {
   type ShownIdentity,
 } from "@/lib/account-query-boundary";
 import { authClient } from "@/lib/auth-client";
+import { resetAuthStateCache } from "@/lib/session-functions";
 
 /**
  * Keeps one account's cached queries and mounted component state away from the
@@ -38,6 +37,11 @@ export function AccountBoundary({ children }: { children: ReactNode }) {
     shown: "none",
     generation: 0,
   });
+  // Route guards briefly reuse the last session check; another account must not.
+  useLayoutEffect(() => {
+    resetAuthStateCache();
+  }, [identity]);
+
   const decision = decideAccountBoundary({
     owner: getAccountOwner(queryClient),
     identity,

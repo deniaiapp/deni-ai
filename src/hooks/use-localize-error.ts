@@ -1,4 +1,4 @@
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useCallback, useMemo } from "react";
 import { type ErrorDictionary, mapKeys, resolveErrorMessage } from "@/lib/localize-error";
 

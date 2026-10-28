@@ -1,4 +1,3 @@
-import { revalidatePath, revalidateTag } from "next/cache";
 import { TRPCError } from "@trpc/server";
 import { desc, eq } from "drizzle-orm";
 import { z } from "zod";
@@ -6,7 +5,7 @@ import { db } from "@/db/drizzle";
 import { blogPost } from "@/db/schema";
 import { isBlogAdmin } from "@/lib/blog/admin";
 import { RESERVED_BLOG_SLUGS } from "@/lib/blog/posts";
-import { BLOG_CACHE_TAG } from "@/lib/blog/queries";
+import { invalidateBlogCache } from "@/lib/blog/queries";
 import { blogSlugSchema, slugifyBlogTitle } from "@/lib/blog/slug";
 import { protectedProcedure, router } from "../trpc";
 import { isVerifiedAdmin, type AdminUser } from "@/lib/verified-admin";
@@ -36,18 +35,8 @@ function requireBlogAdmin(user: AdminUser) {
   }
 }
 
-function revalidateBlog(slug: string, previousSlug?: string) {
-  revalidateTag(BLOG_CACHE_TAG, "max");
-  revalidatePath("/");
-  revalidatePath("/home");
-  revalidatePath("/blog");
-  revalidatePath(`/blog/${slug}`);
-  revalidatePath("/blog/rss.xml");
-  revalidatePath("/sitemap.xml");
-  if (previousSlug && previousSlug !== slug) {
-    revalidateTag(`${BLOG_CACHE_TAG}:${previousSlug}`, "max");
-    revalidatePath(`/blog/${previousSlug}`);
-  }
+function revalidateBlog() {
+  invalidateBlogCache();
 }
 
 async function assertSlugAvailable(slug: string, currentId?: string) {
@@ -151,7 +140,7 @@ export const blogRouter = router({
         });
       }
 
-      revalidateBlog(updated.slug, existing.slug);
+      revalidateBlog();
       return updated;
     }),
 
@@ -190,7 +179,7 @@ export const blogRouter = router({
         });
       }
 
-      revalidateBlog(updated.slug);
+      revalidateBlog();
       return updated;
     }),
 
@@ -220,7 +209,7 @@ export const blogRouter = router({
         });
       }
 
-      revalidateBlog(updated.slug);
+      revalidateBlog();
       return updated;
     }),
 
@@ -260,7 +249,7 @@ export const blogRouter = router({
         });
       }
 
-      revalidateBlog(updated.slug);
+      revalidateBlog();
       return updated;
     }),
 
@@ -278,7 +267,7 @@ export const blogRouter = router({
       }
 
       await ctx.db.delete(blogPost).where(eq(blogPost.id, input.id));
-      revalidateBlog(existing.slug);
+      revalidateBlog();
       return { ok: true };
     }),
 });

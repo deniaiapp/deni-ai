@@ -1,8 +1,6 @@
-"use client";
-
 import { Check, LoaderCircle } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useLocalizeError } from "@/hooks/use-localize-error";

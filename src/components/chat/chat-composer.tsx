@@ -1,7 +1,5 @@
-"use client";
-
 import type { ChatStatus } from "ai";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useEffect, useRef, type ReactNode } from "react";
 import { authClient } from "@/lib/auth-client";
 import {

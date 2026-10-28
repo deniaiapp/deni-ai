@@ -1,10 +1,7 @@
-"use client";
-
 import { FolderClosed, GitCompareArrows, MessageSquare, Plus } from "lucide-react";
-import Link from "next/link";
-import dynamic from "next/dynamic";
-import { usePathname, useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, usePathname, useRouter } from "@/lib/navigation";
+import { dynamic } from "@/lib/dynamic";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";

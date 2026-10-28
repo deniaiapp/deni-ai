@@ -1,11 +1,9 @@
-"use client";
-
 import { authQueryKeys } from "@better-auth-ui/core";
 import { useAuth, useAuthPlugin, useDeleteUser, useListAccounts } from "@better-auth-ui/react";
 import { useQueryClient } from "@tanstack/react-query";
 import { TriangleAlert } from "lucide-react";
-import Link from "next/link";
-import { useExtracted } from "next-intl";
+import { Link } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { type SyntheticEvent, useState } from "react";
 import { toast } from "sonner";

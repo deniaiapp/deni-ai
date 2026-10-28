@@ -3,7 +3,7 @@ packages:
 
 overrides:
   "katex": ^0.18.2
-  "@tanstack/query-core": 5.104.5
+  "@tanstack/query-core": 5.105.0
   "@esbuild-kit/core-utils>esbuild": ^0.25.0
 
 allowBuilds:

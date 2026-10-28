@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import type { SubscriptionReceiptData } from "./subscription-receipt-data";
 import { SubscriptionReceiptView } from "./subscription-receipt-view";

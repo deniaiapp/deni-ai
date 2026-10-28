@@ -16,13 +16,12 @@ vi.mock("../src/lib/auth", () => ({
     },
   },
 }));
-vi.mock("next/headers", () => ({ headers: vi.fn(async () => new Headers()) }));
 vi.mock("../src/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(async () => ({ allowed: true })),
 }));
 
 const { apiKeysRouter } = await import("../src/server/api/routers/api-keys");
-const { POST } = await import("../src/app/api/device-auth/route");
+const { POST } = await import("../src/server/http/device-auth/route");
 const dialect = new PgDialect();
 type Key = { id: string; userId: string; name: string };
 type Device = {

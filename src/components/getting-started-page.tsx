@@ -1,4 +1,3 @@
-"use client";
 import type { LucideIcon } from "lucide-react";
 import {
   ArrowLeft,
@@ -13,8 +12,8 @@ import {
   Sun,
 } from "lucide-react";
 import { LazyMotion, domAnimation, m } from "motion/react";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";

@@ -1,9 +1,7 @@
-"use client";
-
 import { useQueryClient } from "@tanstack/react-query";
 import type { UIMessage } from "ai";
-import dynamic from "next/dynamic";
-import { usePathname, useSearchParams } from "next/navigation";
+import { dynamic } from "@/lib/dynamic";
+import { usePathname, useRouter, useSearchParams } from "@/lib/navigation";
 import { Suspense, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
 import { ChatInterfaceSkeleton } from "@/components/chat/chat-interface-skeleton";
 import { DocumentTitle } from "@/components/document-title";
@@ -14,11 +12,10 @@ import { trpc } from "@/lib/trpc/react";
 /**
  * SPA-style chat host (chat-js ChatRouteHost pattern).
  *
- * /chat and /chat/[id] pages render null so Next route transitions only swap a
- * thin segment. This host stays mounted in the app shell, keeps recently
+ * /chat and /chat/$id routes render null, so route transitions only swap an
+ * empty leaf. This host stays mounted in the app shell, keeps recently
  * visited chat panes alive, and loads message data via tRPC (prefetchable on
- * sidebar hover). Instant Navigations (cacheComponents + partialPrefetching)
- * make the route shell free; this host makes chat-to-chat feel like an SPA.
+ * sidebar hover), so chat-to-chat navigation feels like an SPA.
  */
 
 const ChatHome = dynamic(() => import("@/components/chat/home"), {
@@ -76,6 +73,7 @@ function nextMountedIds(prev: string[], activeId: string): string[] {
 
 function useChatPanePage(id: string, isActive: boolean, projectIdFromQuery: string | null) {
   const utils = trpc.useUtils();
+  const router = useRouter();
   const queryClient = useQueryClient();
 
   const pageQuery = trpc.chat.getChatPage.useQuery(
@@ -128,7 +126,7 @@ function useChatPanePage(id: string, isActive: boolean, projectIdFromQuery: stri
       utils.chat.getChatPage.setData({ id: variables.id }, row);
       void utils.chat.getChats.invalidate();
       if (variables.projectId) {
-        window.history.replaceState({}, "", `/chat/${variables.id}`);
+        router.replace(`/chat/${variables.id}`, { scroll: false });
       }
     },
     onError: (_error, variables, isSameAccount) => {

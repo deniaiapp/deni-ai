@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Archive,
   ArchiveRestore,
@@ -9,9 +7,8 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useExtracted } from "use-intl";
+import { Link, useRouter } from "@/lib/navigation";
 import { useState } from "react";
 import { SettingsPageShell } from "@/components/settings-page-shell";
 import { Badge } from "@/components/ui/badge";

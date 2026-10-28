@@ -153,12 +153,12 @@ Details: [SETUP.md](SETUP.md).
 - kebab-case files: `auth-client.ts`, `chat-interface.tsx`
 - Import with the `@/*` alias from `tsconfig.json`
 
-### React / Next.js
+### React / TanStack Start
 
-- App Router: Server Components by default
-- `"use client"` only when needed
+- File routes live in `src/routes/`; components and loaders run on both the server and the browser
+- Put database, auth, and secret access in `createServerFn` handlers or server routes
 - Respect React Compiler constraints (avoid problematic mutable closures)
-- This project uses Next.js canary APIs — check `node_modules/next/dist/docs/` when unsure
+- TanStack Start APIs move quickly — check the skills bundled under `node_modules/@tanstack/react-start/skills/` when unsure
 
 ### Commit messages
 
@@ -180,7 +180,7 @@ Translations live in `messages/` (`en.json`, `ja.json`).
 
 When adding user-facing strings:
 
-1. Add the English key/value (or use `next-intl` extracted messages as the project does)
+1. Write the English copy inline with `useExtracted()` (or `getExtracted()` outside components); the dev server and build add it to `en.json`
 2. Keep Japanese (`ja.json`) in sync
 3. Prefer `useExtracted()` over locale conditionals like `locale === "ja"`
 

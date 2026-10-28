@@ -1,9 +1,6 @@
-"use client";
-
 import { ArrowRight, X, Zap } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, usePathname } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useEffect, useSyncExternalStore } from "react";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { Button } from "@/components/ui/button";

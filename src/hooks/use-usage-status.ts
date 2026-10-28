@@ -1,4 +1,4 @@
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { toast } from "sonner";
 import type { ModelOption } from "@/components/chat/chat-composer";

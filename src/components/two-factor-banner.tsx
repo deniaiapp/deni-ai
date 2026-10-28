@@ -1,11 +1,8 @@
-"use client";
-
 import { ArrowRight, Code2, ShieldCheck, ScrollText, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, usePathname } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { startTransition, useEffect, useState, useSyncExternalStore } from "react";
 import { authClient } from "@/lib/auth-client";
 import { isCheckoutSettingsRoute } from "@/lib/settings-routes";

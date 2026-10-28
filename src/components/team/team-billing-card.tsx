@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { PlanHighlights } from "@/components/billing/plan-highlights";
 import { SubscriptionCancelDialog } from "@/components/billing/subscription-shredder";

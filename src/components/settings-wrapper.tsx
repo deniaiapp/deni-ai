@@ -1,8 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useExtracted, useLocale } from "next-intl";
+import { Link, usePathname } from "@/lib/navigation";
+import { useExtracted, useLocale } from "use-intl";
 import type React from "react";
 import { DocumentTitle } from "@/components/document-title";
 import { Card, CardContent } from "@/components/ui/card";

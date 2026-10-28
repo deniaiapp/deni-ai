@@ -1,5 +1,3 @@
-"use client";
-
 import type { ReactNode } from "react";
 import { createContext, use, useEffect, useSyncExternalStore } from "react";
 import type { ThemeName } from "@/lib/theme-presets";

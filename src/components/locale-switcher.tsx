@@ -1,7 +1,6 @@
-"use client";
-
-import { usePathname, useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useRouter } from "@tanstack/react-router";
+import { useLocale } from "use-intl";
+import { usePathname } from "@/lib/navigation";
 import {
   Select,
   SelectContent,
@@ -9,19 +8,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { changeLocale } from "@/i18n/locale-functions";
 import { type AppLocale, locales } from "@/i18n/locales";
 import { localizedPath } from "@/lib/locale-path";
-
-type LocaleSwitcherProps = {
-  changeLocaleAction: (locale: AppLocale) => Promise<void>;
-};
 
 const localeLabels: Record<AppLocale, string> = {
   en: "English",
   ja: "日本語",
 };
 
-export function LocaleSwitcher({ changeLocaleAction }: LocaleSwitcherProps) {
+export function LocaleSwitcher() {
   const locale = useLocale() as AppLocale;
   const pathname = usePathname();
   const router = useRouter();
@@ -31,9 +27,10 @@ export function LocaleSwitcher({ changeLocaleAction }: LocaleSwitcherProps) {
       value={locale}
       onValueChange={async (value) => {
         const nextLocale = value as AppLocale;
-        await changeLocaleAction(nextLocale);
-        router.push(localizedPath(pathname, nextLocale));
-        router.refresh();
+        await changeLocale({ data: { locale: nextLocale } });
+        await router.navigate({ href: localizedPath(pathname, nextLocale) });
+        // App routes keep their URL; reload route data so the new cookie applies.
+        await router.invalidate();
       }}
     >
       <SelectTrigger className="w-36">

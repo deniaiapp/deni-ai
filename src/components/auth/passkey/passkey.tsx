@@ -1,8 +1,6 @@
-"use client";
-
 import { useAuth, useAuthPlugin } from "@better-auth-ui/react";
 import { Fingerprint, X } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useLocale } from "use-intl";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";

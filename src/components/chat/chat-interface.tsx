@@ -1,10 +1,8 @@
-"use client";
-
 import { useChat } from "@ai-sdk/react";
-import { sendGAEvent } from "@next/third-parties/google";
+import { sendGAEvent } from "@/lib/gtag";
 import type { FileUIPart, UIMessage } from "ai";
 import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from "ai";
-import dynamic from "next/dynamic";
+import { dynamic } from "@/lib/dynamic";
 import { useCallback, useMemo, useRef, useState } from "react";
 import { ArtifactPreviewProvider } from "@/components/chat/artifact-preview-context";
 import { ChatComposer, type ComposerMessage } from "@/components/chat/chat-composer";

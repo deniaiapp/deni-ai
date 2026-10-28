@@ -1,6 +1,4 @@
-"use client";
-
-import { useLocale } from "next-intl";
+import { useLocale } from "use-intl";
 import { minorUnitToMajor } from "@/lib/currency";
 
 const NUMBER_PART_TYPES = new Set([

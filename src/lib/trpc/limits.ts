@@ -59,7 +59,7 @@ export function trpcBodyLimit(paths: readonly string[]) {
 
 /**
  * True when a tRPC call failed because its body was over the route's cap.
- * src/app/api/trpc/[trpc]/route.ts answers 413 outside tRPC's error shape, so
+ * src/server/http/trpc/[trpc]/route.ts answers 413 outside tRPC's error shape, so
  * the client error carries only the HTTP response (in `meta`). Retrying such a
  * call can never succeed.
  */

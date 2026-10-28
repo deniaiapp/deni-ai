@@ -1,4 +1,4 @@
-const STATIC_CACHE = "deni-ai-static-v3";
+const STATIC_CACHE = "deni-ai-static-v4";
 const PAGE_CACHE = "deni-ai-pages-v1";
 const PRECACHE_URLS = [
   "/home",
@@ -73,7 +73,7 @@ self.addEventListener("fetch", (event) => {
   // as immutable) and fall back to this cache only offline. Serving them cache
   // first could mix chunks from different deployments in one page, which breaks
   // module imports (e.g. "useRefWithInit is not a function").
-  if (url.pathname.startsWith("/_next/static/")) {
+  if (url.pathname.startsWith("/assets/")) {
     event.respondWith(handleBuildAssetRequest(request));
     return;
   }

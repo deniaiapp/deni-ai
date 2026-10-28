@@ -1,9 +1,6 @@
-"use client";
-
 import { ArchiveIcon, MessageSquareIcon, PlusIcon, SaveIcon, UsersIcon } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";

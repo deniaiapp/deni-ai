@@ -1,5 +1,3 @@
-"use client";
-
 import { isSessionNotFreshError } from "@/lib/auth-error-utils";
 import { useRef, useState } from "react";
 

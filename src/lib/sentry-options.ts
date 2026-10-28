@@ -1,4 +1,9 @@
-import { consoleLoggingIntegration, type ErrorEvent, type init, type Log } from "@sentry/nextjs";
+import {
+  consoleLoggingIntegration,
+  type ErrorEvent,
+  type init,
+  type Log,
+} from "@sentry/tanstackstart-react";
 
 type SentryOptions = NonNullable<Parameters<typeof init>[0]>;
 type BeforeSendSpan = NonNullable<SentryOptions["beforeSendSpan"]>;
@@ -35,7 +40,7 @@ const SENSITIVE_ATTRIBUTE_PREFIXES = [
 ];
 
 /** Bare `app:///<page path>` frames mean the script is inline or injected, not an app chunk. */
-const INJECTED_FRAME_FILENAME = /^app:\/\/\/(?!_next\/)/;
+const INJECTED_FRAME_FILENAME = /^app:\/\/\/(?!assets\/)/;
 
 function hasInjectedFrame(event: ErrorEvent): boolean {
   return Boolean(
@@ -107,7 +112,7 @@ function scrubLog(log: Log): Log {
  * NEXT_PUBLIC_SENTRY_DSN is set and NODE_ENV is production.
  */
 export function getSentryOptions(): SentryOptions {
-  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
+  const dsn = import.meta.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
 
   return {
     dsn: dsn || undefined,

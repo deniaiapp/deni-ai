@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test, vi } from "vitest";
 import { Composer } from "./composer";
 
-vi.mock("next-intl", () => ({ useExtracted: () => (message: string) => message }));
+vi.mock("use-intl", () => import("@/test/intl-mock"));
 
 const props = { value: "", onValueChange: () => {}, onSubmit: () => {} };
 

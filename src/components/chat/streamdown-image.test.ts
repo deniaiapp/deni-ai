@@ -6,10 +6,7 @@ import { MessageResponse } from "@/components/ai-elements/message";
 import { classifyStreamdownImageSource } from "@/components/chat/streamdown-image";
 import { streamdownRehypePlugins } from "@/components/chat/streamdown-rehype-plugins";
 
-vi.mock("next-intl", () => ({
-  useExtracted: () => (message: string, values?: Record<string, string>) =>
-    message.replace(/\{(\w+)\}/g, (_, key: string) => values?.[key] ?? ""),
-}));
+vi.mock("use-intl", () => import("@/test/intl-mock"));
 
 const render = (markdown: string) =>
   renderToStaticMarkup(createElement(MessageResponse, { mode: "static" }, markdown));

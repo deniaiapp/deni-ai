@@ -1,7 +1,5 @@
-"use client";
-
 import { Brain, Plus, Search, Trash2 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

@@ -1,7 +1,9 @@
 # Dependencies & build output
 node_modules
 **/node_modules
-.next
+.output
+.nitro
+.tanstack
 out
 build
 dist
@@ -17,7 +19,6 @@ dist
 .claude
 .claude-images
 .agents
-.next-docs
 .diagnostics.json
 .errors_by_file.json
 .vercel

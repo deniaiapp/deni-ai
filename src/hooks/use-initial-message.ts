@@ -1,5 +1,5 @@
 import type { useChat } from "@ai-sdk/react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "@/lib/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { models, resolveReasoningEffort, type ReasoningEffort } from "@/lib/constants";
 
@@ -131,6 +131,7 @@ export function useInitialMessage(params: {
     onDraft,
   } = params;
   const searchParams = useSearchParams();
+  const router = useRouter();
   const stored = useSyncExternalStore(
     subscribeInitialMessageStore,
     readStoredInitialMessage,
@@ -269,7 +270,7 @@ export function useInitialMessage(params: {
       },
     });
 
-    window.history.replaceState({}, "", `/chat/${id}`);
+    router.replace(`/chat/${id}`, { scroll: false });
     emitInitialMessageStore();
     // Search params are already decoded; literal percent escapes belong to the prompt.
     onDraftRef.current(initialMessage);

@@ -1,7 +1,5 @@
-"use client";
-
 import { Gift, RotateCcw } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";

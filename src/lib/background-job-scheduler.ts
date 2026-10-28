@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
+import * as Sentry from "@sentry/tanstackstart-react";
 import { runStorageCleanupJob } from "@/lib/storage-cleanup-job";
 import { getUsageAndMeterNextDueAt, runUsageAndMeterJob } from "@/lib/usage-and-meter-job";
 import {

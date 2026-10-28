@@ -1,4 +1,3 @@
-"use client";
 import { AnimatePresence, LazyMotion, domAnimation, m } from "motion/react";
 import type React from "react";
 

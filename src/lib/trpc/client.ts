@@ -1,5 +1,3 @@
-"use client";
-
 import { createTRPCClient, httpBatchLink, httpLink, splitLink } from "@trpc/client";
 import superjson from "superjson";
 

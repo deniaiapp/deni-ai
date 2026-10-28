@@ -1,8 +1,6 @@
-"use client";
-
 import { CopyIcon, ExternalLinkIcon, XIcon } from "lucide-react";
 import { useState } from "react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { ArtifactLivePreview } from "@/components/chat/artifact-live-preview";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { useArtifactPreview } from "@/components/chat/artifact-preview-context";

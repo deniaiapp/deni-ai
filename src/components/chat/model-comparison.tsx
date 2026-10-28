@@ -1,10 +1,7 @@
-"use client";
-
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArrowUpRight, Save } from "lucide-react";
@@ -510,7 +507,8 @@ function useModelComparison(
     setLeftSettings(comparisonSettingsSchema.parse({}));
     setRightSettings(comparisonSettingsSchema.parse({}));
     if (initialComparison) router.push("/compare");
-    else window.history.replaceState(null, "", "/compare");
+    // Only the address changes: the router (and this mounted page) stay where they are.
+    else window.history.replaceState(window.history.state, "", "/compare");
     setInput("");
   }
 
@@ -546,7 +544,7 @@ function useModelComparison(
           }
           setSessionId(id);
           setDirty(false);
-          window.history.replaceState(null, "", `/compare/${id}`);
+          window.history.replaceState(window.history.state, "", `/compare/${id}`);
           void utils.chat.getComparisons.invalidate();
           void utils.chat.getComparison.invalidate({ id });
           toast.success(

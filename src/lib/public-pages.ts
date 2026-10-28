@@ -1,8 +1,6 @@
-import type { MetadataRoute } from "next";
-
 export type PublicPage = {
   path: string;
-  changeFrequency: NonNullable<MetadataRoute.Sitemap[number]["changeFrequency"]>;
+  changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
   priority: number;
 };
 

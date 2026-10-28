@@ -1,5 +1,3 @@
-"use client";
-
 import { defaultRemarkPlugins } from "streamdown";
 
 type MarkdownNode = {

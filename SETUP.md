@@ -249,8 +249,8 @@ Open [http://localhost:3000](http://localhost:3000).
 
 | Command                                | Description                          |
 | -------------------------------------- | ------------------------------------ |
-| `pnpm dev`                             | Start Next.js dev server             |
-| `pnpm run build`                       | Typecheck + production build         |
+| `pnpm dev`                             | Start the Vite dev server            |
+| `pnpm run build`                       | Production build (`.output/`)        |
 | `pnpm start`                           | Start production server              |
 | `pnpm run lint`                        | oxlint                               |
 | `pnpm run lint:fix`                    | oxlint with auto-fix                 |
@@ -446,7 +446,7 @@ Schema change workflow:
 1. Push the repo to GitHub
 2. Import the project in [Vercel](https://vercel.com)
 3. Set the core environment variables and any optional provider keys you want to enable
-4. Deploy (build uses `pnpm run build` / `next build` per project settings)
+4. Deploy (build uses `pnpm run build`; Nitro detects Vercel and emits its output format)
 5. Serverless functions do not run the in-process background jobs reliably (on Vercel, detected by its `VERCEL` system variable, the server does not start the usage/meter and storage jobs, so a suspended function cannot leave a billing row lock held): set `CRON_SECRET` and schedule `GET /api/cron/max-mode-meter-events` every minute, `GET /api/cron/storage-cleanup` hourly and, optionally, `GET /api/cron/model-health` every 5 minutes (it refreshes only the instance that serves it) (for example with Vercel Cron Jobs, which send `Authorization: Bearer <CRON_SECRET>`)
 
 ### Docker / Dokploy
@@ -454,13 +454,12 @@ Schema change workflow:
 A multi-stage `Dockerfile` is included for self-hosting (e.g. Dokploy):
 
 - **Install:** pnpm 12.8.1 (`pnpm-lock.yaml`, `pnpm-workspace.yaml`), with a frozen lockfile.
-- **Build:** Node 26 runs `next build` (standalone output). Typecheck is skipped in the image (`SKIP_TYPECHECK=1`) so tsc does not fight Turbopack on small VPS CPUs — run `pnpm run typecheck` locally or in CI.
-- Dependencies are installed in the build stage itself, so `node_modules` is an ordinary cached layer (reused while `pnpm-lock.yaml` is unchanged). Do not bind-mount `node_modules` into the `next build` step: Turbopack compiles about 6x slower from a read-only BuildKit bind mount.
-- **Run:** Node 26 serves `.next/standalone` on port **3000**
+- **Build:** Node 26 runs `vite build`, which writes the Nitro Node.js server to `.output/` (server bundle, traced `node_modules`, and public assets). The build does not typecheck — run `pnpm run typecheck` locally or in CI.
+- Dependencies are installed in the build stage itself, so `node_modules` is an ordinary cached layer (reused while `pnpm-lock.yaml` is unchanged).
+- **Run:** Node 26 runs `node .output/server/index.mjs` on port **3000** (`PORT`; bind address `HOST`)
 - **Background jobs:** the server itself runs usage recovery and Max Mode meter retries when they are due (at least hourly), the storage cleanup every hour and the model health probes every 5 minutes; no cron or `CRON_SECRET` is needed (see the notes in step 3 of Getting Started)
-- Turbopack's `.next/cache` is stored in a BuildKit cache mount, so later deploys on the **same Dokploy host** compile incrementally. Do not enable “disable cache” / `--no-cache` in the service settings.
 - `NEXT_PUBLIC_*` values must be present at **build time** (inlined into the client bundle)
-- Server secrets should also be available at build time for `@t3-oss/env-nextjs` validation / prerender; optional provider keys can be omitted and disable their features
+- Server secrets are read at runtime from the container environment (validated by `@t3-oss/env-core` in `src/env.ts`); optional provider keys can be omitted and disable their features
 
 Dokploy application settings (typical):
 
@@ -487,12 +486,12 @@ docker run --rm -p 3000:3000 --env-file .env.production deni-ai
 
 ### Other platforms
 
-Any host that can run a Next.js standalone Node server (Railway, Render, Fly.io, AWS/GCP/Azure, etc.):
+Any host that can run a Node.js server (Railway, Render, Fly.io, AWS/GCP/Azure, etc.):
 
 - Set the core environment variables and any optional provider keys you want to enable
 - Use PostgreSQL (Neon recommended)
 - Build: `pnpm run build` (or the Docker image)
-- Start: `pnpm start` / `node server.js` (standalone) / container CMD
+- Start: `pnpm start` / `node .output/server/index.mjs` / container CMD
 
 ### Client IP behind proxies
 

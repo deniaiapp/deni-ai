@@ -1,5 +1,6 @@
 import { TRPCError } from "@trpc/server";
-import { getExtracted } from "next-intl/server";
+import { getExtracted } from "@/i18n/extracted";
+import { getRequestIntl } from "@/i18n/request-intl";
 import { z } from "zod";
 import { chats } from "@/db/schema";
 import { omitUnownedAttachmentParts } from "@/lib/attachments";
@@ -70,7 +71,7 @@ export const migrationRouter = router({
       // files, which would make every request of the imported chat fail. The
       // notice replacing them is saved in the chat, so it is written in the
       // importing user's language; the import page reports the count.
-      const t = await getExtracted();
+      const t = getExtracted(await getRequestIntl());
       const { conversations: importable, omitted } = await omitUnownedAttachmentParts(
         conversations,
         ctx.userId,

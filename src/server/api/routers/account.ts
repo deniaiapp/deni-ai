@@ -1,6 +1,6 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
-import { after } from "next/server";
+import { runAfterResponse } from "@/lib/run-after-response";
 import { z } from "zod";
 import { securityActivity } from "@/db/schema";
 import { buildAccountExport } from "@/lib/account-export";
@@ -86,7 +86,7 @@ export const accountRouter = router({
       // Runs once the response is sent, for up to the route's maximum duration
       // (Node.js servers wait for it on shutdown). Scheduled before anything
       // else can fail, so the new row never waits for a job that was not started.
-      after(() => runAccountExportJob(job));
+      runAfterResponse(() => runAccountExportJob(job));
       // Logged when the export is requested, so the interval check above sees
       // it while the job runs.
       await recordSecurityActivity(activity);

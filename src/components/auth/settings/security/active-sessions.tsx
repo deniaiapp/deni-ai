@@ -1,5 +1,3 @@
-"use client";
-
 import { useAuth, useListSessions, useSession } from "@better-auth-ui/react";
 import { isSessionNotFreshError } from "@/lib/auth-error-utils";
 import { Card, CardContent } from "@/components/ui/card";

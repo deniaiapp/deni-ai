@@ -4,10 +4,7 @@ import { expect, test, vi } from "vitest";
 import { ChatComposerModelPicker } from "./chat-composer-model-picker";
 import { models } from "@/lib/constants";
 
-vi.mock("next-intl", () => ({
-  useExtracted: () => (message: string) => message,
-  useLocale: () => "en",
-}));
+vi.mock("use-intl", () => import("@/test/intl-mock"));
 vi.mock("@/hooks/use-available-models", () => ({
   useAvailableModels: () => ({ shouldVerifyCard: false }),
 }));

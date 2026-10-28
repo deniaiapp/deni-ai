@@ -1,7 +1,5 @@
-"use client";
-
 import type { VariantProps } from "class-variance-authority";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -9,7 +7,7 @@ import { GuestCaptchaDialog } from "@/components/auth/guest-captcha-dialog";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { Button, type buttonVariants } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import { clientEnv } from "@/env.client";
+import { clientEnv } from "@/public-env";
 import { authClient } from "@/lib/auth-client";
 import { openChatAfterGuestSignIn, signInAsGuest } from "@/lib/guest-sign-in";
 import { runWithLoading } from "@/lib/run-with-loading";

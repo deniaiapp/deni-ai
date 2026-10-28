@@ -1,5 +1,3 @@
-"use client";
-
 import { getEmailProviderLink } from "@better-auth-ui/core";
 import { useAuth } from "@better-auth-ui/react";
 import { SquareArrowOutUpRight } from "lucide-react";

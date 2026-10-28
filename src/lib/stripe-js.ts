@@ -1,7 +1,5 @@
-"use client";
-
 import { loadStripe } from "@stripe/stripe-js";
-import { clientEnv } from "@/env.client";
+import { clientEnv } from "@/public-env";
 
 export const stripeJsPromise = clientEnv.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
   ? // Resolve to null when the script is blocked or offline: consumers already

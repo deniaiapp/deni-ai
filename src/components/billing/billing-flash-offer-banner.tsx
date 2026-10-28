@@ -1,7 +1,5 @@
-"use client";
-
 import { Zap } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import type { FlashOfferLimit } from "@/lib/billing-offers";
 import { BILLING_PLANS_SECTION_ID } from "./billing-utils";
 import { OfferCountdown } from "./offer-countdown";

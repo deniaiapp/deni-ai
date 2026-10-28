@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ captureException: vi.fn(), calls: 0 }));
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: async () => null } } }));
-vi.mock("@sentry/nextjs", () => ({ captureException: mocks.captureException }));
+vi.mock("@sentry/tanstackstart-react", () => ({ captureException: mocks.captureException }));
 vi.mock("@/server/api/root", async () => {
   const { publicProcedure, router } = await import("./trpc");
   return {
@@ -34,7 +34,7 @@ vi.mock("@/server/api/root", async () => {
 
 // tRPC decides whether to send stacks when the instance is created.
 vi.stubEnv("NODE_ENV", "production");
-const { GET } = await import("@/app/api/trpc/[trpc]/route");
+const { GET } = await import("@/server/http/trpc/[trpc]/route");
 const { TRPC_MAX_BATCH_SIZE } = await import("@/lib/trpc/limits");
 
 async function get(path: string) {
@@ -87,7 +87,7 @@ test("intentional server errors keep their message", async () => {
 });
 
 test("Stripe card declines keep their customer-facing message", async () => {
-  const { POST } = await import("@/app/api/trpc/[trpc]/route");
+  const { POST } = await import("@/server/http/trpc/[trpc]/route");
   const response = await POST(
     new Request("http://localhost/api/trpc/cardDeclined", {
       method: "POST",

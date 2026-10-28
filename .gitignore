@@ -15,9 +15,13 @@ package-lock.json
 # testing
 /coverage
 
-# next.js
+# vite / tanstack start / nitro (/.next is left over from the Next.js build)
 /.next/
-/out/
+/.output/
+/.nitro/
+/.tanstack/
+/.swc/
+/dist/
 
 # production
 /build
@@ -41,16 +45,12 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
-# react-doctor scan output (regenerate with `bun run doctor`; stale copies mislead)
+# react-doctor scan output (regenerate with `pnpm doctor`; stale copies mislead)
 .diagnostics.json
 .errors_by_file.json
 
 # claude
 .claude-images/
-# next-agents-md
-.next-docs/
-
 # internal one-off scripts (local only, may touch prod secrets)
 internal/

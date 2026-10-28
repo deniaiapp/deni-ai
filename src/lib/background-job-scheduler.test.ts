@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
   usageAndMeterNextDueAt: vi.fn(),
   storageCleanup: vi.fn(),
 }));
-vi.mock("@sentry/nextjs", () => ({
+vi.mock("@sentry/tanstackstart-react", () => ({
   captureException: mocks.captureException,
   captureMessage: mocks.captureMessage,
 }));

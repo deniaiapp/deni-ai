@@ -1,8 +1,6 @@
-"use client";
-
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { useRouter, useSearchParams } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { startTransition, useState } from "react";
 import { toast } from "sonner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
@@ -24,7 +22,7 @@ import { createTeamSlug, escapeCsvCell, parseTokenLimit } from "./team-utils";
 export function useTeamSettings() {
   const t = useExtracted();
   const localizeError = useLocalizeError();
-  const { push } = useRouter();
+  const { push, replace } = useRouter();
   const session = authClient.useSession();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -413,7 +411,7 @@ export function useTeamSettings() {
     if (invitationId === linkedInvitationId) {
       const url = new URL(window.location.href);
       url.searchParams.delete("invitationId");
-      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+      replace(`${url.pathname}${url.search}${url.hash}`, { scroll: false });
     }
   }
 

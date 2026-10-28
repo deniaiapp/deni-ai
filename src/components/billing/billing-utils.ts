@@ -1,7 +1,7 @@
 import type { BillingPlanId, ClientPlan } from "@/lib/billing";
 import { getPlanTier, isMaxTeamPlan } from "@/lib/billing";
 import { formatMinorCurrency } from "@/lib/currency";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 
 export const ACTIVE_STATUSES = new Set(["active", "trialing", "paid"]);
 export const BILLING_PLANS_SECTION_ID = "billing-plans";

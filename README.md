@@ -21,23 +21,23 @@ Deni AI is a multi-model AI chat app for people who want strong model choice wit
 - **Data export** — Settings → Account builds a JSON copy of the account in the background and keeps it as a private download, signed for its owner only, for 7 days (built in the request when file storage is not configured; see [SETUP.md](SETUP.md))
 - **History APIs** — security and team audit logs use `{ createdAt, id }` cursors to preserve events with identical timestamps. Pass `nextCursor` unchanged when requesting another page.
 - **Ads** — Chat Home shows a Deni AI Ads placement below the composer only for confirmed Free users (including anonymous guests). Paid users and users whose plan is still loading do not request ads.
-- **i18n** — English and Japanese (`next-intl`)
+- **i18n** — English and Japanese (`use-intl`; public pages under `/ja/*`)
 - **Public guides & blog** — original articles on model choice, verification, and practical AI use, available without an account
 - **PWA** — installable progressive web app assets and service worker
 
 ## Tech stack
 
-| Area      | Choice                                            |
-| --------- | ------------------------------------------------- |
-| Framework | Next.js 16 (App Router, React 19, React Compiler) |
-| Language  | TypeScript (strict)                               |
-| Runtime   | Node.js 26+ (pnpm 12.8.1)                         |
-| UI        | Tailwind CSS v4, shadcn/ui (Base UI)              |
-| API       | tRPC + TanStack Query                             |
-| DB        | PostgreSQL (Neon recommended) + Drizzle ORM       |
-| Auth      | better-auth                                       |
-| Billing   | Stripe                                            |
-| AI        | Vercel AI SDK + provider SDKs / OpenRouter        |
+| Area      | Choice                                                                  |
+| --------- | ----------------------------------------------------------------------- |
+| Framework | TanStack Start (TanStack Router, Vite, Nitro, React 19, React Compiler) |
+| Language  | TypeScript (strict)                                                     |
+| Runtime   | Node.js 26+ (pnpm 12.8.1)                                               |
+| UI        | Tailwind CSS v4, shadcn/ui (Base UI)                                    |
+| API       | tRPC + TanStack Query                                                   |
+| DB        | PostgreSQL (Neon recommended) + Drizzle ORM                             |
+| Auth      | better-auth                                                             |
+| Billing   | Stripe                                                                  |
+| AI        | Vercel AI SDK + provider SDKs / OpenRouter                              |
 
 ## Quick start
 
@@ -78,7 +78,8 @@ Full prerequisites, environment variables, Stripe, OAuth, and deployment steps: 
 
 ```
 src/
-  app/           # Next.js App Router (marketing, chat, settings, API)
+  routes/        # TanStack file routes (marketing, chat, settings, API endpoints)
+  server/http/   # HTTP handler logic behind the API routes
   components/    # UI, chat, auth, billing, team
   db/schema/     # Drizzle schemas
   lib/           # Auth, billing, chat, tools, providers

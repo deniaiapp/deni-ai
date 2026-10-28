@@ -1,5 +1,3 @@
-"use client";
-
 import { useSyncExternalStore } from "react";
 
 const STORAGE_KEY = "deni-preferred-model";

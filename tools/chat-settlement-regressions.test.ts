@@ -39,11 +39,9 @@ vi.mock("@/lib/auth", () => ({
     },
   },
 }));
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
-vi.mock("next/server", async () => {
-  const actual = await vi.importActual<typeof import("next/server")>("next/server");
-  return { ...actual, after: (task: () => unknown) => void task() };
-});
+vi.mock("@/lib/run-after-response", () => ({
+  runAfterResponse: (task: () => unknown) => void task(),
+}));
 vi.mock("@/lib/chat", () => ({
   getChatById: async () => ({
     id: "chat",
@@ -115,7 +113,7 @@ vi.mock("@/lib/usage", async () => {
     }),
   };
 });
-vi.mock("@/app/api/chat/_lib/model", async () => {
+vi.mock("@/server/http/chat/_lib/model", async () => {
   class ChatRouteError extends Error {}
   return {
     ChatRouteError,
@@ -203,7 +201,7 @@ vi.mock("ai", async () => {
                       : "streamed",
               );
             if (state.mode === "stopped") {
-              const { POST } = await import("@/app/api/chat/stop/route");
+              const { POST } = await import("@/server/http/chat/stop/route");
               await POST(
                 new Request("http://localhost/api/chat/stop", {
                   method: "POST",
@@ -235,7 +233,7 @@ vi.mock("ai", async () => {
   };
 });
 
-const { POST } = await import("../src/app/api/chat/route");
+const { POST } = await import("../src/server/http/chat/route");
 const { streamText } = await import("ai");
 const {
   clearChatGenerationState,
@@ -251,7 +249,7 @@ const {
   GUEST_MAX_PROMPT_TOKENS,
   GUEST_TOOL_OUTPUT_CHARS,
   URL_PDF_TOKEN_ESTIMATE,
-} = await import("../src/app/api/chat/_lib/usage-estimate");
+} = await import("../src/server/http/chat/_lib/usage-estimate");
 const { clearChatGeneration, isCurrentChatGeneration, recordPromptUsage } =
   await import("@/lib/chat-generation");
 
@@ -705,7 +703,7 @@ test("guest output is capped and skips unbilled memory extraction", async () => 
 });
 
 async function stopChat() {
-  const { POST: stop } = await import("@/app/api/chat/stop/route");
+  const { POST: stop } = await import("@/server/http/chat/stop/route");
   const response = await stop(
     new Request("http://localhost/api/chat/stop", {
       method: "POST",

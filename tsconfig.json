@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ES2017",
+    "target": "ES2022",
     "lib": ["dom", "dom.iterable", "esnext"],
     "allowJs": true,
     "skipLibCheck": true,
@@ -11,13 +11,9 @@
     "moduleResolution": "bundler",
     "resolveJsonModule": true,
     "isolatedModules": true,
+    "allowImportingTsExtensions": true,
     "jsx": "react-jsx",
     "incremental": true,
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "paths": {
       "@/*": ["./src/*"],
       "lucide-react": ["./src/lib/lucide-react.ts"],
@@ -28,15 +24,23 @@
   "types": ["node", "react", "react-dom"],
   "include": [
     "css-types.d.ts",
-    "next-env.d.ts",
-    "next.config.ts",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "vite/**/*.ts",
     "drizzle.config.ts",
     "doctor.config.ts",
     "src/**/*.ts",
     "src/**/*.tsx",
-    "packages/disposable-email-domains/src/**/*.ts",
-    ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    "packages/disposable-email-domains/src/**/*.ts"
   ],
-  "exclude": ["node_modules", "tools", ".next/dev", "dist", "build", "coverage", ".turbo"]
+  "exclude": [
+    "node_modules",
+    "tools",
+    "dist",
+    "build",
+    "coverage",
+    ".output",
+    ".tanstack",
+    ".nitro"
+  ]
 }

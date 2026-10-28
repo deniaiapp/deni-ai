@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import type { ClientPlan, IndividualPlanId } from "@/lib/billing";
 import { useFormatCurrencyMinor, usePlanIntervalLabel } from "./billing-utils";
 import {

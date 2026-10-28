@@ -5,15 +5,12 @@ import { AuthLinkError } from "@/components/auth/settings/auth-link-error";
 
 const search = vi.hoisted(() => ({ params: new URLSearchParams() }));
 
-vi.mock("next/navigation", () => ({
+vi.mock("@/lib/navigation", () => ({
   usePathname: () => "/account/settings",
   useRouter: () => ({ replace: () => {} }),
   useSearchParams: () => search.params,
 }));
-vi.mock("next-intl", () => ({
-  useExtracted: () => (message: string, values?: Record<string, string>) =>
-    message.replace(/\{(\w+)\}/g, (_, key: string) => values?.[key] ?? ""),
-}));
+vi.mock("use-intl", () => import("@/test/intl-mock"));
 
 const render = (error: string) => {
   search.params = new URLSearchParams({ error });

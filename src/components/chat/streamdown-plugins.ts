@@ -1,5 +1,3 @@
-"use client";
-
 import { cjk } from "@streamdown/cjk";
 import type { MathPlugin, PluginConfig } from "streamdown";
 import { useEffect, useMemo, useState } from "react";

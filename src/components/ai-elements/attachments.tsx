@@ -1,7 +1,5 @@
-"use client";
-
 import type { FileUIPart, SourceDocumentUIPart } from "ai";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import type { ComponentProps, HTMLAttributes, ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";

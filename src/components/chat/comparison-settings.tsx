@@ -1,7 +1,5 @@
-"use client";
-
 import { useId } from "react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import {
   Field,
   FieldDescription,

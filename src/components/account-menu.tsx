@@ -1,10 +1,6 @@
-"use client";
-
 import { LogOut, Settings, UserIcon, Users, Zap } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
@@ -175,14 +171,12 @@ export function AccountMenu() {
         <div className="flex w-full items-center gap-2">
           <div className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground overflow-hidden">
             {session.data?.user?.image ? (
-              <Image
+              <img
                 src={session.data.user.image}
                 alt={session.data.user.name ?? t("User")}
                 className="size-full object-cover"
                 width={32}
                 height={32}
-                sizes="32px"
-                unoptimized
               />
             ) : (
               (session.data?.user?.name?.charAt(0).toUpperCase() ?? "U")
@@ -201,14 +195,12 @@ export function AccountMenu() {
         <div className="flex items-center gap-2 px-2 py-1.5">
           <div className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground overflow-hidden text-xs">
             {session.data?.user?.image ? (
-              <Image
+              <img
                 src={session.data.user.image}
                 alt={session.data.user.name ?? t("User")}
                 className="size-full object-cover"
                 width={24}
                 height={24}
-                sizes="24px"
-                unoptimized
               />
             ) : (
               (session.data?.user?.name?.charAt(0).toUpperCase() ?? "U")

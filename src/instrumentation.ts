@@ -1,19 +1,14 @@
-import * as Sentry from "@sentry/nextjs";
+import * as Sentry from "@sentry/tanstackstart-react";
 import { getSentryOptions } from "@/lib/sentry-options";
 
+/** One-time server startup: error reporting, diagnostics, and in-process schedulers. */
 export async function register() {
-  if (process.env.NEXT_RUNTIME === "edge") {
-    return;
-  }
-  if (process.env.NEXT_PHASE === "phase-production-build") {
-    return;
-  }
   Sentry.init(getSentryOptions());
   const { installAbortDiagnostics } = await import("@/lib/abort-diagnostics");
   installAbortDiagnostics();
   const { installProcessWarningFilter } = await import("@/lib/process-warnings");
   installProcessWarningFilter();
-  // `next dev` would spend provider tokens on every restart and run billing and
+  // `vite dev` would spend provider tokens on every restart and run billing and
   // storage jobs against the development database; use the cron routes there.
   if (process.env.NODE_ENV === "production") {
     const { startModelHealthScheduler } = await import("@/lib/model-health-scheduler");
@@ -27,5 +22,3 @@ export async function register() {
     }
   }
 }
-
-export const onRequestError = Sentry.captureRequestError;

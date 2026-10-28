@@ -1,5 +1,3 @@
-"use client";
-
 import {
   ArrowDownWideNarrowIcon,
   ArrowUpDownIcon,
@@ -13,7 +11,7 @@ import {
   TrendingUpIcon,
   XIcon,
 } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { useState } from "react";
 import { Streamdown } from "streamdown";
 import { Badge } from "@/components/ui/badge";

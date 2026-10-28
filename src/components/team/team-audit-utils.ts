@@ -1,5 +1,3 @@
-"use client";
-
 import {
   AlertOctagon,
   AlertTriangle,
@@ -19,7 +17,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { numberFormatter } from "./team-utils";
 import { useRoleLabel } from "./use-role-label";
 

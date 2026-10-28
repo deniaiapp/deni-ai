@@ -1,7 +1,5 @@
-"use client";
-
 import { TableIcon } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { niceTicks } from "@/lib/intelligent-ui/format";

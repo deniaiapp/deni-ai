@@ -1,4 +1,4 @@
-import { createEnv } from "@t3-oss/env-nextjs";
+import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
 
 export const env = createEnv({
@@ -117,48 +117,6 @@ export const env = createEnv({
     /** Public Deni Run origin linked from the usage view. */
     NEXT_PUBLIC_DENI_RUN_URL: z.url().default("https://run.deniai.app"),
   },
-  // If you're using Next.js < 13.4.4, you'll need to specify the runtimeEnv manually
-  runtimeEnv: {
-    DATABASE_URL: process.env.DATABASE_URL,
-    NEXT_PUBLIC_BETTER_AUTH_URL: process.env.NEXT_PUBLIC_BETTER_AUTH_URL,
-    NEXT_PUBLIC_BILLING_DISABLED: process.env.NEXT_PUBLIC_BILLING_DISABLED,
-    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
-    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
-    GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
-    GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
-    GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID,
-    GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET,
-    STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-    STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-    CRON_SECRET: process.env.CRON_SECRET,
-    DENI_RUN_SERVICE_SECRET: process.env.DENI_RUN_SERVICE_SECRET,
-    DENI_RUN_OAUTH_CLIENT_ID: process.env.DENI_RUN_OAUTH_CLIENT_ID,
-    NEXT_PUBLIC_DENI_RUN_URL: process.env.NEXT_PUBLIC_DENI_RUN_URL,
-    OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY,
-    DENI_API_KEY: process.env.DENI_API_KEY,
-    DENI_API_BASE_URL: process.env.DENI_API_BASE_URL,
-    FLIXA_USAGE_WEIGHT_INPUT: process.env.FLIXA_USAGE_WEIGHT_INPUT,
-    FLIXA_USAGE_WEIGHT_CACHE_READ: process.env.FLIXA_USAGE_WEIGHT_CACHE_READ,
-    FLIXA_USAGE_WEIGHT_CACHE_WRITE: process.env.FLIXA_USAGE_WEIGHT_CACHE_WRITE,
-    FLIXA_USAGE_WEIGHT_OUTPUT: process.env.FLIXA_USAGE_WEIGHT_OUTPUT,
-    EXA_API_KEY: process.env.EXA_API_KEY,
-    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY,
-    NEXT_PUBLIC_TURNSTILE_SITE_KEY: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-    NEXT_PUBLIC_SENTRY_DSN: process.env.NEXT_PUBLIC_SENTRY_DSN,
-    STRIPE_FLASH_OFFER_COUPON_ID: process.env.STRIPE_FLASH_OFFER_COUPON_ID,
-    STRIPE_PORTAL_CONFIGURATION_ID: process.env.STRIPE_PORTAL_CONFIGURATION_ID,
-    ADMIN_EMAILS: process.env.ADMIN_EMAILS,
-    AFFILIATE_ADMIN_EMAILS: process.env.AFFILIATE_ADMIN_EMAILS,
-    BLOG_ADMIN_EMAILS: process.env.BLOG_ADMIN_EMAILS,
-    CLOUDFLARE_ACCOUNT_ID: process.env.CLOUDFLARE_ACCOUNT_ID,
-    CLOUDFLARE_API_TOKEN: process.env.CLOUDFLARE_API_TOKEN,
-    UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,
-    UPSTASH_REDIS_REST_TOKEN: process.env.UPSTASH_REDIS_REST_TOKEN,
-    R2_ACCOUNT_ID: process.env.R2_ACCOUNT_ID,
-    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
-    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY,
-    R2_BUCKET: process.env.R2_BUCKET,
-    CLIENT_IP_HEADER: process.env.CLIENT_IP_HEADER,
-    TRUSTED_PROXY_HOPS: process.env.TRUSTED_PROXY_HOPS,
-  },
+  clientPrefix: "NEXT_PUBLIC_",
+  runtimeEnv: process.env,
 });

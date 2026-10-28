@@ -1,7 +1,7 @@
 import { describe, expect, vi, test } from "vitest";
 import { getTableColumns } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pg-proxy";
-import { buildChatSystemPrompt } from "../src/app/api/chat/_lib/prompt";
+import { buildChatSystemPrompt } from "../src/server/http/chat/_lib/prompt";
 import {
   historyBefore,
   historyCursorSchema,

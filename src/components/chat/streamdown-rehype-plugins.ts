@@ -1,5 +1,3 @@
-"use client";
-
 import { defaultRehypePlugins } from "streamdown";
 
 type HastNode = {

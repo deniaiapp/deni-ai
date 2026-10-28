@@ -1,7 +1,5 @@
-"use client";
-
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { startTransition, useEffect, useState } from "react";
 import { toast } from "sonner";

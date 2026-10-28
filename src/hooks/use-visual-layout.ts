@@ -1,5 +1,3 @@
-"use client";
-
 import { useSyncExternalStore } from "react";
 import { type VisualLayout, visualLayouts } from "@/lib/intelligent-ui/prompt";
 

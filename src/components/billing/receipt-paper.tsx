@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import DeniAIIcon from "@/components/deni-ai-icon";
 import { formatPaymentMethodLabel } from "@/lib/stripe-checkout-receipt";
 import { ReceiptBarcode } from "./receipt-barcode";

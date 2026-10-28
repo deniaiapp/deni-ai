@@ -1,8 +1,6 @@
-"use client";
-
 import { FilePlus2, Newspaper, Pencil, Star, Trash2 } from "lucide-react";
-import Link from "next/link";
-import { useExtracted, useLocale } from "next-intl";
+import { Link } from "@/lib/navigation";
+import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
 import { toast } from "sonner";

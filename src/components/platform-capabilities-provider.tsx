@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, useContext, type ReactNode } from "react";
 import type { PlatformCapabilities } from "@/lib/platform-capabilities";
 

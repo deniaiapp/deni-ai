@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 
 /**
  * better-auth-ui fills templates with `.replace("{{token}}", value)`.

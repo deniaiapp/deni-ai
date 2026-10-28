@@ -1,5 +1,3 @@
-"use client";
-
 import {
   Bot,
   BookOpen,
@@ -15,10 +13,9 @@ import {
   Shield,
   Sparkles,
 } from "lucide-react";
-import Link from "next/link";
-import { useExtracted, useLocale } from "next-intl";
+import { Link } from "@/lib/navigation";
+import { useExtracted, useLocale } from "use-intl";
 import { UserButton } from "@/components/auth/user/user-button";
-import { changeLocaleAction } from "@/lib/locale-actions";
 import { localizedPath } from "@/lib/locale-path";
 import DeniAIIcon from "./deni-ai-icon";
 import { HeaderMegaMenu } from "./header-mega-menu";
@@ -297,7 +294,7 @@ export default function Header() {
             </div>
 
             <div className="hidden items-center gap-2 lg:flex">
-              <LocaleSwitcher changeLocaleAction={changeLocaleAction} />
+              <LocaleSwitcher />
               <div className="hidden h-5 w-px bg-border sm:block" />
               <UserButton size="icon" />
             </div>
@@ -346,7 +343,7 @@ export default function Header() {
                       <p className="mb-3 text-[10px] font-medium uppercase tracking-[0.22em] text-muted-foreground">
                         {t("Language")}
                       </p>
-                      <LocaleSwitcher changeLocaleAction={changeLocaleAction} />
+                      <LocaleSwitcher />
                     </div>
 
                     <div className="mt-6 border-t border-border pt-6">

@@ -1,7 +1,5 @@
-"use client";
-
 import { Eye } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useRef } from "react";
 import { BlogMarkdown } from "@/components/blog/blog-markdown";
 import { Input } from "@/components/ui/input";

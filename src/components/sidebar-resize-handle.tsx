@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useRef, useSyncExternalStore } from "react";
 import { useSidebar } from "@/components/ui/sidebar";
 import {

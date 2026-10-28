@@ -1,8 +1,6 @@
-"use client";
-
 import { Mail, TriangleAlert } from "lucide-react";
-import { useSearchParams } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { useSearchParams } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import {

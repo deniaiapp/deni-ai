@@ -1,5 +1,3 @@
-"use client";
-
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { fileToBase64 } from "@better-auth-ui/core";
 import { useAuth, useSession, useUpdateUser } from "@better-auth-ui/react";

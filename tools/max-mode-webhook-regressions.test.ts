@@ -51,7 +51,7 @@ vi.mock("@/db/drizzle", () => ({
   },
 }));
 
-const { POST } = await import("../src/app/api/stripe/webhook/route");
+const { POST } = await import("../src/server/http/stripe/webhook/route");
 
 const meteredItems = {
   data: [

@@ -1,4 +1,4 @@
-import * as Sentry from "@sentry/nextjs";
+import * as Sentry from "@sentry/tanstackstart-react";
 import { checkModelHealth } from "@/lib/model-health";
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;

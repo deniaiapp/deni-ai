@@ -1,5 +1,3 @@
-"use client";
-
 import {
   BillingAddressElement,
   CurrencySelectorElement,
@@ -8,8 +6,8 @@ import {
 import type { StripeCheckoutValue } from "@stripe/react-stripe-js/checkout";
 import type { StripeAddressElementChangeEvent, StripePaymentElement } from "@stripe/stripe-js";
 import { ChevronDown, LoaderCircle, Tag, X } from "lucide-react";
-import Link from "next/link";
-import { useExtracted, useLocale } from "next-intl";
+import { Link } from "@/lib/navigation";
+import { useExtracted, useLocale } from "use-intl";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";

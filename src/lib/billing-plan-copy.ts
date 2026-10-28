@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 
 import { getPlanTier, type BillingPlanId } from "@/lib/billing";
 import { USAGE_POOL_USD } from "@/lib/usage-pool";

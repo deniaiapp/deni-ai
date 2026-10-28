@@ -1,4 +1,4 @@
-import dynamic from "next/dynamic";
+import { dynamic } from "@/lib/dynamic";
 import { captchaPlugin as coreCaptchaPlugin } from "@better-auth-ui/react/plugins/captcha";
 
 // Defer Turnstile script/package until an auth form (or the guest sign-in

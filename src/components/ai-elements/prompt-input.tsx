@@ -1,5 +1,3 @@
-"use client";
-
 import type { ChatStatus, FileUIPart, SourceDocumentUIPart } from "ai";
 import type {
   ChangeEvent,
@@ -50,7 +48,7 @@ import { cn } from "@/lib/utils";
 import { type UploadedAttachment, uploadAttachmentFile } from "@/lib/upload-attachment-client";
 import { CornerDownLeftIcon, ImageIcon, PlusIcon, SquareIcon, XIcon } from "lucide-react";
 import { nanoid } from "nanoid";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import {
   Children,
   createContext,

@@ -1,7 +1,5 @@
-"use client";
-
 import { Zap } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { formatAppDate } from "@/lib/format-date";
 import { formatCompactUsageValue } from "@/lib/utils";
 import { Badge } from "../ui/badge";

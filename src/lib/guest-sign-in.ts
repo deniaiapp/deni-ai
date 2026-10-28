@@ -55,9 +55,9 @@ export async function signInAsGuest(
 }
 
 /**
- * A /chat prefetch made before sign-in can contain the unauthenticated
- * redirect. Use a document navigation so that cached RSC redirects are not
- * reused after the anonymous session cookie has been set.
+ * A /chat preload made before sign-in can contain the unauthenticated
+ * redirect. Use a document navigation so that a cached redirect is not reused
+ * after the anonymous session cookie has been set.
  */
 export function openChatAfterGuestSignIn() {
   window.location.assign("/chat");

@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useRef, useState } from "react";
 import { Check, Copy, ExternalLink } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { toast } from "sonner";
 import type { LinkSafetyConfig, LinkSafetyModalProps } from "streamdown";
 import { Button } from "@/components/ui/button";

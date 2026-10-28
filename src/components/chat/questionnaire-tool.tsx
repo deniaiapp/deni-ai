@@ -1,8 +1,6 @@
-"use client";
-
 import type { ToolUIPart, UIMessage } from "ai";
 import { ChevronDownIcon, CircleCheckIcon } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";

@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { SettingsPageShell } from "../settings-page-shell";

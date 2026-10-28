@@ -1,9 +1,6 @@
-"use client";
-
 import { CreditCard, FolderKanban, History, Home, Users } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, usePathname } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";

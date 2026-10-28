@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useState, type FormEvent } from "react";
 import { FileText, Pencil } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { SettingsPageShell } from "@/components/settings-page-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";

@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { useBillingReceiptCopy } from "@/components/billing/billing-utils";
 import { SubscriptionShredder } from "@/components/billing/subscription-shredder";

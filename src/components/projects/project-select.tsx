@@ -1,7 +1,5 @@
-"use client";
-
 import { FolderKanban, Plus } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import {
   Select,
   SelectContent,

@@ -1,7 +1,5 @@
-"use client";
-
 import { Sparkles } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import type { ReactNode } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useIntelligentUiMessage } from "@/components/chat/intelligent-ui/intelligent-ui-context";
