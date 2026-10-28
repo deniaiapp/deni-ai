@@ -65,7 +65,7 @@ pnpm dev
 
 Required and optional variables are validated in `src/env.ts`. A starter list is in `.env.example`. Key groups:
 
-- **Core:** `DATABASE_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` (32 chars)
+- **Core:** `DATABASE_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL`, `BETTER_AUTH_SECRET` (32+ chars)
 - **OAuth (optional):** Google + GitHub client ID/secret; missing provider pairs hide those buttons.
 - **AI (optional):** `OPENROUTER_API_KEY` (all platform models)
 - **Search / CAPTCHA (optional):** `EXA_API_KEY`, Turnstile keys

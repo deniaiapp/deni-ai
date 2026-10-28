@@ -8,7 +8,7 @@ Source of truth for validated env vars: [`src/env.ts`](src/env.ts). Starter temp
 
 - [Node.js 26+](https://nodejs.org/) and [pnpm 12.8.1](https://pnpm.io/installation)
 - [PostgreSQL](https://neon.tech/) (Neon serverless recommended for self-hosting)
-- Core environment values (`DATABASE_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL`, and a 32-character `BETTER_AUTH_SECRET`)
+- Core environment values (`DATABASE_URL`, `NEXT_PUBLIC_BETTER_AUTH_URL`, and a `BETTER_AUTH_SECRET` of at least 32 characters)
 - Optional API keys for AI providers (OpenRouter)
 - Optional Google + GitHub OAuth credentials
 - Optional Cloudflare Turnstile site + secret keys; set both to require a Turnstile check for email sign-up/sign-in, password reset, magic-link requests, and guest (anonymous) sign-in. Guests complete the check in a short dialog after choosing "Continue as Guest"; without both keys these flows run without a check.
@@ -50,8 +50,8 @@ DATABASE_URL=postgresql://user:password@host:5432/database
 # App URL (must match the origin users open in the browser)
 NEXT_PUBLIC_BETTER_AUTH_URL=http://localhost:3000
 
-# Authentication (BETTER_AUTH_SECRET must be exactly 32 characters)
-BETTER_AUTH_SECRET=your-32-character-secret-here
+# Authentication (BETTER_AUTH_SECRET: at least 32 characters)
+BETTER_AUTH_SECRET=your-secret-of-at-least-32-characters
 # OAuth is optional; omit a provider pair to hide that sign-in button.
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
@@ -184,15 +184,17 @@ Notes:
 
 #### Generate `BETTER_AUTH_SECRET`
 
-The secret must be **exactly 32 characters** (Zod `length(32)`):
+The secret must be **at least 32 characters** (Zod `min(32)`):
 
 ```bash
-# 32 hex chars
-openssl rand -hex 16
+# 64 hex chars
+pnpx auth secret
 
-# or base64 truncated to 32
-openssl rand -base64 24 | cut -c1-32
+# or
+openssl rand -hex 32
 ```
+
+Keep a deployment's secret once it is in use: changing it signs every user out and makes data encrypted with the old secret unreadable. A new deployment with its own database (for example a canary) should get its own secret.
 
 #### Setting up OAuth providers
 

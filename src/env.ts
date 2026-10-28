@@ -9,7 +9,9 @@ export const env = createEnv({
   emptyStringAsUndefined: true,
   server: {
     DATABASE_URL: z.url(),
-    BETTER_AUTH_SECRET: z.string().length(32),
+    // Used for HMACs and key derivation, so any length works; `pnpx auth secret`
+    // prints 64 hex characters.
+    BETTER_AUTH_SECRET: z.string().min(32),
     GOOGLE_CLIENT_ID: z.string().min(1).optional(),
     GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
     GITHUB_CLIENT_ID: z.string().min(1).optional(),
