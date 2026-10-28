@@ -10,8 +10,8 @@ dist
 *.tsbuildinfo
 
 # Git / IDE / local tooling
+# .gitignore stays: Tailwind skips the paths it lists when scanning for classes.
 .git
-.gitignore
 .gitattributes
 .github
 .vscode

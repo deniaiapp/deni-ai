@@ -5,6 +5,14 @@
 @import "@fontsource-variable/jetbrains-mono";
 
 @source "../../node_modules/streamdown/dist/*.js";
+/* The client build writes .output before the SSR build compiles this file
+   again; scanning it there adds classes and changes the CSS hash, so SSR HTML
+   would link a stylesheet the client build never emitted. Tailwind skips
+   gitignored paths, but builds without .gitignore (Docker) must not see them. */
+@source not "../../.output";
+@source not "../../.nitro";
+@source not "../../.tanstack";
+@source not "../../dist";
 
 @custom-variant dark (&:is(.dark *));
 

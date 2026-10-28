@@ -111,7 +111,9 @@ export const Route = createRootRoute({
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "stylesheet", href: themesCss },
-      { rel: "manifest", href: "/manifest.webmanifest" },
+      // Browsers fetch manifests without cookies by default; send them so an
+      // access gate in front of the site (e.g. a private canary) lets it through.
+      { rel: "manifest", href: "/manifest.webmanifest", crossOrigin: "use-credentials" },
       { rel: "icon", href: "/favicon.ico", sizes: "any" },
       { rel: "icon", href: "/icon.png", type: "image/png" },
       { rel: "icon", href: "/pwa/favicon-32x32.png", sizes: "32x32", type: "image/png" },
