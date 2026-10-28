@@ -92,20 +92,21 @@ function BillingPageContent() {
     usageTierLabel,
   } = useBillingPage();
 
+  const title = t("Billing");
+  const description = t("Manage your subscription and usage");
+
   if (loading) {
     return (
-      <div className="flex justify-center py-8">
-        <Spinner />
-      </div>
+      <SettingsPageShell title={title} description={description} className="max-w-6xl">
+        <div className="flex justify-center py-8">
+          <Spinner />
+        </div>
+      </SettingsPageShell>
     );
   }
 
   return (
-    <SettingsPageShell
-      title={t("Billing")}
-      description={t("Manage your subscription and usage")}
-      className="max-w-6xl"
-    >
+    <SettingsPageShell title={title} description={description} className="max-w-6xl">
       {flashOffer && (
         <BillingFlashOfferBanner
           limit={flashOffer.limit}

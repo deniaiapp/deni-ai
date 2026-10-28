@@ -53,9 +53,11 @@ export function BlogSettingsPage() {
 
   if (canManage.isLoading) {
     return (
-      <div className="flex min-h-48 items-center justify-center">
-        <Spinner className="size-5" />
-      </div>
+      <SettingsPageShell title={t("Blog")}>
+        <div className="flex min-h-48 items-center justify-center">
+          <Spinner className="size-5" />
+        </div>
+      </SettingsPageShell>
     );
   }
 

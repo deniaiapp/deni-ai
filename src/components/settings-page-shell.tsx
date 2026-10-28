@@ -16,8 +16,10 @@ export function SettingsPageShell({
   children,
   className,
 }: SettingsPageShellProps) {
+  // Left-aligned with the settings tabs above: centering a capped width put each
+  // page's title at a different offset on wide screens (billing is wider).
   return (
-    <div className={cn("mx-auto flex w-full max-w-4xl flex-col gap-6", className)}>
+    <div className={cn("flex w-full max-w-4xl flex-col gap-6", className)}>
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1">
           <h1 className="text-xl font-semibold tracking-tight">{title}</h1>

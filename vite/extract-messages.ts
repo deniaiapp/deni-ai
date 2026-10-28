@@ -1,5 +1,5 @@
 import { createRequire } from "node:module";
-import { readdir, readFile, stat, writeFile } from "node:fs/promises";
+import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { transform } from "@swc/core";
 import type { Plugin } from "vite";
@@ -142,22 +142,22 @@ async function writeIfChanged(filePath: string, content: string) {
 export function extractMessages(options: ExtractMessagesOptions): Plugin {
   let projectRoot = process.cwd();
   let isDevelopment = false;
-  const messagesByFile = new Map<string, { mtimeMs: number; messages: ExtractedMessage[] }>();
+  const messagesByFile = new Map<string, { source: string; messages: ExtractedMessage[] }>();
   let pendingSave: Promise<void> | null = null;
   // Client and SSR environments start builds concurrently; one writer at a time.
   let saveQueue: Promise<void> = Promise.resolve();
 
+  // Keyed by content, not mtime: a save written in two steps within one
+  // millisecond would otherwise keep the half-written version's messages.
   async function extractFile(absolutePath: string) {
-    const { mtimeMs } = await stat(absolutePath);
-    const cached = messagesByFile.get(absolutePath);
-    if (cached?.mtimeMs === mtimeMs) {
+    const source = await readFile(absolutePath, "utf8");
+    if (messagesByFile.get(absolutePath)?.source === source) {
       return;
     }
-    const source = await readFile(absolutePath, "utf8");
     const messages = usesExtraction(source)
       ? (await compile(projectRoot, absolutePath, source, isDevelopment)).messages
       : [];
-    messagesByFile.set(absolutePath, { mtimeMs, messages });
+    messagesByFile.set(absolutePath, { source, messages });
   }
 
   function saveCatalogs() {
@@ -233,7 +233,7 @@ export function extractMessages(options: ExtractMessagesOptions): Plugin {
     },
     async buildStart() {
       if (options.writeCatalogs === false) return;
-      // Runs once per Vite environment; the scan is cached by mtime.
+      // Runs once per Vite environment; unchanged files are skipped by content.
       await extractAll();
     },
     configureServer(server) {
