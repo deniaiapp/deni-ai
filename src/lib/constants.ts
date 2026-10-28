@@ -105,8 +105,8 @@ export type ModelDefinition = {
    */
   paidOnly?: boolean;
   /**
-   * When true, the model is limited to the Pro tier (including team plans and
-   * lifetime Pro). Plus, Go, and Free accounts cannot use it.
+   * When true, the model is limited to the Pro tier (including team plans).
+   * Plus, Go, and Free accounts cannot use it.
    */
   proOnly?: boolean;
   default?: boolean;

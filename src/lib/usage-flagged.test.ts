@@ -9,7 +9,7 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("./max-mode", () => ({
   isMaxModeEligible: () => false,
-  MAX_MODE_USABLE_STATUSES: new Set(["active", "paid"]),
+  MAX_MODE_USABLE_STATUSES: new Set(["active"]),
 }));
 vi.mock("./max-mode-credits", () => ({
   creditOwnerFor: () => null,

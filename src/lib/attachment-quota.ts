@@ -8,7 +8,7 @@ const GIB = 1024 * MIB;
 
 /**
  * Total bytes of stored attachments per user. Team plans count as their tier
- * (Pro Team as Pro) and lifetime Pro as Pro.
+ * (Pro Team as Pro).
  */
 export const STORAGE_LIMIT_BYTES: Record<StoragePlan, number> = {
   guest: 20 * MIB,

@@ -36,7 +36,6 @@ export function BillingPlansSection({
   proMonthly,
   proInterval,
   onProIntervalChange,
-  proLifetime,
   isOnTeamPlan,
   planActions,
 }: {
@@ -51,7 +50,6 @@ export function BillingPlansSection({
   proMonthly?: ClientPlan;
   proInterval: "monthly" | "yearly";
   onProIntervalChange: (interval: "monthly" | "yearly") => void;
-  proLifetime?: ClientPlan;
   isOnTeamPlan: boolean;
   planActions: PlanActionProps;
 }) {
@@ -143,26 +141,6 @@ export function BillingPlansSection({
             />
           )}
         </div>
-
-        {proLifetime && (
-          <div>
-            <PlanCard
-              plan={proLifetime}
-              status={{
-                isCurrent: proLifetime.id === activePlanId && isSubscribed,
-                hasActiveSubscription,
-                isLoadingEstimate: pendingPlanId === proLifetime.id && isEstimateLoading,
-                isOnTeamPlan,
-              }}
-              cancelDate={cancelDate}
-              activePlanId={activePlanId}
-              changePlan={changePlan}
-              checkout={checkout}
-              onChangePlanClick={onChangePlanClick}
-              onCheckout={onCheckout}
-            />
-          </div>
-        )}
       </div>
 
       <Card

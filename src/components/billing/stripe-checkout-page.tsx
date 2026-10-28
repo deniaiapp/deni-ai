@@ -138,11 +138,7 @@ function usePlanLabel() {
       return t("Checkout");
     }
 
-    const interval = planId.endsWith("_yearly")
-      ? t("Yearly")
-      : planId.endsWith("_lifetime")
-        ? t("Lifetime")
-        : t("Monthly");
+    const interval = planId.endsWith("_yearly") ? t("Yearly") : t("Monthly");
     if (planId.startsWith("pro_team")) {
       return t("Pro for Teams {name}", { name: interval });
     }
@@ -176,10 +172,6 @@ function getPlanIntervalValue(planId: BillingPlanId | null | undefined) {
     return null;
   }
 
-  if (planId.endsWith("_lifetime")) {
-    return "lifetime";
-  }
-
   return planId.endsWith("_yearly") ? "yearly" : "monthly";
 }
 
@@ -190,9 +182,6 @@ function usePlanDescription() {
     const interval = getPlanIntervalValue(planId as BillingPlanId | null | undefined);
     if (interval === "yearly") {
       return t("Annual subscription");
-    }
-    if (interval === "lifetime") {
-      return t("Lifetime access");
     }
     return t("Monthly subscription");
   };
@@ -355,8 +344,8 @@ function CheckoutForm({
   return (
     <CheckoutReceiptForm
       checkout={activeCheckout}
-      confirmHint={activeCheckout.recurring ? t("Cancel anytime") : t("Pay once. Keep access.")}
-      confirmLabel={activeCheckout.recurring ? t("Start subscription") : t("Complete payment")}
+      confirmHint={t("Cancel anytime")}
+      confirmLabel={t("Start subscription")}
       homeHref={backHref}
       homeLabel={receiptHomeLabel}
       isSubmitting={isSubmitting}

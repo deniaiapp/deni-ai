@@ -188,7 +188,7 @@ export async function canCompareModels(userId: string): Promise<boolean> {
   return tier === "pro";
 }
 
-/** The plan tier a (non-guest) user's limits follow, including team and lifetime plans. */
+/** The plan tier a (non-guest) user's limits follow, including team plans. */
 export async function getSubscriptionTier(
   userId: string,
   now = new Date(),

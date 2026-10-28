@@ -73,7 +73,6 @@ function BillingPageContent() {
     plusMonthly,
     portal,
     proInterval,
-    proLifetime,
     proMonthly,
     rawPlanId,
     resume,
@@ -173,7 +172,6 @@ function BillingPageContent() {
         proMonthly={proMonthly}
         proInterval={proInterval}
         onProIntervalChange={setProInterval}
-        proLifetime={proLifetime}
         isOnTeamPlan={isOnTeamPlan}
         planActions={{
           activePlanId,

@@ -5,8 +5,7 @@ export type IndividualPlanId =
   | "plus_monthly"
   | "plus_yearly"
   | "pro_monthly"
-  | "pro_yearly"
-  | "pro_lifetime";
+  | "pro_yearly";
 
 export type TeamPlanId = "pro_team_monthly" | "pro_team_yearly";
 
@@ -53,10 +52,6 @@ export const billingPlans: BillingPlan[] = [
     lookupKey: "pro_yearly",
   },
   {
-    id: "pro_lifetime",
-    lookupKey: "pro_lifetime",
-  },
-  {
     id: "pro_team_monthly",
     lookupKey: "pro_team_monthly",
   },
@@ -72,7 +67,6 @@ const planIdToTier = new Map<BillingPlanId, "go" | "plus" | "pro" | "team">([
   ["plus_yearly", "plus"],
   ["pro_monthly", "pro"],
   ["pro_yearly", "pro"],
-  ["pro_lifetime", "pro"],
   ["pro_team_monthly", "team"],
   ["pro_team_yearly", "team"],
 ]);

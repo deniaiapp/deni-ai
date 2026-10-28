@@ -88,9 +88,7 @@ export function FlashOfferStrip() {
             ? t("Limited-time offer: up to {percent}% off", { percent })
             : t("Limited-time offer: {percent}% off", { percent })}
         </span>
-        <span className="hidden text-muted-foreground sm:inline">
-          {t("Yearly and lifetime plans")}
-        </span>
+        <span className="hidden text-muted-foreground sm:inline">{t("Yearly plans")}</span>
         {offer.kind === "timer" && (
           <span className="inline-flex items-center gap-1.5 text-muted-foreground">
             {t("Ends in")}

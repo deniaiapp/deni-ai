@@ -24,7 +24,7 @@ export function isFlashOfferPlan(planId: string | null | undefined) {
     return false;
   }
 
-  return planId.endsWith("_yearly") || planId.endsWith("_lifetime");
+  return planId.endsWith("_yearly");
 }
 
 export function isFlashOfferActive(flashOfferEndsAt: Date | null | undefined, now = new Date()) {

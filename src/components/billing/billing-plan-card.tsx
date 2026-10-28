@@ -55,21 +55,12 @@ export function PlanCard({
   const formatPriceParts = useFormatPriceParts();
   const getTierLabel = useTierLabel();
   const planCopy = useBillingPlanCopy(plan.id);
-  const mode = plan.mode ?? "subscription";
   const offerPercentOff = getOfferPercentOff(plan);
   const offer = offerPercentOff > 0 ? plan.limitedTimeOffer : null;
-  const canChange =
-    status.hasActiveSubscription && !cancelDate && !status.isCurrent && mode === "subscription";
-  // Switching subscription plans needs a renewing subscription; a one-time plan
-  // is allowed once the subscription is set to cancel, matching checkout.
+  const canChange = status.hasActiveSubscription && !cancelDate && !status.isCurrent;
+  // Switching plans needs a renewing subscription.
   const isBlockedByCancel =
-    mode === "subscription" &&
-    Number.isInteger(cancelDate) &&
-    Boolean(activePlanId) &&
-    !status.isCurrent;
-  // A one-time plan does not end a renewing subscription, so checkout refuses it.
-  const isBlockedBySubscription =
-    mode === "payment" && status.hasActiveSubscription && !cancelDate && !status.isCurrent;
+    Number.isInteger(cancelDate) && Boolean(activePlanId) && !status.isCurrent;
   const processing =
     (changePlan.isPending && changePlan.variables?.planId === plan.id) ||
     (checkout.isPending && checkout.variables?.planId === plan.id);
@@ -79,7 +70,7 @@ export function PlanCard({
   const priceParts =
     plan.amount && plan.currency ? formatPriceParts(plan.amount, plan.currency) : null;
   const monthlyEquivalent =
-    mode === "subscription" && interval === "yearly" && plan.amount && plan.currency
+    interval === "yearly" && plan.amount && plan.currency
       ? formatMinorCurrency(
           Math.round(plan.amount / 12),
           plan.currency,
@@ -91,22 +82,16 @@ export function PlanCard({
         )
       : null;
   const savingsPercent =
-    mode === "subscription" && interval === "yearly"
-      ? calculateYearlySavingsPercent(plan, monthlyPlan)
-      : 0;
+    interval === "yearly" ? calculateYearlySavingsPercent(plan, monthlyPlan) : 0;
   const primaryActionLabel = status.isOnTeamPlan
     ? t("Team plan active")
     : status.isCurrent
       ? t("Current plan")
       : isBlockedByCancel
         ? t("Resume to change")
-        : isBlockedBySubscription
-          ? t("Cancel your subscription first")
-          : canChange
-            ? t("Change plan")
-            : mode === "payment"
-              ? t("Buy once")
-              : t("Subscribe");
+        : canChange
+          ? t("Change plan")
+          : t("Subscribe");
   // Reassurance for first-time buyers only; anyone already on a paid plan knows the terms.
   const showTrustCopy = !status.isOnTeamPlan && !activePlanId;
 
@@ -142,7 +127,8 @@ export function PlanCard({
               {planCopy.tagline}
             </CardDescription>
           </div>
-          {mode === "subscription" ? (
+          {/* A plan sold monthly only (Go) has no interval to switch. */}
+          {onIntervalChange ? (
             <Tabs
               value={interval}
               onValueChange={(v) => onIntervalChange?.(v as "monthly" | "yearly")}
@@ -158,7 +144,7 @@ export function PlanCard({
             </Tabs>
           ) : (
             <Badge variant="secondary" className="text-xs">
-              {t("Lifetime")}
+              {t("Monthly")}
             </Badge>
           )}
         </div>
@@ -215,9 +201,6 @@ export function PlanCard({
                 </p>
               </div>
             )}
-            {mode === "payment" && (
-              <p className="text-sm font-medium text-foreground">{t("One-time purchase")}</p>
-            )}
             {offer?.kind === "timer" && (
               <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300">
                 <Clock className="size-4" />
@@ -235,7 +218,6 @@ export function PlanCard({
             status.isCurrent ||
             processing ||
             isBlockedByCancel ||
-            isBlockedBySubscription ||
             isLoadingThisPlan ||
             status.isOnTeamPlan
           }
@@ -250,9 +232,7 @@ export function PlanCard({
           {(processing || isLoadingThisPlan) && <Spinner className="size-4" />}
           <span>{primaryActionLabel}</span>
           {showTrustCopy && (
-            <span className="text-[11px] font-normal text-current/80">
-              {mode === "payment" ? t("Pay once. Keep access.") : t("Cancel anytime")}
-            </span>
+            <span className="text-[11px] font-normal text-current/80">{t("Cancel anytime")}</span>
           )}
         </Button>
       </CardContent>

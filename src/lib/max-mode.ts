@@ -21,8 +21,8 @@ export function isMaxModeEligible(planId: string | null | undefined): boolean {
 }
 
 const ACTIVE_STATUSES = new Set(["active", "trialing", "past_due", "paid"]);
-/** Statuses whose plan can spend credits: a renewing subscription or a paid lifetime plan. */
-export const MAX_MODE_USABLE_STATUSES = new Set(["active", "paid"]);
+/** Statuses whose plan can spend credits: a renewing subscription. */
+export const MAX_MODE_USABLE_STATUSES = new Set(["active"]);
 
 async function isTeamOwner(userId: string, organizationId: string) {
   const [memberRecord] = await db

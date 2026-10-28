@@ -1,9 +1,6 @@
-import { expect, test, vi } from "vitest";
+import { expect, test } from "vitest";
 
-vi.mock("@/lib/stripe", () => ({ stripe: {} }));
-vi.mock("@/db/drizzle", () => ({ db: {} }));
-
-const { resolveSubscriptionStatus } = await import("./lifetime-plan");
+import { resolveSubscriptionStatus } from "./subscription-status";
 
 test("an ended subscription is inactive, not a canceled grace period", () => {
   expect(

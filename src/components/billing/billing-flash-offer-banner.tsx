@@ -34,7 +34,7 @@ export function BillingFlashOfferBanner({
                 : t("Limited-time offer: {percent}% off", { percent })}
             </p>
             <p className="text-sm text-muted-foreground">
-              {t("Yearly and lifetime plans. The discount is applied automatically at checkout.")}
+              {t("Yearly plans. The discount is applied automatically at checkout.")}
             </p>
           </div>
         </div>

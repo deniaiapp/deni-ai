@@ -7,16 +7,10 @@ import { findPlanByLookupKey, isTeamPlan } from "@/lib/billing";
 import { activatePaidAd, pauseReversedAdCharge, releaseExpiredAdCheckout } from "@/lib/ad-checkout";
 import { getBillingFingerprintUpdates } from "@/lib/billing-card-usage";
 import {
-  findPaidLifetimePurchase,
   grantsSubscriptionAccess,
-  resolveSubscriptionStatus,
-  isLifetimePlanId,
-  isPaidLifetimeRecord,
   isSettledDispute,
-  saveLifetimePlan,
-  restoreDisputedLifetimeCharge,
-  revokeReversedLifetimeCharge,
-} from "@/lib/lifetime-plan";
+  resolveSubscriptionStatus,
+} from "@/lib/subscription-status";
 import {
   grantMaxModeCreditCheckout,
   grantMaxModeCreditTopUp,
@@ -96,26 +90,6 @@ async function saveSubscription(payload: SubscriptionPayload) {
   )
     return;
 
-  // A subscription that grants nothing (incomplete, ended, ...) must not replace a
-  // paid lifetime plan, and an ended one hands the row back to that lifetime plan.
-  if (payload.organizationId === null && !grantsSubscriptionAccess(payload.status)) {
-    if (isPaidLifetimeRecord(existingRecord)) {
-      return;
-    }
-    if (existingRecord?.firstPaidAt) {
-      const lifetime = await findPaidLifetimePurchase(payload.customerId);
-      if (lifetime) {
-        await saveLifetimePlan(db, {
-          userId: payload.userId,
-          customerId: payload.customerId,
-          purchase: lifetime,
-          expectedSubscriptionId: payload.subscriptionId,
-        });
-        return;
-      }
-    }
-  }
-
   const updates = {
     stripeCustomerId: payload.customerId,
     stripeSubscriptionId: payload.subscriptionId,
@@ -192,19 +166,6 @@ async function clearPlanData(owner: BillingOwner & { customerId: string; subscri
   }
 
   const { userId } = owner;
-  // The subscription ended; a lifetime plan bought earlier takes over again.
-  const lifetime = await findPaidLifetimePurchase(customerId);
-  if (lifetime) {
-    return Boolean(
-      await saveLifetimePlan(db, {
-        userId,
-        customerId,
-        purchase: lifetime,
-        expectedSubscriptionId: subscriptionId,
-      }),
-    );
-  }
-
   const [saved] = await db
     .update(billing)
     .set({
@@ -228,58 +189,6 @@ async function clearPlanData(owner: BillingOwner & { customerId: string; subscri
     )
     .returning({ id: billing.id });
   return Boolean(saved);
-}
-
-/**
- * Activates a paid one-time plan even when the buyer never returns to the
- * checkout page (which is the only other place that confirms it).
- */
-async function savePaidLifetimeCheckout(
-  session: Stripe.Checkout.Session,
-  userId: string,
-  planId: string,
-) {
-  const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
-  if (!customerId) return;
-
-  const [existing] = await db
-    .select()
-    .from(billing)
-    .where(and(eq(billing.userId, userId), isNull(billing.organizationId)))
-    .limit(1);
-
-  // A live subscription keeps the row; the lifetime plan is restored from Stripe
-  // once that subscription ends.
-  if (
-    existing?.stripeSubscriptionId &&
-    existing.mode === "subscription" &&
-    grantsSubscriptionAccess(existing.status)
-  ) {
-    return;
-  }
-
-  const [lineItems, fingerprintUpdates] = await Promise.all([
-    stripe.checkout.sessions.listLineItems(session.id, { limit: 1 }),
-    getBillingFingerprintUpdates({ customerId }),
-  ]);
-
-  await saveLifetimePlan(db, {
-    userId,
-    customerId,
-    purchase: {
-      planId,
-      priceId: lineItems.data.at(0)?.price?.id ?? null,
-      checkoutSessionId: session.id,
-    },
-    expectedBillingRecord: existing ?? null,
-    extra: {
-      firstPaidAt: existing?.firstPaidAt ?? new Date(),
-      flashOfferEndsAt: null,
-      paymentMethodFingerprint: fingerprintUpdates.paymentMethodFingerprint,
-      ...(fingerprintUpdates.cardFunding ? { cardFunding: fingerprintUpdates.cardFunding } : {}),
-      cardRemovedAt: fingerprintUpdates.cardRemovedAt,
-    },
-  });
 }
 
 function paymentIntentIdOf(charge: Stripe.Charge) {
@@ -592,18 +501,6 @@ export async function POST(req: Request) {
               });
             }
           }
-        } else if (session.mode === "payment" && session.payment_status === "paid") {
-          const userId =
-            session.metadata?.userId ??
-            session.client_reference_id ??
-            (typeof session.customer === "string"
-              ? await resolveUserIdFromCustomer(session.customer)
-              : null);
-          const planId = session.metadata?.planId;
-
-          if (userId && isLifetimePlanId(planId) && !session.metadata?.organizationId) {
-            await savePaidLifetimeCheckout(session, userId, planId);
-          }
         }
         break;
       }
@@ -613,7 +510,6 @@ export async function POST(req: Request) {
         break;
       }
       case "charge.refunded": {
-        await revokeReversedLifetimeCharge(event.data.object);
         await pauseReversedAdCharge(event.data.object);
         const creditPaymentIntent = paymentIntentIdOf(event.data.object);
         if (creditPaymentIntent) await revokeMaxModeCredits(creditPaymentIntent);
@@ -628,7 +524,6 @@ export async function POST(req: Request) {
           typeof dispute.charge === "string"
             ? await stripe.charges.retrieve(dispute.charge)
             : dispute.charge;
-        await revokeReversedLifetimeCharge(charge);
         await pauseReversedAdCharge(charge);
         const creditPaymentIntent = paymentIntentIdOf(charge);
         if (creditPaymentIntent) await revokeMaxModeCredits(creditPaymentIntent);
@@ -640,14 +535,13 @@ export async function POST(req: Request) {
         if (typeof dispute !== "object" || dispute === null || dispute.object !== "dispute") {
           break;
         }
-        // charge.dispute.created revoked the lifetime plan; a dispute decided in
-        // our favor (or an inquiry closed without one) gives it back.
+        // charge.dispute.created revoked the Max Mode credits the charge bought; a
+        // dispute decided in our favor (or an inquiry closed without one) gives them back.
         if (isSettledDispute(dispute.status)) {
           const charge =
             typeof dispute.charge === "string"
               ? await stripe.charges.retrieve(dispute.charge)
               : dispute.charge;
-          await restoreDisputedLifetimeCharge(charge);
           const creditPaymentIntent = paymentIntentIdOf(charge);
           if (creditPaymentIntent) await restoreMaxModeCredits(creditPaymentIntent);
         }

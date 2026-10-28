@@ -24,7 +24,7 @@ vi.mock("@/db/drizzle", async () => {
 });
 vi.mock("./max-mode", () => ({
   isMaxModeEligible: () => false,
-  MAX_MODE_USABLE_STATUSES: new Set(["active", "paid"]),
+  MAX_MODE_USABLE_STATUSES: new Set(["active"]),
 }));
 vi.mock("./max-mode-credits", () => ({
   creditOwnerFor: () => null,
@@ -67,8 +67,8 @@ test("team members get their team plan's tier", async () => {
   expect(await getSubscriptionTier("user", now)).toBe("pro");
 });
 
-test("personal plans map to their tier, lifetime Pro included", async () => {
-  state.personal = [billingRow("pro_lifetime", "paid")];
+test("personal plans map to their tier", async () => {
+  state.personal = [billingRow("pro_yearly", "active")];
   expect(await getSubscriptionTier("user", now)).toBe("pro");
   state.personal = [billingRow("plus_monthly", "active")];
   expect(await getSubscriptionTier("user", now)).toBe("plus");

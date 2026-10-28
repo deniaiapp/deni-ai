@@ -104,7 +104,7 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
           ...comparisonHighlights,
-          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
+          t.rich("<b>Max Mode credits</b> to keep going past the limit", { b }),
           t.rich("For <b>power users</b>", { b }),
         ],
       };
@@ -120,25 +120,8 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
           ...comparisonHighlights,
-          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
+          t.rich("<b>Max Mode credits</b> to keep going past the limit", { b }),
           t.rich("For <b>power users</b>", { b }),
-        ],
-      };
-    case "pro_lifetime":
-      return {
-        tagline: t("One payment. Long-term Pro access."),
-        badge: t("Buy once"),
-        highlights: [
-          runHighlight,
-          t("Includes all Plus features"),
-          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
-            b,
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
-            plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
-          }),
-          ...comparisonHighlights,
-          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
-          t("No recurring subscription"),
         ],
       };
     case "pro_team_monthly":
@@ -153,7 +136,7 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
             multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
-          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
+          t.rich("<b>Max Mode credits</b> to keep going past the limit", { b }),
           t("Per-seat billing — pay only for active members"),
           t("Centralized billing and member management"),
         ],
@@ -171,7 +154,7 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
             multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
           }),
-          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
+          t.rich("<b>Max Mode credits</b> to keep going past the limit", { b }),
           t("Per-seat billing — pay only for active members"),
           t("Centralized billing and member management"),
         ],

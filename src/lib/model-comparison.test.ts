@@ -46,7 +46,6 @@ test.each([
   ["plus_yearly", false],
   ["pro_monthly", true],
   ["pro_yearly", true],
-  ["pro_lifetime", true],
 ])("active %s comparison access is %s", async (planId, allowed) => {
   state.personal = { planId, status: "active" };
   expect(await canCompareModels("user")).toBe(allowed);

@@ -17,7 +17,6 @@ const state = vi.hoisted(() => ({
   duringUpdate: undefined as (() => void) | undefined,
   duringRetrieve: undefined as (() => void) | undefined,
   duringList: undefined as (() => void) | undefined,
-  duringLifetimeList: undefined as (() => void) | undefined,
 }));
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
@@ -47,7 +46,7 @@ vi.mock("@/lib/stripe", () => ({
           {
             id: `price_${lookup_keys[0]}`,
             lookup_key: lookup_keys[0],
-            recurring: lookup_keys[0].endsWith("_lifetime") ? null : { interval: "month" },
+            recurring: { interval: "month" },
           },
         ],
       }),
@@ -80,10 +79,7 @@ vi.mock("@/lib/stripe", () => ({
         expire: state.expiredSession,
         retrieve: async (id: string) =>
           state.completedSessions.find((session) => session.id === id) ?? state.checkoutSession,
-        list: async () => {
-          state.duringLifetimeList?.();
-          return { data: state.completedSessions };
-        },
+        list: async () => ({ data: state.completedSessions }),
       },
     },
   },
@@ -187,14 +183,6 @@ function subscription(status: string, lookupKey: string, planId = lookupKey) {
   };
 }
 
-const lifetimeRecord = {
-  planId: "pro_lifetime",
-  priceId: "price_pro_lifetime",
-  status: "paid",
-  mode: "payment",
-  stripeSubscriptionId: null,
-};
-
 beforeEach(() => {
   vi.clearAllMocks();
   state.record = {
@@ -221,14 +209,6 @@ beforeEach(() => {
   state.duringUpdate = undefined;
   state.duringRetrieve = undefined;
   state.duringList = undefined;
-  state.duringLifetimeList = undefined;
-});
-
-test("opening checkout does not touch the current plan", async () => {
-  Object.assign(state.record, lifetimeRecord);
-  state.subscriptions = [];
-  await caller().createCheckoutSession({ planId: "go_monthly" });
-  expect(state.record).toMatchObject({ ...lifetimeRecord, checkoutSessionId: "cs_new" });
 });
 
 test("clients cannot replay a checkout session into the plan", () => {
@@ -257,28 +237,11 @@ const freeRecord = {
   checkoutSessionId: "cs_old",
 };
 
-test("a subscriber cannot buy a one-time plan that leaves the subscription billing", async () => {
-  await expect(caller().createCheckoutSession({ planId: "pro_lifetime" })).rejects.toThrow(
-    "Cancel your subscription before buying a one-time plan.",
-  );
-  expect(state.createdSession).not.toHaveBeenCalled();
-});
-
-test("a lifetime plan behind a later subscription cannot be bought again", async () => {
-  state.subscriptions = [{ ...subscription("active", "plus_monthly"), cancel_at_period_end: true }];
-  state.completedSessions = [
-    {
-      id: "cs_lifetime",
-      mode: "payment",
-      payment_status: "paid",
-      metadata: { userId: "user", planId: "pro_lifetime" },
-      payment_intent: { metadata: {}, latest_charge: { refunded: false, disputed: false } },
-    },
-  ];
-  await expect(caller().createCheckoutSession({ planId: "pro_lifetime" })).rejects.toThrow(
-    "This one-time plan has already been purchased.",
-  );
-  expect(state.createdSession).not.toHaveBeenCalled();
+test("opening checkout does not touch the current plan", async () => {
+  Object.assign(state.record, freeRecord, { checkoutSessionId: null });
+  state.subscriptions = [];
+  await caller().createCheckoutSession({ planId: "go_monthly" });
+  expect(state.record).toMatchObject({ ...freeRecord, checkoutSessionId: "cs_new" });
 });
 
 test("a stored open session is not handed back once a guard refuses checkout", async () => {
@@ -360,7 +323,7 @@ test.each([
   state.offerSpots = 2;
   state.couponRedeemed = redeemed;
 
-  await caller().createCheckoutSession({ planId: "pro_lifetime" });
+  await caller().createCheckoutSession({ planId: "plus_yearly" });
 
   const [params] = state.createdSession.mock.calls[0];
   expect(params.discounts).toEqual(discounted ? [{ coupon: "coupon_flash" }] : undefined);
@@ -378,48 +341,6 @@ test("an open session for another plan is expired before a new one is created", 
   await caller().createCheckoutSession({ planId: "plus_monthly" });
   expect(state.expiredSession).toHaveBeenCalledWith("cs_old", {}, expect.anything());
   expect(state.createdSession).toHaveBeenCalledTimes(1);
-});
-
-test("an ended subscription never overwrites a paid lifetime plan", async () => {
-  Object.assign(state.record, lifetimeRecord);
-  state.subscriptions = [subscription("canceled", "pro_monthly")];
-  await caller().status();
-  expect(state.record).toMatchObject(lifetimeRecord);
-});
-
-test("a lifetime plan takes over again once a later subscription ends", async () => {
-  state.record.planId = "go_monthly";
-  state.subscriptions = [subscription("canceled", "go_monthly")];
-  state.completedSessions = [
-    {
-      id: "cs_lifetime",
-      mode: "payment",
-      payment_status: "paid",
-      metadata: { userId: "user", planId: "pro_lifetime" },
-      payment_intent: {
-        metadata: { priceId: "price_pro_lifetime" },
-        latest_charge: { refunded: false, disputed: false },
-      },
-    },
-  ];
-  await caller().status();
-  expect(state.record).toMatchObject({ ...lifetimeRecord, checkoutSessionId: "cs_lifetime" });
-});
-
-test("a refunded lifetime purchase is not restored", async () => {
-  state.record.planId = "go_monthly";
-  state.subscriptions = [subscription("canceled", "go_monthly")];
-  state.completedSessions = [
-    {
-      id: "cs_lifetime",
-      mode: "payment",
-      payment_status: "paid",
-      metadata: { userId: "user", planId: "pro_lifetime" },
-      payment_intent: { metadata: {}, latest_charge: { refunded: true, disputed: false } },
-    },
-  ];
-  await caller().status();
-  expect(state.record).toMatchObject({ planId: "go_monthly", status: "inactive" });
 });
 
 test("the billed price decides the plan, not stale subscription metadata", async () => {
@@ -460,27 +381,6 @@ test("a stale snapshot cannot revert a plan change on the same subscription", as
   await caller().status();
   expect(state.record.planId).toBe("go_monthly");
 });
-test("restoring a lifetime purchase cannot overwrite a concurrently activated subscription", async () => {
-  state.subscriptions = [subscription("canceled", "plus_monthly")];
-  state.completedSessions = [
-    {
-      id: "cs_lifetime",
-      mode: "payment",
-      payment_status: "paid",
-      metadata: { userId: "user", planId: "pro_lifetime" },
-      payment_intent: { metadata: {}, latest_charge: { refunded: false, disputed: false } },
-    },
-  ];
-  state.duringLifetimeList = () =>
-    Object.assign(state.record, {
-      stripeSubscriptionId: "sub_new",
-      planId: "go_monthly",
-      status: "active",
-    });
-  await caller().status();
-  expect(state.record.stripeSubscriptionId).toBe("sub_new");
-});
-
 test.each(["cancelSubscription", "resumeSubscription"] as const)(
   "a delayed %s write cannot overwrite a new subscription",
   async (action) => {

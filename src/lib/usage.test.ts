@@ -29,7 +29,7 @@ vi.mock("@/db/drizzle", () => ({
 }));
 vi.mock("./max-mode", () => ({
   isMaxModeEligible: () => true,
-  MAX_MODE_USABLE_STATUSES: new Set(["active", "paid"]),
+  MAX_MODE_USABLE_STATUSES: new Set(["active"]),
 }));
 vi.mock("./max-mode-credits", () => ({
   creditOwnerFor: (record: { userId: string | null; organizationId: string | null }) =>

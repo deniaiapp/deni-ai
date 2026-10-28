@@ -225,7 +225,6 @@ export function useBillingPage() {
   const plusYearly = allPlans.find((p) => p.id === "plus_yearly");
   const proMonthly = allPlans.find((p) => p.id === "pro_monthly");
   const proYearly = allPlans.find((p) => p.id === "pro_yearly");
-  const proLifetime = allPlans.find((p) => p.id === "pro_lifetime");
 
   const offerPercents = allPlans.map(getOfferPercentOff).filter((percent) => percent > 0);
   const flashOfferLimit = allPlans.find((p) => getOfferPercentOff(p) > 0)?.limitedTimeOffer;
@@ -309,7 +308,6 @@ export function useBillingPage() {
     plusMonthly,
     portal,
     proInterval,
-    proLifetime,
     proMonthly,
     rawPlanId,
     resume,

@@ -85,13 +85,7 @@ test("only credit metadata names a credit owner", () => {
 });
 
 test("every paid plan can use Max Mode credits", () => {
-  for (const planId of [
-    "go_monthly",
-    "plus_yearly",
-    "pro_monthly",
-    "pro_lifetime",
-    "pro_team_yearly",
-  ])
+  for (const planId of ["go_monthly", "plus_yearly", "pro_monthly", "pro_team_yearly"])
     expect(isMaxModeEligible(planId)).toBe(true);
   expect(isMaxModeEligible(null)).toBe(false);
   expect(isMaxModeEligible("max_monthly")).toBe(false);

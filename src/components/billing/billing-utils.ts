@@ -87,9 +87,6 @@ export function usePlanIntervalLabel() {
     if (planId.endsWith("_yearly")) {
       return t("Yearly");
     }
-    if (planId.endsWith("_lifetime")) {
-      return t("Lifetime");
-    }
     return "";
   };
 }
@@ -104,9 +101,7 @@ export function useBillingReceiptCopy() {
       getPlanTier(planId) === "team" ? t("Pro for Teams") : t("{tier} plan", { tier: tierLabel });
     const planDescription = planId?.endsWith("_yearly")
       ? t("Annual subscription")
-      : planId?.endsWith("_lifetime")
-        ? t("Lifetime access")
-        : t("Monthly subscription");
+      : t("Monthly subscription");
 
     return {
       planTitle,
