@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: {} }));
-vi.mock("next/server", () => ({ after: mocks.after }));
+vi.mock("@/lib/run-after-response", () => ({ runAfterResponse: mocks.after }));
 vi.mock("@/lib/account-export", () => ({ buildAccountExport: mocks.buildAccountExport }));
 vi.mock("@/lib/account-export-jobs", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/account-export-jobs")>()),

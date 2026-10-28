@@ -3,7 +3,7 @@ import type { SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import type Stripe from "stripe";
 import { beforeEach, expect, test, vi } from "vitest";
-import { POST } from "@/app/api/ads/campaigns/checkout/route";
+import { POST } from "@/server/http/ads/campaigns/checkout/route";
 import { activatePaidAd, pauseReversedAdCharge } from "./ad-checkout";
 
 const state = vi.hoisted(() => ({
@@ -25,7 +25,6 @@ vi.mock("@/env", () => ({
     NEXT_PUBLIC_BETTER_AUTH_URL: "http://localhost:3000",
   },
 }));
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
 vi.mock("@/lib/auth", () => ({
   auth: {
     api: {

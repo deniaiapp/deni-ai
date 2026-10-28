@@ -1,19 +1,13 @@
 import type { FlashOfferLimit } from "@/lib/billing-offers";
 
 export type IndividualPlanId =
+  | "go_monthly"
   | "plus_monthly"
   | "plus_yearly"
   | "pro_monthly"
-  | "pro_yearly"
-  | "max_monthly"
-  | "max_yearly"
-  | "pro_lifetime";
+  | "pro_yearly";
 
-export type TeamPlanId =
-  | "pro_team_monthly"
-  | "pro_team_yearly"
-  | "max_team_monthly"
-  | "max_team_yearly";
+export type TeamPlanId = "pro_team_monthly" | "pro_team_yearly";
 
 export type BillingPlanId = IndividualPlanId | TeamPlanId;
 
@@ -38,6 +32,10 @@ export type ClientPlan = {
 
 export const billingPlans: BillingPlan[] = [
   {
+    id: "go_monthly",
+    lookupKey: "go_monthly",
+  },
+  {
     id: "plus_monthly",
     lookupKey: "plus_monthly",
   },
@@ -54,18 +52,6 @@ export const billingPlans: BillingPlan[] = [
     lookupKey: "pro_yearly",
   },
   {
-    id: "max_monthly",
-    lookupKey: "max_monthly",
-  },
-  {
-    id: "max_yearly",
-    lookupKey: "max_yearly",
-  },
-  {
-    id: "pro_lifetime",
-    lookupKey: "pro_lifetime",
-  },
-  {
     id: "pro_team_monthly",
     lookupKey: "pro_team_monthly",
   },
@@ -73,28 +59,16 @@ export const billingPlans: BillingPlan[] = [
     id: "pro_team_yearly",
     lookupKey: "pro_team_yearly",
   },
-  {
-    id: "max_team_monthly",
-    lookupKey: "max_team_monthly",
-  },
-  {
-    id: "max_team_yearly",
-    lookupKey: "max_team_yearly",
-  },
 ];
 
-const planIdToTier = new Map<BillingPlanId, "plus" | "pro" | "max" | "team">([
+const planIdToTier = new Map<BillingPlanId, "go" | "plus" | "pro" | "team">([
+  ["go_monthly", "go"],
   ["plus_monthly", "plus"],
   ["plus_yearly", "plus"],
   ["pro_monthly", "pro"],
   ["pro_yearly", "pro"],
-  ["pro_lifetime", "pro"],
-  ["max_monthly", "max"],
-  ["max_yearly", "max"],
   ["pro_team_monthly", "team"],
   ["pro_team_yearly", "team"],
-  ["max_team_monthly", "team"],
-  ["max_team_yearly", "team"],
 ]);
 
 export function findPlanById(planId: BillingPlanId | string) {
@@ -122,16 +96,12 @@ export function isIndividualPlanId(planId: string | null | undefined): planId is
 }
 
 export function isTeamPlan(planId: string | null | undefined): boolean {
-  return Boolean(planId?.startsWith("pro_team") || planId?.startsWith("max_team"));
-}
-
-export function isMaxTeamPlan(planId: string | null | undefined): boolean {
-  return Boolean(planId?.startsWith("max_team"));
+  return Boolean(planId?.startsWith("pro_team"));
 }
 
 export function getPlanTier(
   planId: string | null | undefined,
-): "plus" | "pro" | "max" | "team" | null {
+): "go" | "plus" | "pro" | "team" | null {
   if (!planId) {
     return null;
   }
@@ -141,5 +111,5 @@ export function getPlanTier(
 
 export function isProOrHigherTier(planId: string | null | undefined): boolean {
   const tier = getPlanTier(planId);
-  return tier === "pro" || tier === "max" || tier === "team";
+  return tier === "pro" || tier === "team";
 }

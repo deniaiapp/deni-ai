@@ -1,7 +1,5 @@
-"use client";
-
 import { useAuth } from "@better-auth-ui/react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 

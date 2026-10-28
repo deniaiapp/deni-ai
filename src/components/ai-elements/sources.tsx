@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import type { ComponentProps } from "react";
 
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";

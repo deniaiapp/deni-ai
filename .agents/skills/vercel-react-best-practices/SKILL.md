@@ -1,17 +1,18 @@
 ---
 name: vercel-react-best-practices
-description: Guide React and Next.js performance work involving rendering, data fetching, or bundle size.
+description: Guide React and TanStack Start performance work involving rendering, data fetching, or bundle size.
 license: MIT
 metadata:
   author: vercel
   version: "1.0.0"
 ---
 
-# React and Next.js performance
+# React and TanStack Start performance
 
 Use these references for the performance problem being addressed. Preserve
 behavior and prioritize changes supported by the affected code or measurements.
-Account for this project's React Compiler and installed Next.js version.
+Account for this project's React Compiler and installed TanStack Start version;
+rules written for Next.js Server Components apply to route loaders and server functions.
 
 Read relevant files from rules/ by prefix:
 

@@ -39,11 +39,9 @@ vi.mock("@/lib/auth", () => ({
     },
   },
 }));
-vi.mock("next/headers", () => ({ headers: async () => new Headers() }));
-vi.mock("next/server", async () => {
-  const actual = await vi.importActual<typeof import("next/server")>("next/server");
-  return { ...actual, after: (task: () => unknown) => void task() };
-});
+vi.mock("@/lib/run-after-response", () => ({
+  runAfterResponse: (task: () => unknown) => void task(),
+}));
 vi.mock("@/lib/chat", () => ({
   getChatById: async () => ({
     id: "chat",
@@ -115,7 +113,7 @@ vi.mock("@/lib/usage", async () => {
     }),
   };
 });
-vi.mock("@/app/api/chat/_lib/model", async () => {
+vi.mock("@/server/http/chat/_lib/model", async () => {
   class ChatRouteError extends Error {}
   return {
     ChatRouteError,
@@ -133,7 +131,6 @@ vi.mock("@/app/api/chat/_lib/model", async () => {
       },
       providerOptions: {},
       usageCategory: "basic",
-      usageUnit: state.guest ? "requests" : "tokens",
       usesOpenRouter: false,
     }),
   };
@@ -204,7 +201,7 @@ vi.mock("ai", async () => {
                       : "streamed",
               );
             if (state.mode === "stopped") {
-              const { POST } = await import("@/app/api/chat/stop/route");
+              const { POST } = await import("@/server/http/chat/stop/route");
               await POST(
                 new Request("http://localhost/api/chat/stop", {
                   method: "POST",
@@ -236,7 +233,7 @@ vi.mock("ai", async () => {
   };
 });
 
-const { POST } = await import("../src/app/api/chat/route");
+const { POST } = await import("../src/server/http/chat/route");
 const { streamText } = await import("ai");
 const {
   clearChatGenerationState,
@@ -252,7 +249,7 @@ const {
   GUEST_MAX_PROMPT_TOKENS,
   GUEST_TOOL_OUTPUT_CHARS,
   URL_PDF_TOKEN_ESTIMATE,
-} = await import("../src/app/api/chat/_lib/usage-estimate");
+} = await import("../src/server/http/chat/_lib/usage-estimate");
 const { clearChatGeneration, isCurrentChatGeneration, recordPromptUsage } =
   await import("@/lib/chat-generation");
 
@@ -560,13 +557,13 @@ test("normal completion settles once and finalizes the owned transcript", async 
   expect(clearChatGenerationState).toHaveBeenCalledOnce();
 });
 
-test("a guest stop before output refunds the request unit", async () => {
+test("a guest stop before output is fully refunded", async () => {
   state.guest = true;
   state.output = false;
   state.usage = false;
   await run();
-  expect(state.consumed).toBe(1);
-  expect(state.refunded).toBe(1);
+  expect(state.consumed).toBeGreaterThan(0);
+  expect(state.refunded).toBe(state.consumed);
   expect(state.reported).toBe(0);
 });
 
@@ -588,7 +585,7 @@ test("a failed settlement keeps the streamed answer in the transcript", async ()
   expect(clearChatGenerationState).toHaveBeenCalledOnce();
 });
 
-test("guests cannot send oversized prompts for one request unit", async () => {
+test("guests cannot send oversized prompts in one request", async () => {
   state.guest = true;
   const response = await POST(chatRequest("x".repeat(4 * GUEST_MAX_PROMPT_TOKENS)));
   expect(response.status).toBe(413);
@@ -598,7 +595,7 @@ test("guests cannot send oversized prompts for one request unit", async () => {
   expect(updateChat).not.toHaveBeenCalled();
 });
 
-test("guests cannot send several PDFs by URL for one request unit", async () => {
+test("guests cannot send several PDFs by URL in one request", async () => {
   state.guest = true;
   const pdf = (name: string) => ({
     type: "file" as const,
@@ -636,7 +633,7 @@ test("a guest PDF counts by the size downloaded before the check", async () => {
   expect(streamText).toHaveBeenCalledOnce();
 });
 
-test("guests cannot send a large inline PDF for one request unit", async () => {
+test("guests cannot send a large inline PDF in one request", async () => {
   state.guest = true;
   // About 300 KB, decoded.
   const url = `data:application/pdf;base64,${"A".repeat(400_000)}`;
@@ -706,7 +703,7 @@ test("guest output is capped and skips unbilled memory extraction", async () => 
 });
 
 async function stopChat() {
-  const { POST: stop } = await import("@/app/api/chat/stop/route");
+  const { POST: stop } = await import("@/server/http/chat/stop/route");
   const response = await stop(
     new Request("http://localhost/api/chat/stop", {
       method: "POST",

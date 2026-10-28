@@ -15,17 +15,12 @@ function looksLikeAbortLog(args: unknown[]) {
 }
 
 /**
- * Next.js App Router aborts leftover RSC work on navigation / prefetch
- * cancel. Bun then emits an extra unhandled AbortError. Swallow that noise
- * without patching AbortController (the patch itself re-entered abort()).
+ * Cancelled requests (client navigations, preloads, stopped streams) abort
+ * leftover server work, which can surface as an extra unhandled AbortError.
+ * Swallow that noise without patching AbortController (the patch itself
+ * re-entered abort()).
  */
 export function installAbortDiagnostics() {
-  if (process.env.NEXT_RUNTIME === "edge") {
-    return;
-  }
-  if (process.env.NEXT_PHASE === "phase-production-build") {
-    return;
-  }
   if (installed) {
     return;
   }

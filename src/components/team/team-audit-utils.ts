@@ -1,5 +1,3 @@
-"use client";
-
 import {
   AlertOctagon,
   AlertTriangle,
@@ -19,7 +17,7 @@ import {
   XCircle,
   Zap,
 } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { numberFormatter } from "./team-utils";
 import { useRoleLabel } from "./use-role-label";
 
@@ -95,8 +93,6 @@ export function useAuditActionSentence() {
   const planLabel = (planId: unknown) => {
     if (planId === "pro_team_monthly") return t("Pro monthly");
     if (planId === "pro_team_yearly") return t("Pro yearly");
-    if (planId === "max_team_monthly") return t("Max monthly");
-    if (planId === "max_team_yearly") return t("Max yearly");
     return typeof planId === "string" && planId ? planId : t("Unknown plan");
   };
 

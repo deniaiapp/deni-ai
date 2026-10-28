@@ -85,7 +85,7 @@ test.each([
     () => billing.createCheckoutSession({ planId: "pro_monthly" }),
   ],
   ["billing.createPortalSession", 10, () => billing.createPortalSession()],
-  ["billing.changePlan", 10, () => billing.changePlan({ planId: "max_monthly" })],
+  ["billing.changePlan", 10, () => billing.changePlan({ planId: "pro_monthly" })],
   ["billing.cancelSubscription", 10, () => billing.cancelSubscription()],
   ["billing.resumeSubscription", 10, () => billing.resumeSubscription()],
   ["billing.enableMaxMode", 10, () => billing.enableMaxMode()],
@@ -104,7 +104,7 @@ test.each([
   [
     "organization.changeTeamPlan",
     10,
-    () => organization.changeTeamPlan({ organizationId: "org", planId: "max_team_monthly" }),
+    () => organization.changeTeamPlan({ organizationId: "org", planId: "pro_team_yearly" }),
   ],
   [
     "organization.cancelTeamSubscription",

@@ -8,14 +8,14 @@ const GIB = 1024 * MIB;
 
 /**
  * Total bytes of stored attachments per user. Team plans count as their tier
- * (Pro Team as Pro, Max Team as Max) and lifetime Pro as Pro.
+ * (Pro Team as Pro).
  */
 export const STORAGE_LIMIT_BYTES: Record<StoragePlan, number> = {
   guest: 20 * MIB,
   free: 100 * MIB,
+  go: 200 * MIB,
   plus: 500 * MIB,
   pro: GIB,
-  max: 2 * GIB,
 };
 
 export function getStorageLimitBytes(plan: StoragePlan): number {

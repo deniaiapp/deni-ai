@@ -1,5 +1,3 @@
-"use client";
-
 import type { CSSProperties } from "react";
 
 import {
@@ -25,9 +23,8 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, usePathname, useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { Fragment, startTransition, useEffect, useState } from "react";
 import { toast } from "sonner";
 import {

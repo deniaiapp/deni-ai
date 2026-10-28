@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { useBillingReceiptCopy } from "@/components/billing/billing-utils";
 import { SubscriptionShredder } from "@/components/billing/subscription-shredder";
@@ -34,6 +32,10 @@ export function TeamBillingPage() {
     updateTeamMaxMode,
     updateTeamMaxModeDefaultPolicy,
     updateMemberMaxModePolicy,
+    buyTeamMaxModeCredits,
+    updateTeamMaxModeAutoTopUp,
+    handleBuyTeamMaxModeCredits,
+    handleSaveTeamMaxModeAutoTopUp,
     handleSubscribe,
     handleChangePlan,
     handleChangePlanDialogOpenChange,
@@ -125,6 +127,10 @@ export function TeamBillingPage() {
         onMemberPolicyChange={updateMemberPolicy}
         onMemberLimitChange={handleMemberLimitChange}
         onExportCsv={handleExportMaxModeCsv}
+        buyPending={buyTeamMaxModeCredits.isPending || buyTeamMaxModeCredits.isSuccess}
+        onBuy={handleBuyTeamMaxModeCredits}
+        autoTopUpPending={updateTeamMaxModeAutoTopUp.isPending}
+        onSaveAutoTopUp={handleSaveTeamMaxModeAutoTopUp}
       />
 
       <SubscriptionShredder

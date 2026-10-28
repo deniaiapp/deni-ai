@@ -1,5 +1,3 @@
-"use client";
-
 import type { AdditionalField as AdditionalFieldType } from "@better-auth-ui/core";
 import { Eye, EyeOff } from "lucide-react";
 import { Field, FieldError } from "@/components/ui/field";

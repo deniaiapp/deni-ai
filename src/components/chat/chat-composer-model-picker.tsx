@@ -1,7 +1,5 @@
-"use client";
-
 import type { LucideIcon } from "lucide-react";
-import Link from "next/link";
+import { Link } from "@/lib/navigation";
 import SiAnthropic from "@icons-pack/react-simple-icons/icons/SiAnthropic";
 import SiGooglegemini from "@icons-pack/react-simple-icons/icons/SiGooglegemini";
 import SiX from "@icons-pack/react-simple-icons/icons/SiX";
@@ -15,7 +13,7 @@ import {
   Sparkle,
   TriangleAlert,
 } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { useState } from "react";
 import Openai from "@/components/openai";
 import { useAvailableModels } from "@/hooks/use-available-models";

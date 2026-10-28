@@ -12,7 +12,7 @@ import { TWO_FACTOR_PATH } from "@/lib/auth-paths";
 
 export { TWO_FACTOR_PATH, TWO_FACTOR_VIEW_PATH } from "@/lib/auth-paths";
 
-const baseURL = process.env.NEXT_PUBLIC_BETTER_AUTH_URL;
+const baseURL = import.meta.env.NEXT_PUBLIC_BETTER_AUTH_URL;
 if (!baseURL) {
   throw new Error("NEXT_PUBLIC_BETTER_AUTH_URL is required");
 }

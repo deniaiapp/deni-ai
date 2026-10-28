@@ -1,8 +1,6 @@
-"use client";
-
 import { AlertCircleIcon, X } from "lucide-react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { usePathname, useRouter, useSearchParams } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 

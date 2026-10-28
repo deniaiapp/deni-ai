@@ -1,10 +1,6 @@
-"use client";
-
 import { LogOut, Settings, UserIcon, Users, Zap } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
@@ -29,7 +25,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/t
 
 type UsageCategoryItem = {
   category: "basic" | "premium";
-  unit: "requests" | "tokens";
+  unit: "units";
   limit: number | null;
   used: number;
   remaining: number | null;
@@ -150,18 +146,21 @@ export function AccountMenu() {
     (disableMaxMode.isPending ||
       (!enableMaxMode.isPending &&
         (maxModeQuery.data?.enabled ?? usageQuery.data?.maxModeEnabled ?? false)));
+  // Team members follow their owner's switch; only those who manage Max Mode can toggle it.
   const maxModeEligible =
-    !billingDisabled && (maxModeQuery.data?.eligible ?? usageQuery.data?.maxModeEligible ?? false);
+    !billingDisabled &&
+    (maxModeQuery.data?.canManage ?? true) &&
+    (maxModeQuery.data?.eligible ?? usageQuery.data?.maxModeEligible ?? false);
 
   const usageItem = usageQuery.data?.usage[0];
   const usageTier = usageQuery.data?.tier ?? "free";
   const usageTierLabel =
     usageTier === "free"
       ? t("Free")
-      : usageTier === "plus"
-        ? t("Plus")
-        : usageTier === "max"
-          ? t("Max")
+      : usageTier === "go"
+        ? t("Go")
+        : usageTier === "plus"
+          ? t("Plus")
           : t("Pro");
 
   return (
@@ -175,14 +174,12 @@ export function AccountMenu() {
         <div className="flex w-full items-center gap-2">
           <div className="flex size-8 items-center justify-center rounded-full bg-primary text-primary-foreground overflow-hidden">
             {session.data?.user?.image ? (
-              <Image
+              <img
                 src={session.data.user.image}
                 alt={session.data.user.name ?? t("User")}
                 className="size-full object-cover"
                 width={32}
                 height={32}
-                sizes="32px"
-                unoptimized
               />
             ) : (
               (session.data?.user?.name?.charAt(0).toUpperCase() ?? "U")
@@ -201,14 +198,12 @@ export function AccountMenu() {
         <div className="flex items-center gap-2 px-2 py-1.5">
           <div className="flex size-6 items-center justify-center rounded-full bg-primary text-primary-foreground overflow-hidden text-xs">
             {session.data?.user?.image ? (
-              <Image
+              <img
                 src={session.data.user.image}
                 alt={session.data.user.name ?? t("User")}
                 className="size-full object-cover"
                 width={24}
                 height={24}
-                sizes="24px"
-                unoptimized
               />
             ) : (
               (session.data?.user?.name?.charAt(0).toUpperCase() ?? "U")
@@ -235,7 +230,9 @@ export function AccountMenu() {
                 </span>
               </div>
               {usageQuery.isLoading ? (
-                <p className="text-xs text-muted-foreground">{t("Loading usage…")}</p>
+                <div className="flex justify-center py-1">
+                  <Spinner aria-label={t("Loading…")} className="text-muted-foreground" />
+                </div>
               ) : usageQuery.isError ? (
                 <p className="text-xs text-destructive">{t("Failed to load usage.")}</p>
               ) : (

@@ -5,7 +5,7 @@ import { env } from "@/env";
 import {
   consumeUsage,
   recordObservedUsage,
-  getSearchToolUsageAmount,
+  SEARCH_TOOL_USAGE_COST,
   settleUsage,
   UsageLimitError,
 } from "@/lib/usage";
@@ -33,7 +33,7 @@ type ExaSearchResponse = {
 type SearchCharge = { amount: number; reservationId: string };
 
 async function chargeSearchUsage(usage: ChatToolUsageContext): Promise<SearchCharge> {
-  const amount = getSearchToolUsageAmount(usage.isAnonymous);
+  const amount = SEARCH_TOOL_USAGE_COST;
   const reservationId = `search:${randomUUID()}`;
   await consumeUsage({
     userId: usage.userId,

@@ -12,7 +12,15 @@ vi.mock("@/env", () => ({
   },
 }));
 
-const fetchMock = vi.fn(async (_request: Request) => new Response(null, { status: 200 }));
+const fetchMock = vi.fn(
+  async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(null, { status: 200 }),
+);
+
+/** The request fetch was called with, whether it got a Request or a URL and init. */
+function sentRequest(index = 0): Request {
+  const [input, init] = fetchMock.mock.calls[index]!;
+  return new Request(input, init);
+}
 
 const {
   ATTACHMENT_EXPORT_URL_TTL_SECONDS,
@@ -59,7 +67,7 @@ test("keys derive from row ids", () => {
 test("files are stored as signed PUTs under their key, with their type and name", async () => {
   const file = new File(["xyz"], "写真 1.png", { type: "image/png" });
   expect(await uploadPrivateFile(file, "attachments/id-1")).toBe(true);
-  const [request] = fetchMock.mock.calls[0]!;
+  const request = sentRequest();
   expect(request.method).toBe("PUT");
   expect(request.url).toBe(`${BUCKET_URL}/attachments/id-1`);
   expect(request.headers.get("content-type")).toBe("image/png");
@@ -75,7 +83,7 @@ test("a file can be stored to download under its name rather than to show", asyn
   expect(await uploadPrivateFile(file, "exports/id-1", { contentDisposition: "attachment" })).toBe(
     true,
   );
-  const [request] = fetchMock.mock.calls[0]!;
+  const request = sentRequest();
   expect(request.headers.get("content-disposition")).toMatch(
     /^attachment; filename="deni-ai-export-2026-10-11.json"/,
   );
@@ -115,8 +123,8 @@ test("only URLs into the bucket are stored files", () => {
 });
 
 test("stored files are deleted best effort, reporting the keys that are gone", async () => {
-  fetchMock.mockImplementation(async (request: Request) => {
-    const key = new URL(request.url).pathname.split("/").at(-1);
+  fetchMock.mockImplementation(async (input, init) => {
+    const key = new URL(new Request(input, init).url).pathname.split("/").at(-1);
     if (key === "broken") return new Response(null, { status: 403 });
     if (key === "missing") return new Response(null, { status: 404 });
     return new Response(null, { status: 204 });
@@ -124,7 +132,9 @@ test("stored files are deleted best effort, reporting the keys that are gone", a
   const deleted = await deleteStoredFiles(["a", "broken", "missing", "a", ""]);
   expect(deleted.toSorted()).toEqual(["a", "missing"]);
   expect(fetchMock).toHaveBeenCalledTimes(3);
-  expect(fetchMock.mock.calls.every(([request]) => request.method === "DELETE")).toBe(true);
+  expect(fetchMock.mock.calls.every((_, index) => sentRequest(index).method === "DELETE")).toBe(
+    true,
+  );
   fetchMock.mockReset();
   fetchMock.mockImplementation(async () => new Response(null, { status: 200 }));
 });

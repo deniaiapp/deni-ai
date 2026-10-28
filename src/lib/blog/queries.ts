@@ -1,87 +1,63 @@
-import { cacheLife, cacheTag } from "next/cache";
 import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { blogPost } from "@/db/schema";
 
-export const BLOG_CACHE_TAG = "blog";
-
 export type ManagedBlogPost = typeof blogPost.$inferSelect;
 
-// `next build` may run without a reachable database (e.g. the CI image build).
-// Fall back there so prerender succeeds; at runtime errors still propagate, so a
-// transient DB failure is not cached as an empty result. Callers give a fallback
-// a short cacheLife: that keeps the placeholder out of the prerendered shell and
-// out of the cache, so the first request reads the real database.
-async function withBuildFallback<T>(query: () => Promise<T[]>) {
-  try {
-    return { rows: await query(), isBuildFallback: false };
-  } catch (error) {
-    if (process.env.NEXT_PHASE === "phase-production-build") {
-      return { rows: [] as T[], isBuildFallback: true };
-    }
-    throw error;
+/** Published posts change rarely; edits made through the blog admin clear the cache. */
+const BLOG_CACHE_TTL_MS = 60 * 60 * 1000;
+
+const blogCache = new Map<string, { expiresAt: number; value: Promise<unknown> }>();
+
+function cached<T>(key: string, load: () => Promise<T>): Promise<T> {
+  const now = Date.now();
+  const hit = blogCache.get(key);
+  if (hit && hit.expiresAt > now) {
+    return hit.value as Promise<T>;
   }
+  const value = load();
+  blogCache.set(key, { expiresAt: now + BLOG_CACHE_TTL_MS, value });
+  // A transient DB failure must not be cached.
+  value.catch(() => blogCache.delete(key));
+  return value;
 }
 
-export async function listPublishedManagedPosts() {
-  "use cache";
-  cacheTag(BLOG_CACHE_TAG);
+/** Drops cached blog reads in this server instance after an admin edit. */
+export function invalidateBlogCache() {
+  blogCache.clear();
+}
 
-  const { rows, isBuildFallback } = await withBuildFallback(() =>
+export function listPublishedManagedPosts() {
+  return cached("list", () =>
     db
       .select()
       .from(blogPost)
       .where(eq(blogPost.status, "published"))
       .orderBy(desc(blogPost.publishedAt), desc(blogPost.updatedAt)),
   );
-  if (isBuildFallback) {
-    cacheLife("seconds");
-  } else {
-    cacheLife("hours");
-  }
-
-  return rows;
 }
 
-export async function getFeaturedPublishedPost() {
-  "use cache";
-  cacheTag(BLOG_CACHE_TAG);
-
-  const { rows, isBuildFallback } = await withBuildFallback(() =>
-    db
+export function getFeaturedPublishedPost() {
+  return cached("featured", async () => {
+    const rows = await db
       .select()
       .from(blogPost)
       .where(and(eq(blogPost.status, "published"), eq(blogPost.featured, true)))
       .orderBy(desc(blogPost.publishedAt), desc(blogPost.updatedAt))
-      .limit(1),
-  );
-  if (isBuildFallback) {
-    cacheLife("seconds");
-  } else {
-    cacheLife("hours");
-  }
-
-  return rows[0] ?? null;
+      .limit(1);
+    return rows[0] ?? null;
+  });
 }
 
-export async function getPublishedManagedPost(slug: string) {
-  "use cache";
-  cacheTag(BLOG_CACHE_TAG, `${BLOG_CACHE_TAG}:${slug}`);
-
-  const { rows, isBuildFallback } = await withBuildFallback(() =>
-    db
+export function getPublishedManagedPost(slug: string) {
+  return cached(`post:${slug}`, async () => {
+    const rows = await db
       .select()
       .from(blogPost)
       .where(and(eq(blogPost.slug, slug), eq(blogPost.status, "published")))
-      .limit(1),
-  );
-  if (isBuildFallback) {
-    cacheLife("seconds");
-  } else {
-    cacheLife("hours");
-  }
-
-  return rows[0] ?? null;
+      .limit(1);
+    return rows[0] ?? null;
+  });
 }
 
 export function pickManagedPostCopy(post: ManagedBlogPost, locale: string) {

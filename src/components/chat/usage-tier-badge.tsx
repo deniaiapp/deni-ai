@@ -1,7 +1,5 @@
-"use client";
-
 import { Coins } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { getUsageTierMultiplier, type UsageTier } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 

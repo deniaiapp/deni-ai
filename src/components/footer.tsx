@@ -1,7 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import { useExtracted, useLocale } from "next-intl";
+import { Link } from "@/lib/navigation";
+import { useExtracted, useLocale } from "use-intl";
 import { localizedPath } from "@/lib/locale-path";
 import DeniAIIcon from "./deni-ai-icon";
 

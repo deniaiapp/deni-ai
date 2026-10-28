@@ -1,8 +1,6 @@
-"use client";
-
 import { MessageSquare, Plus, Search } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useEffect } from "react";
 import {
   CommandDialog,

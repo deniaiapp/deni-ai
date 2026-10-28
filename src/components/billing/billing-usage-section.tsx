@@ -1,7 +1,5 @@
-"use client";
-
 import { Zap } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { formatAppDate } from "@/lib/format-date";
 import { formatCompactUsageValue } from "@/lib/utils";
 import { Badge } from "../ui/badge";
@@ -13,7 +11,7 @@ import { CombinedUsageMeter, type UsagePoolView } from "./product-usage";
 
 export type UsageItem = {
   category: "basic" | "premium";
-  unit: "requests" | "tokens";
+  unit: "units";
   limit: number | null;
   used: number;
   remaining: number | null;
@@ -33,7 +31,7 @@ function UsageRow({
   const locale = useLocale();
   if (!item) return null;
 
-  const unitLabel = item.unit === "tokens" ? t("tokens") : t("requests");
+  const unitLabel = t("units");
   const hasLimit = item.limit !== null && item.limit > 0;
   const usedPercent = hasLimit ? Math.min((item.used / (item.limit ?? 1)) * 100, 100) : 0;
   const remainingPercent = Math.max(100 - usedPercent, 0);

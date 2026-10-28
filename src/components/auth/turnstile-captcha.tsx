@@ -1,11 +1,9 @@
-"use client";
-
 import type { CaptchaRenderProps } from "@better-auth-ui/react/plugins/captcha";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
-import { useLocale } from "next-intl";
+import { useLocale } from "use-intl";
 import { useTheme } from "next-themes";
 import { useEffect, useRef } from "react";
-import { clientEnv } from "@/env.client";
+import { clientEnv } from "@/public-env";
 
 /**
  * Cloudflare Turnstile widget wired for better-auth-ui `captchaPlugin`.

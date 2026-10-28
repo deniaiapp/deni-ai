@@ -6,8 +6,8 @@ import type { Context } from "../trpc";
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: {} }));
 // The request's locale is not read here: messages stay in their English source.
-vi.mock("next-intl/server", () => ({
-  getExtracted: async () => (message: string) => message,
+vi.mock("@/i18n/request-intl", () => ({
+  getRequestIntl: async () => ({ locale: "en", messages: {} }),
 }));
 
 const { migrationRouter, IMPORT_RATE_LIMIT } = await import("./migration");

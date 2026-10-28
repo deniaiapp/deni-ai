@@ -8,7 +8,7 @@ export * from "./billing";
 export * from "./chat";
 export * from "./device-auth";
 export * from "./memory";
-export * from "./max-mode-meter-event";
+export * from "./max-mode-credit";
 export * from "./model-comparison";
 export * from "./oauth-provider";
 export * from "./product-usage";

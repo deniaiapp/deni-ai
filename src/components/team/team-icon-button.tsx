@@ -1,8 +1,5 @@
-"use client";
-
 import { Pencil, Trash2, Upload, Users } from "lucide-react";
-import Image from "next/image";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { type ChangeEvent, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,15 +48,7 @@ export function TeamIconButton({
       />
       <div className="relative flex size-10 items-center justify-center overflow-hidden rounded-xl bg-primary/10">
         {logo ? (
-          <Image
-            src={logo}
-            alt=""
-            className="size-full object-cover"
-            width={40}
-            height={40}
-            sizes="40px"
-            unoptimized
-          />
+          <img src={logo} alt="" className="size-full object-cover" width={40} height={40} />
         ) : (
           <Users className="size-5 text-primary" />
         )}

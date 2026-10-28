@@ -1,5 +1,3 @@
-"use client";
-
 import { useAuth, useSession } from "@better-auth-ui/react";
 import type { ComponentProps } from "react";
 

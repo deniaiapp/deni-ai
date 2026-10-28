@@ -271,14 +271,17 @@ export function checkSignupEmail(
 ): SignupEmailPolicyResult {
   const domain = extractEmailDomain(email);
   if (!domain) return { ok: false, reason: "invalid" };
-
-  // Gmail aliases all deliver to one inbox; require Google-verified identity.
-  if (isGoogleMailDomain(domain)) {
-    return oauthProvider === "google" ? { ok: true } : { ok: false, reason: "use_google_oauth" };
-  }
-
   const local = extractEmailLocalPart(email);
   if (!local) return { ok: false, reason: "invalid" };
+
+  // Gmail ignores dots and +tags, so one inbox has endless addresses. Google
+  // returns the account's own address; GitHub returns the verified address the
+  // user picked there, so alias-style ones are refused like email sign-ups.
+  if (isGoogleMailDomain(domain)) {
+    if (oauthProvider === "google") return { ok: true };
+    if (oauthProvider !== "github") return { ok: false, reason: "use_google_oauth" };
+    return isAliasLikeLocalPart(local) ? { ok: false, reason: "alias_not_allowed" } : { ok: true };
+  }
 
   // Email-registration alias rules do not change provider-verified identities.
   if (!oauthProvider && isAliasLikeLocalPart(local)) {
@@ -293,14 +296,14 @@ export function checkSignupEmail(
 export function signupEmailDenialMessage(reason: SignupEmailDenyReason): string {
   switch (reason) {
     case "use_google_oauth":
-      return "Gmail addresses must sign in with Google. Please use the Continue with Google button.";
+      return "Gmail addresses must sign in with Google or GitHub. Please use the Continue with Google or Continue with GitHub button.";
     case "alias_not_allowed":
       return "This email looks like an alias (plus tags or unusual dots). Please use your primary email address without +tags.";
     case "invalid":
       return "Please enter a valid email address.";
     case "not_allowed":
     default:
-      return "Please use a major email provider (Outlook, iCloud, Proton, etc.) or a restricted educational address (e.g. .edu, .ac.jp, .ac.uk, .edu.au). Gmail requires Continue with Google. To request adding another email domain, contact contact@deniai.app.";
+      return "Please use a major email provider (Outlook, iCloud, Proton, etc.) or a restricted educational address (e.g. .edu, .ac.jp, .ac.uk, .edu.au). Gmail requires Continue with Google or GitHub. To request adding another email domain, contact contact@deniai.app.";
   }
 }
 

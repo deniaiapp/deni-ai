@@ -1,5 +1,3 @@
-"use client";
-
 import { useReducedMotion } from "motion/react";
 import { useEffect, useLayoutEffect, useRef, useState, type TransitionEvent } from "react";
 

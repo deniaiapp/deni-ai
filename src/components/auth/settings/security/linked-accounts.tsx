@@ -1,5 +1,3 @@
-"use client";
-
 import { getProviderId } from "@better-auth-ui/core";
 import { useAuth, useListAccounts } from "@better-auth-ui/react";
 import { Card, CardContent } from "@/components/ui/card";

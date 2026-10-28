@@ -1,8 +1,6 @@
-"use client";
-
 import type { LucideIcon } from "lucide-react";
 import { BrainIcon, Globe, Lightbulb, Mic, Sparkle, Zap, XIcon } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import {
   PromptInputSelect,
   PromptInputSelectContent,

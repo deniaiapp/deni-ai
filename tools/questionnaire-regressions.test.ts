@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { buildChatSystemPrompt } from "../src/app/api/chat/_lib/prompt";
+import { buildChatSystemPrompt } from "../src/server/http/chat/_lib/prompt";
 import {
   createQuestionnaireTool,
   questionnaireToolInputSchema,

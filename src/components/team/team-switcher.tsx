@@ -1,9 +1,6 @@
-"use client";
-
 import { Check, ChevronsUpDown, Plus, Users } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
-import { useExtracted } from "next-intl";
+import { Link } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
@@ -71,14 +68,12 @@ export function TeamSwitcher({
           <span className="flex min-w-0 items-center gap-2">
             <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-md bg-primary/10 text-xs font-semibold uppercase text-primary">
               {activeOrg?.logo ? (
-                <Image
+                <img
                   src={activeOrg.logo}
                   alt=""
                   className="size-full object-cover"
                   width={24}
                   height={24}
-                  sizes="24px"
-                  unoptimized
                 />
               ) : activeOrg?.name ? (
                 activeOrg.name.charAt(0)
@@ -106,14 +101,12 @@ export function TeamSwitcher({
               >
                 <span className="flex size-5 shrink-0 items-center justify-center overflow-hidden rounded bg-muted text-[10px] font-semibold uppercase">
                   {org.logo ? (
-                    <Image
+                    <img
                       src={org.logo}
                       alt=""
                       className="size-full object-cover"
                       width={20}
                       height={20}
-                      sizes="20px"
-                      unoptimized
                     />
                   ) : (
                     org.name.charAt(0)

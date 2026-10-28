@@ -1,9 +1,7 @@
-"use client";
-
 import type { UIDataTypes, UIMessagePart, UITools } from "ai";
 import { BrainIcon, Globe, ImageOffIcon, VideoOffIcon } from "lucide-react";
-import Link from "next/link";
-import { useExtracted } from "next-intl";
+import { Link } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import {
   ChainOfThought,
   ChainOfThoughtContent,

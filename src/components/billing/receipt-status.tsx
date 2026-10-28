@@ -1,7 +1,5 @@
-"use client";
-
 import { Check, LoaderCircle } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import type { ReceiptPhase } from "./use-receipt-playback";
 
 export function ReceiptStatus({ phase }: { phase: ReceiptPhase }) {

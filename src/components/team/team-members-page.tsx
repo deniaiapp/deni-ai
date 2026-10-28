@@ -1,5 +1,3 @@
-"use client";
-
 import { TeamInviteDialog } from "./team-invite-dialog";
 import { TeamMembersList } from "./team-members-list";
 import { TeamPendingInvitations } from "./team-pending-invitations";

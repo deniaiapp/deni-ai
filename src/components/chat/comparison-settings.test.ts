@@ -5,7 +5,7 @@ import { ComparisonSettingsControls } from "./comparison-settings";
 import { comparisonSettingsSchema } from "@/lib/comparison-settings";
 import { models } from "@/lib/constants";
 
-vi.mock("next-intl", () => ({ useExtracted: () => (message: string) => message }));
+vi.mock("use-intl", () => import("@/test/intl-mock"));
 
 const model = {
   ...models[0],

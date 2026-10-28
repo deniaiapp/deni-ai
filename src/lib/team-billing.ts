@@ -132,15 +132,6 @@ export async function cancelOrgMembersPersonalSubscriptions(organizationId: stri
   );
 }
 
-async function findItemSubscriptionId(itemId: string) {
-  try {
-    return (await stripe.subscriptionItems.retrieve(itemId)).subscription;
-  } catch (error) {
-    if ((error as { code?: unknown } | null)?.code === "resource_missing") return null;
-    throw error;
-  }
-}
-
 /**
  * Cancel an organization's team Stripe subscription immediately (with proration) and
  * remove its billing row. `billing.organizationId` has no DB-level foreign key/cascade,
@@ -156,19 +147,12 @@ export async function cancelTeamSubscriptionForDeletion(organizationId: string) 
   const subscriptionIds = new Set(
     records.flatMap((record) => (record.stripeSubscriptionId ? [record.stripeSubscriptionId] : [])),
   );
-  // Yearly plans keep the Max Mode meters on a separate monthly subscription.
-  for (const record of records) {
-    for (const itemId of [record.stripeMeteredBasicItemId, record.stripeMeteredPremiumItemId]) {
-      const subscriptionId = itemId ? await findItemSubscriptionId(itemId) : null;
-      if (subscriptionId) subscriptionIds.add(subscriptionId);
-    }
-  }
   for (const subscriptionId of subscriptionIds) {
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
     // unpaid, paused and incomplete subscriptions can still resume or complete
     // and charge a team that no longer exists; only ended ones are safe to drop.
     if (!TERMINAL_SUB_STATUSES.has(subscription.status)) {
-      // Invoice the Max Mode overage accrued this period instead of dropping it.
+      // Invoice the prorated period instead of dropping it.
       await stripe.subscriptions.cancel(subscriptionId, { prorate: true, invoice_now: true });
     }
   }

@@ -1,15 +1,13 @@
-"use client";
-
 import type { ChatStatus } from "ai";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc/react";
 
 /**
  * Auto-memory extraction runs in an after() task once the chat SSE closes
- * (see src/app/api/chat/route.ts), so saved rows land a few seconds later and
+ * (see src/server/http/chat/route.ts), so saved rows land a few seconds later and
  * cannot ride along on the response. Poll a bounded number of times instead,
  * and diff by item id so a client/DB clock skew can never hide a save.
  */

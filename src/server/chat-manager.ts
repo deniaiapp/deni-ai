@@ -1,9 +1,8 @@
-import type { headers } from "next/headers";
 import { db } from "@/db/drizzle";
 import { chats } from "@/db/schema";
 import { auth } from "@/lib/auth";
 
-type HeadersType = Awaited<ReturnType<typeof headers>>;
+type HeadersType = Headers;
 
 /**
  * Get the current user ID from request headers

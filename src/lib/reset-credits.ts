@@ -2,7 +2,7 @@ import { and, eq, gt, inArray, isNotNull, isNull, like, or, sql } from "drizzle-
 import { db } from "@/db/drizzle";
 import { billing, member, resetCreditBalance, usageQuota, user } from "@/db/schema";
 
-export const RESET_CREDIT_PLAN_TIERS = ["free", "plus", "pro", "max"] as const;
+export const RESET_CREDIT_PLAN_TIERS = ["free", "go", "plus", "pro"] as const;
 export type ResetCreditPlanTier = (typeof RESET_CREDIT_PLAN_TIERS)[number];
 
 export type ResetCreditGrantTarget =
@@ -16,9 +16,9 @@ const RESET_GRANT_BATCH_SIZE = 500;
 function getPaidPlanCondition(planTier?: Exclude<ResetCreditPlanTier, "free">) {
   if (!planTier) {
     return or(
+      like(billing.planId, "go_%"),
       like(billing.planId, "plus_%"),
       like(billing.planId, "pro_%"),
-      like(billing.planId, "max_%"),
     );
   }
 
@@ -65,7 +65,7 @@ async function getPaidResetTargetUserIds(
           getPermanentUserCondition(),
           isNotNull(billing.organizationId),
           activeBillingCondition,
-          or(like(billing.planId, "pro_team%"), like(billing.planId, "max_team%")),
+          like(billing.planId, "pro_team%"),
         ),
       ),
   ]);

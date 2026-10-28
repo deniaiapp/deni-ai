@@ -1,8 +1,6 @@
-"use client";
-
 import Bowser from "bowser";
 import { History, Monitor, Smartphone } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { formatAppDate } from "@/lib/format-date";

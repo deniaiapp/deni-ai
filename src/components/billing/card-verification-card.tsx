@@ -1,10 +1,8 @@
-"use client";
-
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import type { Appearance } from "@stripe/stripe-js";
 import { CreditCard, ShieldCheck } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";

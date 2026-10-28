@@ -1,8 +1,6 @@
-"use client";
-
 import { Home } from "lucide-react";
-import Link from "next/link";
-import { useExtracted } from "next-intl";
+import { Link } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import type { ReactNode } from "react";
 import DeniAIIcon from "@/components/deni-ai-icon";
 import { cn } from "@/lib/utils";

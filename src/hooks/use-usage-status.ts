@@ -1,4 +1,4 @@
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { toast } from "sonner";
 import type { ModelOption } from "@/components/chat/chat-composer";
@@ -26,7 +26,6 @@ export function useUsageStatus(params: {
   const categoryUsage = usageQuery.data?.usage[0];
   const remainingUsage = categoryUsage?.remaining;
   const usageLimit = categoryUsage?.limit;
-  const usageUnit = categoryUsage?.unit ?? "requests";
   const usageTier = usageQuery.data?.tier ?? "free";
   const isSignupLimited = usageQuery.data?.signupLimited ?? false;
 
@@ -57,14 +56,18 @@ export function useUsageStatus(params: {
   const usageTierLabel =
     usageTier === "free"
       ? t("Free")
-      : usageTier === "plus"
-        ? t("Plus")
-        : usageTier === "max"
-          ? t("Max")
+      : usageTier === "go"
+        ? t("Go")
+        : usageTier === "plus"
+          ? t("Plus")
           : t("Pro");
-  const usageUnitLabel = usageUnit === "tokens" ? t("tokens") : t("requests");
   const maxModeEligible = features.billing && (usageQuery.data?.maxModeEligible ?? false);
-  const canEnableMaxMode = features.billing && maxModeEligible && !maxModeEnabled && isUsageBlocked;
+  const hasMaxModeCredits = (usageQuery.data?.maxModeCredits ?? 0) > 0;
+  // Max Mode spends prepaid credits: with none left, the way on is buying some.
+  const canEnableMaxMode =
+    features.billing && maxModeEligible && !maxModeEnabled && isUsageBlocked && hasMaxModeCredits;
+  const needsMaxModeCredits =
+    features.billing && maxModeEligible && isUsageBlocked && !hasMaxModeCredits;
   const isSubmitBlocked = !selectedModel || (isUsageBlocked && !maxModeEnabled);
 
   const utils = trpc.useUtils();
@@ -88,12 +91,11 @@ export function useUsageStatus(params: {
     isUsageLow,
     isUsageBlocked,
     canEnableMaxMode,
+    needsMaxModeCredits,
     isSubmitBlocked,
     usageTierLabel,
     remainingUsage,
     remainingPercent,
-    usageUnit,
-    usageUnitLabel,
     enableMaxMode,
   };
 }

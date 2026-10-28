@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { formatStorageBytes } from "@/lib/attachment-quota";
 import { trpc } from "@/lib/trpc/react";
 import { Progress } from "../ui/progress";

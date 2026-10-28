@@ -1,5 +1,3 @@
-"use client";
-
 import type { UIMessage } from "ai";
 import {
   ArrowUpIcon,
@@ -12,7 +10,7 @@ import {
   SquareIcon,
   Volume2Icon,
 } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { useSpeechSynthesis } from "@/hooks/use-speech-synthesis";
 import { memo, useState } from "react";
 import {

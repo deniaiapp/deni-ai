@@ -1,5 +1,3 @@
-"use client";
-
 import { getProviderName, type AuthSocialProvider } from "@better-auth-ui/core";
 import {
   renderProviderIcon,
@@ -10,7 +8,7 @@ import {
 } from "@better-auth-ui/react";
 import type { Account } from "better-auth";
 import { Link2, Link2Off, Plug } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";

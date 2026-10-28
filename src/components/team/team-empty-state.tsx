@@ -1,7 +1,5 @@
-"use client";
-
 import { Plus, Users } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import type { ReactNode } from "react";
 import { SettingsPageShell } from "@/components/settings-page-shell";
 import { Button } from "@/components/ui/button";

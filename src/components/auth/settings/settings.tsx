@@ -1,5 +1,3 @@
-"use client";
-
 import type { SettingsView } from "@better-auth-ui/core";
 import { useAuth, useAuthenticate } from "@better-auth-ui/react";
 import { Shield, User2 } from "lucide-react";

@@ -7,7 +7,16 @@ const state = vi.hoisted(() => ({
   team: false,
   ledger: [] as Record<string, unknown>[],
 }));
-vi.mock("./max-mode", () => ({ isMaxModeEligible: () => true }));
+vi.mock("./max-mode", () => ({
+  isMaxModeEligible: () => true,
+  MAX_MODE_USABLE_STATUSES: new Set(["active"]),
+}));
+vi.mock("./max-mode-credits", () => ({
+  creditOwnerFor: () => null,
+  getMaxModeCreditUnits: async () => 0,
+  spendMaxModeCredits: async () => 0,
+  maybeAutoTopUpMaxModeCredits: async () => false,
+}));
 vi.mock("@/db/drizzle", () => ({
   db: {
     select: () => ({
@@ -29,7 +38,7 @@ vi.mock("@/db/drizzle", () => ({
                       {
                         id: "team-row",
                         organizationId: "team",
-                        planId: "max_team_monthly",
+                        planId: "pro_team_monthly",
                         status: "active",
                         currentPeriodEnd: new Date("2026-07-01"),
                         maxModeEnabled: true,
@@ -38,7 +47,7 @@ vi.mock("@/db/drizzle", () => ({
                   : []
                 : [
                     {
-                      planId: "pro_monthly",
+                      planId: state.team ? "plus_monthly" : "pro_monthly",
                       status: "active",
                       currentPeriodEnd: new Date("2026-07-01"),
                       maxModeEnabled: true,
@@ -49,7 +58,7 @@ vi.mock("@/db/drizzle", () => ({
               rows = ["basic", "premium"].map((category) => ({
                 category,
                 used: 123,
-                unit: "tokens",
+                unit: "units",
                 periodStart: new Date("2026-06-01"),
                 periodEnd: new Date("2026-07-01"),
               }));
@@ -72,10 +81,11 @@ test.each([false, true])(
     const summary = await getUsageSummary({ userId: "user", now: new Date("2026-06-10") });
     // One entitlement lookup reads personal billing and joined team billing once each.
     expect(state.billingReads).toBe(2);
-    expect(summary.tier).toBe(team ? "max" : "pro");
-    // One pool (Pro $200 / Max $300 = 400M / 600M units), not split by model class.
+    // A Pro team outranks the member's personal Plus.
+    expect(summary.tier).toBe("pro");
+    // One pool (Pro $200 = 400M units), not split by model class.
     // Rows written before the change (premium) still count; with no ledger, all is chat.
-    const pool = team ? 600_000_000 : 400_000_000;
+    const pool = 400_000_000;
     expect(summary.pool).toMatchObject({ limit: pool, used: { chat: 246, flixa: 0, run: 0 } });
     expect(
       summary.usage.map(({ category, limit, used, remaining }) => ({
@@ -91,8 +101,8 @@ test.each([false, true])(
 test("the pool is split by product from this month's ledger", async () => {
   state.team = false;
   state.ledger = [
-    { product: "chat", unit: "tokens", used: 100 },
-    { product: "flixa", unit: "tokens", used: 300 },
+    { product: "chat", unit: "units", used: 100 },
+    { product: "flixa", unit: "units", used: 300 },
     // $1.50 of Deni Run = 3M units.
     { product: "run", unit: "usd_micros", used: 1_500_000 },
   ];

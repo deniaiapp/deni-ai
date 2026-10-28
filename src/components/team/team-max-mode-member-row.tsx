@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { formatTokenLimit, numberFormatter } from "./team-utils";

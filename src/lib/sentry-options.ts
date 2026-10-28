@@ -1,5 +1,6 @@
-import { consoleLoggingIntegration, type ErrorEvent, type init, type Log } from "@sentry/nextjs";
+import type { ErrorEvent, init, Log } from "@sentry/tanstackstart-react";
 
+type SentrySdk = typeof import("@/lib/sentry-sdk");
 type SentryOptions = NonNullable<Parameters<typeof init>[0]>;
 type BeforeSendSpan = NonNullable<SentryOptions["beforeSendSpan"]>;
 
@@ -35,7 +36,7 @@ const SENSITIVE_ATTRIBUTE_PREFIXES = [
 ];
 
 /** Bare `app:///<page path>` frames mean the script is inline or injected, not an app chunk. */
-const INJECTED_FRAME_FILENAME = /^app:\/\/\/(?!_next\/)/;
+const INJECTED_FRAME_FILENAME = /^app:\/\/\/(?!assets\/)/;
 
 function hasInjectedFrame(event: ErrorEvent): boolean {
   return Boolean(
@@ -105,9 +106,13 @@ function scrubLog(log: Log): Log {
  * (`Sentry.logger` plus console warn/error), and sampled traces. No session
  * replay and no default PII (Sentry default). Sentry stays disabled until
  * NEXT_PUBLIC_SENTRY_DSN is set and NODE_ENV is production.
+ *
+ * Integrations come from `sentryIntegrations()` once the SDK is loaded; this
+ * module only imports Sentry types so callers can skip loading the SDK when
+ * Sentry is disabled.
  */
 export function getSentryOptions(): SentryOptions {
-  const dsn = process.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
+  const dsn = import.meta.env.NEXT_PUBLIC_SENTRY_DSN?.trim();
 
   return {
     dsn: dsn || undefined,
@@ -155,6 +160,24 @@ export function getSentryOptions(): SentryOptions {
     beforeSend: scrubEvent,
     beforeSendSpan: scrubSpan,
     beforeSendLog: scrubLog,
-    integrations: [consoleLoggingIntegration({ levels: ["warn", "error"] })],
   };
+}
+
+/** Integrations shared by server and browser. */
+export function sentryIntegrations(Sentry: SentrySdk) {
+  return [Sentry.consoleLoggingIntegration({ levels: ["warn", "error"] })];
+}
+
+/**
+ * Loads the SDK only when Sentry is enabled, so development servers and builds
+ * without a DSN never pay for it.
+ */
+export async function loadSentry(): Promise<SentrySdk | null> {
+  if (!getSentryOptions().enabled) return null;
+  return import("@/lib/sentry-sdk");
+}
+
+/** Reports an error when Sentry is enabled; a no-op otherwise. */
+export function reportError(error: unknown) {
+  void loadSentry().then((Sentry) => Sentry?.captureException(error));
 }

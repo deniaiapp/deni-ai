@@ -1,16 +1,13 @@
-"use client";
-
 import { CheckoutElementsProvider, useCheckout } from "@stripe/react-stripe-js/checkout";
 import type { Appearance, Stripe } from "@stripe/stripe-js";
 import { ArrowLeft } from "lucide-react";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { startTransition, useEffect, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import type { BillingPlanId, IndividualPlanId, TeamPlanId } from "@/lib/billing";
-import { findPlanById, getPlanTier, isMaxTeamPlan } from "@/lib/billing";
+import { findPlanById, getPlanTier } from "@/lib/billing";
 import { stripeJsPromise } from "@/lib/stripe-js";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { makeTRPCClient } from "@/lib/trpc/client";
@@ -99,10 +96,10 @@ function useTierLabelValue() {
   return (planId: string) => {
     const tier = getPlanTier(planId);
     if (tier === "team") {
-      return isMaxTeamPlan(planId) ? t("Max for Teams") : t("Pro for Teams");
+      return t("Pro for Teams");
     }
-    if (tier === "max") {
-      return t("Max");
+    if (tier === "go") {
+      return t("Go");
     }
 
     return tier === "pro" ? t("Pro") : t("Plus");
@@ -141,15 +138,9 @@ function usePlanLabel() {
       return t("Checkout");
     }
 
-    const interval = planId.endsWith("_yearly")
-      ? t("Yearly")
-      : planId.endsWith("_lifetime")
-        ? t("Lifetime")
-        : t("Monthly");
-    if (planId.startsWith("pro_team") || planId.startsWith("max_team")) {
-      return isMaxTeamPlan(planId)
-        ? t("Max for Teams {name}", { name: interval })
-        : t("Pro for Teams {name}", { name: interval });
+    const interval = planId.endsWith("_yearly") ? t("Yearly") : t("Monthly");
+    if (planId.startsWith("pro_team")) {
+      return t("Pro for Teams {name}", { name: interval });
     }
 
     return t("{tier} {name}", {
@@ -168,8 +159,8 @@ function useTierLabel() {
       return t("Checkout");
     }
 
-    if (planId.startsWith("pro_team") || planId.startsWith("max_team")) {
-      return isMaxTeamPlan(planId) ? t("Max for Teams") : t("Pro for Teams");
+    if (planId.startsWith("pro_team")) {
+      return t("Pro for Teams");
     }
 
     return getTierLabel(planId);
@@ -179,10 +170,6 @@ function useTierLabel() {
 function getPlanIntervalValue(planId: BillingPlanId | null | undefined) {
   if (!planId) {
     return null;
-  }
-
-  if (planId.endsWith("_lifetime")) {
-    return "lifetime";
   }
 
   return planId.endsWith("_yearly") ? "yearly" : "monthly";
@@ -195,9 +182,6 @@ function usePlanDescription() {
     const interval = getPlanIntervalValue(planId as BillingPlanId | null | undefined);
     if (interval === "yearly") {
       return t("Annual subscription");
-    }
-    if (interval === "lifetime") {
-      return t("Lifetime access");
     }
     return t("Monthly subscription");
   };
@@ -360,8 +344,8 @@ function CheckoutForm({
   return (
     <CheckoutReceiptForm
       checkout={activeCheckout}
-      confirmHint={activeCheckout.recurring ? t("Cancel anytime") : t("Pay once. Keep access.")}
-      confirmLabel={activeCheckout.recurring ? t("Start subscription") : t("Complete payment")}
+      confirmHint={t("Cancel anytime")}
+      confirmLabel={t("Start subscription")}
       homeHref={backHref}
       homeLabel={receiptHomeLabel}
       isSubmitting={isSubmitting}

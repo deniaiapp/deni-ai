@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { PlanHighlights } from "@/components/billing/plan-highlights";
 import { SubscriptionCancelDialog } from "@/components/billing/subscription-shredder";
@@ -8,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
-import { type TeamPlanId, isMaxTeamPlan, isTeamPlanId } from "@/lib/billing";
+import { type TeamPlanId, isTeamPlanId } from "@/lib/billing";
 import { useBillingPlanCopy } from "@/lib/billing-plan-copy";
 import { formatCurrency, monthDayFormatter, monthDayYearFormatter } from "./team-utils";
 
@@ -26,12 +24,7 @@ type BillingStatus = {
   cancelAt?: number | null;
 };
 
-const TEAM_PLAN_ORDER: TeamPlanId[] = [
-  "pro_team_monthly",
-  "pro_team_yearly",
-  "max_team_monthly",
-  "max_team_yearly",
-];
+const TEAM_PLAN_ORDER: TeamPlanId[] = ["pro_team_monthly", "pro_team_yearly"];
 
 function TeamPlanOfferCard({
   plan,
@@ -59,9 +52,8 @@ function TeamPlanOfferCard({
     return null;
   }
 
-  const isMax = isMaxTeamPlan(planId);
   const isYearly = planId.endsWith("_yearly");
-  const title = isMax ? t("Max for Teams") : t("Pro for Teams");
+  const title = t("Pro for Teams");
   const intervalLabel = isYearly ? t("year") : t("month");
   const isSelecting =
     (checkoutPending && checkoutPlanId === planId) || (changePending && changePlanId === planId);
@@ -149,7 +141,7 @@ export function TeamBillingCard({
     );
   const isCanceled = Boolean(billingStatus?.cancelAt) || billingStatus?.status === "canceled";
   const currentPlanId = billingStatus?.planId ?? null;
-  const currentTitle = isMaxTeamPlan(currentPlanId) ? t("Max for Teams") : t("Pro for Teams");
+  const currentTitle = t("Pro for Teams");
   const orderedPlans = TEAM_PLAN_ORDER.map((id) => plans.find((plan) => plan.id === id)).filter(
     (plan): plan is TeamPlan => Boolean(plan),
   );
@@ -161,7 +153,7 @@ export function TeamBillingCard({
       <CardHeader>
         <CardTitle className="text-base">{t("Team Billing")}</CardTitle>
         <CardDescription>
-          {t("Team plans give every member Pro or Max access with per-seat pricing.")}
+          {t("Team plans give every member Pro access with per-seat pricing.")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

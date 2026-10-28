@@ -5,8 +5,11 @@ const mocks = vi.hoisted(() => ({
   startModelHealthScheduler: vi.fn(),
   startBackgroundJobScheduler: vi.fn(),
 }));
-vi.mock("@sentry/nextjs", () => ({ init: vi.fn(), captureRequestError: vi.fn() }));
-vi.mock("@/lib/sentry-options", () => ({ getSentryOptions: () => ({}) }));
+vi.mock("@/lib/sentry-options", () => ({
+  getSentryOptions: () => ({}),
+  loadSentry: async () => null,
+  sentryIntegrations: () => [],
+}));
 vi.mock("@/lib/abort-diagnostics", () => ({ installAbortDiagnostics: vi.fn() }));
 vi.mock("@/lib/process-warnings", () => ({ installProcessWarningFilter: vi.fn() }));
 vi.mock("@/lib/model-health-scheduler", () => ({
@@ -20,9 +23,8 @@ beforeEach(() => {
   mocks.startModelHealthScheduler.mockReset();
   mocks.startBackgroundJobScheduler.mockReset();
   vi.stubEnv("NODE_ENV", "production");
-  vi.stubEnv("NEXT_RUNTIME", "nodejs");
-  vi.stubEnv("NEXT_PHASE", undefined);
   vi.stubEnv("VERCEL", undefined);
+  vi.stubEnv("DISABLE_BACKGROUND_JOBS", undefined);
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -47,3 +49,13 @@ test("development servers start no schedulers", async () => {
   expect(mocks.startModelHealthScheduler).not.toHaveBeenCalled();
   expect(mocks.startBackgroundJobScheduler).not.toHaveBeenCalled();
 });
+
+test.each(["1", "true", "TRUE"])(
+  "DISABLE_BACKGROUND_JOBS=%s keeps a production server (e.g. canary) from starting any scheduler",
+  async (value) => {
+    vi.stubEnv("DISABLE_BACKGROUND_JOBS", value);
+    await register();
+    expect(mocks.startModelHealthScheduler).not.toHaveBeenCalled();
+    expect(mocks.startBackgroundJobScheduler).not.toHaveBeenCalled();
+  },
+);

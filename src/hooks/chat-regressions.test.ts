@@ -73,7 +73,10 @@ vi.mock("react", async (importOriginal) => ({
     return snapshot();
   },
 }));
-vi.mock("next/navigation", () => ({ useSearchParams: () => harness.query }));
+vi.mock("@/lib/navigation", () => ({
+  useRouter: () => ({ replace: vi.fn() }),
+  useSearchParams: () => harness.query,
+}));
 vi.mock("@/lib/trpc/react", () => ({
   trpc: { useUtils: () => harness.utils },
 }));

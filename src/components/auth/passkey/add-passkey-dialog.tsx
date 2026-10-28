@@ -1,5 +1,3 @@
-"use client";
-
 import { addPasskeyOptions, type PasskeyAuthClient } from "@better-auth-ui/core/plugins/passkey";
 import { useAuth, useAuthPlugin, useSession } from "@better-auth-ui/react";
 import { useMutation } from "@tanstack/react-query";

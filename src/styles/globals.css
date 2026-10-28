@@ -1,0 +1,490 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
+
+@source "../../node_modules/streamdown/dist/*.js";
+/* The client build writes .output before the SSR build compiles this file
+   again; scanning it there adds classes and changes the CSS hash, so SSR HTML
+   would link a stylesheet the client build never emitted. Tailwind skips
+   gitignored paths, but builds without .gitignore (Docker) must not see them. */
+@source not "../../.output";
+@source not "../../.nitro";
+@source not "../../.tanstack";
+@source not "../../dist";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --font-inter: "Inter Variable";
+  --font-jetbrains-mono: "JetBrains Mono Variable";
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --radius: 0.625rem;
+  --sidebar: oklch(0.985 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.922 0 0);
+  --sidebar-ring: oklch(0.708 0 0);
+}
+
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.205 0 0);
+  --popover-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --secondary: oklch(0.269 0 0);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.269 0 0);
+  --muted-foreground: oklch(0.708 0 0);
+  --accent: oklch(0.269 0 0);
+  --accent-foreground: oklch(0.985 0 0);
+  --destructive: oklch(0.704 0.191 22.216);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  --ring: oklch(0.556 0 0);
+  --chart-1: oklch(0.87 0 0);
+  --chart-2: oklch(0.556 0 0);
+  --chart-3: oklch(0.439 0 0);
+  --chart-4: oklch(0.371 0 0);
+  --chart-5: oklch(0.269 0 0);
+  --sidebar: oklch(0.205 0 0);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.488 0.243 264.376);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.269 0 0);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-ring: oklch(0.556 0 0);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --font-sans: var(--app-font-sans);
+  --font-mono: var(--app-font-mono);
+  --font-serif: var(--app-font-serif);
+  --font-display: var(--app-font-display);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+
+  --shadow-2xs: var(--shadow-2xs);
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow: var(--shadow);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
+  --font-heading: var(--font-sans);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    scrollbar-gutter: stable;
+    @apply font-sans;
+  }
+
+  * {
+    scrollbar-width: thin;
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    --app-font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    --app-font-serif: ui-serif, Georgia, serif;
+    --app-font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+    --app-font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.02em;
+  }
+
+  /* SidebarResizeHandle drag: follow the pointer without the width transition. */
+  html[data-sidebar-resizing] {
+    user-select: none;
+
+    &,
+    & * {
+      cursor: col-resize !important;
+    }
+
+    [data-slot="sidebar-gap"],
+    [data-slot="sidebar-container"] {
+      transition: none;
+    }
+  }
+
+  body.mono,
+  body .mono {
+    letter-spacing: normal;
+  }
+
+  h1 {
+    @apply font-sans font-semibold tracking-tight leading-[1.1];
+  }
+
+  h2 {
+    @apply font-sans font-semibold tracking-tight leading-[1.15];
+  }
+
+  h3,
+  h4,
+  h5,
+  h6 {
+    @apply font-sans font-medium tracking-tight leading-[1.2];
+  }
+
+  body:not(.mono) p,
+  body:not(.mono) div {
+    @apply font-sans font-medium tracking-tight;
+  }
+
+  button {
+    @apply cursor-pointer;
+  }
+
+  ::selection {
+    background: oklch(0.205 0 0 / 0.12);
+  }
+
+  .dark ::selection {
+    background: oklch(0.922 0 0 / 0.2);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+}
+
+/* Sugar High token colors (github-light / github-dark-ish) */
+:root {
+  --sh-identifier: var(--foreground);
+  --sh-keyword: #cf222e;
+  --sh-string: #0a3069;
+  --sh-comment: #6e7781;
+  --sh-property: #0550ae;
+  --sh-entity: #0550ae;
+  --sh-class: #953800;
+  --sh-jsxliterals: #8250df;
+  --sh-sign: #656d76;
+  --sh-break: var(--foreground);
+  --sh-space: var(--foreground);
+}
+
+.dark {
+  --sh-identifier: #e6edf3;
+  --sh-keyword: #ff7b72;
+  --sh-string: #a5d6ff;
+  --sh-comment: #8b949e;
+  --sh-property: #79c0ff;
+  --sh-entity: #79c0ff;
+  --sh-class: #ffa657;
+  --sh-jsxliterals: #d2a8ff;
+  --sh-sign: #8b949e;
+  --sh-break: #e6edf3;
+  --sh-space: #e6edf3;
+}
+
+/* sugar-high already separates lines with "\n"; block lines would double the spacing. */
+.sh__line {
+  display: inline;
+}
+
+/* ========================================
+   ANIMATIONS - Minimal, functional only
+   ======================================== */
+
+@keyframes fadeCycle {
+  0% {
+    opacity: 0;
+  }
+  5% {
+    opacity: 1;
+  }
+  20% {
+    opacity: 1;
+  }
+  25% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeInUp {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInDown {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes scaleIn {
+  0% {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@layer utilities {
+  /* Keep long chat transcripts cheap to lay out and paint. */
+  .chat-message-group {
+    content-visibility: auto;
+    contain-intrinsic-size: 0 120px;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out both;
+  }
+
+  .animate-fade-in-up {
+    animation: fadeInUp 0.25s ease-out both;
+  }
+
+  .animate-fade-in-down {
+    animation: fadeInDown 0.25s ease-out both;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out both;
+  }
+
+  .animate-shimmer {
+    animation: shimmer 2s linear infinite;
+    background: linear-gradient(90deg, transparent 0%, oklch(0.9 0 0 / 0.3) 50%, transparent 100%);
+    background-size: 200% 100%;
+  }
+
+  /* Keep pulse-soft for backward compat but make it a no-op */
+  .animate-pulse-soft {
+    opacity: 1;
+  }
+
+  .animate-float {
+    /* no-op */
+  }
+
+  .animate-gradient {
+    /* no-op */
+  }
+
+  /* Keep delay classes for backward compat */
+  .delay-75 {
+    animation-delay: 50ms;
+  }
+  .delay-100 {
+    animation-delay: 75ms;
+  }
+  .delay-150 {
+    animation-delay: 100ms;
+  }
+  .delay-200 {
+    animation-delay: 125ms;
+  }
+  .delay-300 {
+    animation-delay: 150ms;
+  }
+  .delay-400 {
+    animation-delay: 175ms;
+  }
+  .delay-500 {
+    animation-delay: 200ms;
+  }
+
+  /* Glass - simplified to subtle background */
+  .glass {
+    background: oklch(1 0 0 / 0.85);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+
+  .dark .glass {
+    background: oklch(0.145 0 0 / 0.85);
+  }
+
+  /* No noise texture */
+  .noise {
+    position: relative;
+  }
+
+  /* Text gradient - just use foreground color, no actual gradient */
+  .text-gradient {
+    color: var(--foreground);
+  }
+
+  .dark .text-gradient {
+    color: var(--foreground);
+  }
+
+  /* No glow effects */
+  .glow {
+    /* no-op */
+  }
+
+  .glow-sm {
+    /* no-op */
+  }
+
+  /* Hover lift - subtle */
+  .hover-lift {
+    transition: box-shadow 0.15s ease;
+  }
+
+  .hover-lift:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  /* No editorial underline */
+  .editorial-underline {
+    position: relative;
+    display: inline-block;
+  }
+}
+
+/* Intelligent UI: categorical chart slots (fixed order, validated for CVD
+   separation in both modes) and status colors, independent of theme presets. */
+.intelligent-ui {
+  --iui-series-1: #2a78d6;
+  --iui-series-2: #eb6834;
+  --iui-series-3: #1baf7a;
+  --iui-series-4: #eda100;
+  --iui-series-5: #e87ba4;
+  --iui-series-6: #008300;
+  --iui-series-7: #6250d6;
+  --iui-series-8: #e34948;
+  --iui-grid: color-mix(in oklab, var(--foreground) 9%, transparent);
+  --iui-axis: color-mix(in oklab, var(--foreground) 22%, transparent);
+  --iui-good: #006300;
+  --iui-critical: #d03b3b;
+}
+
+.dark .intelligent-ui {
+  --iui-series-1: #3987e5;
+  --iui-series-2: #d95926;
+  --iui-series-3: #199e70;
+  --iui-series-4: #c98500;
+  --iui-series-5: #d55181;
+  --iui-series-6: #008300;
+  --iui-series-7: #9085e9;
+  --iui-series-8: #e66767;
+  --iui-good: #0ca30c;
+  --iui-critical: #e66767;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

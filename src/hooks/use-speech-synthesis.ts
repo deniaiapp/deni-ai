@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useSyncExternalStore } from "react";
 import { speechTextFromMarkdown } from "@/lib/speech-text";
 

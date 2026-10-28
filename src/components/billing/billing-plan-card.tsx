@@ -1,7 +1,5 @@
-"use client";
-
-import { Clock, ShieldCheck, Sparkles, Users } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { Clock } from "lucide-react";
+import { useExtracted, useLocale } from "use-intl";
 import type { ClientPlan, IndividualPlanId } from "@/lib/billing";
 import { useBillingPlanCopy } from "@/lib/billing-plan-copy";
 import { formatMinorCurrency } from "@/lib/currency";
@@ -13,7 +11,6 @@ import {
   calculateYearlySavingsPercent,
   getOfferPercentOff,
   useFormatPriceLabel,
-  usePlanFitCopy,
   useTierLabel,
 } from "./billing-utils";
 import { Badge } from "../ui/badge";
@@ -57,23 +54,13 @@ export function PlanCard({
   const formatPriceLabel = useFormatPriceLabel();
   const formatPriceParts = useFormatPriceParts();
   const getTierLabel = useTierLabel();
-  const getPlanFitCopy = usePlanFitCopy();
   const planCopy = useBillingPlanCopy(plan.id);
-  const mode = plan.mode ?? "subscription";
   const offerPercentOff = getOfferPercentOff(plan);
   const offer = offerPercentOff > 0 ? plan.limitedTimeOffer : null;
-  const canChange =
-    status.hasActiveSubscription && !cancelDate && !status.isCurrent && mode === "subscription";
-  // Switching subscription plans needs a renewing subscription; a one-time plan
-  // is allowed once the subscription is set to cancel, matching checkout.
+  const canChange = status.hasActiveSubscription && !cancelDate && !status.isCurrent;
+  // Switching plans needs a renewing subscription.
   const isBlockedByCancel =
-    mode === "subscription" &&
-    Number.isInteger(cancelDate) &&
-    Boolean(activePlanId) &&
-    !status.isCurrent;
-  // A one-time plan does not end a renewing subscription, so checkout refuses it.
-  const isBlockedBySubscription =
-    mode === "payment" && status.hasActiveSubscription && !cancelDate && !status.isCurrent;
+    Number.isInteger(cancelDate) && Boolean(activePlanId) && !status.isCurrent;
   const processing =
     (changePlan.isPending && changePlan.variables?.planId === plan.id) ||
     (checkout.isPending && checkout.variables?.planId === plan.id);
@@ -83,7 +70,7 @@ export function PlanCard({
   const priceParts =
     plan.amount && plan.currency ? formatPriceParts(plan.amount, plan.currency) : null;
   const monthlyEquivalent =
-    mode === "subscription" && interval === "yearly" && plan.amount && plan.currency
+    interval === "yearly" && plan.amount && plan.currency
       ? formatMinorCurrency(
           Math.round(plan.amount / 12),
           plan.currency,
@@ -95,24 +82,18 @@ export function PlanCard({
         )
       : null;
   const savingsPercent =
-    mode === "subscription" && interval === "yearly"
-      ? calculateYearlySavingsPercent(plan, monthlyPlan)
-      : 0;
+    interval === "yearly" ? calculateYearlySavingsPercent(plan, monthlyPlan) : 0;
   const primaryActionLabel = status.isOnTeamPlan
     ? t("Team plan active")
     : status.isCurrent
       ? t("Current plan")
       : isBlockedByCancel
         ? t("Resume to change")
-        : isBlockedBySubscription
-          ? t("Cancel your subscription first")
-          : canChange
-            ? t("Change plan")
-            : mode === "payment"
-              ? t("Buy once")
-              : t("Subscribe");
-  const showTrustCopy =
-    !status.isOnTeamPlan && !status.isCurrent && !isBlockedByCancel && !isBlockedBySubscription;
+        : canChange
+          ? t("Change plan")
+          : t("Subscribe");
+  // Reassurance for first-time buyers only; anyone already on a paid plan knows the terms.
+  const showTrustCopy = !status.isOnTeamPlan && !activePlanId;
 
   return (
     <Card
@@ -127,9 +108,7 @@ export function PlanCard({
         <div className="space-y-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-                {tierName}
-              </CardTitle>
+              <CardTitle className="font-semibold">{tierName}</CardTitle>
               {offer ? (
                 <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300">
                   {t("{percent}% off", { percent: offerPercentOff.toString() })}
@@ -148,7 +127,8 @@ export function PlanCard({
               {planCopy.tagline}
             </CardDescription>
           </div>
-          {mode === "subscription" ? (
+          {/* A plan sold monthly only (Go) has no interval to switch. */}
+          {onIntervalChange ? (
             <Tabs
               value={interval}
               onValueChange={(v) => onIntervalChange?.(v as "monthly" | "yearly")}
@@ -164,7 +144,7 @@ export function PlanCard({
             </Tabs>
           ) : (
             <Badge variant="secondary" className="text-xs">
-              {t("Lifetime")}
+              {t("Monthly")}
             </Badge>
           )}
         </div>
@@ -175,7 +155,7 @@ export function PlanCard({
             {priceParts ? (
               <div className="space-y-1">
                 <div className="flex items-start gap-2">
-                  <span className="pt-2 text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                  <span className="pt-2 text-[11px] font-semibold text-muted-foreground uppercase">
                     {priceParts.currency}
                   </span>
                   <span className="text-4xl font-semibold tracking-tight">{priceParts.amount}</span>
@@ -221,52 +201,13 @@ export function PlanCard({
                 </p>
               </div>
             )}
-            {mode === "payment" && (
-              <p className="text-sm font-medium text-foreground">{t("One-time purchase")}</p>
-            )}
-            {offer && (
+            {offer?.kind === "timer" && (
               <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300">
-                {offer.kind === "timer" ? (
-                  <>
-                    <Clock className="size-4" />
-                    <span>{t("Offer ends in")}</span>
-                    <OfferCountdown endsAt={offer.endsAt} className="font-mono font-semibold" />
-                  </>
-                ) : (
-                  <>
-                    <Users className="size-4" />
-                    <span>
-                      {t("{spots, plural, one {First buyer only} other {First # buyers only}}", {
-                        spots: offer.spots,
-                      })}
-                    </span>
-                    <span aria-hidden="true">·</span>
-                    <span className="font-semibold">
-                      {t("{spotsLeft, plural, one {# spot left} other {# spots left}}", {
-                        spotsLeft: offer.spotsLeft,
-                      })}
-                    </span>
-                  </>
-                )}
+                <Clock className="size-4" />
+                <span>{t("Offer ends in")}</span>
+                <OfferCountdown endsAt={offer.endsAt} className="font-mono font-semibold" />
               </div>
             )}
-          </div>
-          <div className="mt-5 rounded-md border border-border/70 bg-background/70 p-3">
-            <div className="flex items-start gap-2">
-              <Sparkles className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
-              <div>
-                <div className="text-sm font-medium">{getPlanFitCopy(plan.id)}</div>
-                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                  {offer
-                    ? t("Limited-time price. Applied automatically at checkout.")
-                    : interval === "yearly" && savingsPercent > 0
-                      ? t("Lock in the lower monthly equivalent for the year.")
-                      : mode === "payment"
-                        ? t("Keep Pro access without a recurring subscription.")
-                        : t("Upgrade now and manage or cancel from billing anytime.")}
-                </p>
-              </div>
-            </div>
           </div>
           <PlanHighlights items={planCopy.highlights} className="mt-5" />
         </div>
@@ -277,7 +218,6 @@ export function PlanCard({
             status.isCurrent ||
             processing ||
             isBlockedByCancel ||
-            isBlockedBySubscription ||
             isLoadingThisPlan ||
             status.isOnTeamPlan
           }
@@ -292,17 +232,9 @@ export function PlanCard({
           {(processing || isLoadingThisPlan) && <Spinner className="size-4" />}
           <span>{primaryActionLabel}</span>
           {showTrustCopy && (
-            <span className="text-[11px] font-normal text-current/80">
-              {mode === "payment" ? t("Pay once. Keep access.") : t("Cancel anytime")}
-            </span>
+            <span className="text-[11px] font-normal text-current/80">{t("Cancel anytime")}</span>
           )}
         </Button>
-        {showTrustCopy && (
-          <div className="mt-3 flex items-center justify-center gap-2 text-xs text-muted-foreground">
-            <ShieldCheck className="size-3.5" />
-            <span>{t("A 3D Secure compatible card is required.")}</span>
-          </div>
-        )}
       </CardContent>
     </Card>
   );

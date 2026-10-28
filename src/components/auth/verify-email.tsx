@@ -1,5 +1,3 @@
-"use client";
-
 import { useAuth, useSendVerificationEmail } from "@better-auth-ui/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";

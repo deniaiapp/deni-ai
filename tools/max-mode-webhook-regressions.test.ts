@@ -16,7 +16,13 @@ vi.mock("@/lib/ad-checkout", () => ({
   pauseReversedAdCharge: vi.fn(),
   releaseExpiredAdCheckout: vi.fn(),
 }));
-vi.mock("@/lib/max-mode", () => ({ syncMaxModeMeterPeriod: vi.fn() }));
+vi.mock("@/lib/max-mode-credits", () => ({
+  MAX_MODE_CREDIT_PURPOSE: "max_mode_credits",
+  grantMaxModeCreditCheckout: vi.fn(),
+  grantMaxModeCreditTopUp: vi.fn(),
+  restoreMaxModeCredits: vi.fn(),
+  revokeMaxModeCredits: vi.fn(),
+}));
 vi.mock("@/lib/stripe-disputes", () => ({
   handleChargeDisputeClosed: vi.fn(),
   handleChargeDisputeCreated: vi.fn(),
@@ -32,6 +38,8 @@ vi.mock("@/lib/team-billing-record", () => ({ saveTeamBillingRecord: vi.fn() }))
 vi.mock("@/lib/stripe", () => ({
   stripe: {
     webhooks: { constructEvent: () => state.event },
+    // A refunded charge first looks for a lifetime purchase it paid for.
+    checkout: { sessions: { list: async () => ({ data: [] }) } },
     subscriptions: {
       list: async () => ({ data: state.subscriptions }),
       retrieve: async () => state.current,
@@ -51,7 +59,7 @@ vi.mock("@/db/drizzle", () => ({
   },
 }));
 
-const { POST } = await import("../src/app/api/stripe/webhook/route");
+const { POST } = await import("../src/server/http/stripe/webhook/route");
 
 const meteredItems = {
   data: [
@@ -89,15 +97,10 @@ beforeEach(() => {
   state.updates = [];
 });
 
-test("canceling the Max Mode meter subscription turns Max Mode off", async () => {
+// Max Mode now spends prepaid credits: retiring a legacy meter host must not turn it off.
+test("an ended legacy Max Mode meter subscription leaves Max Mode on", async () => {
   expect((await deleteMeterSubscription()).status).toBe(200);
-  expect(state.updates).toEqual([
-    expect.objectContaining({
-      maxModeEnabled: false,
-      stripeMeteredBasicItemId: null,
-      stripeMeteredPremiumItemId: null,
-    }),
-  ]);
+  expect(state.updates).toEqual([]);
 });
 
 test("a replaced meter host keeps Max Mode on while meters live elsewhere", async () => {
@@ -106,7 +109,7 @@ test("a replaced meter host keeps Max Mode on while meters live elsewhere", asyn
   expect(state.updates).toEqual([]);
 });
 
-test("an ended monthly plan that hosted the meters turns Max Mode off", async () => {
+test("an ended monthly plan that hosted legacy meters does not turn Max Mode off", async () => {
   const response = await deliver("customer.subscription.deleted", {
     id: "sub_plan",
     metadata: { userId: "user", organizationId: "team", planId: "pro_team_monthly" },
@@ -115,13 +118,7 @@ test("an ended monthly plan that hosted the meters turns Max Mode off", async ()
     },
   });
   expect(response.status).toBe(200);
-  expect(state.updates).toEqual([
-    expect.objectContaining({
-      maxModeEnabled: false,
-      stripeMeteredBasicItemId: null,
-      stripeMeteredPremiumItemId: null,
-    }),
-  ]);
+  expect(state.updates).not.toContainEqual(expect.objectContaining({ maxModeEnabled: false }));
 });
 
 test("an ended plan without meters leaves Max Mode alone", async () => {
@@ -135,7 +132,7 @@ test("an ended plan without meters leaves Max Mode alone", async () => {
 });
 
 test.each(["past_due", "unpaid", "paused", "incomplete"])(
-  "a %s meter host suspends Max Mode but keeps its meter items",
+  "a %s legacy meter host leaves prepaid Max Mode alone",
   async (status) => {
     state.current = {
       id: "sub_meter",
@@ -146,7 +143,7 @@ test.each(["past_due", "unpaid", "paused", "incomplete"])(
       items: meteredItems,
     };
     expect((await deliver("customer.subscription.updated", state.current)).status).toBe(200);
-    expect(state.updates).toEqual([{ maxModeEnabled: false, updatedAt: expect.any(Date) }]);
+    expect(state.updates).toEqual([]);
   },
 );
 
@@ -188,4 +185,43 @@ test("an activated team subscription bills every current member as a seat", asyn
   expect((await deliver("customer.subscription.updated", state.current)).status).toBe(200);
   expect(updateTeamSeatCount).toHaveBeenCalledWith("team");
   expect(cancelOrgMembersPersonalSubscriptions).toHaveBeenCalledWith("team");
+});
+
+function deliverObject(type: string, object: Record<string, unknown>) {
+  state.event = { type, data: { object } };
+  return POST(
+    new Request("http://localhost/api/stripe/webhook", {
+      method: "POST",
+      headers: { "stripe-signature": "signature" },
+      body: "{}",
+    }),
+  );
+}
+
+test("a paid credit checkout grants Max Mode credits instead of a plan", async () => {
+  const { grantMaxModeCreditCheckout } = await import("@/lib/max-mode-credits");
+  const session = {
+    object: "checkout.session",
+    id: "cs_credits",
+    mode: "payment",
+    payment_status: "paid",
+    metadata: { purpose: "max_mode_credits", credits: "10", creditUserId: "user" },
+  };
+  expect((await deliverObject("checkout.session.completed", session)).status).toBe(200);
+  expect(grantMaxModeCreditCheckout).toHaveBeenCalledWith(session);
+  expect(state.updates).toEqual([]);
+});
+
+test("a succeeded off-session payment is offered to the auto top-up grant", async () => {
+  const { grantMaxModeCreditTopUp } = await import("@/lib/max-mode-credits");
+  const intent = { object: "payment_intent", id: "pi_top_up", status: "succeeded" };
+  expect((await deliverObject("payment_intent.succeeded", intent)).status).toBe(200);
+  expect(grantMaxModeCreditTopUp).toHaveBeenCalledWith(intent);
+});
+
+test("a refunded charge takes back the credits its payment bought", async () => {
+  const { revokeMaxModeCredits } = await import("@/lib/max-mode-credits");
+  const charge = { object: "charge", id: "ch_credits", payment_intent: "pi_credits" };
+  expect((await deliverObject("charge.refunded", charge)).status).toBe(200);
+  expect(revokeMaxModeCredits).toHaveBeenCalledWith("pi_credits");
 });

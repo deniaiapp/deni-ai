@@ -1,4 +1,4 @@
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 
 type ModelDescriptionSource = {
   description?: string;

@@ -1,10 +1,7 @@
-"use client";
-
 import { useChat } from "@ai-sdk/react";
 import type { UIMessage } from "ai";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArrowUpRight, Save } from "lucide-react";
@@ -112,9 +109,7 @@ function ComparisonAccessNotice({
   if (isAnonymous && !hasComparison) {
     return (
       <div className="space-y-3 rounded-xl border p-6">
-        <p>
-          {t("Log in and upgrade to Pro or Max (Team plans also available) to compare models.")}
-        </p>
+        <p>{t("Log in and upgrade to Pro (Team plans also available) to compare models.")}</p>
         <div className="flex flex-wrap gap-2">
           {billingEnabled && (
             <Button
@@ -140,7 +135,7 @@ function ComparisonAccessNotice({
   if (usage.isError) return <p role="alert">{t("Unable to load your plan. Please try again.")}</p>;
   return (
     <div className="rounded-xl border p-6 space-y-3">
-      <p>{t("Model comparison is available on Pro and Max, including team plans.")}</p>
+      <p>{t("Model comparison is available on Pro, including team plans.")}</p>
       {billingEnabled && (
         <Button render={<Link href="/settings/billing" />} nativeButton={false}>
           {t("Upgrade plan")}
@@ -382,7 +377,7 @@ function useModelComparison(
     comparisonSettingsSchema.parse(initialComparison?.rightSettings ?? {}),
   );
   const usage = trpc.billing.usage.useQuery(undefined, { enabled: !isAnonymous });
-  const eligible = usage.data?.tier === "pro" || usage.data?.tier === "max";
+  const eligible = usage.data?.tier === "pro";
   const [input, setInput] = useState("");
   const [leftSelection, setLeftSelection] = useState("");
   const [rightSelection, setRightSelection] = useState("");
@@ -510,7 +505,8 @@ function useModelComparison(
     setLeftSettings(comparisonSettingsSchema.parse({}));
     setRightSettings(comparisonSettingsSchema.parse({}));
     if (initialComparison) router.push("/compare");
-    else window.history.replaceState(null, "", "/compare");
+    // Only the address changes: the router (and this mounted page) stay where they are.
+    else window.history.replaceState(window.history.state, "", "/compare");
     setInput("");
   }
 
@@ -546,7 +542,7 @@ function useModelComparison(
           }
           setSessionId(id);
           setDirty(false);
-          window.history.replaceState(null, "", `/compare/${id}`);
+          window.history.replaceState(window.history.state, "", `/compare/${id}`);
           void utils.chat.getComparisons.invalidate();
           void utils.chat.getComparison.invalidate({ id });
           toast.success(

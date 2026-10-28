@@ -1,4 +1,4 @@
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useCallback, useMemo } from "react";
 import { type ErrorDictionary, mapKeys, resolveErrorMessage } from "@/lib/localize-error";
 
@@ -87,7 +87,7 @@ export function useLocalizeError() {
         ...mapKeys(t("CAPTCHA verification failed. Please try again."), "VERIFICATION_FAILED"),
         ...mapKeys(
           t(
-            "Gmail addresses must sign in with Google. Please use the Continue with Google button.",
+            "Gmail addresses must sign in with Google or GitHub. Please use the Continue with Google or Continue with GitHub button.",
           ),
           "EMAIL_USE_GOOGLE_OAUTH",
         ),
@@ -100,7 +100,7 @@ export function useLocalizeError() {
         ...mapKeys(t("Please enter a valid email address."), "EMAIL_INVALID"),
         ...mapKeys(
           t(
-            "Please use a major email provider (Outlook, iCloud, Proton, etc.) or a restricted educational address (e.g. .edu, .ac.jp, .ac.uk, .edu.au). Gmail requires Continue with Google. To request adding another email domain, contact contact@deniai.app.",
+            "Please use a major email provider (Outlook, iCloud, Proton, etc.) or a restricted educational address (e.g. .edu, .ac.jp, .ac.uk, .edu.au). Gmail requires Continue with Google or GitHub. To request adding another email domain, contact contact@deniai.app.",
           ),
           "EMAIL_DOMAIN_NOT_ALLOWED",
         ),
@@ -279,10 +279,16 @@ export function useLocalizeError() {
           "Too many requests",
         ),
         ...mapKeys(
-          t(
-            "A Max Mode invoice is unpaid. Pay it or update your payment method in the billing portal, then try again.",
-          ),
-          "A Max Mode invoice is unpaid. Pay it or update your payment method in the billing portal, then try again.",
+          t("Max Mode credits are available on active paid plans."),
+          "Max Mode credits are available on active paid plans.",
+        ),
+        ...mapKeys(
+          t("Only organization owners can manage team Max Mode."),
+          "Only organization owners can manage team Max Mode.",
+        ),
+        ...mapKeys(
+          t("The auto top-up amount must be at least the threshold."),
+          "The auto top-up amount must be at least the threshold.",
         ),
         ...mapKeys(
           t("A question and an answer are required."),
@@ -350,10 +356,7 @@ export function useLocalizeError() {
           t("Memory is disabled in this environment."),
           "Memory is disabled in this environment.",
         ),
-        ...mapKeys(
-          t("Model comparison requires Pro or Max."),
-          "Model comparison requires Pro or Max.",
-        ),
+        ...mapKeys(t("Model comparison requires Pro."), "Model comparison requires Pro."),
         ...mapKeys(
           t("No active subscription found. Start with checkout instead."),
           "No active subscription found. Start with checkout instead.",

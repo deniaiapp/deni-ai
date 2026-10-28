@@ -13,7 +13,6 @@ import { stripe } from "./stripe";
 const state = vi.hoisted(() => ({
   metered: false,
   pendingUsage: false,
-  pendingMeter: false,
   unpaid: false,
   canceled: false,
   frozen: false,
@@ -34,14 +33,12 @@ vi.mock("@/db/drizzle", () => {
         const rows =
           name === "usage_reservation" && state.pendingUsage
             ? [{ id: "pending" }]
-            : name === "max_mode_meter_event" && state.pendingMeter
-              ? [{ id: "meter" }]
-              : name === "member" && state.teamOwner
-                ? [{ id: "membership" }]
-                : // The team billing rows that still name this user as their contact.
-                  name === "billing" && state.teamContact
-                  ? [{ customerId: "team-customer" }]
-                  : [];
+            : name === "member" && state.teamOwner
+              ? [{ id: "membership" }]
+              : // The team billing rows that still name this user as their contact.
+                name === "billing" && state.teamContact
+                ? [{ customerId: "team-customer" }]
+                : [];
         const result = Promise.resolve(rows);
         return Object.assign(result, {
           limit: async () => (name === "billing" ? [{ customerId: "customer" }] : rows),
@@ -145,7 +142,6 @@ beforeEach(() => {
   Object.assign(state, {
     metered: false,
     pendingUsage: false,
-    pendingMeter: false,
     unpaid: false,
     canceled: false,
     frozen: false,
@@ -165,7 +161,7 @@ test("a metered cancellation waits for the natural final usage invoice", async (
   expect(stripe.subscriptions.cancel).not.toHaveBeenCalled();
   expect(stripe.customers.del).not.toHaveBeenCalled();
 });
-test.each(["pendingUsage", "pendingMeter", "unpaid"] as const)(
+test.each(["pendingUsage", "unpaid"] as const)(
   "%s prevents deletion even after subscription cancellation",
   async (key) => {
     state[key] = true;

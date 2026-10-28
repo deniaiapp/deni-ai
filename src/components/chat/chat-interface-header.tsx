@@ -1,9 +1,7 @@
-"use client";
-
 import type { UIMessage } from "ai";
 import { FolderKanban } from "lucide-react";
-import dynamic from "next/dynamic";
-import { useExtracted } from "next-intl";
+import { dynamic } from "@/lib/dynamic";
+import { useExtracted } from "use-intl";
 import { Badge } from "@/components/ui/badge";
 
 const ChatExportMenu = dynamic(

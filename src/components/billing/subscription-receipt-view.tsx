@@ -1,7 +1,5 @@
-"use client";
-
 import { RotateCcw } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { useId } from "react";
 import { formatMinorCurrency } from "@/lib/currency";
 import { formatReceiptOrderId } from "@/lib/stripe-checkout-receipt";

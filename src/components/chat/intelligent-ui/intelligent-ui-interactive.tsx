@@ -1,5 +1,3 @@
-"use client";
-
 import {
   ArrowUpRight,
   CheckIcon,
@@ -11,7 +9,7 @@ import {
   RotateCcw,
   Send,
 } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";

@@ -7,7 +7,16 @@ const state = vi.hoisted(() => ({
   fingerprint: null as string | null,
   cardRemovedAt: null as Date | null,
 }));
-vi.mock("./max-mode", () => ({ isMaxModeEligible: () => false }));
+vi.mock("./max-mode", () => ({
+  isMaxModeEligible: () => false,
+  MAX_MODE_USABLE_STATUSES: new Set(["active"]),
+}));
+vi.mock("./max-mode-credits", () => ({
+  creditOwnerFor: () => null,
+  getMaxModeCreditUnits: async () => 0,
+  spendMaxModeCredits: async () => 0,
+  maybeAutoTopUpMaxModeCredits: async () => false,
+}));
 vi.mock("@/db/drizzle", () => ({
   db: {
     select: () => ({

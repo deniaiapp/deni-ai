@@ -19,7 +19,7 @@ vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/stripe", () => ({ stripe: {} }));
 
 const period = {
-  unit: "tokens" as const,
+  unit: "units" as const,
   start: new Date("2026-06-01"),
   end: new Date("2026-07-01"),
 };
@@ -28,9 +28,10 @@ beforeEach(() => {
   vi.mocked(consumeUsage).mockResolvedValue({
     reservationId: "reservation",
     tier: "pro",
-    unit: "tokens",
+    unit: "units",
     limit: 300_000_000,
     remaining: 100_000,
+    allowance: 100_000,
     maxModeAmount: 0,
     usedMaxMode: false,
     period,
@@ -55,10 +56,11 @@ test("a failed search settles its own reservation to zero", async () => {
 test("unlimited search usage still closes the reservation", async () => {
   vi.mocked(consumeUsage).mockResolvedValue({
     reservationId: "reservation",
-    tier: "max",
-    unit: "tokens",
+    tier: "pro",
+    unit: "units",
     limit: null,
     remaining: null,
+    allowance: null,
     maxModeAmount: 0,
     usedMaxMode: false,
     period,
@@ -113,9 +115,10 @@ test("parallel searches take turns on usage writes", async () => {
     return {
       reservationId,
       tier: "pro",
-      unit: "tokens",
+      unit: "units",
       limit: 300_000_000,
       remaining: 100_000,
+      allowance: 100_000,
       maxModeAmount: 0,
       usedMaxMode: false,
       period,

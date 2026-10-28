@@ -24,7 +24,13 @@ vi.mock("@/db/drizzle", async () => {
 });
 vi.mock("./max-mode", () => ({
   isMaxModeEligible: () => false,
-  deliverMaxModeUsageReport: vi.fn(async () => {}),
+  MAX_MODE_USABLE_STATUSES: new Set(["active"]),
+}));
+vi.mock("./max-mode-credits", () => ({
+  creditOwnerFor: () => null,
+  getMaxModeCreditUnits: async () => 0,
+  spendMaxModeCredits: async () => 0,
+  maybeAutoTopUpMaxModeCredits: async () => false,
 }));
 vi.mock("./billing-config", () => ({ isBillingDisabled: false }));
 vi.mock("./stripe", () => ({ stripe: {} }));
@@ -55,19 +61,19 @@ beforeEach(() => {
 });
 
 test("team members get their team plan's tier", async () => {
-  state.team = [billingRow("max_team_monthly", "active", "org")];
-  expect(await getSubscriptionTier("user", now)).toBe("max");
+  state.team = [billingRow("pro_team_monthly", "active", "org")];
+  expect(await getSubscriptionTier("user", now)).toBe("pro");
   state.team = [billingRow("pro_team_yearly", "active", "org")];
   expect(await getSubscriptionTier("user", now)).toBe("pro");
 });
 
-test("personal plans map to their tier, lifetime Pro included", async () => {
-  state.personal = [billingRow("pro_lifetime", "paid")];
+test("personal plans map to their tier", async () => {
+  state.personal = [billingRow("pro_yearly", "active")];
   expect(await getSubscriptionTier("user", now)).toBe("pro");
   state.personal = [billingRow("plus_monthly", "active")];
   expect(await getSubscriptionTier("user", now)).toBe("plus");
-  state.personal = [billingRow("max_yearly", "active")];
-  expect(await getSubscriptionTier("user", now)).toBe("max");
+  state.personal = [billingRow("go_monthly", "active")];
+  expect(await getSubscriptionTier("user", now)).toBe("go");
 });
 
 test("users without an active plan are free", async () => {

@@ -1,9 +1,7 @@
-"use client";
-
 import type { ComponentProps, MouseEvent } from "react";
 import { useState, useSyncExternalStore } from "react";
 import { ImageIcon } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { defaultComponents, type ExtraProps } from "streamdown";
 import { Button } from "@/components/ui/button";
 

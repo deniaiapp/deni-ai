@@ -1,5 +1,3 @@
-"use client";
-
 import { authMutationKeys, parseAdditionalFieldValue } from "@better-auth-ui/core";
 import { useAuth, useFetchOptions, useSignUpEmail } from "@better-auth-ui/react";
 import { useIsMutating } from "@tanstack/react-query";

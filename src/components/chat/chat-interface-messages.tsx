@@ -1,7 +1,5 @@
-"use client";
-
 import type { ChatStatus, FileUIPart, UIMessage } from "ai";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useStickToBottomContext } from "use-stick-to-bottom";
 import {

@@ -1,12 +1,22 @@
 import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
+import { extractMessages } from "./vite/extract-messages.ts";
 
 export default defineConfig({
   resolve: {
-    alias: {
-      "@": fileURLToPath(new URL("./src", import.meta.url)),
-    },
+    // tsconfig excludes tools/, so its tests need the `@` alias spelled out.
+    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    tsconfigPaths: true,
   },
+  plugins: [
+    extractMessages({
+      srcPath: "./src",
+      messagesPath: "./messages",
+      sourceLocale: "en",
+      locales: ["en", "ja"],
+      writeCatalogs: false,
+    }),
+  ],
   test: {
     include: ["tools/*.test.ts", "src/**/*.test.ts"],
     env: {

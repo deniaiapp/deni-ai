@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 
 /**
  * Translates a raw better-auth member role ("owner" | "admin" | "member") into

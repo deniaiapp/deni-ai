@@ -1,8 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useExtracted, useLocale } from "next-intl";
+import { Link, usePathname } from "@/lib/navigation";
+import { useExtracted, useLocale } from "use-intl";
 import type React from "react";
 import { DocumentTitle } from "@/components/document-title";
 import { Card, CardContent } from "@/components/ui/card";
@@ -165,7 +162,7 @@ export default function SettingsWrapper({ children }: { children: React.ReactNod
                   ) : (
                     usages?.map((usageItem) => {
                       const maxModeEnabled = features.billing && (usage?.maxModeEnabled ?? false);
-                      const unitLabel = usageItem.unit === "tokens" ? t("tokens") : t("requests");
+                      const unitLabel = t("units");
                       const hasLimit =
                         !maxModeEnabled && usageItem.limit !== null && usageItem.limit > 0;
                       const usedPercent = hasLimit

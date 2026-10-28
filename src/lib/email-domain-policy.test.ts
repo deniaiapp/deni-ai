@@ -70,3 +70,29 @@ describe("duck.com forwarding addresses", () => {
     }
   });
 });
+
+describe("Gmail addresses", () => {
+  test("register through Google or GitHub, not by email", () => {
+    expect(checkSignupEmail("john.doe@gmail.com", "google")).toEqual({ ok: true });
+    expect(checkSignupEmail("john.doe@gmail.com", "github")).toEqual({ ok: true });
+    expect(checkSignupEmail("john.doe@googlemail.com", "github")).toEqual({ ok: true });
+    expect(checkSignupEmail("john.doe@gmail.com")).toEqual({
+      ok: false,
+      reason: "use_google_oauth",
+    });
+  });
+
+  test.each(["john+deni", "j.o.h.n.doe", "a.b.c.d", ".john"])(
+    "%s@gmail.com from GitHub is refused as an alias of one inbox",
+    (local) => {
+      expect(checkSignupEmail(`${local}@gmail.com`, "github")).toEqual({
+        ok: false,
+        reason: "alias_not_allowed",
+      });
+    },
+  );
+
+  test("Google sign-in keeps accepting its account address as is", () => {
+    expect(checkSignupEmail("j.o.h.n.doe@gmail.com", "google")).toEqual({ ok: true });
+  });
+});

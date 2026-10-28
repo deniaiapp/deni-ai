@@ -16,7 +16,7 @@ import {
   teamMemberAuditHooks,
   withTeamAuditActor,
 } from "./team-member-audit";
-import { POST } from "@/app/api/auth/[...all]/route";
+import { POST } from "@/server/http/auth/[...all]/route";
 import { organizationRouter } from "@/server/api/routers/organization";
 
 const handler = vi.hoisted(() => ({
@@ -25,7 +25,9 @@ const handler = vi.hoisted(() => ({
   membership: vi.fn(),
   where: vi.fn(),
 }));
-vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: handler.session } } }));
+vi.mock("@/lib/auth", () => ({
+  auth: { handler: handler.post, api: { getSession: handler.session } },
+}));
 vi.mock("@/db/drizzle", () => ({
   db: { select: () => ({ from: () => ({ where: handler.where }) }) },
 }));
@@ -41,9 +43,6 @@ vi.mock("@/lib/team-billing-contact", () => ({
   findTeamBillingContactOrganizations: vi.fn(),
   redirectTeamBillingEmail: vi.fn(),
   releaseTeamBillingContact: vi.fn(),
-}));
-vi.mock("better-auth/next-js", () => ({
-  toNextJsHandler: () => ({ POST: handler.post, GET: vi.fn() }),
 }));
 
 const change = { member: { userId: "target", role: "member" }, organization: { id: "team" } };

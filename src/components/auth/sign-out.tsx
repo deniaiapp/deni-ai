@@ -1,5 +1,3 @@
-"use client";
-
 import { useAuth, useSignOut } from "@better-auth-ui/react";
 import { useEffect, useRef } from "react";
 import { Spinner } from "@/components/ui/spinner";

@@ -44,20 +44,31 @@ test.each(oauthContexts)("OAuth domain allowlist applies to %j", async (ctx) => 
 });
 
 test.each(["gmail.com", "googlemail.com"])(
-  "%s requires Google on both OAuth entry points",
+  "%s registers through Google or GitHub on both OAuth entry points",
   async (domain) => {
     const beforeCreate = auth.options.databaseHooks.user.create.before;
     for (const ctx of oauthContexts) {
-      const provider = ctx.params?.id ?? ctx.body?.provider;
-      const result = beforeCreate(newUser(`first.last@${domain}`), ctx as never);
-      if (provider === "google") {
-        await expect(result).resolves.toBeUndefined();
-      } else {
-        await expect(result).rejects.toMatchObject({ body: { code: "EMAIL_USE_GOOGLE_OAUTH" } });
-      }
+      await expect(
+        beforeCreate(newUser(`first.last@${domain}`), ctx as never),
+      ).resolves.toBeUndefined();
     }
+    // Email sign-up still has to go through a provider.
+    await expect(beforeCreate(newUser(`first.last@${domain}`), null)).rejects.toMatchObject({
+      body: { code: "EMAIL_USE_GOOGLE_OAUTH" },
+    });
   },
 );
+
+test("an alias-style Gmail address from GitHub is refused, Google's own address is not", async () => {
+  const beforeCreate = auth.options.databaseHooks.user.create.before;
+  const alias = newUser("first.last+deni@gmail.com");
+  await expect(
+    beforeCreate(alias, { path: "/callback/:id", params: { id: "github" } } as never),
+  ).rejects.toMatchObject({ body: { code: "EMAIL_ALIAS_NOT_ALLOWED" } });
+  await expect(
+    beforeCreate(alias, { path: "/callback/:id", params: { id: "google" } } as never),
+  ).resolves.toBeUndefined();
+});
 
 test("a claimed provider in an email signup cannot enable the Google exception", async () => {
   const beforeCreate = auth.options.databaseHooks.user.create.before;

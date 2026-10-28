@@ -1,13 +1,9 @@
-import { connection } from "next/server";
+import { useLoaderData } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { AppProviders } from "@/components/providers";
-import { getPlatformCapabilities } from "@/lib/platform-capabilities.server";
 
-/**
- * Resolves platform capabilities per request instead of at `next build`.
- * Render inside a <Suspense> boundary.
- */
-export async function RuntimeAppProviders({ children }: { children: ReactNode }) {
-  await connection();
-  return <AppProviders platformCapabilities={getPlatformCapabilities()}>{children}</AppProviders>;
+/** App providers with the platform capabilities the root route resolved per request. */
+export function RuntimeAppProviders({ children }: { children: ReactNode }) {
+  const platformCapabilities = useLoaderData({ from: "__root__" });
+  return <AppProviders platformCapabilities={platformCapabilities}>{children}</AppProviders>;
 }

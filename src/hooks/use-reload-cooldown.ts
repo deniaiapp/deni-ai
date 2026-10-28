@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect, useState } from "react";
 
 /** Seconds a reload button stays disabled after firing, to prevent spamming the endpoint. */

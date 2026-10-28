@@ -1,9 +1,6 @@
-"use client";
-
 import { ArrowRight, X, Zap } from "lucide-react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, usePathname } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useEffect, useSyncExternalStore } from "react";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { Button } from "@/components/ui/button";
@@ -61,11 +58,11 @@ export function FlashOfferStrip() {
   );
   const offer = offerQuery.data;
   const offerEndsAt = offer?.kind === "timer" ? offer.endsAt : null;
-  // A dismissed strip returns for a new timer, or once another spot is taken.
+  // A dismissed strip returns only for a new offer; spot counts are not shown.
   const offerKey = offer
     ? offer.kind === "timer"
       ? offer.endsAt
-      : `spots:${offer.spotsLeft.toString()}`
+      : `spots:${offer.spots.toString()}`
     : null;
 
   // Refetch at expiry so the strip disappears without a reload.
@@ -91,28 +88,14 @@ export function FlashOfferStrip() {
             ? t("Limited-time offer: up to {percent}% off", { percent })
             : t("Limited-time offer: {percent}% off", { percent })}
         </span>
-        <span className="hidden text-muted-foreground sm:inline">
-          {t("Yearly and lifetime plans")}
-        </span>
-        {offer.kind === "timer" ? (
+        <span className="hidden text-muted-foreground sm:inline">{t("Yearly plans")}</span>
+        {offer.kind === "timer" && (
           <span className="inline-flex items-center gap-1.5 text-muted-foreground">
             {t("Ends in")}
             <OfferCountdown
               endsAt={offer.endsAt}
               className="font-mono font-semibold text-amber-700 dark:text-amber-300"
             />
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-            {t("{spots, plural, one {First buyer only} other {First # buyers only}}", {
-              spots: offer.spots,
-            })}
-            <span aria-hidden="true">·</span>
-            <span className="font-semibold text-amber-700 tabular-nums dark:text-amber-300">
-              {t("{spotsLeft, plural, one {# spot left} other {# spots left}}", {
-                spotsLeft: offer.spotsLeft,
-              })}
-            </span>
           </span>
         )}
       </div>

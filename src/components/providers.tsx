@@ -1,8 +1,5 @@
-"use client";
-
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useExtracted } from "next-intl";
+import { Link, useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import type { ReactNode } from "react";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { useAuthLocalization } from "@/hooks/use-auth-localization";

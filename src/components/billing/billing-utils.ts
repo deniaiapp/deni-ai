@@ -1,7 +1,7 @@
 import type { BillingPlanId, ClientPlan } from "@/lib/billing";
-import { getPlanTier, isMaxTeamPlan } from "@/lib/billing";
+import { getPlanTier } from "@/lib/billing";
 import { formatMinorCurrency } from "@/lib/currency";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 
 export const ACTIVE_STATUSES = new Set(["active", "trialing", "paid"]);
 export const BILLING_PLANS_SECTION_ID = "billing-plans";
@@ -87,9 +87,6 @@ export function usePlanIntervalLabel() {
     if (planId.endsWith("_yearly")) {
       return t("Yearly");
     }
-    if (planId.endsWith("_lifetime")) {
-      return t("Lifetime");
-    }
     return "";
   };
 }
@@ -101,16 +98,10 @@ export function useBillingReceiptCopy() {
   return (planId: string | null | undefined, homeHref: string, homeLabel: string) => {
     const tierLabel = planId ? getTierLabel(planId) : t("Checkout");
     const planTitle =
-      getPlanTier(planId) === "team"
-        ? isMaxTeamPlan(planId)
-          ? t("Max for Teams")
-          : t("Pro for Teams")
-        : t("{tier} plan", { tier: tierLabel });
+      getPlanTier(planId) === "team" ? t("Pro for Teams") : t("{tier} plan", { tier: tierLabel });
     const planDescription = planId?.endsWith("_yearly")
       ? t("Annual subscription")
-      : planId?.endsWith("_lifetime")
-        ? t("Lifetime access")
-        : t("Monthly subscription");
+      : t("Monthly subscription");
 
     return {
       planTitle,
@@ -127,8 +118,8 @@ export function useTierLabel() {
 
   return (planId: string) => {
     const tier = getPlanTier(planId);
-    if (tier === "max") {
-      return t("Max");
+    if (tier === "go") {
+      return t("Go");
     }
     if (tier === "team") {
       return t("Team");
@@ -138,26 +129,5 @@ export function useTierLabel() {
     }
 
     return t("Plus");
-  };
-}
-
-export function usePlanFitCopy() {
-  const t = useExtracted();
-
-  return (planId: BillingPlanId) => {
-    const tier = getPlanTier(planId);
-    if (tier === "max") {
-      return t("Best when limits are blocking your daily work.");
-    }
-    if (tier === "pro") {
-      return t("Best for regular projects and premium model usage.");
-    }
-    if (tier === "team") {
-      return isMaxTeamPlan(planId)
-        ? t("Best for teams that need Max-tier usage.")
-        : t("Best for shared workspaces and centralized billing.");
-    }
-
-    return t("Best first upgrade from the free plan.");
   };
 }

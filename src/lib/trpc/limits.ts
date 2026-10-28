@@ -32,7 +32,7 @@ const LARGE_BODY_LIMITS = new Map<string, number>([
   ["migration.import", 30 * MB],
   // Comparison transcripts, so any side /api/chat accepted can be saved. The
   // session sends both sides in one body: 40 MiB, deliberately above the
-  // import's cap. Only Pro and Max bodies are read; chat.ts checks the plan
+  // import's cap. Only Pro bodies are read; chat.ts checks the plan
   // before parsing the input.
   ["chat.saveComparisonSession", 2 * COMPARISON_SIDE_BODY_LIMIT],
   ["chat.saveComparison", COMPARISON_SIDE_BODY_LIMIT],
@@ -59,7 +59,7 @@ export function trpcBodyLimit(paths: readonly string[]) {
 
 /**
  * True when a tRPC call failed because its body was over the route's cap.
- * src/app/api/trpc/[trpc]/route.ts answers 413 outside tRPC's error shape, so
+ * src/server/http/trpc/[trpc]/route.ts answers 413 outside tRPC's error shape, so
  * the client error carries only the HTTP response (in `meta`). Retrying such a
  * call can never succeed.
  */

@@ -8,7 +8,6 @@
  */
 
 import type { ReactElement } from "react";
-import { render } from "react-email";
 import { env } from "@/env";
 import { EMAIL_FROM } from "@/lib/constants";
 
@@ -84,6 +83,8 @@ export async function sendEmail(options: SendEmailOptions): Promise<CloudflareSe
   let text = options.text;
 
   if (options.react) {
+    // Loaded on send: react-email's entry also pulls in Tailwind, Markdown and Prism.
+    const { render } = await import("react-email");
     const [renderedHtml, renderedText] = await Promise.all([
       render(options.react),
       render(options.react, { plainText: true }),

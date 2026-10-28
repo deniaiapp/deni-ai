@@ -1,5 +1,3 @@
-"use client";
-
 import {
   type AdditionalField as AdditionalFieldConfig,
   resolveInputType,
@@ -8,7 +6,7 @@ import { useAuth } from "@better-auth-ui/react";
 import { format } from "date-fns";
 import { enUS, ja } from "date-fns/locale";
 import { CalendarIcon, Check, ChevronDownIcon, Copy } from "lucide-react";
-import { useExtracted, useLocale } from "next-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { type ComponentType, useRef, useState } from "react";
 import { toast } from "sonner";
 

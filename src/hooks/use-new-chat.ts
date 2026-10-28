@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/navigation";
 import { captureAccountEpoch } from "@/lib/account-query-boundary";
 import { trackChatCreation } from "@/lib/chat-creation";
 import { makeTRPCClient } from "@/lib/trpc/client";

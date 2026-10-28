@@ -18,7 +18,7 @@ const mocks = vi.hoisted(() => ({
   usageAndMeterNextDueAt: vi.fn(),
   storageCleanup: vi.fn(),
 }));
-vi.mock("@sentry/nextjs", () => ({
+vi.mock("@sentry/tanstackstart-react", () => ({
   captureException: mocks.captureException,
   captureMessage: mocks.captureMessage,
 }));
@@ -29,9 +29,6 @@ vi.mock("@/lib/usage-and-meter-job", () => ({
 vi.mock("@/lib/storage-cleanup-job", () => ({ runStorageCleanupJob: mocks.storageCleanup }));
 
 const healthyUsage = {
-  delivered: 1,
-  failed: 0,
-  requiresReview: 0,
   recovered: 0,
   recoveryFailed: 0,
   healthy: true,
@@ -254,14 +251,12 @@ test("errors are caught and sent to Sentry, and the job keeps running", async ()
 test("failing usage runs send a Sentry warning with their failure counts", async () => {
   mocks.usageAndMeter.mockResolvedValue({
     ...healthyUsage,
-    failed: 2,
     recoveryFailed: 1,
-    requiresReview: 3,
     healthy: false,
   });
   startBackgroundJobScheduler();
   await vi.advanceTimersByTimeAsync(30_000);
-  const counts = { recoveryFailed: 1, deliveryFailed: 2, requiresReview: 3 };
+  const counts = { recoveryFailed: 1 };
   expect(mocks.captureMessage).toHaveBeenCalledExactlyOnceWith(
     "Background job usage-and-meter reported failures",
     { level: "warning", tags: { job: "usage-and-meter" }, extra: counts },

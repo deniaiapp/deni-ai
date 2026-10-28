@@ -1,9 +1,7 @@
-"use client";
-
 import type { inferRouterOutputs } from "@trpc/server";
 import { Trash2 } from "lucide-react";
-import Link from "next/link";
-import { useExtracted } from "next-intl";
+import { Link } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import {

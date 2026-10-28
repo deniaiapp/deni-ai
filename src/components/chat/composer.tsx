@@ -1,7 +1,5 @@
-"use client";
-
 import { GlobeIcon } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Attachment,

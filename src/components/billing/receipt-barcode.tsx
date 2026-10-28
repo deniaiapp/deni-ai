@@ -1,5 +1,3 @@
-"use client";
-
 function buildBarcodePattern(value: string) {
   const bars: number[] = [1.6, 0.7, 1.6, 0.7];
   for (const char of value) {

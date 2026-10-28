@@ -1,5 +1,3 @@
-"use client";
-
 import { useEffect } from "react";
 
 const SERVICE_WORKER_URL = "/sw.js";

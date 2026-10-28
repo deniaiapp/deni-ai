@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray, isNotNull, isNull, like, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, like, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import { z } from "zod";
 import { billing, member, user } from "@/db/schema";
@@ -25,14 +25,21 @@ import {
   getFlashOfferLimit,
   isFlashOfferPlan,
 } from "@/lib/billing-offers";
+import { resolveSubscriptionStatus } from "@/lib/subscription-status";
 import {
-  findPaidLifetimePurchase,
-  resolveSubscriptionStatus,
-  isPaidLifetimeRecord,
-  saveLifetimePlan,
-} from "@/lib/lifetime-plan";
-import { disableMaxMode, enableMaxMode, getMaxModeStatus } from "@/lib/max-mode";
-import { attachMaxModeMeteredItems } from "@/lib/max-mode-stripe";
+  disableMaxMode,
+  enableMaxMode,
+  getMaxModeCreditTarget,
+  getMaxModeStatus,
+} from "@/lib/max-mode";
+import {
+  createMaxModeCreditCheckout,
+  MAX_MODE_AUTO_TOP_UP_THRESHOLD_MAX,
+  MAX_MODE_AUTO_TOP_UP_THRESHOLD_MIN,
+  MAX_MODE_CREDIT_MAX,
+  MAX_MODE_CREDIT_MIN,
+  updateMaxModeAutoTopUp,
+} from "@/lib/max-mode-credits";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
 import { stripe } from "@/lib/stripe";
 import { createBillingPortalSession } from "@/lib/stripe-portal";
@@ -62,13 +69,11 @@ import {
 } from "../trpc";
 
 const planIdSchema = z.enum([
+  "go_monthly",
   "plus_monthly",
   "plus_yearly",
   "pro_monthly",
   "pro_yearly",
-  "max_monthly",
-  "max_yearly",
-  "pro_lifetime",
 ]);
 
 type BillingRecord = typeof billing.$inferSelect;
@@ -366,26 +371,6 @@ async function syncSubscription(ctx: ProtectedContext, userId: string) {
     ACTIVE_SUB_STATUSES.has(status),
   );
 
-  if (!bestSub || !ACTIVE_SUB_STATUSES.has(bestSub.status)) {
-    // An ended subscription must never overwrite a paid one-time plan.
-    if (isPaidLifetimeRecord(billingRecord)) {
-      return billingRecord;
-    }
-    // A lifetime plan bought before a now-ended subscription takes over again.
-    if (billingRecord.firstPaidAt) {
-      const lifetime = await findPaidLifetimePurchase(billingRecord.stripeCustomerId);
-      if (lifetime) {
-        const restored = await saveLifetimePlan(ctx.db, {
-          userId,
-          customerId: billingRecord.stripeCustomerId,
-          purchase: lifetime,
-          expectedBillingRecord: billingRecord,
-        });
-        return restored ?? (await ensureBillingRecord(ctx, userId));
-      }
-    }
-  }
-
   if (!bestSub) {
     // No subscription exists in Stripe, so a row that still claims one is stale.
     if (billingRecord.stripeSubscriptionId && billingRecord.mode === "subscription") {
@@ -623,7 +608,7 @@ export const billingRouter = router({
           and(
             eq(member.userId, ctx.userId),
             isNotNull(billing.organizationId),
-            or(like(billing.planId, "pro_team%"), like(billing.planId, "max_team%")),
+            like(billing.planId, "pro_team%"),
           ),
         ),
     ]);
@@ -701,41 +686,19 @@ export const billingRouter = router({
           sub.status !== "incomplete_expired",
       );
 
-      if (mode === "subscription") {
-        const activeSub = planSubscriptions.find(
-          (sub) => ACTIVE_SUB_STATUSES.has(sub.status) || sub.cancel_at_period_end === true,
-        );
+      // Every plan is a subscription; a one-time price in Stripe is a misconfiguration.
+      if (mode !== "subscription") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Unknown plan." });
+      }
+      const activeSub = planSubscriptions.find(
+        (sub) => ACTIVE_SUB_STATUSES.has(sub.status) || sub.cancel_at_period_end === true,
+      );
 
-        if (activeSub) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "You already have an active subscription. Use Change plan or cancel first.",
-          });
-        }
-      } else {
-        // A one-time plan does not end a renewing subscription, which would keep billing.
-        const renewingSub = planSubscriptions.find(
-          (sub) =>
-            ACTIVE_SUB_STATUSES.has(sub.status) && !sub.cancel_at_period_end && !sub.cancel_at,
-        );
-        if (renewingSub) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Cancel your subscription before buying a one-time plan.",
-          });
-        }
-
-        // A later subscription replaces a lifetime plan on the row, and the webhook
-        // may not have recorded a fresh purchase yet, so also ask Stripe.
-        const alreadyPurchased =
-          (billingRecord.planId === plan.id && billingRecord.status === "paid") ||
-          (await findPaidLifetimePurchase(billingRecord.stripeCustomerId))?.planId === plan.id;
-        if (alreadyPurchased) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "This one-time plan has already been purchased.",
-          });
-        }
+      if (activeSub) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "You already have an active subscription. Use Change plan or cancel first.",
+        });
       }
 
       const reusableSession = await reuseOpenCheckoutSession({
@@ -755,7 +718,7 @@ export const billingRouter = router({
 
       const session = await stripe.checkout.sessions.create(
         {
-          mode: mode === "payment" ? "payment" : "subscription",
+          mode: "subscription",
           ui_mode: "elements",
           customer: billingRecord.stripeCustomerId,
           client_reference_id: ctx.userId,
@@ -774,27 +737,14 @@ export const billingRouter = router({
             priceId: price.id,
             flashOfferCoupon: offerCouponId,
           },
-          subscription_data:
-            mode === "subscription"
-              ? {
-                  metadata: {
-                    userId: ctx.userId,
-                    planId: plan.id,
-                  },
-                }
-              : undefined,
+          subscription_data: {
+            metadata: {
+              userId: ctx.userId,
+              planId: plan.id,
+            },
+          },
           discounts: flashOffer ? [{ coupon: flashOffer.coupon.id }] : undefined,
           payment_method_options: checkoutCardPaymentMethodOptions,
-          payment_intent_data:
-            mode === "payment"
-              ? {
-                  metadata: {
-                    userId: ctx.userId,
-                    planId: plan.id,
-                    priceId: price.id,
-                  },
-                }
-              : undefined,
           allow_promotion_codes: flashOffer ? undefined : true,
           return_url: `${new URL(env.NEXT_PUBLIC_BETTER_AUTH_URL).origin}/settings/billing/checkout/{CHECKOUT_SESSION_ID}`,
         },
@@ -802,8 +752,8 @@ export const billingRouter = router({
       );
 
       // Only remember the session for reuse. The plan changes once Stripe confirms
-      // payment; marking the row "pending" here would revoke a lifetime plan (or any
-      // current access) as soon as the user merely opened checkout.
+      // payment; marking the row "pending" here would revoke current access as soon
+      // as the user merely opened checkout.
       await ctx.db
         .update(billing)
         .set({ checkoutSessionId: session.id, updatedAt: new Date() })
@@ -935,10 +885,6 @@ export const billingRouter = router({
         })
         .returning();
       const saved = savedSnapshot ?? (await ensureBillingRecord(ctx, ctx.userId));
-
-      if (saved?.maxModeEnabled) {
-        await attachMaxModeMeteredItems(saved, ctx.userId);
-      }
 
       return {
         planId: saved.planId ?? null,
@@ -1133,11 +1079,52 @@ export const billingRouter = router({
           : null,
       };
     }),
-  // Max Mode endpoints
-  // Reads Stripe prices and subscriptions; the team Max Mode editor refetches it per edit.
+  // Max Mode endpoints: prepaid credits spent once the plan's pool is used up.
+  // Reads every credit lot of the owner; the team Max Mode editor refetches it per edit.
   maxModeStatus: protectedProcedure
     .use(stripeRead("maxModeStatus", TRPC_RATE_LIMITS.stripeReadPerEdit))
     .query(async ({ ctx }) => getMaxModeStatus(ctx.userId)),
+  createMaxModeCreditCheckout: billingEnabledProcedure
+    .use(stripeWrite("createMaxModeCreditCheckout"))
+    .input(
+      z.object({
+        credits: z.number().int().min(MAX_MODE_CREDIT_MIN).max(MAX_MODE_CREDIT_MAX),
+        saveCard: z.boolean().default(false),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const target = await getMaxModeCreditTarget(ctx.userId);
+      if (!target.ok) throw new TRPCError({ code: "BAD_REQUEST", message: target.error });
+      const url = await createMaxModeCreditCheckout({
+        owner: target.owner,
+        credits: input.credits,
+        stripeCustomerId: target.stripeCustomerId,
+        purchasedByUserId: ctx.userId,
+        saveCard: input.saveCard,
+        returnPath: target.returnPath,
+      });
+      return { url };
+    }),
+  updateMaxModeAutoTopUp: billingEnabledProcedure
+    .use(stripeWrite("updateMaxModeAutoTopUp"))
+    .input(
+      z.object({
+        enabled: z.boolean(),
+        thresholdCredits: z
+          .number()
+          .int()
+          .min(MAX_MODE_AUTO_TOP_UP_THRESHOLD_MIN)
+          .max(MAX_MODE_AUTO_TOP_UP_THRESHOLD_MAX),
+        amountCredits: z.number().int().min(MAX_MODE_CREDIT_MIN).max(MAX_MODE_CREDIT_MAX),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const target = await getMaxModeCreditTarget(ctx.userId);
+      if (!target.ok) throw new TRPCError({ code: "BAD_REQUEST", message: target.error });
+      const result = await updateMaxModeAutoTopUp(target.owner, input);
+      if (!result.success) throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
+      return { success: true };
+    }),
   enableMaxMode: billingEnabledProcedure
     .use(stripeWrite("enableMaxMode"))
     .mutation(async ({ ctx }) => {

@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 
 export function useFreshSessionLocalization() {
   const t = useExtracted();

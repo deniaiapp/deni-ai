@@ -1,5 +1,3 @@
-"use client";
-
 import { type CSSProperties, useEffect, useRef } from "react";
 
 type PatternShape = "Checks" | "Stripes" | "Edge";

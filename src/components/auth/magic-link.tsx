@@ -1,5 +1,3 @@
-"use client";
-
 import { authMutationKeys } from "@better-auth-ui/core";
 import type { MagicLinkAuthClient } from "@better-auth-ui/core/plugins/magic-link";
 import { useAuth, useAuthPlugin, useFetchOptions } from "@better-auth-ui/react";

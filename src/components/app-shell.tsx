@@ -1,7 +1,5 @@
-"use client";
-
-import dynamic from "next/dynamic";
-import { usePathname } from "next/navigation";
+import { dynamic } from "@/lib/dynamic";
+import { usePathname } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatRouteHost } from "@/components/chat/chat-route-host";
@@ -82,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <TwoFactorBanner />
         <FlashOfferStrip />
         <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4">
-          {/* Chat routes: SPA host. Everything else: normal RSC children. */}
+          {/* Chat routes: SPA host. Everything else: the matched route. */}
           <ChatRouteHost>{children}</ChatRouteHost>
         </div>
       </SidebarInset>

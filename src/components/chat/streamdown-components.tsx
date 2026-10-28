@@ -1,8 +1,6 @@
-"use client";
-
 import type { ComponentProps, ReactNode } from "react";
 import { EyeIcon } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import {
   CodeBlock,
   CodeBlockActions,

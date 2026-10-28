@@ -1,6 +1,4 @@
-"use client";
-
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { SettingsPageShell } from "../settings-page-shell";
@@ -65,24 +63,22 @@ function BillingPageContent() {
     isChangePlanOpen,
     isOnTeamPlan,
     isSubscribed,
+    goMonthly,
     loading,
-    maxInterval,
     maxModeQuery,
-    maxMonthly,
+    buyMaxModeCredits,
+    updateMaxModeAutoTopUp,
     pendingPlanId,
     plusInterval,
     plusMonthly,
     portal,
     proInterval,
-    proLifetime,
     proMonthly,
     rawPlanId,
     resume,
-    selectedMaxPlan,
     selectedPlusPlan,
     selectedProPlan,
     setHasAgreed,
-    setMaxInterval,
     setPlusInterval,
     setProInterval,
     setShredOpen,
@@ -94,20 +90,21 @@ function BillingPageContent() {
     usageTierLabel,
   } = useBillingPage();
 
+  const title = t("Billing");
+  const description = t("Manage your subscription and usage");
+
   if (loading) {
     return (
-      <div className="flex justify-center py-8">
-        <Spinner />
-      </div>
+      <SettingsPageShell title={title} description={description} className="max-w-6xl">
+        <div className="flex justify-center py-8">
+          <Spinner />
+        </div>
+      </SettingsPageShell>
     );
   }
 
   return (
-    <SettingsPageShell
-      title={t("Billing")}
-      description={t("Manage your subscription and usage")}
-      className="max-w-6xl"
-    >
+    <SettingsPageShell title={title} description={description} className="max-w-6xl">
       {flashOffer && (
         <BillingFlashOfferBanner
           limit={flashOffer.limit}
@@ -151,17 +148,22 @@ function BillingPageContent() {
 
       <BillingResetCard />
 
-      {statusQuery.data?.status === "active" && maxModeQuery.data?.eligible && (
+      {maxModeQuery.data?.eligible && (
         <BillingMaxModeCard
           data={maxModeQuery.data}
           onToggle={handleMaxModeToggle}
           isToggling={enableMaxMode.isPending || disableMaxMode.isPending}
+          onBuy={(credits, saveCard) => buyMaxModeCredits.mutate({ credits, saveCard })}
+          buyPending={buyMaxModeCredits.isPending || buyMaxModeCredits.isSuccess}
+          onSaveAutoTopUp={(settings) => updateMaxModeAutoTopUp.mutate(settings)}
+          autoTopUpPending={updateMaxModeAutoTopUp.isPending}
         />
       )}
 
       <BillingPlansSection
         erroredMessage={errored?.message}
         hasActiveSubscription={hasActiveSubscription}
+        goMonthly={goMonthly}
         selectedPlusPlan={selectedPlusPlan}
         plusMonthly={plusMonthly}
         plusInterval={plusInterval}
@@ -170,11 +172,6 @@ function BillingPageContent() {
         proMonthly={proMonthly}
         proInterval={proInterval}
         onProIntervalChange={setProInterval}
-        selectedMaxPlan={selectedMaxPlan}
-        maxMonthly={maxMonthly}
-        maxInterval={maxInterval}
-        onMaxIntervalChange={setMaxInterval}
-        proLifetime={proLifetime}
         isOnTeamPlan={isOnTeamPlan}
         planActions={{
           activePlanId,

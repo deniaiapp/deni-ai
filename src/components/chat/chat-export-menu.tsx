@@ -1,8 +1,6 @@
-"use client";
-
 import type { UIMessage } from "ai";
 import { DownloadIcon, FileJsonIcon, FileTextIcon, PrinterIcon } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";

@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { comparisonSettingsSchema, normalizeComparisonSettings } from "./comparison-settings";
 import { models } from "./constants";
-import { buildChatSystemPrompt } from "@/app/api/chat/_lib/prompt";
+import { buildChatSystemPrompt } from "@/server/http/chat/_lib/prompt";
 
 const defaults = () => comparisonSettingsSchema.parse({});
 

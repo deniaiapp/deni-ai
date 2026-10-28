@@ -7,7 +7,7 @@ import { user } from "./auth-schema";
  * Per-product monthly usage totals behind the combined usage view.
  *
  * - `chat` / `flixa`: `metric` is the shared quota category ("basic" | "premium"),
- *   `unit` is "tokens" (or "requests" for guests). The quota itself stays in
+ *   `unit` is "units" (rows before 2026-11: "tokens", or "requests" for guests). The quota itself stays in
  *   `usage_quota`; these rows only say which product spent it.
  * - `run` (Deni Run): `metric` is "model" | "browser" | "computer", `unit` is
  *   "usd_micros". These rows are the Deni Run budget ledger itself.

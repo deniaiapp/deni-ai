@@ -3,10 +3,11 @@
  * factories that no longer exist on the server. A full reload fixes them.
  */
 const STALE_DEPLOYMENT_PATTERNS = [
-  /module factory is not available/i,
-  /ChunkLoadError/,
-  /Loading chunk [\w-]+ failed/i,
-  /Failed to load chunk/i,
+  // Chromium, Firefox and Safari wording for a failed dynamic import().
+  /Failed to fetch dynamically imported module/i,
+  /error loading dynamically imported module/i,
+  /Importing a module script failed/i,
+  /Unable to preload CSS/i,
 ];
 
 const RELOAD_GUARD_KEY = "deni-ai:stale-deployment-reload";

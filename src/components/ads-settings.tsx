@@ -1,8 +1,6 @@
-"use client";
-
 import { useEffect, useState, type FormEvent } from "react";
 import { FileText, Pencil } from "lucide-react";
-import { useExtracted } from "next-intl";
+import { useExtracted } from "use-intl";
 import { SettingsPageShell } from "@/components/settings-page-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -530,12 +528,8 @@ export function AdsSettings() {
           </Alert>
         )}
         {campaigns === null && !loadError && (
-          <div
-            role="status"
-            className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground"
-          >
-            <Spinner aria-hidden="true" className="size-4" />
-            <span>{t("Loading ads…")}</span>
+          <div className="flex justify-center py-12 text-muted-foreground">
+            <Spinner aria-label={t("Loading…")} />
           </div>
         )}
         {campaigns?.length === 0 && !loadError && (

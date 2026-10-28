@@ -1,8 +1,8 @@
-import { and, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import { APIError } from "better-auth/api";
 import { db } from "@/db/drizzle";
-import { billing, member, maxModeMeterEvent, usageReservation } from "@/db/schema";
+import { billing, member, usageReservation } from "@/db/schema";
 import { env } from "@/env";
 import { stripe } from "@/lib/stripe";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
@@ -13,29 +13,13 @@ import {
 } from "@/lib/account-deletion-policy";
 import { isMaxModeOnlySubscription, isMeteredMaxModePrice } from "@/lib/stripe-subscriptions";
 
-async function hasPendingUsage(
-  userId: string,
-  customerIds: Set<string>,
-  database: Pick<typeof db, "select"> = db,
-) {
+async function hasPendingUsage(userId: string, database: Pick<typeof db, "select"> = db) {
   const [reservation] = await database
     .select({ id: usageReservation.id })
     .from(usageReservation)
     .where(and(eq(usageReservation.userId, userId), isNull(usageReservation.settledAt)))
     .limit(1);
-  if (reservation) return true;
-  if (!customerIds.size) return false;
-  const [event] = await database
-    .select({ id: maxModeMeterEvent.id })
-    .from(maxModeMeterEvent)
-    .where(
-      and(
-        inArray(maxModeMeterEvent.stripeCustomerId, [...customerIds]),
-        isNull(maxModeMeterEvent.deliveredAt),
-      ),
-    )
-    .limit(1);
-  return Boolean(event);
+  return Boolean(reservation);
 }
 
 async function hasUnpaidInvoices(customerIds: Set<string>) {
@@ -72,7 +56,7 @@ async function personalDeletionStatus(
     );
   if (
     meteredCancellation ||
-    (await hasPendingUsage(userId, customerIds)) ||
+    (await hasPendingUsage(userId)) ||
     (await hasUnpaidInvoices(customerIds))
   ) {
     return { state: "billingPending", periodEnd: status.periodEnd };
@@ -256,7 +240,7 @@ export async function deletePersonalStripeCustomers(userId: string) {
   const detached = await db.transaction(
     async (tx) => {
       await tx.execute(sql`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`);
-      if (await hasPendingUsage(userId, customerIds, tx))
+      if (await hasPendingUsage(userId, tx))
         throw new APIError("BAD_REQUEST", { message: "Usage settlement is still in progress." });
       await tx
         .update(billing)

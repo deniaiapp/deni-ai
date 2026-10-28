@@ -15,14 +15,9 @@ const mocks = vi.hoisted(() => ({
   mutation: undefined as MutationOptions | undefined,
 }));
 
-vi.mock("next-intl", () => ({
-  useExtracted:
-    () =>
-    (message: string, values: Record<string, string> = {}) =>
-      message.replace(/\{(\w+)\}/g, (_match, key: string) => values[key] ?? ""),
-}));
-vi.mock("next/link", () => ({
-  default: ({ href, children, ...props }: { href: string; children: unknown }) =>
+vi.mock("use-intl", () => import("@/test/intl-mock"));
+vi.mock("@/lib/navigation", () => ({
+  Link: ({ href, children, ...props }: { href: string; children: unknown }) =>
     createElement("a", { href, ...props }, children as string),
 }));
 vi.mock("sonner", () => ({

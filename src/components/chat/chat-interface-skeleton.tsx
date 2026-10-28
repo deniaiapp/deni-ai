@@ -1,9 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 /**
- * Static App Shell for /chat/[id] while session + messages stream in.
- * Mirrors ChatInterface layout so client navigations feel instant under
- * cacheComponents + partialPrefetching (sidebar stays; only the pane swaps).
+ * Placeholder for /chat/$id while the pane chunk and messages load.
+ * Mirrors ChatInterface layout so client navigations feel instant (the
+ * sidebar stays; only the pane swaps).
  */
 export function ChatInterfaceSkeleton() {
   return (
