@@ -39,27 +39,17 @@ export function BillingFlashOfferBanner({
           </div>
         </div>
         <div className="flex items-center justify-between gap-4 sm:justify-end">
-          <div className="sm:text-right">
-            <p className="text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
-              {limit.kind === "timer"
-                ? t("Ends in")
-                : t("{spots, plural, one {First buyer only} other {First # buyers only}}", {
-                    spots: limit.spots,
-                  })}
-            </p>
-            {limit.kind === "timer" ? (
+          {limit.kind === "timer" && (
+            <div className="sm:text-right">
+              <p className="text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+                {t("Ends in")}
+              </p>
               <OfferCountdown
                 endsAt={limit.endsAt}
                 className="font-mono text-xl font-semibold text-amber-700 dark:text-amber-300"
               />
-            ) : (
-              <p className="text-xl font-semibold text-amber-700 tabular-nums dark:text-amber-300">
-                {t("{spotsLeft, plural, one {# spot left} other {# spots left}}", {
-                  spotsLeft: limit.spotsLeft,
-                })}
-              </p>
-            )}
-          </div>
+            </div>
+          )}
           <Button
             onClick={() => {
               onViewOffer();

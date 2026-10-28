@@ -58,11 +58,11 @@ export function FlashOfferStrip() {
   );
   const offer = offerQuery.data;
   const offerEndsAt = offer?.kind === "timer" ? offer.endsAt : null;
-  // A dismissed strip returns for a new timer, or once another spot is taken.
+  // A dismissed strip returns only for a new offer; spot counts are not shown.
   const offerKey = offer
     ? offer.kind === "timer"
       ? offer.endsAt
-      : `spots:${offer.spotsLeft.toString()}`
+      : `spots:${offer.spots.toString()}`
     : null;
 
   // Refetch at expiry so the strip disappears without a reload.
@@ -91,25 +91,13 @@ export function FlashOfferStrip() {
         <span className="hidden text-muted-foreground sm:inline">
           {t("Yearly and lifetime plans")}
         </span>
-        {offer.kind === "timer" ? (
+        {offer.kind === "timer" && (
           <span className="inline-flex items-center gap-1.5 text-muted-foreground">
             {t("Ends in")}
             <OfferCountdown
               endsAt={offer.endsAt}
               className="font-mono font-semibold text-amber-700 dark:text-amber-300"
             />
-          </span>
-        ) : (
-          <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-            {t("{spots, plural, one {First buyer only} other {First # buyers only}}", {
-              spots: offer.spots,
-            })}
-            <span aria-hidden="true">·</span>
-            <span className="font-semibold text-amber-700 tabular-nums dark:text-amber-300">
-              {t("{spotsLeft, plural, one {# spot left} other {# spots left}}", {
-                spotsLeft: offer.spotsLeft,
-              })}
-            </span>
           </span>
         )}
       </div>

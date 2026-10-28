@@ -1,4 +1,4 @@
-import { Clock, ShieldCheck, Sparkles, Users } from "lucide-react";
+import { Clock, ShieldCheck, Sparkles } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import type { ClientPlan, IndividualPlanId } from "@/lib/billing";
 import { useBillingPlanCopy } from "@/lib/billing-plan-copy";
@@ -125,7 +125,7 @@ export function PlanCard({
         <div className="space-y-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="text-[11px] font-semibold tracking-[0.22em] text-muted-foreground uppercase">
+              <CardTitle className="text-[11px] font-semibold tracking-[0.22em] text-muted-foreground">
                 {tierName}
               </CardTitle>
               {offer ? (
@@ -222,30 +222,11 @@ export function PlanCard({
             {mode === "payment" && (
               <p className="text-sm font-medium text-foreground">{t("One-time purchase")}</p>
             )}
-            {offer && (
+            {offer?.kind === "timer" && (
               <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300">
-                {offer.kind === "timer" ? (
-                  <>
-                    <Clock className="size-4" />
-                    <span>{t("Offer ends in")}</span>
-                    <OfferCountdown endsAt={offer.endsAt} className="font-mono font-semibold" />
-                  </>
-                ) : (
-                  <>
-                    <Users className="size-4" />
-                    <span>
-                      {t("{spots, plural, one {First buyer only} other {First # buyers only}}", {
-                        spots: offer.spots,
-                      })}
-                    </span>
-                    <span aria-hidden="true">·</span>
-                    <span className="font-semibold">
-                      {t("{spotsLeft, plural, one {# spot left} other {# spots left}}", {
-                        spotsLeft: offer.spotsLeft,
-                      })}
-                    </span>
-                  </>
-                )}
+                <Clock className="size-4" />
+                <span>{t("Offer ends in")}</span>
+                <OfferCountdown endsAt={offer.endsAt} className="font-mono font-semibold" />
               </div>
             )}
           </div>
