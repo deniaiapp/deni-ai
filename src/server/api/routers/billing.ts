@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { and, eq, inArray, isNotNull, isNull, like, or, sql } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, isNull, like, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import { z } from "zod";
 import { billing, member, user } from "@/db/schema";
@@ -31,8 +31,20 @@ import {
   isPaidLifetimeRecord,
   saveLifetimePlan,
 } from "@/lib/lifetime-plan";
-import { disableMaxMode, enableMaxMode, getMaxModeStatus } from "@/lib/max-mode";
-import { attachMaxModeMeteredItems } from "@/lib/max-mode-stripe";
+import {
+  disableMaxMode,
+  enableMaxMode,
+  getMaxModeCreditTarget,
+  getMaxModeStatus,
+} from "@/lib/max-mode";
+import {
+  createMaxModeCreditCheckout,
+  MAX_MODE_AUTO_TOP_UP_THRESHOLD_MAX,
+  MAX_MODE_AUTO_TOP_UP_THRESHOLD_MIN,
+  MAX_MODE_CREDIT_MAX,
+  MAX_MODE_CREDIT_MIN,
+  updateMaxModeAutoTopUp,
+} from "@/lib/max-mode-credits";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
 import { stripe } from "@/lib/stripe";
 import { createBillingPortalSession } from "@/lib/stripe-portal";
@@ -62,12 +74,11 @@ import {
 } from "../trpc";
 
 const planIdSchema = z.enum([
+  "go_monthly",
   "plus_monthly",
   "plus_yearly",
   "pro_monthly",
   "pro_yearly",
-  "max_monthly",
-  "max_yearly",
   "pro_lifetime",
 ]);
 
@@ -623,7 +634,7 @@ export const billingRouter = router({
           and(
             eq(member.userId, ctx.userId),
             isNotNull(billing.organizationId),
-            or(like(billing.planId, "pro_team%"), like(billing.planId, "max_team%")),
+            like(billing.planId, "pro_team%"),
           ),
         ),
     ]);
@@ -936,10 +947,6 @@ export const billingRouter = router({
         .returning();
       const saved = savedSnapshot ?? (await ensureBillingRecord(ctx, ctx.userId));
 
-      if (saved?.maxModeEnabled) {
-        await attachMaxModeMeteredItems(saved, ctx.userId);
-      }
-
       return {
         planId: saved.planId ?? null,
         status: saved.status ?? null,
@@ -1133,11 +1140,52 @@ export const billingRouter = router({
           : null,
       };
     }),
-  // Max Mode endpoints
-  // Reads Stripe prices and subscriptions; the team Max Mode editor refetches it per edit.
+  // Max Mode endpoints: prepaid credits spent once the plan's pool is used up.
+  // Reads every credit lot of the owner; the team Max Mode editor refetches it per edit.
   maxModeStatus: protectedProcedure
     .use(stripeRead("maxModeStatus", TRPC_RATE_LIMITS.stripeReadPerEdit))
     .query(async ({ ctx }) => getMaxModeStatus(ctx.userId)),
+  createMaxModeCreditCheckout: billingEnabledProcedure
+    .use(stripeWrite("createMaxModeCreditCheckout"))
+    .input(
+      z.object({
+        credits: z.number().int().min(MAX_MODE_CREDIT_MIN).max(MAX_MODE_CREDIT_MAX),
+        saveCard: z.boolean().default(false),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const target = await getMaxModeCreditTarget(ctx.userId);
+      if (!target.ok) throw new TRPCError({ code: "BAD_REQUEST", message: target.error });
+      const url = await createMaxModeCreditCheckout({
+        owner: target.owner,
+        credits: input.credits,
+        stripeCustomerId: target.stripeCustomerId,
+        purchasedByUserId: ctx.userId,
+        saveCard: input.saveCard,
+        returnPath: target.returnPath,
+      });
+      return { url };
+    }),
+  updateMaxModeAutoTopUp: billingEnabledProcedure
+    .use(stripeWrite("updateMaxModeAutoTopUp"))
+    .input(
+      z.object({
+        enabled: z.boolean(),
+        thresholdCredits: z
+          .number()
+          .int()
+          .min(MAX_MODE_AUTO_TOP_UP_THRESHOLD_MIN)
+          .max(MAX_MODE_AUTO_TOP_UP_THRESHOLD_MAX),
+        amountCredits: z.number().int().min(MAX_MODE_CREDIT_MIN).max(MAX_MODE_CREDIT_MAX),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const target = await getMaxModeCreditTarget(ctx.userId);
+      if (!target.ok) throw new TRPCError({ code: "BAD_REQUEST", message: target.error });
+      const result = await updateMaxModeAutoTopUp(target.owner, input);
+      if (!result.success) throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
+      return { success: true };
+    }),
   enableMaxMode: billingEnabledProcedure
     .use(stripeWrite("enableMaxMode"))
     .mutation(async ({ ctx }) => {

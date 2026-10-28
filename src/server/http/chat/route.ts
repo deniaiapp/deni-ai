@@ -173,7 +173,7 @@ export async function POST(req: Request) {
   }
 
   if (parsedBody.data.comparison && !(await canCompareModels(userId))) {
-    return Response.json({ error: "Model comparison requires Pro or Max." }, { status: 403 });
+    return Response.json({ error: "Model comparison requires Pro." }, { status: 403 });
   }
 
   const {
@@ -397,6 +397,9 @@ export async function POST(req: Request) {
   let hasAssistantOutput = false;
   let consumedUsageAmount = 0;
   let finalUsageAmount = 0;
+  // What this request may spend in total (the pool left, plus Max Mode credits);
+  // the reservation only held an estimate, and a tool loop resends its context.
+  let usageAllowance: number | null = null;
   // Provider usage arrives when a model call ends, and is added once its step
   // finishes. A stop during the step's tool calls keeps the call's reported usage.
   // A call the provider accepted but that was cut off before it ended (stop,
@@ -452,6 +455,8 @@ export async function POST(req: Request) {
   const resolveUsageAmount = () => {
     return Math.max(finalUsageAmount + resolveUnfinishedStepAmount(), hasAssistantOutput ? 1 : 0);
   };
+  const isUsageAllowanceSpent = () =>
+    usageAllowance !== null && resolveUsageAmount() >= usageAllowance;
   const modelReservationId = `${generationId}:model`;
   const persistObservedUsage = async () => {
     if (!usageConsumed) return;
@@ -689,13 +694,14 @@ export async function POST(req: Request) {
       proMode,
       fastMode,
     });
-    await consumeUsage({
+    const reservation = await consumeUsage({
       userId,
       category: usageCategory,
       reservationId: modelReservationId,
       isAnonymous,
       amount: consumedUsageAmount,
     });
+    usageAllowance = reservation.allowance;
     usageConsumed = true;
     watchUsage();
     usageRefunded = false;
@@ -721,7 +727,8 @@ export async function POST(req: Request) {
       experimental_download: createChatAttachmentDownload(generationSignal, attachmentCache),
       messages: requestMessages,
       abortSignal: generationSignal,
-      stopWhen: stepCountIs(isAnonymous ? GUEST_MAX_STEPS : MAX_STEPS),
+      // No further tool step once the request has spent what it may.
+      stopWhen: [stepCountIs(isAnonymous ? GUEST_MAX_STEPS : MAX_STEPS), isUsageAllowanceSpent],
       maxOutputTokens: isAnonymous ? GUEST_MAX_OUTPUT_TOKENS : undefined,
       tools,
       // Runs right before the provider call, once attachments are downloaded.
@@ -744,6 +751,11 @@ export async function POST(req: Request) {
           stepOutputChars += chunk.text.length;
         } else if (chunk.type === "tool-input-delta") {
           stepOutputChars += chunk.delta.length;
+        }
+        // A step that streams past the allowance stops like a user stop: its
+        // output so far is kept and billed, and the next request is refused.
+        if (generationAbortController && !generationSignal.aborted && isUsageAllowanceSpent()) {
+          abortGeneration(generationAbortController, "stopped");
         }
       },
       // Runs before the step's tool calls; the step finishes after them.

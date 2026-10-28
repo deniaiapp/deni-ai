@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   sign: vi.fn(async (key: string, ttl: number) => `https://storage.example/${key}?ttl=${ttl}`),
   // Reports every key as deleted unless a test says otherwise.
   deleteStoredFiles: vi.fn(async (keys: readonly string[]): Promise<string[]> => [...keys]),
-  tier: vi.fn(async (_userId: string) => "free" as "free" | "plus" | "pro" | "max"),
+  tier: vi.fn(async (_userId: string) => "free" as "free" | "go" | "plus" | "pro"),
   exportFiles: vi.fn(async (_userId: string, _database?: unknown): Promise<string[]> => []),
 }));
 
@@ -626,8 +626,8 @@ test("guests get the guest quota; signed-in users get their plan tier's", async 
   expect(await getStorageLimitForUser("guest", true)).toBe(20 * MiB);
   expect(mocks.tier).not.toHaveBeenCalled();
 
-  mocks.tier.mockResolvedValueOnce("max");
-  expect(await getStorageLimitForUser("user", false)).toBe(2048 * MiB);
+  mocks.tier.mockResolvedValueOnce("pro");
+  expect(await getStorageLimitForUser("user", false)).toBe(1024 * MiB);
   mocks.tier.mockResolvedValueOnce("plus");
   expect(await getStorageLimitForUser("user", false)).toBe(500 * MiB);
   expect(mocks.tier).toHaveBeenCalledWith("user");

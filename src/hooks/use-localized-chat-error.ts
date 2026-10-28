@@ -53,18 +53,12 @@ export function useLocalizedChatError() {
       case "You've hit the usage limit for your plan.":
       case "Usage limit reached for your plan.":
         return t("You've hit the usage limit for your plan.");
-      case "This model is not available on the Free plan. Upgrade to Plus or higher to use it.":
-        return t(
-          "This model is not available on the Free plan. Upgrade to Plus or higher to use it.",
-        );
-      case "This model is available on the Pro and Max plans. Upgrade to Pro or higher to use it.":
-        return t(
-          "This model is available on the Pro and Max plans. Upgrade to Pro or higher to use it.",
-        );
-      case "Pro mode is not available on the Free plan. Upgrade to Plus or higher to use it.":
-        return t(
-          "Pro mode is not available on the Free plan. Upgrade to Plus or higher to use it.",
-        );
+      case "This model is not available on your plan. Upgrade to Plus or higher to use it.":
+        return t("This model is not available on your plan. Upgrade to Plus or higher to use it.");
+      case "This model is available on the Pro plan. Upgrade to Pro to use it.":
+        return t("This model is available on the Pro plan. Upgrade to Pro to use it.");
+      case "Pro mode is not available on your plan. Upgrade to Plus or higher to use it.":
+        return t("Pro mode is not available on your plan. Upgrade to Plus or higher to use it.");
       case "Only GPT-6 Luna is available for guest sessions.":
         return t("Only GPT-6 Luna is available for guest sessions. Log in to use more models.");
       case "Pro mode is not available for guest sessions.":

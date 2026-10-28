@@ -25,7 +25,13 @@ vi.mock("@/lib/ad-checkout", () => ({
   pauseReversedAdCharge: vi.fn(),
   releaseExpiredAdCheckout: vi.fn(),
 }));
-vi.mock("@/lib/max-mode", () => ({ syncMaxModeMeterPeriod: vi.fn() }));
+vi.mock("@/lib/max-mode-credits", () => ({
+  MAX_MODE_CREDIT_PURPOSE: "max_mode_credits",
+  grantMaxModeCreditCheckout: vi.fn(),
+  grantMaxModeCreditTopUp: vi.fn(),
+  restoreMaxModeCredits: vi.fn(),
+  revokeMaxModeCredits: vi.fn(),
+}));
 vi.mock("@/lib/stripe-disputes", () => ({
   handleChargeDisputeClosed: vi.fn(),
   handleChargeDisputeCreated: vi.fn(),
@@ -70,7 +76,7 @@ vi.mock("@/lib/stripe", () => ({
           if (state.replacementDuringLineItems)
             Object.assign(state.record, {
               stripeSubscriptionId: "sub_new",
-              planId: "max_monthly",
+              planId: "go_monthly",
               status: "active",
             });
           return { data: [{ price: { id: "price_pro_lifetime" } }] };
@@ -189,7 +195,7 @@ test.each([false, true])(
   async (lifetime) => {
     Object.assign(state.record, {
       stripeSubscriptionId: "sub_new",
-      planId: "max_monthly",
+      planId: "go_monthly",
       status: "active",
       mode: "subscription",
     });
@@ -209,7 +215,7 @@ test.each([false, true])(
     expect((await deliver()).status).toBe(200);
     expect(state.record).toMatchObject({
       stripeSubscriptionId: "sub_new",
-      planId: "max_monthly",
+      planId: "go_monthly",
       status: "active",
     });
   },
@@ -218,7 +224,7 @@ test.each([false, true])(
 test("a subscription replaced during lifetime lookup is protected by the conditional write", async () => {
   Object.assign(state.record, {
     stripeSubscriptionId: "sub_old",
-    planId: "max_monthly",
+    planId: "go_monthly",
     status: "active",
   });
   state.replacementDuringLookup = true;
@@ -258,7 +264,7 @@ test("a paid lifetime checkout is activated without the buyer returning", async 
 test("a lifetime checkout does not displace a live subscription", async () => {
   Object.assign(state.record, {
     stripeSubscriptionId: "sub",
-    planId: "max_monthly",
+    planId: "go_monthly",
     status: "active",
   });
   state.event = {
@@ -267,13 +273,13 @@ test("a lifetime checkout does not displace a live subscription", async () => {
     data: { object: paidLifetimeSession },
   };
   expect((await deliver()).status).toBe(200);
-  expect(state.record).toMatchObject({ planId: "max_monthly", status: "active" });
+  expect(state.record).toMatchObject({ planId: "go_monthly", status: "active" });
 });
 
 test("a deleted subscription hands the row back to a paid lifetime plan", async () => {
   Object.assign(state.record, {
     stripeSubscriptionId: "sub",
-    planId: "max_monthly",
+    planId: "go_monthly",
     status: "active",
     firstPaidAt: new Date(),
   });
@@ -285,8 +291,8 @@ test("a deleted subscription hands the row back to a paid lifetime plan", async 
         id: "sub",
         object: "subscription",
         customer: "customer",
-        metadata: { userId: "user", planId: "max_monthly" },
-        items: { data: [{ price: { lookup_key: "max_monthly" } }] },
+        metadata: { userId: "user", planId: "go_monthly" },
+        items: { data: [{ price: { lookup_key: "go_monthly" } }] },
       },
     },
   };
@@ -314,9 +320,9 @@ test("an incomplete subscription never replaces a paid lifetime plan", async () 
         object: "subscription",
         customer: "customer",
         status: "incomplete",
-        metadata: { userId: "user", planId: "max_monthly" },
+        metadata: { userId: "user", planId: "go_monthly" },
         items: {
-          data: [{ current_period_end: 1_900_000_000, price: { lookup_key: "max_monthly" } }],
+          data: [{ current_period_end: 1_900_000_000, price: { lookup_key: "go_monthly" } }],
         },
       },
     },
@@ -330,12 +336,12 @@ test("a stale subscription event cannot undo a newer cancellation", async () => 
     id: "sub",
     object: "subscription",
     customer: "customer",
-    metadata: { userId: "user", planId: "max_monthly" },
+    metadata: { userId: "user", planId: "go_monthly" },
     items: {
-      data: [{ current_period_end: 1_900_000_000, price: { lookup_key: "max_monthly" } }],
+      data: [{ current_period_end: 1_900_000_000, price: { lookup_key: "go_monthly" } }],
     },
   };
-  Object.assign(state.record, { stripeSubscriptionId: "sub", planId: "max_monthly" });
+  Object.assign(state.record, { stripeSubscriptionId: "sub", planId: "go_monthly" });
   // The delayed event still says active; Stripe already knows the subscription ended.
   state.event = {
     type: "customer.subscription.updated",
@@ -376,7 +382,7 @@ test("a refund for an old lifetime checkout preserves a newer subscription", asy
     stripeSubscriptionId: "sub_new",
     mode: "subscription",
     status: "active",
-    planId: "max_monthly",
+    planId: "go_monthly",
     checkoutSessionId: "cs_new",
   });
   state.completedSessions = [paidLifetimeSession];
@@ -426,13 +432,13 @@ test("a won dispute does not replace a subscription bought after the revocation"
   Object.assign(state.record, {
     ...revokedByDispute,
     stripeSubscriptionId: "sub_new",
-    planId: "max_monthly",
+    planId: "go_monthly",
     status: "active",
   });
   state.completedSessions = [paidLifetimeSession];
   state.disputes = ["won"];
   expect((await closeDispute("won")).status).toBe(200);
-  expect(state.record).toMatchObject({ planId: "max_monthly", status: "active" });
+  expect(state.record).toMatchObject({ planId: "go_monthly", status: "active" });
 });
 test("a won dispute leaves a later refund's revocation in place", async () => {
   Object.assign(state.record, revokedByDispute);

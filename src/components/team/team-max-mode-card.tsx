@@ -5,10 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
+import {
+  MaxModeCreditsPanel,
+  type MaxModeAutoTopUpSettings,
+  type MaxModeCreditSummaryData,
+} from "@/components/billing/max-mode-credits-panel";
 import { useAuditActionSentence } from "./team-audit-utils";
 import { TeamMaxModeDefaultPolicySection } from "./team-max-mode-default-policy";
 import { TeamMaxModeMemberRow, type TeamMaxModeMemberPolicy } from "./team-max-mode-member-row";
-import { dateTimeFormatter, numberFormatter } from "./team-utils";
+import { dateTimeFormatter } from "./team-utils";
 
 type DefaultPolicy = {
   maxModeEnabled: boolean;
@@ -29,8 +34,10 @@ type AuditEntry = {
 type MaxModeSettings = {
   enabled: boolean;
   eligible: boolean;
-  usageBasic: number;
-  usagePremium: number;
+  credits: MaxModeCreditSummaryData;
+  packs: readonly number[];
+  minCredits: number;
+  maxCredits: number;
   defaultPolicy?: DefaultPolicy | null;
   members: TeamMaxModeMemberPolicy[];
   auditLog: AuditEntry[];
@@ -48,6 +55,10 @@ export function TeamMaxModeCard({
   onMemberPolicyChange,
   onMemberLimitChange,
   onExportCsv,
+  buyPending,
+  onBuy,
+  autoTopUpPending,
+  onSaveAutoTopUp,
 }: {
   isLoading: boolean;
   settings?: MaxModeSettings | null;
@@ -82,6 +93,10 @@ export function TeamMaxModeCard({
     value: string;
   }) => void;
   onExportCsv: () => void;
+  buyPending: boolean;
+  onBuy: (credits: number, saveCard: boolean) => void;
+  autoTopUpPending: boolean;
+  onSaveAutoTopUp: (settings: MaxModeAutoTopUpSettings) => void;
 }) {
   const t = useExtracted();
   const getActionSentence = useAuditActionSentence();
@@ -96,7 +111,9 @@ export function TeamMaxModeCard({
               {t("Team Max Mode")}
             </CardTitle>
             <CardDescription>
-              {t("Set the team-wide Max Mode switch and per-member overage token limits.")}
+              {t(
+                "Buy shared prepaid credits for usage past the plan's pool, and set per-member limits.",
+              )}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
@@ -118,23 +135,26 @@ export function TeamMaxModeCard({
           <Spinner />
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border p-3">
-                <p className="text-xs text-muted-foreground">{t("Status")}</p>
-                <p className="mt-1 text-sm font-medium">
-                  {settings?.enabled ? t("Enabled") : t("Disabled")}
-                </p>
-              </div>
-              <div className="rounded-xl border p-3">
-                <p className="text-xs text-muted-foreground">{t("Max Mode usage")}</p>
-                <p className="mt-1 text-sm font-medium">
-                  {numberFormatter.format(
-                    (settings?.usageBasic ?? 0) + (settings?.usagePremium ?? 0),
-                  )}{" "}
-                  {t("tokens")}
-                </p>
-              </div>
+            <div className="rounded-xl border p-3">
+              <p className="text-xs text-muted-foreground">{t("Status")}</p>
+              <p className="mt-1 text-sm font-medium">
+                {settings?.enabled ? t("Enabled") : t("Disabled")}
+              </p>
             </div>
+
+            {settings && (
+              <MaxModeCreditsPanel
+                credits={settings.credits}
+                packs={settings.packs}
+                minCredits={settings.minCredits}
+                maxCredits={settings.maxCredits}
+                canManage={settings.eligible}
+                buyPending={buyPending}
+                onBuy={onBuy}
+                autoTopUpPending={autoTopUpPending}
+                onSaveAutoTopUp={onSaveAutoTopUp}
+              />
+            )}
 
             {settings?.defaultPolicy && (
               <TeamMaxModeDefaultPolicySection
@@ -149,7 +169,7 @@ export function TeamMaxModeCard({
               <div className="hidden grid-cols-[minmax(0,1fr)_88px_120px] gap-3 px-3 text-xs font-medium text-muted-foreground md:grid">
                 <span>{t("Member")}</span>
                 <span>{t("Enabled")}</span>
-                <span>{t("Token limit")}</span>
+                <span>{t("Unit limit")}</span>
               </div>
               {settings?.members.map((memberPolicy) => (
                 <TeamMaxModeMemberRow
@@ -165,7 +185,7 @@ export function TeamMaxModeCard({
               <ShieldCheck className="mt-0.5 size-3.5 shrink-0" />
               <p>
                 {t(
-                  "Blank member limits allow unlimited Max Mode token overage while the team switch is enabled.",
+                  "Limits are in usage units past the plan's pool (2M units = 1 credit). Blank limits let a member spend the team's credits freely while the team switch is enabled.",
                 )}
               </p>
             </div>

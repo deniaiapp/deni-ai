@@ -32,6 +32,10 @@ export function TeamBillingPage() {
     updateTeamMaxMode,
     updateTeamMaxModeDefaultPolicy,
     updateMemberMaxModePolicy,
+    buyTeamMaxModeCredits,
+    updateTeamMaxModeAutoTopUp,
+    handleBuyTeamMaxModeCredits,
+    handleSaveTeamMaxModeAutoTopUp,
     handleSubscribe,
     handleChangePlan,
     handleChangePlanDialogOpenChange,
@@ -123,6 +127,10 @@ export function TeamBillingPage() {
         onMemberPolicyChange={updateMemberPolicy}
         onMemberLimitChange={handleMemberLimitChange}
         onExportCsv={handleExportMaxModeCsv}
+        buyPending={buyTeamMaxModeCredits.isPending || buyTeamMaxModeCredits.isSuccess}
+        onBuy={handleBuyTeamMaxModeCredits}
+        autoTopUpPending={updateTeamMaxModeAutoTopUp.isPending}
+        onSaveAutoTopUp={handleSaveTeamMaxModeAutoTopUp}
       />
 
       <SubscriptionShredder

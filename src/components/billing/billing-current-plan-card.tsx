@@ -2,7 +2,6 @@ import { Link } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { useState } from "react";
 import type { BillingPlanId, ClientPlan } from "@/lib/billing";
-import { isMaxTeamPlan } from "@/lib/billing";
 import { formatAppDate } from "@/lib/format-date";
 import { usePlanIntervalLabel, useTierLabel } from "./billing-utils";
 import { SubscriptionCancelDialog } from "./subscription-shredder";
@@ -54,13 +53,9 @@ export function BillingCurrentPlanCard({
           <CardTitle className="text-sm font-medium">{t("Current Plan")}</CardTitle>
           <CardDescription>
             {isOnTeamPlan
-              ? isMaxTeamPlan(rawPlanId)
-                ? t("Max for Teams {name}", {
-                    name: rawPlanId ? getPlanIntervalLabel(rawPlanId) : "",
-                  })
-                : t("Pro for Teams {name}", {
-                    name: rawPlanId ? getPlanIntervalLabel(rawPlanId) : "",
-                  })
+              ? t("Pro for Teams {name}", {
+                  name: rawPlanId ? getPlanIntervalLabel(rawPlanId) : "",
+                })
               : currentPlan
                 ? t("{tier} {name}", {
                     tier: activePlanId ? getTierLabel(activePlanId) : t("Plus"),

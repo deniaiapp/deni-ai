@@ -227,7 +227,7 @@ beforeEach(() => {
 test("opening checkout does not touch the current plan", async () => {
   Object.assign(state.record, lifetimeRecord);
   state.subscriptions = [];
-  await caller().createCheckoutSession({ planId: "max_monthly" });
+  await caller().createCheckoutSession({ planId: "go_monthly" });
   expect(state.record).toMatchObject({ ...lifetimeRecord, checkoutSessionId: "cs_new" });
 });
 
@@ -284,11 +284,11 @@ test("a lifetime plan behind a later subscription cannot be bought again", async
 test("a stored open session is not handed back once a guard refuses checkout", async () => {
   state.record.checkoutSessionId = "cs_old";
   state.checkoutSession = openSession({
-    planId: "max_monthly",
-    priceId: "price_max_monthly",
+    planId: "go_monthly",
+    priceId: "price_go_monthly",
     flashOfferCoupon: "none",
   });
-  await expect(caller().createCheckoutSession({ planId: "max_monthly" })).rejects.toThrow(
+  await expect(caller().createCheckoutSession({ planId: "go_monthly" })).rejects.toThrow(
     "You already have an active subscription",
   );
   expect(state.createdSession).not.toHaveBeenCalled();
@@ -299,7 +299,7 @@ test("a subscription that ended after canceling at period end allows a new check
   state.subscriptions = [
     { ...subscription("canceled", "plus_monthly"), cancel_at_period_end: true },
   ];
-  await expect(caller().createCheckoutSession({ planId: "max_monthly" })).resolves.toMatchObject({
+  await expect(caller().createCheckoutSession({ planId: "go_monthly" })).resolves.toMatchObject({
     sessionId: "cs_new",
   });
 });
@@ -388,8 +388,8 @@ test("an ended subscription never overwrites a paid lifetime plan", async () => 
 });
 
 test("a lifetime plan takes over again once a later subscription ends", async () => {
-  state.record.planId = "max_monthly";
-  state.subscriptions = [subscription("canceled", "max_monthly")];
+  state.record.planId = "go_monthly";
+  state.subscriptions = [subscription("canceled", "go_monthly")];
   state.completedSessions = [
     {
       id: "cs_lifetime",
@@ -407,8 +407,8 @@ test("a lifetime plan takes over again once a later subscription ends", async ()
 });
 
 test("a refunded lifetime purchase is not restored", async () => {
-  state.record.planId = "max_monthly";
-  state.subscriptions = [subscription("canceled", "max_monthly")];
+  state.record.planId = "go_monthly";
+  state.subscriptions = [subscription("canceled", "go_monthly")];
   state.completedSessions = [
     {
       id: "cs_lifetime",
@@ -419,11 +419,11 @@ test("a refunded lifetime purchase is not restored", async () => {
     },
   ];
   await caller().status();
-  expect(state.record).toMatchObject({ planId: "max_monthly", status: "inactive" });
+  expect(state.record).toMatchObject({ planId: "go_monthly", status: "inactive" });
 });
 
 test("the billed price decides the plan, not stale subscription metadata", async () => {
-  state.subscriptions = [subscription("active", "plus_monthly", "max_monthly")];
+  state.subscriptions = [subscription("active", "plus_monthly", "go_monthly")];
   await caller().status();
   expect(state.record.planId).toBe("plus_monthly");
 });
@@ -433,13 +433,13 @@ test("a slow status query cannot overwrite a newly activated subscription", asyn
   state.duringRetrieve = () =>
     Object.assign(state.record, {
       stripeSubscriptionId: "sub_new",
-      planId: "max_monthly",
+      planId: "go_monthly",
       status: "active",
     });
   await caller().status();
   expect(state.record).toMatchObject({
     stripeSubscriptionId: "sub_new",
-    planId: "max_monthly",
+    planId: "go_monthly",
     status: "active",
   });
 });
@@ -448,7 +448,7 @@ test("an empty stale Stripe list cannot clear a concurrently purchased plan", as
   state.duringList = () =>
     Object.assign(state.record, {
       stripeSubscriptionId: "sub_new",
-      planId: "max_monthly",
+      planId: "go_monthly",
       status: "active",
     });
   await caller().status();
@@ -456,9 +456,9 @@ test("an empty stale Stripe list cannot clear a concurrently purchased plan", as
 });
 test("a stale snapshot cannot revert a plan change on the same subscription", async () => {
   state.duringRetrieve = () =>
-    Object.assign(state.record, { priceId: "price_max_monthly", planId: "max_monthly" });
+    Object.assign(state.record, { priceId: "price_go_monthly", planId: "go_monthly" });
   await caller().status();
-  expect(state.record.planId).toBe("max_monthly");
+  expect(state.record.planId).toBe("go_monthly");
 });
 test("restoring a lifetime purchase cannot overwrite a concurrently activated subscription", async () => {
   state.subscriptions = [subscription("canceled", "plus_monthly")];
@@ -474,7 +474,7 @@ test("restoring a lifetime purchase cannot overwrite a concurrently activated su
   state.duringLifetimeList = () =>
     Object.assign(state.record, {
       stripeSubscriptionId: "sub_new",
-      planId: "max_monthly",
+      planId: "go_monthly",
       status: "active",
     });
   await caller().status();
@@ -487,18 +487,18 @@ test.each(["cancelSubscription", "resumeSubscription"] as const)(
     state.duringUpdate = () =>
       Object.assign(state.record, {
         stripeSubscriptionId: "sub_new",
-        planId: "max_monthly",
+        planId: "go_monthly",
         status: "active",
       });
     await caller()[action]();
     expect(state.record.stripeSubscriptionId).toBe("sub_new");
-    expect(state.record.planId).toBe("max_monthly");
+    expect(state.record.planId).toBe("go_monthly");
   },
 );
 
 test("deletion freeze blocks starting another checkout", async () => {
   state.record.deletionPending = true;
-  await expect(caller().createCheckoutSession({ planId: "max_monthly" })).rejects.toThrow(
+  await expect(caller().createCheckoutSession({ planId: "go_monthly" })).rejects.toThrow(
     "Account deletion",
   );
   expect(state.createdSession).not.toHaveBeenCalled();

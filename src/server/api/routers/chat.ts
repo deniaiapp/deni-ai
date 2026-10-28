@@ -112,7 +112,7 @@ async function loadChatPage(
 }
 
 /**
- * Saving a comparison requires Pro or Max. Checked before `.input()`, so the
+ * Saving a comparison requires Pro. Checked before `.input()`, so the
  * transcript body, which may be far over the usual cap (src/lib/trpc/limits.ts),
  * is read only for users allowed to save it.
  */
@@ -120,7 +120,7 @@ const comparisonSaveProcedure = protectedProcedure.use(async ({ ctx, next }) => 
   if (!(await canCompareModels(ctx.userId))) {
     throw new TRPCError({
       code: "FORBIDDEN",
-      message: "Model comparison requires Pro or Max.",
+      message: "Model comparison requires Pro.",
     });
   }
   return next();

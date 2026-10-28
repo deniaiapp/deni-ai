@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter, useSearchParams } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { authClient } from "@/lib/auth-client";
@@ -130,6 +130,8 @@ export function useTeamSettings() {
   const updateTeamMaxModeDefaultPolicy =
     trpc.organization.updateTeamMaxModeDefaultPolicy.useMutation();
   const updateMemberMaxModePolicy = trpc.organization.updateTeamMemberMaxModePolicy.useMutation();
+  const buyTeamMaxModeCredits = trpc.organization.createTeamMaxModeCreditCheckout.useMutation();
+  const updateTeamMaxModeAutoTopUp = trpc.organization.updateTeamMaxModeAutoTopUp.useMutation();
   const utils = trpc.useUtils();
   const members = (orgDetailsData?.members ?? []).filter(isMember);
   const invitations = (orgDetailsData?.invitations ?? []).filter(isInvitation);
@@ -145,6 +147,19 @@ export function useTeamSettings() {
     { organizationId: activeOrg?.id ?? "" },
     { enabled: features.billing && Boolean(activeOrg?.id) && isAdmin },
   );
+  // Back from a paid team credit checkout: the webhook may still be granting the credits.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("credits") !== "success") return;
+    toast.success(t("Credits purchased. They appear here once the payment is confirmed."));
+    url.searchParams.delete("credits");
+    window.history.replaceState(window.history.state, "", url);
+    const timeout = setTimeout(
+      () => void utils.organization.teamMaxModeSettings.invalidate(),
+      3_000,
+    );
+    return () => clearTimeout(timeout);
+  }, [t, utils]);
   const teamPlansQuery = trpc.organization.teamPlans.useQuery(undefined, {
     enabled: features.billing && Boolean(activeOrg?.id) && isAdmin,
   });
@@ -626,6 +641,38 @@ export function useTeamSettings() {
     }
   }
 
+  async function handleBuyTeamMaxModeCredits(credits: number, saveCard: boolean) {
+    if (!activeOrg) return;
+    try {
+      const { url } = await buyTeamMaxModeCredits.mutateAsync({
+        organizationId: activeOrg.id,
+        credits,
+        saveCard,
+      });
+      // Stripe-hosted checkout returns to team settings with ?credits=success.
+      window.location.assign(url);
+    } catch (error) {
+      console.error("Failed to start the team credit checkout", error);
+      toast.error(localizeError(error, t("Failed to update Max Mode.")));
+    }
+  }
+
+  async function handleSaveTeamMaxModeAutoTopUp(settings: {
+    enabled: boolean;
+    thresholdCredits: number;
+    amountCredits: number;
+  }) {
+    if (!activeOrg) return;
+    try {
+      await updateTeamMaxModeAutoTopUp.mutateAsync({ organizationId: activeOrg.id, ...settings });
+      await utils.organization.teamMaxModeSettings.invalidate({ organizationId: activeOrg.id });
+      toast.success(t("Auto top-up settings saved."));
+    } catch (error) {
+      console.error("Failed to update team auto top-up", error);
+      toast.error(localizeError(error, t("Failed to update Max Mode.")));
+    }
+  }
+
   async function updateMemberPolicy(input: {
     userId: string;
     maxModeEnabled: boolean;
@@ -736,10 +783,10 @@ export function useTeamSettings() {
       "email",
       "role",
       "max_mode_enabled",
-      "basic_token_limit",
-      "premium_token_limit",
-      "basic_tokens_used",
-      "premium_tokens_used",
+      "basic_unit_limit",
+      "premium_unit_limit",
+      "basic_units_over_pool",
+      "premium_units_over_pool",
     ];
     const rows = settings.members.map((memberPolicy) => [
       memberPolicy.name ?? "",
@@ -795,6 +842,10 @@ export function useTeamSettings() {
     updateTeamMaxMode,
     updateTeamMaxModeDefaultPolicy,
     updateMemberMaxModePolicy,
+    buyTeamMaxModeCredits,
+    updateTeamMaxModeAutoTopUp,
+    handleBuyTeamMaxModeCredits,
+    handleSaveTeamMaxModeAutoTopUp,
     isCreateDialogOpen,
     setIsCreateDialogOpen,
     newOrgName,

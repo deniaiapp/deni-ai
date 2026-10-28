@@ -146,18 +146,21 @@ export function AccountMenu() {
     (disableMaxMode.isPending ||
       (!enableMaxMode.isPending &&
         (maxModeQuery.data?.enabled ?? usageQuery.data?.maxModeEnabled ?? false)));
+  // Team members follow their owner's switch; only those who manage Max Mode can toggle it.
   const maxModeEligible =
-    !billingDisabled && (maxModeQuery.data?.eligible ?? usageQuery.data?.maxModeEligible ?? false);
+    !billingDisabled &&
+    (maxModeQuery.data?.canManage ?? true) &&
+    (maxModeQuery.data?.eligible ?? usageQuery.data?.maxModeEligible ?? false);
 
   const usageItem = usageQuery.data?.usage[0];
   const usageTier = usageQuery.data?.tier ?? "free";
   const usageTierLabel =
     usageTier === "free"
       ? t("Free")
-      : usageTier === "plus"
-        ? t("Plus")
-        : usageTier === "max"
-          ? t("Max")
+      : usageTier === "go"
+        ? t("Go")
+        : usageTier === "plus"
+          ? t("Plus")
           : t("Pro");
 
   return (

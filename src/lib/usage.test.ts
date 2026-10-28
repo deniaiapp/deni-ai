@@ -1,25 +1,27 @@
 import { getTableName, SQL } from "drizzle-orm";
 import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, expect, test, vi } from "vitest";
-import { deliverMaxModeUsageReport } from "./max-mode";
+import { maybeAutoTopUpMaxModeCredits } from "./max-mode-credits";
 import { consumeUsage, settleUsage, recordObservedUsage, recoverUsageReservations } from "./usage";
 import { requestUsageAndMeterCheck } from "./usage-and-meter-schedule";
-import type { usageReservation, usageQuota, billing, maxModeMeterEvent } from "@/db/schema";
+import type { usageReservation, usageQuota, billing } from "@/db/schema";
 
 type Reservation = typeof usageReservation.$inferSelect;
 type Quota = typeof usageQuota.$inferSelect;
 type Billing = typeof billing.$inferSelect;
-type Event = typeof maxModeMeterEvent.$inferSelect;
+/** Credits spent at settlement, by payer (the organization, else the user). */
+type Spend = { payer: string; units: number };
 const state = vi.hoisted(() => ({
   database: {} as Record<string, unknown>,
   quota: null as Quota | null,
   reservations: [] as Reservation[],
-  events: [] as Event[],
+  spends: [] as Spend[],
+  credits: Number.MAX_SAFE_INTEGER,
   billings: [] as Billing[],
   team: null as string | null,
   cap: null as number | null,
   failQuota: false,
-  failMeter: false,
+  failSpend: false,
   locks: 0,
 }));
 vi.mock("@/db/drizzle", () => ({
@@ -27,7 +29,26 @@ vi.mock("@/db/drizzle", () => ({
 }));
 vi.mock("./max-mode", () => ({
   isMaxModeEligible: () => true,
-  deliverMaxModeUsageReport: vi.fn(async () => {}),
+  MAX_MODE_USABLE_STATUSES: new Set(["active", "paid"]),
+}));
+vi.mock("./max-mode-credits", () => ({
+  creditOwnerFor: (record: { userId: string | null; organizationId: string | null }) =>
+    record.organizationId
+      ? { userId: null, organizationId: record.organizationId }
+      : record.userId
+        ? { userId: record.userId, organizationId: null }
+        : null,
+  getMaxModeCreditUnits: vi.fn(async () => state.credits),
+  spendMaxModeCredits: vi.fn(
+    async (owner: { userId: string | null; organizationId: string | null }, units: number) => {
+      if (state.failSpend) throw new Error("Credit spend failed");
+      const spent = Math.min(units, state.credits);
+      state.credits -= spent;
+      state.spends.push({ payer: owner.organizationId ?? owner.userId!, units: spent });
+      return spent;
+    },
+  ),
+  maybeAutoTopUpMaxModeCredits: vi.fn(async () => false),
 }));
 vi.mock("./billing-config", () => ({ isBillingDisabled: false }));
 vi.mock("./usage-and-meter-schedule", () => ({ requestUsageAndMeterCheck: vi.fn() }));
@@ -51,12 +72,6 @@ function matches(row: object, condition: SQL): boolean {
   }
   if (query.sql.includes('"settled_at" is null') && values.settledAt != null) return false;
   if (query.sql.includes('"period_end" IS NOT DISTINCT FROM NULL') && values.periodEnd != null)
-    return false;
-  if (
-    query.sql.includes('"max_mode_period_start" <=') &&
-    values.maxModePeriodStart instanceof Date &&
-    values.maxModePeriodStart > now
-  )
     return false;
   return true;
 }
@@ -94,7 +109,8 @@ function database() {
           snapshot = structuredClone({
             quota: state.quota,
             reservations: state.reservations,
-            events: state.events,
+            spends: state.spends,
+            credits: state.credits,
             billings: state.billings,
           });
           state.locks++;
@@ -113,9 +129,14 @@ function database() {
                 const name = getTableName(table);
                 let rows: object[] = [];
                 if (name === "billing")
-                  rows = state.billings.filter((b) =>
-                    joined ? b.organizationId === state.team && !!state.team : !b.organizationId,
-                  );
+                  // The settlement looks its payer up by billing id.
+                  rows = /"billing"\."id" = \$/.test(dialect.sqlToQuery(condition).sql)
+                    ? state.billings.filter((b) => matches(b, condition))
+                    : state.billings.filter((b) =>
+                        joined
+                          ? b.organizationId === state.team && !!state.team
+                          : !b.organizationId,
+                      );
                 if (name === "usage_quota") rows = state.quota ? [state.quota] : [];
                 if (name === "usage_reservation")
                   rows = state.reservations.filter((r) => matches(r, condition));
@@ -158,14 +179,6 @@ function database() {
               } as Reservation);
               return Promise.resolve();
             }
-            if (name === "max_mode_meter_event")
-              return {
-                onConflictDoNothing: async () => {
-                  if (state.failMeter) throw new Error("Meter persistence failed");
-                  if (!state.events.some((e) => e.id === input.id))
-                    state.events.push(input as Event);
-                },
-              };
             return {
               onConflictDoUpdate: () => ({
                 returning: async () => {
@@ -241,11 +254,12 @@ beforeEach(() => {
     periodEnd: new Date("2026-07-01"),
   } as Quota;
   state.reservations = [];
-  state.events = [];
+  state.spends = [];
+  state.credits = Number.MAX_SAFE_INTEGER;
   state.team = null;
   state.cap = null;
   state.failQuota = false;
-  state.failMeter = false;
+  state.failSpend = false;
   state.locks = 0;
   state.billings = [
     {
@@ -256,15 +270,12 @@ beforeEach(() => {
       planId: "pro_monthly",
       status: "active",
       maxModeEnabled: true,
-      maxModeUsageBasic: 0,
-      maxModeUsagePremium: 0,
-      maxModePeriodStart: now,
       deletionPending: false,
     } as Billing,
   ];
   state.database = database();
   vi.mocked(requestUsageAndMeterCheck).mockClear();
-  vi.mocked(deliverMaxModeUsageReport).mockReset().mockResolvedValue(undefined);
+  vi.mocked(maybeAutoTopUpMaxModeCredits).mockClear();
 });
 const reserve = (reservationId: string, amount = 20) =>
   consumeUsage({ userId: "user", category: "basic", reservationId, amount, now });
@@ -274,8 +285,7 @@ const settle = (reservationId: string, amount: number, at = now) =>
 test("parallel reservations never permanently bill estimates", async () => {
   await Promise.all([reserve("a"), reserve("b")]);
   expect(state.quota!.used).toBe(limit + 30);
-  expect(state.billings[0].maxModeUsageBasic).toBe(0);
-  expect(state.events).toHaveLength(0);
+  expect(state.spends).toHaveLength(0);
 });
 test.each([true, false])(
   "an aborted reservation cannot overbill another generation (first abort: %s)",
@@ -289,14 +299,13 @@ test.each([true, false])(
       await settle("a", 0);
     }
     expect(state.quota!.used).toBe(limit + 10);
-    expect(state.events.map((e) => e.amount)).toEqual([10]);
-    expect(state.billings[0].maxModeUsageBasic).toBe(10);
+    expect(state.spends.map((spend) => spend.units)).toEqual([10]);
   },
 );
-test("concurrent finalization bills each actual token once", async () => {
+test("concurrent finalization spends credits for each actual unit once", async () => {
   await Promise.all([reserve("a"), reserve("b")]);
   await Promise.all([settle("a", 20), settle("b", 20)]);
-  expect(state.events.reduce((sum, e) => sum + e.amount, 0)).toBe(30);
+  expect(state.spends.reduce((sum, spend) => sum + spend.units, 0)).toBe(30);
 });
 test("old-period settlement neither refunds the new quota nor bills a returned estimate", async () => {
   await reserve("a");
@@ -305,20 +314,14 @@ test("old-period settlement neither refunds the new quota nor bills a returned e
   state.quota!.used = 100;
   await settle("a", 10, new Date("2026-07-01"));
   expect(state.quota!.used).toBe(100);
-  expect(state.events).toHaveLength(0);
+  expect(state.spends).toHaveLength(0);
 });
-test("late old-period overage retains its payer and timestamp, without inflating the new ledger", async () => {
+test("late old-period overage is still paid by its payer, without touching the new quota", async () => {
   await reserve("a");
   state.quota!.periodStart = new Date("2026-07-01");
   state.quota!.used = 100;
-  state.billings[0].maxModePeriodStart = new Date("2026-07-01");
   await settle("a", 20, new Date("2026-07-01"));
-  expect(state.events[0]).toMatchObject({
-    amount: 10,
-    stripeCustomerId: "personal-customer",
-    occurredAt: now,
-  });
-  expect(state.billings[0].maxModeUsageBasic).toBe(0);
+  expect(state.spends).toEqual([{ payer: "user", units: 10 }]);
   expect(state.quota!.used).toBe(100);
 });
 test("membership changes never move a generation's charge to a different payer", async () => {
@@ -339,9 +342,7 @@ test("membership changes never move a generation's charge to a different payer",
   await reserve("a");
   state.team = "team-b";
   await settle("a", 20);
-  expect(state.events[0].stripeCustomerId).toBe("customer-a");
-  expect(state.billings[1].maxModeUsageBasic).toBe(10);
-  expect(state.billings[2].maxModeUsageBasic).toBe(0);
+  expect(state.spends).toEqual([{ payer: "team-a", units: 10 }]);
 });
 test("parallel reservations respect a member's Max Mode cap", async () => {
   state.billings[0].organizationId = "team";
@@ -360,7 +361,7 @@ test("actual usage beyond the estimate records all usage but honors the captured
   await reserve("a");
   await settle("a", 40);
   expect(state.quota!.used).toBe(limit + 30);
-  expect(state.events[0].amount).toBe(15);
+  expect(state.spends[0].units).toBe(15);
 });
 test("quota-write failure rolls back the reservation", async () => {
   state.failQuota = true;
@@ -368,45 +369,51 @@ test("quota-write failure rolls back the reservation", async () => {
   expect(state.reservations).toHaveLength(0);
   expect(state.quota!.used).toBe(limit - 10);
 });
-test("meter persistence failure rolls back quota, ledger, and settlement together", async () => {
+test("a failed credit spend rolls back quota, ledger, and settlement together", async () => {
   await reserve("a");
-  state.failMeter = true;
-  await expect(settle("a", 15)).rejects.toThrow("Meter persistence failed");
+  state.failSpend = true;
+  await expect(settle("a", 15)).rejects.toThrow("Credit spend failed");
   expect(state.quota!.used).toBe(limit + 10);
-  expect(state.billings[0].maxModeUsageBasic).toBe(0);
+  expect(state.spends).toHaveLength(0);
   expect(state.reservations[0].settledAt).toBeNull();
 });
 test("a failed settlement has the job recover the reservation once it is stale", async () => {
   await reserve("a");
-  state.failMeter = true;
+  state.failSpend = true;
   const before = Date.now();
-  await expect(settle("a", 15)).rejects.toThrow("Meter persistence failed");
+  await expect(settle("a", 15)).rejects.toThrow("Credit spend failed");
   expect(requestUsageAndMeterCheck).toHaveBeenCalledOnce();
   expect(vi.mocked(requestUsageAndMeterCheck).mock.calls[0][0]).toBeGreaterThanOrEqual(
     before + 15 * 60_000,
   );
 });
-test("an undelivered meter event has the job retry it, a delivered one does not", async () => {
-  await Promise.all([reserve("a"), reserve("b")]);
-  vi.mocked(deliverMaxModeUsageReport).mockResolvedValueOnce({
-    delivered: 1,
-    failed: 0,
-    requiresReview: 0,
-  });
-  await settle("a", 20);
-  expect(requestUsageAndMeterCheck).not.toHaveBeenCalled();
-  vi.mocked(deliverMaxModeUsageReport).mockResolvedValueOnce({
-    delivered: 0,
-    failed: 1,
-    requiresReview: 0,
-  });
+test("spending credits checks the payer's auto top-up, settling within the pool does not", async () => {
+  await reserve("a", 5);
+  await settle("a", 5);
+  expect(maybeAutoTopUpMaxModeCredits).not.toHaveBeenCalled();
+  await reserve("b");
   await settle("b", 20);
-  expect(requestUsageAndMeterCheck).toHaveBeenCalledOnce();
+  expect(maybeAutoTopUpMaxModeCredits).toHaveBeenCalledWith(
+    { userId: "user", organizationId: null },
+    now,
+  );
+});
+test("a request past the pool is refused when the credits left cannot cover it", async () => {
+  state.credits = 5;
+  // 10 of these 20 units are past the pool.
+  await expect(reserve("a")).rejects.toThrow("Usage limit reached for your plan.");
+  state.credits = 10;
+  await expect(reserve("b")).resolves.toMatchObject({ usedMaxMode: true });
+});
+test("without credits Max Mode carries no usage past the pool", async () => {
+  state.credits = 0;
+  await expect(reserve("a")).rejects.toThrow("Usage limit reached for your plan.");
+  await expect(reserve("b", 5)).resolves.toMatchObject({ usedMaxMode: false });
 });
 test("settling without overage needs no job check", async () => {
   await reserve("a", 5);
   await settle("a", 5);
-  expect(state.events).toHaveLength(0);
+  expect(state.spends).toHaveLength(0);
   expect(requestUsageAndMeterCheck).not.toHaveBeenCalled();
 });
 test("replayed reserve and settlement calls are idempotent", async () => {
@@ -415,8 +422,7 @@ test("replayed reserve and settlement calls are idempotent", async () => {
   await settle("a", 20);
   await settle("a", 999);
   expect(state.reservations).toHaveLength(1);
-  expect(state.events).toHaveLength(1);
-  expect(state.events[0].amount).toBe(10);
+  expect(state.spends).toEqual([{ payer: "user", units: 10 }]);
   expect(state.quota!.used).toBe(limit + 10);
 });
 test("a reservation cannot refund a quota row stored in a legacy unit", async () => {
@@ -460,7 +466,7 @@ test("usage exceeding the signed 32-bit range can be settled", async () => {
   await reserve("a", 20);
   await settle("a", 20);
   expect(state.quota!.used).toBe(2_147_483_660);
-  expect(state.events[0].amount).toBe(20);
+  expect(state.spends[0].units).toBe(20);
 });
 
 test("interrupted generations recover actual provider usage without retaining the estimate", async () => {
@@ -471,13 +477,13 @@ test("interrupted generations recover actual provider usage without retaining th
     recoveryFailed: 0,
   });
   expect(state.quota!.used).toBe(limit + 5);
-  expect(state.events[0].amount).toBe(5);
+  expect(state.spends[0].units).toBe(5);
 });
 test("an abandoned generation with no output releases its entire reservation", async () => {
   await reserve("a", 20);
   await recoverUsageReservations(new Date(now.getTime() + 16 * 60_000));
   expect(state.quota!.used).toBe(limit - 10);
-  expect(state.events).toHaveLength(0);
+  expect(state.spends).toHaveLength(0);
 });
 test("a heartbeat that wins the account lock prevents stale recovery", async () => {
   await reserve("a");
@@ -495,7 +501,7 @@ test("a heartbeat that wins the account lock prevents stale recovery", async () 
   });
   expect(result.amount).toBeNull();
   expect(state.reservations[0].settledAt).toBeNull();
-  expect(state.events).toHaveLength(0);
+  expect(state.spends).toHaveLength(0);
 });
 test("late observations cannot reopen an already settled receipt", async () => {
   await reserve("a");
@@ -508,5 +514,20 @@ test("late observations cannot reopen an already settled receipt", async () => {
     now: new Date(now.getTime() + 60_000),
   });
   expect(state.reservations[0].updatedAt).toEqual(updatedAt);
-  expect(state.events).toHaveLength(1);
+  expect(state.spends).toHaveLength(1);
+});
+test("a reservation reports what the request may spend: the pool left plus the credits", async () => {
+  state.credits = 1_000;
+  // 10 units of the pool are left.
+  await expect(reserve("a", 5)).resolves.toMatchObject({ allowance: 1_010 });
+  state.billings[0].maxModeEnabled = false;
+  await expect(reserve("b", 1)).resolves.toMatchObject({ allowance: 5 });
+});
+test("a member cap bounds the credits a request may spend", async () => {
+  state.billings[0].organizationId = "team";
+  state.billings[0].planId = "pro_team_monthly";
+  state.team = "team";
+  state.cap = 30;
+  state.credits = 1_000;
+  await expect(reserve("a", 5)).resolves.toMatchObject({ allowance: 40 });
 });

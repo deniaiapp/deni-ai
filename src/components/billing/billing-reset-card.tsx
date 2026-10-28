@@ -224,9 +224,9 @@ export function BillingResetCard() {
                         <SelectContent>
                           <SelectGroup>
                             <SelectItem value="free">{t("Free plan")}</SelectItem>
+                            <SelectItem value="go">{t("Go plan")}</SelectItem>
                             <SelectItem value="plus">{t("Plus plan")}</SelectItem>
                             <SelectItem value="pro">{t("Pro plan")}</SelectItem>
-                            <SelectItem value="max">{t("Max plan")}</SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>

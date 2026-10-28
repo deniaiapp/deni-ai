@@ -150,7 +150,7 @@ test("failed team upgrade retains the original team tier", async () => {
   await expect(
     organizationRouter
       .createCaller(context())
-      .changeTeamPlan({ organizationId: "team", planId: "max_team_monthly" }),
+      .changeTeamPlan({ organizationId: "team", planId: "pro_team_yearly" }),
   ).rejects.toThrow("Payment incomplete");
   expect(state.update).toHaveBeenCalledWith(
     "sub",

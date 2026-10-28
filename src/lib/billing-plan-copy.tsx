@@ -10,15 +10,15 @@ export type BillingPlanCopy = {
   badge?: string;
 };
 
-// Multipliers vs. the next-lower tier, from the shared monthly pool in
-// src/lib/usage-pool.ts (Free $10, Plus $100, Pro $200, Max $300). Ratios against
-// the adjacent tier keep the copy meaningful and make upgrade value tangible.
+// Multipliers from the shared monthly pool in src/lib/usage-pool.ts (Free $10,
+// Go $30, Plus $100, Pro $200). Go and Plus compare against Free, Pro against
+// Plus, which keeps the copy meaningful and makes upgrade value tangible.
 const poolRatio = (tier: keyof typeof USAGE_POOL_USD, vs: keyof typeof USAGE_POOL_USD) =>
   Math.round((USAGE_POOL_USD[tier] / USAGE_POOL_USD[vs]) * 10) / 10;
 const PLAN_USAGE_MULTIPLIERS = {
+  go: { pool: poolRatio("go", "free"), vs: "Free" as const },
   plus: { pool: poolRatio("plus", "free"), vs: "Free" as const },
   pro: { pool: poolRatio("pro", "plus"), vs: "Plus" as const },
-  max: { pool: poolRatio("max", "pro"), vs: "Pro" as const },
 } as const;
 
 /** Key phrases inside a highlight, drawn at full contrast. */
@@ -48,6 +48,20 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
   );
 
   switch (planId) {
+    case "go_monthly":
+      return {
+        tagline: t("Go beyond Free for just a little"),
+        highlights: [
+          runHighlight,
+          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
+            b,
+            multiplier: String(PLAN_USAGE_MULTIPLIERS.go.pool),
+            plan: PLAN_USAGE_MULTIPLIERS.go.vs,
+          }),
+          t.rich("<b>No ads</b> experience", { b }),
+          t.rich("<b>More models</b> than Free", { b }),
+        ],
+      };
     case "plus_monthly":
       return {
         tagline: t("Get unbelievable usage limits"),
@@ -110,37 +124,6 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
           t.rich("For <b>power users</b>", { b }),
         ],
       };
-    case "max_monthly":
-      return {
-        tagline: t("Get unbelievable usage limits"),
-        highlights: [
-          runHighlight,
-          t("Includes all Pro features"),
-          t.rich("About <b>{multiplier}× more</b> monthly usage than {plan}", {
-            b,
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
-            plan: PLAN_USAGE_MULTIPLIERS.max.vs,
-          }),
-          ...comparisonHighlights,
-          t.rich("For <b>power users</b>", { b }),
-        ],
-      };
-    case "max_yearly":
-      return {
-        tagline: t("Incredible deal"),
-        badge: t("Most cost-effective"),
-        highlights: [
-          runHighlight,
-          t("Includes all Pro features"),
-          t.rich("About <b>{multiplier}× more</b> monthly usage than {plan}", {
-            b,
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
-            plan: PLAN_USAGE_MULTIPLIERS.max.vs,
-          }),
-          ...comparisonHighlights,
-          t.rich("For <b>power users</b>", { b }),
-        ],
-      };
     case "pro_lifetime":
       return {
         tagline: t("One payment. Long-term Pro access."),
@@ -187,41 +170,6 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
             b,
             multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
             plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
-          }),
-          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
-          t("Per-seat billing — pay only for active members"),
-          t("Centralized billing and member management"),
-        ],
-      };
-    case "max_team_monthly":
-      return {
-        tagline: t("Give your whole team Max-tier access with per-seat pricing."),
-        highlights: [
-          runHighlight,
-          ...comparisonHighlights,
-          t("Max benefits for every team member"),
-          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
-            b,
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
-            plan: PLAN_USAGE_MULTIPLIERS.max.vs,
-          }),
-          t.rich("Max Mode <b>pay-per-use</b> available", { b }),
-          t("Per-seat billing — pay only for active members"),
-          t("Centralized billing and member management"),
-        ],
-      };
-    case "max_team_yearly":
-      return {
-        tagline: t("Give your whole team Max-tier access with per-seat pricing."),
-        badge: t("Most cost-effective"),
-        highlights: [
-          runHighlight,
-          ...comparisonHighlights,
-          t("Max benefits for every team member"),
-          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
-            b,
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.max.pool),
-            plan: PLAN_USAGE_MULTIPLIERS.max.vs,
           }),
           t.rich("Max Mode <b>pay-per-use</b> available", { b }),
           t("Per-seat billing — pay only for active members"),

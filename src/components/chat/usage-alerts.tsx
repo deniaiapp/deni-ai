@@ -14,6 +14,8 @@ interface UsageAlertsProps {
     isUsageLow: boolean;
     isUsageBlocked: boolean;
     canEnableMaxMode: boolean;
+    /** Max Mode could carry on, but no prepaid credits are left. */
+    needsMaxModeCredits: boolean;
     billingDisabled: boolean;
   };
   usage: {
@@ -28,6 +30,7 @@ interface UsageAlertsProps {
 export function UsageAlerts({ status, usage, enableMaxMode, onRefreshUsage }: UsageAlertsProps) {
   const t = useExtracted();
   const showVerifyCard = status.isSignupLimited && !status.isAnonymous && !status.billingDisabled;
+  const offersMaxMode = status.canEnableMaxMode || status.needsMaxModeCredits;
 
   return (
     <>
@@ -36,13 +39,13 @@ export function UsageAlerts({ status, usage, enableMaxMode, onRefreshUsage }: Us
           className={cn(
             "mt-3 border-amber-500/50 bg-amber-100/40 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-50",
             status.isUsageBlocked &&
-              !status.canEnableMaxMode &&
+              !offersMaxMode &&
               "border-destructive/40 bg-destructive/10 text-destructive-foreground dark:border-destructive/30",
-            status.canEnableMaxMode &&
+            offersMaxMode &&
               "border-blue-500/50 bg-blue-100/40 text-blue-900 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-50",
           )}
         >
-          {status.canEnableMaxMode ? (
+          {offersMaxMode ? (
             <Zap className="mt-0.5 size-4" />
           ) : status.isUsageBlocked ? (
             <Ban className="mt-0.5 size-4" />
@@ -52,28 +55,32 @@ export function UsageAlerts({ status, usage, enableMaxMode, onRefreshUsage }: Us
           <AlertTitle>
             {status.canEnableMaxMode
               ? t("Enable Max Mode to continue")
-              : status.isUsageBlocked
-                ? t("Usage limit reached")
-                : t("You are running low")}
+              : status.needsMaxModeCredits
+                ? t("Buy Max Mode credits to continue")
+                : status.isUsageBlocked
+                  ? t("Usage limit reached")
+                  : t("You are running low")}
           </AlertTitle>
           <AlertDescription className="flex flex-col gap-2">
             <p>
               {status.canEnableMaxMode
-                ? t(
-                    "You've reached your limit. Enable Max Mode to continue with pay-per-use pricing.",
-                  )
-                : status.isUsageBlocked
-                  ? t("You've hit this month's usage limit on your {tier} plan.", {
-                      tier: usage.tierLabel,
-                    })
-                  : usage.remainingPercent === null
-                    ? t("Only a little of this month's usage is left on your {tier} plan.", {
+                ? t("You've reached your limit. Enable Max Mode to continue with your credits.")
+                : status.needsMaxModeCredits
+                  ? t(
+                      "You've reached your limit. Buy prepaid Max Mode credits to keep going this month.",
+                    )
+                  : status.isUsageBlocked
+                    ? t("You've hit this month's usage limit on your {tier} plan.", {
                         tier: usage.tierLabel,
                       })
-                    : t("Only {percent}% of this month's usage is left on your {tier} plan.", {
-                        percent: Math.max(usage.remainingPercent, 0.1).toFixed(1),
-                        tier: usage.tierLabel,
-                      })}
+                    : usage.remainingPercent === null
+                      ? t("Only a little of this month's usage is left on your {tier} plan.", {
+                          tier: usage.tierLabel,
+                        })
+                      : t("Only {percent}% of this month's usage is left on your {tier} plan.", {
+                          percent: Math.max(usage.remainingPercent, 0.1).toFixed(1),
+                          tier: usage.tierLabel,
+                        })}
             </p>
             {showVerifyCard && (
               <p>
@@ -100,7 +107,13 @@ export function UsageAlerts({ status, usage, enableMaxMode, onRefreshUsage }: Us
                   {t("Enable Max Mode")}
                 </Button>
               )}
-              {!status.isAnonymous && !status.billingDisabled && !status.canEnableMaxMode && (
+              {status.needsMaxModeCredits && (
+                <Button size="sm" render={<Link href="/settings/billing" />} nativeButton={false}>
+                  <Zap className="size-3.5" />
+                  {t("Buy credits")}
+                </Button>
+              )}
+              {!status.isAnonymous && !status.billingDisabled && !offersMaxMode && (
                 <Button size="sm" render={<Link href="/settings/billing" />} nativeButton={false}>
                   {t("Upgrade plan")}
                   <ArrowUpRight className="size-3.5" />

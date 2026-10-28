@@ -12,9 +12,9 @@ const MiB = 1024 * 1024;
 test("attachment storage quota follows the plan", () => {
   expect(getStorageLimitBytes("guest")).toBe(20 * MiB);
   expect(getStorageLimitBytes("free")).toBe(100 * MiB);
+  expect(getStorageLimitBytes("go")).toBe(200 * MiB);
   expect(getStorageLimitBytes("plus")).toBe(500 * MiB);
   expect(getStorageLimitBytes("pro")).toBe(1024 * MiB);
-  expect(getStorageLimitBytes("max")).toBe(2048 * MiB);
 });
 
 test("a file fits only while the total stays within the quota", () => {

@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNotNull, isNull, or, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, or, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 import { db } from "@/db/drizzle";
 import { billing, user } from "@/db/schema";
@@ -17,7 +17,13 @@ import {
   restoreDisputedLifetimeCharge,
   revokeReversedLifetimeCharge,
 } from "@/lib/lifetime-plan";
-import { syncMaxModeMeterPeriod } from "@/lib/max-mode";
+import {
+  grantMaxModeCreditCheckout,
+  grantMaxModeCreditTopUp,
+  MAX_MODE_CREDIT_PURPOSE,
+  restoreMaxModeCredits,
+  revokeMaxModeCredits,
+} from "@/lib/max-mode-credits";
 import { stripe } from "@/lib/stripe";
 import { readRequestBody, RequestBodyTooLargeError } from "@/lib/request-body";
 import { saveTeamBillingRecord } from "@/lib/team-billing-record";
@@ -30,7 +36,6 @@ import {
   getLicensedPrice,
   getSubscriptionPeriodEnd,
   isMaxModeOnlySubscription,
-  isMeteredMaxModePrice,
 } from "@/lib/stripe-subscriptions";
 import {
   cancelOrgMembersPersonalSubscriptions,
@@ -277,76 +282,10 @@ async function savePaidLifetimeCheckout(
   });
 }
 
-const METER_HOST_STATUSES = new Set(["trialing", "active", "past_due"]);
-/**
- * A live meter host whose invoices are not being paid. Ended hosts are left to
- * customer.subscription.deleted, which knows whether a replacement took over.
- */
-const UNPAID_METER_HOST_STATUSES = new Set(["past_due", "unpaid", "paused", "incomplete"]);
-
-function hasMeteredMaxModeItems(subscription: Stripe.Subscription) {
-  return subscription.items.data.some((item) => isMeteredMaxModePrice(item.price));
-}
-
-function meterItemsCondition(subscription: Stripe.Subscription) {
-  const itemIds = subscription.items.data.map((item) => item.id);
-  if (itemIds.length === 0) return null;
-  return or(
-    inArray(billing.stripeMeteredBasicItemId, itemIds),
-    inArray(billing.stripeMeteredPremiumItemId, itemIds),
-  );
-}
-
-/**
- * The Max Mode meters live on the monthly plan subscription or on a separate
- * monthly subscription, and either can end (Customer Portal, dunning, disputes).
- * Meter events only invoice through a live subscription carrying the metered
- * prices, so turn Max Mode off for the rows that relied on it instead of
- * letting overage accrue unbilled.
- */
-async function disableMaxModeForEndedMeterSubscription(
-  subscription: Stripe.Subscription,
-  customerId: string,
-) {
-  const condition = meterItemsCondition(subscription);
-  if (!condition) return;
-
-  // The app itself cancels duplicate meter hosts after attaching a new one; the
-  // meters are still billable then, so leave Max Mode alone.
-  const listed = await stripe.subscriptions.list({
-    customer: customerId,
-    status: "all",
-    limit: 20,
-    expand: ["data.items"],
-  });
-  const meteredElsewhere = listed.data.some(
-    (other) =>
-      other.id !== subscription.id &&
-      METER_HOST_STATUSES.has(other.status) &&
-      hasMeteredMaxModeItems(other),
-  );
-  if (meteredElsewhere) return;
-
-  await db
-    .update(billing)
-    .set({
-      maxModeEnabled: false,
-      stripeMeteredBasicItemId: null,
-      stripeMeteredPremiumItemId: null,
-      updatedAt: new Date(),
-    })
-    .where(condition);
-}
-
-/**
- * A Max-Mode-only host that stops being paid must not keep accruing overage.
- * The item IDs stay, so enabling Max Mode again (refused while the host is
- * unpaid) reuses the host once it recovers.
- */
-async function suspendMaxModeForUnpaidMeterSubscription(subscription: Stripe.Subscription) {
-  const condition = meterItemsCondition(subscription);
-  if (!condition) return;
-  await db.update(billing).set({ maxModeEnabled: false, updatedAt: new Date() }).where(condition);
+function paymentIntentIdOf(charge: Stripe.Charge) {
+  return typeof charge.payment_intent === "string"
+    ? charge.payment_intent
+    : (charge.payment_intent?.id ?? null);
 }
 
 async function resolveUserIdFromCustomer(
@@ -440,13 +379,9 @@ export async function POST(req: Request) {
           break;
         }
 
-        // A monthly plan subscription hosts the meters itself, so its end must
-        // turn Max Mode off too: a later checkout would not carry the meters.
-        const maxModeOnly = isMaxModeOnlySubscription(subscription);
-        if (maxModeOnly || hasMeteredMaxModeItems(subscription)) {
-          await disableMaxModeForEndedMeterSubscription(subscription, customerId);
-        }
-        if (maxModeOnly) {
+        // A legacy metered Max Mode host is not a plan; its end leaves the plan
+        // and the prepaid-credit Max Mode alone.
+        if (isMaxModeOnlySubscription(subscription)) {
           break;
         }
 
@@ -526,13 +461,8 @@ export async function POST(req: Request) {
           break;
         }
 
-        await syncMaxModeMeterPeriod(subscription);
+        // Legacy metered Max Mode hosts carry no plan.
         if (isMaxModeOnlySubscription(subscription)) {
-          // A monthly plan's own status already gates Max Mode; a separate meter
-          // host's status does not reach the billing row, so act on it here.
-          if (UNPAID_METER_HOST_STATUSES.has(subscription.status)) {
-            await suspendMaxModeForUnpaidMeterSubscription(subscription);
-          }
           break;
         }
 
@@ -612,6 +542,10 @@ export async function POST(req: Request) {
           await activatePaidAd(session);
           break;
         }
+        if (session.metadata?.purpose === MAX_MODE_CREDIT_PURPOSE) {
+          await grantMaxModeCreditCheckout(session);
+          break;
+        }
         if (session.mode === "subscription" && session.subscription) {
           const subscription =
             typeof session.subscription === "string"
@@ -673,9 +607,16 @@ export async function POST(req: Request) {
         }
         break;
       }
+      case "payment_intent.succeeded": {
+        // Off-session auto top-ups grant directly; this covers a lost response.
+        await grantMaxModeCreditTopUp(event.data.object);
+        break;
+      }
       case "charge.refunded": {
         await revokeReversedLifetimeCharge(event.data.object);
         await pauseReversedAdCharge(event.data.object);
+        const creditPaymentIntent = paymentIntentIdOf(event.data.object);
+        if (creditPaymentIntent) await revokeMaxModeCredits(creditPaymentIntent);
         break;
       }
       case "charge.dispute.created": {
@@ -689,6 +630,8 @@ export async function POST(req: Request) {
             : dispute.charge;
         await revokeReversedLifetimeCharge(charge);
         await pauseReversedAdCharge(charge);
+        const creditPaymentIntent = paymentIntentIdOf(charge);
+        if (creditPaymentIntent) await revokeMaxModeCredits(creditPaymentIntent);
         await handleChargeDisputeCreated(dispute);
         break;
       }
@@ -705,6 +648,8 @@ export async function POST(req: Request) {
               ? await stripe.charges.retrieve(dispute.charge)
               : dispute.charge;
           await restoreDisputedLifetimeCharge(charge);
+          const creditPaymentIntent = paymentIntentIdOf(charge);
+          if (creditPaymentIntent) await restoreMaxModeCredits(creditPaymentIntent);
         }
         await handleChargeDisputeClosed(dispute);
         break;

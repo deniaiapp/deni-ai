@@ -41,19 +41,18 @@ test("Free users cannot compare", async () => {
 });
 
 test.each([
+  ["go_monthly", false],
   ["plus_monthly", false],
   ["plus_yearly", false],
   ["pro_monthly", true],
   ["pro_yearly", true],
   ["pro_lifetime", true],
-  ["max_monthly", true],
-  ["max_yearly", true],
 ])("active %s comparison access is %s", async (planId, allowed) => {
   state.personal = { planId, status: "active" };
   expect(await canCompareModels("user")).toBe(allowed);
 });
 
-test.each(["pro_team_monthly", "pro_team_yearly", "max_team_monthly", "max_team_yearly"])(
+test.each(["pro_team_monthly", "pro_team_yearly"])(
   "%s grants access to a member with personal Plus",
   async (planId) => {
     state.personal = { planId: "plus_monthly", status: "active" };
@@ -77,6 +76,6 @@ test("canceled Pro retains access until the paid period ends", async () => {
 });
 
 test("expired canceled team does not grant access", async () => {
-  state.team = { planId: "max_team_monthly", status: "canceled", currentPeriodEnd: new Date(0) };
+  state.team = { planId: "pro_team_monthly", status: "canceled", currentPeriodEnd: new Date(0) };
   expect(await canCompareModels("user")).toBe(false);
 });

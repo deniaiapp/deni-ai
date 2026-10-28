@@ -13,13 +13,7 @@ import {
   user,
 } from "@/db/schema";
 import { env } from "@/env";
-import {
-  type BillingPlan,
-  billingPlans,
-  findPlanById,
-  isMaxTeamPlan,
-  isTeamPlan,
-} from "@/lib/billing";
+import { type BillingPlan, billingPlans, findPlanById, isTeamPlan } from "@/lib/billing";
 import { isBillingDisabled } from "@/lib/billing-config";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
 import { stripe } from "@/lib/stripe";
@@ -29,7 +23,16 @@ import {
   customCheckoutRequestOptions,
 } from "@/lib/stripe-checkout";
 import { checkoutSessionExpand, summarizeCheckoutSession } from "@/lib/stripe-checkout-receipt";
-import { attachMaxModeMeteredItems } from "@/lib/max-mode-stripe";
+import {
+  createMaxModeCreditCheckout,
+  getMaxModeCreditSummary,
+  MAX_MODE_AUTO_TOP_UP_THRESHOLD_MAX,
+  MAX_MODE_AUTO_TOP_UP_THRESHOLD_MIN,
+  MAX_MODE_CREDIT_MAX,
+  MAX_MODE_CREDIT_MIN,
+  MAX_MODE_CREDIT_PACKS,
+  updateMaxModeAutoTopUp,
+} from "@/lib/max-mode-credits";
 import {
   listCustomerSubscriptions,
   getLicensedPrice,
@@ -58,12 +61,7 @@ import { historyBefore, historyCursorSchema, historyCursorTimestamp } from "../h
 
 import type Stripe from "stripe";
 
-const teamPlanIdSchema = z.enum([
-  "pro_team_monthly",
-  "pro_team_yearly",
-  "max_team_monthly",
-  "max_team_yearly",
-]);
+const teamPlanIdSchema = z.enum(["pro_team_monthly", "pro_team_yearly"]);
 const maxModeLimitSchema = z.number().int().min(0).nullable();
 
 type BillingRecord = typeof billing.$inferSelect;
@@ -545,7 +543,7 @@ export const organizationRouter = router({
       await verifyOrgOwnerOrAdmin(ctx, input.organizationId);
       const auditActorUser = alias(user, "audit_actor_user");
       const auditTargetUser = alias(user, "audit_target_user");
-      const [subscription, defaultPolicy, members, auditLog] = await Promise.all([
+      const [subscription, defaultPolicy, members, auditLog, credits] = await Promise.all([
         syncTeamSubscription(ctx, ctx.userId, input.organizationId),
         ensureTeamUsagePolicy(ctx, input.organizationId),
         ctx.db
@@ -590,6 +588,7 @@ export const organizationRouter = router({
           .where(eq(teamUsageAuditLog.organizationId, input.organizationId))
           .orderBy(desc(teamUsageAuditLog.createdAt))
           .limit(5),
+        getMaxModeCreditSummary({ userId: null, organizationId: input.organizationId }),
       ]);
 
       const memberIds = members.map((m) => m.userId);
@@ -605,8 +604,7 @@ export const organizationRouter = router({
               .where(inArray(usageQuota.userId, memberIds))
           : [];
       const usageByMember = new Map<string, { basic: number; premium: number }>();
-      const tier = isMaxTeamPlan(subscription.planId ?? "") ? "max" : "pro";
-      const poolIncluded = getUsagePoolUnits(tier);
+      const poolIncluded = getUsagePoolUnits("pro");
 
       for (const row of usageRows) {
         const current = usageByMember.get(row.userId) ?? { basic: 0, premium: 0 };
@@ -627,9 +625,10 @@ export const organizationRouter = router({
         eligible: subscription.planId
           ? isTeamPlan(subscription.planId) && subscription.status === "active"
           : false,
-        usageBasic: subscription.maxModeUsageBasic,
-        usagePremium: subscription.maxModeUsagePremium,
-        periodStart: subscription.maxModePeriodStart,
+        credits,
+        packs: MAX_MODE_CREDIT_PACKS,
+        minCredits: MAX_MODE_CREDIT_MIN,
+        maxCredits: MAX_MODE_CREDIT_MAX,
         defaultPolicy: {
           maxModeEnabled: defaultPolicy.defaultMaxModeEnabled,
           maxModeLimitBasic: defaultPolicy.defaultMaxModeLimitBasic,
@@ -767,30 +766,10 @@ export const organizationRouter = router({
     .input(z.object({ organizationId: z.string().min(1), enabled: z.boolean() }))
     .mutation(async ({ ctx, input }) => {
       const subscription = await getOwnedTeamBillingRecord(ctx, input.organizationId);
-      const updates: Partial<BillingRecord> = input.enabled
-        ? {
-            maxModeEnabled: true,
-            maxModePeriodStart: subscription.maxModeEnabled
-              ? subscription.maxModePeriodStart
-              : new Date(),
-            maxModeUsageBasic: subscription.maxModeEnabled ? subscription.maxModeUsageBasic : 0,
-            maxModeUsagePremium: subscription.maxModeEnabled ? subscription.maxModeUsagePremium : 0,
-            updatedAt: new Date(),
-          }
-        : {
-            maxModeEnabled: false,
-            updatedAt: new Date(),
-          };
-
-      if (input.enabled) {
-        const attached = await attachMaxModeMeteredItems(subscription, ctx.userId);
-        if (!attached.ok) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: attached.error });
-        }
-        updates.stripeSubscriptionId = attached.subscriptionId;
-        updates.stripeMeteredBasicItemId = attached.basicItemId;
-        updates.stripeMeteredPremiumItemId = attached.premiumItemId;
-      }
+      const updates: Partial<BillingRecord> = {
+        maxModeEnabled: input.enabled,
+        updatedAt: new Date(),
+      };
 
       await ctx.db.update(billing).set(updates).where(eq(billing.id, subscription.id));
       await recordTeamUsageAuditLog({
@@ -802,6 +781,50 @@ export const organizationRouter = router({
           next: { maxModeEnabled: input.enabled },
         },
       });
+      return { success: true };
+    }),
+
+  createTeamMaxModeCreditCheckout: billingEnabledProcedure
+    .use(stripeWrite("createTeamMaxModeCreditCheckout"))
+    .input(
+      z.object({
+        organizationId: z.string().min(1),
+        credits: z.number().int().min(MAX_MODE_CREDIT_MIN).max(MAX_MODE_CREDIT_MAX),
+        saveCard: z.boolean().default(false),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const subscription = await getOwnedTeamBillingRecord(ctx, input.organizationId);
+      const url = await createMaxModeCreditCheckout({
+        owner: { userId: null, organizationId: input.organizationId },
+        credits: input.credits,
+        stripeCustomerId: subscription.stripeCustomerId,
+        purchasedByUserId: ctx.userId,
+        saveCard: input.saveCard,
+        returnPath: `/settings/team?organizationId=${encodeURIComponent(input.organizationId)}`,
+      });
+      return { url };
+    }),
+
+  updateTeamMaxModeAutoTopUp: billingEnabledProcedure
+    .use(stripeWrite("updateTeamMaxModeAutoTopUp"))
+    .input(
+      z.object({
+        organizationId: z.string().min(1),
+        enabled: z.boolean(),
+        thresholdCredits: z
+          .number()
+          .int()
+          .min(MAX_MODE_AUTO_TOP_UP_THRESHOLD_MIN)
+          .max(MAX_MODE_AUTO_TOP_UP_THRESHOLD_MAX),
+        amountCredits: z.number().int().min(MAX_MODE_CREDIT_MIN).max(MAX_MODE_CREDIT_MAX),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await getOwnedTeamBillingRecord(ctx, input.organizationId);
+      const { organizationId, ...settings } = input;
+      const result = await updateMaxModeAutoTopUp({ userId: null, organizationId }, settings);
+      if (!result.success) throw new TRPCError({ code: "BAD_REQUEST", message: result.error });
       return { success: true };
     }),
 
@@ -1186,10 +1209,6 @@ export const organizationRouter = router({
         ...updates,
         stripeCustomerId: subscriptionState.stripeCustomerId,
       });
-
-      if (saved?.maxModeEnabled) {
-        await attachMaxModeMeteredItems(saved, ctx.userId);
-      }
 
       if (subscriptionState.planId && subscriptionState.planId !== plan.id) {
         await recordTeamUsageAuditLog({

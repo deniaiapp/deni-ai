@@ -128,14 +128,12 @@ export function scheduleBackgroundJob(job: BackgroundJob) {
 }
 
 /**
- * Usage reservation recovery and Max Mode meter retries (first 30 seconds after
- * boot). It ticks every minute but queries the database only when work is due
- * (`usage-and-meter-schedule.ts`): when a reservation turns stale or a meter
- * retry comes up, as read after each run or requested by `usage.ts` when a
- * settlement or delivery fails, and otherwise once an hour, so an idle server
- * lets the database suspend. Its failure counts are this run's failed
- * recoveries and deliveries, plus the meter events awaiting manual review (a
- * total).
+ * Usage reservation recovery (first 30 seconds after boot). It ticks every minute
+ * but queries the database only when work is due (`usage-and-meter-schedule.ts`):
+ * when a reservation turns stale, as read after each run or requested by
+ * `usage.ts` when a settlement fails, and otherwise once an hour, so an idle
+ * server lets the database suspend. Its failure count is this run's failed
+ * recoveries. (The job and schedule names predate prepaid Max Mode credits.)
  */
 export const usageAndMeterJob: BackgroundJob = {
   name: "usage-and-meter",
@@ -155,11 +153,7 @@ export const usageAndMeterJob: BackgroundJob = {
       throw error;
     }
     if (result.healthy) return null;
-    return {
-      recoveryFailed: result.recoveryFailed,
-      deliveryFailed: result.failed,
-      requiresReview: result.requiresReview,
-    };
+    return { recoveryFailed: result.recoveryFailed };
   },
 };
 

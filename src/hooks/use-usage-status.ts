@@ -56,13 +56,18 @@ export function useUsageStatus(params: {
   const usageTierLabel =
     usageTier === "free"
       ? t("Free")
-      : usageTier === "plus"
-        ? t("Plus")
-        : usageTier === "max"
-          ? t("Max")
+      : usageTier === "go"
+        ? t("Go")
+        : usageTier === "plus"
+          ? t("Plus")
           : t("Pro");
   const maxModeEligible = features.billing && (usageQuery.data?.maxModeEligible ?? false);
-  const canEnableMaxMode = features.billing && maxModeEligible && !maxModeEnabled && isUsageBlocked;
+  const hasMaxModeCredits = (usageQuery.data?.maxModeCredits ?? 0) > 0;
+  // Max Mode spends prepaid credits: with none left, the way on is buying some.
+  const canEnableMaxMode =
+    features.billing && maxModeEligible && !maxModeEnabled && isUsageBlocked && hasMaxModeCredits;
+  const needsMaxModeCredits =
+    features.billing && maxModeEligible && isUsageBlocked && !hasMaxModeCredits;
   const isSubmitBlocked = !selectedModel || (isUsageBlocked && !maxModeEnabled);
 
   const utils = trpc.useUtils();
@@ -86,6 +91,7 @@ export function useUsageStatus(params: {
     isUsageLow,
     isUsageBlocked,
     canEnableMaxMode,
+    needsMaxModeCredits,
     isSubmitBlocked,
     usageTierLabel,
     remainingUsage,

@@ -42,7 +42,11 @@ vi.mock("@/lib/stripe", () => ({
     prices: {
       list: async () => ({
         data: [
-          { id: "price_max", lookup_key: "max_team_monthly", recurring: { interval: "month" } },
+          {
+            id: "price_pro_team_yearly",
+            lookup_key: "pro_team_yearly",
+            recurring: { interval: "month" },
+          },
         ],
       }),
     },
@@ -162,7 +166,7 @@ test("a delayed plan change cannot overwrite the newer seat count", async () => 
     state.quantity = params?.items?.[0].quantity ?? 0;
     return state.subscription() as never;
   });
-  const change = caller().changeTeamPlan({ organizationId: "team", planId: "max_team_monthly" });
+  const change = caller().changeTeamPlan({ organizationId: "team", planId: "pro_team_yearly" });
   await ready;
   state.members = 3;
   const seats = updateTeamSeatCount("team");
@@ -177,24 +181,24 @@ test("an old team status query cannot replace a newly purchased contract", async
   state.duringRetrieve = () =>
     Object.assign(state.record, {
       stripeSubscriptionId: "new-subscription",
-      planId: "max_team_monthly",
+      planId: "pro_team_yearly",
     });
   await caller().teamBillingStatus({ organizationId: "team" });
   expect(state.record.stripeSubscriptionId).toBe("new-subscription");
-  expect(state.record.planId).toBe("max_team_monthly");
+  expect(state.record.planId).toBe("pro_team_yearly");
 });
 test("the team plan switch estimate previews every seat without changing the plan", async () => {
   state.members = 3;
   const estimate = await caller().estimateTeamPlanChange({
     organizationId: "team",
-    planId: "max_team_monthly",
+    planId: "pro_team_yearly",
   });
   expect(estimate).toEqual({ amountDue: 4200, currency: "usd", memberCount: 3 });
   expect(stripe.invoices.createPreview).toHaveBeenCalledWith(
     expect.objectContaining({
       subscription: "subscription",
       subscription_details: {
-        items: [{ id: "licensed", price: "price_max", quantity: 3 }],
+        items: [{ id: "licensed", price: "price_pro_team_yearly", quantity: 3 }],
         proration_behavior: "always_invoice",
       },
     }),

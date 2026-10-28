@@ -11,9 +11,9 @@ import type { SubscriptionTier } from "@/lib/usage";
  */
 export const USAGE_POOL_USD: Record<SubscriptionTier, number> = {
   free: 10,
+  go: 30,
   plus: 100,
   pro: 200,
-  max: 300,
 };
 
 /** Free accounts with a verified payment method (anti-abuse trust signal). */

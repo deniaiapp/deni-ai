@@ -121,7 +121,7 @@ function FaqPage() {
         {
           question: t("Is there a team plan?"),
           answer: t(
-            "Yes. Teams can subscribe to Pro for Teams or Max for Teams with per-seat billing, shared access, usage visibility, and a consistent workspace so members do not need separate personal tools for the same workflow.",
+            "Yes. Teams can subscribe to Pro for Teams with per-seat billing, shared access, usage visibility, and a consistent workspace so members do not need separate personal tools for the same workflow.",
           ),
         },
       ],

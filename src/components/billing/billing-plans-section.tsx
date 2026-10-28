@@ -27,6 +27,7 @@ type PlanActionProps = {
 export function BillingPlansSection({
   erroredMessage,
   hasActiveSubscription,
+  goMonthly,
   selectedPlusPlan,
   plusMonthly,
   plusInterval,
@@ -35,16 +36,13 @@ export function BillingPlansSection({
   proMonthly,
   proInterval,
   onProIntervalChange,
-  selectedMaxPlan,
-  maxMonthly,
-  maxInterval,
-  onMaxIntervalChange,
   proLifetime,
   isOnTeamPlan,
   planActions,
 }: {
   erroredMessage?: string | null;
   hasActiveSubscription: boolean;
+  goMonthly?: ClientPlan;
   selectedPlusPlan?: ClientPlan;
   plusMonthly?: ClientPlan;
   plusInterval: "monthly" | "yearly";
@@ -53,10 +51,6 @@ export function BillingPlansSection({
   proMonthly?: ClientPlan;
   proInterval: "monthly" | "yearly";
   onProIntervalChange: (interval: "monthly" | "yearly") => void;
-  selectedMaxPlan?: ClientPlan;
-  maxMonthly?: ClientPlan;
-  maxInterval: "monthly" | "yearly";
-  onMaxIntervalChange: (interval: "monthly" | "yearly") => void;
   proLifetime?: ClientPlan;
   isOnTeamPlan: boolean;
   planActions: PlanActionProps;
@@ -89,6 +83,24 @@ export function BillingPlansSection({
     <>
       <div id={BILLING_PLANS_SECTION_ID} className="scroll-mt-6 space-y-4">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {goMonthly && (
+            <PlanCard
+              plan={goMonthly}
+              status={{
+                isCurrent: goMonthly.id === activePlanId && isSubscribed,
+                hasActiveSubscription,
+                isLoadingEstimate: pendingPlanId === goMonthly.id && isEstimateLoading,
+                isOnTeamPlan,
+              }}
+              cancelDate={cancelDate}
+              activePlanId={activePlanId}
+              changePlan={changePlan}
+              checkout={checkout}
+              onChangePlanClick={onChangePlanClick}
+              onCheckout={onCheckout}
+            />
+          )}
+
           {selectedPlusPlan && (
             <PlanCard
               plan={selectedPlusPlan}
@@ -120,27 +132,6 @@ export function BillingPlansSection({
                 isCurrent: selectedProPlan.id === activePlanId && isSubscribed,
                 hasActiveSubscription,
                 isLoadingEstimate: pendingPlanId === selectedProPlan.id && isEstimateLoading,
-                isOnTeamPlan,
-              }}
-              cancelDate={cancelDate}
-              activePlanId={activePlanId}
-              changePlan={changePlan}
-              checkout={checkout}
-              onChangePlanClick={onChangePlanClick}
-              onCheckout={onCheckout}
-            />
-          )}
-
-          {selectedMaxPlan && (
-            <PlanCard
-              plan={selectedMaxPlan}
-              monthlyPlan={maxMonthly}
-              interval={maxInterval}
-              onIntervalChange={onMaxIntervalChange}
-              status={{
-                isCurrent: selectedMaxPlan.id === activePlanId && isSubscribed,
-                hasActiveSubscription,
-                isLoadingEstimate: pendingPlanId === selectedMaxPlan.id && isEstimateLoading,
                 isOnTeamPlan,
               }}
               cancelDate={cancelDate}
@@ -192,7 +183,7 @@ export function BillingPlansSection({
               )}
             </div>
             <CardDescription>
-              {t("Give your whole team Pro or Max access with per-seat pricing.")}
+              {t("Give your whole team Pro access with per-seat pricing.")}
             </CardDescription>
           </div>
           <Button size="sm" render={<Link href="/settings/team" />} nativeButton={false}>
@@ -202,7 +193,7 @@ export function BillingPlansSection({
         <CardContent>
           <PlanHighlights
             items={[
-              t("Pro or Max benefits for every team member"),
+              t("Pro benefits for every team member"),
               t("Per-seat billing — pay only for active members"),
               t("Centralized billing and member management"),
             ]}

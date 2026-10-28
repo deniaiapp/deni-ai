@@ -1,5 +1,5 @@
 import type { BillingPlanId, ClientPlan } from "@/lib/billing";
-import { getPlanTier, isMaxTeamPlan } from "@/lib/billing";
+import { getPlanTier } from "@/lib/billing";
 import { formatMinorCurrency } from "@/lib/currency";
 import { useExtracted, useLocale } from "use-intl";
 
@@ -101,11 +101,7 @@ export function useBillingReceiptCopy() {
   return (planId: string | null | undefined, homeHref: string, homeLabel: string) => {
     const tierLabel = planId ? getTierLabel(planId) : t("Checkout");
     const planTitle =
-      getPlanTier(planId) === "team"
-        ? isMaxTeamPlan(planId)
-          ? t("Max for Teams")
-          : t("Pro for Teams")
-        : t("{tier} plan", { tier: tierLabel });
+      getPlanTier(planId) === "team" ? t("Pro for Teams") : t("{tier} plan", { tier: tierLabel });
     const planDescription = planId?.endsWith("_yearly")
       ? t("Annual subscription")
       : planId?.endsWith("_lifetime")
@@ -127,8 +123,8 @@ export function useTierLabel() {
 
   return (planId: string) => {
     const tier = getPlanTier(planId);
-    if (tier === "max") {
-      return t("Max");
+    if (tier === "go") {
+      return t("Go");
     }
     if (tier === "team") {
       return t("Team");

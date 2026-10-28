@@ -18,7 +18,6 @@ export function useBillingPage() {
   // null follows the default: yearly while a limited-time offer is running, else monthly.
   const [plusIntervalChoice, setPlusInterval] = useState<"monthly" | "yearly" | null>(null);
   const [proIntervalChoice, setProInterval] = useState<"monthly" | "yearly" | null>(null);
-  const [maxIntervalChoice, setMaxInterval] = useState<"monthly" | "yearly" | null>(null);
   const [hasAgreed, setHasAgreed] = useState(false);
   const [pendingPlanId, setPendingPlanId] = useState<IndividualPlanId | null>(null);
 
@@ -147,9 +146,37 @@ export function useBillingPage() {
     onError: (error) => toast.error(localizeError(error)),
   });
 
+  const buyMaxModeCredits = trpc.billing.createMaxModeCreditCheckout.useMutation({
+    // Stripe-hosted checkout returns to this page with ?credits=success.
+    onSuccess: ({ url }) => window.location.assign(url),
+    onError: (error) => toast.error(localizeError(error)),
+  });
+
+  const updateMaxModeAutoTopUp = trpc.billing.updateMaxModeAutoTopUp.useMutation({
+    onSuccess: async () => {
+      toast.success(t("Auto top-up settings saved."));
+      await utils.billing.maxModeStatus.invalidate();
+    },
+    onError: (error) => toast.error(localizeError(error)),
+  });
+
+  // Back from a paid credit checkout: the webhook may still be granting the credits.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("credits") !== "success") return;
+    toast.success(t("Credits purchased. They appear here once the payment is confirmed."));
+    url.searchParams.delete("credits");
+    window.history.replaceState(window.history.state, "", url);
+    const timeout = setTimeout(() => {
+      void utils.billing.maxModeStatus.invalidate();
+      void utils.billing.usage.invalidate();
+    }, 3_000);
+    return () => clearTimeout(timeout);
+  }, [t, utils]);
+
   const handleMaxModeToggle = (enabled: boolean) => {
     if (enabled) {
-      if (statusQuery.data?.status !== "active" || !maxModeQuery.data?.eligible) return;
+      if (!maxModeQuery.data?.eligible) return;
       enableMaxMode.mutate();
     } else {
       disableMaxMode.mutate();
@@ -171,8 +198,8 @@ export function useBillingPage() {
   const usageTier = usageQuery.data?.tier ?? "free";
   const usageTierLabel = (() => {
     switch (usageTier) {
-      case "max":
-        return t("Max");
+      case "go":
+        return t("Go");
       case "plus":
         return t("Plus");
       case "pro":
@@ -193,12 +220,11 @@ export function useBillingPage() {
   const errored = statusQuery.error ?? plansQuery.error;
   const allPlans = plansQuery.data?.plans ?? [];
 
+  const goMonthly = allPlans.find((p) => p.id === "go_monthly");
   const plusMonthly = allPlans.find((p) => p.id === "plus_monthly");
   const plusYearly = allPlans.find((p) => p.id === "plus_yearly");
   const proMonthly = allPlans.find((p) => p.id === "pro_monthly");
   const proYearly = allPlans.find((p) => p.id === "pro_yearly");
-  const maxMonthly = allPlans.find((p) => p.id === "max_monthly");
-  const maxYearly = allPlans.find((p) => p.id === "max_yearly");
   const proLifetime = allPlans.find((p) => p.id === "pro_lifetime");
 
   const offerPercents = allPlans.map(getOfferPercentOff).filter((percent) => percent > 0);
@@ -226,16 +252,13 @@ export function useBillingPage() {
   const defaultInterval = flashOffer ? "yearly" : "monthly";
   const plusInterval = plusIntervalChoice ?? defaultInterval;
   const proInterval = proIntervalChoice ?? defaultInterval;
-  const maxInterval = maxIntervalChoice ?? defaultInterval;
   const showYearlyPlans = () => {
     setPlusInterval("yearly");
     setProInterval("yearly");
-    setMaxInterval("yearly");
   };
 
   const selectedPlusPlan = plusInterval === "monthly" ? plusMonthly : plusYearly;
   const selectedProPlan = proInterval === "monthly" ? proMonthly : proYearly;
-  const selectedMaxPlan = maxInterval === "monthly" ? maxMonthly : maxYearly;
   // One shared pool: the summary has a single usage entry.
   const usageItem = usage[0];
   const cancelReceipt = {
@@ -276,10 +299,11 @@ export function useBillingPage() {
     isChangePlanOpen,
     isOnTeamPlan,
     isSubscribed,
+    goMonthly,
     loading,
-    maxInterval,
     maxModeQuery,
-    maxMonthly,
+    buyMaxModeCredits,
+    updateMaxModeAutoTopUp,
     pendingPlanId,
     plusInterval,
     plusMonthly,
@@ -289,11 +313,9 @@ export function useBillingPage() {
     proMonthly,
     rawPlanId,
     resume,
-    selectedMaxPlan,
     selectedPlusPlan,
     selectedProPlan,
     setHasAgreed,
-    setMaxInterval,
     setPlusInterval,
     setProInterval,
     setShredOpen,

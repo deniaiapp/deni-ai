@@ -314,6 +314,7 @@ export function ChatInterface({
     isUsageLow,
     isUsageBlocked,
     canEnableMaxMode,
+    needsMaxModeCredits,
     isSubmitBlocked,
     usageTierLabel,
     remainingPercent,
@@ -549,6 +550,7 @@ export function ChatInterface({
               isUsageLow,
               isUsageBlocked,
               canEnableMaxMode,
+              needsMaxModeCredits,
               billingDisabled,
             }}
             usage={{

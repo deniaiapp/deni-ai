@@ -100,13 +100,13 @@ export type ModelDefinition = {
   description?: string;
   featured?: boolean;
   /**
-   * When true, the model is limited to paid tiers (Plus / Pro / Max / Team).
-   * Card verification on the Free plan does not unlock it.
+   * When true, the model is limited to the Plus / Pro / Team tiers.
+   * Go and card verification on the Free plan do not unlock it.
    */
   paidOnly?: boolean;
   /**
-   * When true, the model is limited to the Pro and Max tiers (including team
-   * plans and lifetime Pro). Plus and Free accounts cannot use it.
+   * When true, the model is limited to the Pro tier (including team plans and
+   * lifetime Pro). Plus, Go, and Free accounts cannot use it.
    */
   proOnly?: boolean;
   default?: boolean;
@@ -408,8 +408,8 @@ export const defaultModel = models.find((model) => model.value === "gpt-6-luna")
 
 /**
  * Models available on the Free plan.
- * Verified cards unlock the catalog except `paidOnly` and `proOnly` models;
- * Plus unlocks everything except `proOnly` models, and Pro / Max / Team unlock
+ * Verified cards and Go unlock the catalog except `paidOnly` and `proOnly`
+ * models; Plus unlocks everything except `proOnly` models, and Pro / Team unlock
  * everything.
  */
 export const FREE_PLAN_MODEL_VALUES = [
@@ -449,14 +449,14 @@ export function getModelsForGuest() {
 
 export function isModelAllowedForAccount(
   modelValue: string,
-  tier: "free" | "plus" | "pro" | "max" | null | undefined,
+  tier: "free" | "go" | "plus" | "pro" | null | undefined,
   hasVerifiedPaymentMethod = false,
 ): boolean {
   if (isProOnlyModel(modelValue)) {
-    return tier === "pro" || tier === "max";
+    return tier === "pro";
   }
 
-  if (tier && tier !== "free") {
+  if (tier === "plus" || tier === "pro") {
     return true;
   }
 
@@ -464,18 +464,19 @@ export function isModelAllowedForAccount(
     return false;
   }
 
-  return hasVerifiedPaymentMethod || isFreePlanModel(modelValue);
+  // Go matches a Free account with a verified card.
+  return tier === "go" || hasVerifiedPaymentMethod || isFreePlanModel(modelValue);
 }
 
-/** Pro mode is limited to paid tiers; card verification on Free does not unlock it. */
+/** Pro mode is limited to Plus and Pro; Go and card verification on Free do not unlock it. */
 export function isProModeAllowedForAccount(
-  tier: "free" | "plus" | "pro" | "max" | null | undefined,
+  tier: "free" | "go" | "plus" | "pro" | null | undefined,
 ): boolean {
-  return Boolean(tier && tier !== "free");
+  return tier === "plus" || tier === "pro";
 }
 
 export function getModelsForPlanTier(
-  tier: "free" | "plus" | "pro" | "max" | null | undefined,
+  tier: "free" | "go" | "plus" | "pro" | null | undefined,
   hasVerifiedPaymentMethod = false,
 ) {
   return models.filter((model) =>

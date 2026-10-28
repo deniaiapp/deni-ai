@@ -191,14 +191,14 @@ export async function resolveChatModelContext({
     ) {
       throw new ChatRouteError(403, {
         error: isProOnlyModel(selectedModel.value)
-          ? "This model is available on the Pro and Max plans. Upgrade to Pro or higher to use it."
-          : "This model is not available on the Free plan. Upgrade to Plus or higher to use it.",
+          ? "This model is available on the Pro plan. Upgrade to Pro to use it."
+          : "This model is not available on your plan. Upgrade to Plus or higher to use it.",
       });
     }
 
     if (!isAnonymous && useProMode && !isProModeAllowedForAccount(usageSummary.tier)) {
       throw new ChatRouteError(403, {
-        error: "Pro mode is not available on the Free plan. Upgrade to Plus or higher to use it.",
+        error: "Pro mode is not available on your plan. Upgrade to Plus or higher to use it.",
       });
     }
 

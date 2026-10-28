@@ -109,9 +109,7 @@ function ComparisonAccessNotice({
   if (isAnonymous && !hasComparison) {
     return (
       <div className="space-y-3 rounded-xl border p-6">
-        <p>
-          {t("Log in and upgrade to Pro or Max (Team plans also available) to compare models.")}
-        </p>
+        <p>{t("Log in and upgrade to Pro (Team plans also available) to compare models.")}</p>
         <div className="flex flex-wrap gap-2">
           {billingEnabled && (
             <Button
@@ -137,7 +135,7 @@ function ComparisonAccessNotice({
   if (usage.isError) return <p role="alert">{t("Unable to load your plan. Please try again.")}</p>;
   return (
     <div className="rounded-xl border p-6 space-y-3">
-      <p>{t("Model comparison is available on Pro and Max, including team plans.")}</p>
+      <p>{t("Model comparison is available on Pro, including team plans.")}</p>
       {billingEnabled && (
         <Button render={<Link href="/settings/billing" />} nativeButton={false}>
           {t("Upgrade plan")}
@@ -379,7 +377,7 @@ function useModelComparison(
     comparisonSettingsSchema.parse(initialComparison?.rightSettings ?? {}),
   );
   const usage = trpc.billing.usage.useQuery(undefined, { enabled: !isAnonymous });
-  const eligible = usage.data?.tier === "pro" || usage.data?.tier === "max";
+  const eligible = usage.data?.tier === "pro";
   const [input, setInput] = useState("");
   const [leftSelection, setLeftSelection] = useState("");
   const [rightSelection, setRightSelection] = useState("");

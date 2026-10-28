@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull, isNull, like, lte, or, sql } from "drizzle-orm";
+import { and, asc, eq, isNotNull, isNull, like, lte, sql } from "drizzle-orm";
 
 import { db } from "@/db/drizzle";
 import {
@@ -10,20 +10,27 @@ import {
   usageQuota,
   usageReservation,
 } from "@/db/schema";
-import { getPlanTier, isMaxTeamPlan } from "@/lib/billing";
+import { getPlanTier } from "@/lib/billing";
 import { isSignupFlagged } from "@/lib/signup-risk";
 import { canonicalTeamBillingRow } from "@/lib/team-billing-record";
 
-import { isMaxModeEligible, deliverMaxModeUsageReport } from "./max-mode";
+import { isMaxModeEligible, MAX_MODE_USABLE_STATUSES } from "./max-mode";
+import {
+  creditOwnerFor,
+  getMaxModeCreditUnits,
+  maybeAutoTopUpMaxModeCredits,
+  spendMaxModeCredits,
+  type MaxModeCreditOwner,
+} from "./max-mode-credits";
 import { recordProductUsage, usageMonthStart } from "./product-usage-ledger";
 import {
   FLAGGED_FREE_POOL_USD,
   USAGE_POOL_USD,
   USAGE_UNITS_PER_USD_MICRO,
+  usageUnitsToUsd,
   usdToUsageUnits,
   VERIFIED_FREE_POOL_USD,
 } from "./usage-pool";
-import { enqueueMaxModeMeterEvent } from "./max-mode-meter-events";
 import { isBillingDisabled } from "./billing-config";
 import { requestUsageAndMeterCheck } from "./usage-and-meter-schedule";
 
@@ -37,7 +44,7 @@ const ACTIVE_BILLING_STATUSES = new Set(["active", "trialing", "past_due", "paid
 export type UsageCategory = "basic" | "premium";
 
 export const SHARED_USAGE_CATEGORY: UsageCategory = "basic";
-export type SubscriptionTier = "free" | "plus" | "pro" | "max";
+export type SubscriptionTier = "free" | "go" | "plus" | "pro";
 /**
  * Quota rows count usage units (usage-pool.ts): weighted tokens for chat and Flixa,
  * converted provider cost for Deni Run. Rows stored as "tokens" or "requests" before
@@ -156,6 +163,10 @@ type TierInfo = {
   maxModeMemberEnabled: boolean;
   maxModeLimitBasic: number | null;
   maxModeLimitPremium: number | null;
+  /** Who pays Max Mode overage with credits: the team on team plans, else the user. */
+  creditOwner: MaxModeCreditOwner | null;
+  /** Unspent Max Mode credits in usage units; only looked up while Max Mode is on. */
+  maxModeCreditUnits: number;
   hasVerifiedPaymentMethod: boolean;
   /** Free account flagged at sign-up as part of a batch; only looked up for unverified Free accounts. */
   signupFlagged?: boolean;
@@ -174,7 +185,7 @@ export async function isFreeAdViewer(userId: string): Promise<boolean> {
 
 export async function canCompareModels(userId: string): Promise<boolean> {
   const { tier } = await getTierInfo(userId, new Date());
-  return tier === "pro" || tier === "max";
+  return tier === "pro";
 }
 
 /** The plan tier a (non-guest) user's limits follow, including team and lifetime plans. */
@@ -193,6 +204,15 @@ async function getTierInfo(
   const info = await loadTierInfo(userId, now, database);
   if (info.tier === "free" && !info.hasVerifiedPaymentMethod) {
     info.signupFlagged = await isSignupFlagged(userId, database);
+  }
+  // Max Mode spends prepaid credits: without any left it cannot carry usage past the pool.
+  if (info.maxModeEnabled && info.creditOwner) {
+    info.maxModeCreditUnits = isBillingDisabled
+      ? Number.MAX_SAFE_INTEGER
+      : await getMaxModeCreditUnits(info.creditOwner, now, database);
+    info.maxModeEnabled = info.maxModeCreditUnits > 0;
+  } else {
+    info.maxModeEnabled = false;
   }
   return info;
 }
@@ -239,7 +259,7 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
         eq(member.userId, userId),
         isNotNull(billing.organizationId),
         canonicalTeamBillingRow(),
-        or(like(billing.planId, "pro_team%"), like(billing.planId, "max_team%")),
+        like(billing.planId, "pro_team%"),
       ),
     );
 
@@ -259,7 +279,8 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
   if (teamRecord) {
     const teamPlanId = teamRecord.planId;
     const teamStatus = teamRecord.status;
-    const maxModeEligible = isMaxModeEligible(teamPlanId) && teamStatus === "active";
+    const maxModeEligible =
+      isMaxModeEligible(teamPlanId) && MAX_MODE_USABLE_STATUSES.has(teamStatus ?? "");
     const [memberPolicy, defaultPolicy] = teamRecord.organizationId
       ? await Promise.all([
           database
@@ -297,7 +318,7 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
       billingId: teamRecord.id,
       deletionPending: Boolean(record?.deletionPending || teamRecord.deletionPending),
       stripeCustomerId: teamRecord.stripeCustomerId,
-      tier: isMaxTeamPlan(teamPlanId) ? "max" : "pro",
+      tier: "pro",
       planId: teamPlanId,
       status: teamStatus ?? null,
       periodEnd: teamRecord.currentPeriodEnd ?? null,
@@ -308,6 +329,10 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
         memberPolicy?.maxModeLimitBasic ?? defaultPolicy?.defaultMaxModeLimitBasic ?? null,
       maxModeLimitPremium:
         memberPolicy?.maxModeLimitPremium ?? defaultPolicy?.defaultMaxModeLimitPremium ?? null,
+      creditOwner: teamRecord.organizationId
+        ? { userId: null, organizationId: teamRecord.organizationId }
+        : null,
+      maxModeCreditUnits: 0,
       hasVerifiedPaymentMethod,
     };
   }
@@ -327,6 +352,8 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
       maxModeMemberEnabled: true,
       maxModeLimitBasic: null,
       maxModeLimitPremium: null,
+      creditOwner: null,
+      maxModeCreditUnits: 0,
       hasVerifiedPaymentMethod,
     };
   }
@@ -352,27 +379,27 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
       maxModeMemberEnabled: true,
       maxModeLimitBasic: null,
       maxModeLimitPremium: null,
+      creditOwner: null,
+      maxModeCreditUnits: 0,
       hasVerifiedPaymentMethod,
     };
   }
 
   const planTier = getPlanTier(planId);
-  const maxModeEligible = isMaxModeEligible(planId) && status === "active";
+  const maxModeEligible = isMaxModeEligible(planId) && MAX_MODE_USABLE_STATUSES.has(status ?? "");
 
   return {
     billingId: record.id,
     deletionPending: record.deletionPending,
     stripeCustomerId: record.stripeCustomerId,
     tier:
-      planTier === "max"
-        ? "max"
-        : planTier === "pro"
-          ? "pro"
-          : planTier === "team"
-            ? "pro"
-            : planTier === "plus"
-              ? "plus"
-              : "free",
+      planTier === "pro" || planTier === "team"
+        ? "pro"
+        : planTier === "plus"
+          ? "plus"
+          : planTier === "go"
+            ? "go"
+            : "free",
     planId,
     status: status ?? null,
     periodEnd: record.currentPeriodEnd ?? null,
@@ -381,6 +408,8 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
     maxModeMemberEnabled: true,
     maxModeLimitBasic: null,
     maxModeLimitPremium: null,
+    creditOwner: { userId, organizationId: null },
+    maxModeCreditUnits: 0,
     hasVerifiedPaymentMethod,
   };
 }
@@ -635,6 +664,7 @@ export async function consumeUsage({
         unit: existing.unit,
         limit: existing.limitAmount,
         remaining: null,
+        allowance: null,
         usedMaxMode: false,
         maxModeAmount: 0,
       };
@@ -651,7 +681,15 @@ export async function consumeUsage({
     const maxModeLimit =
       category === "basic" ? tierInfo.maxModeLimitBasic : tierInfo.maxModeLimitPremium;
     const overage = limit === null ? 0 : Math.max(state.used + amount - limit, 0);
-    if (overage > 0 && (!maxModeEnabled || (maxModeLimit !== null && overage > maxModeLimit))) {
+    // This request's share past the pool must fit the credits left; a member cap
+    // bounds the whole period's overage.
+    const requestOverage = Math.min(amount, overage);
+    if (
+      overage > 0 &&
+      (!maxModeEnabled ||
+        requestOverage > tierInfo.maxModeCreditUnits ||
+        (maxModeLimit !== null && overage > maxModeLimit))
+    ) {
       throw new UsageLimitError("Usage limit reached for your plan.", tierInfo.maxModeEligible);
     }
     const totals = await reservationTotals(database, userId, category, period);
@@ -693,6 +731,16 @@ export async function consumeUsage({
       createdAt: now,
       updatedAt: now,
     });
+    // The reservation only holds an estimate. What the request may really spend is
+    // what the pool had left, plus the Max Mode credits (within a member cap).
+    const creditAllowance = maxModeEnabled
+      ? Math.min(
+          tierInfo.maxModeCreditUnits,
+          maxModeLimit === null
+            ? Number.MAX_SAFE_INTEGER
+            : Math.max(maxModeLimit - Math.max(state.used - (limit ?? 0), 0), 0),
+        )
+      : 0;
     return {
       reservationId,
       tier: tierInfo.tier,
@@ -700,13 +748,15 @@ export async function consumeUsage({
       unit,
       limit,
       remaining: limit === null ? null : Math.max(limit - state.used - amount, 0),
+      /** Units this request may spend in total before it must stop; null without a limit. */
+      allowance: limit === null ? null : Math.max(limit - state.used, 0) + creditAllowance,
       usedMaxMode: overage > 0,
       maxModeAmount: 0,
     };
   });
 }
 
-/** Atomically settle actual usage, the original payer's ledger, and the durable meter event. */
+/** Atomically settle actual usage and spend Max Mode credits for what went past the pool. */
 export async function settleUsage({
   userId,
   reservationId,
@@ -782,58 +832,39 @@ export async function settleUsage({
       },
       database,
     );
+    let creditOwner: MaxModeCreditOwner | null = null;
     if (maxModeAmount > 0) {
-      if (!reservation.stripeCustomerId || !reservation.billingId)
-        throw new Error("Usage reservation has no billing identity.");
-      const field = reservation.category === "basic" ? "maxModeUsageBasic" : "maxModeUsagePremium";
-      const column =
-        reservation.category === "basic" ? billing.maxModeUsageBasic : billing.maxModeUsagePremium;
-      // Late settlement still bills the old period, without inflating a renewed period's dashboard.
-      await database
-        .update(billing)
-        .set({ [field]: sql`${column} + ${maxModeAmount}` })
-        .where(
-          and(
-            eq(billing.id, reservation.billingId),
-            or(
-              isNull(billing.maxModePeriodStart),
-              sql`${billing.maxModePeriodStart} <= ${reservation.createdAt.toISOString()}::timestamp`,
-            ),
-          ),
-        );
-      await enqueueMaxModeMeterEvent(
-        {
-          id: reservationId,
-          userId,
-          category: reservation.category,
-          amount: maxModeAmount,
-          stripeCustomerId: reservation.stripeCustomerId,
-          occurredAt: reservation.createdAt,
-        },
-        database,
-      );
+      if (!reservation.billingId) throw new Error("Usage reservation has no billing identity.");
+      // The plan that carried the request pays: its team's credits, or the user's own.
+      const [payer] = await database
+        .select({ userId: billing.userId, organizationId: billing.organizationId })
+        .from(billing)
+        .where(eq(billing.id, reservation.billingId))
+        .limit(1);
+      creditOwner = payer ? creditOwnerFor(payer) : null;
+      // Usage past the credits left is not charged (the next request is refused).
+      maxModeAmount = creditOwner
+        ? await spendMaxModeCredits(creditOwner, maxModeAmount, now, database)
+        : 0;
     }
     await database
       .update(usageReservation)
       .set({ settledAmount: amount, maxModeAmount, settledAt: now })
       .where(eq(usageReservation.id, reservationId));
-    return { maxModeAmount, amount };
+    return { maxModeAmount, amount, creditOwner };
   }).catch((error: unknown) => {
     // The reservation stays unsettled: have the job recover it once it is stale.
     requestUsageAndMeterCheck(Date.now() + USAGE_RESERVATION_STALE_MS);
     throw error;
   });
-  if (result.maxModeAmount > 0) {
-    let delivered = false;
+  if (result.maxModeAmount > 0 && "creditOwner" in result && result.creditOwner) {
     try {
-      delivered = ((await deliverMaxModeUsageReport(reservationId))?.delivered ?? 0) > 0;
+      await maybeAutoTopUpMaxModeCredits(result.creditOwner, now);
     } catch (error) {
-      console.error("Settled usage retained for meter delivery", { reservationId, error });
+      console.error("Max Mode auto top-up check failed", { reservationId, error });
     }
-    // A queued meter event is retried by the job; its retry time is read from the database.
-    if (!delivered) requestUsageAndMeterCheck(Date.now() + 60_000);
   }
-  return result;
+  return { maxModeAmount: result.maxModeAmount, amount: result.amount };
 }
 
 /** Persist completed provider usage and refresh a running request's recovery lease. */
@@ -922,6 +953,8 @@ export type UsageSummary = {
   usage: UsageSnapshot[];
   maxModeEnabled: boolean;
   maxModeEligible: boolean;
+  /** Unspent Max Mode credits ($1 each) of whoever pays overage; null when not eligible. */
+  maxModeCredits: number | null;
   hasVerifiedPaymentMethod: boolean;
   /**
    * The Free allowance is reduced (see signup-risk.ts) and a verified payment method lifts it.
@@ -969,6 +1002,14 @@ export async function getUsageSummary({
         periodEnd: resolvePeriodEnd(nowDate),
       };
   const poolUsed = pool ? pool.used.chat + pool.used.flixa + pool.used.run : 0;
+  const maxModeCredits =
+    isAnonymous || isBillingDisabled || !tierInfo.maxModeEligible || !tierInfo.creditOwner
+      ? null
+      : usageUnitsToUsd(
+          tierInfo.maxModeEnabled
+            ? tierInfo.maxModeCreditUnits
+            : await getMaxModeCreditUnits(tierInfo.creditOwner, nowDate),
+        );
 
   // One entry for the one pool (guests: their own allowance).
   const usage: UsageSnapshot[] = [
@@ -1002,6 +1043,7 @@ export async function getUsageSummary({
     usage,
     maxModeEnabled: tierInfo.maxModeEnabled,
     maxModeEligible: tierInfo.maxModeEligible,
+    maxModeCredits,
     hasVerifiedPaymentMethod: tierInfo.hasVerifiedPaymentMethod,
     signupLimited: Boolean(tierInfo.signupFlagged) && !tierInfo.hasVerifiedPaymentMethod,
   };

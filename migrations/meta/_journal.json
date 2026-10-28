@@ -498,6 +498,13 @@
       "when": 1793102789003,
       "tag": "0070_usage_units_reset",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1793194055401,
+      "tag": "0071_max_mode_credits",
+      "breakpoints": true
     }
   ]
 }

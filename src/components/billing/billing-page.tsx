@@ -63,10 +63,11 @@ function BillingPageContent() {
     isChangePlanOpen,
     isOnTeamPlan,
     isSubscribed,
+    goMonthly,
     loading,
-    maxInterval,
     maxModeQuery,
-    maxMonthly,
+    buyMaxModeCredits,
+    updateMaxModeAutoTopUp,
     pendingPlanId,
     plusInterval,
     plusMonthly,
@@ -76,11 +77,9 @@ function BillingPageContent() {
     proMonthly,
     rawPlanId,
     resume,
-    selectedMaxPlan,
     selectedPlusPlan,
     selectedProPlan,
     setHasAgreed,
-    setMaxInterval,
     setPlusInterval,
     setProInterval,
     setShredOpen,
@@ -150,17 +149,22 @@ function BillingPageContent() {
 
       <BillingResetCard />
 
-      {statusQuery.data?.status === "active" && maxModeQuery.data?.eligible && (
+      {maxModeQuery.data?.eligible && (
         <BillingMaxModeCard
           data={maxModeQuery.data}
           onToggle={handleMaxModeToggle}
           isToggling={enableMaxMode.isPending || disableMaxMode.isPending}
+          onBuy={(credits, saveCard) => buyMaxModeCredits.mutate({ credits, saveCard })}
+          buyPending={buyMaxModeCredits.isPending || buyMaxModeCredits.isSuccess}
+          onSaveAutoTopUp={(settings) => updateMaxModeAutoTopUp.mutate(settings)}
+          autoTopUpPending={updateMaxModeAutoTopUp.isPending}
         />
       )}
 
       <BillingPlansSection
         erroredMessage={errored?.message}
         hasActiveSubscription={hasActiveSubscription}
+        goMonthly={goMonthly}
         selectedPlusPlan={selectedPlusPlan}
         plusMonthly={plusMonthly}
         plusInterval={plusInterval}
@@ -169,10 +173,6 @@ function BillingPageContent() {
         proMonthly={proMonthly}
         proInterval={proInterval}
         onProIntervalChange={setProInterval}
-        selectedMaxPlan={selectedMaxPlan}
-        maxMonthly={maxMonthly}
-        maxInterval={maxInterval}
-        onMaxIntervalChange={setMaxInterval}
         proLifetime={proLifetime}
         isOnTeamPlan={isOnTeamPlan}
         planActions={{

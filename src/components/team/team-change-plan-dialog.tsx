@@ -13,7 +13,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
-import { type TeamPlanId, isMaxTeamPlan } from "@/lib/billing";
+import type { TeamPlanId } from "@/lib/billing";
 
 export function TeamChangePlanDialog({
   open,
@@ -43,9 +43,7 @@ export function TeamChangePlanDialog({
   const getPlanIntervalLabel = usePlanIntervalLabel();
   const formatCurrencyMinor = useFormatCurrencyMinor();
   const intervalLabel = planId ? getPlanIntervalLabel(planId) : "";
-  const planLabel = isMaxTeamPlan(planId)
-    ? t("Max for Teams {name}", { name: intervalLabel })
-    : t("Pro for Teams {name}", { name: intervalLabel });
+  const planLabel = t("Pro for Teams {name}", { name: intervalLabel });
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>

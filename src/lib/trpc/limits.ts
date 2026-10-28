@@ -32,7 +32,7 @@ const LARGE_BODY_LIMITS = new Map<string, number>([
   ["migration.import", 30 * MB],
   // Comparison transcripts, so any side /api/chat accepted can be saved. The
   // session sends both sides in one body: 40 MiB, deliberately above the
-  // import's cap. Only Pro and Max bodies are read; chat.ts checks the plan
+  // import's cap. Only Pro bodies are read; chat.ts checks the plan
   // before parsing the input.
   ["chat.saveComparisonSession", 2 * COMPARISON_SIDE_BODY_LIMIT],
   ["chat.saveComparison", COMPARISON_SIDE_BODY_LIMIT],

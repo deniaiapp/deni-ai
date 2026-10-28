@@ -11,7 +11,13 @@ vi.mock("@/lib/ad-checkout", () => ({
   pauseReversedAdCharge: vi.fn(),
   releaseExpiredAdCheckout: vi.fn(),
 }));
-vi.mock("@/lib/max-mode", () => ({ syncMaxModeMeterPeriod: vi.fn() }));
+vi.mock("@/lib/max-mode-credits", () => ({
+  MAX_MODE_CREDIT_PURPOSE: "max_mode_credits",
+  grantMaxModeCreditCheckout: vi.fn(),
+  grantMaxModeCreditTopUp: vi.fn(),
+  restoreMaxModeCredits: vi.fn(),
+  revokeMaxModeCredits: vi.fn(),
+}));
 vi.mock("@/lib/stripe-disputes", () => ({
   handleChargeDisputeClosed: vi.fn(),
   handleChargeDisputeCreated: vi.fn(),

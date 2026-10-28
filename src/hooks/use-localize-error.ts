@@ -279,10 +279,16 @@ export function useLocalizeError() {
           "Too many requests",
         ),
         ...mapKeys(
-          t(
-            "A Max Mode invoice is unpaid. Pay it or update your payment method in the billing portal, then try again.",
-          ),
-          "A Max Mode invoice is unpaid. Pay it or update your payment method in the billing portal, then try again.",
+          t("Max Mode credits are available on active paid plans."),
+          "Max Mode credits are available on active paid plans.",
+        ),
+        ...mapKeys(
+          t("Only organization owners can manage team Max Mode."),
+          "Only organization owners can manage team Max Mode.",
+        ),
+        ...mapKeys(
+          t("The auto top-up amount must be at least the threshold."),
+          "The auto top-up amount must be at least the threshold.",
         ),
         ...mapKeys(
           t("A question and an answer are required."),
@@ -350,10 +356,7 @@ export function useLocalizeError() {
           t("Memory is disabled in this environment."),
           "Memory is disabled in this environment.",
         ),
-        ...mapKeys(
-          t("Model comparison requires Pro or Max."),
-          "Model comparison requires Pro or Max.",
-        ),
+        ...mapKeys(t("Model comparison requires Pro."), "Model comparison requires Pro."),
         ...mapKeys(
           t("No active subscription found. Start with checkout instead."),
           "No active subscription found. Start with checkout instead.",
