@@ -484,6 +484,16 @@ docker build -t deni-ai \
 docker run --rm -p 3000:3000 --env-file .env.production deni-ai
 ```
 
+### Canary / staging on Dokploy
+
+Run `canary` as its own Dokploy application next to production (which tracks `master`):
+
+- Same repository and `Dockerfile`, branch `canary`, auto deploy on push; give it its own domain (for example `canary.deniai.app`).
+- Build args and environment: `NEXT_PUBLIC_BETTER_AUTH_URL` set to that domain (build time, like every `NEXT_PUBLIC_*`), a separate `DATABASE_URL` with the migrations applied, and Stripe test keys. Add the canary callback URLs to the Google/GitHub OAuth apps if social sign-in should work there.
+- `DISABLE_BACKGROUND_JOBS=1`: the server skips the usage/meter and storage jobs and the model health probes (which spend provider tokens). The cron routes still work with `CRON_SECRET` if you need a run.
+- `NOINDEX=1`: every response carries `X-Robots-Tag: noindex, nofollow` and `/robots.txt` disallows everything, so the copy stays out of search results.
+- To keep it private, put the domain behind an access gate in front of the app, such as Cloudflare Access (the domain must be proxied through Cloudflare). Let `/api/stripe/webhook` bypass the gate if Stripe should reach the canary.
+
 ### Other platforms
 
 Any host that can run a Node.js server (Railway, Render, Fly.io, AWS/GCP/Azure, etc.):

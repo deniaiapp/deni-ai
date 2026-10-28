@@ -11,6 +11,7 @@ import {
 } from "@/lib/locale-path";
 import { signInPath } from "@/lib/sign-in-redirect";
 import { compressResponse } from "@/server/compression";
+import { indexingDisabled } from "@/lib/deployment-flags";
 
 const SESSION_COOKIE = "better-auth.session_token";
 const SECURE_SESSION_COOKIE = `__Secure-${SESSION_COOKIE}`;
@@ -139,6 +140,16 @@ const compression = createMiddleware().server(async ({ request, next }) => {
   return { ...result, response: compressResponse(request, result.response) };
 });
 
+/** Non-production deployments (NOINDEX) tell crawlers to skip every response. */
+const noindex = createMiddleware().server(async ({ next }) => {
+  const result = await next();
+  if (!indexingDisabled()) return result;
+  // Copy: redirect responses carry immutable headers.
+  const response = new Response(result.response.body, result.response);
+  response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return { ...result, response };
+});
+
 export const startInstance = createStart(() => ({
-  requestMiddleware: [compression, serverFnCsrf, localeAndAuthRedirects],
+  requestMiddleware: [noindex, compression, serverFnCsrf, localeAndAuthRedirects],
 }));

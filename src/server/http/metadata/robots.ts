@@ -1,3 +1,5 @@
+import { indexingDisabled } from "@/lib/deployment-flags";
+
 type RobotsRule = { userAgent: string; allow: string[]; disallow: string[] };
 
 const rules: RobotsRule[] = [
@@ -11,6 +13,8 @@ const sitemap = "https://deniai.app/sitemap.xml";
 
 /** Serialized the way Next.js rendered `MetadataRoute.Robots`. */
 export function renderRobots() {
+  // Non-production deployments (NOINDEX) keep every crawler out.
+  if (indexingDisabled()) return "User-Agent: *\nDisallow: /\n";
   let content = "";
   for (const rule of rules) {
     content += `User-Agent: ${rule.userAgent}\n`;

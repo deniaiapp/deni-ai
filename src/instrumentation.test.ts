@@ -24,6 +24,7 @@ beforeEach(() => {
   mocks.startBackgroundJobScheduler.mockReset();
   vi.stubEnv("NODE_ENV", "production");
   vi.stubEnv("VERCEL", undefined);
+  vi.stubEnv("DISABLE_BACKGROUND_JOBS", undefined);
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -48,3 +49,13 @@ test("development servers start no schedulers", async () => {
   expect(mocks.startModelHealthScheduler).not.toHaveBeenCalled();
   expect(mocks.startBackgroundJobScheduler).not.toHaveBeenCalled();
 });
+
+test.each(["1", "true", "TRUE"])(
+  "DISABLE_BACKGROUND_JOBS=%s keeps a production server (e.g. canary) from starting any scheduler",
+  async (value) => {
+    vi.stubEnv("DISABLE_BACKGROUND_JOBS", value);
+    await register();
+    expect(mocks.startModelHealthScheduler).not.toHaveBeenCalled();
+    expect(mocks.startBackgroundJobScheduler).not.toHaveBeenCalled();
+  },
+);

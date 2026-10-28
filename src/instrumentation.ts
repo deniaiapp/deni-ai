@@ -1,3 +1,4 @@
+import { backgroundJobsDisabled } from "@/lib/deployment-flags";
 import { getSentryOptions, loadSentry, sentryIntegrations } from "@/lib/sentry-options";
 
 /** One-time server startup: error reporting, diagnostics, and in-process schedulers. */
@@ -10,7 +11,8 @@ export async function register() {
   installProcessWarningFilter();
   // `vite dev` would spend provider tokens on every restart and run billing and
   // storage jobs against the development database; use the cron routes there.
-  if (process.env.NODE_ENV === "production") {
+  // Staging copies (e.g. canary) opt out with DISABLE_BACKGROUND_JOBS.
+  if (process.env.NODE_ENV === "production" && !backgroundJobsDisabled()) {
     const { startModelHealthScheduler } = await import("@/lib/model-health-scheduler");
     startModelHealthScheduler();
     // Vercel (which sets `VERCEL` at runtime) can suspend a function instance
