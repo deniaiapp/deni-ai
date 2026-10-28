@@ -15,6 +15,7 @@ import {
 import { env } from "@/env";
 import { type BillingPlan, billingPlans, findPlanById, isTeamPlan } from "@/lib/billing";
 import { isBillingDisabled } from "@/lib/billing-config";
+import { planDisplayCurrency, priceInCurrency } from "@/lib/plan-currency";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
 import { stripe } from "@/lib/stripe";
 import { createBillingPortalSession } from "@/lib/stripe-portal";
@@ -98,11 +99,12 @@ function deriveModeFromPrice(price: Stripe.Price | null | undefined): "subscript
   return price.recurring ? "subscription" : "payment";
 }
 
-async function findPriceForPlan(plan: BillingPlan) {
+async function findPriceForPlan(plan: BillingPlan, expand?: string[]) {
   const prices = await stripe.prices.list({
     lookup_keys: [plan.lookupKey],
     active: true,
     limit: 1,
+    ...(expand ? { expand } : {}),
   });
   return prices.data.at(0) ?? null;
 }
@@ -418,23 +420,25 @@ async function reuseOpenTeamCheckoutSession({
 }
 
 export const organizationRouter = router({
-  teamPlans: billingEnabledProcedure.use(stripeRead("teamPlans")).query(async () => {
+  teamPlans: billingEnabledProcedure.use(stripeRead("teamPlans")).query(async ({ ctx }) => {
     const teamPlans = billingPlans.filter((p) => isTeamPlan(p.id));
+    const displayCurrency = planDisplayCurrency(ctx.country);
     const plans = (
       await Promise.all(
         teamPlans.map(async (plan) => {
-          const price = await findPriceForPlan(plan);
+          const price = await findPriceForPlan(plan, ["data.currency_options"]);
           if (!price) {
             return null;
           }
           const mode = deriveModeFromPrice(price);
+          const { amount, currency } = priceInCurrency(price, displayCurrency);
           return {
             id: plan.id,
             lookupKey: plan.lookupKey,
             mode,
             priceId: price.id,
-            amount: price.unit_amount,
-            currency: price.currency,
+            amount,
+            currency,
             interval: price.recurring?.interval ?? null,
             intervalCount: price.recurring?.interval_count ?? 1,
             isTeamPlan: true,

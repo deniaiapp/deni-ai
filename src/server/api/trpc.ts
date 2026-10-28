@@ -4,12 +4,15 @@ import superjson from "superjson";
 
 import { db } from "@/db/drizzle";
 import { auth } from "@/lib/auth";
+import { requestCountry } from "@/lib/plan-currency";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function createContext(opts: FetchCreateContextFnOptions) {
   // Derive session from incoming request headers via better-auth
   const session = await auth.api.getSession({ headers: opts.req.headers });
-  return { db, session };
+  // Optional so callers built without a request (tests) need not supply it.
+  const country: string | undefined = requestCountry(opts.req.headers);
+  return { db, session, country } as { db: typeof db; session: typeof session; country?: string };
 }
 
 export type Context = Awaited<ReturnType<typeof createContext>>;
