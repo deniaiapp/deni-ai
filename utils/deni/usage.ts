@@ -409,28 +409,9 @@ export interface UsageReservation {
   category: ModelCategory;
 }
 
-let reservationTableReady: Promise<void> | undefined;
-
-async function ensureReservationTable(): Promise<void> {
-  reservationTableReady ??= getDeniPool().query(`
-    CREATE TABLE IF NOT EXISTS flixa_usage_reservation (
-      id UUID PRIMARY KEY,
-      user_id TEXT NOT NULL,
-      category TEXT NOT NULL,
-      plan_tier TEXT NOT NULL,
-      period_start TEXT NOT NULL,
-      amount BIGINT NOT NULL CHECK (amount > 0),
-      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-    )
-  `).then(() => {}).catch((error) => {
-    reservationTableReady = undefined;
-    throw error;
-  });
-  await reservationTableReady;
-}
-
 /** Reserve estimated usage units (weighted tokens), including concurrent first requests.
- * The quota update and receipt creation are one atomic PostgreSQL statement.
+ * The quota update and receipt (flixa.usage_reservation, see schema/flixa.ts) are one
+ * atomic PostgreSQL statement.
  */
 export async function reserveUsageQuota(
   userId: string,
@@ -451,7 +432,6 @@ export async function reserveUsageQuota(
   const limit = await getCategoryLimit(userId, category, tier, hasVerifiedPaymentMethod);
   const unit = USAGE_UNIT;
   if (amount > limit) return { allowed: false, remaining: limit, reserved: false, unit };
-  await ensureReservationTable();
   const id = crypto.randomUUID();
   const now = new Date();
   const reset = `(usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
@@ -472,7 +452,7 @@ export async function reserveUsageQuota(
        WHERE (CASE WHEN ${reset} THEN 0 ELSE usage_quota.used END) + EXCLUDED.used <= EXCLUDED.limit_amount
        RETURNING used, period_start
      ), receipt AS (
-       INSERT INTO flixa_usage_reservation (id, user_id, category, plan_tier, period_start, amount)
+       INSERT INTO flixa.usage_reservation (id, user_id, category, plan_tier, period_start, amount)
        SELECT $9::uuid, $1::text, $2::text, $3::text, EXTRACT(EPOCH FROM period_start)::text, $6::bigint FROM reserved
        RETURNING id
      ) SELECT used FROM reserved, receipt`,
@@ -504,7 +484,7 @@ export async function settleUsageQuota(
   // written from the same deleted receipt, so it is counted exactly once.
   await getDeniPool().query(
     `WITH receipt AS (
-       DELETE FROM flixa_usage_reservation WHERE id = $1::uuid
+       DELETE FROM flixa.usage_reservation WHERE id = $1::uuid
        RETURNING user_id, category, plan_tier, period_start, amount, created_at
      ), quota AS (
        UPDATE usage_quota q

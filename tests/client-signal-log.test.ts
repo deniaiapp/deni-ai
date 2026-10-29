@@ -28,7 +28,7 @@ describe("clientSignalLog", () => {
       method: "POST",
       client: null,
       allowed: false,
-      outcome: "missing_banned",
+      outcome: "missing_rejected",
       headers: { "user-agent": "curl/8" },
     });
 
@@ -64,14 +64,14 @@ describe("clientSignalLog", () => {
       method: "POST",
       client: null,
       allowed: false,
-      outcome: "missing_banned",
+      outcome: "missing_rejected",
       headers: {},
     });
 
     assert.equal(queryClientSignalLogs({ userId: "abc" }).length, 2);
     assert.equal(queryClientSignalLogs({ client: "codex" }).length, 1);
     assert.equal(queryClientSignalLogs({ client: "none" })[0]!.userId, "zzz");
-    assert.equal(queryClientSignalLogs({ outcome: "missing_banned" }).length, 1);
+    assert.equal(queryClientSignalLogs({ outcome: "missing_rejected" }).length, 1);
     assert.equal(queryClientSignalLogs({ allowed: false }).length, 1);
   });
 

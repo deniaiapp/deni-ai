@@ -4,16 +4,14 @@
 
 Flixa backend (Deni AI API) に abuse 対策が入った。
 
-認証付き agent エンドポイントへのリクエストで、次のいずれかの **client signal** が無いと:
+認証付き agent エンドポイントへのリクエストで、Free / Go プランのユーザーに次のいずれかの **client signal** が無いと、
+`403` を返す（`code: missing_client_signal`、`type: insufficient_plan`、`upgradeUrl` 付き）。ban はしない。
+Plus 以上（Plus / Pro / Pro for Teams）はどのクライアントからでも使える。
 
-1. そのユーザーを Flixa から ban する（`flixa_ban` に記録）
-2. 全 API キーを revoke する
-3. `403` を返す（`code: missing_client_signal`）
-
-許可クライアント: **Codex / Claude Code / OpenCode / Flixa**
+許可クライアント: **Codex / Claude Code / OpenCode / Zed / Flixa**
 
 Flixa VS Code 拡張は first-party なので、**Deni AI / Flixa backend に送るすべての HTTP リクエスト**に Flixa signal を必ず付けること。
-付け忘れると正規ユーザーが ban される。
+付け忘れると Free / Go の正規ユーザーが使えなくなる。
 
 ## Backend が Flixa と判定する条件（いずれか1つで OK）
 
@@ -105,8 +103,8 @@ backend が以下を返したら、ユーザーに分かりやすく表示する
 
 | HTTP | code | 意味 | UI 案 |
 |------|------|------|--------|
-| 403 | `missing_client_signal` | signal 不足で ban された | 「拡張を最新版に更新してください。不正クライアントとしてアカウントが制限された可能性があります。サポートに連絡してください。」 |
-| 403 | `banned` | 既に ban 済み | 「Flixa の利用が制限されています。サポートに連絡してください。」 |
+| 403 | `missing_client_signal` | Free / Go で signal 不足（ban はされない） | 「拡張を最新版に更新してください。解決しない場合はサポートに連絡してください。」 |
+| 403 | `service_unavailable` | ban 済み（理由は返さない） | 「Flixa の利用が制限されています。サポートに連絡してください。」 |
 | 401 | `invalid_key` / `expired_key` | キー無効（ban で revoke された場合も含む） | 再ログインを促す |
 
 `missing_client_signal` は実装バグの可能性が高いので、ログに request path と付与ヘッダ名を残す（API キーはログに出さない）。

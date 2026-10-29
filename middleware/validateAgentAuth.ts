@@ -1,5 +1,5 @@
 import { UsageEstimate } from "../utils/agent/usageEstimation";
-import { USAGE_UNIT, type UsageReservation, type UsageUnit } from "../utils/deni/usage";
+import { USAGE_UNIT, type UsageReservation, type UsageTier, type UsageUnit } from "../utils/deni/usage";
 import { Context, Next } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {
@@ -15,7 +15,7 @@ import {
   getVerifyUrl,
   reserveUsageQuota,
   isUserBannedFromFlixa,
-  banUserFromFlixa,
+  MISSING_CLIENT_SIGNAL_MESSAGE,
   BANNED_ERROR_MESSAGE,
   CLIENT_UPDATE_REQUIRED_MESSAGE,
   isClientSignalEnforcementEnabled,
@@ -163,13 +163,19 @@ function dbErrorAuthResponse(c: Context): Response {
   );
 }
 
+/** Lowest plan that may call Flixa from any client (Plus, Pro, Pro for Teams). */
+const EXTERNAL_CLIENT_MIN_TIER = 'plus';
+
 /**
- * After a key is valid, reject banned users and ban accounts that call the
- * agent API without an allowed client signal (Codex / Claude Code / OpenCode / Zed / Flixa).
+ * After a key is valid, reject banned users and reject (without banning)
+ * Free/Go accounts that call the agent API without an allowed client signal
+ * (Codex / Claude Code / OpenCode / Zed / Flixa). Plus and above may use any
+ * client; silent-ban rules and existing bans still apply to every plan.
  *
  * Every request records a client-signal log (console + in-memory ring buffer
- * for /admin/lookup). Legacy AI SDK User-Agents (`ai/…`, `ai-sdk…`) get a soft
- * "please update" response without banning — typically outdated Flixa clients.
+ * for /admin/lookup). Legacy AI SDK User-Agents (`ai/…`, `ai-sdk…`) from
+ * Free/Go get a soft "please update" response without banning — typically
+ * outdated Flixa clients.
  */
 async function enforceFlixaAccessPolicy(
   c: Context,
@@ -245,6 +251,23 @@ async function enforceFlixaAccessPolicy(
     return null;
   }
 
+  // Plus and above may use external apps (including ones built on the AI SDK).
+  let tier: UsageTier;
+  try {
+    tier = (await getDeniBillingProfile(userId)).tier;
+  } catch {
+    // Plan unknown (DB error): fail closed, never ban on an unknown plan.
+    return dbErrorAuthResponse(c);
+  }
+  if (isTierSufficient(tier, EXTERNAL_CLIENT_MIN_TIER)) {
+    recordClientSignalLog({
+      ...logBase,
+      allowed: true,
+      outcome: 'plan_allowed',
+    });
+    return null;
+  }
+
   // Outdated Flixa / raw AI SDK: nudge to update, do not ban.
   if (isLegacyAiSdkUserAgent(headers)) {
     recordClientSignalLog({
@@ -262,16 +285,22 @@ async function enforceFlixaAccessPolicy(
   recordClientSignalLog({
     ...logBase,
     allowed: false,
-    outcome: 'missing_banned',
+    outcome: 'missing_rejected',
   });
 
-  await banUserFromFlixa(userId, 'missing_client_signal', clientHeaders);
-
-  // Same public response as an already-banned account (do not expose ban/signal).
-  return forbiddenAuthResponse(
-    c,
-    'service_unavailable',
-    BANNED_ERROR_MESSAGE,
+  // Free/Go on an unlisted client: explain the plan limit, do not ban.
+  return c.json(
+    {
+      error: {
+        message: MISSING_CLIENT_SIGNAL_MESSAGE,
+        type: 'insufficient_plan',
+        param: null,
+        code: 'missing_client_signal',
+        tier,
+        upgradeUrl: getUpgradeUrl(),
+      },
+    },
+    403,
   );
 }
 

@@ -10,9 +10,11 @@
  * and stay consistent across instances.
  */
 
-import { getDeniPool } from "./db";
+import { and, asc, count, desc, eq, sql, type SQL } from "drizzle-orm";
+import { getDeniDb } from "./db";
 import { banUserFromFlixa } from "./ban";
 import { summarizeClientHeaders } from "./clientSignal";
+import { silentBanHit, silentBanRule } from "./schema/flixa";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -124,53 +126,6 @@ const MIN_HITS = 1;
 const MAX_HITS = 10_000;
 const DEFAULT_HITS_BEFORE_BAN = 3;
 const RULES_CACHE_TTL_MS = 15_000;
-
-// ── Schema ───────────────────────────────────────────────────────────────────
-
-let tableReady: Promise<void> | null = null;
-
-async function ensureSilentBanTables(): Promise<void> {
-  if (!tableReady) {
-    tableReady = (async () => {
-      const pool = getDeniPool();
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS flixa_silent_ban_rule (
-          id TEXT PRIMARY KEY,
-          name TEXT NOT NULL,
-          enabled BOOLEAN NOT NULL DEFAULT TRUE,
-          hits_before_ban INT NOT NULL DEFAULT 3,
-          reason TEXT NOT NULL DEFAULT 'silent_ban_rule',
-          conditions JSONB NOT NULL DEFAULT '[]'::jsonb,
-          created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-      `);
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS flixa_silent_ban_hit (
-          user_id TEXT NOT NULL,
-          rule_id TEXT NOT NULL REFERENCES flixa_silent_ban_rule(id) ON DELETE CASCADE,
-          hit_count INT NOT NULL DEFAULT 0,
-          first_hit_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          last_hit_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-          PRIMARY KEY (user_id, rule_id)
-        )
-      `);
-      await pool.query(`
-        CREATE INDEX IF NOT EXISTS flixa_silent_ban_hit_rule_idx
-        ON flixa_silent_ban_hit (rule_id)
-      `);
-      await pool.query(`
-        CREATE INDEX IF NOT EXISTS flixa_silent_ban_rule_enabled_idx
-        ON flixa_silent_ban_rule (enabled)
-        WHERE enabled = TRUE
-      `);
-    })().catch((error) => {
-      tableReady = null;
-      throw error;
-    });
-  }
-  await tableReady;
-}
 
 // ── Rules cache ──────────────────────────────────────────────────────────────
 
@@ -284,16 +239,7 @@ export function validateSilentBanConditions(
   return { ok: true, conditions };
 }
 
-type RuleRow = {
-  id: string;
-  name: string;
-  enabled: boolean;
-  hits_before_ban: number;
-  reason: string;
-  conditions: unknown;
-  created_at: Date | string;
-  updated_at: Date | string;
-};
+type RuleRow = typeof silentBanRule.$inferSelect;
 
 function parseConditionsJson(raw: unknown): SilentBanCondition[] {
   if (!Array.isArray(raw)) return [];
@@ -306,24 +252,15 @@ function parseConditionsJson(raw: unknown): SilentBanCondition[] {
 }
 
 function rowToRule(row: RuleRow): SilentBanRule {
-  const createdAt =
-    row.created_at instanceof Date
-      ? row.created_at.toISOString()
-      : String(row.created_at);
-  const updatedAt =
-    row.updated_at instanceof Date
-      ? row.updated_at.toISOString()
-      : String(row.updated_at);
-
   return {
     id: row.id,
     name: row.name,
-    enabled: Boolean(row.enabled),
-    hitsBeforeBan: clampHits(Number(row.hits_before_ban)),
+    enabled: row.enabled,
+    hitsBeforeBan: clampHits(row.hitsBeforeBan),
     reason: row.reason || "silent_ban_rule",
     conditions: parseConditionsJson(row.conditions),
-    createdAt,
-    updatedAt,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -416,14 +353,12 @@ export function matchSilentBanRule(
 export async function listSilentBanRules(options?: {
   enabledOnly?: boolean;
 }): Promise<SilentBanRule[]> {
-  await ensureSilentBanTables();
-  const pool = getDeniPool();
-  const result = await pool.query<RuleRow>(
-    options?.enabledOnly
-      ? `SELECT * FROM flixa_silent_ban_rule WHERE enabled = TRUE ORDER BY created_at ASC`
-      : `SELECT * FROM flixa_silent_ban_rule ORDER BY created_at ASC`,
-  );
-  return result.rows.map(rowToRule);
+  const rows = await getDeniDb()
+    .select()
+    .from(silentBanRule)
+    .where(options?.enabledOnly ? eq(silentBanRule.enabled, true) : undefined)
+    .orderBy(asc(silentBanRule.createdAt));
+  return rows.map(rowToRule);
 }
 
 async function getEnabledRulesCached(): Promise<SilentBanRule[]> {
@@ -461,14 +396,12 @@ async function getEnabledRulesCached(): Promise<SilentBanRule[]> {
 export async function getSilentBanRule(
   id: string,
 ): Promise<SilentBanRule | null> {
-  await ensureSilentBanTables();
-  const pool = getDeniPool();
-  const result = await pool.query<RuleRow>(
-    `SELECT * FROM flixa_silent_ban_rule WHERE id = $1 LIMIT 1`,
-    [id],
-  );
-  if (result.rows.length === 0) return null;
-  return rowToRule(result.rows[0]!);
+  const [row] = await getDeniDb()
+    .select()
+    .from(silentBanRule)
+    .where(eq(silentBanRule.id, id))
+    .limit(1);
+  return row ? rowToRule(row) : null;
 }
 
 export async function createSilentBanRule(
@@ -495,35 +428,27 @@ export async function createSilentBanRule(
   const enabled = input.enabled !== false;
 
   try {
-    await ensureSilentBanTables();
-    const pool = getDeniPool();
+    const db = getDeniDb();
 
-    const countResult = await pool.query<{ n: string }>(
-      `SELECT COUNT(*)::text AS n FROM flixa_silent_ban_rule`,
-    );
-    const count = Number.parseInt(countResult.rows[0]?.n ?? "0", 10);
-    if (count >= MAX_RULES) {
+    const [{ n } = { n: 0 }] = await db.select({ n: count() }).from(silentBanRule);
+    if (n >= MAX_RULES) {
       return { ok: false, error: `Maximum of ${MAX_RULES} rules reached` };
     }
 
-    const id = crypto.randomUUID();
-    const result = await pool.query<RuleRow>(
-      `INSERT INTO flixa_silent_ban_rule
-         (id, name, enabled, hits_before_ban, reason, conditions, created_at, updated_at)
-       VALUES ($1, $2, $3, $4, $5, $6::jsonb, NOW(), NOW())
-       RETURNING *`,
-      [
-        id,
+    const [row] = await db
+      .insert(silentBanRule)
+      .values({
+        id: crypto.randomUUID(),
         name,
         enabled,
         hitsBeforeBan,
         reason,
-        JSON.stringify(conditionsResult.conditions),
-      ],
-    );
+        conditions: conditionsResult.conditions,
+      })
+      .returning();
 
     invalidateSilentBanRulesCache();
-    return { ok: true, rule: rowToRule(result.rows[0]!) };
+    return { ok: true, rule: rowToRule(row!) };
   } catch (error) {
     console.error("[SilentBan] Failed to create rule:", error);
     return {
@@ -538,7 +463,6 @@ export async function updateSilentBanRule(
   input: UpdateSilentBanRuleInput,
 ): Promise<{ ok: true; rule: SilentBanRule } | { ok: false; error: string }> {
   try {
-    await ensureSilentBanTables();
     const existing = await getSilentBanRule(id);
     if (!existing) {
       return { ok: false, error: "rule_not_found" };
@@ -571,26 +495,18 @@ export async function updateSilentBanRule(
     const enabled =
       input.enabled !== undefined ? Boolean(input.enabled) : existing.enabled;
 
-    const pool = getDeniPool();
-    const result = await pool.query<RuleRow>(
-      `UPDATE flixa_silent_ban_rule
-       SET name = $2,
-           enabled = $3,
-           hits_before_ban = $4,
-           reason = $5,
-           conditions = $6::jsonb,
-           updated_at = NOW()
-       WHERE id = $1
-       RETURNING *`,
-      [id, name, enabled, hitsBeforeBan, reason, JSON.stringify(conditions)],
-    );
+    const [row] = await getDeniDb()
+      .update(silentBanRule)
+      .set({ name, enabled, hitsBeforeBan, reason, conditions, updatedAt: sql`NOW()` })
+      .where(eq(silentBanRule.id, id))
+      .returning();
 
-    if (result.rows.length === 0) {
+    if (!row) {
       return { ok: false, error: "rule_not_found" };
     }
 
     invalidateSilentBanRulesCache();
-    return { ok: true, rule: rowToRule(result.rows[0]!) };
+    return { ok: true, rule: rowToRule(row) };
   } catch (error) {
     console.error(`[SilentBan] Failed to update rule=${id}:`, error);
     return {
@@ -604,14 +520,12 @@ export async function deleteSilentBanRule(
   id: string,
 ): Promise<{ ok: true; deleted: boolean } | { ok: false; error: string }> {
   try {
-    await ensureSilentBanTables();
-    const pool = getDeniPool();
-    const result = await pool.query(
-      `DELETE FROM flixa_silent_ban_rule WHERE id = $1`,
-      [id],
-    );
+    const deleted = await getDeniDb()
+      .delete(silentBanRule)
+      .where(eq(silentBanRule.id, id))
+      .returning({ id: silentBanRule.id });
     invalidateSilentBanRulesCache();
-    return { ok: true, deleted: (result.rowCount ?? 0) > 0 };
+    return { ok: true, deleted: deleted.length > 0 };
   } catch (error) {
     console.error(`[SilentBan] Failed to delete rule=${id}:`, error);
     return {
@@ -623,27 +537,13 @@ export async function deleteSilentBanRule(
 
 // ── Hits ─────────────────────────────────────────────────────────────────────
 
-type HitRow = {
-  user_id: string;
-  rule_id: string;
-  hit_count: number;
-  first_hit_at: Date | string;
-  last_hit_at: Date | string;
-};
-
-function rowToHit(row: HitRow): SilentBanHit {
+function rowToHit(row: typeof silentBanHit.$inferSelect): SilentBanHit {
   return {
-    userId: row.user_id,
-    ruleId: row.rule_id,
-    hitCount: Number(row.hit_count) || 0,
-    firstHitAt:
-      row.first_hit_at instanceof Date
-        ? row.first_hit_at.toISOString()
-        : String(row.first_hit_at),
-    lastHitAt:
-      row.last_hit_at instanceof Date
-        ? row.last_hit_at.toISOString()
-        : String(row.last_hit_at),
+    userId: row.userId,
+    ruleId: row.ruleId,
+    hitCount: row.hitCount,
+    firstHitAt: row.firstHitAt.toISOString(),
+    lastHitAt: row.lastHitAt.toISOString(),
   };
 }
 
@@ -654,18 +554,22 @@ async function incrementSilentBanHit(
   userId: string,
   ruleId: string,
 ): Promise<number> {
-  await ensureSilentBanTables();
-  const pool = getDeniPool();
-  const result = await pool.query<{ hit_count: number }>(
-    `INSERT INTO flixa_silent_ban_hit (user_id, rule_id, hit_count, first_hit_at, last_hit_at)
-     VALUES ($1, $2, 1, NOW(), NOW())
-     ON CONFLICT (user_id, rule_id) DO UPDATE
-       SET hit_count = flixa_silent_ban_hit.hit_count + 1,
-           last_hit_at = NOW()
-     RETURNING hit_count`,
-    [userId, ruleId],
-  );
-  return Number(result.rows[0]?.hit_count) || 1;
+  const [row] = await getDeniDb()
+    .insert(silentBanHit)
+    .values({ userId, ruleId, hitCount: 1 })
+    .onConflictDoUpdate({
+      target: [silentBanHit.userId, silentBanHit.ruleId],
+      set: { hitCount: sql`${silentBanHit.hitCount} + 1`, lastHitAt: sql`NOW()` },
+    })
+    .returning({ hitCount: silentBanHit.hitCount });
+  return row?.hitCount || 1;
+}
+
+function hitFilter(options: { userId?: string; ruleId?: string }): SQL[] {
+  const filters: SQL[] = [];
+  if (options.userId?.trim()) filters.push(eq(silentBanHit.userId, options.userId.trim()));
+  if (options.ruleId?.trim()) filters.push(eq(silentBanHit.ruleId, options.ruleId.trim()));
+  return filters;
 }
 
 export async function listSilentBanHits(options?: {
@@ -673,37 +577,18 @@ export async function listSilentBanHits(options?: {
   ruleId?: string;
   limit?: number;
 }): Promise<SilentBanHit[]> {
-  await ensureSilentBanTables();
-  const pool = getDeniPool();
   const limit = Math.min(
     Math.max(1, Math.floor(options?.limit ?? 200)),
     1000,
   );
 
-  const clauses: string[] = [];
-  const params: unknown[] = [];
-
-  if (options?.userId?.trim()) {
-    params.push(options.userId.trim());
-    clauses.push(`user_id = $${params.length}`);
-  }
-  if (options?.ruleId?.trim()) {
-    params.push(options.ruleId.trim());
-    clauses.push(`rule_id = $${params.length}`);
-  }
-
-  params.push(limit);
-  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-
-  const result = await pool.query<HitRow>(
-    `SELECT user_id, rule_id, hit_count, first_hit_at, last_hit_at
-     FROM flixa_silent_ban_hit
-     ${where}
-     ORDER BY last_hit_at DESC
-     LIMIT $${params.length}`,
-    params,
-  );
-  return result.rows.map(rowToHit);
+  const rows = await getDeniDb()
+    .select()
+    .from(silentBanHit)
+    .where(and(...hitFilter(options ?? {})))
+    .orderBy(desc(silentBanHit.lastHitAt))
+    .limit(limit);
+  return rows.map(rowToHit);
 }
 
 export async function resetSilentBanHits(options: {
@@ -718,25 +603,11 @@ export async function resetSilentBanHits(options: {
   }
 
   try {
-    await ensureSilentBanTables();
-    const pool = getDeniPool();
-    const clauses: string[] = [];
-    const params: unknown[] = [];
-
-    if (options.userId?.trim()) {
-      params.push(options.userId.trim());
-      clauses.push(`user_id = $${params.length}`);
-    }
-    if (options.ruleId?.trim()) {
-      params.push(options.ruleId.trim());
-      clauses.push(`rule_id = $${params.length}`);
-    }
-
-    const result = await pool.query(
-      `DELETE FROM flixa_silent_ban_hit WHERE ${clauses.join(" AND ")}`,
-      params,
-    );
-    return { ok: true, deleted: result.rowCount ?? 0 };
+    const deleted = await getDeniDb()
+      .delete(silentBanHit)
+      .where(and(...hitFilter(options)))
+      .returning({ userId: silentBanHit.userId });
+    return { ok: true, deleted: deleted.length };
   } catch (error) {
     console.error("[SilentBan] Failed to reset hits:", error);
     return {

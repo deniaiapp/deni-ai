@@ -7,7 +7,10 @@ import type { KnownClient } from "./clientSignal";
 
 export type ClientSignalLogOutcome =
   | "allowed"
-  | "missing_banned"
+  /** Unlisted client allowed because the account is on Plus or above. */
+  | "plan_allowed"
+  /** Free/Go on an unlisted client: rejected with a plan notice, not banned. */
+  | "missing_rejected"
   | "legacy_update_required"
   | "enforcement_disabled"
   | "already_banned"

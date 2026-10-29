@@ -132,6 +132,44 @@ full secret is never written. Admin lookup can filter on that fingerprint.
 `FLIXA_USAGE_FINALIZE_ASYNC=true` returns token-metered responses without waiting
 for settlement. The estimated usage remains reserved until settlement completes.
 
+### Database
+
+Flixa uses the Deni AI Postgres database (`DENI_DATABASE_URL`). Its own tables live
+in the `flixa` schema and are defined with Drizzle in `utils/deni/schema/flixa.ts`:
+`ban`, `silent_ban_rule`, `silent_ban_hit`, and `usage_reservation`. Deni AI's tables
+in `public` are owned and migrated by deni-ai; `utils/deni/schema/deni.ts` declares
+only the columns Flixa queries, so keep it in sync with deni-ai's schema by hand.
+Query with `getDeniDb()` (Drizzle) or `getDeniPool()` (raw SQL) from `utils/deni/db.ts`.
+
+```bash
+pnpm run db:generate   # after editing utils/deni/schema/flixa.ts
+pnpm run db:migrate    # applies migrations/ to DENI_DATABASE_URL (.env)
+```
+
+Drizzle-kit only manages the `flixa` schema (its journal is
+`flixa.__drizzle_migrations`), and deni-ai's only manages `public`. The runtime role
+needs no `CREATE` permission: `USAGE` on schema `flixa` plus DML on its tables and on
+the Deni AI tables Flixa uses. Flixa's tables reference `public."user"` with
+`ON DELETE CASCADE`, so deleting a Deni AI account deletes its Flixa rows.
+
+#### Moving an existing deployment to the `flixa` schema
+
+Releases before the `flixa` schema created `public.flixa_ban`,
+`public.flixa_silent_ban_rule`, `public.flixa_silent_ban_hit`, and
+`public.flixa_usage_reservation` at runtime. Migration `0000_flixa_schema` moves them
+into `flixa`, renames their constraints and indexes, and deletes rows whose account
+no longer exists (the new foreign keys would reject them). An old instance that
+starts after the move would recreate empty `public.flixa_*` tables and write bans
+there, so:
+
+1. Deploy, then let all old instances stop.
+2. Right after that, run `pnpm run db:migrate`. Until it finishes, the new
+   instances cannot read `flixa.ban` and reject authenticated requests (ban
+   checks fail closed with 503).
+
+If `public.flixa_*` tables reappear after the move, an old instance was still
+running: copy their rows into `flixa.*` and drop them.
+
 ### Quota reservation and interrupted streams
 
 Requests atomically reserve estimated usage units (weighted tokens; 1M units =
@@ -150,8 +188,7 @@ and tool-argument deltas. UTF-8 bytes / 4 is an approximation; cached history,
 media, and hidden reasoning may differ, so this is not an exact provider-token
 cap. Actual usage above an estimate is still recorded and blocks subsequent work.
 
-`flixa_usage_reservation` is created automatically on first use (the DB role needs
-`CREATE TABLE` permission). Its receipts make settlement idempotent and prevent old
+Receipts in `flixa.usage_reservation` make settlement idempotent and prevent old
 refunds from affecting a newly reset month or tier. On process termination or a DB
 settlement failure, the reserved estimate remains charged; outstanding receipts
 are retained for reconciliation. Do not blindly delete/refund them: provider work
@@ -217,6 +254,26 @@ provider block is missing or the process has an empty `FLIXA_API_KEY`.
 
 Do not point the built-in `openai` provider at Flixa via `openai_base_url`
 unless you also send a Deni API key. ChatGPT login tokens are not Flixa keys.
+
+### Client access policy
+
+After an API key is validated, `middleware/validateAgentAuth.ts` checks which
+client sent the request (`utils/deni/clientSignal.ts`):
+
+- **Free and Go:** only Codex, Claude Code, OpenCode, Zed, and Flixa may call the
+  API. Legacy AI SDK User-Agents (`ai/…`, `ai-sdk…`) get a `403
+  client_update_required`; any other client gets a `403 missing_client_signal`
+  (`type: insufficient_plan`, with `tier` and `upgradeUrl`) that says Plus or
+  higher can use other apps. Neither bans the account. These are logged as
+  `legacy_update_required` and `missing_rejected`.
+- **Plus, Pro, and Pro for Teams:** any client may call the API, including
+  external apps built on the AI SDK. These requests are logged with the
+  `plan_allowed` outcome in `/admin/lookup`.
+- **Every plan:** existing bans and admin silent-ban rules still apply, and
+  banned accounts keep getting the generic `403 service_unavailable` message,
+  which does not say why. If the
+  plan cannot be read, the request fails with `503 db_error`; nobody is banned
+  because of an unknown plan.
 
 Set `FLIXA_AUTH_DISABLED=true` only for local development when you need to test
 upstream requests without a Deni API key or database-backed account. It

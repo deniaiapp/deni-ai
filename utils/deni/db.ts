@@ -1,7 +1,12 @@
+import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
 import { getRequestRuntime } from '../runtime';
 
 let pool: Pool | null = null;
+
+export type DeniDb = NodePgDatabase;
+
+const databases = new WeakMap<Pool, DeniDb>();
 
 function getPositiveIntEnv(envKey: string, fallback: number): number {
   const rawValue = process.env[envKey];
@@ -39,6 +44,20 @@ export function getDeniPool(): Pool {
   }
   pool ??= createPool();
   return pool;
+}
+
+/**
+ * Drizzle over the same pool. Tables: `./schema/flixa` (Flixa's own) and
+ * `./schema/deni` (Deni AI's, declared with only the columns Flixa uses).
+ */
+export function getDeniDb(): DeniDb {
+  const client = getDeniPool();
+  let db = databases.get(client);
+  if (!db) {
+    db = drizzle({ client });
+    databases.set(client, db);
+  }
+  return db;
 }
 
 function createPool(): Pool {

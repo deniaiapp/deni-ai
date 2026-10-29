@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, mock, test } from "node:test";
-import { PGlite } from "@electric-sql/pglite";
 import type { Pool } from "pg";
 import type { AgentAuthContext } from "../middleware/validateAgentAuth";
 import { Hono } from "hono";
@@ -18,9 +17,10 @@ mock.module("../middleware/validateAgentAuth", {
 const { reserveUsageQuota, settleUsageQuota } = await import("../utils/deni/usage");
 const { UsageEstimate } = await import("../utils/agent/usageEstimation");
 const { finalizeUsage, releaseReservedUsage } = await import("../utils/agent/usageAccounting");
+const { createFlixaTestDb } = await import("./helpers/flixa-db");
 
 // Executes production SQL in isolated PostgreSQL/WASM. No external DB or keys.
-const db = new PGlite();
+const { pglite: db } = await createFlixaTestDb();
 let app: Hono;
 let activeAuth: AgentAuthContext;
 const oldAsync = process.env.FLIXA_USAGE_FINALIZE_ASYNC;
@@ -45,6 +45,7 @@ before(async () => {
     "CREATE UNIQUE INDEX product_usage_user_period_idx ON product_usage (user_id, product, metric, unit, period_start)",
   );
   await db.exec("CREATE TABLE signup_risk (user_id TEXT PRIMARY KEY)");
+  await db.exec(`INSERT INTO "user" (id) VALUES ('bootstrap'), ('test-user')`);
   const pool = {
     query: (sql: string, values: unknown[]) => db.query(sql, values),
   } as unknown as Pool;
@@ -63,7 +64,7 @@ beforeEach(async () => {
   process.env.FLIXA_USAGE_FINALIZE_ASYNC = "false";
   process.env.OPENROUTER_API_KEY = "local-test-key";
   process.env.DENI_AI_API_KEY = "deni_local_test_key";
-  await db.exec("TRUNCATE usage_quota, flixa_usage_reservation, product_usage");
+  await db.exec("TRUNCATE usage_quota, flixa.usage_reservation, product_usage");
 });
 
 after(async () => {
@@ -206,13 +207,13 @@ describe("atomic usage reservations", () => {
   test("receipt creation failure rolls back the quota debit", async () => {
     await reserveUsageQuota("test-user", "premium", "free", false, 100);
     await db.exec(
-      "ALTER TABLE flixa_usage_reservation ADD CONSTRAINT test_fail CHECK (amount < 150)",
+      "ALTER TABLE flixa.usage_reservation ADD CONSTRAINT test_fail CHECK (amount < 150)",
     );
     try {
       await assert.rejects(reserveUsageQuota("test-user", "premium", "free", false, 200));
       assert.equal(await used(), 100);
     } finally {
-      await db.exec("ALTER TABLE flixa_usage_reservation DROP CONSTRAINT test_fail");
+      await db.exec("ALTER TABLE flixa.usage_reservation DROP CONSTRAINT test_fail");
     }
   });
 });

@@ -1,42 +1,14 @@
-import { getDeniPool } from "./db";
+import { eq, sql } from "drizzle-orm";
+import { getDeniDb } from "./db";
 import { invalidateUserAuthCache } from "./auth";
+import { apiKey, user } from "./schema/deni";
+import { ban } from "./schema/flixa";
 
 export type BanReason = "missing_client_signal" | "manual" | string;
 
 export type BanResult =
   | { banned: true; alreadyBanned: boolean }
   | { banned: false; error: string };
-
-let tableReady: Promise<void> | null = null;
-
-/**
- * Ensure the flixa_ban table exists. Idempotent; runs at most once per process.
- */
-async function ensureBanTable(): Promise<void> {
-  if (!tableReady) {
-    tableReady = (async () => {
-      const pool = getDeniPool();
-      await pool.query(`
-        CREATE TABLE IF NOT EXISTS flixa_ban (
-          user_id TEXT PRIMARY KEY,
-          reason TEXT NOT NULL,
-          client_headers JSONB,
-          banned_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-        )
-      `);
-      await pool.query(`
-        CREATE INDEX IF NOT EXISTS flixa_ban_banned_at_idx
-        ON flixa_ban (banned_at DESC)
-      `);
-    })().catch((error) => {
-      // Allow retry on next call if the first attempt failed (e.g. cold start race).
-      tableReady = null;
-      throw error;
-    });
-  }
-
-  await tableReady;
-}
 
 const banStatusCache = new Map<string, { banned: boolean; expiresAt: number }>();
 const banStatusInFlight = new Map<string, Promise<boolean>>();
@@ -93,13 +65,12 @@ export async function isUserBannedFromFlixa(userId: string): Promise<boolean> {
   const generation = banCacheGeneration;
   const pending = (async () => {
     try {
-      await ensureBanTable();
-      const pool = getDeniPool();
-      const result = await pool.query<{ user_id: string }>(
-        `SELECT user_id FROM flixa_ban WHERE user_id = $1 LIMIT 1`,
-        [userId],
-      );
-      const banned = result.rows.length > 0;
+      const rows = await getDeniDb()
+        .select({ userId: ban.userId })
+        .from(ban)
+        .where(eq(ban.userId, userId))
+        .limit(1);
+      const banned = rows.length > 0;
       // An admin ban/unban can invalidate the cache while this query is in
       // flight. Do not let the older result overwrite the newer state.
       if (generation === banCacheGeneration) {
@@ -143,47 +114,32 @@ export async function banUserFromFlixa(
   clientHeaders?: Record<string, string | null>,
 ): Promise<BanResult> {
   try {
-    await ensureBanTable();
-    const pool = getDeniPool();
-    const client = await pool.connect();
-
-    try {
-      await client.query("BEGIN");
-
-      const insert = await client.query(
-        `INSERT INTO flixa_ban (user_id, reason, client_headers, banned_at)
-         VALUES ($1, $2, $3::jsonb, NOW())
-         ON CONFLICT (user_id) DO NOTHING
-         RETURNING user_id`,
-        [userId, reason, JSON.stringify(clientHeaders ?? null)],
-      );
-
-      const alreadyBanned = (insert.rowCount ?? 0) === 0;
+    const { alreadyBanned, revokedKeys } = await getDeniDb().transaction(async (tx) => {
+      const inserted = await tx
+        .insert(ban)
+        .values({ userId, reason, clientHeaders: clientHeaders ?? null })
+        .onConflictDoNothing({ target: ban.userId })
+        .returning({ userId: ban.userId });
 
       // Always revoke keys so a re-issued key cannot bypass a prior ban
       // without an explicit unban + new login flow.
-      const revoked = await client.query(
-        `DELETE FROM api_key WHERE user_id = $1`,
-        [userId],
-      );
+      const revoked = await tx
+        .delete(apiKey)
+        .where(eq(apiKey.userId, userId))
+        .returning({ id: apiKey.id });
 
-      await client.query("COMMIT");
+      return { alreadyBanned: inserted.length === 0, revokedKeys: revoked.length };
+    });
 
-      invalidateUserAuthCache(userId);
-      setCachedBanStatus(userId, true);
+    invalidateUserAuthCache(userId);
+    setCachedBanStatus(userId, true);
 
-      console.warn(
-        `[Ban] user=${userId} reason=${reason} alreadyBanned=${alreadyBanned} revokedKeys=${revoked.rowCount ?? 0}`,
-        clientHeaders ? { clientHeaders } : undefined,
-      );
+    console.warn(
+      `[Ban] user=${userId} reason=${reason} alreadyBanned=${alreadyBanned} revokedKeys=${revokedKeys}`,
+      clientHeaders ? { clientHeaders } : undefined,
+    );
 
-      return { banned: true, alreadyBanned };
-    } catch (error) {
-      await client.query("ROLLBACK").catch(() => undefined);
-      throw error;
-    } finally {
-      client.release();
-    }
+    return { banned: true, alreadyBanned };
   } catch (error) {
     console.error(`[Ban] Failed to ban user=${userId}:`, error);
     return {
@@ -203,14 +159,12 @@ export type UnbanResult =
  */
 export async function unbanUserFromFlixa(userId: string): Promise<UnbanResult> {
   try {
-    await ensureBanTable();
-    const pool = getDeniPool();
-    const result = await pool.query<{ user_id: string }>(
-      `DELETE FROM flixa_ban WHERE user_id = $1 RETURNING user_id`,
-      [userId],
-    );
+    const deleted = await getDeniDb()
+      .delete(ban)
+      .where(eq(ban.userId, userId))
+      .returning({ userId: ban.userId });
 
-    const wasBanned = (result.rowCount ?? 0) > 0;
+    const wasBanned = deleted.length > 0;
     invalidateUserAuthCache(userId);
     setCachedBanStatus(userId, false);
 
@@ -225,8 +179,6 @@ export async function unbanUserFromFlixa(userId: string): Promise<UnbanResult> {
   }
 }
 
-type UserLookupRow = { id: string; email: string | null };
-
 async function findUserByEmail(
   email: string,
 ): Promise<
@@ -238,24 +190,23 @@ async function findUserByEmail(
     return { found: false, error: "Email is required" };
   }
 
-  const pool = getDeniPool();
-  const userResult = await pool.query<UserLookupRow>(
-    `SELECT id, email FROM "user" WHERE lower(email) = $1 LIMIT 1`,
-    [normalizedEmail],
-  );
+  const [found] = await getDeniDb()
+    .select({ id: user.id, email: user.email })
+    .from(user)
+    .where(eq(sql`lower(${user.email})`, normalizedEmail))
+    .limit(1);
 
-  if (userResult.rows.length === 0) {
+  if (!found) {
     return {
       found: false,
       error: `No user found with email: ${normalizedEmail}`,
     };
   }
 
-  const user = userResult.rows[0]!;
   return {
     found: true,
-    userId: user.id,
-    email: user.email ?? normalizedEmail,
+    userId: found.id,
+    email: found.email,
   };
 }
 
@@ -375,9 +326,10 @@ export async function unbanUserFromFlixaByEmail(
 export const BANNED_ERROR_MESSAGE =
   "Deni AI Flixa is currently unavailable. Please contact us at contact@deniai.app.";
 
+/** Free/Go on an unlisted client (no ban). */
 export const MISSING_CLIENT_SIGNAL_MESSAGE =
-  "Unauthorized client. Deni AI API keys may only be used from Codex, Claude Code, OpenCode, or Flixa. Your account has been banned from Flixa.";
+  "This app is not available on your plan. On the Free and Go plans, Deni AI API keys can only be used from Codex, Claude Code, OpenCode, Zed, or Flixa. Upgrade to Plus or higher to use other apps.";
 
-/** Soft-reject for legacy AI SDK / outdated Flixa clients (no ban). */
+/** Soft-reject for legacy AI SDK / outdated Flixa clients on Free/Go (no ban). */
 export const CLIENT_UPDATE_REQUIRED_MESSAGE =
-  "Please update your Deni AI Flixa to continue.";
+  "Please update your Deni AI Flixa to continue. To use Flixa from other apps, upgrade to Plus or higher.";

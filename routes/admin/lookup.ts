@@ -7,7 +7,8 @@ import {
 
 const OUTCOMES: ClientSignalLogOutcome[] = [
   "allowed",
-  "missing_banned",
+  "plan_allowed",
+  "missing_rejected",
   "legacy_update_required",
   "enforcement_disabled",
   "already_banned",
@@ -223,11 +224,11 @@ function renderLookupPage(): string {
       font-weight: 600;
       white-space: nowrap;
     }
-    .badge.allowed { background: color-mix(in srgb, var(--ok) 22%, transparent); color: var(--ok); }
-    .badge.missing_banned, .badge.already_banned, .badge.silent_rule_banned {
+    .badge.allowed, .badge.plan_allowed { background: color-mix(in srgb, var(--ok) 22%, transparent); color: var(--ok); }
+    .badge.already_banned, .badge.silent_rule_banned {
       background: color-mix(in srgb, var(--bad) 22%, transparent); color: var(--bad);
     }
-    .badge.legacy_update_required, .badge.enforcement_disabled {
+    .badge.missing_rejected, .badge.legacy_update_required, .badge.enforcement_disabled {
       background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn);
     }
     .headers {

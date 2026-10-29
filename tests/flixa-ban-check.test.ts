@@ -3,24 +3,22 @@ import { after, before, beforeEach, describe, mock, test } from "node:test";
 import type { Pool } from "pg";
 import { Hono } from "hono";
 
-// Swap getDeniPool for a mock before any module that imports it is loaded.
+// Swap getDeniPool / getDeniDb for mocks before any module that imports them is loaded.
 const database = await import("../utils/deni/db");
 const getDeniPool = mock.fn(database.getDeniPool);
-mock.module("../utils/deni/db", { exports: { ...database, getDeniPool } });
+const getDeniDb = mock.fn(database.getDeniDb);
+mock.module("../utils/deni/db", { exports: { ...database, getDeniPool, getDeniDb } });
 const { hashApiKey } = await import("../utils/deni/auth");
 const { BANNED_ERROR_MESSAGE, invalidateBanCache } = await import("../utils/deni/ban");
 const { invalidateSilentBanRulesCache } = await import("../utils/deni/silentBanRules");
 const { validateAgentApiKey, validateAgentAuth } = await import(
   "../middleware/validateAgentAuth"
 );
+const { createFlixaTestDb } = await import("./helpers/flixa-db");
 
-// In-memory stand-in for the Deni pool. No external DB or keys.
-type BanLookupMode = "not_banned" | "banned" | "throw";
-let banLookupMode: BanLookupMode = "not_banned";
-let banTableSetupThrows = false;
-// Silent-ban rules: "none" configured, one matching rule, or DB errors.
-type SilentRulesMode = "none" | "matching_rule" | "rules_throw" | "hit_throw";
-let silentRulesMode: SilentRulesMode = "none";
+// Flixa's tables run in isolated PostgreSQL/WASM; API key lookups use an
+// in-memory pool. No external DB or keys.
+const { pglite, db } = await createFlixaTestDb();
 const keyOwners = new Map<string, string>();
 let keyCounter = 0;
 const oldAuthDisabled = process.env.FLIXA_AUTH_DISABLED;
@@ -33,45 +31,36 @@ async function fakeQuery(sql: string, values?: unknown[]) {
       rowCount: userId ? 1 : 0,
     };
   }
-  if (sql.includes("flixa_ban") && /CREATE (TABLE|INDEX)/.test(sql)) {
-    if (banTableSetupThrows) throw new Error("connection timeout");
-    return { rows: [], rowCount: 0 };
-  }
-  if (sql.includes("SELECT user_id FROM flixa_ban")) {
-    if (banLookupMode === "throw") throw new Error("connection timeout");
-    const userId = String(values?.[0]);
-    return banLookupMode === "banned"
-      ? { rows: [{ user_id: userId }], rowCount: 1 }
-      : { rows: [], rowCount: 0 };
-  }
-  if (sql.includes("FROM flixa_silent_ban_rule")) {
-    if (silentRulesMode === "rules_throw") throw new Error("connection timeout");
-    if (silentRulesMode === "none") return { rows: [], rowCount: 0 };
-    const row = {
-      id: "rule-1",
-      name: "codex",
-      enabled: true,
-      hits_before_ban: 3,
-      reason: "silent_rule:codex",
-      conditions: [{ target: "user-agent", op: "contains", value: "codex_cli_rs" }],
-      created_at: new Date(0),
-      updated_at: new Date(0),
-    };
-    return { rows: [row], rowCount: 1 };
-  }
-  if (sql.includes("INSERT INTO flixa_silent_ban_hit")) {
-    if (silentRulesMode === "hit_throw") throw new Error("connection timeout");
-    return { rows: [{ hit_count: 1 }], rowCount: 1 };
-  }
-  // last_used_at touch, silent-ban table setup, etc.
+  // last_used_at touch, etc.
   return { rows: [], rowCount: 0 };
 }
 
-function newKey(): string {
+async function newKey(): Promise<{ key: string; userId: string }> {
   keyCounter += 1;
   const key = `deni_bancheck_${keyCounter}_${"x".repeat(24)}`;
-  keyOwners.set(hashApiKey(key), `ban-check-user-${keyCounter}`);
-  return key;
+  const userId = `ban-check-user-${keyCounter}`;
+  keyOwners.set(hashApiKey(key), userId);
+  await pglite.query(`INSERT INTO "user" (id) VALUES ($1)`, [userId]);
+  return { key, userId };
+}
+
+async function ban(userId: string): Promise<void> {
+  await pglite.query(`INSERT INTO flixa.ban (user_id, reason) VALUES ($1, 'manual')`, [userId]);
+}
+
+async function addMatchingRule(): Promise<void> {
+  await pglite.query(
+    `INSERT INTO flixa.silent_ban_rule (id, name, hits_before_ban, reason, conditions)
+     VALUES ('rule-1', 'codex', 3, 'silent_rule:codex', $1::jsonb)`,
+    [JSON.stringify([{ target: "user-agent", op: "contains", value: "codex_cli_rs" }])],
+  );
+}
+
+// Queries against a renamed table fail like an unreachable database would.
+const brokenTables = new Set<string>();
+async function breakTable(table: string): Promise<void> {
+  await pglite.exec(`ALTER TABLE flixa.${table} RENAME TO ${table}_broken`);
+  brokenTables.add(table);
 }
 
 function request(app: Hono, path: string, key: string, method = "GET") {
@@ -107,20 +96,25 @@ function inferenceApp(): Hono {
 before(() => {
   const pool = { query: fakeQuery } as unknown as Pool;
   getDeniPool.mock.mockImplementation(() => pool);
+  getDeniDb.mock.mockImplementation(() => db);
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   delete process.env.FLIXA_AUTH_DISABLED;
-  banLookupMode = "not_banned";
-  banTableSetupThrows = false;
-  silentRulesMode = "none";
+  for (const table of brokenTables) {
+    await pglite.exec(`ALTER TABLE flixa.${table}_broken RENAME TO ${table}`);
+  }
+  brokenTables.clear();
+  await pglite.exec("TRUNCATE flixa.ban, flixa.silent_ban_rule, flixa.silent_ban_hit");
   served = 0;
   invalidateBanCache();
   invalidateSilentBanRulesCache();
 });
 
-after(() => {
+after(async () => {
   getDeniPool.mock.restore();
+  getDeniDb.mock.restore();
+  await pglite.close();
   if (oldAuthDisabled === undefined) delete process.env.FLIXA_AUTH_DISABLED;
   else process.env.FLIXA_AUTH_DISABLED = oldAuthDisabled;
 });
@@ -136,30 +130,18 @@ const dbErrorBody = {
 
 describe("flixa ban check", () => {
   test("fails closed with 503 when the ban lookup errors", async () => {
-    banLookupMode = "throw";
-    const res = await request(modelsApp(), "/v1/models", newKey());
-    assert.equal(res.status, 503);
-    assert.deepEqual(await res.json(), dbErrorBody);
-    assert.equal(served, 0);
-  });
-
-  test("fails closed when ban table setup and lookup both error", async () => {
-    banTableSetupThrows = true;
-    banLookupMode = "throw";
-    const res = await request(modelsApp(), "/v1/models", newKey());
+    await breakTable("ban");
+    const { key } = await newKey();
+    const res = await request(modelsApp(), "/v1/models", key);
     assert.equal(res.status, 503);
     assert.deepEqual(await res.json(), dbErrorBody);
     assert.equal(served, 0);
   });
 
   test("does not serve inference requests when the ban lookup errors", async () => {
-    banLookupMode = "throw";
-    const res = await request(
-      inferenceApp(),
-      "/v1/agent/chat/completions",
-      newKey(),
-      "POST",
-    );
+    await breakTable("ban");
+    const { key } = await newKey();
+    const res = await request(inferenceApp(), "/v1/agent/chat/completions", key, "POST");
     assert.equal(res.status, 503);
     assert.deepEqual(await res.json(), dbErrorBody);
     assert.equal(served, 0);
@@ -167,26 +149,29 @@ describe("flixa ban check", () => {
 
   test("does not cache a failed lookup", async () => {
     const app = modelsApp();
-    const key = newKey();
-    banLookupMode = "throw";
+    const { key } = await newKey();
+    await breakTable("ban");
     assert.equal((await request(app, "/v1/models", key)).status, 503);
 
-    banLookupMode = "not_banned";
+    await pglite.exec("ALTER TABLE flixa.ban_broken RENAME TO ban");
+    brokenTables.delete("ban");
     const res = await request(app, "/v1/models", key);
     assert.equal(res.status, 200);
     assert.equal(served, 1);
   });
 
   test("serves users that are not banned", async () => {
-    const res = await request(modelsApp(), "/v1/models", newKey());
+    const { key } = await newKey();
+    const res = await request(modelsApp(), "/v1/models", key);
     assert.equal(res.status, 200);
     assert.deepEqual(await res.json(), { ok: true });
     assert.equal(served, 1);
   });
 
   test("rejects banned users with the unchanged 403 response", async () => {
-    banLookupMode = "banned";
-    const res = await request(modelsApp(), "/v1/models", newKey());
+    const { key, userId } = await newKey();
+    await ban(userId);
+    const res = await request(modelsApp(), "/v1/models", key);
     assert.equal(res.status, 403);
     assert.deepEqual(await res.json(), {
       error: {
@@ -200,40 +185,77 @@ describe("flixa ban check", () => {
   });
 
   test("fails closed when silent-ban rules cannot be loaded", async () => {
-    silentRulesMode = "rules_throw";
-    const res = await request(modelsApp(), "/v1/models", newKey());
+    await breakTable("silent_ban_rule");
+    const { key } = await newKey();
+    const res = await request(modelsApp(), "/v1/models", key);
     assert.equal(res.status, 503);
     assert.deepEqual(await res.json(), dbErrorBody);
     assert.equal(served, 0);
   });
 
   test("fails closed when a silent-ban hit cannot be counted", async () => {
-    silentRulesMode = "hit_throw";
-    const res = await request(
-      inferenceApp(),
-      "/v1/agent/chat/completions",
-      newKey(),
-      "POST",
-    );
+    await addMatchingRule();
+    await breakTable("silent_ban_hit");
+    const { key } = await newKey();
+    const res = await request(inferenceApp(), "/v1/agent/chat/completions", key, "POST");
     assert.equal(res.status, 503);
     assert.deepEqual(await res.json(), dbErrorBody);
     assert.equal(served, 0);
   });
 
   test("still serves requests counted below the silent-ban threshold", async () => {
-    silentRulesMode = "matching_rule";
-    const res = await request(modelsApp(), "/v1/models", newKey());
+    await addMatchingRule();
+    const { key, userId } = await newKey();
+    const res = await request(modelsApp(), "/v1/models", key);
     assert.equal(res.status, 200);
     assert.equal(served, 1);
+    const hits = await pglite.query<{ hit_count: number }>(
+      "SELECT hit_count FROM flixa.silent_ban_hit WHERE user_id = $1",
+      [userId],
+    );
+    assert.equal(hits.rows[0]?.hit_count, 1);
+  });
+
+  test("bans on the threshold hit and revokes the user's keys", async () => {
+    await addMatchingRule();
+    await pglite.exec("CREATE TABLE IF NOT EXISTS api_key (id TEXT PRIMARY KEY, user_id TEXT NOT NULL)");
+    const app = modelsApp();
+    const { key, userId } = await newKey();
+    await pglite.query("INSERT INTO api_key (id, user_id) VALUES ('key-1', $1)", [userId]);
+    assert.equal((await request(app, "/v1/models", key)).status, 200);
+    assert.equal((await request(app, "/v1/models", key)).status, 200);
+    assert.equal((await request(app, "/v1/models", key)).status, 403);
+
+    const banned = await pglite.query<{ reason: string }>(
+      "SELECT reason FROM flixa.ban WHERE user_id = $1",
+      [userId],
+    );
+    assert.equal(banned.rows[0]?.reason, "silent_rule:codex");
+    const keys = await pglite.query("SELECT id FROM api_key WHERE user_id = $1", [userId]);
+    assert.equal(keys.rows.length, 0);
+  });
+
+  test("deleting the Deni AI account deletes its ban and hits", async () => {
+    await addMatchingRule();
+    const { key, userId } = await newKey();
+    await request(modelsApp(), "/v1/models", key);
+    await ban(userId);
+    await pglite.query(`DELETE FROM "user" WHERE id = $1`, [userId]);
+    const left = await pglite.query(
+      `SELECT user_id FROM flixa.ban WHERE user_id = $1
+       UNION ALL SELECT user_id FROM flixa.silent_ban_hit WHERE user_id = $1`,
+      [userId],
+    );
+    assert.equal(left.rows.length, 0);
   });
 
   test("keeps serving a cached ban answer when a later lookup would error", async () => {
     const app = modelsApp();
-    const key = newKey();
-    banLookupMode = "banned";
+    const { key, userId } = await newKey();
+    await ban(userId);
     assert.equal((await request(app, "/v1/models", key)).status, 403);
 
-    banLookupMode = "throw";
+    await breakTable("ban");
     assert.equal((await request(app, "/v1/models", key)).status, 403);
     assert.equal(served, 0);
   });
