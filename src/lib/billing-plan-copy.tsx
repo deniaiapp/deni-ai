@@ -26,11 +26,25 @@ const b = (chunks: ReactNode) => (
   <strong className="font-semibold text-foreground">{chunks}</strong>
 );
 
+/** What Pro for Teams adds, shown on its plan cards and the billing overview. */
+export function useTeamPlanHighlights(): ReactNode[] {
+  const t = useExtracted();
+  return [
+    t.rich("One usage pool for <b>Deni AI chat</b>, <b>Flixa</b>, and <b>Deni Run</b>", { b }),
+    t.rich("<b>Pro benefits</b> for every team member", { b }),
+    t.rich("<b>Per-seat billing</b> — pay only for active members", { b }),
+    t.rich("<b>Centralized</b> billing and member management, audit log", { b }),
+    t.rich("<b>Team projects</b> shared with every member", { b }),
+    t.rich("<b>Team domains</b> so coworkers join with their work email", { b }),
+  ];
+}
+
 export function useBillingPlanCopy(planId: BillingPlanId): BillingPlanCopy;
 export function useBillingPlanCopy(planId: null): null;
 export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCopy | null;
 export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCopy | null {
   const t = useExtracted();
+  const teamHighlights = useTeamPlanHighlights();
 
   if (!planId) {
     return null;
@@ -38,9 +52,7 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
 
   const tier = getPlanTier(planId);
   const comparisonHighlights =
-    tier === "pro" || tier === "team"
-      ? [t.rich("<b>Compare two models</b> side by side", { b })]
-      : [];
+    tier === "pro" ? [t.rich("<b>Compare two models</b> side by side", { b })] : [];
   // One monthly pool covers Deni AI chat, Flixa, and Deni Run on every plan.
   const runHighlight = t.rich(
     "One usage pool for <b>Deni AI chat</b>, <b>Flixa</b>, and <b>Deni Run</b>",
@@ -127,37 +139,13 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
     case "pro_team_monthly":
       return {
         tagline: t("Give your whole team Pro-tier access with per-seat pricing."),
-        highlights: [
-          runHighlight,
-          ...comparisonHighlights,
-          t("Pro benefits for every team member"),
-          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
-            b,
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
-            plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
-          }),
-          t.rich("<b>Max Mode credits</b> to keep going past the limit", { b }),
-          t("Per-seat billing — pay only for active members"),
-          t("Centralized billing and member management"),
-        ],
+        highlights: teamHighlights,
       };
     case "pro_team_yearly":
       return {
         tagline: t("Give your whole team Pro-tier access with per-seat pricing."),
         badge: t("Most cost-effective"),
-        highlights: [
-          runHighlight,
-          ...comparisonHighlights,
-          t("Pro benefits for every team member"),
-          t.rich("<b>{multiplier}× more</b> monthly usage than {plan}", {
-            b,
-            multiplier: String(PLAN_USAGE_MULTIPLIERS.pro.pool),
-            plan: PLAN_USAGE_MULTIPLIERS.pro.vs,
-          }),
-          t.rich("<b>Max Mode credits</b> to keep going past the limit", { b }),
-          t("Per-seat billing — pay only for active members"),
-          t("Centralized billing and member management"),
-        ],
+        highlights: teamHighlights,
       };
     default:
       return null;

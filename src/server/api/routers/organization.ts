@@ -43,7 +43,7 @@ import {
   isMeteredMaxModePrice,
   pickLicensedSubscription,
 } from "@/lib/stripe-subscriptions";
-import { getOrgMemberCount, updateTeamSeatCount } from "@/lib/team-billing";
+import { getOrgMemberCount, hasPaidTeamPlan, updateTeamSeatCount } from "@/lib/team-billing";
 import {
   findTeamBillingRecord,
   saveTeamBillingRecord,
@@ -668,6 +668,13 @@ export const organizationRouter = router({
     )
     .query(async ({ ctx, input }) => {
       await verifyOrgOwnerOrAdmin(ctx, input.organizationId);
+      // A paid team feature; entries keep being recorded while the plan lapses.
+      if (!(await hasPaidTeamPlan(input.organizationId))) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "The audit log requires a paid team plan.",
+        });
+      }
 
       const actorUser = alias(user, "actor_user");
       const targetUser = alias(user, "target_user");

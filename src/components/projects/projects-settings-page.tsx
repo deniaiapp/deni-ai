@@ -10,6 +10,7 @@ import {
 import { useExtracted } from "use-intl";
 import { Link, useRouter } from "@/lib/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 import { SettingsPageShell } from "@/components/settings-page-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { useLocalizeError } from "@/hooks/use-localize-error";
 import { trpc } from "@/lib/trpc/react";
 
 const projectColorClass: Record<string, string> = {
@@ -136,6 +138,7 @@ function ProjectListRow({
 
 export function ProjectsSettingsPage() {
   const t = useExtracted();
+  const localizeError = useLocalizeError();
   const { push } = useRouter();
   const utils = trpc.useUtils();
   const [createScope, setCreateScope] = useState("__personal__");
@@ -153,6 +156,7 @@ export function ProjectsSettingsPage() {
         push(`/projects/${project.id}`);
       }
     },
+    onError: (error) => toast.error(localizeError(error)),
   });
 
   const archiveProject = trpc.projects.archive.useMutation({
@@ -244,8 +248,10 @@ export function ProjectsSettingsPage() {
                   <SelectContent>
                     <SelectItem value="__personal__">{t("Personal")}</SelectItem>
                     {organizations.map((org) => (
-                      <SelectItem key={org.id} value={org.id}>
-                        {org.name}
+                      <SelectItem key={org.id} value={org.id} disabled={!org.canShareProjects}>
+                        {org.canShareProjects
+                          ? org.name
+                          : t("{team} (paid team plan)", { team: org.name })}
                       </SelectItem>
                     ))}
                   </SelectContent>

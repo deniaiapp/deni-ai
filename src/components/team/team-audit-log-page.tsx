@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { useReloadCooldown } from "@/hooks/use-reload-cooldown";
+import { shouldRetryQuery } from "@/lib/query-client";
 import { trpc } from "@/lib/trpc/react";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +14,7 @@ import {
   useFormatAuditChanges,
   getInitials,
 } from "./team-audit-utils";
+import { TeamPaidPlanNotice } from "./team-paid-plan-notice";
 import { useTeamSettingsContext } from "./team-settings-context";
 import { dateTimeFormatter, monthDayYearFormatter } from "./team-utils";
 
@@ -28,6 +30,9 @@ export function TeamAuditLogPage() {
     {
       enabled: Boolean(activeOrg?.id) && isAdmin,
       getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+      // Without a paid plan the answer will not change on a retry.
+      retry: (failureCount, error) =>
+        error.data?.code !== "PRECONDITION_FAILED" && shouldRetryQuery(failureCount, error),
     },
   );
   const {
@@ -54,6 +59,16 @@ export function TeamAuditLogPage() {
           </CardDescription>
         </CardHeader>
       </Card>
+    );
+  }
+
+  if (auditLogQuery.error?.data?.code === "PRECONDITION_FAILED") {
+    return (
+      <TeamPaidPlanNotice
+        message={t(
+          "The audit log is available on a paid team plan. Changes are still recorded and appear once the plan is active.",
+        )}
+      />
     );
   }
 

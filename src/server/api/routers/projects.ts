@@ -11,7 +11,21 @@ import {
   userIsOrgMember,
   withProjectAccess,
 } from "@/lib/project-access";
+import { hasPaidTeamPlan } from "@/lib/team-billing";
 import { protectedProcedure, router } from "../trpc";
+
+/**
+ * Team projects are a paid team feature: creating or sharing one needs an
+ * active team plan. Projects already shared stay available if the plan lapses.
+ */
+async function requireTeamProjects(organizationId: string) {
+  if (!(await hasPaidTeamPlan(organizationId))) {
+    throw new TRPCError({
+      code: "PRECONDITION_FAILED",
+      message: "Team projects require a paid team plan.",
+    });
+  }
+}
 
 const projectInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -63,11 +77,14 @@ async function requireShareableProject(
 export const projectsRouter = router({
   organizations: protectedProcedure.query(async ({ ctx }) => {
     const memberships = await listUserMemberships(ctx.db, ctx.userId);
-    return memberships.map((entry) => ({
-      id: entry.organizationId,
-      name: entry.organizationName,
-      role: entry.role,
-    }));
+    return Promise.all(
+      memberships.map(async (entry) => ({
+        id: entry.organizationId,
+        name: entry.organizationName,
+        role: entry.role,
+        canShareProjects: await hasPaidTeamPlan(entry.organizationId),
+      })),
+    );
   }),
 
   list: protectedProcedure
@@ -115,6 +132,7 @@ export const projectsRouter = router({
         const [project] = await ctx.db.insert(projects).values(values).returning();
         return project;
       }
+      await requireTeamProjects(organizationId);
 
       // Lock the membership row for the insert: a removal committed earlier is
       // seen here, and one that starts later waits until the project exists.
@@ -168,6 +186,7 @@ export const projectsRouter = router({
           message: "You are not a member of that team.",
         });
       }
+      await requireTeamProjects(input.organizationId);
 
       const [updated] = await ctx.db
         .update(projects)

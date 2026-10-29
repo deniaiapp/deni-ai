@@ -18,10 +18,10 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
-import { Link } from "@/lib/navigation";
 import { TEAM_DOMAIN_JOIN_MODES, type TeamDomainJoinMode } from "@/lib/team-domain-policy";
 import { trpc } from "@/lib/trpc/react";
 import type { AppRouter } from "@/server/api/root";
+import { TeamPaidPlanNotice } from "./team-paid-plan-notice";
 import { useTeamSettingsContext } from "./team-settings-context";
 
 type TeamDomain = inferRouterOutputs<AppRouter>["teamDomains"]["settings"]["domains"][number];
@@ -56,23 +56,11 @@ function CopyableValue({ label, value }: { label: string; value: string }) {
 function TeamDomainsPaidNotice() {
   const t = useExtracted();
   return (
-    <Card className="border-dashed">
-      <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-muted-foreground">
-          {t(
-            "Team domains are available on a paid team plan. Domains you already added stop applying until the plan is active again.",
-          )}
-        </p>
-        <Button
-          size="sm"
-          variant="outline"
-          render={<Link href="/settings/team/billing" />}
-          nativeButton={false}
-        >
-          {t("View plans")}
-        </Button>
-      </CardContent>
-    </Card>
+    <TeamPaidPlanNotice
+      message={t(
+        "Team domains are available on a paid team plan. Domains you already added stop applying until the plan is active again.",
+      )}
+    />
   );
 }
 

@@ -3,12 +3,10 @@ import { generateRandomString } from "better-auth/crypto";
 import { and, count, eq, isNotNull, sql } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { member, teamDomain, teamDomainPolicy, user } from "@/db/schema";
-import { isTeamPlan } from "@/lib/billing";
-import { isBillingDisabled } from "@/lib/billing-config";
 import { extractEmailDomain } from "@/lib/email-domain-policy";
 import {
   cancelPersonalSubscription,
-  getTeamBilling,
+  hasPaidTeamPlan,
   recordTeamAuditEvent,
   updateTeamSeatCount,
 } from "@/lib/team-billing";
@@ -21,21 +19,8 @@ import {
 /** Matches the organization plugin's `membershipLimit` in auth.ts. */
 export const TEAM_MEMBERSHIP_LIMIT = 50;
 
-const ACTIVE_SUB_STATUSES = new Set(["trialing", "active", "past_due"]);
-
-/**
- * Team domains are a paid team feature. Without billing (self-hosting) every
- * team has it. A lapsed plan keeps its domains, but they stop applying.
- */
-export async function hasPaidTeamPlan(organizationId: string) {
-  if (isBillingDisabled) return true;
-  const record = await getTeamBilling(organizationId);
-  return Boolean(
-    record?.stripeSubscriptionId &&
-    isTeamPlan(record.planId) &&
-    ACTIVE_SUB_STATUSES.has(record.status ?? ""),
-  );
-}
+// Team domains are a paid team feature (hasPaidTeamPlan). A lapsed plan keeps
+// its domains, but they stop applying.
 
 export function createTeamDomainVerificationToken() {
   return generateRandomString(32, "a-z", "0-9");

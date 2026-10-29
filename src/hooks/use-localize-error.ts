@@ -397,6 +397,14 @@ export function useLocalizeError() {
           t("Team domains require a paid team plan."),
           "Team domains require a paid team plan.",
         ),
+        ...mapKeys(
+          t("Team projects require a paid team plan."),
+          "Team projects require a paid team plan.",
+        ),
+        ...mapKeys(
+          t("The audit log requires a paid team plan."),
+          "The audit log requires a paid team plan.",
+        ),
         ...mapKeys(t("Enter a valid domain."), "Enter a valid domain."),
         ...mapKeys(
           t("Shared email provider domains cannot be added to a team."),

@@ -9,7 +9,7 @@ import {
   teamJoinRequest,
   user,
 } from "@/db/schema";
-import { recordTeamAuditEvent } from "@/lib/team-billing";
+import { hasPaidTeamPlan, recordTeamAuditEvent } from "@/lib/team-billing";
 import {
   isSharedEmailDomain,
   normalizeTeamDomain,
@@ -21,7 +21,6 @@ import {
   createTeamDomainVerificationToken,
   findActiveTeamForEmail,
   getTeamDomainJoinMode,
-  hasPaidTeamPlan,
   hasTeamDomainTxtRecord,
 } from "@/lib/team-domains";
 import { type ProtectedContext, protectedProcedure, rateLimited, router } from "../trpc";
