@@ -12,6 +12,7 @@ Internal scripts for maintainers. Run from the **repository root** with pnpm. Pa
 | `audit-uploadthing-storage.ts` | `pnpm run tools:audit-uploadthing-storage` | Read-only breakdown of the UploadThing files by what the database still references                              |
 | `migrate-legacy-chat-files.ts` | `pnpm run tools:migrate-legacy-chat-files` | Move files old chats reference by public UploadThing URLs to R2 with attachment rows (dry run unless `--apply`) |
 | `stripe-portal-setup.ts`       | `pnpm run tools:stripe-portal`             | Stripe Customer Portal configuration                                                                            |
+| `copy-database.ts`             | `pnpm exec tsx tools/copy-database.ts`     | Copy a whole database to an empty one and compare row counts (dry run unless `--apply`; needs Docker)           |
 
 ## Commit helper
 
@@ -80,3 +81,14 @@ Creates or updates the portal configuration that keeps plan and seat changes in 
 pnpm run tools:stripe-portal
 pnpm run tools:stripe-portal --check
 ```
+
+## Copy a database
+
+Moves a database to another Postgres server, for example from Neon to a Postgres service on the Dokploy host. The env file passed with `--env` supplies `DATABASE_URL` (source) and `TARGET_DATABASE_URL` (target, which must be empty and run the same or a newer major version). pg_dump and pg_restore run in the `postgres:<major>` Docker image of the source server, so Docker must be running. The dry run only connects and reports versions and table counts. `--apply` copies every schema, including drizzle's migration history, in one transaction, then compares exact row counts table by table and exits with status 1 on any difference. The dump stays in the OS temp directory as a backup; it holds user data, so delete it once the move is settled.
+
+```sh
+pnpm exec tsx tools/copy-database.ts --env=.env.canary
+pnpm exec tsx tools/copy-database.ts --env=.env.canary --apply
+```
+
+For production: stop the app (and anything else that writes to the database) before `--apply`, switch `DATABASE_URL` to the new server once the counts match, then start the app again. Keep the old database for a while in case you need to switch back, and set up scheduled backups of the new one to storage outside that host.
