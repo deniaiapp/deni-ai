@@ -75,7 +75,8 @@ NEXT_PUBLIC_TURNSTILE_SITE_KEY=your-turnstile-site-key
 
 # Error monitoring, logs, and 10% sampled traces (optional; Sentry is disabled when empty and outside production)
 # NEXT_PUBLIC_SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<project>
-# Readable stack traces: set at build time to upload source maps (org auth token)
+# Readable stack traces: set at build time to upload source maps (org auth token;
+# in Docker, pass it as the SENTRY_AUTH_TOKEN build secret, not a build argument)
 # SENTRY_AUTH_TOKEN=sntrys_...
 # SENTRY_ORG=your-org-slug
 # SENTRY_PROJECT=your-project-slug
@@ -473,7 +474,7 @@ Dokploy application settings (typical):
 | Port            | `3000`       |
 | Build cache     | enabled      |
 
-Put the same keys as production `.env` in the service **Environment** tab, and pass them as **build-time** args/env for `NEXT_PUBLIC_*` plus any provider keys you want enabled during the build. See comments at the top of `Dockerfile`.
+Put the same keys as production `.env` in the service **Environment** tab. Pass only the public `NEXT_PUBLIC_*` values (and optionally `SENTRY_ORG` / `SENTRY_PROJECT`) as **build-time** arguments: the build reads no server secrets, and build arguments stay in the build cache and image history. To upload Sentry source maps, provide `SENTRY_AUTH_TOKEN` as a build secret (`docker build --secret id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN`); without it the upload is skipped. See comments at the top of `Dockerfile`.
 
 Local example:
 
@@ -491,7 +492,7 @@ docker run --rm -p 3000:3000 --env-file .env.production deni-ai
 Run `canary` as its own Dokploy application next to production (which tracks `master`):
 
 - Same repository and `Dockerfile`, branch `canary`, auto deploy on push; give it its own domain (for example `canary.deniai.app`).
-- Build args and environment: `NEXT_PUBLIC_BETTER_AUTH_URL` set to that domain (build time, like every `NEXT_PUBLIC_*`), a separate `DATABASE_URL` with the migrations applied, and Stripe test keys. Add the canary callback URLs to the Google/GitHub OAuth apps if social sign-in should work there.
+- Build args and environment: `NEXT_PUBLIC_BETTER_AUTH_URL` set to that domain (build time, like every `NEXT_PUBLIC_*`); in the Environment tab, a separate `DATABASE_URL` with the migrations applied and Stripe test keys. Add the canary callback URLs to the Google/GitHub OAuth apps if social sign-in should work there.
 - `DISABLE_BACKGROUND_JOBS=1`: the server skips the usage/meter and storage jobs and the model health probes (which spend provider tokens). The cron routes still work with `CRON_SECRET` if you need a run.
 - `NOINDEX=1`: every response carries `X-Robots-Tag: noindex, nofollow` and `/robots.txt` disallows everything, so the copy stays out of search results.
 - To keep it private, put the domain behind an access gate in front of the app, such as Cloudflare Access (the domain must be proxied through Cloudflare). Let `/api/stripe/webhook` bypass the gate if Stripe should reach the canary.
