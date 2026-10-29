@@ -18,7 +18,7 @@ import { dateTimeFormatter, monthDayYearFormatter } from "./team-utils";
 
 export function TeamAuditLogPage() {
   const t = useExtracted();
-  const { activeOrg, isAdmin } = useTeamSettingsContext();
+  const { activeOrg, isAdmin, isRoleLoading } = useTeamSettingsContext();
   const getActionMeta = useAuditActionMeta();
   const getActionSentence = useAuditActionSentence();
   const formatChanges = useFormatAuditChanges();
@@ -35,6 +35,14 @@ export function TeamAuditLogPage() {
     isReloading: isReloadingAuditLog,
     isCoolingDown: isAuditLogReloadCoolingDown,
   } = useReloadCooldown(() => auditLogQuery.refetch());
+
+  if (isRoleLoading) {
+    return (
+      <div className="flex min-h-[20vh] items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return (

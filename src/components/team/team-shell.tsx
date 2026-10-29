@@ -3,6 +3,7 @@ import { Link, usePathname } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import type { ReactNode } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useTeamSettingsContext } from "./team-settings-context";
 import { TeamSwitcher } from "./team-switcher";
@@ -16,6 +17,7 @@ export function TeamShell({ children }: { children: ReactNode }) {
     activeOrg,
     selectOrg,
     isAdmin,
+    isRoleLoading,
     myPendingInvitations,
     isCreateDialogOpen,
     setIsCreateDialogOpen,
@@ -75,6 +77,12 @@ export function TeamShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          {isRoleLoading && features.billing && (
+            <>
+              <Skeleton className="h-9 w-24 shrink-0 rounded-full lg:w-full" />
+              <Skeleton className="h-9 w-28 shrink-0 rounded-full lg:w-full" />
+            </>
+          )}
         </nav>
       </aside>
       <div className="min-w-0 flex-1">{children}</div>
