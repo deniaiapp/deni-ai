@@ -23,6 +23,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
+import { INTENT_PREFETCH_DELAY_MS, useIntentPrefetch } from "@/hooks/use-intent-prefetch";
 import { Link, usePathname, useRouter } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { Fragment, startTransition, useEffect, useState } from "react";
@@ -218,9 +219,9 @@ function ChatItem({ item }: { item: ChatListItem }) {
   });
 
   // Warm tRPC chat payload on intent so ChatRouteHost can paint without waiting.
-  const prefetchChatPage = () => {
+  const prefetchChatPageHandlers = useIntentPrefetch(() => {
     void utils.chat.getChatPage.prefetch({ id: item.id });
-  };
+  });
 
   const openDetails = () => {
     setDraft(createChatItemDraft(item));
@@ -292,7 +293,8 @@ function ChatItem({ item }: { item: ChatListItem }) {
         }}
       >
         {/* Thin /chat/[id] page + ChatRouteHost SPA host. Prefetch message payload
-            on hover/focus so the pane paints from tRPC cache on click. */}
+            once hover/focus lingers (or on press) so the pane paints from tRPC
+            cache on click, without preloading every chat the pointer sweeps over. */}
         <SidebarMenuButton
           {...attributes}
           {...listeners}
@@ -307,9 +309,8 @@ function ChatItem({ item }: { item: ChatListItem }) {
             <Link
               href={`/chat/${item.id}`}
               className="flex min-w-0 items-center gap-2"
-              onMouseEnter={prefetchChatPage}
-              onFocus={prefetchChatPage}
-              onTouchStart={prefetchChatPage}
+              prefetchDelay={INTENT_PREFETCH_DELAY_MS}
+              {...prefetchChatPageHandlers}
             />
           }
         >

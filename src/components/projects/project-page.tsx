@@ -17,6 +17,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useAvailableModels } from "@/hooks/use-available-models";
+import { INTENT_PREFETCH_DELAY_MS } from "@/hooks/use-intent-prefetch";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useNewChat } from "@/hooks/use-new-chat";
 import { trpc } from "@/lib/trpc/react";
@@ -65,6 +66,7 @@ function ProjectChatList({
             <li key={chat.id}>
               <Link
                 href={`/chat/${chat.id}`}
+                prefetchDelay={INTENT_PREFETCH_DELAY_MS}
                 className="block truncate rounded-xl px-2 py-1.5 text-sm hover:bg-muted/60 transition-colors"
               >
                 {chat.title ?? "Untitled chat"}
