@@ -5,6 +5,13 @@ import {
   changeEmailConfirmationEmailSubject,
 } from "@/emails/change-email-confirmation-email";
 
+// Team domains are read from Postgres; no team has verified one in these tests.
+vi.mock("@/lib/team-domains", () => ({
+  TEAM_MEMBERSHIP_LIMIT: 50,
+  isActiveTeamEmailDomain: async () => false,
+  joinTeamByDomainOnSignIn: async () => undefined,
+}));
+
 const email = vi.hoisted(() => ({ configured: true, sendEmail: vi.fn() }));
 vi.mock("@/lib/email", () => ({
   isEmailConfigured: () => email.configured,

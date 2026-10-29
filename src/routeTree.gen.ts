@@ -91,6 +91,7 @@ import { Route as AppSettingsBillingCheckoutSessionIdRouteImport } from './route
 import { Route as AppSettingsTeamDashboardIndexRouteImport } from './routes/_app/settings/team/_dashboard/index'
 import { Route as AppSettingsTeamDashboardAuditLogRouteImport } from './routes/_app/settings/team/_dashboard/audit-log'
 import { Route as AppSettingsTeamDashboardBillingRouteImport } from './routes/_app/settings/team/_dashboard/billing'
+import { Route as AppSettingsTeamDashboardDomainsRouteImport } from './routes/_app/settings/team/_dashboard/domains'
 import { Route as AppSettingsTeamDashboardMembersRouteImport } from './routes/_app/settings/team/_dashboard/members'
 import { Route as AppSettingsTeamCheckoutIndexRouteImport } from './routes/_app/settings/team/checkout/index'
 import { Route as AppSettingsTeamCheckoutSessionIdRouteImport } from './routes/_app/settings/team/checkout/$sessionId'
@@ -536,6 +537,12 @@ const AppSettingsTeamDashboardBillingRoute =
     path: '/billing',
     getParentRoute: () => AppSettingsTeamDashboardRouteRoute,
   } as any)
+const AppSettingsTeamDashboardDomainsRoute =
+  AppSettingsTeamDashboardDomainsRouteImport.update({
+    id: '/domains',
+    path: '/domains',
+    getParentRoute: () => AppSettingsTeamDashboardRouteRoute,
+  } as any)
 const AppSettingsTeamDashboardMembersRoute =
   AppSettingsTeamDashboardMembersRouteImport.update({
     id: '/members',
@@ -635,6 +642,7 @@ export interface FileRoutesByFullPath {
   '/settings/billing/checkout/$sessionId': typeof AppSettingsBillingCheckoutSessionIdRoute
   '/settings/team/audit-log': typeof AppSettingsTeamDashboardAuditLogRoute
   '/settings/team/billing': typeof AppSettingsTeamDashboardBillingRoute
+  '/settings/team/domains': typeof AppSettingsTeamDashboardDomainsRoute
   '/settings/team/members': typeof AppSettingsTeamDashboardMembersRoute
   '/settings/team/checkout/$sessionId': typeof AppSettingsTeamCheckoutSessionIdRoute
   '/settings/billing/checkout/': typeof AppSettingsBillingCheckoutIndexRoute
@@ -718,6 +726,7 @@ export interface FileRoutesByTo {
   '/settings/billing/checkout/$sessionId': typeof AppSettingsBillingCheckoutSessionIdRoute
   '/settings/team/audit-log': typeof AppSettingsTeamDashboardAuditLogRoute
   '/settings/team/billing': typeof AppSettingsTeamDashboardBillingRoute
+  '/settings/team/domains': typeof AppSettingsTeamDashboardDomainsRoute
   '/settings/team/members': typeof AppSettingsTeamDashboardMembersRoute
   '/settings/team/checkout/$sessionId': typeof AppSettingsTeamCheckoutSessionIdRoute
   '/settings/billing/checkout': typeof AppSettingsBillingCheckoutIndexRoute
@@ -806,6 +815,7 @@ export interface FileRoutesById {
   '/_app/settings/billing/checkout/$sessionId': typeof AppSettingsBillingCheckoutSessionIdRoute
   '/_app/settings/team/_dashboard/audit-log': typeof AppSettingsTeamDashboardAuditLogRoute
   '/_app/settings/team/_dashboard/billing': typeof AppSettingsTeamDashboardBillingRoute
+  '/_app/settings/team/_dashboard/domains': typeof AppSettingsTeamDashboardDomainsRoute
   '/_app/settings/team/_dashboard/members': typeof AppSettingsTeamDashboardMembersRoute
   '/_app/settings/team/checkout/$sessionId': typeof AppSettingsTeamCheckoutSessionIdRoute
   '/_app/settings/billing/checkout/': typeof AppSettingsBillingCheckoutIndexRoute
@@ -894,6 +904,7 @@ export interface FileRouteTypes {
     | '/settings/billing/checkout/$sessionId'
     | '/settings/team/audit-log'
     | '/settings/team/billing'
+    | '/settings/team/domains'
     | '/settings/team/members'
     | '/settings/team/checkout/$sessionId'
     | '/settings/billing/checkout/'
@@ -977,6 +988,7 @@ export interface FileRouteTypes {
     | '/settings/billing/checkout/$sessionId'
     | '/settings/team/audit-log'
     | '/settings/team/billing'
+    | '/settings/team/domains'
     | '/settings/team/members'
     | '/settings/team/checkout/$sessionId'
     | '/settings/billing/checkout'
@@ -1064,6 +1076,7 @@ export interface FileRouteTypes {
     | '/_app/settings/billing/checkout/$sessionId'
     | '/_app/settings/team/_dashboard/audit-log'
     | '/_app/settings/team/_dashboard/billing'
+    | '/_app/settings/team/_dashboard/domains'
     | '/_app/settings/team/_dashboard/members'
     | '/_app/settings/team/checkout/$sessionId'
     | '/_app/settings/billing/checkout/'
@@ -1680,6 +1693,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsTeamDashboardBillingRouteImport
       parentRoute: typeof AppSettingsTeamDashboardRouteRoute
     }
+    '/_app/settings/team/_dashboard/domains': {
+      id: '/_app/settings/team/_dashboard/domains'
+      path: '/domains'
+      fullPath: '/settings/team/domains'
+      preLoaderRoute: typeof AppSettingsTeamDashboardDomainsRouteImport
+      parentRoute: typeof AppSettingsTeamDashboardRouteRoute
+    }
     '/_app/settings/team/_dashboard/members': {
       id: '/_app/settings/team/_dashboard/members'
       path: '/members'
@@ -1707,6 +1727,7 @@ declare module '@tanstack/react-router' {
 interface AppSettingsTeamDashboardRouteRouteChildren {
   AppSettingsTeamDashboardAuditLogRoute: typeof AppSettingsTeamDashboardAuditLogRoute
   AppSettingsTeamDashboardBillingRoute: typeof AppSettingsTeamDashboardBillingRoute
+  AppSettingsTeamDashboardDomainsRoute: typeof AppSettingsTeamDashboardDomainsRoute
   AppSettingsTeamDashboardMembersRoute: typeof AppSettingsTeamDashboardMembersRoute
   AppSettingsTeamDashboardIndexRoute: typeof AppSettingsTeamDashboardIndexRoute
 }
@@ -1716,6 +1737,7 @@ const AppSettingsTeamDashboardRouteRouteChildren: AppSettingsTeamDashboardRouteR
     AppSettingsTeamDashboardAuditLogRoute:
       AppSettingsTeamDashboardAuditLogRoute,
     AppSettingsTeamDashboardBillingRoute: AppSettingsTeamDashboardBillingRoute,
+    AppSettingsTeamDashboardDomainsRoute: AppSettingsTeamDashboardDomainsRoute,
     AppSettingsTeamDashboardMembersRoute: AppSettingsTeamDashboardMembersRoute,
     AppSettingsTeamDashboardIndexRoute: AppSettingsTeamDashboardIndexRoute,
   }

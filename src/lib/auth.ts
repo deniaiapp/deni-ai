@@ -52,6 +52,12 @@ import {
   recordTeamAuditEvent,
   updateTeamSeatCount,
 } from "@/lib/team-billing";
+import { isAdminEmailDomain } from "@/lib/admin-emails";
+import {
+  isActiveTeamEmailDomain,
+  joinTeamByDomainOnSignIn,
+  TEAM_MEMBERSHIP_LIMIT,
+} from "@/lib/team-domains";
 
 const emailEnabled = isEmailConfigured();
 const googleClientId = env.GOOGLE_CLIENT_ID?.trim();
@@ -121,9 +127,17 @@ function resolveSignupUserAgent(ctx: SignupContext) {
   return signupHeaders(ctx)?.get("user-agent");
 }
 
-function assertAllowedSignupEmail(email: string, oauthProvider?: SignupOAuthProvider) {
+async function assertAllowedSignupEmail(email: string, oauthProvider?: SignupOAuthProvider) {
   const result = checkSignupEmail(email, oauthProvider);
   if (result.ok) return;
+  // Operator domains and DNS-verified domains of paid teams are allowed even
+  // though they are not on the allowlist; alias rules still apply to them.
+  if (
+    result.reason === "not_allowed" &&
+    (isAdminEmailDomain(email) || (await isActiveTeamEmailDomain(email)))
+  ) {
+    return;
+  }
   throw new APIError("BAD_REQUEST", {
     message: signupEmailDenialMessage(result.reason),
     code: signupEmailDenialCode(result.reason),
@@ -296,7 +310,7 @@ export const auth = betterAuth({
         if (existing) return;
       }
 
-      assertAllowedSignupEmail(email);
+      await assertAllowedSignupEmail(email);
 
       if (ctx.path === "/sign-up/email") {
         await revokeContestedSignupPassword(ctx, email, body?.password);
@@ -433,7 +447,7 @@ export const auth = betterAuth({
     organization({
       // Guests have placeholder emails and must not own teams (or their billing).
       allowUserToCreateOrganization: (user) => !user.isAnonymous,
-      membershipLimit: 50,
+      membershipLimit: TEAM_MEMBERSHIP_LIMIT,
       organizationHooks: {
         afterCreateOrganization: async ({ organization, user }) => {
           await recordTeamAuditEvent({
@@ -666,7 +680,7 @@ export const auth = betterAuth({
               : ctx?.path === "/sign-in/social"
                 ? ctx.body?.provider
                 : undefined;
-          assertAllowedSignupEmail(
+          await assertAllowedSignupEmail(
             user.email,
             provider === "google" || provider === "github" ? provider : undefined,
           );
@@ -691,7 +705,7 @@ export const auth = betterAuth({
           // Block change-email flows that switch to a disallowed domain.
           const email = typeof data.email === "string" ? data.email : undefined;
           if (!email) return;
-          assertAllowedSignupEmail(email);
+          await assertAllowedSignupEmail(email);
         },
       },
       // Covers every deletion path, including guest cleanup after account linking.
@@ -722,6 +736,12 @@ export const auth = betterAuth({
             });
           } catch (error) {
             console.error("Failed to record sign-in activity", error);
+          }
+          try {
+            await joinTeamByDomainOnSignIn(session.userId);
+          } catch (error) {
+            // Signing in must not fail because the automatic team join did.
+            console.error("Failed to join a team by email domain", error);
           }
         },
       },

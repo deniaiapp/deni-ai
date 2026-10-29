@@ -2,6 +2,7 @@ import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useExtracted } from "use-intl";
 import type { ReactNode } from "react";
 import { Spinner } from "@/components/ui/spinner";
+import { TeamDomainSuggestion } from "@/components/team/team-domain-suggestion";
 import { TeamEmptyState } from "@/components/team/team-empty-state";
 import { TeamReceivedInvitations } from "@/components/team/team-received-invitations";
 import { TeamShell } from "@/components/team/team-shell";
@@ -42,12 +43,15 @@ function TeamDashboardContent({ children }: { children: ReactNode }) {
   }
 
   const receivedInvitations = (
-    <TeamReceivedInvitations
-      invitations={myPendingInvitations}
-      respondingInvitationId={respondingInvitationId}
-      onAccept={handleAcceptMyInvitation}
-      onReject={handleRejectMyInvitation}
-    />
+    <>
+      <TeamReceivedInvitations
+        invitations={myPendingInvitations}
+        respondingInvitationId={respondingInvitationId}
+        onAccept={handleAcceptMyInvitation}
+        onReject={handleRejectMyInvitation}
+      />
+      <TeamDomainSuggestion />
+    </>
   );
 
   if (organizations.length === 0 && !activeOrg) {

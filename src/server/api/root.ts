@@ -9,6 +9,7 @@ import { migrationRouter } from "./routers/migration";
 import { organizationRouter } from "./routers/organization";
 import { projectsRouter } from "./routers/projects";
 import { resetCreditsRouter } from "./routers/reset-credits";
+import { teamDomainsRouter } from "./routers/team-domains";
 import { router } from "./trpc";
 
 export const appRouter = router({
@@ -23,6 +24,7 @@ export const appRouter = router({
   organization: organizationRouter,
   projects: projectsRouter,
   resetCredits: resetCreditsRouter,
+  teamDomains: teamDomainsRouter,
 });
 
 export type AppRouter = typeof appRouter;

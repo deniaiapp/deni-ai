@@ -95,6 +95,8 @@ CLOUDFLARE_API_TOKEN=your-cloudflare-api-token
 
 # Operator administration (optional; comma-separated server-side admin emails)
 # ADMIN_EMAILS=you@example.com
+# Operator email domains (optional; comma-separated, e.g. deniai.app)
+# ADMIN_EMAIL_DOMAINS=example.com
 
 # Rate limiting (optional — falls back to in-memory)
 UPSTASH_REDIS_REST_URL=
@@ -180,6 +182,7 @@ Notes:
 - Optional Deni AI API: set **`DENI_API_KEY`** (and optionally **`DENI_API_BASE_URL`**, default `https://api.deniai.app/v1`, an OpenAI-compatible Chat Completions endpoint) to expose OpenAI models, including GPT-6 Luna. OpenAI models on this route are sent as `openai/<id>` (e.g. `openai/gpt-6-sol`) and do not offer Pro or Fast mode. A missing key hides those models.
 - Operator administration: set `ADMIN_EMAILS` to a comma-separated list of account emails that can grant usage reset credits from **Settings → Billing** and receive dispute alerts. The address is read only on the server. The former name `AFFILIATE_ADMIN_EMAILS` is still read when `ADMIN_EMAILS` is unset; rename it when convenient.
 - Blog administration: set `BLOG_ADMIN_EMAILS` to a comma-separated list of account emails that can write and publish posts at `/settings/blog`. If omitted, `ADMIN_EMAILS` is used.
+- Operator email domains: set `ADMIN_EMAIL_DOMAINS` to a comma-separated list of domains (for example `deniai.app`). Addresses on these domains may sign up even though the domain is not on the sign-up allowlist, and accounts with a verified email there can grant reset credits and manage the blog, in addition to `ADMIN_EMAILS` / `BLOG_ADMIN_EMAILS`. Dispute alerts still go only to the listed emails.
 - **Email (Cloudflare Email Sending):** requires a Workers Paid plan and the sending domain (e.g. `deniai.app`) onboarded under **Email Service → Email Sending** in the Cloudflare dashboard (DNS/SPF/DKIM managed there). Create an API token with **Email Sending: Edit**, then set `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN`. From address defaults to `Deni AI <noreply@deniai.app>` (`EMAIL_FROM` in `src/lib/constants.ts`). When either env var is missing, magic link / verification / invite emails are disabled, and so is changing an account's email address. With email configured, a verified account changes its email in two steps: the current address approves the request, then the new address receives a verification link, and the email updates only after that link is opened.
 
 #### Generate `BETTER_AUTH_SECRET`

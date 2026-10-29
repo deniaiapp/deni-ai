@@ -393,6 +393,32 @@ export function useLocalizeError() {
           t("Only organization owners or admins can manage this."),
           "Only organization owners or admins can manage this.",
         ),
+        ...mapKeys(
+          t("Team domains require a paid team plan."),
+          "Team domains require a paid team plan.",
+        ),
+        ...mapKeys(t("Enter a valid domain."), "Enter a valid domain."),
+        ...mapKeys(
+          t("Shared email provider domains cannot be added to a team."),
+          "Shared email provider domains cannot be added to a team.",
+        ),
+        ...mapKeys(
+          t("This domain is already verified by another team."),
+          "This domain is already verified by another team.",
+        ),
+        ...mapKeys(t("This domain is already added."), "This domain is already added."),
+        ...mapKeys(t("A team can add up to 10 domains."), "A team can add up to 10 domains."),
+        ...mapKeys(t("Domain not found."), "Domain not found."),
+        ...mapKeys(
+          t("This team does not accept join requests from your email domain."),
+          "This team does not accept join requests from your email domain.",
+        ),
+        ...mapKeys(t("Join request not found."), "Join request not found."),
+        ...mapKeys(
+          t("This team has reached its member limit."),
+          "This team has reached its member limit.",
+        ),
+        ...mapKeys(t("Sign in before managing teams."), "Sign in before managing teams."),
         ...mapKeys(t("Payload too large (max 25 MB)"), "Payload too large (max 25 MB)"),
         ...mapKeys(
           t("Please wait a minute before exporting again."),
