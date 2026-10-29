@@ -13,6 +13,47 @@ export type ChangelogEntry = {
 
 export const changelogEntries: ChangelogEntry[] = [
   {
+    version: "7.11",
+    codename: "Thunder Dragon",
+    date: "2026-10-29",
+    summary:
+      "One usage pool across Deni AI, Flixa, and Deni Run, a new Go plan with prepaid Max Mode credits, team domains, interactive answers, and a faster app.",
+    highlights: [
+      {
+        title: "One usage pool",
+        body: "Deni AI chat, Flixa, and Deni Run now share one monthly usage pool per plan, shown as a single bar colored by product. Usage is measured in units, and guests get 1M units to try Deni AI. Deni Run can sign in with your Deni AI account.",
+      },
+      {
+        title: "Go plan and Max Mode credits",
+        body: "The Max plans are replaced by Go, a low-cost plan with three times the Free usage, no ads, and more models. Max Mode now spends prepaid credits, bought in packs, as a custom amount, or with auto top-up, that last 180 days and are shared across a team. Lifetime plans have been retired, and visitors from Japan see prices in yen.",
+      },
+      {
+        title: "Team domains",
+        body: "Teams on Pro for Teams can verify their email domain with a DNS record. Coworkers on that domain can then sign up and join the team automatically or after an admin approves their request.",
+      },
+      {
+        title: "Pro for Teams",
+        body: "Team projects and the audit log are now part of Pro for Teams, alongside per-seat billing and centralized member management.",
+      },
+      {
+        title: "Interactive answers",
+        body: "Answers can include interactive charts, tables, calculators, checklists, timelines, and quizzes. Switch between Rich and Simple in Settings > Appearance.",
+      },
+      {
+        title: "Faster app",
+        body: "Deni AI moved to a new web framework that sends less JavaScript and compresses responses, so pages load faster. You can also resize the sidebar, and the chat column is wider.",
+      },
+      {
+        title: "Sign-in",
+        body: "Gmail addresses can sign up through GitHub as well as Google, and failed sign-ins explain what went wrong in your language.",
+      },
+      {
+        title: "Fixes",
+        body: "Fixed the whole browser freezing when you started a new chat right after opening a settings page, answers lost when a phone went to sleep mid-reply, extra usage charged for cut-off replies, and double-spaced code blocks. Attachments are now stored on Cloudflare R2.",
+      },
+    ],
+  },
+  {
     version: "7.10",
     codename: "Silver Compass",
     date: "2026-10-17",

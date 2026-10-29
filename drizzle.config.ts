@@ -18,6 +18,9 @@ export default defineConfig({
   schema: "./src/db/schema/index.ts",
   out: "./migrations",
   dialect: "postgresql",
+  // The `flixa` schema in the same database belongs to flixa-backend, which
+  // migrates it itself; keep `db:push` from proposing to drop its tables.
+  schemaFilter: ["public"],
   dbCredentials: {
     url: migrationUrl(process.env.DATABASE_URL),
   },

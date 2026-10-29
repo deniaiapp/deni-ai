@@ -320,7 +320,7 @@ Without the coupon (or if it is invalid), no offer is shown.
 
 Dispute handling is automatic when those extra webhook events are enabled. On `charge.dispute.created` the app emails admins and cancels the related subscription (immediately for fraud, otherwise at period end). Evidence is not submitted automatically; contest from the Stripe Dashboard if needed. On `radar.early_fraud_warning.created` it refunds as fraud only when the payment is still actionable, 3D Secure did not authenticate it, and the account has no post-payment service use. Alerts go to `ADMIN_EMAILS` / `BLOG_ADMIN_EMAILS` when Cloudflare email is configured.
 
-Checkout and card verification always request 3D Secure (`request_three_d_secure: any`), matching the Radar policy that also blocks `:card_3d_secure_support: = 'not_supported'`. A verified card unlocks the chat model catalog for free accounts except paid-only models (subject to the verified-free token limits); the Go plan unlocks the same catalog, has no ads, and does not include Pro mode or Max Mode. Guests remain limited to the guest model. Pro-only models (the GPT-5.6 series) need Pro, including team plans; Plus unlocks every other model. Signed-in free users without a verified card see a reminder at the bottom of the model selector's right panel; it stays visible while scrolling the model list and is hidden for verified-card users, paid users, guests, and deployments with billing disabled.
+Checkout and card verification always request 3D Secure (`request_three_d_secure: any`), matching the Radar policy that also blocks `:card_3d_secure_support: = 'not_supported'`. A verified card unlocks the chat model catalog for free accounts except paid-only models (subject to the verified-free token limits); the Go plan unlocks the same catalog, has no ads, and includes Max Mode credits but not Pro mode. Guests remain limited to the guest model. Pro-only models (the GPT-5.6 series) need Pro, including team plans; Plus unlocks every other model. Signed-in free users without a verified card see a reminder at the bottom of the model selector's right panel; it stays visible while scrolling the model list and is hidden for verified-card users, paid users, guests, and deployments with billing disabled.
 
 Keep a Terms of Service URL in Stripe public details (`https://deniai.app/legal/terms`). Optional: turn on [Smart Disputes](https://dashboard.stripe.com/settings/disputes) if you want Stripe to help assemble network evidence.
 
@@ -441,6 +441,12 @@ Schema change workflow:
 1. Edit files in `src/db/schema/`
 2. `pnpm run db:generate`
 3. `pnpm run db:migrate` or `pnpm run db:migrate:dev` (or `db:push` in dev)
+
+These cover the `public` schema only (`schemaFilter` in `drizzle.config.ts`). The
+`flixa` schema in the same database (Flixa bans, silent-ban rules and hits, usage
+reservation receipts) belongs to flixa-backend, which migrates it with its own
+drizzle-kit setup. Its tables reference `public."user"` with `ON DELETE CASCADE`, so
+deleting an account removes its Flixa rows too.
 
 ## Deployment
 

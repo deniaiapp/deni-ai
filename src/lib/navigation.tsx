@@ -35,12 +35,14 @@ type LinkProps = Omit<ComponentProps<"a">, "href"> & {
   href: string;
   /** `false` disables intent preloading. */
   prefetch?: boolean | null;
+  /** Hover/focus dwell (ms) before intent preloading; defaults to the router's. */
+  prefetchDelay?: number;
   replace?: boolean;
   /** `false` keeps the scroll position. */
   scroll?: boolean;
 };
 
-export function Link({ href, prefetch, replace, scroll, ...props }: LinkProps) {
+export function Link({ href, prefetch, prefetchDelay, replace, scroll, ...props }: LinkProps) {
   if (isExternalHref(href) || href.startsWith("#")) {
     return <a href={href} {...props} />;
   }
@@ -52,6 +54,7 @@ export function Link({ href, prefetch, replace, scroll, ...props }: LinkProps) {
       search={search}
       hash={hash}
       preload={prefetch === false ? false : undefined}
+      preloadDelay={prefetchDelay}
       replace={replace}
       resetScroll={scroll}
     />
