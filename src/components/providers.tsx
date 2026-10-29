@@ -83,9 +83,10 @@ export function AppProviders({
         }}
         emailAndPassword={{
           enabled: true,
-          forgotPassword: true,
-          // Match server: after sign-up, show verify-email instead of redirecting to app
-          requireEmailVerification: true,
+          // Both need email sending, as on the server (src/lib/auth.ts). Without it
+          // sign-up signs straight in instead of showing the verify-email view.
+          forgotPassword: platformCapabilities.auth.email,
+          requireEmailVerification: platformCapabilities.auth.email,
         }}
         avatar={{
           enabled: true,

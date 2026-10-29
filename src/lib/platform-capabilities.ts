@@ -11,6 +11,8 @@ export type PlatformCapabilities = {
   auth: {
     socialProviders: SocialProviderId[];
     captcha: boolean;
+    /** Email sending is configured: verification, password reset and magic links work. */
+    email: boolean;
   };
 };
 
