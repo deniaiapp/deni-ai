@@ -442,6 +442,12 @@ Schema change workflow:
 2. `pnpm run db:generate`
 3. `pnpm run db:migrate` or `pnpm run db:migrate:dev` (or `db:push` in dev)
 
+These cover the `public` schema only (`schemaFilter` in `drizzle.config.ts`). The
+`flixa` schema in the same database (Flixa bans, silent-ban rules and hits, usage
+reservation receipts) belongs to flixa-backend, which migrates it with its own
+drizzle-kit setup. Its tables reference `public."user"` with `ON DELETE CASCADE`, so
+deleting an account removes its Flixa rows too.
+
 ## Deployment
 
 ### Vercel (common for this stack)
