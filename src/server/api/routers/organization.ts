@@ -545,9 +545,7 @@ export const organizationRouter = router({
     .input(z.object({ organizationId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       await verifyOrgOwnerOrAdmin(ctx, input.organizationId);
-      const auditActorUser = alias(user, "audit_actor_user");
-      const auditTargetUser = alias(user, "audit_target_user");
-      const [subscription, defaultPolicy, members, auditLog, credits] = await Promise.all([
+      const [subscription, defaultPolicy, members, credits] = await Promise.all([
         syncTeamSubscription(ctx, ctx.userId, input.organizationId),
         ensureTeamUsagePolicy(ctx, input.organizationId),
         ctx.db
@@ -571,27 +569,6 @@ export const organizationRouter = router({
             ),
           )
           .where(eq(member.organizationId, input.organizationId)),
-        ctx.db
-          .select({
-            id: teamUsageAuditLog.id,
-            actorUserId: teamUsageAuditLog.actorUserId,
-            actorName: auditActorUser.name,
-            actorEmail: auditActorUser.email,
-            targetUserId: teamUsageAuditLog.targetUserId,
-            targetName: auditTargetUser.name,
-            targetEmail: auditTargetUser.email,
-            action: teamUsageAuditLog.action,
-            metadata: teamUsageAuditLog.metadata,
-            createdAt: teamUsageAuditLog.createdAt,
-          })
-          .from(teamUsageAuditLog)
-          // Left join: the actor's account may have been deleted (actor_user_id is
-          // then null) and the entry must still show.
-          .leftJoin(auditActorUser, eq(auditActorUser.id, teamUsageAuditLog.actorUserId))
-          .leftJoin(auditTargetUser, eq(auditTargetUser.id, teamUsageAuditLog.targetUserId))
-          .where(eq(teamUsageAuditLog.organizationId, input.organizationId))
-          .orderBy(desc(teamUsageAuditLog.createdAt))
-          .limit(5),
         getMaxModeCreditSummary({ userId: null, organizationId: input.organizationId }),
       ]);
 
@@ -654,7 +631,6 @@ export const organizationRouter = router({
             maxModeUsagePremium: maxModeUsage.premium,
           };
         }),
-        auditLog,
       };
     }),
 
