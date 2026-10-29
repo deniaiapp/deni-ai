@@ -108,7 +108,9 @@ export function SignUp({ className, socialLayout, socialPosition = "bottom" }: S
     }
 
     const emailPolicy = checkSignupEmail(email);
-    if (!emailPolicy.ok) {
+    // Operator domains (ADMIN_EMAIL_DOMAINS) and verified team domains are known
+    // only to the server, so it alone rejects a domain as not allowed.
+    if (!emailPolicy.ok && emailPolicy.reason !== "not_allowed") {
       toast.error(signupEmailDenialMessage(emailPolicy.reason));
       setFieldErrors((current) => ({
         ...current,
