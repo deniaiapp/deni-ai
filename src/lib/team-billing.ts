@@ -15,6 +15,20 @@ export async function getTeamBilling(organizationId: string) {
   return (await findTeamBillingRecord(db, organizationId)) ?? null;
 }
 
+/**
+ * Paid team features (team projects, domains, the audit log) need an active
+ * team plan. Without billing (self-hosting) every team has them.
+ */
+export async function hasPaidTeamPlan(organizationId: string) {
+  if (isBillingDisabled) return true;
+  const record = await getTeamBilling(organizationId);
+  return Boolean(
+    record?.stripeSubscriptionId &&
+    isTeamPlan(record.planId) &&
+    ACTIVE_SUB_STATUSES.has(record.status ?? ""),
+  );
+}
+
 export async function getOrgMemberCount(
   organizationId: string,
   database: Pick<typeof db, "select"> = db,

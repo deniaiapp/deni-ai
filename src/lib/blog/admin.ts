@@ -1,5 +1,5 @@
 import { env } from "@/env";
-import { getAdminEmails, parseAdminEmails } from "@/lib/admin-emails";
+import { getAdminEmails, isAdminEmailDomain, parseAdminEmails } from "@/lib/admin-emails";
 
 export function getBlogAdminEmails() {
   const dedicated = parseAdminEmails(env.BLOG_ADMIN_EMAILS);
@@ -11,5 +11,7 @@ export function getBlogAdminEmails() {
 }
 
 export function isBlogAdmin(email: string | null | undefined) {
-  return Boolean(email && getBlogAdminEmails().has(email.trim().toLowerCase()));
+  return Boolean(
+    email && (getBlogAdminEmails().has(email.trim().toLowerCase()) || isAdminEmailDomain(email)),
+  );
 }

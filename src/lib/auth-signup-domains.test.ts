@@ -1,6 +1,14 @@
-import { beforeAll, expect, test, vi } from "vitest";
+import { afterEach, beforeAll, expect, test, vi } from "vitest";
 
 vi.mock("@/lib/email", () => ({ isEmailConfigured: () => true, sendEmail: vi.fn() }));
+
+const teamDomains = vi.hoisted(() => ({ verified: new Set<string>() }));
+vi.mock("@/lib/team-domains", () => ({
+  TEAM_MEMBERSHIP_LIMIT: 50,
+  isActiveTeamEmailDomain: async (email: string) =>
+    teamDomains.verified.has(email.split("@").pop()?.toLowerCase() ?? ""),
+  joinTeamByDomainOnSignIn: async () => undefined,
+}));
 
 let auth: typeof import("./auth").auth;
 beforeAll(async () => {
@@ -122,4 +130,28 @@ test("existing duck.com accounts keep updating, but nobody can switch to duck.co
       body: { code: "EMAIL_DOMAIN_NOT_ALLOWED" },
     });
   }
+});
+
+afterEach(() => teamDomains.verified.clear());
+
+test("a domain verified by a paid team may sign up and switch to it", async () => {
+  const beforeCreate = auth.options.databaseHooks.user.create.before;
+  const beforeUpdate = auth.options.databaseHooks.user.update.before;
+  await expect(beforeCreate(newUser("person@company.example"), null)).rejects.toMatchObject({
+    body: { code: "EMAIL_DOMAIN_NOT_ALLOWED" },
+  });
+
+  teamDomains.verified.add("company.example");
+  for (const ctx of [null, ...oauthContexts]) {
+    await expect(
+      beforeCreate(newUser("person@company.example"), ctx as never),
+    ).resolves.toBeUndefined();
+  }
+  await expect(
+    beforeUpdate({ email: "person@company.example", emailVerified: true }),
+  ).resolves.toBeUndefined();
+  // The domain exception does not lift the alias rules of email registration.
+  await expect(beforeCreate(newUser("person+tag@company.example"), null)).rejects.toMatchObject({
+    body: { code: "EMAIL_ALIAS_NOT_ALLOWED" },
+  });
 });

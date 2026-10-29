@@ -1,8 +1,9 @@
-import { CreditCard, FolderKanban, History, Home, Users } from "lucide-react";
+import { CreditCard, FolderKanban, Globe, History, Home, Users } from "lucide-react";
 import { Link, usePathname } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import type { ReactNode } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { useTeamSettingsContext } from "./team-settings-context";
 import { TeamSwitcher } from "./team-switcher";
@@ -16,6 +17,7 @@ export function TeamShell({ children }: { children: ReactNode }) {
     activeOrg,
     selectOrg,
     isAdmin,
+    isRoleLoading,
     myPendingInvitations,
     isCreateDialogOpen,
     setIsCreateDialogOpen,
@@ -29,6 +31,9 @@ export function TeamShell({ children }: { children: ReactNode }) {
     { href: "/settings/team", label: t("Home"), icon: Home, exact: true },
     { href: "/settings/team/members", label: t("Members"), icon: Users, exact: false },
     { href: "/settings/projects", label: t("Projects"), icon: FolderKanban, exact: false },
+    ...(isAdmin
+      ? [{ href: "/settings/team/domains", label: t("Domains"), icon: Globe, exact: false }]
+      : []),
     ...(isAdmin && features.billing
       ? [
           { href: "/settings/team/billing", label: t("Billing"), icon: CreditCard, exact: false },
@@ -75,6 +80,17 @@ export function TeamShell({ children }: { children: ReactNode }) {
               </Link>
             );
           })}
+          {isRoleLoading && (
+            <>
+              <Skeleton className="h-9 w-24 shrink-0 rounded-full lg:w-full" />
+              {features.billing && (
+                <>
+                  <Skeleton className="h-9 w-24 shrink-0 rounded-full lg:w-full" />
+                  <Skeleton className="h-9 w-28 shrink-0 rounded-full lg:w-full" />
+                </>
+              )}
+            </>
+          )}
         </nav>
       </aside>
       <div className="min-w-0 flex-1">{children}</div>

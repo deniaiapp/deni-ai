@@ -2,6 +2,7 @@ import { Users } from "lucide-react";
 import { Link } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import type { ClientPlan, IndividualPlanId } from "@/lib/billing";
+import { useTeamPlanHighlights } from "@/lib/billing-plan-copy";
 import { cn } from "@/lib/utils";
 import { PlanCard } from "./billing-plan-card";
 import { BILLING_PLANS_SECTION_ID } from "./billing-utils";
@@ -54,6 +55,7 @@ export function BillingPlansSection({
   planActions: PlanActionProps;
 }) {
   const t = useExtracted();
+  const teamHighlights = useTeamPlanHighlights();
   const {
     activePlanId,
     isSubscribed,
@@ -169,13 +171,7 @@ export function BillingPlansSection({
           </Button>
         </CardHeader>
         <CardContent>
-          <PlanHighlights
-            items={[
-              t("Pro benefits for every team member"),
-              t("Per-seat billing — pay only for active members"),
-              t("Centralized billing and member management"),
-            ]}
-          />
+          <PlanHighlights items={teamHighlights} />
         </CardContent>
       </Card>
     </>

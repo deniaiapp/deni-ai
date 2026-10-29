@@ -1,4 +1,5 @@
 import { TeamInviteDialog } from "./team-invite-dialog";
+import { TeamJoinRequests } from "./team-join-requests";
 import { TeamMembersList } from "./team-members-list";
 import { TeamPendingInvitations } from "./team-pending-invitations";
 import { TeamRemoveMemberDialog } from "./team-remove-member-dialog";
@@ -6,6 +7,7 @@ import { useTeamSettingsContext } from "./team-settings-context";
 
 export function TeamMembersPage() {
   const {
+    activeOrg,
     members,
     reloadMembers,
     isReloadingMembers,
@@ -42,6 +44,8 @@ export function TeamMembersPage() {
         isReloading={isReloadingMembers}
         isReloadDisabled={isReloadingMembers || isMembersReloadCoolingDown}
       />
+
+      {isAdmin && activeOrg && <TeamJoinRequests organizationId={activeOrg.id} />}
 
       <TeamPendingInvitations
         invitations={pendingInvitations}

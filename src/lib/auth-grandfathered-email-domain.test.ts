@@ -2,6 +2,13 @@ import { hashPassword } from "better-auth/crypto";
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from "vitest";
 import type { auth as Auth } from "./auth";
 
+// Team domains are read from Postgres; no team has verified one in these tests.
+vi.mock("@/lib/team-domains", () => ({
+  TEAM_MEMBERSHIP_LIMIT: 50,
+  isActiveTeamEmailDomain: async () => false,
+  joinTeamByDomainOnSignIn: async () => undefined,
+}));
+
 /**
  * duck.com left the sign-up allowlist. These run the real Better Auth config
  * (in-memory store, stubbed GitHub) to check that the domain hooks only gate

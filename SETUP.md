@@ -75,7 +75,8 @@ NEXT_PUBLIC_TURNSTILE_SITE_KEY=your-turnstile-site-key
 
 # Error monitoring, logs, and 10% sampled traces (optional; Sentry is disabled when empty and outside production)
 # NEXT_PUBLIC_SENTRY_DSN=https://<key>@<org>.ingest.sentry.io/<project>
-# Readable stack traces: set at build time to upload source maps (org auth token)
+# Readable stack traces: set at build time to upload source maps (org auth token;
+# in Docker, pass it as the SENTRY_AUTH_TOKEN build secret, not a build argument)
 # SENTRY_AUTH_TOKEN=sntrys_...
 # SENTRY_ORG=your-org-slug
 # SENTRY_PROJECT=your-project-slug
@@ -95,6 +96,8 @@ CLOUDFLARE_API_TOKEN=your-cloudflare-api-token
 
 # Operator administration (optional; comma-separated server-side admin emails)
 # ADMIN_EMAILS=you@example.com
+# Operator email domains (optional; comma-separated, e.g. deniai.app)
+# ADMIN_EMAIL_DOMAINS=example.com
 
 # Rate limiting (optional — falls back to in-memory)
 UPSTASH_REDIS_REST_URL=
@@ -180,6 +183,7 @@ Notes:
 - Optional Deni AI API: set **`DENI_API_KEY`** (and optionally **`DENI_API_BASE_URL`**, default `https://api.deniai.app/v1`, an OpenAI-compatible Chat Completions endpoint) to expose OpenAI models, including GPT-6 Luna. OpenAI models on this route are sent as `openai/<id>` (e.g. `openai/gpt-6-sol`) and do not offer Pro or Fast mode. A missing key hides those models.
 - Operator administration: set `ADMIN_EMAILS` to a comma-separated list of account emails that can grant usage reset credits from **Settings → Billing** and receive dispute alerts. The address is read only on the server. The former name `AFFILIATE_ADMIN_EMAILS` is still read when `ADMIN_EMAILS` is unset; rename it when convenient.
 - Blog administration: set `BLOG_ADMIN_EMAILS` to a comma-separated list of account emails that can write and publish posts at `/settings/blog`. If omitted, `ADMIN_EMAILS` is used.
+- Operator email domains: set `ADMIN_EMAIL_DOMAINS` to a comma-separated list of domains (for example `deniai.app`). Addresses on these domains may sign up even though the domain is not on the sign-up allowlist, and accounts with a verified email there can grant reset credits and manage the blog, in addition to `ADMIN_EMAILS` / `BLOG_ADMIN_EMAILS`. Dispute alerts still go only to the listed emails.
 - **Email (Cloudflare Email Sending):** requires a Workers Paid plan and the sending domain (e.g. `deniai.app`) onboarded under **Email Service → Email Sending** in the Cloudflare dashboard (DNS/SPF/DKIM managed there). Create an API token with **Email Sending: Edit**, then set `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN`. From address defaults to `Deni AI <noreply@deniai.app>` (`EMAIL_FROM` in `src/lib/constants.ts`). When either env var is missing, magic link / verification / invite emails are disabled, and so is changing an account's email address. With email configured, a verified account changes its email in two steps: the current address approves the request, then the new address receives a verification link, and the email updates only after that link is opened.
 
 #### Generate `BETTER_AUTH_SECRET`
@@ -470,7 +474,7 @@ Dokploy application settings (typical):
 | Port            | `3000`       |
 | Build cache     | enabled      |
 
-Put the same keys as production `.env` in the service **Environment** tab, and pass them as **build-time** args/env for `NEXT_PUBLIC_*` plus any provider keys you want enabled during the build. See comments at the top of `Dockerfile`.
+Put the same keys as production `.env` in the service **Environment** tab. Pass only the public `NEXT_PUBLIC_*` values (and optionally `SENTRY_ORG` / `SENTRY_PROJECT`) as **build-time** arguments: the build reads no server secrets, and build arguments stay in the build cache and image history. To upload Sentry source maps, provide `SENTRY_AUTH_TOKEN` as a build secret (`docker build --secret id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN`); without it the upload is skipped. See comments at the top of `Dockerfile`.
 
 Local example:
 
@@ -488,7 +492,7 @@ docker run --rm -p 3000:3000 --env-file .env.production deni-ai
 Run `canary` as its own Dokploy application next to production (which tracks `master`):
 
 - Same repository and `Dockerfile`, branch `canary`, auto deploy on push; give it its own domain (for example `canary.deniai.app`).
-- Build args and environment: `NEXT_PUBLIC_BETTER_AUTH_URL` set to that domain (build time, like every `NEXT_PUBLIC_*`), a separate `DATABASE_URL` with the migrations applied, and Stripe test keys. Add the canary callback URLs to the Google/GitHub OAuth apps if social sign-in should work there.
+- Build args and environment: `NEXT_PUBLIC_BETTER_AUTH_URL` set to that domain (build time, like every `NEXT_PUBLIC_*`); in the Environment tab, a separate `DATABASE_URL` with the migrations applied and Stripe test keys. Add the canary callback URLs to the Google/GitHub OAuth apps if social sign-in should work there.
 - `DISABLE_BACKGROUND_JOBS=1`: the server skips the usage/meter and storage jobs and the model health probes (which spend provider tokens). The cron routes still work with `CRON_SECRET` if you need a run.
 - `NOINDEX=1`: every response carries `X-Robots-Tag: noindex, nofollow` and `/robots.txt` disallows everything, so the copy stays out of search results.
 - To keep it private, put the domain behind an access gate in front of the app, such as Cloudflare Access (the domain must be proxied through Cloudflare). Let `/api/stripe/webhook` bypass the gate if Stripe should reach the canary.

@@ -17,6 +17,7 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea";
 import { useAvailableModels } from "@/hooks/use-available-models";
+import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useNewChat } from "@/hooks/use-new-chat";
 import { trpc } from "@/lib/trpc/react";
 
@@ -78,6 +79,7 @@ function ProjectChatList({
 
 export function ProjectPage({ projectId, initialProjectName }: ProjectPageProps) {
   const t = useExtracted();
+  const localizeError = useLocalizeError();
   const { push } = useRouter();
   const utils = trpc.useUtils();
   const { availableModels } = useAvailableModels();
@@ -127,6 +129,7 @@ export function ProjectPage({ projectId, initialProjectName }: ProjectPageProps)
       void utils.projects.list.invalidate();
       void utils.projects.get.invalidate({ id: projectId });
     },
+    onError: (error) => toast.error(localizeError(error)),
   });
 
   const unshareProject = trpc.projects.unshare.useMutation({
@@ -273,8 +276,15 @@ export function ProjectPage({ projectId, initialProjectName }: ProjectPageProps)
                 <SelectContent>
                   <SelectItem value="__personal__">{t("Only you")}</SelectItem>
                   {organizations.map((org) => (
-                    <SelectItem key={org.id} value={org.id}>
-                      {org.name}
+                    <SelectItem
+                      key={org.id}
+                      value={org.id}
+                      // A project already shared there stays selected after a plan lapses.
+                      disabled={!org.canShareProjects && org.id !== project?.organizationId}
+                    >
+                      {org.canShareProjects || org.id === project?.organizationId
+                        ? org.name
+                        : t("{team} (paid team plan)", { team: org.name })}
                     </SelectItem>
                   ))}
                 </SelectContent>

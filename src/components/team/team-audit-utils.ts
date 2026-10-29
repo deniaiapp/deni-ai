@@ -4,6 +4,7 @@ import {
   Ban,
   Building2,
   CreditCard,
+  Globe,
   MailX,
   Pencil,
   RefreshCw,
@@ -76,6 +77,18 @@ export function useAuditActionMeta() {
         return { label: t("Subscription expired"), icon: AlertOctagon };
       case "payment_failed":
         return { label: t("Payment failed"), icon: AlertTriangle };
+      case "domain_added":
+        return { label: t("Domain added"), icon: Globe };
+      case "domain_verified":
+        return { label: t("Domain verified"), icon: ShieldCheck };
+      case "domain_removed":
+        return { label: t("Domain removed"), icon: Globe };
+      case "domain_join_mode_updated":
+        return { label: t("Domain joining updated"), icon: Globe };
+      case "join_requested":
+        return { label: t("Join requested"), icon: UserPlus };
+      case "join_request_declined":
+        return { label: t("Join request declined"), icon: UserX };
       default:
         return { label: action, icon: ShieldCheck };
     }
@@ -116,8 +129,13 @@ export function useAuditActionSentence() {
           : t("invited a new member to the team");
       }
       case "member_joined":
-        // actor and target are the same person here (self-action), so the
+        // An approved join request is the one case with a different actor.
+        if (data?.source === "domain_request" && targetLabel) {
+          return t("approved {target}'s request to join the team", { target: targetLabel });
+        }
+        // Otherwise actor and target are the same person (self-action), so the
         // sentence must not repeat their name — it already prefixes actorName.
+        if (data?.source === "domain_auto") return t("joined the team through the email domain");
         return t("joined the team");
       case "member_role_updated": {
         const newRole = typeof data?.newRole === "string" ? roleLabel(data.newRole) : null;
@@ -171,6 +189,26 @@ export function useAuditActionSentence() {
         return t("no longer has an active team subscription");
       case "payment_failed":
         return t("had a payment fail for the team subscription");
+      case "domain_added":
+      case "domain_verified":
+      case "domain_removed": {
+        const domain = typeof data?.domain === "string" ? data.domain : "";
+        if (action === "domain_added") return t("added the domain {domain}", { domain });
+        if (action === "domain_verified") return t("verified the domain {domain}", { domain });
+        return t("removed the domain {domain}", { domain });
+      }
+      case "domain_join_mode_updated": {
+        const mode = asRecord(data?.next)?.joinMode;
+        if (mode === "auto") return t("set domain users to join automatically");
+        if (mode === "request") return t("set domain users to request to join");
+        return t("turned off joining by domain");
+      }
+      case "join_requested":
+        return t("asked to join the team");
+      case "join_request_declined":
+        return targetLabel
+          ? t("declined {target}'s request to join the team", { target: targetLabel })
+          : t("declined a request to join the team");
       default:
         return action;
     }

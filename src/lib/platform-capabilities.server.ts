@@ -1,4 +1,5 @@
 import { env } from "@/env";
+import { isEmailConfigured } from "@/lib/email";
 import type { PlatformCapabilities, SocialProviderId } from "./platform-capabilities";
 
 function hasValue(value: string | undefined): boolean {
@@ -43,6 +44,7 @@ export function getPlatformCapabilities(): PlatformCapabilities {
     auth: {
       socialProviders,
       captcha: hasValue(env.TURNSTILE_SECRET_KEY) && hasValue(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY),
+      email: isEmailConfigured(),
     },
   };
 }

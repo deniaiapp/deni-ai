@@ -23,6 +23,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 
 const resetTargetTypes = ["all", "plan", "user"] as const;
 type ResetTargetType = (typeof resetTargetTypes)[number];
+// Mirrors RESET_CREDIT_PLAN_TIERS; that module reads the database.
+const planTiers = ["free", "go", "plus", "pro"] as const satisfies readonly ResetCreditPlanTier[];
 
 export function BillingResetCard() {
   const t = useExtracted();
@@ -94,6 +96,17 @@ export function BillingResetCard() {
   }
 
   const status = statusQuery.data;
+  const targetTypeLabels: Record<ResetTargetType, string> = {
+    all: t("All users"),
+    plan: t("Users on a plan"),
+    user: t("Specific user"),
+  };
+  const planTierLabels: Record<ResetCreditPlanTier, string> = {
+    free: t("Free plan"),
+    go: t("Go plan"),
+    plus: t("Plus plan"),
+    pro: t("Pro plan"),
+  };
   const isBusy = consumeResetCredit.isPending || grantResetCredits.isPending;
 
   const handleGrant = (event: FormEvent<HTMLFormElement>) => {
@@ -185,13 +198,15 @@ export function BillingResetCard() {
                         onValueChange={(value) => setTargetType(value as ResetTargetType)}
                       >
                         <SelectTrigger id="reset-target-type" className="w-full">
-                          <SelectValue />
+                          <SelectValue>{targetTypeLabels[targetType]}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="all">{t("All users")}</SelectItem>
-                            <SelectItem value="plan">{t("Users on a plan")}</SelectItem>
-                            <SelectItem value="user">{t("Specific user")}</SelectItem>
+                            {resetTargetTypes.map((type) => (
+                              <SelectItem key={type} value={type}>
+                                {targetTypeLabels[type]}
+                              </SelectItem>
+                            ))}
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -219,14 +234,15 @@ export function BillingResetCard() {
                         onValueChange={(value) => setPlanTier(value as ResetCreditPlanTier)}
                       >
                         <SelectTrigger id="reset-plan-tier" className="w-full">
-                          <SelectValue />
+                          <SelectValue>{planTierLabels[planTier]}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="free">{t("Free plan")}</SelectItem>
-                            <SelectItem value="go">{t("Go plan")}</SelectItem>
-                            <SelectItem value="plus">{t("Plus plan")}</SelectItem>
-                            <SelectItem value="pro">{t("Pro plan")}</SelectItem>
+                            {planTiers.map((tier) => (
+                              <SelectItem key={tier} value={tier}>
+                                {planTierLabels[tier]}
+                              </SelectItem>
+                            ))}
                           </SelectGroup>
                         </SelectContent>
                       </Select>

@@ -9,13 +9,14 @@
 #   Port:              3000
 #
 # Environment (service Environment tab):
-#   - Put ALL required secrets/public vars there (same as .env.production).
-#   - Add the same keys under Build Time Arguments (or mark them build-time)
-#     so Dokploy passes them as `docker build --build-arg`. The builder stage
-#     declares matching ARG/ENV so `vite build` sees real prod values.
-#   - NEXT_PUBLIC_* MUST be build-time (embedded into the client bundle).
-#   - Server secrets are read from the runtime environment; build-time values
-#     only matter for code that runs during the build.
+#   - Put ALL secrets and runtime settings there (same as .env.production). The
+#     server reads them when the container starts; none are needed to build.
+#   - Build Time Arguments: only the public NEXT_PUBLIC_* values (embedded into
+#     the client bundle) and, optionally, SENTRY_ORG / SENTRY_PROJECT.
+#   - Never pass secrets as build arguments: ARG/ENV values stay in the build
+#     cache and image history. SENTRY_AUTH_TOKEN is a build secret instead
+#     (`docker build --secret id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN`);
+#     without it the build skips the source map upload.
 #
 # Local:
 #   docker build -t deni-ai .
@@ -43,70 +44,23 @@ ENV NODE_ENV=production
 
 COPY . .
 
-# Dokploy / `docker build --build-arg` inject service env here.
-# Core keys keep placeholder defaults so a bare `docker build` still compiles.
-# Provider/integration keys have no default, so missing keys disable their
-# dependent features; emptyStringAsUndefined in src/env.ts treats "" as unset.
-ARG DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
-ARG BETTER_AUTH_SECRET=01234567890123456789012345678901
-ARG GOOGLE_CLIENT_ID
-ARG GOOGLE_CLIENT_SECRET
-ARG GITHUB_CLIENT_ID
-ARG GITHUB_CLIENT_SECRET
-ARG STRIPE_SECRET_KEY
-ARG STRIPE_WEBHOOK_SECRET
-ARG STRIPE_FLASH_OFFER_COUPON_ID
-ARG OPENROUTER_API_KEY
-ARG DENI_API_KEY
-ARG DENI_API_BASE_URL
-ARG EXA_API_KEY
-ARG TURNSTILE_SECRET_KEY
-ARG RESEND_API_KEY
-ARG UPSTASH_REDIS_REST_URL
-ARG UPSTASH_REDIS_REST_TOKEN
-ARG R2_ACCOUNT_ID
-ARG R2_ACCESS_KEY_ID
-ARG R2_SECRET_ACCESS_KEY
-ARG R2_BUCKET
+# Only public values are build arguments: the build never reads server
+# secrets, which the runtime stage gets from the container environment.
 ARG NEXT_PUBLIC_BETTER_AUTH_URL
 ARG NEXT_PUBLIC_TURNSTILE_SITE_KEY
 ARG NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_BILLING_DISABLED
 ARG NEXT_PUBLIC_SENTRY_DSN
-# Optional: uploads source maps to Sentry during `vite build` when set.
-ARG SENTRY_AUTH_TOKEN
+# Optional: with the SENTRY_AUTH_TOKEN build secret, `vite build` uploads source maps.
 ARG SENTRY_ORG
 ARG SENTRY_PROJECT
 
-# Promote ARG → ENV so `vite build` / env.ts validation / NEXT_PUBLIC inlining
-# all see production values when Dokploy (or --build-arg) supplies them.
-ENV DATABASE_URL=$DATABASE_URL \
-  BETTER_AUTH_SECRET=$BETTER_AUTH_SECRET \
-  GOOGLE_CLIENT_ID=$GOOGLE_CLIENT_ID \
-  GOOGLE_CLIENT_SECRET=$GOOGLE_CLIENT_SECRET \
-  GITHUB_CLIENT_ID=$GITHUB_CLIENT_ID \
-  GITHUB_CLIENT_SECRET=$GITHUB_CLIENT_SECRET \
-  STRIPE_SECRET_KEY=$STRIPE_SECRET_KEY \
-  STRIPE_WEBHOOK_SECRET=$STRIPE_WEBHOOK_SECRET \
-  STRIPE_FLASH_OFFER_COUPON_ID=$STRIPE_FLASH_OFFER_COUPON_ID \
-  OPENROUTER_API_KEY=$OPENROUTER_API_KEY \
-  DENI_API_KEY=$DENI_API_KEY \
-  DENI_API_BASE_URL=$DENI_API_BASE_URL \
-  EXA_API_KEY=$EXA_API_KEY \
-  TURNSTILE_SECRET_KEY=$TURNSTILE_SECRET_KEY \
-  RESEND_API_KEY=$RESEND_API_KEY \
-  UPSTASH_REDIS_REST_URL=$UPSTASH_REDIS_REST_URL \
-  UPSTASH_REDIS_REST_TOKEN=$UPSTASH_REDIS_REST_TOKEN \
-  R2_ACCOUNT_ID=$R2_ACCOUNT_ID \
-  R2_ACCESS_KEY_ID=$R2_ACCESS_KEY_ID \
-  R2_SECRET_ACCESS_KEY=$R2_SECRET_ACCESS_KEY \
-  R2_BUCKET=$R2_BUCKET \
-  NEXT_PUBLIC_BETTER_AUTH_URL=$NEXT_PUBLIC_BETTER_AUTH_URL \
+# Promote ARG → ENV so `vite build` inlines the NEXT_PUBLIC_* values.
+ENV NEXT_PUBLIC_BETTER_AUTH_URL=$NEXT_PUBLIC_BETTER_AUTH_URL \
   NEXT_PUBLIC_TURNSTILE_SITE_KEY=$NEXT_PUBLIC_TURNSTILE_SITE_KEY \
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=$NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
   NEXT_PUBLIC_BILLING_DISABLED=$NEXT_PUBLIC_BILLING_DISABLED \
   NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN \
-  SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN \
   SENTRY_ORG=$SENTRY_ORG \
   SENTRY_PROJECT=$SENTRY_PROJECT
 
@@ -114,7 +68,9 @@ ENV DATABASE_URL=$DATABASE_URL \
 # the committed .env.production supplies them: Vite never overrides a variable that
 # already exists in the environment, even as an empty string (which an unset ARG becomes).
 # Non-empty build args (Dokploy / --build-arg) still take precedence.
-RUN for v in NEXT_PUBLIC_BETTER_AUTH_URL NEXT_PUBLIC_TURNSTILE_SITE_KEY \
+# The Sentry token is mounted for this step only, so no layer records it.
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
+  for v in NEXT_PUBLIC_BETTER_AUTH_URL NEXT_PUBLIC_TURNSTILE_SITE_KEY \
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY NEXT_PUBLIC_BILLING_DISABLED NEXT_PUBLIC_SENTRY_DSN; do \
     [ -n "$(printenv "$v")" ] || unset "$v"; \
   done; \

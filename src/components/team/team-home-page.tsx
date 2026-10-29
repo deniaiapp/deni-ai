@@ -17,6 +17,7 @@ export function TeamHomePage() {
     members,
     isAdmin,
     isOwner,
+    isRoleLoading,
     orgNameDraft,
     setOrgNameDraft,
     isSavingOrgName,
@@ -33,6 +34,14 @@ export function TeamHomePage() {
 
   if (!activeOrg) {
     return null;
+  }
+
+  if (isRoleLoading) {
+    return (
+      <div className="flex min-h-[20vh] items-center justify-center">
+        <Spinner />
+      </div>
+    );
   }
 
   async function saveName() {

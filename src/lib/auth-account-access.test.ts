@@ -2,6 +2,13 @@ import { createHmac } from "node:crypto";
 import { afterAll, beforeAll, beforeEach, expect, test, vi } from "vitest";
 import type { auth as Auth } from "./auth";
 
+// Team domains are read from Postgres; no team has verified one in these tests.
+vi.mock("@/lib/team-domains", () => ({
+  TEAM_MEMBERSHIP_LIMIT: 50,
+  isActiveTeamEmailDomain: async () => false,
+  joinTeamByDomainOnSignIn: async () => undefined,
+}));
+
 const mocks = vi.hoisted(() => ({
   db: {} as Record<string, Record<string, unknown>[]>,
   sendEmail: vi.fn(),

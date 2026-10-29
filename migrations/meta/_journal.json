@@ -505,6 +505,13 @@
       "when": 1793194055401,
       "tag": "0071_max_mode_credits",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1793261311943,
+      "tag": "0072_kind_spirit",
+      "breakpoints": true
     }
   ]
 }

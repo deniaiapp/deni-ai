@@ -106,7 +106,11 @@ export function useTeamSettings() {
     organizations.find((org) => org.id === activeOrganizationId) ??
     organizations[0] ??
     null;
-  const { data: orgDetailsData, refetch: refetchOrgDetails } = useQuery({
+  const {
+    data: orgDetailsData,
+    isLoading: orgDetailsLoading,
+    refetch: refetchOrgDetails,
+  } = useQuery({
     queryKey: ["team", "organization", currentUserId, activeOrg?.id],
     enabled: Boolean(activeOrg?.id),
     queryFn: async () => {
@@ -139,6 +143,8 @@ export function useTeamSettings() {
   const currentUserRole = members.find((member) => member.userId === currentUserId)?.role ?? null;
   const isOwner = currentUserRole === "owner";
   const isAdmin = currentUserRole === "admin" || isOwner;
+  // The role comes from the member list, so admin-only UI is unknown until it loads.
+  const isRoleLoading = orgDetailsLoading;
   const teamBillingQuery = trpc.organization.teamBillingStatus.useQuery(
     { organizationId: activeOrg?.id ?? "" },
     { enabled: features.billing && Boolean(activeOrg?.id) && isAdmin },
@@ -827,6 +833,7 @@ export function useTeamSettings() {
     respondingInvitationId,
     isOwner,
     isAdmin,
+    isRoleLoading,
     teamBillingQuery,
     teamMaxModeQuery,
     teamPlans,
