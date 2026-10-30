@@ -36,6 +36,35 @@ describe("accessLog", () => {
     assert.ok(outgoing!.includes("key=deni_abc…2345"));
     assert.ok(!outgoing!.includes(rawKey));
   });
+
+  test("omits the API key fingerprint in production", async () => {
+    const lines: string[] = [];
+    const originalLog = console.log;
+    const originalNodeEnv = process.env.NODE_ENV;
+    console.log = (...args: unknown[]) => {
+      lines.push(args.map(String).join(" "));
+    };
+    process.env.NODE_ENV = "production";
+
+    const app = new Hono();
+    app.use("*", accessLog);
+    app.get("/v1/ping", (c) => c.json({ ok: true }));
+
+    try {
+      const res = await app.request("/v1/ping", {
+        headers: { Authorization: `Bearer ${rawKey}` },
+      });
+      assert.equal(res.status, 200);
+    } finally {
+      console.log = originalLog;
+      if (originalNodeEnv === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = originalNodeEnv;
+    }
+
+    const outgoing = lines.find((line) => line.startsWith("--> GET /v1/ping"));
+    assert.notEqual(outgoing, undefined);
+    assert.ok(!outgoing!.includes("key="));
+  });
 });
 
 describe("logErrorResponses", () => {

@@ -111,7 +111,10 @@ export function recordClientSignalLog(
   }
 
   if (shouldConsoleLog(entry)) {
-    const keyPart = entry.apiKey ? ` key=${entry.apiKey}` : "";
+    const keyPart =
+      entry.apiKey && process.env.NODE_ENV !== "production"
+        ? ` key=${entry.apiKey}`
+        : "";
     console.log(
       `[ClientSignal] ${entry.outcome} client=${entry.client ?? "none"} user=${entry.userId}${keyPart} ${entry.method} ${entry.path}`,
       entry.headers,

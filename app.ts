@@ -35,7 +35,11 @@ if (isAccessLogEnabled()) {
   app.use("*", accessLog);
 }
 app.use("*", cors());
-app.use("*", logErrorResponses);
+// Detailed error-response dumps are for local debugging; production relies on
+// the access log's status line.
+if (process.env.NODE_ENV !== "production") {
+  app.use("*", logErrorResponses);
+}
 
 // Health check
 app.get("/health", (c) => {
