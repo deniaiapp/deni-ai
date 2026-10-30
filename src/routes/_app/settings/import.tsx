@@ -78,7 +78,7 @@ function ImportSettingsPage() {
     <SettingsPageShell
       title={t("Import")}
       description={t(
-        "Bring conversations in from ChatGPT or another Deni AI export. Imported chats are added to your account, not merged with existing ones.",
+        "Bring conversations in from ChatGPT, Claude, or another Deni AI export. Imported chats are added to your account, not merged with existing ones.",
       )}
     >
       <Card>
@@ -86,7 +86,7 @@ function ImportSettingsPage() {
           <CardTitle className="text-sm font-medium">{t("Import conversations")}</CardTitle>
           <CardDescription>
             {t(
-              'Upload a ChatGPT "conversations.json" export, or a Deni AI export file. Only the active branch of each ChatGPT conversation is imported.',
+              'Upload the "conversations.json" file from a ChatGPT or Claude export, or a Deni AI export file. Only the latest branch of each conversation is imported, and attached files are left out.',
             )}
           </CardDescription>
         </CardHeader>

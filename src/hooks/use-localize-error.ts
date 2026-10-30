@@ -271,6 +271,10 @@ export function useLocalizeError() {
           t("You're already signed in as a guest"),
           "ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY",
         ),
+        ...mapKeys(
+          t("Guest accounts cannot add sign-in methods. Sign up instead."),
+          "GUEST_SIGN_IN_METHOD_NOT_ALLOWED",
+        ),
       },
       byMessage: {
         ...mapKeys(
@@ -306,16 +310,8 @@ export function useLocalizeError() {
           t("An active team subscription is required to manage Max Mode."),
           "An active team subscription is required to manage Max Mode.",
         ),
-        ...mapKeys(
-          t("Another post already uses that slug."),
-          "Another post already uses that slug.",
-        ),
         ...mapKeys(t("API key not found."), "API key not found."),
         ...mapKeys(t("Billing is disabled."), "Billing is disabled."),
-        ...mapKeys(
-          t("Blog administration is not enabled for this account."),
-          "Blog administration is not enabled for this account.",
-        ),
         ...mapKeys(t("Both conversations need an answer."), "Both conversations need an answer."),
         ...mapKeys(
           t("Cancel your subscription before buying a one-time plan."),

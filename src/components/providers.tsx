@@ -72,7 +72,7 @@ export function AppProviders({
         }}
         basePaths={{
           auth: "/auth",
-          // Preserve legacy /account/* URLs (app settings use /settings/*)
+          // Account and security settings live at /account/*; emails link there.
           settings: "/account",
         }}
         viewPaths={{

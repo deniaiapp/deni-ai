@@ -40,8 +40,6 @@ export const routeRules: RouteRules = {
   "/about": marketingCache,
   "/use-cases": marketingCache,
   "/guides/**": marketingCache,
-  "/blog": marketingCache,
-  "/blog/**": marketingCache,
   "/models": marketingCache,
   "/flixa": marketingCache,
   "/desktop": marketingCache,
@@ -58,4 +56,9 @@ export const routeRules: RouteRules = {
   "/settings/developer": permanentRedirect("/settings/api-keys"),
   "/oauth/example": permanentRedirect("/"),
   "/ja/oauth/example": permanentRedirect("/ja"),
+  // The blog was removed; the AI guides cover the same topics.
+  "/blog": permanentRedirect("/guides"),
+  "/blog/**": permanentRedirect("/guides"),
+  "/ja/blog": permanentRedirect("/ja/guides"),
+  "/ja/blog/**": permanentRedirect("/ja/guides"),
 };

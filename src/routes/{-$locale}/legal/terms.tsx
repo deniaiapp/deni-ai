@@ -22,7 +22,7 @@ function TermsPage() {
     <main className="min-h-screen bg-background" id="main-content">
       <div className="mx-auto flex max-w-4xl flex-col gap-10 px-4 pb-16 pt-28 sm:px-6 lg:px-8">
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">{t("Last updated: 2026-08-09")}</p>
+          <p className="text-sm text-muted-foreground">{t("Last updated: 2026-10-30")}</p>
           <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
             {t("Terms of Service")}
           </h1>
@@ -73,7 +73,7 @@ function TermsPage() {
             </li>
             <li>
               {t(
-                "Deni AI Flixa may only be used with approved, authenticated clients: Codex, Claude Code, OpenCode, Flixa, and Flixa CLI. Using any other client, proxy, or unauthorized tool with Deni AI Flixa may result in a Flixa ban (including suspension or permanent loss of Flixa access) without prior notice.",
+                "On the Free and Go plans, Deni AI Flixa may only be used with approved, authenticated clients: Codex, Claude Code, OpenCode, Zed, Flixa, and Flixa CLI. Plus, Pro, and Pro for Teams may use Deni AI Flixa from any client. Disguising a client as an approved one or otherwise circumventing these limits may result in a Flixa ban (including suspension or permanent loss of Flixa access) without prior notice.",
               )}
             </li>
           </ul>
@@ -154,7 +154,7 @@ function TermsPage() {
           </p>
           <p className="text-muted-foreground">
             {t(
-              "We may also ban, suspend, or permanently revoke Deni AI Flixa access if Flixa is used with clients other than the approved authenticated clients listed above (Codex, Claude Code, OpenCode, Flixa, and Flixa CLI).",
+              "We may also ban, suspend, or permanently revoke Deni AI Flixa access if the client restrictions for the Free and Go plans described above are circumvented.",
             )}
           </p>
         </section>

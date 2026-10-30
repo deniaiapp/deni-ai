@@ -1,12 +1,5 @@
 import { Link } from "@/lib/navigation";
-import {
-  BookOpenText,
-  BrainCircuit,
-  CheckCircle2,
-  CircleHelp,
-  Newspaper,
-  ShieldCheck,
-} from "lucide-react";
+import { BookOpenText, BrainCircuit, CheckCircle2, CircleHelp, ShieldCheck } from "lucide-react";
 import { useExtracted } from "use-intl";
 
 export function HomeTrustSection() {
@@ -31,12 +24,6 @@ export function HomeTrustSection() {
   ];
 
   const resources = [
-    {
-      href: "/blog/chatgpt-vs-claude-vs-gemini",
-      icon: Newspaper,
-      title: t("ChatGPT vs Claude vs Gemini: how we pick for daily work"),
-      description: t("A practical comparison based on task failure modes, not brand loyalty."),
-    },
     {
       href: "/guides",
       icon: BookOpenText,
@@ -101,12 +88,12 @@ export function HomeTrustSection() {
             </h2>
             <p className="mt-5 text-sm leading-7 text-muted-foreground">
               {t(
-                "Deni AI publishes a public blog and original guides for model selection, answer verification, multi-model workflows, study practice, and privacy. These pages are meant to help even if you use another tool.",
+                "Deni AI publishes original guides for model selection, answer verification, multi-model workflows, study practice, and privacy. These pages are meant to help even if you use another tool.",
               )}
             </p>
           </div>
 
-          <div className="mt-10 grid gap-4 md:grid-cols-3">
+          <div className="mt-10 grid gap-4 md:grid-cols-2">
             {resources.map((resource) => {
               const Icon = resource.icon;
               return (
@@ -126,9 +113,6 @@ export function HomeTrustSection() {
           </div>
 
           <div className="mt-8 flex flex-wrap gap-5">
-            <Link href="/blog" className="text-sm font-medium underline-offset-4 hover:underline">
-              {t("Browse the blog")}
-            </Link>
             <Link href="/guides" className="text-sm font-medium underline-offset-4 hover:underline">
               {t("Browse all AI guides")}
             </Link>

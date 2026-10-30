@@ -2,23 +2,6 @@ import type { ReasoningUIPart, TextUIPart, UIMessage } from "ai";
 import { nanoid } from "nanoid";
 import { toJsonbSafe, toPostgresText } from "@/lib/jsonb";
 
-export type MigrationExport = {
-  format: "deni-ai-message-export";
-  version: 1;
-  exportedAt: string;
-  source: {
-    app: "deni-ai";
-    channel: "canary" | "master" | "unknown";
-  };
-  chats: Array<{
-    id: string;
-    title: string | null;
-    createdAt: string | null;
-    updatedAt: string | null;
-    messages: unknown[];
-  }>;
-};
-
 type LegacyConversation = {
   id?: unknown;
   title?: unknown;
@@ -278,6 +261,174 @@ function parseUnixSeconds(value: unknown): Date | undefined {
   return Number.isNaN(date.getTime()) ? undefined : date;
 }
 
+// --- Claude ("conversations.json") export support ---
+//
+// Claude exports a flat list of messages per conversation (`chat_messages`).
+// Newer exports link each message to its parent (`parent_message_uuid`), and
+// edits/retries leave the replaced messages in the list; we import only the
+// branch that ends at the latest message, like the ChatGPT import.
+type ClaudeContentBlock = {
+  type?: unknown;
+  text?: unknown;
+  thinking?: unknown;
+};
+
+type ClaudeMessage = {
+  uuid?: unknown;
+  parent_message_uuid?: unknown;
+  sender?: unknown;
+  text?: unknown;
+  content?: unknown;
+  attachments?: unknown;
+  files?: unknown;
+};
+
+type ClaudeConversation = {
+  name?: unknown;
+  created_at?: unknown;
+  updated_at?: unknown;
+  chat_messages: unknown[];
+};
+
+export function isClaudeExport(payload: unknown): payload is ClaudeConversation[] {
+  return (
+    Array.isArray(payload) &&
+    payload.length > 0 &&
+    payload.every((item) => isRecord(item) && Array.isArray(item.chat_messages))
+  );
+}
+
+export function normalizeClaudeExport(payload: ClaudeConversation[]): MigrationImportResult {
+  const conversations: NormalizedConversation[] = [];
+  const warnings: string[] = [];
+
+  payload.forEach((conversation, index) => {
+    const messages: UIMessage[] = [];
+    for (const raw of claudeActiveBranch(conversation.chat_messages)) {
+      const role = normalizeClaudeRole(raw.sender);
+      if (!role) continue;
+      const parts = normalizeClaudeMessageParts(raw);
+      if (!parts.length) continue;
+      messages.push({
+        id: typeof raw.uuid === "string" && raw.uuid.trim().length > 0 ? raw.uuid : nanoid(),
+        role,
+        parts,
+      });
+    }
+
+    if (!messages.length) {
+      warnings.push(`conversation ${index + 1}: no usable messages found`);
+      return;
+    }
+
+    conversations.push({
+      title: normalizeTitle(conversation.name, index),
+      messages,
+      createdAt: parseDate(conversation.created_at),
+      updatedAt: parseDate(conversation.updated_at),
+    });
+  });
+
+  return { conversations, warnings };
+}
+
+/** Messages plus the content blocks, attachments, and files that become parts. */
+function countClaudeItems(rawMessages: unknown[]): number {
+  let count = rawMessages.length;
+  for (const message of rawMessages) {
+    if (!isRecord(message)) continue;
+    for (const key of ["content", "attachments", "files"] as const) {
+      const items = message[key];
+      if (Array.isArray(items)) count += items.length;
+    }
+  }
+  return count;
+}
+
+function claudeActiveBranch(rawMessages: unknown[]): ClaudeMessage[] {
+  const messages = rawMessages.filter(isRecord) as ClaudeMessage[];
+  const byId = new Map<string, ClaudeMessage>();
+  for (const message of messages) {
+    if (typeof message.uuid === "string") byId.set(message.uuid, message);
+  }
+  const linked = messages.some(
+    (message) =>
+      typeof message.parent_message_uuid === "string" && byId.has(message.parent_message_uuid),
+  );
+  if (!linked) {
+    return messages;
+  }
+
+  // Messages are listed oldest first, so the last one ends the active branch.
+  const branch: ClaudeMessage[] = [];
+  const visited = new Set<ClaudeMessage>();
+  let cursor: ClaudeMessage | undefined = messages.at(-1);
+  while (cursor && !visited.has(cursor)) {
+    visited.add(cursor);
+    branch.push(cursor);
+    const parent: unknown = cursor.parent_message_uuid;
+    cursor = typeof parent === "string" ? byId.get(parent) : undefined;
+  }
+  return branch.reverse();
+}
+
+function normalizeClaudeRole(sender: unknown): UIMessage["role"] | null {
+  if (sender === "human") return "user";
+  if (sender === "assistant") return "assistant";
+  return null;
+}
+
+function normalizeClaudeMessageParts(message: ClaudeMessage): UIMessage["parts"] {
+  const parts: UIMessage["parts"] = [];
+
+  if (Array.isArray(message.content)) {
+    for (const block of message.content as ClaudeContentBlock[]) {
+      if (!isRecord(block)) continue;
+      if (block.type === "text" && typeof block.text === "string" && block.text.trim()) {
+        parts.push(createTextPart(block.text));
+      } else if (
+        block.type === "thinking" &&
+        typeof block.thinking === "string" &&
+        block.thinking.trim()
+      ) {
+        parts.push(createReasoningPart(block.thinking));
+      }
+      // Tool calls and their results only make sense inside Claude.
+    }
+  }
+  // Older exports have no content blocks, only the message text.
+  if (!parts.some((part) => part.type === "text")) {
+    if (typeof message.text === "string" && message.text.trim()) {
+      parts.push(createTextPart(message.text));
+    }
+  }
+
+  // The export keeps the text Claude extracted from documents, but no files.
+  if (Array.isArray(message.attachments)) {
+    for (const attachment of message.attachments) {
+      if (!isRecord(attachment)) continue;
+      const name = typeof attachment.file_name === "string" ? attachment.file_name : "file";
+      const extracted = attachment.extracted_content;
+      parts.push(
+        createTextPart(
+          typeof extracted === "string" && extracted.trim()
+            ? `[Attached file: ${name}]\n\n${extracted}`
+            : `[attachment omitted: ${name}]`,
+        ),
+      );
+    }
+  }
+  if (Array.isArray(message.files)) {
+    for (const file of message.files) {
+      if (!isRecord(file)) continue;
+      const name = typeof file.file_name === "string" ? file.file_name : "file";
+      parts.push(createTextPart(`[attachment omitted: ${name}]`));
+    }
+  }
+
+  return parts;
+}
+
 /** Throws MigrationPayloadTooLargeError when the payload exceeds the import caps. */
 export function normalizeMigrationPayload(payload: unknown): MigrationImportResult {
   const result = normalizeParsedPayload(payload);
@@ -299,6 +450,17 @@ function normalizeParsedPayload(payload: unknown): MigrationImportResult {
       payload.reduce((count, conversation) => count + Object.keys(conversation.mapping).length, 0),
     );
     return normalizeChatGptExport(payload);
+  }
+
+  if (isClaudeExport(payload)) {
+    assertImportSize(
+      payload.length,
+      payload.reduce(
+        (count, conversation) => count + countClaudeItems(conversation.chat_messages),
+        0,
+      ),
+    );
+    return normalizeClaudeExport(payload);
   }
 
   const { conversations: legacyConversations, warnings } = extractLegacyConversations(payload);

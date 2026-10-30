@@ -1,11 +1,8 @@
-import { fileURLToPath } from "node:url";
 import { defineConfig } from "vitest/config";
 import { extractMessages } from "./vite/extract-messages.ts";
 
 export default defineConfig({
   resolve: {
-    // tsconfig excludes tools/, so its tests need the `@` alias spelled out.
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
     tsconfigPaths: true,
   },
   plugins: [
@@ -18,7 +15,7 @@ export default defineConfig({
     }),
   ],
   test: {
-    include: ["tools/*.test.ts", "src/**/*.test.ts"],
+    include: ["src/**/*.test.ts"],
     env: {
       DATABASE_URL: "postgresql://test:test@127.0.0.1:5432/test",
       BETTER_AUTH_SECRET: "0123456789abcdef0123456789abcdef",

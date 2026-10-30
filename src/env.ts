@@ -34,14 +34,11 @@ export const env = createEnv({
      * portal configuration applies and must have subscription updates disabled.
      */
     STRIPE_PORTAL_CONFIGURATION_ID: z.string().min(1).optional(),
-    /** Operator emails (reset-credit grants, dispute alerts, blog fallback). */
+    /** Operator emails (reset-credit grants, dispute alerts). */
     ADMIN_EMAILS: z.string().min(1).optional(),
-    /** @deprecated Former name of `ADMIN_EMAILS`; still read when it is unset. */
-    AFFILIATE_ADMIN_EMAILS: z.string().min(1).optional(),
-    BLOG_ADMIN_EMAILS: z.string().min(1).optional(),
     /**
      * Operator email domains (e.g. `deniai.app`): verified accounts on them may
-     * sign up and administer the blog and reset credits, like `ADMIN_EMAILS`.
+     * sign up and grant reset credits, like `ADMIN_EMAILS`.
      */
     ADMIN_EMAIL_DOMAINS: z.string().min(1).optional(),
     OPENROUTER_API_KEY: z.string().min(1).optional(),

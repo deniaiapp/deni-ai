@@ -248,10 +248,6 @@ function UseCasesPage() {
           <div className="mt-6 flex flex-col items-center gap-4">
             <LoginButton />
             <div className="flex flex-wrap justify-center gap-3">
-              <Button variant="outline" render={<Link href="/blog" />} nativeButton={false}>
-                {t("Blog")}
-                <ArrowRight className="size-4" />
-              </Button>
               <Button variant="outline" render={<Link href="/guides" />} nativeButton={false}>
                 {t("AI Guides")}
                 <ArrowRight className="size-4" />

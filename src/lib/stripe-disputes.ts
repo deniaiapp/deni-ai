@@ -8,8 +8,7 @@ import {
   disputeAlertEmailSubject,
   type DisputeAlertKind,
 } from "@/emails/dispute-alert-email";
-import { env } from "@/env";
-import { getAdminEmails, parseAdminEmails } from "@/lib/admin-emails";
+import { getAdminEmails } from "@/lib/admin-emails";
 import { isEmailConfigured, sendEmail } from "@/lib/email";
 import { formatMinorCurrency } from "@/lib/currency";
 import { isMaxModeOnlySubscription } from "@/lib/stripe-subscriptions";
@@ -35,7 +34,7 @@ function dashboardUrl(path: string, livemode: boolean) {
 }
 
 function getDisputeAdminEmails() {
-  return [...new Set([...getAdminEmails(), ...parseAdminEmails(env.BLOG_ADMIN_EMAILS)])];
+  return [...getAdminEmails()];
 }
 
 async function notifyAdmins({

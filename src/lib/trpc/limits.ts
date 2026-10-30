@@ -10,8 +10,7 @@ export const TRPC_MAX_BATCH_SIZE = 20;
 const MB = 1024 * 1024;
 
 /**
- * POST body cap for every procedure not listed below. The largest of them is a
- * blog post: two 100,000-character bodies, about 600 KB of JSON in Japanese.
+ * POST body cap for every procedure not listed below.
  */
 export const TRPC_DEFAULT_BODY_LIMIT = 2 * MB;
 

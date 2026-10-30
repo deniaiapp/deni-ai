@@ -30,9 +30,6 @@ export default function SettingsWrapper({ children }: { children: React.ReactNod
     enabled: !isStandaloneRoute,
     ...settingsUsageQueryOptions,
   });
-  const blogAdminQuery = trpc.blog.canManage.useQuery(undefined, {
-    enabled: !isStandaloneRoute,
-  });
 
   // Always keep {children} in the tree. Returning only a Spinner drops the page
   // segment and breaks Next.js instant-navigation validation
@@ -74,15 +71,6 @@ export default function SettingsWrapper({ children }: { children: React.ReactNod
       value: "ads",
       href: "/settings/ads",
     },
-    ...(blogAdminQuery.data
-      ? [
-          {
-            label: t("Blog"),
-            value: "blog",
-            href: "/settings/blog",
-          },
-        ]
-      : []),
     {
       label: t("Projects"),
       value: "projects",

@@ -1,7 +1,11 @@
 import { asSchema } from "ai";
 import { expect, test } from "vitest";
 import { isQuestionnaireInput } from "@/components/chat/questionnaire-tool";
-import { questionnaireToolInputSchema } from "./questionnaire";
+import {
+  createQuestionnaireTool,
+  questionnaireToolInputSchema,
+  uniqueQuestionnaireParts,
+} from "./questionnaire";
 
 const valid = {
   title: "Trip details",
@@ -77,4 +81,65 @@ test("the refinements leave the provider JSON schema intact", async () => {
     type: "object",
     required: ["title", "questions"],
   });
+});
+
+test("accepts single choice, multiple choice, free text, and skippable questions", () => {
+  const questionnaire = questionnaireToolInputSchema.parse({
+    title: "Plan the prototype",
+    questions: [
+      {
+        name: "direction",
+        prompt: "What should we prototype?",
+        required: true,
+        choices: [{ value: "web", label: "Web app" }],
+        input: { label: "Another direction" },
+      },
+      {
+        name: "signals",
+        prompt: "Which signals matter?",
+        multiple: true,
+        choices: [{ value: "speed", label: "Speed" }],
+      },
+      {
+        name: "timing",
+        prompt: "When should we revisit this?",
+        required: false,
+        input: { label: "Timing" },
+      },
+    ],
+  });
+
+  expect(questionnaire.questions).toHaveLength(3);
+  expect(questionnaire.questions[1]?.multiple).toBe(true);
+  expect(questionnaire.questions[2]?.required).toBe(false);
+});
+
+test("bounds questionnaire size and requires an answer key and prompt", () => {
+  expect(() => questionnaireToolInputSchema.parse({ title: "Empty", questions: [] })).toThrow();
+  expect(() =>
+    questionnaireToolInputSchema.parse({
+      title: "Missing prompt",
+      questions: [{ name: "scope" }],
+    }),
+  ).toThrow();
+  expect(() =>
+    questionnaireToolInputSchema.parse({
+      title: "Too many",
+      questions: Array.from({ length: 9 }, (_, index) => ({
+        name: `question-${index}`,
+        prompt: "Question",
+      })),
+    }),
+  ).toThrow();
+});
+
+test("pauses for client input rather than executing on the server", () => {
+  expect(createQuestionnaireTool().execute).toBeUndefined();
+});
+
+test("keeps separate completed questionnaires in the same assistant message", () => {
+  const first = { toolCallId: "first", state: "output-available", title: "First question" };
+  const second = { toolCallId: "second", state: "output-available", title: "Second question" };
+  const updatedFirst = { ...first, title: "Updated first" };
+  expect(uniqueQuestionnaireParts([first, second, updatedFirst])).toEqual([updatedFirst, second]);
 });

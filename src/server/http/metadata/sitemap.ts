@@ -1,4 +1,3 @@
-import { listPublishedManagedPosts } from "@/lib/blog/queries";
 import { changelogEntries } from "@/lib/changelog";
 import { absoluteUrl, hreflangLanguages } from "@/lib/locale-path";
 import { PUBLIC_SITE_ORIGIN, type PublicPage, publicPages } from "@/lib/public-pages";
@@ -29,14 +28,9 @@ function sitemapEntry(
   };
 }
 
-export async function sitemapEntries(): Promise<SitemapEntry[]> {
+export function sitemapEntries(): SitemapEntry[] {
   const lastModified = new Date("2026-08-16");
   const changelogModified = new Date(changelogEntries[0]?.date ?? lastModified);
-  const managedPosts = await listPublishedManagedPosts().catch(() => []);
-  const blogPaths = managedPosts.map((post) => ({
-    path: `/blog/${post.slug}`,
-    lastModified: post.updatedAt,
-  }));
 
   const publicEntries = publicPages.flatMap((page) => {
     if (page.path === "/") {
@@ -49,11 +43,6 @@ export async function sitemapEntries(): Promise<SitemapEntry[]> {
     ];
   });
 
-  const blogEntries = blogPaths.flatMap((entry) => [
-    sitemapEntry(entry.path, "en", entry.lastModified, "monthly", 0.8),
-    sitemapEntry(entry.path, "ja", entry.lastModified, "monthly", 0.8),
-  ]);
-
   return [
     {
       url: PUBLIC_SITE_ORIGIN,
@@ -65,7 +54,6 @@ export async function sitemapEntries(): Promise<SitemapEntry[]> {
       },
     },
     ...publicEntries,
-    ...blogEntries,
   ];
 }
 
@@ -90,7 +78,7 @@ export function renderSitemap(entries: SitemapEntry[]) {
 }
 
 export async function GET() {
-  return new Response(renderSitemap(await sitemapEntries()), {
+  return new Response(renderSitemap(sitemapEntries()), {
     headers: {
       "Content-Type": "application/xml",
       "Cache-Control": "public, max-age=0, must-revalidate",

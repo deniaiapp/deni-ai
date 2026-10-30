@@ -44,10 +44,17 @@ export const Route = createFileRoute("/_auth/account/$path")({
       throw redirect({ href: `/auth/sign-in?redirectTo=${encodeURIComponent(returnTo)}` });
     }
 
+    // Sign-in methods added to a guest would keep it a guest for good (the server
+    // refuses them too); guests sign up instead.
+    const isGuest = Boolean(session.user.isAnonymous);
+    if (isGuest && params.path !== "settings") {
+      throw redirect({ href: "/account/settings" });
+    }
+
     // Seed Better Auth UI's session query so settings render without a refetch.
     const queryClient = new QueryClient();
     queryClient.setQueryData(SESSION_QUERY_KEY, session);
-    return dehydrate(queryClient);
+    return { dehydratedState: dehydrate(queryClient), isGuest };
   },
   pendingComponent: AccountPageFallback,
   component: AccountPage,
@@ -55,14 +62,14 @@ export const Route = createFileRoute("/_auth/account/$path")({
 
 function AccountPage() {
   const { path } = Route.useParams();
-  const dehydratedState = Route.useLoaderData();
+  const { dehydratedState, isGuest } = Route.useLoaderData();
 
   return (
     <HydrationBoundary state={dehydratedState}>
       <main className="pt-24" id="main-content">
         <Header />
         <div className="mx-auto w-full max-w-3xl px-8 pb-12">
-          <Settings path={path} />
+          <Settings path={path} hideNav={isGuest} />
         </div>
         <Footer />
       </main>

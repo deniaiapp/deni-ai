@@ -21,11 +21,6 @@
     "tools:stripe-portal": "tsx --env-file-if-exists=.env.local ./tools/stripe-portal-setup.ts",
     "tools:commit": "tsx --env-file-if-exists=.env.local ./tools/commit.ts",
     "tools:register-oauth-client": "tsx --env-file-if-exists=.env.local ./tools/register-oauth-client.ts",
-    "tools:grant-card-flash-offer": "tsx --env-file-if-exists=.env.local ./tools/grant-card-flash-offer.ts",
-    "tools:purge-anonymous": "tsx --env-file=.env ./tools/purge-anonymous.ts",
-    "tools:migrate-uploadthing-to-r2": "tsx --env-file=.env ./tools/migrate-uploadthing-to-r2.ts",
-    "tools:audit-uploadthing-storage": "tsx --env-file=.env ./tools/audit-uploadthing-storage.ts",
-    "tools:migrate-legacy-chat-files": "tsx --env-file=.env ./tools/migrate-legacy-chat-files.ts",
     "disposable:refresh": "pnpm --filter @deni-ai/disposable-email-domains refresh",
     "test": "vitest run",
     "doctor": "react-doctor"

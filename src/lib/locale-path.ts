@@ -30,7 +30,7 @@ export function isPublicLocalizablePath(pathname: string): boolean {
   if (PUBLIC_PATHS.has(pathname)) {
     return true;
   }
-  return pathname.startsWith("/blog/") || pathname.startsWith("/guides/");
+  return pathname.startsWith("/guides/");
 }
 
 export function stripJaPrefix(pathname: string): string {

@@ -418,8 +418,6 @@ export const FREE_PLAN_MODEL_VALUES = [
   "gemini-3.8-flash",
 ] as const;
 
-export type FreePlanModelValue = (typeof FREE_PLAN_MODEL_VALUES)[number];
-
 const freePlanModelSet = new Set<string>(FREE_PLAN_MODEL_VALUES);
 
 /** Guest sessions are intentionally limited to the default Luna model. */

@@ -196,13 +196,6 @@ function GuidesPage() {
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
-              href="/blog"
-              className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-secondary"
-            >
-              {t("Blog")}
-              <ArrowRight className="size-4" />
-            </Link>
-            <Link
               href="/faq"
               className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-secondary"
             >

@@ -77,6 +77,7 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
       t("Includes all Go features"),
       moreUsage("plus"),
       t.rich("Get <b>more models</b> in Deni AI Flixa", { b }),
+      t.rich("Use Deni AI Flixa from <b>any coding agent</b>", { b }),
     ],
     pro: [
       runHighlight,
