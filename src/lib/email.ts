@@ -10,6 +10,7 @@
 import type { ReactElement } from "react";
 import { env } from "@/env";
 import { EMAIL_FROM } from "@/lib/constants";
+import { isPlaceholderEmail } from "@/lib/placeholder-email";
 
 type EmailAddress =
   | string
@@ -79,6 +80,15 @@ export async function sendEmail(options: SendEmailOptions): Promise<CloudflareSe
     );
   }
 
+  // Guest accounts carry non-routable `.invalid` addresses: mail to them only bounces.
+  const recipients = (Array.isArray(options.to) ? options.to : [options.to]).filter(
+    (address) => !isPlaceholderEmail(address),
+  );
+  if (recipients.length === 0) {
+    console.warn("[email] Skipped an email addressed only to placeholder addresses");
+    return { delivered: [], permanent_bounces: [], queued: [] };
+  }
+
   let html = options.html;
   let text = options.text;
 
@@ -101,7 +111,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<CloudflareSe
   const token = env.CLOUDFLARE_API_TOKEN!;
   const body: Record<string, unknown> = {
     from: normalizeFrom(options.from ?? EMAIL_FROM),
-    to: options.to,
+    to: recipients,
     subject: options.subject,
   };
   if (html) body.html = html;

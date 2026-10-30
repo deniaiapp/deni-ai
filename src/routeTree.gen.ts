@@ -57,6 +57,7 @@ import { Route as ApiAttachmentsIdRouteImport } from './routes/api/attachments/$
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiChatIndexRouteImport } from './routes/api/chat/index'
 import { Route as ApiChatStopRouteImport } from './routes/api/chat/stop'
+import { Route as ApiCronGuestCleanupRouteImport } from './routes/api/cron/guest-cleanup'
 import { Route as ApiCronModelHealthRouteImport } from './routes/api/cron/model-health'
 import { Route as ApiCronStorageCleanupRouteImport } from './routes/api/cron/storage-cleanup'
 import { Route as ApiCronUsageAndMeterRouteImport } from './routes/api/cron/usage-and-meter'
@@ -339,6 +340,11 @@ const ApiChatStopRoute = ApiChatStopRouteImport.update({
   path: '/api/chat/stop',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronGuestCleanupRoute = ApiCronGuestCleanupRouteImport.update({
+  id: '/api/cron/guest-cleanup',
+  path: '/api/cron/guest-cleanup',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCronModelHealthRoute = ApiCronModelHealthRouteImport.update({
   id: '/api/cron/model-health',
   path: '/api/cron/model-health',
@@ -565,6 +571,7 @@ export interface FileRoutesByFullPath {
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/chat/stop': typeof ApiChatStopRoute
+  '/api/cron/guest-cleanup': typeof ApiCronGuestCleanupRoute
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
   '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
@@ -644,6 +651,7 @@ export interface FileRoutesByTo {
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/chat/stop': typeof ApiChatStopRoute
+  '/api/cron/guest-cleanup': typeof ApiCronGuestCleanupRoute
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
   '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
@@ -726,6 +734,7 @@ export interface FileRoutesById {
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/chat/stop': typeof ApiChatStopRoute
+  '/api/cron/guest-cleanup': typeof ApiCronGuestCleanupRoute
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
   '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
@@ -809,6 +818,7 @@ export interface FileRouteTypes {
     | '/api/attachments/$id'
     | '/api/auth/$'
     | '/api/chat/stop'
+    | '/api/cron/guest-cleanup'
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
     | '/api/cron/usage-and-meter'
@@ -888,6 +898,7 @@ export interface FileRouteTypes {
     | '/api/attachments/$id'
     | '/api/auth/$'
     | '/api/chat/stop'
+    | '/api/cron/guest-cleanup'
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
     | '/api/cron/usage-and-meter'
@@ -969,6 +980,7 @@ export interface FileRouteTypes {
     | '/api/attachments/$id'
     | '/api/auth/$'
     | '/api/chat/stop'
+    | '/api/cron/guest-cleanup'
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
     | '/api/cron/usage-and-meter'
@@ -1027,6 +1039,7 @@ export interface RootRouteChildren {
   ApiAttachmentsIdRoute: typeof ApiAttachmentsIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiChatStopRoute: typeof ApiChatStopRoute
+  ApiCronGuestCleanupRoute: typeof ApiCronGuestCleanupRoute
   ApiCronModelHealthRoute: typeof ApiCronModelHealthRoute
   ApiCronStorageCleanupRoute: typeof ApiCronStorageCleanupRoute
   ApiCronUsageAndMeterRoute: typeof ApiCronUsageAndMeterRoute
@@ -1377,6 +1390,13 @@ declare module '@tanstack/react-router' {
       path: '/api/chat/stop'
       fullPath: '/api/chat/stop'
       preLoaderRoute: typeof ApiChatStopRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/guest-cleanup': {
+      id: '/api/cron/guest-cleanup'
+      path: '/api/cron/guest-cleanup'
+      fullPath: '/api/cron/guest-cleanup'
+      preLoaderRoute: typeof ApiCronGuestCleanupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/cron/model-health': {
@@ -1790,6 +1810,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAttachmentsIdRoute: ApiAttachmentsIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiChatStopRoute: ApiChatStopRoute,
+  ApiCronGuestCleanupRoute: ApiCronGuestCleanupRoute,
   ApiCronModelHealthRoute: ApiCronModelHealthRoute,
   ApiCronStorageCleanupRoute: ApiCronStorageCleanupRoute,
   ApiCronUsageAndMeterRoute: ApiCronUsageAndMeterRoute,

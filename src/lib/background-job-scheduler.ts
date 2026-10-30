@@ -1,4 +1,5 @@
 import * as Sentry from "@sentry/tanstackstart-react";
+import { runGuestCleanupJob } from "@/lib/guest-cleanup-job";
 import { runStorageCleanupJob } from "@/lib/storage-cleanup-job";
 import { getUsageAndMeterNextDueAt, runUsageAndMeterJob } from "@/lib/usage-and-meter-job";
 import {
@@ -169,6 +170,18 @@ export const storageCleanupJob: BackgroundJob = {
   },
 };
 
+/** Deletion of guest accounts no session can sign in to, every hour (first 5 minutes after boot). */
+export const guestCleanupJob: BackgroundJob = {
+  name: "guest-cleanup",
+  firstDelayMs: 5 * 60_000,
+  intervalMs: 60 * 60_000,
+  run: async () => {
+    const result = await runGuestCleanupJob();
+    if (result.healthy) return null;
+    return { guestsFailed: result.failed };
+  },
+};
+
 /**
  * Runs the periodic maintenance jobs in-process on a long-running production
  * server (Docker / Dokploy), so they need no external scheduler or
@@ -180,4 +193,5 @@ export const storageCleanupJob: BackgroundJob = {
 export function startBackgroundJobScheduler() {
   scheduleBackgroundJob(usageAndMeterJob);
   scheduleBackgroundJob(storageCleanupJob);
+  scheduleBackgroundJob(guestCleanupJob);
 }

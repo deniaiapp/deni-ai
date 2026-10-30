@@ -6,6 +6,7 @@ import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/a
 import { deleteSessionCookie } from "better-auth/cookies";
 import { generateRandomString } from "better-auth/crypto";
 import {
+  type AnonymousOptions,
   anonymous,
   captcha,
   haveIBeenPwned,
@@ -28,6 +29,7 @@ import { isEmailConfigured, sendEmail } from "@/lib/email";
 import { readEmailChangeToken } from "@/lib/email-change-token";
 import { deletePersonalStripeCustomers } from "@/lib/account-deletion-billing";
 import { accountDeletionAttachmentHooks } from "@/lib/attachments";
+import { transferGuestData } from "@/lib/guest-data-transfer";
 import { reassignTeamProjectsOnAccountDeletion } from "@/lib/project-access";
 import {
   checkSignupEmail,
@@ -240,6 +242,53 @@ async function challengeSecondFactorAfterMagicLink(ctx: GenericEndpointContext) 
   throw ctx.redirect(challengeURL.toString());
 }
 
+/**
+ * A sign-in method added to a guest leaves the account a guest (placeholder
+ * email, no plan) that the method then signs in to for good. Guests sign up or
+ * sign in instead, which moves their data (`linkGuestAccount`).
+ */
+const GUEST_SIGN_IN_METHOD_PATHS = new Set([
+  "/link-social",
+  "/passkey/generate-register-options",
+  "/passkey/verify-registration",
+  "/two-factor/enable",
+]);
+
+/**
+ * Runs when a browser with a guest session signs up or signs in to an account
+ * (the anonymous plugin's `onLinkAccount`): moves the guest's data to that
+ * account, then deletes the guest. A guest whose data could not be moved is
+ * kept; the guest cleanup job deletes it once its session has ended.
+ */
+async function linkGuestAccount({
+  anonymousUser,
+  newUser,
+  ctx,
+}: Parameters<NonNullable<AnonymousOptions["onLinkAccount"]>>[0]) {
+  const guestId = anonymousUser.user.id;
+  if (newUser.user.id === guestId || newUser.user.isAnonymous) return;
+
+  // A password sign-in to a 2FA account gets this session only until the
+  // two-factor plugin swaps it for the second-factor challenge, so the password
+  // alone must not write into the account. The guest's data is dropped.
+  const awaitsSecondFactor =
+    ctx.path === "/sign-in/email" && Boolean(newUser.user.twoFactorEnabled);
+  if (!awaitsSecondFactor) {
+    try {
+      await transferGuestData(guestId, newUser.user.id);
+    } catch (error) {
+      console.error("Failed to move guest data to the signed-in account", error);
+      return;
+    }
+  }
+
+  try {
+    await ctx.context.internalAdapter.deleteUser(guestId);
+  } catch (error) {
+    console.error("Failed to delete a guest after it signed in to an account", error);
+  }
+}
+
 export const auth = betterAuth({
   appName: "Deni AI",
   database: drizzleAdapter(db, { provider: "pg", schema }),
@@ -258,6 +307,17 @@ export const auth = betterAuth({
             ),
           );
           throw ctx.redirect(`${OAUTH_LOGIN_PATH}?${query.toString()}`);
+        }
+        return;
+      }
+
+      if (GUEST_SIGN_IN_METHOD_PATHS.has(ctx.path)) {
+        const session = await getSessionFromCtx(ctx);
+        if (session?.user.isAnonymous) {
+          throw new APIError("FORBIDDEN", {
+            message: "Guest accounts cannot add sign-in methods. Sign up instead.",
+            code: "GUEST_SIGN_IN_METHOD_NOT_ALLOWED",
+          });
         }
         return;
       }
@@ -428,7 +488,11 @@ export const auth = betterAuth({
       }
     : undefined,
   plugins: [
-    anonymous(),
+    anonymous({
+      // linkGuestAccount deletes the guest itself, once its data has moved.
+      disableDeleteAnonymousUser: true,
+      onLinkAccount: linkGuestAccount,
+    }),
     twoFactor(),
     passkey(),
     haveIBeenPwned(),

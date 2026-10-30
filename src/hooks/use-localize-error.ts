@@ -271,6 +271,10 @@ export function useLocalizeError() {
           t("You're already signed in as a guest"),
           "ANONYMOUS_USERS_CANNOT_SIGN_IN_AGAIN_ANONYMOUSLY",
         ),
+        ...mapKeys(
+          t("Guest accounts cannot add sign-in methods. Sign up instead."),
+          "GUEST_SIGN_IN_METHOD_NOT_ALLOWED",
+        ),
       },
       byMessage: {
         ...mapKeys(
