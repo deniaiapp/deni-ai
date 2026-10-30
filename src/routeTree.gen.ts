@@ -57,15 +57,12 @@ import { Route as ApiAttachmentsIdRouteImport } from './routes/api/attachments/$
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as ApiChatIndexRouteImport } from './routes/api/chat/index'
 import { Route as ApiChatStopRouteImport } from './routes/api/chat/stop'
-import { Route as ApiCronMaxModeMeterEventsRouteImport } from './routes/api/cron/max-mode-meter-events'
 import { Route as ApiCronModelHealthRouteImport } from './routes/api/cron/model-health'
 import { Route as ApiCronStorageCleanupRouteImport } from './routes/api/cron/storage-cleanup'
+import { Route as ApiCronUsageAndMeterRouteImport } from './routes/api/cron/usage-and-meter'
 import { Route as ApiStatusModelsRouteImport } from './routes/api/status/models'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
-import { Route as Char123LocaleChar125BlogIndexRouteImport } from './routes/{-$locale}/blog/index'
-import { Route as Char123LocaleChar125BlogSlugRouteImport } from './routes/{-$locale}/blog/$slug'
-import { Route as Char123LocaleChar125BlogRssDotxmlRouteImport } from './routes/{-$locale}/blog/rss[.]xml'
 import { Route as Char123LocaleChar125GuidesIndexRouteImport } from './routes/{-$locale}/guides/index'
 import { Route as Char123LocaleChar125GuidesFreeAiChatRouteImport } from './routes/{-$locale}/guides/free-ai-chat'
 import { Route as Char123LocaleChar125GuidesModelSelectionRouteImport } from './routes/{-$locale}/guides/model-selection'
@@ -78,9 +75,6 @@ import { Route as Char123LocaleChar125LegalPrivacyPolicyRouteImport } from './ro
 import { Route as Char123LocaleChar125LegalTermsRouteImport } from './routes/{-$locale}/legal/terms'
 import { Route as Char123LocaleChar125LegalTokushoRouteImport } from './routes/{-$locale}/legal/tokusho'
 import { Route as AppSettingsBillingIndexRouteImport } from './routes/_app/settings/billing/index'
-import { Route as AppSettingsBlogIndexRouteImport } from './routes/_app/settings/blog/index'
-import { Route as AppSettingsBlogIdRouteImport } from './routes/_app/settings/blog/$id'
-import { Route as AppSettingsBlogNewRouteImport } from './routes/_app/settings/blog/new'
 import { Route as AppSettingsTeamDashboardRouteRouteImport } from './routes/_app/settings/team/_dashboard/route'
 import { Route as ApiAdsCampaignsIndexRouteImport } from './routes/api/ads/campaigns/index'
 import { Route as ApiAdsCampaignsIdRouteImport } from './routes/api/ads/campaigns/$id'
@@ -345,12 +339,6 @@ const ApiChatStopRoute = ApiChatStopRouteImport.update({
   path: '/api/chat/stop',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCronMaxModeMeterEventsRoute =
-  ApiCronMaxModeMeterEventsRouteImport.update({
-    id: '/api/cron/max-mode-meter-events',
-    path: '/api/cron/max-mode-meter-events',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ApiCronModelHealthRoute = ApiCronModelHealthRouteImport.update({
   id: '/api/cron/model-health',
   path: '/api/cron/model-health',
@@ -359,6 +347,11 @@ const ApiCronModelHealthRoute = ApiCronModelHealthRouteImport.update({
 const ApiCronStorageCleanupRoute = ApiCronStorageCleanupRouteImport.update({
   id: '/api/cron/storage-cleanup',
   path: '/api/cron/storage-cleanup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCronUsageAndMeterRoute = ApiCronUsageAndMeterRouteImport.update({
+  id: '/api/cron/usage-and-meter',
+  path: '/api/cron/usage-and-meter',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiStatusModelsRoute = ApiStatusModelsRouteImport.update({
@@ -376,24 +369,6 @@ const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
   path: '/api/trpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char123LocaleChar125BlogIndexRoute =
-  Char123LocaleChar125BlogIndexRouteImport.update({
-    id: '/blog/',
-    path: '/blog/',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125BlogSlugRoute =
-  Char123LocaleChar125BlogSlugRouteImport.update({
-    id: '/blog/$slug',
-    path: '/blog/$slug',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125BlogRssDotxmlRoute =
-  Char123LocaleChar125BlogRssDotxmlRouteImport.update({
-    id: '/blog/rss.xml',
-    path: '/blog/rss.xml',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
 const Char123LocaleChar125GuidesIndexRoute =
   Char123LocaleChar125GuidesIndexRouteImport.update({
     id: '/guides/',
@@ -463,21 +438,6 @@ const Char123LocaleChar125LegalTokushoRoute =
 const AppSettingsBillingIndexRoute = AppSettingsBillingIndexRouteImport.update({
   id: '/billing/',
   path: '/billing/',
-  getParentRoute: () => AppSettingsRouteRoute,
-} as any)
-const AppSettingsBlogIndexRoute = AppSettingsBlogIndexRouteImport.update({
-  id: '/blog/',
-  path: '/blog/',
-  getParentRoute: () => AppSettingsRouteRoute,
-} as any)
-const AppSettingsBlogIdRoute = AppSettingsBlogIdRouteImport.update({
-  id: '/blog/$id',
-  path: '/blog/$id',
-  getParentRoute: () => AppSettingsRouteRoute,
-} as any)
-const AppSettingsBlogNewRoute = AppSettingsBlogNewRouteImport.update({
-  id: '/blog/new',
-  path: '/blog/new',
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 const AppSettingsTeamDashboardRouteRoute =
@@ -605,14 +565,12 @@ export interface FileRoutesByFullPath {
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/chat/stop': typeof ApiChatStopRoute
-  '/api/cron/max-mode-meter-events': typeof ApiCronMaxModeMeterEventsRoute
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
+  '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
   '/api/status/models': typeof ApiStatusModelsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
-  '/{-$locale}/blog/$slug': typeof Char123LocaleChar125BlogSlugRoute
-  '/{-$locale}/blog/rss.xml': typeof Char123LocaleChar125BlogRssDotxmlRoute
   '/{-$locale}/guides/free-ai-chat': typeof Char123LocaleChar125GuidesFreeAiChatRoute
   '/{-$locale}/guides/model-selection': typeof Char123LocaleChar125GuidesModelSelectionRoute
   '/{-$locale}/guides/multi-model-workflows': typeof Char123LocaleChar125GuidesMultiModelWorkflowsRoute
@@ -628,16 +586,12 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AppSettingsIndexRoute
   '/api/ads/': typeof ApiAdsIndexRoute
   '/api/chat/': typeof ApiChatIndexRoute
-  '/{-$locale}/blog/': typeof Char123LocaleChar125BlogIndexRoute
   '/{-$locale}/guides/': typeof Char123LocaleChar125GuidesIndexRoute
   '/settings/team': typeof AppSettingsTeamDashboardRouteRouteWithChildren
-  '/settings/blog/$id': typeof AppSettingsBlogIdRoute
-  '/settings/blog/new': typeof AppSettingsBlogNewRoute
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
   '/settings/billing/': typeof AppSettingsBillingIndexRoute
-  '/settings/blog/': typeof AppSettingsBlogIndexRoute
   '/api/ads/campaigns/': typeof ApiAdsCampaignsIndexRoute
   '/settings/billing/checkout/$sessionId': typeof AppSettingsBillingCheckoutSessionIdRoute
   '/settings/team/audit-log': typeof AppSettingsTeamDashboardAuditLogRoute
@@ -690,14 +644,12 @@ export interface FileRoutesByTo {
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/chat/stop': typeof ApiChatStopRoute
-  '/api/cron/max-mode-meter-events': typeof ApiCronMaxModeMeterEventsRoute
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
+  '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
   '/api/status/models': typeof ApiStatusModelsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
-  '/{-$locale}/blog/$slug': typeof Char123LocaleChar125BlogSlugRoute
-  '/{-$locale}/blog/rss.xml': typeof Char123LocaleChar125BlogRssDotxmlRoute
   '/{-$locale}/guides/free-ai-chat': typeof Char123LocaleChar125GuidesFreeAiChatRoute
   '/{-$locale}/guides/model-selection': typeof Char123LocaleChar125GuidesModelSelectionRoute
   '/{-$locale}/guides/multi-model-workflows': typeof Char123LocaleChar125GuidesMultiModelWorkflowsRoute
@@ -713,15 +665,11 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsIndexRoute
   '/api/ads': typeof ApiAdsIndexRoute
   '/api/chat': typeof ApiChatIndexRoute
-  '/{-$locale}/blog': typeof Char123LocaleChar125BlogIndexRoute
   '/{-$locale}/guides': typeof Char123LocaleChar125GuidesIndexRoute
-  '/settings/blog/$id': typeof AppSettingsBlogIdRoute
-  '/settings/blog/new': typeof AppSettingsBlogNewRoute
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
   '/settings/billing': typeof AppSettingsBillingIndexRoute
-  '/settings/blog': typeof AppSettingsBlogIndexRoute
   '/api/ads/campaigns': typeof ApiAdsCampaignsIndexRoute
   '/settings/billing/checkout/$sessionId': typeof AppSettingsBillingCheckoutSessionIdRoute
   '/settings/team/audit-log': typeof AppSettingsTeamDashboardAuditLogRoute
@@ -778,14 +726,12 @@ export interface FileRoutesById {
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/api/chat/stop': typeof ApiChatStopRoute
-  '/api/cron/max-mode-meter-events': typeof ApiCronMaxModeMeterEventsRoute
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
+  '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
   '/api/status/models': typeof ApiStatusModelsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
-  '/{-$locale}/blog/$slug': typeof Char123LocaleChar125BlogSlugRoute
-  '/{-$locale}/blog/rss.xml': typeof Char123LocaleChar125BlogRssDotxmlRoute
   '/{-$locale}/guides/free-ai-chat': typeof Char123LocaleChar125GuidesFreeAiChatRoute
   '/{-$locale}/guides/model-selection': typeof Char123LocaleChar125GuidesModelSelectionRoute
   '/{-$locale}/guides/multi-model-workflows': typeof Char123LocaleChar125GuidesMultiModelWorkflowsRoute
@@ -801,16 +747,12 @@ export interface FileRoutesById {
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/api/ads/': typeof ApiAdsIndexRoute
   '/api/chat/': typeof ApiChatIndexRoute
-  '/{-$locale}/blog/': typeof Char123LocaleChar125BlogIndexRoute
   '/{-$locale}/guides/': typeof Char123LocaleChar125GuidesIndexRoute
   '/_app/settings/team/_dashboard': typeof AppSettingsTeamDashboardRouteRouteWithChildren
-  '/_app/settings/blog/$id': typeof AppSettingsBlogIdRoute
-  '/_app/settings/blog/new': typeof AppSettingsBlogNewRoute
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
   '/_app/settings/billing/': typeof AppSettingsBillingIndexRoute
-  '/_app/settings/blog/': typeof AppSettingsBlogIndexRoute
   '/api/ads/campaigns/': typeof ApiAdsCampaignsIndexRoute
   '/_app/settings/billing/checkout/$sessionId': typeof AppSettingsBillingCheckoutSessionIdRoute
   '/_app/settings/team/_dashboard/audit-log': typeof AppSettingsTeamDashboardAuditLogRoute
@@ -867,14 +809,12 @@ export interface FileRouteTypes {
     | '/api/attachments/$id'
     | '/api/auth/$'
     | '/api/chat/stop'
-    | '/api/cron/max-mode-meter-events'
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
+    | '/api/cron/usage-and-meter'
     | '/api/status/models'
     | '/api/stripe/webhook'
     | '/api/trpc/$'
-    | '/{-$locale}/blog/$slug'
-    | '/{-$locale}/blog/rss.xml'
     | '/{-$locale}/guides/free-ai-chat'
     | '/{-$locale}/guides/model-selection'
     | '/{-$locale}/guides/multi-model-workflows'
@@ -890,16 +830,12 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/ads/'
     | '/api/chat/'
-    | '/{-$locale}/blog/'
     | '/{-$locale}/guides/'
     | '/settings/team'
-    | '/settings/blog/$id'
-    | '/settings/blog/new'
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
     | '/api/integrations/deni-run/usage'
     | '/settings/billing/'
-    | '/settings/blog/'
     | '/api/ads/campaigns/'
     | '/settings/billing/checkout/$sessionId'
     | '/settings/team/audit-log'
@@ -952,14 +888,12 @@ export interface FileRouteTypes {
     | '/api/attachments/$id'
     | '/api/auth/$'
     | '/api/chat/stop'
-    | '/api/cron/max-mode-meter-events'
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
+    | '/api/cron/usage-and-meter'
     | '/api/status/models'
     | '/api/stripe/webhook'
     | '/api/trpc/$'
-    | '/{-$locale}/blog/$slug'
-    | '/{-$locale}/blog/rss.xml'
     | '/{-$locale}/guides/free-ai-chat'
     | '/{-$locale}/guides/model-selection'
     | '/{-$locale}/guides/multi-model-workflows'
@@ -975,15 +909,11 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/ads'
     | '/api/chat'
-    | '/{-$locale}/blog'
     | '/{-$locale}/guides'
-    | '/settings/blog/$id'
-    | '/settings/blog/new'
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
     | '/api/integrations/deni-run/usage'
     | '/settings/billing'
-    | '/settings/blog'
     | '/api/ads/campaigns'
     | '/settings/billing/checkout/$sessionId'
     | '/settings/team/audit-log'
@@ -1039,14 +969,12 @@ export interface FileRouteTypes {
     | '/api/attachments/$id'
     | '/api/auth/$'
     | '/api/chat/stop'
-    | '/api/cron/max-mode-meter-events'
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
+    | '/api/cron/usage-and-meter'
     | '/api/status/models'
     | '/api/stripe/webhook'
     | '/api/trpc/$'
-    | '/{-$locale}/blog/$slug'
-    | '/{-$locale}/blog/rss.xml'
     | '/{-$locale}/guides/free-ai-chat'
     | '/{-$locale}/guides/model-selection'
     | '/{-$locale}/guides/multi-model-workflows'
@@ -1062,16 +990,12 @@ export interface FileRouteTypes {
     | '/_app/settings/'
     | '/api/ads/'
     | '/api/chat/'
-    | '/{-$locale}/blog/'
     | '/{-$locale}/guides/'
     | '/_app/settings/team/_dashboard'
-    | '/_app/settings/blog/$id'
-    | '/_app/settings/blog/new'
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
     | '/api/integrations/deni-run/usage'
     | '/_app/settings/billing/'
-    | '/_app/settings/blog/'
     | '/api/ads/campaigns/'
     | '/_app/settings/billing/checkout/$sessionId'
     | '/_app/settings/team/_dashboard/audit-log'
@@ -1103,9 +1027,9 @@ export interface RootRouteChildren {
   ApiAttachmentsIdRoute: typeof ApiAttachmentsIdRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiChatStopRoute: typeof ApiChatStopRoute
-  ApiCronMaxModeMeterEventsRoute: typeof ApiCronMaxModeMeterEventsRoute
   ApiCronModelHealthRoute: typeof ApiCronModelHealthRoute
   ApiCronStorageCleanupRoute: typeof ApiCronStorageCleanupRoute
+  ApiCronUsageAndMeterRoute: typeof ApiCronUsageAndMeterRoute
   ApiStatusModelsRoute: typeof ApiStatusModelsRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
@@ -1455,13 +1379,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiChatStopRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/cron/max-mode-meter-events': {
-      id: '/api/cron/max-mode-meter-events'
-      path: '/api/cron/max-mode-meter-events'
-      fullPath: '/api/cron/max-mode-meter-events'
-      preLoaderRoute: typeof ApiCronMaxModeMeterEventsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/api/cron/model-health': {
       id: '/api/cron/model-health'
       path: '/api/cron/model-health'
@@ -1474,6 +1391,13 @@ declare module '@tanstack/react-router' {
       path: '/api/cron/storage-cleanup'
       fullPath: '/api/cron/storage-cleanup'
       preLoaderRoute: typeof ApiCronStorageCleanupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/cron/usage-and-meter': {
+      id: '/api/cron/usage-and-meter'
+      path: '/api/cron/usage-and-meter'
+      fullPath: '/api/cron/usage-and-meter'
+      preLoaderRoute: typeof ApiCronUsageAndMeterRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/status/models': {
@@ -1496,27 +1420,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/trpc/$'
       preLoaderRoute: typeof ApiTrpcSplatRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/{-$locale}/blog/': {
-      id: '/{-$locale}/blog/'
-      path: '/blog'
-      fullPath: '/{-$locale}/blog/'
-      preLoaderRoute: typeof Char123LocaleChar125BlogIndexRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/blog/$slug': {
-      id: '/{-$locale}/blog/$slug'
-      path: '/blog/$slug'
-      fullPath: '/{-$locale}/blog/$slug'
-      preLoaderRoute: typeof Char123LocaleChar125BlogSlugRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/blog/rss.xml': {
-      id: '/{-$locale}/blog/rss.xml'
-      path: '/blog/rss.xml'
-      fullPath: '/{-$locale}/blog/rss.xml'
-      preLoaderRoute: typeof Char123LocaleChar125BlogRssDotxmlRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
     }
     '/{-$locale}/guides/': {
       id: '/{-$locale}/guides/'
@@ -1600,27 +1503,6 @@ declare module '@tanstack/react-router' {
       path: '/billing'
       fullPath: '/settings/billing/'
       preLoaderRoute: typeof AppSettingsBillingIndexRouteImport
-      parentRoute: typeof AppSettingsRouteRoute
-    }
-    '/_app/settings/blog/': {
-      id: '/_app/settings/blog/'
-      path: '/blog'
-      fullPath: '/settings/blog/'
-      preLoaderRoute: typeof AppSettingsBlogIndexRouteImport
-      parentRoute: typeof AppSettingsRouteRoute
-    }
-    '/_app/settings/blog/$id': {
-      id: '/_app/settings/blog/$id'
-      path: '/blog/$id'
-      fullPath: '/settings/blog/$id'
-      preLoaderRoute: typeof AppSettingsBlogIdRouteImport
-      parentRoute: typeof AppSettingsRouteRoute
-    }
-    '/_app/settings/blog/new': {
-      id: '/_app/settings/blog/new'
-      path: '/blog/new'
-      fullPath: '/settings/blog/new'
-      preLoaderRoute: typeof AppSettingsBlogNewRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
     '/_app/settings/team/_dashboard': {
@@ -1756,10 +1638,7 @@ interface AppSettingsRouteRouteChildren {
   AppSettingsProjectsRoute: typeof AppSettingsProjectsRoute
   AppSettingsIndexRoute: typeof AppSettingsIndexRoute
   AppSettingsTeamDashboardRouteRoute: typeof AppSettingsTeamDashboardRouteRouteWithChildren
-  AppSettingsBlogIdRoute: typeof AppSettingsBlogIdRoute
-  AppSettingsBlogNewRoute: typeof AppSettingsBlogNewRoute
   AppSettingsBillingIndexRoute: typeof AppSettingsBillingIndexRoute
-  AppSettingsBlogIndexRoute: typeof AppSettingsBlogIndexRoute
   AppSettingsBillingCheckoutSessionIdRoute: typeof AppSettingsBillingCheckoutSessionIdRoute
   AppSettingsTeamCheckoutSessionIdRoute: typeof AppSettingsTeamCheckoutSessionIdRoute
   AppSettingsBillingCheckoutIndexRoute: typeof AppSettingsBillingCheckoutIndexRoute
@@ -1776,10 +1655,7 @@ const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsIndexRoute: AppSettingsIndexRoute,
   AppSettingsTeamDashboardRouteRoute:
     AppSettingsTeamDashboardRouteRouteWithChildren,
-  AppSettingsBlogIdRoute: AppSettingsBlogIdRoute,
-  AppSettingsBlogNewRoute: AppSettingsBlogNewRoute,
   AppSettingsBillingIndexRoute: AppSettingsBillingIndexRoute,
-  AppSettingsBlogIndexRoute: AppSettingsBlogIndexRoute,
   AppSettingsBillingCheckoutSessionIdRoute:
     AppSettingsBillingCheckoutSessionIdRoute,
   AppSettingsTeamCheckoutSessionIdRoute: AppSettingsTeamCheckoutSessionIdRoute,
@@ -1843,8 +1719,6 @@ interface Char123LocaleChar125RouteRouteChildren {
   Char123LocaleChar125ModelsRoute: typeof Char123LocaleChar125ModelsRoute
   Char123LocaleChar125UseCasesRoute: typeof Char123LocaleChar125UseCasesRoute
   Char123LocaleChar125IndexRoute: typeof Char123LocaleChar125IndexRoute
-  Char123LocaleChar125BlogSlugRoute: typeof Char123LocaleChar125BlogSlugRoute
-  Char123LocaleChar125BlogRssDotxmlRoute: typeof Char123LocaleChar125BlogRssDotxmlRoute
   Char123LocaleChar125GuidesFreeAiChatRoute: typeof Char123LocaleChar125GuidesFreeAiChatRoute
   Char123LocaleChar125GuidesModelSelectionRoute: typeof Char123LocaleChar125GuidesModelSelectionRoute
   Char123LocaleChar125GuidesMultiModelWorkflowsRoute: typeof Char123LocaleChar125GuidesMultiModelWorkflowsRoute
@@ -1855,7 +1729,6 @@ interface Char123LocaleChar125RouteRouteChildren {
   Char123LocaleChar125LegalPrivacyPolicyRoute: typeof Char123LocaleChar125LegalPrivacyPolicyRoute
   Char123LocaleChar125LegalTermsRoute: typeof Char123LocaleChar125LegalTermsRoute
   Char123LocaleChar125LegalTokushoRoute: typeof Char123LocaleChar125LegalTokushoRoute
-  Char123LocaleChar125BlogIndexRoute: typeof Char123LocaleChar125BlogIndexRoute
   Char123LocaleChar125GuidesIndexRoute: typeof Char123LocaleChar125GuidesIndexRoute
 }
 
@@ -1871,9 +1744,6 @@ const Char123LocaleChar125RouteRouteChildren: Char123LocaleChar125RouteRouteChil
     Char123LocaleChar125ModelsRoute: Char123LocaleChar125ModelsRoute,
     Char123LocaleChar125UseCasesRoute: Char123LocaleChar125UseCasesRoute,
     Char123LocaleChar125IndexRoute: Char123LocaleChar125IndexRoute,
-    Char123LocaleChar125BlogSlugRoute: Char123LocaleChar125BlogSlugRoute,
-    Char123LocaleChar125BlogRssDotxmlRoute:
-      Char123LocaleChar125BlogRssDotxmlRoute,
     Char123LocaleChar125GuidesFreeAiChatRoute:
       Char123LocaleChar125GuidesFreeAiChatRoute,
     Char123LocaleChar125GuidesModelSelectionRoute:
@@ -1893,7 +1763,6 @@ const Char123LocaleChar125RouteRouteChildren: Char123LocaleChar125RouteRouteChil
     Char123LocaleChar125LegalTermsRoute: Char123LocaleChar125LegalTermsRoute,
     Char123LocaleChar125LegalTokushoRoute:
       Char123LocaleChar125LegalTokushoRoute,
-    Char123LocaleChar125BlogIndexRoute: Char123LocaleChar125BlogIndexRoute,
     Char123LocaleChar125GuidesIndexRoute: Char123LocaleChar125GuidesIndexRoute,
   }
 
@@ -1921,9 +1790,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAttachmentsIdRoute: ApiAttachmentsIdRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiChatStopRoute: ApiChatStopRoute,
-  ApiCronMaxModeMeterEventsRoute: ApiCronMaxModeMeterEventsRoute,
   ApiCronModelHealthRoute: ApiCronModelHealthRoute,
   ApiCronStorageCleanupRoute: ApiCronStorageCleanupRoute,
+  ApiCronUsageAndMeterRoute: ApiCronUsageAndMeterRoute,
   ApiStatusModelsRoute: ApiStatusModelsRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,

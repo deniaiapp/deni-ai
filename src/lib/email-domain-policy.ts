@@ -25,17 +25,6 @@
 /** Google consumer mail — email/password and magic-link sign-up forbidden. */
 export const GOOGLE_MAIL_DOMAINS: ReadonlySet<string> = new Set(["gmail.com", "googlemail.com"]);
 
-/** Microsoft free consumer mail — alias-like local parts rejected. */
-export const MICROSOFT_MAIL_DOMAINS: ReadonlySet<string> = new Set([
-  "outlook.com",
-  "outlook.jp",
-  "hotmail.com",
-  "hotmail.co.jp",
-  "live.com",
-  "live.jp",
-  "msn.com",
-]);
-
 /** Exact domains allowed for email/password and magic-link sign-up. */
 export const ALLOWED_EMAIL_PROVIDERS: ReadonlySet<string> = new Set([
   // Microsoft (primary address only — see alias checks)
@@ -198,10 +187,6 @@ export function isAllowedEducationalDomain(domain: string): boolean {
 
 export function isGoogleMailDomain(domain: string): boolean {
   return GOOGLE_MAIL_DOMAINS.has(domain.toLowerCase());
-}
-
-export function isMicrosoftMailDomain(domain: string): boolean {
-  return MICROSOFT_MAIL_DOMAINS.has(domain.toLowerCase());
 }
 
 export function isAllowedEmailProviderDomain(domain: string): boolean {

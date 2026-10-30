@@ -10,13 +10,9 @@ export function parseAdminEmails(value: string | undefined) {
   );
 }
 
-/**
- * Operator allowlist (reset-credit grants, dispute alerts, blog fallback).
- * `AFFILIATE_ADMIN_EMAILS` is the name from before the affiliate program was
- * removed; it is still read so existing deployments keep their admins.
- */
+/** Operator allowlist (reset-credit grants, dispute alerts). */
 export function getAdminEmails() {
-  return parseAdminEmails(env.ADMIN_EMAILS ?? env.AFFILIATE_ADMIN_EMAILS);
+  return parseAdminEmails(env.ADMIN_EMAILS);
 }
 
 /** Operator email domains: their accounts may sign up and administer like `ADMIN_EMAILS`. */

@@ -306,16 +306,8 @@ export function useLocalizeError() {
           t("An active team subscription is required to manage Max Mode."),
           "An active team subscription is required to manage Max Mode.",
         ),
-        ...mapKeys(
-          t("Another post already uses that slug."),
-          "Another post already uses that slug.",
-        ),
         ...mapKeys(t("API key not found."), "API key not found."),
         ...mapKeys(t("Billing is disabled."), "Billing is disabled."),
-        ...mapKeys(
-          t("Blog administration is not enabled for this account."),
-          "Blog administration is not enabled for this account.",
-        ),
         ...mapKeys(t("Both conversations need an answer."), "Both conversations need an answer."),
         ...mapKeys(
           t("Cancel your subscription before buying a one-time plan."),

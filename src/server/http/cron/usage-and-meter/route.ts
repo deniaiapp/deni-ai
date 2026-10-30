@@ -4,8 +4,7 @@ import { runUsageAndMeterJob } from "@/lib/usage-and-meter-job";
 
 /**
  * Manual or external trigger of the usage recovery job that a production server
- * already runs in-process when work is due (see SETUP.md). The path predates
- * prepaid Max Mode credits and is kept for existing schedulers.
+ * already runs in-process when work is due (see SETUP.md).
  */
 export async function GET(request: Request) {
   if (!env.CRON_SECRET)

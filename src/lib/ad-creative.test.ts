@@ -1,10 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
-import {
-  adCreativeSchema,
-  adTargetLanguagesSchema,
-  submittedAdCreativeSchema,
-} from "./ad-creative";
+import { adCreativeSchema, adTargetLanguagesSchema, hasOnlyOppositeVariant } from "./ad-creative";
+
+// The campaign create and edit routes refine their schemas the same way.
+const submittedAdCreativeSchema = adCreativeSchema.refine(hasOnlyOppositeVariant);
 
 const creative = {
   title: "Sample ad",

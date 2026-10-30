@@ -312,7 +312,7 @@ function AboutPage() {
           </h2>
           <p>
             {t(
-              "Beyond the chat product, Deni AI publishes a dated blog and original guides on model selection, answer verification, multi-model workflows, study practice, prompt patterns, and privacy habits. These pages are written for visitors who want useful methods, not only a signup funnel.",
+              "Beyond the chat product, Deni AI publishes original guides on model selection, answer verification, multi-model workflows, study practice, prompt patterns, and privacy habits. These pages are written for visitors who want useful methods, not only a signup funnel.",
             )}
           </p>
           <p>

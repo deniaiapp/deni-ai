@@ -108,8 +108,3 @@ export function getPlanTier(
 
   return planIdToTier.get(planId as BillingPlanId) ?? null;
 }
-
-export function isProOrHigherTier(planId: string | null | undefined): boolean {
-  const tier = getPlanTier(planId);
-  return tier === "pro" || tier === "team";
-}

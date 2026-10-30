@@ -22,7 +22,7 @@ Deni AI is a multi-model AI chat app for people who want strong model choice wit
 - **History APIs** — security and team audit logs use `{ createdAt, id }` cursors to preserve events with identical timestamps. Pass `nextCursor` unchanged when requesting another page.
 - **Ads** — Chat Home shows a Deni AI Ads placement below the composer only for confirmed Free users (including anonymous guests). Paid users and users whose plan is still loading do not request ads.
 - **i18n** — English and Japanese (`use-intl`; public pages under `/ja/*`)
-- **Public guides & blog** — original articles on model choice, verification, and practical AI use, available without an account
+- **Public guides** — original articles on model choice, verification, and practical AI use, available without an account
 - **PWA** — installable progressive web app assets and service worker
 
 ## Tech stack

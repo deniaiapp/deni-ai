@@ -16,7 +16,6 @@ const Footer = () => {
   ];
 
   const resourceLinks = [
-    { href: "/blog", label: t("Blog") },
     { href: "/guides", label: t("AI Guides") },
     { href: "/use-cases", label: t("Use Cases") },
     { href: "/faq", label: t("FAQ") },

@@ -1,7 +1,6 @@
 import { HOME_ALTERNATE_NAMES } from "@/lib/seo";
 import { useExtracted } from "use-intl";
 import { ClientHome } from "./home-client";
-import { HomeFeaturedBadge, type HomeFeaturedPost } from "./home-featured-badge";
 
 function HomeJsonLd() {
   const t = useExtracted();
@@ -84,7 +83,7 @@ function HomeJsonLd() {
           acceptedAnswer: {
             "@type": "Answer",
             text: t(
-              "The Blog and AI Guides cover model selection, answer verification, bilingual writing, when not to use AI, and practical multi-model habits.",
+              "The AI Guides cover model selection, answer verification, bilingual writing, when not to use AI, and practical multi-model habits.",
             ),
           },
         },
@@ -100,11 +99,11 @@ function HomeJsonLd() {
   );
 }
 
-export function HomePage({ featuredPost }: { featuredPost: HomeFeaturedPost | null }) {
+export function HomePage() {
   return (
     <>
       <HomeJsonLd />
-      <ClientHome featuredBadge={<HomeFeaturedBadge post={featuredPost} />} />
+      <ClientHome />
     </>
   );
 }

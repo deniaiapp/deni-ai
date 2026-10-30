@@ -52,7 +52,7 @@ function ContactPage() {
       icon: MessagesSquare,
       title: t("Self-serve answers"),
       body: t(
-        "Many product questions are already answered in the FAQ, Blog, AI Guides, Use Cases, Terms, and Privacy Policy. Start there if you need an immediate explanation.",
+        "Many product questions are already answered in the FAQ, AI Guides, Use Cases, Terms, and Privacy Policy. Start there if you need an immediate explanation.",
       ),
       detail: t("Browse FAQ and guides"),
       href: "/faq",

@@ -17,7 +17,6 @@ export const publicPages: PublicPage[] = [
   { path: "/contact", changeFrequency: "monthly", priority: 0.7 },
   { path: "/faq", changeFrequency: "monthly", priority: 0.85 },
   { path: "/use-cases", changeFrequency: "monthly", priority: 0.8 },
-  { path: "/blog", changeFrequency: "weekly", priority: 0.9 },
   { path: "/guides", changeFrequency: "weekly", priority: 0.9 },
   { path: "/guides/model-selection", changeFrequency: "monthly", priority: 0.85 },
   { path: "/guides/verify-ai-answers", changeFrequency: "monthly", priority: 0.85 },

@@ -122,33 +122,6 @@ export function isBlockedHostnameLiteral(hostname: string) {
   );
 }
 
-export async function normalizePublicBaseUrl(url: string) {
-  const trimmed = url.trim().replace(/\/$/, "");
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    const parsed = new URL(trimmed);
-
-    if (parsed.protocol !== "https:" && parsed.protocol !== "http:") {
-      return null;
-    }
-
-    if (parsed.username || parsed.password) {
-      return null;
-    }
-
-    if (await resolvesToPrivateNetwork(parsed.hostname)) {
-      return null;
-    }
-
-    return parsed.toString().replace(/\/$/, "");
-  } catch {
-    return null;
-  }
-}
-
 export async function resolvesToPrivateNetwork(hostname: string) {
   if (isBlockedHostnameLiteral(hostname)) {
     return true;

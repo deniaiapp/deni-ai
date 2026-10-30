@@ -47,5 +47,3 @@ export function hasOnlyOppositeVariant(input: z.infer<typeof adCreativeSchema>) 
       : input.englishVariant === null)
   );
 }
-
-export const submittedAdCreativeSchema = adCreativeSchema.refine(hasOnlyOppositeVariant);

@@ -1,7 +1,6 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import { homeHead } from "@/components/home/home-head";
 import { HomePage } from "@/components/home/home-page";
-import { getFeaturedBlogPostFn } from "@/lib/blog/blog-functions";
 
 /**
  * `/` sends visitors to `/home` (document requests are redirected earlier by the
@@ -13,11 +12,10 @@ export const Route = createFileRoute("/{-$locale}/")({
       throw redirect({ href: "/home" });
     }
   },
-  loader: ({ context }) => getFeaturedBlogPostFn({ data: { locale: context.intl.locale } }),
   head: ({ match }) => homeHead(match.context.intl.locale),
   component: LocaleHomeRoute,
 });
 
 function LocaleHomeRoute() {
-  return <HomePage featuredPost={Route.useLoaderData()} />;
+  return <HomePage />;
 }

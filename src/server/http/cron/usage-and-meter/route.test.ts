@@ -17,7 +17,7 @@ beforeEach(() => {
   state.recovery.mockReset().mockResolvedValue({ recovered: 0, recoveryFailed: 0 });
 });
 const request = (authorization?: string) =>
-  new Request("http://localhost/api/cron/max-mode-meter-events", {
+  new Request("http://localhost/api/cron/usage-and-meter", {
     headers: authorization ? { authorization } : {},
   });
 
