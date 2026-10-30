@@ -2007,7 +2007,7 @@ router.post(
         });
       }
 
-      // Use OpenRouter SDK for OpenRouter models
+      // Call OpenRouter Chat Completions directly for OpenRouter models
       if (clientResult.type === "openrouter") {
         const providerName = clientResult.providerName;
         const normalizedToolChoice = normalizeOpenRouterToolChoice(

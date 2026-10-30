@@ -342,14 +342,6 @@ export function rewriteReservedCollaborationTools(
   return { tools: next, rewritten };
 }
 
-/** Backwards-compatible name for callers that previously stripped tools. */
-export function stripReservedCollaborationTools(
-  tools: unknown[] | undefined,
-  _model?: string,
-): unknown[] | undefined {
-  return rewriteReservedCollaborationTools(tools).tools;
-}
-
 export function rewriteToolChoiceCollaborationName(toolChoice: unknown): {
   toolChoice: unknown;
   rewritten: boolean;
@@ -386,13 +378,6 @@ export function rewriteToolChoiceCollaborationName(toolChoice: unknown): {
   }
 
   return { toolChoice, rewritten: false };
-}
-
-export function sanitizeToolChoiceForReservedCollaboration(
-  toolChoice: unknown,
-  _model?: string,
-): unknown {
-  return rewriteToolChoiceCollaborationName(toolChoice).toolChoice;
 }
 
 function isFunctionCallLikeType(type: unknown): boolean {

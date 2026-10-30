@@ -3,7 +3,6 @@ import type {
   ChatCompletionTool,
   ChatCompletionToolChoiceOption,
 } from "openai/resources/chat/completions";
-import type { OpenRouter } from "@openrouter/sdk";
 import type OpenAI from "openai";
 
 export type ReasoningEffort =
@@ -113,7 +112,7 @@ export interface ResponsesCompactRequest {
 }
 
 export type ClientResult =
-  | { type: "openrouter"; client: OpenRouter; providerName: string }
+  | { type: "openrouter"; providerName: string }
   | { type: "openai"; client: OpenAI; providerName: string }
   | { type: "deni"; client: OpenAI; providerName: string }
   | { error: string };

@@ -1,13 +1,5 @@
-import { OpenRouter } from '@openrouter/sdk';
 import OpenAI from 'openai';
 import type { ClientResult } from './types';
-
-// OpenRouter SDK client
-export const openrouterClient = new OpenRouter({
-  apiKey: process.env.OPENROUTER_API_KEY || '',
-  httpReferer: "https://flixa.deniai.app",
-  appTitle: "Deni AI Flixa"
-});
 
 // Voids.top (OpenAI compatible) client
 export const voidsClient = new OpenAI({
@@ -56,10 +48,10 @@ export function getClient(model: string): ClientResult {
   // Other models with a slash (e.g. "anthropic/claude-3.5-sonnet") go through OpenRouter
   if (isOpenRouterRoutedModel(model)) {
     if (!process.env.OPENROUTER_API_KEY) {
-
       return { error: 'OPENROUTER_API_KEY is required for OpenRouter models' };
     }
-    return { type: 'openrouter', client: openrouterClient, providerName: 'openrouter' };
+    // OpenRouter is called with fetch directly, so no SDK client is needed.
+    return { type: 'openrouter', providerName: 'openrouter' };
   }
 
   return { type: 'openai', client: voidsClient, providerName: 'voids.top' };

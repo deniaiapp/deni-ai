@@ -38,10 +38,6 @@ const USAGE_WEIGHTS: UsageWeights = {
   output: getWeight("FLIXA_USAGE_WEIGHT_OUTPUT", 5),
 };
 
-export function getUsageWeights(): UsageWeights {
-  return USAGE_WEIGHTS;
-}
-
 function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }

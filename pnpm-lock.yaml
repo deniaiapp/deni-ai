@@ -172,9 +172,6 @@ importers:
       '@hono/node-server':
         specifier: ^2.1.5
         version: 2.1.5(hono@4.13.14)
-      '@openrouter/sdk':
-        specifier: ^1.5.7
-        version: 1.5.7
       drizzle-orm:
         specifier: ^0.45.4
         version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@electric-sql/pglite@0.5.11)(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(pg@8.23.1)
@@ -925,9 +922,6 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
-
-  '@openrouter/sdk@1.5.7':
-    resolution: {integrity: sha512-vEbQCfRYNTewy02sP3nHk/bbiTZiArykfVsyskvb3Tebs6rBMqBsHewu67GEFjjPdcVMF46wrgOMDGWVx4t8Nw==}
 
   '@opentelemetry/api@1.10.0':
     resolution: {integrity: sha512-lMkyes8iHrG+mk6WH7X70MdCLI2RS0FwNBY1PyQ8UemaijE2m5mv5A0Niy3HtbYTFrgkUEQjFMXmSAk2hQDuPQ==}
@@ -2098,10 +2092,6 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.6.0
 
-  '@openrouter/sdk@1.5.7':
-    dependencies:
-      zod: 4.6.7
-
   '@opentelemetry/api@1.10.0': {}
 
   '@oxfmt/binding-android-arm-eabi@0.74.0':
@@ -2686,4 +2676,5 @@ snapshots:
       cookie: 1.1.1
       youch-core: 0.3.3
 
-  zod@4.6.7: {}
+  zod@4.6.7:
+    optional: true

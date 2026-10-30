@@ -63,31 +63,12 @@ const OPENAI_GPT_5_6_EFFORTS: ReasoningEffort[] = [
   "xhigh",
   "max",
 ];
-const OPENAI_GPT_5_EFFORTS: ReasoningEffort[] = [
-  "none",
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-];
-const OPENAI_CODEX_EFFORTS: ReasoningEffort[] = [
-  "low",
-  "medium",
-  "high",
-  "xhigh",
-];
 
 const ANTHROPIC_FABLE_OPUS_EFFORTS: ReasoningEffort[] = [
   "low",
   "medium",
   "high",
   "xhigh",
-  "max",
-];
-const ANTHROPIC_STANDARD_EFFORTS: ReasoningEffort[] = [
-  "low",
-  "medium",
-  "high",
   "max",
 ];
 const ANTHROPIC_SONNET_5_5_EFFORTS: ReasoningEffort[] = [
@@ -104,13 +85,7 @@ const ANTHROPIC_HAIKU_5_5_EFFORTS: ReasoningEffort[] = [
   "xhigh",
   "max",
 ];
-const ANTHROPIC_NO_EFFORTS: ReasoningEffort[] = [];
 
-const GOOGLE_GEMINI_PRO_EFFORTS: ReasoningEffort[] = [
-  "low",
-  "medium",
-  "high",
-];
 const GOOGLE_GEMINI_3_8_FLASH_EFFORTS: ReasoningEffort[] = [
   "low",
   "medium",
@@ -298,10 +273,8 @@ export const MODEL_DEFINITIONS: ModelDefinition[] = [
 ];
 
 export const DEFAULT_MODEL = "openai/gpt-6-luna";
-export const AVAILABLE_MODELS = MODEL_DEFINITIONS.map((model) => model.id);
 /** Usage tier of models that are not registered (Tier 3, 2x). */
 export const DEFAULT_USAGE_TIER: UsageTier = 3;
-export const DEFAULT_TOKEN_USAGE_MULTIPLIER = getUsageTierMultiplier(DEFAULT_USAGE_TIER);
 
 /** Model definitions as exposed to clients; flags the default model. */
 /** Premium models: Tier 5 and above. */
@@ -492,12 +465,6 @@ export const ANTHROPIC_MODEL_DEFINITIONS: AnthropicModelDefinition[] = [
   },
 ];
 
-export function getModelLabel(modelId: string): string {
-  const resolvedModelId = resolveAvailableModelId(modelId);
-  const def = MODEL_DEFINITIONS.find((m) => m.id === resolvedModelId);
-  return def ? def.label : modelId;
-}
-
 export function getModelDefinition(
   modelId: string,
 ): ModelDefinition | undefined {
@@ -619,12 +586,4 @@ export function getEffectiveTokenUsageMultiplier(
     return base;
   }
   return base * getLongContextUsageMultiplier(modelId, usage);
-}
-
-export function getModelTierRequirement(
-  model: string,
-): "free" | "plus" | "pro" | "max" {
-  const resolvedModel = resolveAvailableModelId(model);
-  const def = MODEL_DEFINITIONS.find((m) => m.id === resolvedModel);
-  return def ? def.tier : "free";
 }

@@ -35,7 +35,6 @@
   "dependencies": {
     "@anthropic-ai/sdk": "^0.137.0",
     "@hono/node-server": "^2.1.5",
-    "@openrouter/sdk": "^1.5.7",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.14",
     "openai": "^7.43.0",

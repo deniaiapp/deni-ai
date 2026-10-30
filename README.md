@@ -358,25 +358,3 @@ flixa-backend/
 │   └── errorHandler.ts        # Error handling
 └── package.json
 ```
-
-## SDK (Local Client)
-
-This repo includes a lightweight client in `utils/flixa-sdk.ts`.
-
-```ts
-import { FlixaClient } from './utils/flixa-sdk';
-
-const client = new FlixaClient({ baseUrl: 'http://localhost:3000' });
-
-const result = await client.createChatCompletion({
-  model: 'openai/gpt-4',
-  messages: [{ role: 'user', content: 'Hello!' }],
-  temperature: 0.7
-});
-
-const streamResponse = await client.streamChatCompletion({
-  model: 'openai/gpt-4',
-  messages: [{ role: 'user', content: 'Stream me' }],
-  stream: true
-});
-```

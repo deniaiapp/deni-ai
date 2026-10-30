@@ -210,10 +210,6 @@ adminRulesRouter.get("/rules", (c) => {
 });
 
 function renderRulesPage(): string {
-  const opOptions = MATCH_OPS.map(
-    (op) => `<option value="${op}">${op}</option>`,
-  ).join("");
-
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
