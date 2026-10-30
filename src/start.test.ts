@@ -3,11 +3,11 @@ import { beforeEach, describe, expect, test, vi } from "vitest";
 const state = vi.hoisted(() => ({
   createChatFromRequest: vi.fn<(headers: Headers) => Promise<string>>(),
 }));
-vi.mock("../src/server/chat-manager", () => ({
+vi.mock("@/server/chat-manager", () => ({
   createChatFromRequest: state.createChatFromRequest,
 }));
 
-const { localeAndAuthRedirects } = await import("../src/start");
+const { localeAndAuthRedirects } = await import("@/start");
 
 const SESSION = { cookie: "better-auth.session_token=token" };
 /** What `next()` resolves to: the request continued to route matching. */
@@ -124,7 +124,7 @@ describe("/new/$message", () => {
   const navigation = { "sec-fetch-dest": "document", "sec-fetch-mode": "navigate" };
 
   async function get(url: string, headers: Record<string, string>) {
-    const { Route } = await import("../src/routes/new/$message");
+    const { Route } = await import("@/routes/new/$message");
     const handlers = Route.options.server?.handlers as unknown as {
       GET: (ctx: { request: Request; params: { message: string } }) => Promise<Response>;
     };
@@ -152,7 +152,7 @@ describe("/new/$message", () => {
     expect(state.createChatFromRequest).toHaveBeenCalledTimes(1);
   });
 
-  test.each([
+  test.each<Record<string, string>>([
     { "sec-fetch-dest": "image", "sec-fetch-mode": "no-cors" },
     { "sec-fetch-dest": "iframe", "sec-fetch-mode": "navigate" },
     { "sec-fetch-dest": "empty", "sec-fetch-mode": "cors", rsc: "1" },

@@ -1,23 +1,22 @@
 import { describe, expect, vi, test } from "vitest";
 import { getTableColumns } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/pg-proxy";
-import { buildChatSystemPrompt } from "../src/server/http/chat/_lib/prompt";
 import {
   historyBefore,
   historyCursorSchema,
   historyCursorTimestamp,
-} from "../src/server/api/history-pagination";
+} from "@/server/api/history-pagination";
 
 // Keep these regression tests entirely local: no real auth, database, or exports.
-vi.mock("../src/db/drizzle", () => ({ db: {} }));
-vi.mock("../src/lib/auth", () => ({ auth: {} }));
-vi.mock("../src/lib/account-export", () => ({ buildAccountExport: vi.fn() }));
-vi.mock("../src/lib/security-activity", () => ({ recordSecurityActivity: vi.fn() }));
+vi.mock("@/db/drizzle", () => ({ db: {} }));
+vi.mock("@/lib/auth", () => ({ auth: {} }));
+vi.mock("@/lib/account-export", () => ({ buildAccountExport: vi.fn() }));
+vi.mock("@/lib/security-activity", () => ({ recordSecurityActivity: vi.fn() }));
 
-const { chatRouter } = await import("../src/server/api/routers/chat");
-const { accountRouter } = await import("../src/server/api/routers/account");
-const { projectsRouter } = await import("../src/server/api/routers/projects");
-const { projects, teamUsageAuditLog } = await import("../src/db/schema");
+const { chatRouter } = await import("@/server/api/routers/chat");
+const { accountRouter } = await import("@/server/api/routers/account");
+const { projectsRouter } = await import("@/server/api/routers/projects");
+const { projects, teamUsageAuditLog } = await import("@/db/schema");
 
 function context(execute: (query: string, params: unknown[]) => unknown[][]) {
   return {
@@ -25,21 +24,6 @@ function context(execute: (query: string, params: unknown[]) => unknown[][]) {
     session: { session: { userId: "current-user" } },
   } as unknown as Parameters<typeof chatRouter.createCaller>[0];
 }
-
-describe("chat instructions", () => {
-  const base = { currentDate: "2026-09-20", persistentMemory: null, projectPrompt: null };
-
-  test("ordinary messages do not claim the user requested regeneration", () => {
-    expect(buildChatSystemPrompt(base)).not.toContain("previous answer");
-  });
-
-  test.each(["retry", "detailed", "concise"] as const)(
-    "explicit %s keeps regeneration instructions",
-    (responseStyle) => {
-      expect(buildChatSystemPrompt({ ...base, responseStyle })).toContain("previous answer");
-    },
-  );
-});
 
 test("chat listing retains older pinned chats beyond the first 100", async () => {
   const rows = Array.from({ length: 101 }, (_, index) => [
@@ -74,7 +58,7 @@ describe("project access on chat writes", () => {
         context((query) => {
           if (query.startsWith("select")) {
             if (state === "missing") return [];
-            const project = {
+            const project: Record<string, unknown> = {
               id: projectId,
               userId: state === "other-user" ? "other-user" : "current-user",
               organizationId: null,

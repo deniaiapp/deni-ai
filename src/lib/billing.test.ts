@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { billingPlans, getPlanTier, isIndividualPlanId, isTeamPlanId } from "../src/lib/billing";
+import { billingPlans, getPlanTier, isIndividualPlanId, isTeamPlanId } from "@/lib/billing";
 
 describe("billing plan ID guards", () => {
   test("classify every registered plan according to its tier", () => {

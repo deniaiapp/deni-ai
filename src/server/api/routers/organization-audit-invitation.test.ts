@@ -13,6 +13,8 @@ vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/lib/billing-config", () => ({ isBillingDisabled: false }));
 vi.mock("@/lib/team-billing", () => ({
   getOrgMemberCount: vi.fn(async () => 2),
+  // The audit log is a paid team feature.
+  hasPaidTeamPlan: vi.fn(async () => true),
   updateTeamSeatCount: vi.fn(),
 }));
 vi.mock("@/lib/stripe", () => ({

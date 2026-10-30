@@ -233,7 +233,7 @@ vi.mock("ai", async () => {
   };
 });
 
-const { POST } = await import("../src/server/http/chat/route");
+const { POST } = await import("@/server/http/chat/route");
 const { streamText } = await import("ai");
 const {
   clearChatGenerationState,
@@ -249,7 +249,7 @@ const {
   GUEST_MAX_PROMPT_TOKENS,
   GUEST_TOOL_OUTPUT_CHARS,
   URL_PDF_TOKEN_ESTIMATE,
-} = await import("../src/server/http/chat/_lib/usage-estimate");
+} = await import("@/server/http/chat/_lib/usage-estimate");
 const { clearChatGeneration, isCurrentChatGeneration, recordPromptUsage } =
   await import("@/lib/chat-generation");
 

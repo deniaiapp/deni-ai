@@ -3,10 +3,10 @@ import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, expect, test, vi } from "vitest";
 
 const state = vi.hoisted(() => ({ database: {} as Record<string, unknown> }));
-vi.mock("../src/db/drizzle", () => ({
+vi.mock("@/db/drizzle", () => ({
   db: new Proxy({}, { get: (_target, key) => state.database[key as string] }),
 }));
-vi.mock("../src/lib/auth", () => ({
+vi.mock("@/lib/auth", () => ({
   auth: {
     api: {
       getSession: vi.fn(async () => ({
@@ -16,12 +16,12 @@ vi.mock("../src/lib/auth", () => ({
     },
   },
 }));
-vi.mock("../src/lib/rate-limit", () => ({
+vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: vi.fn(async () => ({ allowed: true })),
 }));
 
-const { apiKeysRouter } = await import("../src/server/api/routers/api-keys");
-const { POST } = await import("../src/server/http/device-auth/route");
+const { apiKeysRouter } = await import("@/server/api/routers/api-keys");
+const { POST } = await import("@/server/http/device-auth/route");
 const dialect = new PgDialect();
 type Key = { id: string; userId: string; name: string };
 type Device = {
@@ -36,7 +36,7 @@ type Device = {
 };
 let keys: Key[];
 let devices: Device[];
-let lockCount: number;
+let lockCount = 0;
 let failDeviceUpdate: boolean;
 
 function database() {
