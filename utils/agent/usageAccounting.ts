@@ -2,7 +2,6 @@ import type { AgentAuthContext } from "../../middleware/validateAgentAuth";
 import { settleUsageQuota } from "../deni/usage";
 import { computeMeteredTokens } from "./usageMetering";
 import { getLongContextUsageMultiplier } from "./models";
-import { keepAlive } from "../runtime";
 
 async function settle(auth: AgentAuthContext | undefined, amount: number): Promise<void> {
   if (!auth?.usageMeteringEnabled || !auth.usageReserved || !auth.usageReservation) return;
@@ -38,8 +37,6 @@ export async function finalizeUsage(
           ),
         );
   const pending = settle(auth, amount);
-  // Settlement may run from a stream cancel after the client is gone.
-  keepAlive(pending);
   const raw = process.env.FLIXA_USAGE_FINALIZE_ASYNC?.trim().toLowerCase();
   if (["1", "true", "yes", "on"].includes(raw ?? "")) {
     void pending;
@@ -50,7 +47,5 @@ export async function finalizeUsage(
 
 /** Only failures before a successful upstream response refund the full hold. */
 export async function releaseReservedUsage(auth: AgentAuthContext | undefined): Promise<void> {
-  const pending = settle(auth, 0);
-  keepAlive(pending);
-  await pending;
+  await settle(auth, 0);
 }

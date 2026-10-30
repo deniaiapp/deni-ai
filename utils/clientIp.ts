@@ -55,11 +55,6 @@ export function getClientIp(headers: Headers, peerAddress = "unknown"): string {
 }
 
 export function getRequestClientIp(c: Context): string {
-  // Cloudflare sets cf-connecting-ip itself and strips any client-supplied value.
-  if (c.env?.runtime === "workers") {
-    const ip = normalizeIp(c.req.header("cf-connecting-ip") ?? "");
-    return isIP(ip) ? ip : "unknown";
-  }
   const server = c.env?.server as { requestIP(req: Request): { address: string } | null } | undefined;
   const peer = server?.requestIP(c.req.raw)?.address;
   return getClientIp(c.req.raw.headers, peer);

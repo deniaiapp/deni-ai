@@ -2,7 +2,7 @@ import { getRequestClientIp } from "../utils/clientIp";
 import type { Context, MiddlewareHandler, Next } from "hono";
 import type { ContentfulStatusCode } from "hono/utils/http-status";
 import {
-  consumeRateLimitAsync,
+  consumeRateLimit,
   getAdminLoginRateLimitConfig,
   getIpRateLimitConfig,
   getUserRateLimitConfig,
@@ -59,7 +59,7 @@ export function ipRateLimitMiddleware(
 
     const { max, windowMs } = getIpRateLimitConfig();
     const ip = getRequestClientIp(c);
-    const result = await consumeRateLimitAsync(scope, ip, max, windowMs);
+    const result = consumeRateLimit(scope, ip, max, windowMs);
 
     applyRateLimitHeaders(c, result);
     if (!result.allowed) {
@@ -94,7 +94,7 @@ export async function checkUserRateLimit(
   }
 
   const { max, windowMs } = getUserRateLimitConfig();
-  const result = await consumeRateLimitAsync("user", userId, max, windowMs);
+  const result = consumeRateLimit("user", userId, max, windowMs);
   applyRateLimitHeaders(c, result);
 
   if (!result.allowed) {
@@ -120,7 +120,7 @@ export async function checkAdminLoginRateLimit(
   if (!isRateLimitEnabled()) return null;
   const { max, windowMs } = getAdminLoginRateLimitConfig();
   const ip = getRequestClientIp(c);
-  const result = await consumeRateLimitAsync("admin-login", ip, max, windowMs);
+  const result = consumeRateLimit("admin-login", ip, max, windowMs);
   if (result.allowed) return null;
   applyRateLimitHeaders(c, result);
   const accept = (c.req.header("Accept") || "").toLowerCase();

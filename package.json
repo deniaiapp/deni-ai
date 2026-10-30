@@ -15,8 +15,6 @@
     "test": "tsx --test --experimental-test-module-mocks \"tests/**/*.test.ts\"",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env ./node_modules/drizzle-kit/bin.cjs migrate",
-    "dev:worker": "wrangler dev",
-    "deploy:worker": "wrangler deploy",
     "performance:benchmark": "tsx tools/performance-benchmark.ts",
     "tools:revoke-anonymous-api-keys": "tsx --env-file-if-exists=.env tools/revoke-anonymous-api-keys.ts",
     "tools:ban-flixa-user": "tsx --env-file-if-exists=.env tools/ban-flixa-user.ts",
@@ -44,7 +42,6 @@
     "node": ">=26"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^5.20261026.1",
     "@electric-sql/pglite": "^0.5.11",
     "@types/node": "^26.6.5",
     "@types/pg": "^8.23.1",
@@ -53,8 +50,7 @@
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",
     "tsx": "^4.23.15",
-    "typescript": "^7.0.2",
-    "wrangler": "^4.152.0"
+    "typescript": "^7.0.2"
   },
   "packageManager": "pnpm@12.15.0"
 }

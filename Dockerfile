@@ -6,7 +6,7 @@ RUN npm install -g pnpm@12.15.0
 
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 # Dev dependencies are needed for the esbuild step. Install scripts are skipped:
-# the bundle only needs sources, and wrangler's workerd binary is not used here.
+# the bundle only needs sources.
 RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM node:26-alpine AS build

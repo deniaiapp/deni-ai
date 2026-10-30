@@ -60,7 +60,7 @@ function sessionSecret(): string | undefined {
   return process.env.ADMIN_SESSION_SECRET || undefined;
 }
 
-// Cloudflare Workers rejects PBKDF2 iteration counts above 100,000.
+// Part of the derived key: changing it logs out every admin session.
 const SESSION_KDF_ITERATIONS = 100_000;
 const SESSION_KDF_SALT = "flixa-admin-session-kdf-v1";
 

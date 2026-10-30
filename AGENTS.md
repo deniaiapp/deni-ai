@@ -1,7 +1,7 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`app.ts` builds the Hono app (middleware plus the `/v1` routers). `server.ts` is the Node.js entrypoint (`@hono/node-server`) and `worker.ts` the Cloudflare Workers entrypoint; both only wrap `app.ts`. Read config via `process.env` so code runs on both runtimes. Route handlers live in `routes/v1/` (`agent.ts`, `deni.ts`, `models.ts`). Shared request guards live in `middleware/`; `middleware/validateAgentAuth.ts` enforces the client access policy (Free/Go only from the listed clients, otherwise a 403 plan notice without a ban; Plus and above from any client; see the README). Domain logic is grouped under `utils/`: `utils/agent/` for model routing and upstream clients, and `utils/deni/` for auth, billing, usage, and DB access.
+`app.ts` builds the Hono app (middleware plus the `/v1` routers). `server.ts` is the Node.js entrypoint (`@hono/node-server`) and only wraps `app.ts`. Read config via `process.env`. Route handlers live in `routes/v1/` (`agent.ts`, `deni.ts`, `models.ts`). Shared request guards live in `middleware/`; `middleware/validateAgentAuth.ts` enforces the client access policy (Free/Go only from the listed clients, otherwise a 403 plan notice without a ban; Plus and above from any client; see the README). Domain logic is grouped under `utils/`: `utils/agent/` for model routing and upstream clients, and `utils/deni/` for auth, billing, usage, and DB access.
 
 There is no dedicated `src/` folder; keep new modules close to the feature they support. Follow the existing split: route layer in `routes/`, reusable logic in `utils/`, cross-cutting concerns in `middleware/`.
 
@@ -14,7 +14,6 @@ Requires Node.js 26+ and pnpm. Install dependencies with `pnpm install`. TypeScr
 - `pnpm run build`: bundle `server.ts` with esbuild into `dist/server.js` (run it with `pnpm run start:dist`).
 - `pnpm test`: run the test suite (`node:test` via `tsx --test`).
 - `pnpm run typecheck`: run TypeScript checks with `tsc --noEmit`.
-- `pnpm run dev:worker` / `pnpm run deploy:worker`: run on local workerd / deploy to Cloudflare Workers (`wrangler.toml`). DB goes through the `DENI_DB` Hyperdrive binding; secrets via `pnpm exec wrangler secret put <NAME>`.
 - `pnpm exec oxlint .` and `pnpm exec oxfmt . --check`: optional lint/format validation using installed tools.
 
 ## Coding Style & Naming Conventions

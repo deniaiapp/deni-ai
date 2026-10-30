@@ -5,5 +5,3 @@ node_modules/
 dist/
 build/
 .env.production
-.wrangler/
-.dev.vars

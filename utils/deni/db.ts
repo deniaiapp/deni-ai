@@ -1,6 +1,5 @@
 import { drizzle, type NodePgDatabase } from 'drizzle-orm/node-postgres';
 import { Pool } from 'pg';
-import { getRequestRuntime } from '../runtime';
 
 let pool: Pool | null = null;
 
@@ -37,11 +36,6 @@ function normalizeConnectionString(connectionString: string): string {
  * Get or create a PostgreSQL connection pool for Deni AI database
  */
 export function getDeniPool(): Pool {
-  const runtime = getRequestRuntime();
-  if (runtime) {
-    runtime.pool ??= createPool();
-    return runtime.pool;
-  }
   pool ??= createPool();
   return pool;
 }
@@ -63,7 +57,7 @@ export function getDeniDb(): DeniDb {
 function createPool(): Pool {
   const connectionString = process.env.DENI_DATABASE_URL;
   const disableTlsVerification = process.env.DENI_DATABASE_SSL_NO_VERIFY === 'true';
-  // Hyperdrive terminates TLS to the origin itself; its local endpoint is plaintext.
+  // For plaintext endpoints such as a local Postgres or an SSH tunnel.
   const disableTls = process.env.DENI_DATABASE_SSL_DISABLED === 'true';
   if (!connectionString) {
     throw new Error('DENI_DATABASE_URL environment variable is not set');

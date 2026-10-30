@@ -1,14 +1,7 @@
 /**
- * Fixed-window rate limiter.
- *
- * - Node / single process: process-local in-memory buckets (`consumeRateLimit`).
- * - Cloudflare Workers: when `configureDurableRateLimit(namespace)` has been
- *   called, `consumeRateLimitAsync` routes each `${scope}:${key}` to its own
- *   Durable Object (`RateLimiterDO`) so limits hold across isolates.
- *   DO failures fail open (request allowed) and are logged with `[RateLimit]`.
+ * Fixed-window rate limiter with process-local in-memory buckets.
  */
 
-import type { DurableObjectNamespace } from "@cloudflare/workers-types";
 import { isAuthDisabledMode } from "./authMode";
 
 export type RateLimitResult = {
@@ -21,7 +14,7 @@ export type RateLimitResult = {
   retryAfterSec: number;
 };
 
-export type RateLimitBucket = {
+type RateLimitBucket = {
   count: number;
   /** Window start (ms). */
   windowStart: number;
@@ -264,11 +257,11 @@ function shouldBypass(max: number, windowMs: number): boolean {
 }
 
 /**
- * Pure fixed-window step shared by the in-memory limiter and `RateLimiterDO`.
+ * Pure fixed-window step used by `consumeRateLimit`.
  * Opens a new bucket when none exists or the window elapsed; otherwise mutates
  * `bucket.count` in place. Callers must handle `max < 1 || windowMs < 1`.
  */
-export function applyFixedWindow(
+function applyFixedWindow(
   bucket: RateLimitBucket | undefined,
   max: number,
   windowMs: number,
@@ -315,8 +308,6 @@ export function applyFixedWindow(
 /**
  * Consume one request for `key` within a fixed window (process-local only).
  * Window is keyed by the limiter name so IP/user/login limits stay independent.
- * Request paths should use `consumeRateLimitAsync`, which honours the Durable
- * Object backend when configured.
  */
 export function consumeRateLimit(
   scope: string,
@@ -340,111 +331,10 @@ export function consumeRateLimit(
   return step.result;
 }
 
-// ---------------------------------------------------------------------------
-// Durable Object backend (Cloudflare Workers)
-// ---------------------------------------------------------------------------
-
-let durableNamespace: DurableObjectNamespace | null = null;
-
-const DO_ERROR_LOG_INTERVAL_MS = 60_000;
-let lastDoErrorLogAt = 0;
-let suppressedDoErrors = 0;
-
-/**
- * Route rate limiting through a Durable Object namespace (Workers). Pass
- * `null` to return to the in-memory limiter.
- */
-export function configureDurableRateLimit(
-  namespace: DurableObjectNamespace | null,
-): void {
-  durableNamespace = namespace;
-}
-
-function logDurableError(error: unknown): void {
-  const now = Date.now();
-  if (now - lastDoErrorLogAt < DO_ERROR_LOG_INTERVAL_MS) {
-    suppressedDoErrors += 1;
-    return;
-  }
-  const suppressed = suppressedDoErrors;
-  lastDoErrorLogAt = now;
-  suppressedDoErrors = 0;
-  console.error(
-    `[RateLimit] durable object call failed; failing open${
-      suppressed > 0 ? ` (${suppressed} similar errors suppressed)` : ""
-    }:`,
-    error instanceof Error ? error.message : error,
-  );
-}
-
-function isRateLimitResult(value: unknown): value is RateLimitResult {
-  if (!value || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return (
-    typeof v.allowed === "boolean" &&
-    typeof v.limit === "number" &&
-    typeof v.remaining === "number" &&
-    typeof v.resetAt === "number" &&
-    typeof v.retryAfterSec === "number"
-  );
-}
-
-async function consumeDurable(
-  namespace: DurableObjectNamespace,
-  scope: string,
-  key: string,
-  max: number,
-  windowMs: number,
-): Promise<RateLimitResult> {
-  const stub = namespace.get(namespace.idFromName(`${scope}:${key}`));
-  const response = await stub.fetch("https://rate-limiter.internal/consume", {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ max, windowMs }),
-  });
-  if (!response.ok) {
-    throw new Error(`RateLimiterDO responded ${response.status}`);
-  }
-  const body: unknown = await response.json();
-  if (!isRateLimitResult(body)) {
-    throw new Error("RateLimiterDO returned an invalid payload");
-  }
-  return body;
-}
-
-/**
- * Consume one request for `key`. Uses the Durable Object backend when
- * configured, otherwise the in-memory limiter. Never throws: DO failures are
- * logged and the request is allowed (fail open).
- */
-export async function consumeRateLimitAsync(
-  scope: string,
-  key: string,
-  max: number,
-  windowMs: number,
-  now = Date.now(),
-): Promise<RateLimitResult> {
-  const namespace = durableNamespace;
-  if (!namespace) {
-    return consumeRateLimit(scope, key, max, windowMs, now);
-  }
-  if (shouldBypass(max, windowMs)) {
-    return allowAllResult(max, windowMs, now);
-  }
-  try {
-    return await consumeDurable(namespace, scope, key, max, windowMs);
-  } catch (error) {
-    logDurableError(error);
-    return allowAllResult(max, windowMs, now);
-  }
-}
-
 /** Test helper. */
 export function clearRateLimitBuckets(): void {
   resetBuckets();
   opsSinceCleanup = 0;
-  lastDoErrorLogAt = 0;
-  suppressedDoErrors = 0;
 }
 
 /**
