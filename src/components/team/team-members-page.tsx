@@ -4,6 +4,7 @@ import { TeamMembersList } from "./team-members-list";
 import { TeamPendingInvitations } from "./team-pending-invitations";
 import { TeamRemoveMemberDialog } from "./team-remove-member-dialog";
 import { useTeamSettingsContext } from "./team-settings-context";
+import { TeamTransferOwnershipDialog } from "./team-transfer-ownership-dialog";
 
 export function TeamMembersPage() {
   const {
@@ -14,6 +15,7 @@ export function TeamMembersPage() {
     isMembersReloadCoolingDown,
     pendingInvitations,
     isAdmin,
+    isOwner,
     isInviteDialogOpen,
     setIsInviteDialogOpen,
     inviteEmail,
@@ -29,6 +31,10 @@ export function TeamMembersPage() {
     handleRemoveMember,
     handleUpdateMemberRole,
     handleCancelInvitation,
+    memberToMakeOwner,
+    setMemberToMakeOwner,
+    isTransferringOwnership,
+    handleTransferOwnership,
   } = useTeamSettingsContext();
 
   return (
@@ -36,7 +42,9 @@ export function TeamMembersPage() {
       <TeamMembersList
         members={members}
         isAdmin={isAdmin}
+        isOwner={isOwner}
         updatingMemberRoleId={updatingMemberRoleId}
+        onMakeOwnerClick={setMemberToMakeOwner}
         onInviteClick={() => setIsInviteDialogOpen(true)}
         onRemoveClick={setMemberToRemove}
         onRoleChange={handleUpdateMemberRole}
@@ -71,6 +79,15 @@ export function TeamMembersPage() {
         }}
         onConfirm={handleRemoveMember}
         isRemoving={isRemovingMember}
+      />
+
+      <TeamTransferOwnershipDialog
+        member={memberToMakeOwner}
+        onOpenChange={(open) => {
+          if (!open) setMemberToMakeOwner(null);
+        }}
+        onConfirm={handleTransferOwnership}
+        isTransferring={isTransferringOwnership}
       />
     </div>
   );

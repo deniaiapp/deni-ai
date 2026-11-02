@@ -1,9 +1,10 @@
 import { Link } from "@/lib/navigation";
 import { Mail, MapPin, MessagesSquare, Shield } from "lucide-react";
-import { useExtracted } from "use-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
 import { getExtracted } from "@/i18n/extracted";
 import { pageHead } from "@/lib/seo";
+import { supportUrl } from "@/lib/support-url";
 
 export const Route = createFileRoute("/{-$locale}/contact")({
   head: ({ match }) => {
@@ -33,6 +34,7 @@ export const Route = createFileRoute("/{-$locale}/contact")({
 
 function ContactPage() {
   const t = useExtracted();
+  const locale = useLocale();
   const headline = t("Contact Deni AI");
   const description = t(
     "Use this page when you need a human response about the product, privacy, billing, or commercial disclosure. We keep support simple: one clear email address and public documentation for common questions.",
@@ -52,10 +54,10 @@ function ContactPage() {
       icon: MessagesSquare,
       title: t("Self-serve answers"),
       body: t(
-        "Many product questions are already answered in the FAQ, AI Guides, Use Cases, Terms, and Privacy Policy. Start there if you need an immediate explanation.",
+        "Many product questions are already answered in the Help Center, FAQ, AI Guides, Use Cases, Terms, and Privacy Policy. Start there if you need an immediate explanation.",
       ),
-      detail: t("Browse FAQ and guides"),
-      href: "/faq",
+      detail: t("Open the Help Center"),
+      href: supportUrl(locale),
     },
     {
       icon: Shield,

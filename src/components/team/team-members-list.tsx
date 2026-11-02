@@ -28,20 +28,24 @@ import { useRoleLabel } from "./use-role-label";
 export function TeamMembersList({
   members,
   isAdmin,
+  isOwner,
   updatingMemberRoleId,
   onInviteClick,
   onRemoveClick,
   onRoleChange,
+  onMakeOwnerClick,
   onReload,
   isReloading,
   isReloadDisabled,
 }: {
   members: Member[];
   isAdmin: boolean;
+  isOwner: boolean;
   updatingMemberRoleId: string | null;
   onInviteClick: () => void;
   onRemoveClick: (member: Member) => void;
   onRoleChange: (member: Member, role: "admin" | "member") => void;
+  onMakeOwnerClick: (member: Member) => void;
   onReload: () => void;
   isReloading: boolean;
   isReloadDisabled: boolean;
@@ -150,6 +154,15 @@ export function TeamMembersList({
                             <UserRound className="size-4" />
                           )}
                           {t("Make {role}", { role: roleLabel("member") })}
+                        </DropdownMenuItem>
+                      )}
+                      {isOwner && (
+                        <DropdownMenuItem
+                          disabled={!!updatingMemberRoleId}
+                          onClick={() => onMakeOwnerClick(m)}
+                        >
+                          <Crown className="size-4" />
+                          {t("Transfer ownership")}
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuSeparator />

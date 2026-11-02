@@ -88,7 +88,7 @@ export function TwoFactorBanner() {
             id: "two-factor",
             message: t("2FA - Enhance your security with two-factor authentication"),
             linkLabel: t("Setup"),
-            href: "/account/settings",
+            href: "/account/security",
             external: false,
             icon: ShieldCheck,
             iconClassName: "text-emerald-500",

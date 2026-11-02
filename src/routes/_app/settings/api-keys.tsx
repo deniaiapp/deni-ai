@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Copy, Key, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Check, Copy, Key, Plus, Trash2 } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
@@ -30,6 +30,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Spinner } from "@/components/ui/spinner";
 import { authClient } from "@/lib/auth-client";
+import { Link } from "@/lib/navigation";
+import { supportUrl } from "@/lib/support-url";
 import { trpc } from "@/lib/trpc/react";
 
 export const Route = createFileRoute("/_app/settings/api-keys")({
@@ -96,6 +98,17 @@ function ApiKeysSettingsPage() {
     <SettingsPageShell
       title={t("API Keys")}
       description={t("Generate API keys for the Flixa extension and other integrations.")}
+      actions={
+        <Button
+          size="sm"
+          variant="outline"
+          nativeButton={false}
+          render={<Link href={supportUrl(locale, "/flixa/external-tools")} />}
+        >
+          <BookOpen className="size-4" />
+          {t("Setup guide")}
+        </Button>
+      }
     >
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">

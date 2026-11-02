@@ -4,6 +4,7 @@ import { ActiveSessions } from "./active-sessions";
 import { ChangePassword } from "./change-password";
 import { LinkedAccounts } from "./linked-accounts";
 import { SecurityActivity } from "./security-activity";
+import { TwoFactorSettings } from "./two-factor-settings";
 
 export type SecuritySettingsProps = {
   className?: string;
@@ -24,6 +25,7 @@ export function SecuritySettings({ className }: SecuritySettingsProps) {
   return (
     <div className={cn("flex w-full flex-col gap-4 md:gap-6", className)}>
       {emailAndPassword?.enabled && <ChangePassword />}
+      {emailAndPassword?.enabled && <TwoFactorSettings />}
       {!!socialProviders?.length && <LinkedAccounts />}
       <ActiveSessions />
       <SecurityActivity />

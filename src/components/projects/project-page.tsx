@@ -38,10 +38,12 @@ function ProjectChatList({
   isStartingChat: boolean;
   onNewChat: () => void;
 }) {
+  const t = useExtracted();
+
   return (
     <aside className="flex w-64 shrink-0 flex-col gap-3 p-4 overflow-y-auto">
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-muted-foreground">Chats</span>
+        <span className="text-sm font-medium text-muted-foreground">{t("Chats")}</span>
         <Button
           size="sm"
           variant="ghost"
@@ -50,7 +52,7 @@ function ProjectChatList({
           disabled={isStartingChat}
         >
           {isStartingChat ? <Spinner className="size-3.5" /> : <PlusIcon className="size-3.5" />}
-          New chat
+          {t("New chat")}
         </Button>
       </div>
 
@@ -59,7 +61,7 @@ function ProjectChatList({
           <Spinner />
         </div>
       ) : chats.length === 0 ? (
-        <p className="text-xs text-muted-foreground">No chats yet.</p>
+        <p className="text-xs text-muted-foreground">{t("No chats yet.")}</p>
       ) : (
         <ul className="space-y-1">
           {chats.map((chat) => (
@@ -69,7 +71,7 @@ function ProjectChatList({
                 prefetchDelay={INTENT_PREFETCH_DELAY_MS}
                 className="block truncate rounded-xl px-2 py-1.5 text-sm hover:bg-muted/60 transition-colors"
               >
-                {chat.title ?? "Untitled chat"}
+                {chat.title ?? t("Untitled chat")}
               </Link>
             </li>
           ))}

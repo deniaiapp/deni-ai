@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { TeamDeleteDialog } from "./team-delete-dialog";
 import { TeamIconButton } from "./team-icon-button";
+import { TeamLeaveDialog } from "./team-leave-dialog";
 import { useTeamSettingsContext } from "./team-settings-context";
 import { monthDayYearFormatter } from "./team-utils";
 
@@ -29,6 +30,10 @@ export function TeamHomePage() {
     setIsDeleteDialogOpen,
     isDeletingOrg,
     handleDeleteOrg,
+    isLeaveDialogOpen,
+    setIsLeaveDialogOpen,
+    isLeavingOrg,
+    handleLeaveOrg,
   } = useTeamSettingsContext();
   const [isEditingName, setIsEditingName] = useState(false);
 
@@ -139,14 +144,15 @@ export function TeamHomePage() {
         </CardContent>
       </Card>
 
-      {isOwner && (
+      {isOwner ? (
         <Card className="border-destructive/40">
           <CardHeader>
             <CardTitle className="text-base text-destructive">{t("Danger Zone")}</CardTitle>
             <CardDescription>
               {t(
                 "Deleting a team removes every member and cancels its subscription. This cannot be undone.",
-              )}
+              )}{" "}
+              {t("To leave the team instead, transfer ownership to another member on Members.")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -155,7 +161,29 @@ export function TeamHomePage() {
             </Button>
           </CardContent>
         </Card>
+      ) : (
+        <Card className="border-destructive/40">
+          <CardHeader>
+            <CardTitle className="text-base text-destructive">{t("Leave team")}</CardTitle>
+            <CardDescription>
+              {t("You lose access to this team and its shared projects.")}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button variant="destructive" onClick={() => setIsLeaveDialogOpen(true)}>
+              {t("Leave team")}
+            </Button>
+          </CardContent>
+        </Card>
       )}
+
+      <TeamLeaveDialog
+        open={isLeaveDialogOpen}
+        organizationName={activeOrg.name}
+        onOpenChange={setIsLeaveDialogOpen}
+        onConfirm={handleLeaveOrg}
+        isLeaving={isLeavingOrg}
+      />
 
       <TeamDeleteDialog
         open={isDeleteDialogOpen}

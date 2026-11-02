@@ -46,6 +46,10 @@ export function useTeamSettings() {
   const [respondingInvitationId, setRespondingInvitationId] = useState<string | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingOrg, setIsDeletingOrg] = useState(false);
+  const [isLeaveDialogOpen, setIsLeaveDialogOpen] = useState(false);
+  const [isLeavingOrg, setIsLeavingOrg] = useState(false);
+  const [memberToMakeOwner, setMemberToMakeOwner] = useState<Member | null>(null);
+  const [isTransferringOwnership, setIsTransferringOwnership] = useState(false);
   const [pendingTeamPlanId, setPendingTeamPlanId] = useState<TeamPlanId | null>(null);
   const [hasAgreedToTeamPlanChange, setHasAgreedToTeamPlanChange] = useState(false);
   const currentUserId = session.data?.user?.id ?? null;
@@ -484,6 +488,79 @@ export function useTeamSettings() {
     );
   }
 
+  /**
+   * Hands the team to another member: they become owner first, then the current
+   * owner steps down to admin. Better Auth refuses to leave a team without an
+   * owner, so the order matters; if the second step fails the team simply has
+   * two owners.
+   */
+  async function handleTransferOwnership() {
+    const newOwner = memberToMakeOwner;
+    const currentMember = members.find((member) => member.userId === currentUserId);
+    if (!activeOrg || !newOwner || !currentMember) return;
+    await runWithLoading(setIsTransferringOwnership, async () => {
+      try {
+        const promoted = await authClient.organization.updateMemberRole({
+          memberId: newOwner.id,
+          role: "owner",
+          organizationId: activeOrg.id,
+        });
+        if (promoted.error) {
+          toast.error(localizeError(promoted.error, t("Failed to transfer ownership")));
+          return;
+        }
+        const demoted = await authClient.organization.updateMemberRole({
+          memberId: currentMember.id,
+          role: "admin",
+          organizationId: activeOrg.id,
+        });
+        if (demoted.error) {
+          toast.error(localizeError(demoted.error, t("Failed to transfer ownership")));
+        } else {
+          toast.success(t("Ownership transferred"));
+        }
+        setMemberToMakeOwner(null);
+        await queryClient.invalidateQueries({
+          queryKey: ["team", "organization", currentUserId, activeOrg.id],
+        });
+      } catch (error) {
+        console.error("Failed to transfer ownership", error);
+        toast.error(t("Failed to transfer ownership"));
+      }
+    });
+  }
+
+  async function handleLeaveOrg() {
+    if (!activeOrg) return;
+    const leftOrgId = activeOrg.id;
+    await runWithLoading(setIsLeavingOrg, async () => {
+      try {
+        const result = await authClient.organization.leave({ organizationId: leftOrgId });
+        if (result.error) {
+          toast.error(localizeError(result.error, t("Failed to leave team")));
+          return;
+        }
+        toast.success(t("You left the team"));
+        setIsLeaveDialogOpen(false);
+        setSelectedOrgId(null);
+        queryClient.setQueryData<Organization[]>(
+          ["team", "organizations", currentUserId],
+          (current) => (current ?? []).filter((org) => org.id !== leftOrgId),
+        );
+        queryClient.removeQueries({
+          queryKey: ["team", "organization", currentUserId, leftOrgId],
+        });
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["team", "organizations", currentUserId] }),
+          session.refetch(),
+        ]);
+      } catch (error) {
+        console.error("Failed to leave team", error);
+        toast.error(t("Failed to leave team"));
+      }
+    });
+  }
+
   async function handleDeleteOrg() {
     if (!activeOrg) return;
     const deletedOrgId = activeOrg.id;
@@ -888,6 +965,14 @@ export function useTeamSettings() {
     setIsDeleteDialogOpen,
     isDeletingOrg,
     handleDeleteOrg,
+    isLeaveDialogOpen,
+    setIsLeaveDialogOpen,
+    isLeavingOrg,
+    handleLeaveOrg,
+    memberToMakeOwner,
+    setMemberToMakeOwner,
+    isTransferringOwnership,
+    handleTransferOwnership,
     handleSubscribe,
     handleChangePlan,
     handleChangePlanDialogOpenChange,

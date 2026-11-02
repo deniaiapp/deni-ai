@@ -23,9 +23,50 @@ type ImportResult = {
   omittedAttachments: number;
 };
 
+/**
+ * Warnings come from src/lib/migration.ts in English (the API returns them as
+ * is), so the known shapes are translated here. Unknown ones show unchanged.
+ */
+function useImportWarningText() {
+  const t = useExtracted();
+
+  return (warning: string): string => {
+    if (warning === "no conversations found in payload") {
+      return t("No conversations were found in the file.");
+    }
+    if (warning === "payload array is empty") return t("The file contains an empty list.");
+
+    const conversationMatch = /^conversation (\d+): (.+)$/.exec(warning);
+    if (!conversationMatch) return warning;
+    const [, conversation, detail] = conversationMatch;
+
+    if (detail === "no usable messages found") {
+      return t("Conversation {conversation}: no messages could be imported.", { conversation });
+    }
+    if (detail.startsWith("failed to parse")) {
+      return t("Conversation {conversation}: the data couldn't be read.", { conversation });
+    }
+    const messageMatch = /^message (\d+) (is not recognized|has no usable parts)$/.exec(detail);
+    if (messageMatch) {
+      const [, message, reason] = messageMatch;
+      return reason === "is not recognized"
+        ? t("Conversation {conversation}: message {message} wasn't recognized.", {
+            conversation,
+            message,
+          })
+        : t("Conversation {conversation}: message {message} has no content to import.", {
+            conversation,
+            message,
+          });
+    }
+    return warning;
+  };
+}
+
 function ImportSettingsPage() {
   const t = useExtracted();
   const localizeError = useLocalizeError();
+  const warningText = useImportWarningText();
   const utils = trpc.useUtils();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isReading, setIsReading] = useState(false);
@@ -151,7 +192,7 @@ function ImportSettingsPage() {
                   </p>
                   <ul className="list-disc pl-4 space-y-0.5 max-h-40 overflow-y-auto">
                     {lastResult.warnings.slice(0, 50).map((warning) => (
-                      <li key={warning}>{warning}</li>
+                      <li key={warning}>{warningText(warning)}</li>
                     ))}
                   </ul>
                 </div>

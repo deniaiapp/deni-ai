@@ -1,12 +1,13 @@
 import { ArrowRight, Code2, Zap, Brain, Terminal, Download } from "lucide-react";
 import { Link } from "@/lib/navigation";
-import { useExtracted } from "use-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
 import { getExtracted } from "@/i18n/extracted";
 import { Button } from "@/components/ui/button";
 import SiGoogle from "@icons-pack/react-simple-icons/icons/SiGoogle";
 import SiWindsurf from "@icons-pack/react-simple-icons/icons/SiWindsurf";
 import { pageHead } from "@/lib/seo";
+import { supportUrl } from "@/lib/support-url";
 
 export const Route = createFileRoute("/{-$locale}/flixa")({
   head: ({ match }) => {
@@ -138,6 +139,7 @@ const flixaJsonLd = [
 
 function FlixaPage() {
   const t = useExtracted();
+  const locale = useLocale();
 
   return (
     <main className="relative min-h-screen" id="main-content">
@@ -302,6 +304,16 @@ function FlixaPage() {
               icon={<SiGoogle className="size-8" />}
             />
           </div>
+
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            {t("Using Claude Code, Codex, Zed, or opencode?")}{" "}
+            <Link
+              href={supportUrl(locale, "/flixa/external-tools")}
+              className="font-medium text-foreground underline-offset-4 hover:underline"
+            >
+              {t("Set up Flixa in your coding tool")}
+            </Link>
+          </p>
         </div>
       </section>
 
