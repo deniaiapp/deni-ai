@@ -1,0 +1,275 @@
+---
+title: Flixa CLI を使う
+description: Flixa CLI のインストールとサインインの方法と、ターミナルでコーディングエージェントを使う方法です。
+---
+
+Flixa CLI は Flixa のコーディングエージェントをターミナルで動かすツールです。プロジェクトを読み、ファイルを編集し、コマンドを実行します。実行前には確認を求めます。
+Deni AI アカウントでも、自分で用意したほかのプロバイダーの API キー（BYOK）でも使えます。
+
+Claude Code や Codex の接続先を Flixa にしたい場合は、[Flixa を外部のコーディングツールで使う](/ja/flixa/external-tools)を見てください。
+
+## インストール
+
+```bash
+npm install -g @deniai/flixa
+```
+
+pnpm を使う場合は次を実行します。
+
+```bash
+pnpm install -g @deniai/flixa
+```
+
+## サインインする
+
+```bash
+flixa login
+```
+
+一覧からプロバイダーを選びます。サインインしたプロバイダーが既定のプロバイダーになります。
+
+### Deni AI アカウントで使う
+
+**Flixa** を選択し、続けて承認ページの開き方を選びます。
+
+- **Open browser automatically**: ブラウザでページが自動で開きます。
+- **Show URL (open manually)**: SSH 接続中など、ブラウザがない環境向けです。
+
+ターミナルにコードと URL が表示されます。URL を開いてページのコードがターミナルのコードと同じか確認し、**承認** をクリックします。
+キーは CLI が自動で保存します。ゲストアカウントでは承認できないので、先に通常のアカウントでサインインしてください。
+
+### 自分の API キーで使う（BYOK）
+
+組み込みのプロバイダーは `flixa`、`openai`、`anthropic`、`google`、`openrouter`、`custom-openai` です。同梱のカタログにあるプロバイダーも使えます。
+
+```bash
+flixa login --provider anthropic
+```
+
+求められたらプロバイダーの API キーを入力します。以降のリクエストはそのキーを使ってそのプロバイダーに送られます。
+自分で用意した OpenAI 互換のエンドポイントを使う場合は、ベース URL を指定します。
+
+```bash
+flixa login --provider custom-openai --base-url http://localhost:1234/v1
+```
+
+プロバイダーの一覧と、それぞれが設定済みかどうかを確認するには、次を実行します。
+
+```bash
+flixa providers list
+```
+
+あとから既定のプロバイダーを切り替えるには、次を実行します。
+
+```bash
+flixa providers set-default anthropic
+```
+
+今のプロバイダーで使う既定のモデルを選ぶには、次を実行します。
+
+```bash
+flixa model
+```
+
+## エージェントとチャットする
+
+プロジェクトのフォルダーで次を実行します。
+
+```bash
+flixa chat
+```
+
+やりたいことを入力して Enter を押します。ファイルを編集する前やシェルコマンドを実行する前には、確認が出ます。←→ と Enter で承認し、Esc で拒否します。
+
+前回の続きから始めるには、次のコマンドを使います。
+
+| コマンド | 動作 |
+| --- | --- |
+| `flixa chat -c` | このフォルダーで最後に使った会話を続ける |
+| `flixa resume` | 保存された会話から選んで再開する |
+
+### モード
+
+Shift+Tab でモードを切り替えます。`--accept-edits`、`--plan`、`--auto`、`--yolo-mode` を付けて、そのモードで始めることもできます。
+
+| モード | 確認が出る操作 |
+| --- | --- |
+| default | ファイルの編集、シェルコマンド、Web ページの取得 |
+| accept edits | シェルコマンドと Web ページの取得。ファイルの編集は確認なしで進みます |
+| plan | Web ページの取得だけ。ファイルの編集やコマンドの実行はしません |
+| auto | なし。代わりに AI による安全チェックが入ります |
+| yolo | なし。確認も安全チェックもなしで実行します |
+
+あとで説明する `ask` ルールに当てはまる操作は、accept edits や auto モードでも確認が出ます。
+
+### チャットで使える機能
+
+| 入力 | 動作 |
+| --- | --- |
+| `/` | コマンドの一覧を表示します。Tab で選択中のコマンドを補完します |
+| `@path/to/file` | ファイル（フォルダーならその一覧）をメッセージに添付します。Tab でパスを補完できます。ワークスペース内のファイルだけが対象です |
+| `# メモ` | プロジェクトの `AGENTS.md`（`CLAUDE.md` を使っている場合はそちら）にメモを保存します |
+| `/memory user <メモ>` | 自分用のメモを `~/.flixa/AGENTS.md` に保存します |
+| `/init` | このリポジトリの `AGENTS.md` を作成・改善します |
+| `/rewind [turns\|list]` | 直近のターンでエージェントが行ったファイルの編集を元に戻します。会話はそのまま残ります |
+| `/compact [focus]` | 会話を要約してコンテキストを空けます |
+| `/diff` | 今の git diff の概要を表示します |
+| `/export [path]` | 会話を Markdown で保存します |
+| `/model [id]` | モデルを切り替えます |
+| `/usage` | プランと使用量を表示します |
+| `/clear` または `/new` | 新しい会話を始めます |
+| `/exit` | 終了します。何も実行していないときは Ctrl+C でも終了できます |
+
+会話が約 240,000 文字を超えると、自動で圧縮されます。上限は `FLIXA_AUTO_COMPACT_CHARS` で変えられ、`0` にすると無効になります。
+
+プロジェクトの `CLAUDE.md`、`AGENTS.md`、`.claude/CLAUDE.md` は指示として読み込まれます。
+
+### エージェントが自分でできること
+
+- 時間のかかるコマンドをバックグラウンドで実行し、あとで出力を確認する
+- 作業をサブエージェントに任せる（`general-purpose` と読み取り専用の `explore` が組み込まれています）
+- 必要に応じてスキルを読み込む
+- タスクリストを管理し、公開されている Web ページを読む（事前に確認が出ます。プライベートやローカルのアドレスにはアクセスしません）
+
+設定済みのものは `/agents`、`/skills`、`/permissions`、`/hooks` で確認できます。
+
+## 独自のコマンド、サブエージェント、スキルを追加する
+
+Flixa はプロジェクトとホームフォルダーにある `.flixa/` と `.claude/` フォルダーを読み込みます。
+
+| 種類 | 置き場所 | 補足 |
+| --- | --- | --- |
+| スラッシュコマンド | `commands/<名前>.md` | `review.md` は `/review`、`frontend/lint.md` は `/frontend:lint` になります。引数は `$ARGUMENTS` または `$1`〜`$9` で受け取れます |
+| サブエージェント | `agents/<名前>.md` | frontmatter に `description:` が必要です。`tools:` と `model:` は任意です。本文がサブエージェントへの指示になります |
+| スキル | `skills/<名前>/SKILL.md` | `description:` が必要です。全文は必要になったときだけ読み込まれます |
+
+独自のコマンドが組み込みのコマンドを上書きすることはありません。サブエージェントがさらに別のサブエージェントを起動することはできません。
+
+## 権限ルールとフックを設定する
+
+ルールとフックは `settings.json` に書きます。
+
+- 自分用の設定: `~/.flixa/settings.json` または `~/.claude/settings.json`
+- プロジェクトの設定: `.flixa/settings.json` または `.claude/settings.json`、同じフォルダーの `settings.local.json`
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(pnpm test:*)", "Read(src/**)", "WebFetch(domain:docs.example.com)"],
+    "ask": ["Write(docs/**)"],
+    "deny": ["Read(.env)", "Bash(git push:*)"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "pnpm run format" }] }
+    ]
+  }
+}
+```
+
+- `deny` は `ask` より、`ask` は `allow` より優先されます。
+- `pnpm test && curl ...` のような複合コマンドは、すべての部分が許可されているときだけ許可されます。
+- `Read`、`Write`、`Edit`、`Grep`、`Glob` のルールは、そのツールにだけ適用されます。シェルコマンドで同じファイルを読む操作は、これらのルールでは止められません。
+- フックは `PreToolUse`、`PostToolUse`、`UserPromptSubmit`、`Stop` のタイミングで実行され、標準入力で JSON を受け取ります。フックが終了コード 2 で終了すると、その操作は止まり、フックの標準エラー出力が Flixa に返されます。
+
+<Callout title="プロジェクトの設定はそのままでは信頼されません">
+  クローンしたリポジトリを開いただけでコードが実行されたり、コマンドが事前に許可されたりしないように、プロジェクトの設定は次のように扱われます。
+
+  - フックは自分用の設定からだけ読み込まれます。プロジェクトのフックも使うには `FLIXA_TRUST_PROJECT_HOOKS=1` を設定します。
+  - プロジェクトの `deny` と `ask` のルールは常に適用されます。`allow` のルールは `FLIXA_TRUST_PROJECT_SETTINGS=1` を設定したときだけ使われます。
+</Callout>
+
+## スクリプトから使う
+
+`--print` を付けると、対話画面を出さずにプロンプトを 1 回だけ実行します。
+最終的な回答だけが標準出力に、途中経過は標準エラー出力に書き出されるので、結果をそのままパイプで渡せます。
+
+```bash
+flixa --print "Summarize the last commit"
+```
+
+```bash
+git diff | flixa --print "Review this diff"
+```
+
+独自のコマンドも使えます。
+
+```bash
+flixa --print "/review src/index.ts"
+```
+
+承認が必要な操作は、`--accept-edits`、`--auto`、`--yolo` のどれかを付けない限り拒否されます。
+
+## タスクを 1 回で仕上げる
+
+`flixa ship` は 1 つのタスクを最初から最後まで実行します。リポジトリを調べ、変更を加え、動作を確認します。
+
+```bash
+flixa ship "Add a retry budget to the API client"
+```
+
+既定ではガード付きの auto モードで動きます。編集とコマンドには安全チェックが入り、明らかに破壊的なコマンドはブロックされます。
+
+| オプション | 動作 |
+| --- | --- |
+| `--plan` | 編集はせず、調べて計画を提案します |
+| `--verify "<command>"` | 指定したコマンドで変更を確認します |
+| `--interactive` | 編集やコマンドのたびに確認します |
+| `--yolo` | 承認も安全チェックも省きます |
+| `--share [path]` | 機密情報を伏せた Markdown のまとめカードを作ります。パスを指定するとファイルに書き出します |
+| `--share-url` | カードを限定公開の Flixa Share リンクとして公開します |
+
+タスクの代わりに GitHub Issue の URL を渡すこともできます。Flixa は Issue のタイトル、本文、ラベルを読み込み、信頼できない入力として扱います。
+
+```bash
+flixa ship https://github.com/org/repo/issues/123
+```
+
+カードを作ると、その Markdown がクリップボードにコピーされます。
+`--share-url` で公開されるのは、変更したファイルの一覧、差分の統計、確認の結果、モデル、最後のまとめです。ソースコードは公開されません。
+最新のセッションのカードをあとから作るには、`flixa share` を実行します。
+
+## 使用量を確認する
+
+```bash
+flixa usage
+```
+
+Flixa のプランと使用量の上限を表示します。Flixa でサインインしている必要があります。
+Flixa は、サインインしていれば Free を含むすべてのプランで使えます。BYOK のプロバイダーでは自分のキーを使うため、Deni AI のプランの使用量は消費しません。
+
+## 環境をチェックする
+
+```bash
+flixa doctor
+```
+
+Node.js、Git、ripgrep、シェル、保存された認証情報、指示ファイル、ネットワーク接続を確認します。ネットワークの確認を省くには `--offline` を付けます。
+
+## サインアウトする
+
+```bash
+flixa logout
+```
+
+保存された Flixa のキーを削除します。ほかのプロバイダーの場合は `--provider` を付けます。
+
+```bash
+flixa logout --provider anthropic
+```
+
+サインアウトしても、`flixa claude-code` や `flixa codex` で変えた Claude Code や Codex の設定は元に戻りません。
+
+## うまくいかないとき
+
+**「Already logged in」と表示される**
+
+`flixa logout` を実行してから、もう一度 `flixa login` を実行してください。ほかのプロバイダーの場合は、`flixa logout` と `flixa login` の両方に `--provider <provider>` を付けます。
+
+**「Not logged in」と表示される**
+
+`flixa login` を実行してください。BYOK のプロバイダーを使う場合は `flixa login --provider <provider>` です。
+
+**キーはどこに保存されますか？**
+
+macOS ではキーチェーン、Windows では DPAPI で暗号化したファイル、Linux では `secret-tool` に保存されます。Linux で `secret-tool` がない場合は、`~/.flixa/` のファイルに保存され、警告が表示されます。

@@ -1,0 +1,144 @@
+---
+title: Trouble signing in
+description: Sign-in methods, what each sign-in error means, email verification, password reset, and two-factor authentication.
+---
+
+This page covers the ways you can sign in to Deni AI, what each sign-in error means, and how to get back in when something goes wrong.
+
+<Callout title="Gmail addresses need Google or GitHub">
+  You can't create an account with a Gmail address and a password, or with an email sign-in link.
+  Use **Continue with Google** or **Continue with GitHub** instead. See [Gmail addresses](#gmail-addresses).
+</Callout>
+
+## Ways to sign in
+
+Sign in at [deniai.app/auth/sign-in](https://deniai.app/auth/sign-in). New accounts start at [deniai.app/auth/sign-up](https://deniai.app/auth/sign-up).
+
+| Method | Button or link |
+| --- | --- |
+| Email and password | **Sign In** |
+| Email sign-in link | **Continue with Magic Link**: we email you a link that signs you in. It works for 5 minutes. |
+| Google | **Continue with Google** |
+| GitHub | **Continue with GitHub** |
+| Passkey | **Continue with Passkey** |
+| No account | **Continue as Guest**. See [Guest accounts](/en/account/guest-accounts). |
+
+To use a passkey, add one first in [Account › Security](https://deniai.app/account/security) under **Passkeys** › **Add passkey**.
+
+## Which email addresses can sign up
+
+New accounts need one of these addresses:
+
+- **Major email providers**, such as Outlook, Hotmail, Live, iCloud, Yahoo, Proton, AOL, Zoho, Fastmail, HEY, Tuta, GMX, Yandex, Mail.ru, QQ, 163, Naver, Daum, Kakao, and Japanese carrier addresses (docomo, au, SoftBank, and others).
+- **School addresses** under `.edu`, `.ac.jp`, `.ed.jp`, `.ac.uk`, `.sch.uk`, `.edu.au`, `.ac.nz`, `.ac.kr`, `.edu.tw`, `.edu.sg`, or `.edu.hk`.
+- **Your work address**, if your company has a paid Deni AI team plan and has verified that email domain.
+
+The same rule applies when you sign up with Google or GitHub: the address they share with Deni AI must be on this list.
+For example, a Google account on a company domain is refused unless your team has verified that domain.
+
+If you already have an account, you can keep signing in even if your address's domain is no longer accepted.
+
+To ask us to accept another domain, [contact us](https://deniai.app/contact).
+
+### Gmail addresses
+
+Gmail addresses (`gmail.com` and `googlemail.com`) can sign up only with **Continue with Google** or **Continue with GitHub**.
+
+With GitHub, Deni AI receives the email address you chose on GitHub.
+If that is a Gmail address with a `+` tag or unusual dots, it's refused as an alias. Use your plain Gmail address on GitHub, or use **Continue with Google**.
+
+### Alias addresses
+
+When you sign up with an email address, addresses with `+` tags (such as `name+news@outlook.com`) or unusual dots are refused. Use your primary address.
+
+## Sign-in error messages
+
+| Message | What to do |
+| --- | --- |
+| "Invalid email or password" | Check both and try again. If you signed up with Google, GitHub, or a passkey, sign in that way. To add a password, see [Reset your password](#reset-your-password). |
+| "Email not verified" | You're taken to the **Verify Email** page and we send you a new link. Open it to finish signing in. See [Email verification](#email-verification). |
+| "Gmail addresses must sign in with Google or GitHub. …" | Use **Continue with Google** or **Continue with GitHub**. |
+| "This email looks like an alias (plus tags or unusual dots). …" | Use your primary address without a `+` tag. |
+| "Please use a major email provider (Outlook, iCloud, Proton, etc.) or a restricted educational address …" | This address can't be used for a new account. See [Which email addresses can sign up](#which-email-addresses-can-sign-up). |
+| "Please enter a valid email address." | Check the address for typos. |
+| "The password you entered has been compromised. Please choose a different password." | This password has appeared in a known data breach. Choose a different one. |
+| "Please complete the CAPTCHA" or "CAPTCHA verification failed. Please try again." | Complete the security check on the form, then submit again. |
+| "Too many requests. Please try again later." | Wait a moment, then try again. |
+| "Too many accounts were created from this network. Please try again later." | Try signing up again later. |
+
+### Google and GitHub sign-in errors
+
+If Google or GitHub sign-in fails, you come back to the sign-in page with a **We couldn't sign you in** message and the reason.
+
+| Message | What to do |
+| --- | --- |
+| "Sign-in was cancelled or took too long. Please try again." | Start again. |
+| "Sign-in was started in another tab or took too long. Please try again from this page." | Start again from the page that shows this message. |
+| "This email is already registered with another sign-in method. …" | Sign in the way you did before. Then connect Google or GitHub in [Account › Security](https://deniai.app/account/security) under **Linked accounts**. |
+| "The provider didn't share an email address. …" | Let Google or GitHub share your email address with Deni AI, or use another sign-in method. |
+| "We couldn't read your profile from the provider. Please try again." | Try again. |
+| "Something went wrong. Please try again. (Error: …)" | Try again. If it keeps happening, [contact us](https://deniai.app/contact) with the error code. |
+
+The Gmail, alias, and email provider messages above can also appear here.
+
+## Email verification
+
+When you sign up with an email address and password, we send you a verification link.
+Open it to finish signing up; it signs you in. The link works for 1 hour.
+
+- Didn't get it? Check your spam folder, then select **Resend** on the **Verify Email** page.
+- If you try to sign in before verifying, we send a new link and show the **Verify Email** page.
+
+If you're signed in right after signing up with no verification step, email sending is turned off on the service. In that case the **Forgot password?** link isn't shown either.
+
+## Reset your password
+
+1. On the sign-in page, select **Forgot password?**.
+2. Enter your email address and select **Send reset link**.
+3. Open the link in the email and set a new password (at least 8 characters). The link works for 1 hour.
+
+Resetting your password signs you out on every device.
+
+If you see "Invalid reset password token", the link has expired or was already used. Request a new one.
+
+**No password yet?** If you signed up with Google or GitHub, you can add a password in [Account › Security](https://deniai.app/account/security). Under **Set password**, request a reset link.
+
+## Two-factor authentication
+
+### Turn it on
+
+1. Open [Account › Security](https://deniai.app/account/security) and find **Two-factor authentication**.
+2. Select **Turn on** and enter your password.
+3. Scan the QR code with an authenticator app such as Google Authenticator or 1Password. If you can't scan it, enter the key shown below the code.
+4. Enter the 6-digit code from the app.
+5. Save your backup codes with **Copy** or **Download**. They're shown only once.
+
+Two-factor authentication protects sign-ins with your password or an email sign-in link, so you need a password to turn it on. If you signed up with Google or GitHub, [set a password](#reset-your-password) first. Sign-ins with Google, GitHub, or a passkey don't ask for a code.
+
+To turn it off, select **Turn off** on the same card and enter your password.
+
+### Sign in with a code
+
+If your account has two-factor authentication turned on, you're asked for a code after you enter your password or open an email sign-in link.
+On the **Two-factor authentication** page, enter the 6-digit code from your authenticator app.
+
+- Check **Trust this device for 30 days** to skip the code on this browser for 30 days.
+- The code page expires after 10 minutes. If you see "Your two-factor session expired. Please sign in again.", start over from the sign-in page.
+- After too many wrong codes, you'll see "Too many failed attempts. Your account is temporarily locked. Please try again later." Wait, then try again.
+
+### Backup codes
+
+On the **Two-factor authentication** page, select **Use a backup code instead** and enter one of your backup codes.
+Each backup code works only once. Keep the rest somewhere safe, away from your phone.
+
+To get a new set, select **New backup codes** in [Account › Security](https://deniai.app/account/security) and enter your password. Your old codes stop working.
+
+### If you lose your authenticator device
+
+- Sign in with a backup code.
+- On a browser where you checked **Trust this device for 30 days** within the last 30 days, you may still be able to sign in without a code.
+- If neither works, [contact us](https://deniai.app/contact).
+
+## Still can't sign in?
+
+[Contact us](https://deniai.app/contact). Tell us the sign-in method you used and the exact error message.

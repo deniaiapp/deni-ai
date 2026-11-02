@@ -1,0 +1,264 @@
+---
+title: Flixa を外部のコーディングツールで使う
+description: Claude Code、Codex、Zed、opencode などのツールから Flixa を使うための設定方法です。
+---
+
+Flixa は Claude Code、Codex、Zed、opencode などのツールから使えます。
+各ツールの接続先を Flixa に変えるだけで、そのツールを Deni AI のプランの使用量で使えます。
+
+- Claude Code / Codex: Flixa CLI のコマンド 1 つで設定できます。
+- Zed / opencode: 設定ファイルに Flixa を追加します。
+
+<Callout title="プランによって使えるツールが変わります">
+  Free と Go プランで使えるのは、Claude Code、Codex、Zed、opencode と Flixa（VS Code 拡張機能・CLI）だけです。
+  それ以外のツールは Plus 以上のプランで使えます。詳しくは[その他のツール](#その他のツール)を見てください。
+</Callout>
+
+## 準備
+
+### API キー
+
+Flixa を使うには Deni AI の API キー（`deni_` で始まる文字列）が必要です。
+
+- Flixa CLI を使う場合（Claude Code / Codex）: `flixa login` でブラウザからログインすると、キーが自動で保存されます。
+- 手動で設定する場合（Zed / opencode など）: [設定 › API キー](https://deniai.app/settings/api-keys) でキーを作成します。キーは作成時に一度しか表示されないので、その場でコピーしてください。
+
+ゲストアカウントでは API キーを作成できません。サインインしてから作成してください。
+
+### 接続先
+
+| 用途 | URL |
+| --- | --- |
+| ベース URL | `https://flixa-api.deniai.app/v1/agent` |
+| OpenAI Chat Completions | `https://flixa-api.deniai.app/v1/agent/chat/completions` |
+| OpenAI Responses | `https://flixa-api.deniai.app/v1/agent/responses` |
+| Anthropic Messages | `https://flixa-api.deniai.app/v1/agent/v1/messages` |
+| モデル一覧 | `https://flixa-api.deniai.app/v1/agent/models` |
+
+認証には `Authorization: Bearer deni_...` または `x-api-key: deni_...` ヘッダーを使います。
+
+### モデル
+
+モデル ID は `openai/gpt-6-sol` や `anthropic/claude-sonnet-5.5` のように `提供元/モデル名` の形式です。
+最新の一覧はモデル一覧 API で確認できます。各モデルの `tier` が `free` なら無料プランで、`plus` や `pro` ならそのプラン以上で使えます。
+次の `curl` も「その他のツール」として扱われるため、実行には Plus 以上のプランが必要です。
+
+```bash
+curl https://flixa-api.deniai.app/v1/agent/models -H "Authorization: Bearer $FLIXA_API_KEY"
+```
+
+## Flixa CLI のインストール
+
+Claude Code と Codex の設定には Flixa CLI を使います。
+
+```bash
+npm install -g @deniai/flixa
+```
+
+```bash
+flixa login
+```
+
+## Claude Code
+
+```bash
+flixa claude-code
+```
+
+```bash
+claude
+```
+
+`flixa claude-code` は次の 2 つのファイルを書き換えます。元のファイルは同じ場所に `*.bak` として残ります。
+
+- `~/.claude.json`: `hasCompletedOnboarding`、`primaryApiKey`
+- `~/.claude/settings.json`: `env.ANTHROPIC_BASE_URL`、`env.ANTHROPIC_API_KEY`
+
+ファイルを書き換えずに変更内容だけを確認したいときは、`--dry-run` を付けます。
+
+```bash
+flixa claude-code --dry-run
+```
+
+### 手動で設定する
+
+CLI を使わない場合は、`~/.claude/settings.json` に次を追加します。
+
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://flixa-api.deniai.app/v1/agent",
+    "ANTHROPIC_API_KEY": "deni_..."
+  }
+}
+```
+
+### 元に戻す
+
+```bash
+flixa claude-code unset
+```
+
+`flixa logout` は Flixa CLI に保存したキーを消すだけで、Claude Code の設定は元に戻りません。
+
+## Codex
+
+```bash
+flixa codex
+```
+
+`flixa codex` は `~/.codex/config.toml`（Windows では `%USERPROFILE%\.codex\config.toml`）に Flixa のプロバイダーを追加し、`model_provider = "flixa"` を設定します。
+
+### 手動で設定する
+
+`config.toml` に次を追加します。`model_provider` は、`[` で始まるセクションより前のファイルの先頭に置いてください。
+
+```toml
+model_provider = "flixa"
+model = "openai/gpt-6-sol"
+
+[model_providers.flixa]
+name = "flixa"
+base_url = "https://flixa-api.deniai.app/v1/agent"
+wire_api = "responses"
+requires_openai_auth = false
+env_key = "FLIXA_API_KEY"
+```
+
+`env_key` を使う場合は、Codex を起動する環境で `FLIXA_API_KEY` を設定してください。
+環境変数を使わずに `config.toml` にキーを直接書く場合は、`env_key` の代わりに次を追加します。
+
+```toml
+[model_providers.flixa.http_headers]
+Authorization = "Bearer deni_..."
+```
+
+### 元に戻す
+
+```bash
+flixa codex unset
+```
+
+このコマンドは `config.toml` から `model_provider = "flixa"` を外します。`[model_providers.flixa]` のセクションは残るので、不要なら手で削除してください。
+
+## Zed
+
+Zed には Flixa を OpenAI 互換プロバイダーとして追加します。
+
+1. コマンドパレットから `zed: open settings` を実行し、`settings.json` に次を追加します。
+
+   ```json
+   {
+     "language_models": {
+       "openai_compatible": {
+         "Flixa": {
+           "api_url": "https://flixa-api.deniai.app/v1/agent",
+           "available_models": [
+             {
+               "name": "anthropic/claude-sonnet-5.5",
+               "display_name": "Claude Sonnet 5.5 (Flixa)",
+               "max_tokens": 1000000,
+               "max_output_tokens": 128000
+             },
+             {
+               "name": "google/gemini-3.8-flash",
+               "display_name": "Gemini 3.8 Flash (Flixa)",
+               "max_tokens": 1048576,
+               "max_output_tokens": 65536
+             }
+           ]
+         }
+       }
+     }
+   }
+   ```
+
+2. API キーを登録します。次のどちらかで設定してください。
+   - `agent: open settings` を実行し、LLM Providers で Flixa を選んでキーを入力する（キーはシステムのキーチェーンに保存されます）
+   - 環境変数 `FLIXA_API_KEY` を設定する
+
+3. Agent パネルのモデルセレクターで Flixa のモデルを選びます。
+
+API キーは `settings.json` に書かないでください。
+
+## opencode
+
+1. プロジェクトの `opencode.json`（すべてのプロジェクトで使うなら `~/.config/opencode/opencode.json`）に次を追加します。
+
+   ```json
+   {
+     "$schema": "https://opencode.ai/config.json",
+     "provider": {
+       "flixa": {
+         "npm": "@ai-sdk/openai-compatible",
+         "name": "Flixa",
+         "options": {
+           "baseURL": "https://flixa-api.deniai.app/v1/agent",
+           "apiKey": "{env:FLIXA_API_KEY}"
+         },
+         "models": {
+           "anthropic/claude-sonnet-5.5": {
+             "name": "Claude Sonnet 5.5",
+             "limit": { "context": 1000000, "output": 128000 }
+           },
+           "google/gemini-3.8-flash": {
+             "name": "Gemini 3.8 Flash",
+             "limit": { "context": 1048576, "output": 65536 }
+           }
+         }
+       }
+     }
+   }
+   ```
+
+2. API キーを登録します。次のどちらかで設定してください。
+   - 環境変数 `FLIXA_API_KEY` を設定する
+   - opencode で `/connect` を実行し、**Other** を選んでプロバイダー ID に `flixa` と入力してからキーを入力する（この場合は `options.apiKey` の行を消してかまいません）
+
+3. `/models` で Flixa のモデルを選びます。
+
+## その他のツール
+
+**Plus 以上のプランが必要です。**
+
+Plus 以上のプランなら、OpenAI 互換 API（Chat Completions または Responses）か Anthropic Messages API に対応したツールを、どれでも同じ方法で使えます。
+自分で書いたスクリプトや、`curl` などからの直接の呼び出しもここに含まれます。
+
+- ベース URL: `https://flixa-api.deniai.app/v1/agent`
+- API キー: `deni_...`
+- モデル: `openai/gpt-6-sol` などの Flixa のモデル ID
+
+| プラン | 使えるツール |
+| --- | --- |
+| Free / Go | Claude Code、Codex、Zed、opencode、Flixa（VS Code 拡張機能・CLI） |
+| Plus / Pro | 上記に加えて、対応している任意のツール |
+
+Free と Go プランでそれ以外のツールを使うと、「This app is not available on your plan」というエラーになります。
+
+## うまくいかないとき
+
+**「Authentication required」と表示される**
+
+API キーがツールから送られていません。
+
+- 環境変数でキーを渡している場合は、ツールを起動したターミナルやプロセスで変数が設定されているか確認してください。
+- Windows でスタートメニューやショートカットから Codex を起動すると、別の PowerShell ウィンドウで `$env:` を使って設定した環境変数を Codex から参照できません。システムの環境変数に設定するか、`http_headers` でキーを直接指定してください。
+- 設定を変えたあとはツールを再起動してください。
+
+**ゲストアカウントのエラーが出る**
+
+ゲストアカウントでは Flixa を使えません。サインインして新しい API キーを作成してください。
+
+**「This app is not available on your plan」と表示される**
+
+そのツールは Free と Go プランでは使えません。Claude Code、Codex、Zed、opencode、Flixa のどれかを使うか、Plus 以上のプランにアップグレードしてください。
+
+**モデルが使えない**
+
+一部のモデルは有料プランでのみ使えます。モデルの `tier` を見て、今のプランで使えるモデルか確認してください。
+
+**使用量を確認したい**
+
+```bash
+flixa usage
+```

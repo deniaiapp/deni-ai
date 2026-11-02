@@ -1,0 +1,111 @@
+---
+title: Memory and projects
+description: How Deni AI remembers things about you, and how projects give a group of chats shared instructions.
+---
+
+Memory and projects both give the AI context you don't have to repeat.
+
+- **Memory**: short facts about you, such as your name, language, or preferences. They're used in all your chats.
+- **Projects**: a group of chats with shared instructions and a default model.
+
+## Memory
+
+### What gets saved
+
+There are two kinds of memories:
+
+| Kind | How it's added |
+| --- | --- |
+| AI added | After the AI replies, Deni AI looks at your recent messages in that chat and saves lasting facts about you. |
+| You added | You type it yourself in Settings › Personalize. |
+
+Automatic saving looks for things that stay true: your name, language, role, tools you use, and preferences you always want.
+It's meant to skip one-off tasks, passing questions, greetings, and secrets such as passwords.
+It saves at most 3 memories per reply, and skips anything already covered by a saved memory.
+
+Saving runs in the background after the reply finishes. When something is saved, you'll see "Saved to memory" with a **View** button.
+
+Each memory can be up to 240 characters. Guest accounts don't save memories.
+
+### How memories are used
+
+Your saved memories are added to every chat as background.
+The AI uses them when they're relevant and doesn't mention them unless you ask.
+
+### View, add, and delete memories
+
+Open [Settings › Personalize](https://deniai.app/settings/memory). Your memories are under **Saved Memories**.
+
+- **Add**: type in "Add something Deni should remember about you" and click **Add**.
+- **Find**: use **Search memories**, or filter by **All**, **AI added**, or **You added**.
+- **Delete one**: click the trash icon next to it.
+- **Delete all**: click **Clear all memories**. This can't be undone.
+
+You can't edit a memory. Delete it and add a new one instead.
+
+### Turn off memory
+
+Turn off **Auto-save memories** under **Response Style** on the same page. The change is saved right away.
+
+<Callout title="Turning off auto-save keeps your saved memories">
+  With **Auto-save memories** off, the AI stops adding new memories, but the ones already saved are still used in your chats.
+  To stop the AI from using them, delete them or click **Clear all memories**.
+</Callout>
+
+### Response style and instructions
+
+The same page has settings that apply to every chat:
+
+- **Tone**, **Friendliness**, **Warmth**, and **Emoji**: how the AI writes. These save as soon as you pick one.
+- **Instructions**: anything the AI should always follow, up to 4,000 characters. Click **Save** after editing.
+
+## Projects
+
+A project groups chats and gives them shared context. Each project has:
+
+| Setting | What it does |
+| --- | --- |
+| Name | Up to 80 characters. |
+| Description | Optional, up to 240 characters. |
+| Custom instructions | Tell the AI how to behave in this project: goals, tone, constraints, output format. Up to 4,000 characters. |
+| Default model | New chats in this project start with this model. You can still switch per chat. |
+
+The project's name, description, and custom instructions are given to the AI in every chat in the project.
+Your memories and personalization still apply too.
+
+### Create a project
+
+1. Open [Settings › Projects](https://deniai.app/settings/projects).
+2. Click **New project**. The new project opens.
+3. Fill in the settings and click **Save**.
+
+### Start a chat in a project
+
+- On the chat home screen, pick the project from the project menu under the message box (it shows **No project** by default). Then send your message.
+- Or open the project and click **New chat**.
+
+The project page lists your chats in that project.
+
+### Archive and delete projects
+
+- **Archive**: click **Archive** on the project page, or the archive icon in Settings › Projects. Archived projects move to **Archived**. You can't start new chats in them, and their instructions are no longer used.
+- **Restore**: click **Restore** next to an archived project.
+- **Delete**: archive the project first, then click the trash icon next to it under **Archived**. This can't be undone.
+
+Deleting a project doesn't delete its chats. They stay in your chat list without a project.
+
+## Plans
+
+Memory and personal projects are available on every plan.
+
+Sharing a project with a team needs a paid team plan.
+On a team without one, the team shows as "(paid team plan)" and can't be picked.
+See [Pro for Teams](/en/teams/pro-for-teams).
+
+### Team projects
+
+- If you're on a team, pick **Personal** or the team next to **New project** before you create it. You can change it later under **Team sharing** on the project page.
+- Only the project's creator can change its team sharing, or make it **Only you** again.
+- Team members get the project instructions and default model. Their chats stay private.
+- Only team owners, admins, or the project's creator can edit a team project.
+- If the team plan ends, projects already shared stay usable.

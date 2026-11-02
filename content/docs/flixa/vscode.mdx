@@ -1,0 +1,140 @@
+---
+title: Get started with Flixa in VS Code
+description: Install the Flixa extension, sign in, and make your first change with the agent.
+---
+
+Flixa is Deni AI's coding agent for VS Code. It reads your code, edits files, and runs commands, asking you first when needed.
+It also works in Cursor, Windsurf, and Antigravity.
+
+<Callout title="Sign in with a Deni AI account">
+  Flixa works on every plan, but guest accounts can't use it. Sign in with a permanent account first.
+</Callout>
+
+## Install the extension
+
+The extension is called **Flixa** (publisher `deniai`). Install it from your editor's extension registry.
+
+| Editor | Where to install |
+| --- | --- |
+| VS Code | [Visual Studio Marketplace](https://marketplace.visualstudio.com/items?itemName=deniai.flixa) |
+| Cursor, Windsurf, Antigravity | [Open VSX Registry](https://open-vsx.org/extension/deniai/flixa) |
+
+After installing, a Flixa icon appears in the activity bar.
+
+## Sign in
+
+1. Open the command palette and run **Deni AI: Login**.
+2. Your browser opens the Flixa authorization page on deniai.app. Sign in if asked.
+3. Check that the code on the page matches the code in VS Code's notification ("Waiting for approval... Code: ...").
+4. Click **Approve**. VS Code connects on its own; you can close the page.
+
+The status bar shows `Deni AI: <your plan>` once you're connected.
+If you don't approve within 15 minutes, the login times out. Run **Deni AI: Login** again.
+
+Signing in creates an API key in your account. You can have up to 5 keys.
+If you already have 5, the authorization page asks you to revoke one before it continues.
+
+### Sign in with an API key instead
+
+1. Create a key in [Settings › API Keys](https://deniai.app/settings/api-keys) and copy it.
+2. Click **Deni AI: Not connected** in the status bar.
+3. Choose **Enter API Key manually** and paste the key (it starts with `deni_`).
+
+## Make your first change
+
+1. Click the Flixa icon in the activity bar to open the chat. You can also run **Flixa: Open Chat**.
+2. Pick a model from the selector next to the input box. Some models also let you choose a reasoning effort.
+3. Make sure the mode is **Agent**. Use the **+** button in the input box to switch modes.
+4. Describe the change you want and send it.
+5. When Flixa needs permission, an **Allow** / **Deny** card appears above the input box.
+6. Review the files in the **Files Changed** list. Keep or revert each file, or click **Keep All**.
+
+| Mode | What it does |
+| --- | --- |
+| Agent | Reads and edits files and runs commands to complete the task |
+| Chat | Answers questions without taking any actions |
+
+A few things that help:
+
+- Type `@` to add a workspace file as context. The active file and your selection are added automatically; you can remove them from the input box.
+- Messages you send while the agent is working are queued and sent when it finishes.
+- You can edit and resend your earlier messages.
+- **Flixa: New Chat** and **Flixa: Chat History** are at the top of the chat view.
+
+## Choose an approval mode
+
+The approval mode decides which actions need your OK. Change it from the **+** button, with `/approval`, or with **Flixa: Set Approval Mode**.
+
+| Mode | Shell commands | Other actions |
+| --- | --- | --- |
+| All Approve | Run without asking | Run without asking |
+| Auto | Checked by an AI safety review | Run without asking |
+| Safe Approve (default) | You confirm | Run without asking |
+| Manual Approve | You confirm | You confirm |
+
+## Slash commands
+
+Type `/` in the input box to see them.
+
+| Command | What it does |
+| --- | --- |
+| `/new` | Start a new chat |
+| `/clear` | Clear the messages in this chat |
+| `/compact` | Compact this chat's context |
+| `/stop` | Stop the running agent |
+| `/agent`, `/chat` | Switch to Agent or Chat mode |
+| `/model [model-id]` | Show or set the model |
+| `/approval [auto\|safe\|manual\|all]` | Show or set the approval mode |
+| `/help` | List the commands |
+
+## Edit from the editor
+
+- **Inline Edit**: press `Ctrl+I` (`Cmd+I` on macOS) in the editor, then describe the change. Select code first to focus the edit on it.
+- **Implement Comment**: write a comment such as `// TODO: ...`, `// implement: ...`, `# TODO: ...`, or `@flixa implement ...`. Click **Implement (Flixa)** above it.
+
+Both show the result as a diff so you can review it before applying.
+
+## Settings worth knowing
+
+Open them from the chat view's settings menu (**Open Settings**), or search `@ext:deniai.flixa` in VS Code settings.
+
+| Setting | Default | What it does |
+| --- | --- | --- |
+| `flixa.agentApprovalMode` | `SAFE_APPROVE` | The default approval mode |
+| `flixa.autoContext.enabled` | `true` | Adds your workspace file list, git status, `package.json`, `tsconfig.json`, and the active file to prompts |
+| `flixa.autoContext.excludePatterns` | `node_modules`, `.git`, `dist`, and others | Files and folders left out of the file list |
+| `flixa.compactTokenThreshold` | `200000` | Context size (estimated tokens) at which Flixa compacts the chat automatically. `0` turns it off |
+
+Other `flixa.autoContext.*` settings choose what goes into the context and limit the file list's depth and size.
+
+## Plans and usage
+
+Flixa runs on the usage included in your Deni AI plan. It works on every plan, Free included.
+
+- Each model has a usage tier that sets how fast it uses your quota. The model selector shows it, for example `Tier 3 · 2x`.
+- Some models need a higher plan. They show "Plus plan or higher required" or "Pro plan required". Clicking one opens your billing page.
+- The status bar shows your plan. Click it, or choose **Usage** in the chat view's settings menu, to see how much you have left.
+- **Plan** in the same menu opens [Settings › Billing](https://deniai.app/settings/billing).
+
+## Sign out
+
+Run **Deni AI: Logout** from the command palette.
+
+## Troubleshooting
+
+**The status bar says "Deni AI: Not connected"**
+
+You aren't signed in. Click it and choose **Login with Deni AI**.
+
+**The authorization page says "Sign in required"**
+
+You're using a guest account. Sign in with a permanent account, then approve again.
+
+**Models show "Login required"**
+
+Sign in first. Clicking a locked model starts the login.
+
+## Related
+
+- [Use the Flixa CLI](/en/flixa/cli)
+- [Use Flixa with external coding tools](/en/flixa/external-tools)

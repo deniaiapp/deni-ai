@@ -1,0 +1,148 @@
+---
+title: Get started with Pro for Teams
+description: Create a team, subscribe to Pro for Teams, invite members, verify your email domain, and manage billing.
+---
+
+Pro for Teams gives your whole team Pro-tier access with per-seat pricing.
+You create the team, subscribe once, and invite your coworkers. Each member gets Pro access without a personal subscription.
+
+Teams live in [Settings › Team](https://deniai.app/settings/team). You can also open it from your account menu in the sidebar (**Team**).
+
+## What's included
+
+- One usage pool for Deni AI chat, Flixa, and Deni Run
+- Pro benefits for every team member
+- Per-seat billing: you pay only for active members
+- Centralized billing and member management, with an audit log
+- Team projects shared with every member
+- Team domains, so coworkers join with their work email
+
+For what the Pro plan itself includes, see [Plans and usage](/en/billing/plans-and-usage).
+
+### What needs a paid team plan
+
+Creating a team, inviting members, and managing roles work without a subscription.
+These features need an active team plan:
+
+| Feature | If the plan ends |
+| --- | --- |
+| Team projects (creating or sharing a project with the team) | Projects already shared stay usable. |
+| Audit log | Changes are still recorded and appear once the plan is active again. |
+| Team domains | Domains you already added stop applying until the plan is active again. |
+
+## Create a team
+
+Guest accounts can't create teams. Sign in first.
+
+1. Open [Settings › Team](https://deniai.app/settings/team).
+2. Select **Create Team**.
+3. Enter a **Team Name** and select **Create**.
+
+The person who creates the team is its owner.
+To create another team later, use the team switcher at the top of the team menu and select **New Team**.
+
+## Subscribe
+
+Only the team owner can subscribe.
+
+1. Go to [Settings › Team › Billing](https://deniai.app/settings/team/billing).
+2. On the **Pro for Teams** card, choose **Monthly** or **Yearly** with the switch in the top right. Yearly billing shows how much you save.
+3. Select **Subscribe** and complete checkout.
+
+The price is shown per seat. One seat is one team member.
+
+For payment methods and invoices, see [Payments](/en/billing/payments).
+
+## Invite members
+
+Owners and admins can invite people.
+
+1. Go to [Settings › Team › Members](https://deniai.app/settings/team/members) and select **Invite**.
+2. Enter their **Email** and choose a **Role** (**Member** or **Admin**).
+3. Select **Send Invitation**.
+
+The person gets an email with a link. They can also accept from **Invitations for you** in [Settings › Team](https://deniai.app/settings/team).
+Until then, the invitation appears under **Pending Invitations**, where you can cancel it.
+
+When someone accepts, they join the team right away and your billed seat count may change.
+A team can have up to 50 members.
+
+<Callout title="Joining a team cancels a personal subscription">
+  If the team has an active team plan, joining it cancels the member's personal subscription immediately.
+  Unused time is credited toward future invoices, not refunded.
+</Callout>
+
+## Roles
+
+| Role | What they can do |
+| --- | --- |
+| Member | Use Pro access and team projects, and see the member list. |
+| Admin | Everything a member can, plus invite and remove members, change roles, manage domains, view the audit log, and cancel or resume the subscription. |
+| Owner | Everything an admin can, plus subscribe, switch between monthly and yearly, open **Manage** for billing details, and delete the team. |
+
+To change someone's role, open the **⋯** menu next to them on the **Members** page and select **Make Admin** or **Make Member**.
+The owner's role can't be changed here.
+
+## Verify your email domain
+
+**Requires a paid team plan. Owners and admins only.**
+
+Verify a domain your organization owns, such as `example.com`.
+Coworkers with an address on that domain can then join the team with their work email. They can also sign up even if the domain isn't normally allowed.
+
+1. Go to [Settings › Team › Domains](https://deniai.app/settings/team/domains).
+2. Under **Email domains**, enter the domain and select **Add domain**.
+3. Add the TXT record shown at your DNS provider:
+
+   | Field | Value |
+   | --- | --- |
+   | Name | `_deni-ai-verification.<your domain>` |
+   | Value | `deni-ai-verification=...` (copy it from the page) |
+4. Select **Verify**. When it works, the domain shows **Verified**.
+
+If you see "The TXT record was not found yet", wait a while for the DNS change to appear, then try again.
+You can remove the TXT record after the domain is verified.
+
+### Choose how people join
+
+Under **Joining by domain**, choose what happens when someone signs in with a verified domain email:
+
+| Setting | What happens |
+| --- | --- |
+| **Join automatically** | They join the team as members. Each one adds a billed seat, and an active personal subscription is canceled. |
+| **Suggest and require admin approval** (default) | They see the team and can select **Request to join**. An owner or admin approves or declines each request under **Join requests** on the **Members** page. |
+| **Off** | Nobody joins through the domain. Its addresses can still sign up and be invited as usual. |
+
+## Audit log
+
+**Requires a paid team plan. Owners and admins only.**
+
+[Settings › Team › Audit Log](https://deniai.app/settings/team/audit-log) shows a history of billing and policy changes made by your team's owners and admins.
+It includes events such as members invited, joined, or removed, role changes, plan changes, and domains added or verified.
+
+## Team billing
+
+Owners and admins can open [Settings › Team › Billing](https://deniai.app/settings/team/billing).
+It shows the current plan, the number of seats, and the renewal date.
+
+- **Switch between monthly and yearly** (owner): pick the other interval on the **Pro for Teams** card and select **Switch**. A dialog shows the estimated charge. The prorated difference is charged to the team's payment method right away.
+- **Manage** (owner): opens the team's Stripe billing portal.
+- **Cancel subscription** (owner or admin): the plan stays active until the end of the current billing period, then ends for every member. You can **Resume** it any time before then.
+
+The **Billing** page also has **Team Max Mode** settings.
+
+## Remove members or leave a team
+
+Owners and admins can remove members. On the **Members** page, open the **⋯** menu next to the person and select **Remove**.
+The owner can't be removed.
+
+To leave a team, go to [Settings › Team](https://deniai.app/settings/team) and select **Leave team**. To join again, you need a new invitation.
+
+The owner can't leave the team. Transfer ownership first: on the **Members** page, open the **⋯** menu next to another member and select **Transfer ownership**. They become the owner, and you become an admin.
+
+### Delete the team
+
+Only the owner can delete a team. Go to [Settings › Team](https://deniai.app/settings/team) and select **Delete team** under **Danger Zone**.
+This removes every member and cancels the team subscription. It can't be undone.
+
+If you own a team, you need to delete it or transfer ownership before you can delete your account. See [Your data and privacy](/en/account/data-and-privacy).
