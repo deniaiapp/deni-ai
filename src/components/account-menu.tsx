@@ -1,6 +1,6 @@
-import { LogOut, Settings, UserIcon, UserPlus, Users, Zap } from "lucide-react";
+import { CircleHelp, LogOut, Settings, UserIcon, UserPlus, Users, Zap } from "lucide-react";
 import { Link, useRouter } from "@/lib/navigation";
-import { useExtracted } from "use-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
 import { Spinner } from "@/components/ui/spinner";
@@ -30,6 +30,7 @@ import { CombinedUsageBar } from "@/components/billing/product-usage";
 import { trpc } from "@/lib/trpc/react";
 import { liveUsageQueryOptions } from "@/lib/usage-query-options";
 import { cn } from "@/lib/utils";
+import { supportUrl } from "@/lib/support-url";
 import { versions } from "@/lib/version";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
@@ -89,6 +90,7 @@ function AccountUsageRow({
 
 export function AccountMenu() {
   const t = useExtracted();
+  const locale = useLocale();
   const localizeError = useLocalizeError();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -383,6 +385,14 @@ export function AccountMenu() {
               <span className="flex-1">{t("Team")}</span>
             </DropdownMenuItem>
           )}
+          <DropdownMenuItem
+            className="gap-2 text-sm"
+            disabled={isMenuPending}
+            render={<Link href={supportUrl(locale)} className="flex w-full" />}
+          >
+            <CircleHelp className="size-4" />
+            <span className="flex-1">{t("Help Center")}</span>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="gap-2 text-sm"

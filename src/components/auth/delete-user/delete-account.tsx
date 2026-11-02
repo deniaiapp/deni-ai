@@ -148,7 +148,7 @@ export function DeleteAccount({ className }: DeleteAccountProps) {
                       ? t("Unable to check your subscription. Please try again.")
                       : deletionStatus.data?.state === "teamOwner"
                         ? t(
-                            "You own a team. Delete the team or transfer ownership before deleting your account.",
+                            "You own a team. Delete the team, or transfer ownership to another member in Team › Members, before deleting your account.",
                           )
                         : deletionStatus.data?.state === "active"
                           ? t(

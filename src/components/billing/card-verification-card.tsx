@@ -11,6 +11,8 @@ import { stripeJsPromise } from "@/lib/stripe-js";
 import { trpc } from "@/lib/trpc/react";
 
 import { runWithLoading } from "@/lib/run-with-loading";
+import { usdToUsageUnits, VERIFIED_FREE_POOL_USD } from "@/lib/usage-pool";
+import { formatCompactUsageValue } from "@/lib/utils";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -38,6 +40,7 @@ export function CardVerificationCard({
 }: Props) {
   const t = useExtracted();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const verifiedUnits = formatCompactUsageValue(usdToUsageUnits(VERIFIED_FREE_POOL_USD));
 
   // Only show this card for free-tier users; paid users manage cards via the
   // Stripe portal.
@@ -65,12 +68,14 @@ export function CardVerificationCard({
             <CardDescription>
               {hasVerifiedPaymentMethod ? (
                 t(
-                  "More models are unlocked with 25M basic / 10M premium tokens per month. We will not charge this card.",
+                  "More models are unlocked and your monthly usage is {units} units. We will not charge this card.",
+                  { units: verifiedUnits },
                 )
               ) : (
                 <span className="whitespace-pre-line">
                   {t(
-                    "Add a card to unlock more models and lift your monthly limits to 25M basic / 10M premium tokens.\n We place a $1 hold that is released immediately — no actual charge.",
+                    "Add a card to unlock more models and raise your monthly usage to {units} units.\n We place a $1 hold that is released immediately — no actual charge.",
+                    { units: verifiedUnits },
                   )}
                 </span>
               )}

@@ -1,12 +1,14 @@
 import { Link } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { localizedPath } from "@/lib/locale-path";
+import { supportUrl } from "@/lib/support-url";
 import DeniAIIcon from "./deni-ai-icon";
 
 const Footer = () => {
   const t = useExtracted();
   const locale = useLocale();
-  const hrefFor = (path: string) => localizedPath(path, locale);
+  const hrefFor = (path: string) =>
+    path.startsWith("https://") ? path : localizedPath(path, locale);
 
   const productLinks = [
     { href: "/home", label: "Deni AI" },
@@ -16,6 +18,7 @@ const Footer = () => {
   ];
 
   const resourceLinks = [
+    { href: supportUrl(locale), label: t("Help Center") },
     { href: "/guides", label: t("AI Guides") },
     { href: "/use-cases", label: t("Use Cases") },
     { href: "/faq", label: t("FAQ") },
