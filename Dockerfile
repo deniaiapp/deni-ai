@@ -16,7 +16,7 @@
 FROM node:26-slim AS base
 WORKDIR /app
 RUN npm install --global pnpm@latest
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 FROM base AS builder
 RUN --mount=type=cache,id=deni-ai-support-pnpm,target=/pnpm/store \
