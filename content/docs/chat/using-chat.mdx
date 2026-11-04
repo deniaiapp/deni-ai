@@ -1,0 +1,195 @@
+---
+title: Using chat
+description: How to choose a model and reasoning effort, attach files, use web search and Deep Research, preview code, retry answers, organize and search chats, export a chat, compare two models, and change the look of chat.
+---
+
+This page covers the everyday features of Deni AI chat at [deniai.app](https://deniai.app).
+
+## Send a message
+
+Type in the message box and press **Enter** to send. Press **Shift+Enter** for a new line. On phones and tablets, **Enter** adds a new line, so tap the send button.
+
+While an answer is being written, the send button becomes **Stop**. See [Stop an answer](#stop-an-answer).
+
+You can also speak your message with the **Voice input** microphone button.
+
+## Choose a model
+
+Select the model name in the message box to open the model picker. You can search by name, or browse by provider: **Featured**, OpenAI, Anthropic, and Google.
+
+The model you pick stays selected for your next chats in the same browser. It isn't saved per chat. In a project with a default model, new chats in that project start with that model.
+
+In the picker:
+
+- A **Tier** badge means the model uses more of your usage per token. Hover over it to see how much more. See [Model usage tiers](/en/billing/plans-and-usage#model-usage-tiers).
+- A green dot means the model is working. A warning icon means it's currently unavailable.
+- A date badge, such as **Retires** and a date, means the model will be removed.
+
+Which models you can use depends on your plan:
+
+| Plan | Models |
+| --- | --- |
+| Guest | GPT-6 Luna |
+| Free | GPT-6 Luna, Claude Haiku 5.5, and Gemini 3.8 Flash |
+| Free with a verified card, or Go | Most models |
+| Plus | All models except Pro-only ones |
+| Pro | All models |
+
+For details, see [Plans and usage](/en/billing/plans-and-usage).
+
+### Reasoning effort
+
+Use the reasoning effort menu (the brain icon) to choose how much the model thinks before answering: **None**, **Minimal**, **Light**, **Medium**, **High**, **Extra High**, or **Max**.
+Each model offers only some of these levels, and the menu is grayed out for models that don't support it. The default is **High** where available.
+
+Higher effort can give better answers to hard questions, but it takes longer and uses more of your usage. On phones, the menu is in the **+** menu.
+
+## Attach files
+
+To attach files:
+
+- Select **+** › **Add photos or files**.
+- Drag files onto the page.
+- Paste a file or image into the message box.
+
+Files upload as soon as you add them. Wait for "Uploading..." to finish before you send.
+
+| Type | Formats | Size limit |
+| --- | --- | --- |
+| Images | JPEG, PNG, WebP. HEIC, GIF, AVIF, and BMP are converted in your browser when it can read them. | 10 MB |
+| PDF | PDF | 10 MB |
+| Text and code | Files such as `.txt`, `.md`, `.csv`, `.json`, `.yaml`, `.html`, `.js`, `.ts`, `.py`, `.sql`, and `.srt` | 2 MB |
+
+Other files, such as SVG, Word, Excel, and ZIP files, can't be attached. Save them as PDF or text first.
+
+Text and code files are added to your message as text. In one message, the model reads up to 20 images and PDFs (20 MB in total) and up to 20 text files (400,000 characters in total).
+Longer text files are cut off.
+
+Attachments count toward your attachment storage (20 MB for guests, 100 MB on Free, 200 MB on Go, 500 MB on Plus, 1 GB on Pro). You can see how much you've used under **Attachment storage** in [Settings › Billing](https://deniai.app/settings/billing). Deleting a chat deletes its files.
+
+If an upload fails, see [File uploads](/en/chat/troubleshooting#file-uploads).
+
+## Search the web
+
+Models can search the web on their own when a question needs current information.
+To make sure the answer uses the web, select **+** › **Search** before you send. Answers show the sources they used under **Sources**.
+
+**Deep Research** (in the **+** menu) searches several times, opens pages, cross-checks them, and writes a report with a summary, key findings, risks, and sources. It takes longer than a normal answer. Guests can't use Deep Research.
+
+Each web search uses 10,000 units of your usage.
+
+You can also paste a link into your message and ask about it. The model opens the page and reads it.
+
+### Questions from the model
+
+Sometimes the model asks you a few questions before answering, one at a time, with choices to pick from.
+Answer them and select **Submit answers**, or select **Continue without answers**. You can't send a new message until you do one of these.
+
+## What answers can include
+
+- **Code blocks** have a copy button. HTML, JSX, and TSX code also has a **Preview** button that runs the code in a panel next to the chat. Previews of React code can use only `react` and `react-dom`.
+- **Diagrams** written in Mermaid are drawn as diagrams.
+- **Math** is shown as formatted equations.
+- **Charts, checklists, calculators, and other interactive elements** appear when they help. To get mostly text, see [Appearance](#appearance).
+- **Images from other sites** load only when you select **Load image from …**.
+- **Links to other sites** ask you to confirm with **Open link** before they open.
+
+## Stop an answer
+
+Select **Stop** while an answer is being written. What was written so far stays in the chat, and only that counts toward your usage.
+
+## Retry, refine, and copy answers
+
+Under each answer:
+
+- **Retry** opens a menu where you can:
+  - Type how you'd like the answer improved, then select **Send**
+  - **Regenerate** the answer
+  - **Expand answer** or **Shorten answer**
+  - **Use web search** or **Run deep research**
+  - **Change model** to answer again with another model
+- **Copy** copies the answer.
+- **Read aloud** reads the answer aloud, if your browser supports it.
+
+New answers from **Retry** are kept as versions. Use the arrows under the answer to switch between them.
+
+You can't edit a message after sending it. To change it, send a new message.
+
+## Organize your chats
+
+Your chats are listed in the sidebar, grouped by **Pinned**, **Today**, **Yesterday**, and older.
+
+Select **⋯** next to a chat to:
+
+- **Edit details**: change the title, folder, and tags
+- **Pin** or **Unpin**
+- **Delete**: deletes the chat and its attached files right away, without asking
+
+### Folders
+
+Under **Folders** in the sidebar, select **+** to create a folder.
+Drag chats onto a folder to add them. To take a chat out of a folder, drag it to **Drop here to remove from folder**.
+
+To group chats with shared files and instructions, use projects instead. See [Memory and projects](/en/chat/memory-and-projects).
+
+### Search your chats
+
+Select **Chat Search** in the sidebar, or press **Ctrl+K** (**Cmd+K** on Mac).
+Search matches chat titles, folders, and tags, not the text of messages.
+
+### Keyboard shortcuts
+
+| Shortcut | Action |
+| --- | --- |
+| **Ctrl+K** / **Cmd+K** | Chat Search |
+| **Ctrl+Shift+C** / **Cmd+Shift+C** | New chat |
+| **/** | Move to the message box |
+| **Esc** | Collapse the message box |
+
+Shortcuts don't work while you're typing in a text field.
+
+## Export a chat
+
+In an open chat, select **Export chat** (the download icon at the top right):
+
+- **Export as Markdown** downloads the conversation as a `.md` file.
+- **Export as JSON** downloads all messages as a `.json` file.
+- **Export as PDF** opens your browser's print dialog. Choose **Save as PDF** there.
+
+Markdown and PDF include only the text of the conversation, not attachments or search results.
+
+To download all your data at once, see [Your data and privacy](/en/account/data-and-privacy).
+Chats can't be shared by public link.
+
+## Compare two models
+
+Model comparison is available on Pro, including Pro for Teams.
+
+1. Select **Compare models** in the sidebar.
+2. Choose a **First model** and a **Second model**. They must be different.
+3. Type your question. Both models answer side by side.
+
+Each model keeps its own conversation, and both answers count toward your usage. You can't attach files in a comparison.
+Use **Generation settings** on each side to change reasoning effort, turn on Search or Deep Research, and choose which tools the model can use.
+
+- **Save comparison** saves it so you can open it later from **Saved comparisons**. Unsaved comparisons are lost when you leave the page.
+- **Continue this chat** turns one side into a normal chat.
+- **New comparison** starts over.
+
+A comparison holds about 200 messages per side. After that, start a new comparison.
+
+## Start a chat from a link
+
+Open `https://deniai.app/new/` followed by your message, such as `https://deniai.app/new/Summarize%20this%20article`, to start a new chat with that message filled in.
+Add `?webSearch=true` to turn on Search. The message isn't sent until you send it.
+
+## Appearance
+
+In [Settings › Appearance](https://deniai.app/settings/appearance):
+
+- **Language**: English or Japanese
+- **Mode**: Light, Dark, or System
+- **Layout and visuals**: **Rich** lets answers include charts, checklists, and other interactive elements. **Simple** keeps answers mostly text.
+- **Color Theme**: choose a color scheme
+
+**Layout and visuals** is saved in your browser, so set it again on other devices.

@@ -1,3 +1,12 @@
 {
-  "pages": ["index", "account", "billing", "chat", "flixa", "teams"]
+  "pages": [
+    "index",
+    "account",
+    "billing",
+    "chat",
+    "flixa",
+    "run",
+    "teams",
+    "ads"
+  ]
 }

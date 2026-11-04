@@ -1,0 +1,173 @@
+---
+title: Chat troubleshooting
+description: What chat error messages mean and what to do, including usage limits, unavailable models, long conversations, file upload errors, stopped or interrupted answers, and the "An unexpected error occurred." message.
+---
+
+This page lists the messages you can see while chatting in Deni AI, what causes them, and what to do.
+
+If a message isn't listed here, or the steps don't help, [contact us](/en/contact). Include the exact message, the model you used, and roughly when it happened.
+
+## Error messages in chat
+
+When a request fails, a red **Error** card appears under the conversation.
+
+| Message | What to do |
+| --- | --- |
+| "You've hit the usage limit for your plan." | You've used this month's usage. See [Usage limit notices](#usage-limit-notices). |
+| "… models are currently unavailable. Please try again later." | That provider's models are having trouble. Wait a while, or switch to a model from another provider. |
+| "… models are experiencing high demand right now. Please try again later." | The provider is busy. Try again in a few minutes, or switch models. |
+| "… exceeded its context window. Start a new chat or trim earlier messages/files." | The conversation and files are longer than the model can read at once. Start a new chat, remove large files, or choose a model with a larger context window. |
+| "Fast, Pro, and Deep Research are not available for guest sessions. Log in to use them." | Turn off **Deep Research**, or sign in. |
+| "Conversations this long are not available for guest sessions. Start a new chat or log in to continue." | Guest chats have a length limit. Start a new chat, or sign in. |
+| "Files this large are not available for guest sessions. Remove the attachment or log in to send it." | Remove the file or use a smaller one, or sign in. |
+| "An unexpected error occurred." | See [An unexpected error occurred](#an-unexpected-error-occurred). |
+
+The error card has no retry button. To try again, send your message again.
+
+### An unexpected error occurred
+
+This message covers many different causes, such as:
+
+- Sending too many messages in a short time (more than 30 a minute)
+- A dropped connection before the message reached Deni AI
+- A model that isn't available on your plan
+- An attached file that can't be read
+- Being signed out
+
+Try these in order:
+
+1. Wait about a minute, then send your message again.
+2. Check your internet connection and reload the page.
+3. Choose another model.
+4. If the message has attachments, remove them and send it again.
+5. Sign out and sign back in.
+6. Start a new chat.
+
+If it keeps happening, [contact us](/en/contact) with the model you used and what you were sending.
+
+## Usage limit notices
+
+When you're running low or out of usage, a notice appears above the message box.
+
+| Notice | What to do |
+| --- | --- |
+| "You are running low" | Only a little of this month's usage is left. Upgrade your plan, or use a model with a lower usage tier. |
+| "Usage limit reached" | Select **Upgrade plan**, or wait for the reset on the 1st of the month (00:00 UTC). |
+| "Buy Max Mode credits to continue" | Select **Buy credits**. |
+| "Enable Max Mode to continue" | You have credits. Select **Enable Max Mode**. |
+| "Your free allowance is currently limited. …" | Select **Verify a card** to lift the limit. Your card isn't charged. |
+
+While you're at the limit, the send button and **Retry** don't work.
+After upgrading or buying credits, select **Refresh usage**.
+
+If Max Mode credits run out in the middle of an answer, the answer stops early. What was written so far is kept.
+
+| Message after selecting Enable Max Mode | What to do |
+| --- | --- |
+| "Max Mode credits are available on active paid plans." | Max Mode needs an active, renewing Go, Plus, or Pro plan. Check your subscription in [Settings › Billing](https://deniai.app/settings/billing). |
+| "Only organization owners can manage team Max Mode." | Ask your team's owner. |
+
+For how usage is counted, see [Plans and usage](/en/billing/plans-and-usage).
+
+## Models
+
+In the model picker:
+
+- A warning icon with "This model is currently unavailable." means the latest health check for that model failed. Choose another model.
+- A model with a retirement date, such as "This model is scheduled to retire on …", will be removed. Switch to another model before that date.
+- "Log in to use more models" appears for guests. Sign in to see more models.
+- "Verify your card to unlock more models" appears on the Free plan. Verify a card in [Settings › Billing](https://deniai.app/settings/billing).
+- "No models available" means the model list didn't load. Reload the page.
+
+There's no separate status page. The icons in the model picker show each model's current status.
+
+## File uploads
+
+Files upload as soon as you add them. If an upload fails, red text appears under the file.
+
+<Callout title="Check for red text before you send">
+  If you send a message while a file shows an error, the message is sent without that file. Remove the file, fix the problem, and add it again.
+</Callout>
+
+| Message | What to do |
+| --- | --- |
+| "Uploading..." | Wait until it finishes. You can't send while a file is uploading. |
+| "Attachment is too large." | Images and PDFs must be 10 MB or smaller. Compress or split the file. |
+| "Text file is too large (max 2 MB)." | Text and code files must be 2 MB or smaller. Split the file, or paste only the part you need. |
+| "Unsupported attachment type." | Convert the file to PDF, PNG, or JPEG. For text files, save them as UTF-8. |
+| "This browser can't read HEIC images. Please convert it to JPEG or PNG." | Convert the image, or try Safari. |
+| "This image format isn't supported. Please use JPEG, PNG, WebP or PDF." | Convert the image to one of those formats. |
+| "Attachment storage is full (… of … used). …" | Delete chats that have attachments, or upgrade your plan. See [Storage for attachments](#storage-for-attachments). |
+| "Too many uploads. Please slow down." | Wait up to 10 minutes, then try again. |
+| "Attachment upload failed." | Remove the file and add it again. |
+| "Couldn't reach the server. Check your connection and try again." | Check your internet connection and add the file again. |
+
+### Files you can attach
+
+| Type | Formats | Size limit |
+| --- | --- | --- |
+| Images | JPEG, PNG, WebP. HEIC, GIF, AVIF, and BMP are converted in your browser when it can read them. | 10 MB |
+| PDF | PDF | 10 MB |
+| Text and code | Files such as `.txt`, `.md`, `.csv`, `.json`, `.html`, `.py`, and `.ts` | 2 MB |
+
+Text files in Shift_JIS or UTF-16 are converted to UTF-8, which can make them larger. Some encodings, such as EUC-JP and GBK, can't be read.
+
+### Storage for attachments
+
+Files you attach are kept with your chats and count toward your attachment storage.
+
+| Guest | Free | Go | Plus | Pro |
+| --- | --- | --- | --- | --- |
+| 20 MB | 100 MB | 200 MB | 500 MB | 1 GB |
+
+Deleting a chat deletes the files attached in it.
+
+## Answers that stop or don't finish
+
+### You selected Stop
+
+The answer stops, and what was written so far stays in the chat. You're charged only for what was written.
+
+To get a full answer, select **Retry** under the answer, then **Regenerate**.
+
+### The page was closed or the connection dropped
+
+If the connection drops after your message was received, Deni AI keeps writing the answer.
+When you come back, you'll see "Waiting for response...", and the answer appears when it's done. You don't need to send your message again.
+
+If the connection dropped before your message was received, you'll see "An unexpected error occurred." Send it again.
+
+### An error appeared in the middle of an answer
+
+What was written before the error stays in the chat, with the error card below it. Select **Retry** › **Regenerate** to try again, or switch models.
+
+If the error appeared before anything was written, there's no **Retry** button. Send your message again.
+
+### Retry options
+
+Select **Retry** under an answer to:
+
+- **Regenerate** the answer
+- **Expand answer** or **Shorten answer**
+- **Use web search** or **Run deep research**
+- **Change model** and answer again
+- Type how you'd like the answer improved
+
+Each new answer is kept as a version. Use the arrows under the answer to switch between versions.
+
+## Web search and web pages
+
+| Message | What to do |
+| --- | --- |
+| "Search failed" | The web search didn't finish. Ask again. If you're out of usage, web search stops working too. Each search uses 10,000 units. |
+| "Failed to open page" | The page couldn't be opened, for example because the site blocked it or the page was too large. Try another link, or paste the text into the chat. |
+
+## Other messages
+
+| Message | What to do |
+| --- | --- |
+| "An error occurred while starting the chat." | Try again. If you're in a private window, allow the site to store data, or use a normal window. |
+| "Failed to delete conversations. Please try again." | Try again. |
+| "Failed to move chat. Please try again." | Try again. |
+| "Copy failed. Select the link and copy it manually." | Your browser blocked copying. Select the link and copy it yourself. |
+| "Image generation is no longer available." or "Video generation is no longer available." | These features were removed. Older chats that used them show this message. |
