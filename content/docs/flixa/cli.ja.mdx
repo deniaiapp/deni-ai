@@ -4,9 +4,9 @@ description: Flixa CLI のインストールとサインインの方法と、タ
 ---
 
 Flixa CLI は Flixa のコーディングエージェントをターミナルで動かすツールです。プロジェクトを読み、ファイルを編集し、コマンドを実行します。実行前には確認を求めます。
-Deni AI アカウントでも、自分で用意したほかのプロバイダーの API キー（BYOK）でも使えます。
+Deni AI アカウントでも、ご自身で用意したほかのプロバイダーの API キー（BYOK）でもご利用いただけます。
 
-Claude Code や Codex の接続先を Flixa にしたい場合は、[Flixa を外部のコーディングツールで使う](/ja/flixa/external-tools)を見てください。
+Claude Code や Codex の接続先を Flixa にしたい場合は、[Flixa を外部のコーディングツールで使う](/ja/flixa/external-tools)の手順で設定できます。
 
 ## インストール
 
@@ -40,14 +40,14 @@ flixa login
 
 ### 自分の API キーで使う（BYOK）
 
-組み込みのプロバイダーは `flixa`、`openai`、`anthropic`、`google`、`openrouter`、`custom-openai` です。同梱のカタログにあるプロバイダーも使えます。
+組み込みのプロバイダーは `flixa`、`openai`、`anthropic`、`google`、`openrouter`、`custom-openai` です。同梱のカタログにあるプロバイダーもご利用いただけます。
 
 ```bash
 flixa login --provider anthropic
 ```
 
 求められたらプロバイダーの API キーを入力します。以降のリクエストはそのキーを使ってそのプロバイダーに送られます。
-自分で用意した OpenAI 互換のエンドポイントを使う場合は、ベース URL を指定します。
+ご自身で用意した OpenAI 互換のエンドポイントを使う場合は、ベース URL を指定します。
 
 ```bash
 flixa login --provider custom-openai --base-url http://localhost:1234/v1
@@ -100,7 +100,7 @@ Shift+Tab でモードを切り替えます。`--accept-edits`、`--plan`、`--a
 | auto | なし。代わりに AI による安全チェックが入ります |
 | yolo | なし。確認も安全チェックもなしで実行します |
 
-あとで説明する `ask` ルールに当てはまる操作は、accept edits や auto モードでも確認が出ます。
+あとでご説明する `ask` ルールに当てはまる操作は、accept edits や auto モードでも確認が出ます。
 
 ### チャットで使える機能
 
@@ -109,7 +109,7 @@ Shift+Tab でモードを切り替えます。`--accept-edits`、`--plan`、`--a
 | `/` | コマンドの一覧を表示します。Tab で選択中のコマンドを補完します |
 | `@path/to/file` | ファイル（フォルダーならその一覧）をメッセージに添付します。Tab でパスを補完できます。ワークスペース内のファイルだけが対象です |
 | `# メモ` | プロジェクトの `AGENTS.md`（`CLAUDE.md` を使っている場合はそちら）にメモを保存します |
-| `/memory user <メモ>` | 自分用のメモを `~/.flixa/AGENTS.md` に保存します |
+| `/memory user <メモ>` | ユーザー単位のメモを `~/.flixa/AGENTS.md` に保存します |
 | `/init` | このリポジトリの `AGENTS.md` を作成・改善します |
 | `/rewind [turns\|list]` | 直近のターンでエージェントが行ったファイルの編集を元に戻します。会話はそのまま残ります |
 | `/compact [focus]` | 会話を要約してコンテキストを空けます |
@@ -131,7 +131,7 @@ Shift+Tab でモードを切り替えます。`--accept-edits`、`--plan`、`--a
 - 必要に応じてスキルを読み込む
 - タスクリストを管理し、公開されている Web ページを読む（事前に確認が出ます。プライベートやローカルのアドレスにはアクセスしません）
 
-設定済みのものは `/agents`、`/skills`、`/permissions`、`/hooks` で確認できます。
+設定済みのものは `/agents`、`/skills`、`/permissions`、`/hooks` でご確認いただけます。
 
 ## 独自のコマンド、サブエージェント、スキルを追加する
 
@@ -149,7 +149,7 @@ Flixa はプロジェクトとホームフォルダーにある `.flixa/` と `.
 
 ルールとフックは `settings.json` に書きます。
 
-- 自分用の設定: `~/.flixa/settings.json` または `~/.claude/settings.json`
+- ユーザーの設定: `~/.flixa/settings.json` または `~/.claude/settings.json`
 - プロジェクトの設定: `.flixa/settings.json` または `.claude/settings.json`、同じフォルダーの `settings.local.json`
 
 ```json
@@ -175,7 +175,7 @@ Flixa はプロジェクトとホームフォルダーにある `.flixa/` と `.
 <Callout title="プロジェクトの設定はそのままでは信頼されません">
   クローンしたリポジトリを開いただけでコードが実行されたり、コマンドが事前に許可されたりしないように、プロジェクトの設定は次のように扱われます。
 
-  - フックは自分用の設定からだけ読み込まれます。プロジェクトのフックも使うには `FLIXA_TRUST_PROJECT_HOOKS=1` を設定します。
+  - フックはユーザーの設定からだけ読み込まれます。プロジェクトのフックも使うには `FLIXA_TRUST_PROJECT_HOOKS=1` を設定します。
   - プロジェクトの `deny` と `ask` のルールは常に適用されます。`allow` のルールは `FLIXA_TRUST_PROJECT_SETTINGS=1` を設定したときだけ使われます。
 </Callout>
 
@@ -192,7 +192,7 @@ flixa --print "Summarize the last commit"
 git diff | flixa --print "Review this diff"
 ```
 
-独自のコマンドも使えます。
+独自のコマンドもご利用いただけます。
 
 ```bash
 flixa --print "/review src/index.ts"
@@ -236,7 +236,7 @@ flixa usage
 ```
 
 Flixa のプランと使用量の上限を表示します。Flixa でサインインしている必要があります。
-Flixa は、サインインしていれば Free を含むすべてのプランで使えます。BYOK のプロバイダーでは自分のキーを使うため、Deni AI のプランの使用量は消費しません。
+Flixa は、サインインしていれば Free を含むすべてのプランでご利用いただけます。BYOK のプロバイダーではご自身のキーを使うため、Deni AI のプランの使用量は消費しません。
 
 ## 環境をチェックする
 
@@ -268,7 +268,7 @@ flixa logout --provider anthropic
 
 **「Not logged in」と表示される**
 
-`flixa login` を実行してください。BYOK のプロバイダーを使う場合は `flixa login --provider <provider>` です。
+`flixa login` を実行してください。BYOK のプロバイダーを使う場合は `flixa login --provider <provider>` を実行してください。
 
 **キーはどこに保存されますか？**
 

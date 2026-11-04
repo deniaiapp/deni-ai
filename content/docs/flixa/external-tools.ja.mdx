@@ -3,15 +3,15 @@ title: Flixa を外部のコーディングツールで使う
 description: Claude Code、Codex、Zed、opencode などのツールから Flixa を使うための設定方法です。
 ---
 
-Flixa は Claude Code、Codex、Zed、opencode などのツールから使えます。
-各ツールの接続先を Flixa に変えるだけで、そのツールを Deni AI のプランの使用量で使えます。
+Flixa は Claude Code、Codex、Zed、opencode などのツールからご利用いただけます。
+各ツールの接続先を Flixa に変えるだけで、そのツールを Deni AI のプランの使用量でご利用いただけます。
 
 - Claude Code / Codex: Flixa CLI のコマンド 1 つで設定できます。
 - Zed / opencode: 設定ファイルに Flixa を追加します。
 
 <Callout title="プランによって使えるツールが変わります">
-  Free と Go プランで使えるのは、Claude Code、Codex、Zed、opencode と Flixa（VS Code 拡張機能・CLI）だけです。
-  それ以外のツールは Plus 以上のプランで使えます。詳しくは[その他のツール](#その他のツール)を見てください。
+  Free と Go プランでご利用いただけるのは、Claude Code、Codex、Zed、opencode と Flixa（VS Code 拡張機能・CLI）だけです。
+  それ以外のツールは Plus 以上のプランでご利用いただけます。設定の手順は[その他のツール](#その他のツール)にあります。
 </Callout>
 
 ## 準備
@@ -40,7 +40,7 @@ Flixa を使うには Deni AI の API キー（`deni_` で始まる文字列）�
 ### モデル
 
 モデル ID は `openai/gpt-6-sol` や `anthropic/claude-sonnet-5.5` のように `提供元/モデル名` の形式です。
-最新の一覧はモデル一覧 API で確認できます。各モデルの `tier` が `free` なら無料プランで、`plus` や `pro` ならそのプラン以上で使えます。
+最新の一覧はモデル一覧 API でご確認いただけます。各モデルの `tier` が `free` なら無料プランで、`plus` や `pro` ならそのプラン以上でご利用いただけます。
 次の `curl` も「その他のツール」として扱われるため、実行には Plus 以上のプランが必要です。
 
 ```bash
@@ -221,8 +221,8 @@ API キーは `settings.json` に書かないでください。
 
 **Plus 以上のプランが必要です。**
 
-Plus 以上のプランなら、OpenAI 互換 API（Chat Completions または Responses）か Anthropic Messages API に対応したツールを、どれでも同じ方法で使えます。
-自分で書いたスクリプトや、`curl` などからの直接の呼び出しもここに含まれます。
+Plus 以上のプランなら、OpenAI 互換 API（Chat Completions または Responses）か Anthropic Messages API に対応したツールを、どれでも同じ方法でご利用いただけます。
+ご自身で書いたスクリプトや、`curl` などからの直接の呼び出しもここに含まれます。
 
 - ベース URL: `https://flixa-api.deniai.app/v1/agent`
 - API キー: `deni_...`
@@ -241,21 +241,21 @@ Free と Go プランでそれ以外のツールを使うと、「This app is no
 
 API キーがツールから送られていません。
 
-- 環境変数でキーを渡している場合は、ツールを起動したターミナルやプロセスで変数が設定されているか確認してください。
+- 環境変数でキーを渡している場合は、ツールを起動したターミナルやプロセスで変数が設定されているかご確認ください。
 - Windows でスタートメニューやショートカットから Codex を起動すると、別の PowerShell ウィンドウで `$env:` を使って設定した環境変数を Codex から参照できません。システムの環境変数に設定するか、`http_headers` でキーを直接指定してください。
 - 設定を変えたあとはツールを再起動してください。
 
 **ゲストアカウントのエラーが出る**
 
-ゲストアカウントでは Flixa を使えません。サインインして新しい API キーを作成してください。
+ゲストアカウントでは Flixa をご利用いただけません。サインインして新しい API キーを作成してください。
 
 **「This app is not available on your plan」と表示される**
 
-そのツールは Free と Go プランでは使えません。Claude Code、Codex、Zed、opencode、Flixa のどれかを使うか、Plus 以上のプランにアップグレードしてください。
+そのツールは Free と Go プランではご利用いただけません。Claude Code、Codex、Zed、opencode、Flixa のどれかを使うか、Plus 以上のプランにアップグレードしてください。
 
 **モデルが使えない**
 
-一部のモデルは有料プランでのみ使えます。モデルの `tier` を見て、今のプランで使えるモデルか確認してください。
+一部のモデルは有料プランでのみご利用いただけます。モデルの `tier` を見て、今のプランで使えるモデルかご確認ください。
 
 **使用量を確認したい**
 
