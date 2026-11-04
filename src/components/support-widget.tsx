@@ -20,12 +20,13 @@ import type { Language } from '@/lib/i18n';
 import { readSupportError, supportErrorMessage } from '@/lib/support-client';
 import {
   supportLimits,
+  supportSessionHeader,
   type ChatEvent,
   type ChatTurn,
   type SupportErrorCode,
 } from '@/lib/support-protocol';
 import { useSupportConfig } from './support-config';
-import { Turnstile, type TurnstileHandle } from './turnstile';
+import { loadTurnstile, Turnstile, type TurnstileHandle } from './turnstile';
 
 const labels = {
   en: {
@@ -45,6 +46,7 @@ const labels = {
     searching: (query: string) => `Searching “${query}”`,
     reading: (title: string) => `Reading “${title}”`,
     thinking: 'Thinking…',
+    verifying: 'Checking you’re human…',
     sources: 'Sources',
     contact: 'Contact support',
     feedback: 'Send feedback',
@@ -70,6 +72,7 @@ const labels = {
     searching: (query: string) => `「${query}」を検索中`,
     reading: (title: string) => `「${title}」を確認中`,
     thinking: '考え中…',
+    verifying: '確認中…',
     sources: '参照した記事',
     contact: 'サポートに問い合わせる',
     feedback: 'フィードバックを送る',
@@ -130,15 +133,15 @@ export function SupportWidget({ lang }: { lang: Language }) {
   const [messages, setMessages] = useState<UiMessage[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState(false);
-  const [token, setToken] = useState<string>();
   const turnstileRef = useRef<TurnstileHandle>(null);
+  /** Pass from the last answer that lets the next message skip Turnstile. */
+  const sessionRef = useRef<string | undefined>(undefined);
   const abortRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const nextId = useRef(0);
 
-  const verified = !config.turnstileSiteKey || Boolean(token);
-  const canSend = config.chat && !busy && verified && input.trim().length > 0;
+  const canSend = config.chat && !busy && input.trim().length > 0;
 
   useEffect(() => {
     if (open) inputRef.current?.focus();
@@ -178,7 +181,7 @@ export function SupportWidget({ lang }: { lang: Language }) {
         id: answerId,
         role: 'assistant',
         content: '',
-        status: { kind: 'thinking', text: t.thinking },
+        status: { kind: 'thinking', text: needsToken() ? t.verifying : t.thinking },
         pending: true,
       },
     ]);
@@ -187,21 +190,43 @@ export function SupportWidget({ lang }: { lang: Language }) {
 
     const controller = new AbortController();
     abortRef.current = controller;
-    const turnstileToken = token;
-    turnstileRef.current?.reset();
 
-    try {
-      const response = await fetch('/api/chat', {
+    const post = async (): Promise<Response | SupportErrorCode> => {
+      const verification = await verify();
+      if (!verification) return 'verification_failed';
+      if (controller.signal.aborted) throw new DOMException('Aborted', 'AbortError');
+      updateAnswer(answerId, (m) => ({ ...m, status: { kind: 'thinking', text: t.thinking } }));
+      return fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [...history, { role: 'user', content: question }],
           lang,
           pagePath: pathname,
-          turnstileToken,
+          ...verification,
         }),
         signal: controller.signal,
       });
+    };
+
+    try {
+      const usedSession = Boolean(sessionRef.current);
+      let response = await post();
+      // An expired pass: drop it and verify with Turnstile once.
+      if (usedSession && response instanceof Response && response.status === 403) {
+        sessionRef.current = undefined;
+        updateAnswer(answerId, (m) => ({ ...m, status: { kind: 'thinking', text: t.verifying } }));
+        response = await post();
+      }
+
+      if (!(response instanceof Response)) {
+        const error = response;
+        updateAnswer(answerId, (m) => ({ ...m, pending: false, status: undefined, error }));
+        return;
+      }
+
+      const pass = response.headers.get(supportSessionHeader);
+      if (pass) sessionRef.current = pass;
 
       if (!response.ok || !response.body) {
         const error = await readSupportError(response);
@@ -272,6 +297,23 @@ export function SupportWidget({ lang }: { lang: Language }) {
     }
   }
 
+  function needsToken() {
+    return Boolean(config.turnstileSiteKey) && !sessionRef.current;
+  }
+
+  /** The session pass, or a fresh Turnstile token when there is none. */
+  async function verify(): Promise<{ session?: string; turnstileToken?: string } | undefined> {
+    if (!config.turnstileSiteKey) return {};
+    if (sessionRef.current) return { session: sessionRef.current };
+    const turnstileToken = await turnstileRef.current?.take();
+    return turnstileToken ? { turnstileToken } : undefined;
+  }
+
+  // Fetch the Turnstile script as soon as the visitor reaches for the button.
+  function preload() {
+    if (config.chat && config.turnstileSiteKey) loadTurnstile().catch(() => {});
+  }
+
   function reset() {
     abortRef.current?.abort();
     abortRef.current = null;
@@ -308,6 +350,8 @@ export function SupportWidget({ lang }: { lang: Language }) {
         aria-label={t.open}
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
+        onPointerEnter={preload}
+        onFocus={preload}
         className={cn(
           'fixed bottom-4 end-4 z-40 inline-flex items-center gap-2 rounded-full bg-fd-primary px-4 py-2.5 text-sm font-medium text-fd-primary-foreground shadow-lg transition-transform hover:scale-105',
           open && 'max-sm:hidden',
@@ -360,7 +404,6 @@ export function SupportWidget({ lang }: { lang: Language }) {
                       <button
                         key={suggestion}
                         type="button"
-                        disabled={!verified}
                         onClick={() => void send(suggestion)}
                         className="rounded-xl border bg-fd-card px-3 py-2 text-start text-sm transition-colors hover:bg-fd-accent disabled:opacity-50"
                       >
@@ -475,12 +518,7 @@ export function SupportWidget({ lang }: { lang: Language }) {
               </form>
             )}
             {config.chat && config.turnstileSiteKey && (
-              <Turnstile
-                ref={turnstileRef}
-                siteKey={config.turnstileSiteKey}
-                lang={lang}
-                onToken={setToken}
-              />
+              <Turnstile ref={turnstileRef} siteKey={config.turnstileSiteKey} lang={lang} />
             )}
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
               <span className="text-fd-muted-foreground">{t.needHuman}</span>

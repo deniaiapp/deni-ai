@@ -11,7 +11,12 @@ export type ChatRequest = {
   /** Path of the page the widget was opened on, e.g. `/en/billing/payments`. */
   pagePath?: string;
   turnstileToken?: string;
+  /** Pass from the previous response's {@link supportSessionHeader}. */
+  session?: string;
 };
+
+/** Response header carrying a pass that lets the next messages skip Turnstile. */
+export const supportSessionHeader = 'X-Support-Session';
 
 /** One line of the chat response body (NDJSON). */
 export type ChatEvent =

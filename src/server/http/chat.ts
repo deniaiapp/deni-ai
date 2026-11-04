@@ -1,13 +1,15 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
   supportLimits,
+  supportSessionHeader,
   type ChatEvent,
   type ChatTurn,
   type SupportErrorCode,
 } from '@/lib/support-protocol';
 import { clientIp, rateLimit } from '../rate-limit';
 import { isSupportAgentEnabled, runSupportAgent } from '../support-agent';
-import { verifyTurnstile } from '../turnstile';
+import { issueSupportSession, verifySupportSession } from '../support-session';
+import { isTurnstileEnabled, verifyTurnstile } from '../turnstile';
 import { errorResponse, readJsonBody, readLanguage, readPagePath } from './shared';
 
 function readTurns(value: unknown): ChatTurn[] | null {
@@ -57,9 +59,12 @@ export async function POST(request: Request): Promise<Response> {
     rateLimit(`chat:minute:${ip}`, 6, 60_000) || rateLimit(`chat:day:${ip}`, 100, 86_400_000);
   if (retryAfter) return errorResponse('rate_limited', retryAfter);
 
-  if (!(await verifyTurnstile(body.turnstileToken, ip))) {
+  // A valid session pass stands in for a fresh Turnstile token.
+  const hasSession = isTurnstileEnabled() && verifySupportSession(body.session);
+  if (!hasSession && !(await verifyTurnstile(body.turnstileToken, ip))) {
     return errorResponse('verification_failed');
   }
+  const session = isTurnstileEnabled() ? issueSupportSession() : undefined;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
@@ -92,6 +97,7 @@ export async function POST(request: Request): Promise<Response> {
       'Content-Type': 'application/x-ndjson; charset=utf-8',
       'Cache-Control': 'no-store',
       'X-Accel-Buffering': 'no',
+      ...(session ? { [supportSessionHeader]: session } : {}),
     },
   });
 }
