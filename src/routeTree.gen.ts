@@ -13,7 +13,12 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as LlmsFullDottxtRouteImport } from './routes/llms-full[.]txt'
 import { Route as LlmsDottxtRouteImport } from './routes/llms[.]txt'
 import { Route as LangSplatRouteImport } from './routes/$lang/$'
+import { Route as LangContactRouteImport } from './routes/$lang/contact'
+import { Route as LangFeedbackRouteImport } from './routes/$lang/feedback'
 import { Route as LangChar123Char125DotmdRouteImport } from './routes/$lang/{$}[.]md'
+import { Route as ApiChatRouteImport } from './routes/api/chat'
+import { Route as ApiContactRouteImport } from './routes/api/contact'
+import { Route as ApiFeedbackRouteImport } from './routes/api/feedback'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as LangOgSplatRouteImport } from './routes/$lang/og/$'
 
@@ -37,9 +42,34 @@ const LangSplatRoute = LangSplatRouteImport.update({
   path: '/$lang/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LangContactRoute = LangContactRouteImport.update({
+  id: '/$lang/contact',
+  path: '/$lang/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LangFeedbackRoute = LangFeedbackRouteImport.update({
+  id: '/$lang/feedback',
+  path: '/$lang/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LangChar123Char125DotmdRoute = LangChar123Char125DotmdRouteImport.update({
   id: '/$lang/{$}.md',
   path: '/$lang/{$}.md',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiChatRoute = ApiChatRouteImport.update({
+  id: '/api/chat',
+  path: '/api/chat',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiContactRoute = ApiContactRouteImport.update({
+  id: '/api/contact',
+  path: '/api/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiFeedbackRoute = ApiFeedbackRouteImport.update({
+  id: '/api/feedback',
+  path: '/api/feedback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiSearchRoute = ApiSearchRouteImport.update({
@@ -58,7 +88,12 @@ export interface FileRoutesByFullPath {
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/$lang/$': typeof LangSplatRoute
+  '/$lang/contact': typeof LangContactRoute
+  '/$lang/feedback': typeof LangFeedbackRoute
   '/$lang/{$}.md': typeof LangChar123Char125DotmdRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/contact': typeof ApiContactRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/api/search': typeof ApiSearchRoute
   '/$lang/og/$': typeof LangOgSplatRoute
 }
@@ -67,7 +102,12 @@ export interface FileRoutesByTo {
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/$lang/$': typeof LangSplatRoute
+  '/$lang/contact': typeof LangContactRoute
+  '/$lang/feedback': typeof LangFeedbackRoute
   '/$lang/{$}.md': typeof LangChar123Char125DotmdRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/contact': typeof ApiContactRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/api/search': typeof ApiSearchRoute
   '/$lang/og/$': typeof LangOgSplatRoute
 }
@@ -77,7 +117,12 @@ export interface FileRoutesById {
   '/llms-full.txt': typeof LlmsFullDottxtRoute
   '/llms.txt': typeof LlmsDottxtRoute
   '/$lang/$': typeof LangSplatRoute
+  '/$lang/contact': typeof LangContactRoute
+  '/$lang/feedback': typeof LangFeedbackRoute
   '/$lang/{$}.md': typeof LangChar123Char125DotmdRoute
+  '/api/chat': typeof ApiChatRoute
+  '/api/contact': typeof ApiContactRoute
+  '/api/feedback': typeof ApiFeedbackRoute
   '/api/search': typeof ApiSearchRoute
   '/$lang/og/$': typeof LangOgSplatRoute
 }
@@ -88,7 +133,12 @@ export interface FileRouteTypes {
     | '/llms-full.txt'
     | '/llms.txt'
     | '/$lang/$'
+    | '/$lang/contact'
+    | '/$lang/feedback'
     | '/$lang/{$}.md'
+    | '/api/chat'
+    | '/api/contact'
+    | '/api/feedback'
     | '/api/search'
     | '/$lang/og/$'
   fileRoutesByTo: FileRoutesByTo
@@ -97,7 +147,12 @@ export interface FileRouteTypes {
     | '/llms-full.txt'
     | '/llms.txt'
     | '/$lang/$'
+    | '/$lang/contact'
+    | '/$lang/feedback'
     | '/$lang/{$}.md'
+    | '/api/chat'
+    | '/api/contact'
+    | '/api/feedback'
     | '/api/search'
     | '/$lang/og/$'
   id:
@@ -106,7 +161,12 @@ export interface FileRouteTypes {
     | '/llms-full.txt'
     | '/llms.txt'
     | '/$lang/$'
+    | '/$lang/contact'
+    | '/$lang/feedback'
     | '/$lang/{$}.md'
+    | '/api/chat'
+    | '/api/contact'
+    | '/api/feedback'
     | '/api/search'
     | '/$lang/og/$'
   fileRoutesById: FileRoutesById
@@ -116,7 +176,12 @@ export interface RootRouteChildren {
   LlmsFullDottxtRoute: typeof LlmsFullDottxtRoute
   LlmsDottxtRoute: typeof LlmsDottxtRoute
   LangSplatRoute: typeof LangSplatRoute
+  LangContactRoute: typeof LangContactRoute
+  LangFeedbackRoute: typeof LangFeedbackRoute
   LangChar123Char125DotmdRoute: typeof LangChar123Char125DotmdRoute
+  ApiChatRoute: typeof ApiChatRoute
+  ApiContactRoute: typeof ApiContactRoute
+  ApiFeedbackRoute: typeof ApiFeedbackRoute
   ApiSearchRoute: typeof ApiSearchRoute
   LangOgSplatRoute: typeof LangOgSplatRoute
 }
@@ -151,11 +216,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LangSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$lang/contact': {
+      id: '/$lang/contact'
+      path: '/$lang/contact'
+      fullPath: '/$lang/contact'
+      preLoaderRoute: typeof LangContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$lang/feedback': {
+      id: '/$lang/feedback'
+      path: '/$lang/feedback'
+      fullPath: '/$lang/feedback'
+      preLoaderRoute: typeof LangFeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$lang/{$}.md': {
       id: '/$lang/{$}.md'
       path: '/$lang/{$}.md'
       fullPath: '/$lang/{$}.md'
       preLoaderRoute: typeof LangChar123Char125DotmdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/chat': {
+      id: '/api/chat'
+      path: '/api/chat'
+      fullPath: '/api/chat'
+      preLoaderRoute: typeof ApiChatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/contact': {
+      id: '/api/contact'
+      path: '/api/contact'
+      fullPath: '/api/contact'
+      preLoaderRoute: typeof ApiContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/feedback': {
+      id: '/api/feedback'
+      path: '/api/feedback'
+      fullPath: '/api/feedback'
+      preLoaderRoute: typeof ApiFeedbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/search': {
@@ -180,7 +280,12 @@ const rootRouteChildren: RootRouteChildren = {
   LlmsFullDottxtRoute: LlmsFullDottxtRoute,
   LlmsDottxtRoute: LlmsDottxtRoute,
   LangSplatRoute: LangSplatRoute,
+  LangContactRoute: LangContactRoute,
+  LangFeedbackRoute: LangFeedbackRoute,
   LangChar123Char125DotmdRoute: LangChar123Char125DotmdRoute,
+  ApiChatRoute: ApiChatRoute,
+  ApiContactRoute: ApiContactRoute,
+  ApiFeedbackRoute: ApiFeedbackRoute,
   ApiSearchRoute: ApiSearchRoute,
   LangOgSplatRoute: LangOgSplatRoute,
 }

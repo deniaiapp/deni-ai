@@ -10,6 +10,7 @@ import {
   MarkdownCopyButton,
 } from 'fumadocs-ui/layouts/docs/page';
 import { ViewOptionsPopover } from '@/components/page-actions';
+import { PageFeedback } from '@/components/support-forms';
 import { baseOptions } from '@/lib/layout.shared';
 import { isLanguage, resolveLanguage, type Language } from '@/lib/i18n';
 import { appName, getPageImageUrl, getPageMarkdownUrl, siteUrl } from '@/lib/shared';
@@ -94,6 +95,7 @@ function Content({
       </div>
       <DocsBody>
         <MDX components={useMDXComponents()} />
+        <PageFeedback key={path} lang={lang} />
       </DocsBody>
     </DocsPage>
   );

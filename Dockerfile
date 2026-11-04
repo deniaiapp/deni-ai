@@ -7,7 +7,8 @@
 #   Port:            3000
 #   Domain:          support.deniai.app
 #
-# No environment variables or build arguments are needed.
+# No build arguments are needed. The support chat and forms read optional
+# runtime environment variables; see README.md and .env.example.
 #
 # Local:
 #   docker build -t deni-ai-support .

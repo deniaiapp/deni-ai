@@ -73,8 +73,11 @@ export function baseOptions(locale: string): BaseLayoutProps {
       },
       {
         text: isJapanese ? 'お問い合わせ' : 'Contact',
-        url: isJapanese ? 'https://deniai.app/ja/contact' : 'https://deniai.app/contact',
-        external: true,
+        url: `/${locale}/contact`,
+      },
+      {
+        text: isJapanese ? 'フィードバック' : 'Feedback',
+        url: `/${locale}/feedback`,
       },
     ],
   };
