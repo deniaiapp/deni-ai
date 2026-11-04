@@ -18,13 +18,28 @@ export function errorResponse(error: SupportErrorCode, retryAfter?: number): Res
   });
 }
 
+/**
+ * True unless the browser says the request came from another site. Only hosts are
+ * compared: TLS ends at the proxy, so the server sees its own URL as `http:` while
+ * browsers send an `https:` origin.
+ */
+function isSameSite(request: Request): boolean {
+  const origin = request.headers.get('origin');
+  if (!origin) return true;
+  try {
+    const host = new URL(origin).host;
+    return host === new URL(request.url).host || host === request.headers.get('x-forwarded-host');
+  } catch {
+    return false;
+  }
+}
+
 /** Parses a JSON object body, rejecting cross-site posts and oversized bodies. */
 export async function readJsonBody(
   request: Request,
   maxBytes: number,
 ): Promise<Record<string, unknown> | undefined> {
-  const origin = request.headers.get('origin');
-  if (origin && origin !== new URL(request.url).origin) return undefined;
+  if (!isSameSite(request)) return undefined;
 
   const text = await request.text();
   if (text.length > maxBytes) return undefined;
