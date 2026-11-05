@@ -37,6 +37,7 @@ export type SupportErrorCode =
 export const contactCategories = [
   'account',
   'billing',
+  'education',
   'chat',
   'flixa',
   'teams',
@@ -46,6 +47,10 @@ export const contactCategories = [
 ] as const;
 
 export type ContactCategory = (typeof contactCategories)[number];
+
+export function isContactCategory(value: unknown): value is ContactCategory {
+  return (contactCategories as readonly unknown[]).includes(value);
+}
 
 export type ContactRequest = {
   name?: string;

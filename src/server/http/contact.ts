@@ -1,5 +1,5 @@
 import { siteUrl } from '@/lib/shared';
-import { contactCategories, supportLimits, type ContactCategory } from '@/lib/support-protocol';
+import { isContactCategory, supportLimits, type ContactCategory } from '@/lib/support-protocol';
 import { isEmailConfigured, sendSupportEmail } from '../email';
 import { clientIp, rateLimit } from '../rate-limit';
 import { verifyTurnstile } from '../turnstile';
@@ -16,6 +16,7 @@ import {
 const categoryLabels: Record<ContactCategory, string> = {
   account: 'Account and sign-in',
   billing: 'Plans and billing',
+  education: 'School email domain request',
   chat: 'Chat',
   flixa: 'Flixa',
   teams: 'Teams',
@@ -23,10 +24,6 @@ const categoryLabels: Record<ContactCategory, string> = {
   privacy: 'Privacy and data',
   other: 'Other',
 };
-
-function isCategory(value: unknown): value is ContactCategory {
-  return (contactCategories as readonly unknown[]).includes(value);
-}
 
 export async function POST(request: Request): Promise<Response> {
   if (!isEmailConfigured()) return errorResponse('unavailable');
@@ -45,7 +42,7 @@ export async function POST(request: Request): Promise<Response> {
     name === null ||
     !email ||
     !isEmail(email) ||
-    !isCategory(body.category) ||
+    !isContactCategory(body.category) ||
     !subject ||
     !message ||
     pagePath === null

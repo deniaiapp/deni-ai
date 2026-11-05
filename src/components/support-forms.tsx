@@ -27,6 +27,7 @@ const labels = {
     categories: {
       account: 'Account and sign-in',
       billing: 'Plans and billing',
+      education: 'Add a school email domain (students and educators)',
       chat: 'Chat',
       flixa: 'Flixa',
       teams: 'Teams',
@@ -38,6 +39,8 @@ const labels = {
     message: 'Message',
     messageHint:
       'Describe what you expected, what happened, and any error message. Never include passwords or card numbers.',
+    educationMessageHint:
+      'Include your school’s name, its email domain (for example, example.ac.jp), and its official website. We add domains that only the school can issue addresses on.',
     sendMessage: 'Send message',
     contactSent: 'Message sent',
     contactSentBody: 'Thanks. We’ll reply by email, usually within a few business days.',
@@ -65,6 +68,7 @@ const labels = {
     categories: {
       account: 'アカウント・サインイン',
       billing: 'プラン・お支払い',
+      education: '学校メールドメインの追加依頼（学生・教職員）',
       chat: 'チャット',
       flixa: 'Flixa',
       teams: 'チーム',
@@ -76,6 +80,8 @@ const labels = {
     message: '内容',
     messageHint:
       '期待した動作、実際に起きたこと、表示されたエラーを書いてください。パスワードやカード番号は書かないでください。',
+    educationMessageHint:
+      '学校名、メールアドレスのドメイン（例: example.ac.jp）、学校の公式サイトの URL を書いてください。学校だけがアドレスを発行できるドメインを追加します。',
     sendMessage: '送信する',
     contactSent: '送信しました',
     contactSentBody: 'お問い合わせありがとうございます。通常、数営業日以内にメールで返信します。',
@@ -225,9 +231,17 @@ function readForm(form: HTMLFormElement) {
   };
 }
 
-export function ContactForm({ lang }: { lang: Language }) {
+export function ContactForm({
+  lang,
+  defaultCategory = 'account',
+}: {
+  lang: Language;
+  /** Preselected topic, for example from a help article's `?category=` link. */
+  defaultCategory?: ContactCategory;
+}) {
   const t = labels[lang];
   const submission = useSubmission();
+  const [category, setCategory] = useState<ContactCategory>(defaultCategory);
 
   if (!submission.enabled) return <FormError lang={lang} error="unavailable" />;
   if (submission.sent) return <Sent title={t.contactSent} body={t.contactSentBody} />;
@@ -262,7 +276,13 @@ export function ContactForm({ lang }: { lang: Language }) {
         </Field>
         <Field label={t.category}>
           {(id) => (
-            <select id={id} name="category" defaultValue="account" className={inputClass}>
+            <select
+              id={id}
+              name="category"
+              value={category}
+              onChange={(event) => setCategory(event.currentTarget.value as ContactCategory)}
+              className={inputClass}
+            >
               {contactCategories.map((category) => (
                 <option key={category} value={category}>
                   {t.categories[category]}
@@ -297,7 +317,10 @@ export function ContactForm({ lang }: { lang: Language }) {
           />
         )}
       </Field>
-      <Field label={t.message} hint={t.messageHint}>
+      <Field
+        label={t.message}
+        hint={category === 'education' ? t.educationMessageHint : t.messageHint}
+      >
         {(id, hintId) => (
           <textarea
             id={id}

@@ -3,6 +3,7 @@ import { ContactForm } from '@/components/support-forms';
 import { SupportPage } from '@/components/support-page';
 import { isLanguage, resolveLanguage, type Language } from '@/lib/i18n';
 import { loadPageTree } from '@/lib/page-tree';
+import { isContactCategory, type ContactCategory } from '@/lib/support-protocol';
 import { appName, siteUrl } from '@/lib/shared';
 
 const copy = {
@@ -21,6 +22,8 @@ const copy = {
 } satisfies Record<Language, unknown>;
 
 export const Route = createFileRoute('/$lang/contact')({
+  validateSearch: (search: Record<string, unknown>): { category?: ContactCategory } =>
+    isContactCategory(search.category) ? { category: search.category } : {},
   loader: async ({ params }) => {
     if (!isLanguage(params.lang)) throw notFound();
     return loadPageTree({ data: { lang: params.lang } });
@@ -52,7 +55,7 @@ function ContactPage() {
       title={t.title}
       description={t.description}
     >
-      <ContactForm lang={lang} />
+      <ContactForm lang={lang} defaultCategory={Route.useSearch().category} />
       <p className="text-sm text-fd-muted-foreground">
         {t.email} <a href="mailto:contact@deniai.app">contact@deniai.app</a>
       </p>
