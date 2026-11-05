@@ -49,11 +49,14 @@ export default function SettingsWrapper({ children }: { children: React.ReactNod
   const usage = usageQuery.data;
   const usages = usage?.usage;
 
-  const plan =
-    status?.planId
-      ?.split("_")
-      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-      .join(" ") || "";
+  // Go through a verified educational address has no subscription, so no plan id or renewal.
+  const isEducation = usage?.education === true;
+  const plan = isEducation
+    ? t("Go (free for education)")
+    : status?.planId
+        ?.split("_")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ") || t("Free");
 
   const settingsTabs = [
     {
@@ -118,11 +121,13 @@ export default function SettingsWrapper({ children }: { children: React.ReactNod
                     <div className="flex flex-col gap-0.5">
                       <span className="text-base font-semibold">{plan}</span>
                       <span className="text-xs text-muted-foreground">
-                        {t("Next update: {date}", {
-                          date: status?.currentPeriodEnd
-                            ? formatAppDate(status.currentPeriodEnd, locale)
-                            : "—",
-                        })}
+                        {isEducation
+                          ? t("Included with your school email")
+                          : t("Next update: {date}", {
+                              date: status?.currentPeriodEnd
+                                ? formatAppDate(status.currentPeriodEnd, locale)
+                                : "—",
+                            })}
                       </span>
                     </div>
                   </div>
