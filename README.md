@@ -255,6 +255,13 @@ provider block is missing or the process has an empty `FLIXA_API_KEY`.
 Do not point the built-in `openai` provider at Flixa via `openai_base_url`
 unless you also send a Deni API key. ChatGPT login tokens are not Flixa keys.
 
+### Education accounts
+
+An account with a verified email on a restricted educational domain (`.edu`,
+`.ac.jp`, `.ac.uk`, and the rest of `utils/deni/education.ts`, kept in sync with
+Deni AI's sign-up allowlist) is treated as Go at no charge when it has no paid
+or team plan, matching Deni AI. Guest accounts never qualify.
+
 ### Client access policy
 
 After an API key is validated, `middleware/validateAgentAuth.ts` checks which

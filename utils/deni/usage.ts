@@ -1,4 +1,5 @@
 import { getDeniPool } from "./db";
+import { isEducationalEmail } from "./education";
 import type { DeniUsageInfo, BillingRow, UsageQuotaRow } from "./types";
 import type { ModelCategory } from "./models";
 
@@ -201,6 +202,21 @@ const billingProfileCache = new Map<
 >();
 const billingProfileInFlight = new Map<string, Promise<BillingProfile>>();
 
+async function hasEducationAccess(userId: string): Promise<boolean> {
+  const result = await getDeniPool().query<{
+    email: string;
+    email_verified: boolean;
+    is_anonymous: boolean | null;
+  }>(
+    `SELECT email, email_verified, is_anonymous FROM "user" WHERE id = $1`,
+    [userId],
+  );
+  const row = result.rows[0];
+  return Boolean(
+    row && row.email_verified && !row.is_anonymous && isEducationalEmail(row.email),
+  );
+}
+
 /**
  * Fetch the user's billing rows and derive tier info.
  * Team and personal billing are selected in one query; no usage rows.
@@ -265,7 +281,10 @@ async function fetchBillingProfile(userId: string): Promise<BillingProfile> {
     billing = personalBilling;
   }
 
-  const tier = determineTier(billing, isTeam);
+  let tier = determineTier(billing, isTeam);
+  // A verified educational address lifts Free to Go at no charge (same rule as
+  // deni-ai's loadTierInfo); paid and team plans take precedence.
+  if (tier === "free" && (await hasEducationAccess(userId))) tier = "go";
   const hasVerifiedPaymentMethod =
     billing?.payment_method_fingerprint !== null &&
     billing?.payment_method_fingerprint !== undefined;
