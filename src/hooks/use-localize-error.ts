@@ -501,6 +501,10 @@ export function useLocalizeError() {
           t("You already have an active subscription. Use Change plan or cancel first."),
           "You already have an active subscription. Use Change plan or cancel first.",
         ),
+        ...mapKeys(
+          t("Go is already included with your educational account."),
+          "Go is already included with your educational account.",
+        ),
         ...mapKeys(t("You are not a member of that team."), "You are not a member of that team."),
         ...mapKeys(
           t("You do not have permission to manage this project."),

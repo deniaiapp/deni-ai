@@ -9,6 +9,7 @@ import {
   billingPlans,
   findPlanById,
   findPlanByLookupKey,
+  getPlanTier,
   isTeamPlan,
 } from "@/lib/billing";
 import {
@@ -59,7 +60,7 @@ import {
   isMeteredMaxModePrice,
   pickLicensedSubscription,
 } from "@/lib/stripe-subscriptions";
-import { getUsageSummary } from "@/lib/usage";
+import { getUsageSummary, hasEducationGo } from "@/lib/usage";
 import {
   type ProtectedContext,
   protectedProcedure,
@@ -671,6 +672,14 @@ export const billingRouter = router({
         throw new TRPCError({
           code: "BAD_REQUEST",
           message: "Unknown plan.",
+        });
+      }
+
+      // A verified educational address already includes Go at no charge.
+      if (getPlanTier(plan.id) === "go" && (await hasEducationGo(ctx.userId))) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Go is already included with your educational account.",
         });
       }
 

@@ -3,10 +3,12 @@ import { beforeEach, expect, test, vi } from "vitest";
 const state = vi.hoisted(() => ({
   personal: [] as Record<string, unknown>[],
   team: [] as Record<string, unknown>[],
+  user: [] as Record<string, unknown>[],
 }));
 
 // loadTierInfo reads the personal billing row (where/limit), the active team
-// billing rows (innerJoin/where) and the team policies (where/limit).
+// billing rows (innerJoin/where), the team policies (where/limit), and, for
+// accounts without a plan, the user row (where/limit).
 vi.mock("@/db/drizzle", async () => {
   const { getTableName } = await import("drizzle-orm");
   return {
@@ -14,7 +16,10 @@ vi.mock("@/db/drizzle", async () => {
       select: () => ({
         from: (table: Parameters<typeof getTableName>[0]) => ({
           where: () => ({
-            limit: async () => (getTableName(table) === "billing" ? state.personal : []),
+            limit: async () => {
+              const name = getTableName(table);
+              return name === "billing" ? state.personal : name === "user" ? state.user : [];
+            },
           }),
           innerJoin: () => ({ where: async () => state.team }),
         }),
@@ -35,7 +40,7 @@ vi.mock("./max-mode-credits", () => ({
 vi.mock("./billing-config", () => ({ isBillingDisabled: false }));
 vi.mock("./stripe", () => ({ stripe: {} }));
 
-const { getSubscriptionTier } = await import("./usage");
+const { getSubscriptionTier, hasEducationGo } = await import("./usage");
 
 const now = new Date("2026-10-01T00:00:00Z");
 const later = new Date("2026-11-01T00:00:00Z");
@@ -58,7 +63,12 @@ function billingRow(planId: string, status: string, organizationId: string | nul
 beforeEach(() => {
   state.personal = [];
   state.team = [];
+  state.user = [];
 });
+
+function userRow(email: string, emailVerified = true, isAnonymous = false) {
+  return { email, emailVerified, isAnonymous };
+}
 
 test("team members get their team plan's tier", async () => {
   state.team = [billingRow("pro_team_monthly", "active", "org")];
@@ -80,4 +90,33 @@ test("users without an active plan are free", async () => {
   expect(await getSubscriptionTier("user", now)).toBe("free");
   state.personal = [billingRow("pro_monthly", "inactive")];
   expect(await getSubscriptionTier("user", now)).toBe("free");
+});
+
+test("a verified educational address gets Go for free", async () => {
+  state.user = [userRow("student@u-tokyo.ac.jp")];
+  expect(await getSubscriptionTier("user", now)).toBe("go");
+  expect(await hasEducationGo("user", now)).toBe(true);
+  state.personal = [billingRow("plus_monthly", "inactive")];
+  expect(await getSubscriptionTier("user", now)).toBe("go");
+});
+
+test("education does not apply to unverified, guest, or non-educational addresses", async () => {
+  state.user = [userRow("student@mit.edu", false)];
+  expect(await getSubscriptionTier("user", now)).toBe("free");
+  state.user = [userRow("student@mit.edu", true, true)];
+  expect(await getSubscriptionTier("user", now)).toBe("free");
+  state.user = [userRow("someone@outlook.com")];
+  expect(await getSubscriptionTier("user", now)).toBe("free");
+  state.user = [userRow("someone@foo.edu.co")];
+  expect(await getSubscriptionTier("user", now)).toBe("free");
+});
+
+test("paid and team plans take precedence over education", async () => {
+  state.user = [userRow("student@mit.edu")];
+  state.personal = [billingRow("pro_monthly", "active")];
+  expect(await getSubscriptionTier("user", now)).toBe("pro");
+  expect(await hasEducationGo("user", now)).toBe(false);
+  state.personal = [];
+  state.team = [billingRow("pro_team_monthly", "active", "org")];
+  expect(await getSubscriptionTier("user", now)).toBe("pro");
 });

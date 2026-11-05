@@ -10,6 +10,7 @@ import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Spinner } from "../ui/spinner";
 
 export function BillingCurrentPlanCard({
+  isEducation,
   isOnTeamPlan,
   rawPlanId,
   currentPlan,
@@ -25,6 +26,7 @@ export function BillingCurrentPlanCard({
   onCancel,
   onResume,
 }: {
+  isEducation: boolean;
   isOnTeamPlan: boolean;
   rawPlanId: BillingPlanId | undefined;
   currentPlan: ClientPlan | undefined;
@@ -61,7 +63,9 @@ export function BillingCurrentPlanCard({
                     tier: activePlanId ? getTierLabel(activePlanId) : t("Plus"),
                     name: getPlanIntervalLabel(currentPlan.id),
                   })
-                : t("Free")}{" "}
+                : isEducation
+                  ? t("Go (free for education)")
+                  : t("Free")}{" "}
             {cancelDate && (
               <span className="text-destructive">
                 {t("(Cancels {date})", {

@@ -71,6 +71,7 @@ export function useBillingPlanCopy(planId: BillingPlanId | null): BillingPlanCop
       t.rich("<b>No ads</b> experience", { b }),
       t.rich("<b>More models</b> than Free", { b }),
       t.rich("<b>Max Mode credits</b> to keep going past the limit", { b }),
+      t.rich("<b>Free for students and educators</b> with a verified school email", { b }),
     ],
     plus: [
       runHighlight,
