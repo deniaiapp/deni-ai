@@ -5,9 +5,8 @@ import { db } from "@/db/drizzle";
 import { signupRisk } from "@/db/schema";
 import { env } from "@/env";
 import {
-  extractEmailDomain,
   extractEmailLocalPart,
-  isAllowedEducationalDomain,
+  isEducationalEmail,
   isRandomLookingLocalPart,
 } from "@/lib/email-domain-policy";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -70,11 +69,6 @@ const AUTOMATION_CLIENT =
 
 export function isAutomationUserAgent(userAgent: string | null | undefined): boolean {
   return AUTOMATION_CLIENT.test((userAgent ?? "").trim());
-}
-
-function isEducationalEmail(email: string) {
-  const domain = extractEmailDomain(email);
-  return domain !== null && isAllowedEducationalDomain(domain);
 }
 
 /**

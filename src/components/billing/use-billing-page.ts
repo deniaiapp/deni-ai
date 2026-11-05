@@ -196,6 +196,8 @@ export function useBillingPage() {
     statusQuery.data?.isTeamPlan === true && rawPlanId ? isTeamPlan(rawPlanId) : false;
   const usage = usageQuery.data?.usage ?? [];
   const usageTier = usageQuery.data?.tier ?? "free";
+  // Go at no charge through a verified educational address.
+  const isEducation = usageQuery.data?.education === true;
   const usageTierLabel = (() => {
     switch (usageTier) {
       case "go":
@@ -296,6 +298,7 @@ export function useBillingPage() {
     hasActiveSubscription,
     hasAgreed,
     isChangePlanOpen,
+    isEducation,
     isOnTeamPlan,
     isSubscribed,
     goMonthly,

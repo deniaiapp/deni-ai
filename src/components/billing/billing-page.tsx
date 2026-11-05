@@ -61,6 +61,7 @@ function BillingPageContent() {
     hasActiveSubscription,
     hasAgreed,
     isChangePlanOpen,
+    isEducation,
     isOnTeamPlan,
     isSubscribed,
     goMonthly,
@@ -115,6 +116,7 @@ function BillingPageContent() {
       )}
 
       <BillingCurrentPlanCard
+        isEducation={isEducation}
         isOnTeamPlan={isOnTeamPlan}
         rawPlanId={rawPlanId}
         currentPlan={currentPlan}
@@ -173,6 +175,7 @@ function BillingPageContent() {
         proInterval={proInterval}
         onProIntervalChange={setProInterval}
         isOnTeamPlan={isOnTeamPlan}
+        isEducation={isEducation}
         planActions={{
           activePlanId,
           isSubscribed,

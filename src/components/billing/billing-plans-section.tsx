@@ -38,6 +38,7 @@ export function BillingPlansSection({
   proInterval,
   onProIntervalChange,
   isOnTeamPlan,
+  isEducation,
   planActions,
 }: {
   erroredMessage?: string | null;
@@ -52,6 +53,8 @@ export function BillingPlansSection({
   proInterval: "monthly" | "yearly";
   onProIntervalChange: (interval: "monthly" | "yearly") => void;
   isOnTeamPlan: boolean;
+  /** Go comes free with a verified educational address, so it is the current plan. */
+  isEducation: boolean;
   planActions: PlanActionProps;
 }) {
   const t = useExtracted();
@@ -87,7 +90,8 @@ export function BillingPlansSection({
             <PlanCard
               plan={goMonthly}
               status={{
-                isCurrent: goMonthly.id === activePlanId && isSubscribed,
+                isCurrent:
+                  (goMonthly.id === activePlanId && isSubscribed) || (isEducation && !isSubscribed),
                 hasActiveSubscription,
                 isLoadingEstimate: pendingPlanId === goMonthly.id && isEstimateLoading,
                 isOnTeamPlan,

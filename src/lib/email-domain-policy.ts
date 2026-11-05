@@ -185,6 +185,12 @@ export function isAllowedEducationalDomain(domain: string): boolean {
   return ALLOWED_EDU_DOMAIN_SUFFIXES.some((suffix) => domainMatchesSuffix(d, suffix));
 }
 
+/** Whether an address is on a restricted educational domain (see {@link isAllowedEducationalDomain}). */
+export function isEducationalEmail(email: string): boolean {
+  const domain = extractEmailDomain(email);
+  return domain !== null && isAllowedEducationalDomain(domain);
+}
+
 export function isGoogleMailDomain(domain: string): boolean {
   return GOOGLE_MAIL_DOMAINS.has(domain.toLowerCase());
 }

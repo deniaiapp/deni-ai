@@ -9,8 +9,10 @@ import {
   teamUsagePolicy,
   usageQuota,
   usageReservation,
+  user,
 } from "@/db/schema";
 import { getPlanTier } from "@/lib/billing";
+import { isEducationalEmail } from "@/lib/email-domain-policy";
 import { isSignupFlagged } from "@/lib/signup-risk";
 import { canonicalTeamBillingRow } from "@/lib/team-billing-record";
 
@@ -168,6 +170,8 @@ type TierInfo = {
   /** Unspent Max Mode credits in usage units; only looked up while Max Mode is on. */
   maxModeCreditUnits: number;
   hasVerifiedPaymentMethod: boolean;
+  /** Go at no charge through a verified educational address, without a paid plan. */
+  education: boolean;
   /** Free account flagged at sign-up as part of a batch; only looked up for unverified Free accounts. */
   signupFlagged?: boolean;
 };
@@ -217,7 +221,43 @@ async function getTierInfo(
   return info;
 }
 
+/**
+ * Whether the account gets Go for free: a verified address on a restricted educational
+ * domain (email-domain-policy.ts). It follows the current address, so changing to a
+ * non-educational one returns the account to Free.
+ */
+async function hasEducationAccess(userId: string, database: UsageDatabase) {
+  const [row] = await database
+    .select({
+      email: user.email,
+      emailVerified: user.emailVerified,
+      isAnonymous: user.isAnonymous,
+    })
+    .from(user)
+    .where(eq(user.id, userId))
+    .limit(1);
+  return Boolean(row && row.emailVerified && !row.isAnonymous && isEducationalEmail(row.email));
+}
+
+/** Whether the account already has Go through education (see {@link hasEducationAccess}). */
+export async function hasEducationGo(userId: string, now = new Date()): Promise<boolean> {
+  return (await loadTierInfo(userId, now, db)).education;
+}
+
 async function loadTierInfo(userId: string, now: Date, database: UsageDatabase): Promise<TierInfo> {
+  const info = await loadBillingTierInfo(userId, now, database);
+  // A paid plan or team plan takes precedence; education only lifts Free to Go.
+  if (info.tier === "free" && (await hasEducationAccess(userId, database))) {
+    return { ...info, tier: "go", education: true };
+  }
+  return info;
+}
+
+async function loadBillingTierInfo(
+  userId: string,
+  now: Date,
+  database: UsageDatabase,
+): Promise<TierInfo> {
   // 1. Check personal billing (where organizationId is NULL)
   const [record] = await database
     .select({
@@ -334,6 +374,7 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
         : null,
       maxModeCreditUnits: 0,
       hasVerifiedPaymentMethod,
+      education: false,
     };
   }
 
@@ -355,6 +396,7 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
       creditOwner: null,
       maxModeCreditUnits: 0,
       hasVerifiedPaymentMethod,
+      education: false,
     };
   }
 
@@ -382,6 +424,7 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
       creditOwner: null,
       maxModeCreditUnits: 0,
       hasVerifiedPaymentMethod,
+      education: false,
     };
   }
 
@@ -411,6 +454,7 @@ async function loadTierInfo(userId: string, now: Date, database: UsageDatabase):
     creditOwner: { userId, organizationId: null },
     maxModeCreditUnits: 0,
     hasVerifiedPaymentMethod,
+    education: false,
   };
 }
 
@@ -956,6 +1000,8 @@ export type UsageSummary = {
   /** Unspent Max Mode credits ($1 each) of whoever pays overage; null when not eligible. */
   maxModeCredits: number | null;
   hasVerifiedPaymentMethod: boolean;
+  /** Go comes free with a verified educational address (no paid plan). */
+  education: boolean;
   /**
    * The Free allowance is reduced (see signup-risk.ts) and a verified payment method lifts it.
    * Tells the user the way out without saying what triggered it.
@@ -1045,6 +1091,7 @@ export async function getUsageSummary({
     maxModeEligible: tierInfo.maxModeEligible,
     maxModeCredits,
     hasVerifiedPaymentMethod: tierInfo.hasVerifiedPaymentMethod,
+    education: tierInfo.education,
     signupLimited: Boolean(tierInfo.signupFlagged) && !tierInfo.hasVerifiedPaymentMethod,
   };
 }

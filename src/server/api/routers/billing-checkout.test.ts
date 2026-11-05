@@ -13,6 +13,7 @@ const state = vi.hoisted(() => ({
   expiredSession: vi.fn(),
   couponId: null as string | null,
   couponRedeemed: 0,
+  educationGo: false,
   offerSpots: null as number | null,
   duringUpdate: undefined as (() => void) | undefined,
   duringRetrieve: undefined as (() => void) | undefined,
@@ -21,6 +22,10 @@ const state = vi.hoisted(() => ({
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
 vi.mock("@/lib/billing-config", () => ({ isBillingDisabled: false }));
+vi.mock("@/lib/usage", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/usage")>()),
+  hasEducationGo: async () => state.educationGo,
+}));
 // The procedure budgets are covered elsewhere; these tests call checkout more often.
 vi.mock("@/lib/rate-limit", () => ({ checkRateLimit: async () => ({ allowed: true }) }));
 vi.mock("@/lib/billing-offers", async (importOriginal) => {
@@ -185,6 +190,7 @@ function subscription(status: string, lookupKey: string, planId = lookupKey) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  state.educationGo = false;
   state.record = {
     id: "row",
     userId: "user",
@@ -402,4 +408,17 @@ test("deletion freeze blocks starting another checkout", async () => {
     "Account deletion",
   );
   expect(state.createdSession).not.toHaveBeenCalled();
+});
+
+test("an educational account cannot buy Go but can still upgrade", async () => {
+  Object.assign(state.record, freeRecord, { checkoutSessionId: null });
+  state.subscriptions = [];
+  state.educationGo = true;
+  await expect(caller().createCheckoutSession({ planId: "go_monthly" })).rejects.toThrow(
+    "Go is already included",
+  );
+  expect(state.createdSession).not.toHaveBeenCalled();
+  await expect(caller().createCheckoutSession({ planId: "plus_monthly" })).resolves.toMatchObject({
+    sessionId: "cs_new",
+  });
 });
