@@ -96,13 +96,16 @@ function createSerialQueue() {
 
 export function createSearchTool(usage?: ChatToolUsageContext) {
   const serialize = createSerialQueue();
+  // Citation ids keep counting across every search in one response, so `[cite:id]`
+  // names one result even when the model searched several times.
+  let nextCitationId = 1;
   const reserve = (context: ChatToolUsageContext) => serialize(() => chargeSearchUsage(context));
   const settle = (context: ChatToolUsageContext, reserved: SearchCharge, amount: number) =>
     serialize(() => settleSearchUsage(context, reserved, amount));
 
   return tool({
     description:
-      "Search the web and get page content for the top results. Use this whenever current, local, or easily-changed facts would improve the answer — news, prices, docs, people, products, or anything you are not confident about — even if the user did not ask you to search. Skip it for casual chat or questions you can answer confidently from general knowledge. Each call consumes a fixed amount of the user's usage quota, so prefer one well-chosen query over several overlapping ones. Prefer the browse tool when you need the full content of a specific URL.",
+      "Search the web and get page content for the top results. Each result has an `id`; cite it as [cite:id] after the sentence that uses it. Use this whenever current, local, or easily-changed facts would improve the answer — news, prices, docs, people, products, or anything you are not confident about — even if the user did not ask you to search. Skip it for casual chat or questions you can answer confidently from general knowledge. Each call consumes a fixed amount of the user's usage quota, so prefer one well-chosen query over several overlapping ones. Prefer the browse tool when you need the full content of a specific URL.",
     inputSchema: z.object({
       query: z.string().min(1).describe("Search query"),
       amount: z
@@ -166,6 +169,7 @@ export function createSearchTool(usage?: ChatToolUsageContext) {
 
           const data = (await response.json()) as ExaSearchResponse;
           results = (data.results ?? []).map((item) => ({
+            id: nextCitationId++,
             title: item.title,
             url: item.url,
             description: item.highlights?.join("\n\n") || item.text?.slice(0, 500) || "",

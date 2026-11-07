@@ -1,4 +1,6 @@
 export type SearchResult = {
+  /** Citation id, unique within one response; the model cites it as `[cite:id]`. */
+  id?: number;
   title: string;
   url: string;
   description: string;

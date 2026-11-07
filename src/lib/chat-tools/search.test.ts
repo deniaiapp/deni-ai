@@ -134,3 +134,31 @@ test("parallel searches take turns on usage writes", async () => {
   expect(consumeUsage).toHaveBeenCalledTimes(3);
   expect(peak).toBe(1);
 });
+
+test("citation ids keep counting across searches in one response", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () =>
+      Response.json({
+        results: [
+          { title: "A", url: "https://a.example/", highlights: ["a"] },
+          { title: "B", url: "https://b.example/", highlights: ["b"] },
+        ],
+      }),
+    ),
+  );
+  vi.mocked(fetchPageMarkdown).mockResolvedValue({
+    url: "https://a.example/",
+    title: "A",
+    content: "Page",
+    truncated: false,
+    contentLength: 4,
+    source: "direct",
+  });
+  const search = createSearchTool({ userId: "user", isAnonymous: false });
+  const options = { toolCallId: "call", messages: [], context: {} };
+  const first = (await search.execute!({ query: "one" }, options)) as { id?: number }[];
+  const second = (await search.execute!({ query: "two" }, options)) as { id?: number }[];
+  expect(first.map((result) => result.id)).toEqual([1, 2]);
+  expect(second.map((result) => result.id)).toEqual([3, 4]);
+});

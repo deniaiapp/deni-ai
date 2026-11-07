@@ -2,6 +2,8 @@
 import type { UIDataTypes, UIMessagePart, UITools } from "ai";
 
 export type SearchResult = {
+  /** Citation id; results stored before citations existed have none. */
+  id?: number;
   title: string;
   url: string;
   description: string;

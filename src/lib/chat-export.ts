@@ -1,10 +1,12 @@
 import type { UIMessage } from "ai";
+import { collectCitationSources, replaceCitationMarkers } from "@/lib/chat-citations";
 
 function getTextFromMessage(message: UIMessage): string {
   const texts: string[] = [];
+  const citationSources = collectCitationSources(message.parts);
   for (const part of message.parts) {
     if (part.type === "text") {
-      texts.push(part.text);
+      texts.push(replaceCitationMarkers(part.text, citationSources));
     }
   }
   return texts.join("\n");
