@@ -284,6 +284,27 @@ test("a magic link without 2FA signs in directly", async () => {
   expect((await mailbox.session())?.user.email).toBe(EMAIL);
 }, 30_000);
 
+test("a magic-link sign-up is named after the email address", async () => {
+  const mailbox = browser();
+  await mailbox.request("/sign-in/magic-link", {
+    body: { email: EMAIL, callbackURL: `${ORIGIN}/chat` },
+  });
+  expect((await mailbox.request(lastEmailProps().signInUrl)).status).toBe(302);
+
+  expect(mocks.db.user).toHaveLength(1);
+  expect(mocks.db.user[0]?.name).toBe("owner");
+}, 30_000);
+
+test("a magic-link sign-up keeps the name it was sent with", async () => {
+  const mailbox = browser();
+  await mailbox.request("/sign-in/magic-link", {
+    body: { email: EMAIL, name: "Owner Name", callbackURL: `${ORIGIN}/chat` },
+  });
+  expect((await mailbox.request(lastEmailProps().signInUrl)).status).toBe(302);
+
+  expect(mocks.db.user[0]?.name).toBe("Owner Name");
+}, 30_000);
+
 test("guests cannot attach an email address to their guest account", async () => {
   const guest = browser();
   expect((await guest.request("/sign-in/anonymous", { method: "POST" })).status).toBe(200);
