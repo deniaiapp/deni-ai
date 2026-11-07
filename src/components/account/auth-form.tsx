@@ -51,13 +51,9 @@ function GoogleIcon() {
   );
 }
 
+/** The Deni AI app icon, copied from the deni-ai repository (public/pwa/android-chrome-192x192.png). */
 function DeniAiIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="size-4" aria-hidden="true">
-      <rect width="24" height="24" rx="6" className="fill-foreground" />
-      <path d="M8 6.5h3.6c3.3 0 5.4 2.1 5.4 5.5s-2.1 5.5-5.4 5.5H8z" className="fill-background" />
-    </svg>
-  );
+  return <img src="/brand/deni-ai.png" alt="" aria-hidden="true" draggable={false} className="size-4 shrink-0 rounded-[4px]" />;
 }
 
 function GitHubIcon() {

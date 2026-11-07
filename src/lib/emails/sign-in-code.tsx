@@ -1,7 +1,6 @@
-import { Body, Container, Head, Heading, Html, Preview, Section, Text } from "react-email";
+import { Body, Container, Head, Heading, Html, Img, Preview, Section, Text } from "react-email";
 
-// Colors come from public/icon.svg so the email matches the app icon. Styles are inline because
-// most mail clients drop <style> blocks.
+// Styles are inline because most mail clients drop <style> blocks.
 
 const ink = "#0e0c0a";
 const tan = "#d4a574";
@@ -17,6 +16,8 @@ export type SignInCodeEmailProps = {
   intro: string;
   expiry: string;
   ignore: string;
+  /** Absolute URL of the Deni Run app icon (public/icon.png). Without it the header shows the name only. */
+  iconUrl?: string;
 };
 
 export function SignInCodeEmail({
@@ -27,6 +28,7 @@ export function SignInCodeEmail({
   intro,
   expiry,
   ignore,
+  iconUrl,
 }: SignInCodeEmailProps) {
   return (
     <Html lang={lang}>
@@ -54,21 +56,15 @@ export function SignInCodeEmail({
               margin: 0,
             }}
           >
-            <span
-              style={{
-                backgroundColor: ink,
-                borderRadius: 6,
-                color: tan,
-                display: "inline-block",
-                fontSize: 13,
-                lineHeight: "24px",
-                marginRight: 8,
-                textAlign: "center",
-                width: 24,
-              }}
-            >
-              ●
-            </span>
+            {iconUrl ? (
+              <Img
+                src={iconUrl}
+                alt=""
+                width={24}
+                height={24}
+                style={{ borderRadius: 6, display: "inline-block", marginRight: 8, verticalAlign: "middle" }}
+              />
+            ) : null}
             Deni Run
           </Text>
           <Heading
