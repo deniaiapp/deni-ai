@@ -3,7 +3,7 @@ import type { ComponentProps } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { ArrowDownIcon, DownloadIcon } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 
 export type ConversationProps = ComponentProps<typeof StickToBottom>;
@@ -20,9 +20,63 @@ export const Conversation = ({ className, ...props }: ConversationProps) => (
 
 export type ConversationContentProps = ComponentProps<typeof StickToBottom.Content>;
 
-export const ConversationContent = ({ className, ...props }: ConversationContentProps) => (
-  <StickToBottom.Content className={cn("flex flex-col gap-8 p-4", className)} {...props} />
-);
+const STICK_TO_BOTTOM_TOLERANCE_PX = 2;
+
+// use-stick-to-bottom only follows content resizes. When the scroll viewport
+// itself shrinks or grows (for example while the composer expands), keep the
+// bottom pinned in the same frame so the latest message neither slides under
+// the composer nor reads as a user scroll that breaks the lock.
+function useStickToBottomOnViewportResize() {
+  const { scrollRef, state } = useStickToBottomContext();
+
+  useEffect(() => {
+    const scrollElement = scrollRef.current;
+    if (!scrollElement) {
+      return;
+    }
+
+    let previousHeight = scrollElement.clientHeight;
+    const observer = new ResizeObserver(() => {
+      const height = scrollElement.clientHeight;
+      if (height === previousHeight) {
+        return;
+      }
+      const difference = height - previousHeight;
+      // Measure against the previous viewport height. A viewport resize keeps
+      // scrollHeight, and a shrinking viewport leaves scrollTop untouched.
+      const wasAtBottom =
+        scrollElement.scrollHeight - previousHeight - scrollElement.scrollTop <=
+        STICK_TO_BOTTOM_TOLERANCE_PX;
+      previousHeight = height;
+      // `escapedFromLock` can stay set after "scroll to bottom" re-locks, so
+      // follow the library's own `isAtBottom` lock like its content resizes do.
+      if (!state.isAtBottom && !wasAtBottom) {
+        return;
+      }
+
+      // A growing viewport makes the browser clamp scrollTop, which the library
+      // would read as the user scrolling up. Flag the resize the same way the
+      // library does for content resizes so that scroll event is ignored.
+      state.resizeDifference = difference;
+      state.scrollTop = state.calculatedTargetScrollTop;
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          if (state.resizeDifference === difference) {
+            state.resizeDifference = 0;
+          }
+        }, 1);
+      });
+    });
+    observer.observe(scrollElement);
+    return () => observer.disconnect();
+  }, [scrollRef, state]);
+}
+
+export const ConversationContent = ({ className, ...props }: ConversationContentProps) => {
+  useStickToBottomOnViewportResize();
+
+  return <StickToBottom.Content className={cn("flex flex-col gap-8 p-4", className)} {...props} />;
+};
 
 export type ConversationEmptyStateProps = ComponentProps<"div"> & {
   title?: string;
