@@ -83,7 +83,7 @@ Compose does not bind host port 3000 (Dokploy routes through Traefik). For a loc
 
 On Dokploy, create a **Compose** service from this repo (`docker-compose.yml`). Put the same variables in the Environment tab (Dokploy writes `.env` next to the compose file). Set `D1_PROXY_URL` and `D1_PROXY_TOKEN` for the d1-proxy Worker (see `docs/d1-migration.md`). Point the domain at service `app`, container port `3000`. Run `pnpm db:migrate` (applies `src/db/migrations` to D1) before rolling out a schema change. The app container does not migrate on start. The routine scheduler is on by default (`DENI_SCHEDULER=true`). Keep a single app replica, or set `DENI_SCHEDULER=false` on extras.
 
-Dockerfile-only deploys: build type **Dockerfile**, port `3000`, health check `/api/health`. Pass `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_SUPPORT_EMAIL` as build arguments.
+Dockerfile-only deploys: build type **Dockerfile**, port `3000`. Pass `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_SUPPORT_EMAIL` as build arguments.
 
 ## Usage
 

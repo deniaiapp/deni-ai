@@ -19,18 +19,6 @@ services:
       - deni-data:/app/.deni
     restart: unless-stopped
     stop_grace_period: 30s
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "node",
-          "-e",
-          "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
-        ]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 60s
 
 volumes:
   deni-data:
