@@ -20,7 +20,7 @@ RUN npm install --global pnpm@latest
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 FROM base AS builder
-RUN --mount=type=cache,id=deni-ai-support-pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile --store-dir=/pnpm/store
 ENV NODE_ENV=production
 COPY . .
@@ -31,7 +31,7 @@ RUN pnpm run build
 # loads its native renderer dynamically, so the runtime keeps production
 # node_modules instead of relying on Nitro's dependency tracing.
 FROM base AS deps
-RUN --mount=type=cache,id=deni-ai-support-pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --prod --frozen-lockfile --store-dir=/pnpm/store
 
 FROM node:26-slim AS runner
