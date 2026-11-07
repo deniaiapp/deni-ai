@@ -14,7 +14,7 @@
  */
 import dotenv from "dotenv";
 import postgres from "postgres";
-import { remoteExecutor } from "../db/remote-executor";
+import { remoteExecutor } from "../src/db/remote-executor";
 
 dotenv.config({ path: ".env", quiet: true });
 dotenv.config({ path: ".env.local", override: true, quiet: true });

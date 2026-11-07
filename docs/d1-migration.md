@@ -13,13 +13,13 @@ Worker has no such limit and also provides `/batch`, which D1 runs as one transa
 
 Local development and `pnpm test:core` need no Cloudflare account: with `D1_PROXY_URL`
 unset the app uses a SQLite file (`.deni/local.sqlite`), which is the same dialect as D1
-and is migrated automatically from `db/migrations`.
+and is migrated automatically from `src/db/migrations`.
 
 ## What changed in the code
 
 | Postgres | D1 |
 |---|---|
-| `jsonb`, `timestamptz` | JSON text and epoch-millisecond integers (`db/columns.ts`) |
+| `jsonb`, `timestamptz` | JSON text and epoch-millisecond integers (`src/db/columns.ts`) |
 | `SELECT ... FOR UPDATE` on the user document | `version` column compare-and-swap in `mutateStore` (re-reads and re-runs the callback on conflict) |
 | `pg_advisory_xact_lock` for job events | sequence allocated inside the `INSERT`, unique index, retry |
 | row lock in `claimJob` | conditional `UPDATE` repeating the observed state in `WHERE` |
@@ -36,10 +36,10 @@ side effects that are unsafe to repeat.
 
 1. Create the database and note its id:
    `pnpm exec wrangler d1 create deni-run`
-2. Put the id in `d1-proxy/wrangler.jsonc` (`database_id`).
+2. Put the id in `services/d1-proxy/wrangler.jsonc` (`database_id`).
 3. Create the schema: `pnpm db:migrate`
 4. Set the shared secret and deploy:
-   `pnpm exec wrangler secret put PROXY_TOKEN --config d1-proxy/wrangler.jsonc`
+   `pnpm exec wrangler secret put PROXY_TOKEN --config services/d1-proxy/wrangler.jsonc`
    `pnpm d1:deploy`
 5. Give the Worker a URL (custom domain such as `d1.deniai.app`, or a route). `workers_dev`
    is off on purpose; the endpoint should only be reachable with the token.

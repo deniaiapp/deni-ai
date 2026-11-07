@@ -40,7 +40,7 @@ pnpm db:migrate
 ```
 
 If the database already contains the original tables but `drizzle.__drizzle_migrations` has no
-baseline row, do not drop or reset it. Compare the live schema with `db/migrations/0000_init.sql`
+baseline row, do not drop or reset it. Compare the live schema with `src/db/migrations/0000_init.sql`
 and have the database owner record that known baseline with the team's migration tooling before
 applying `0001_wakeful_king_cobra.sql`. `pnpm test:core` validates both migrations in a temporary
 schema without touching application data.
@@ -62,9 +62,9 @@ pnpm dev
 ```
 
 The app is built with TanStack Start on Vite. `pnpm build` writes a self-contained Node server to
-`.output/`, and `pnpm start` runs it. UI text is translated with use-intl from `messages/*.po`:
+`.output/`, and `pnpm start` runs it. UI text is translated with use-intl from `src/i18n/messages/*.po`:
 `pnpm dev` and `pnpm build` add new strings to the catalogs (or run `pnpm messages:extract`), and
-untranslated entries in `messages/ja.po` have an empty `msgstr` that falls back to English.
+untranslated entries in `src/i18n/messages/ja.po` have an empty `msgstr` that falls back to English.
 
 http://localhost:3000
 
@@ -81,7 +81,7 @@ docker compose up --build
 
 Compose does not bind host port 3000 (Dokploy routes through Traefik). For a local bind, add `ports: ["3000:3000"]` under `app` temporarily.
 
-On Dokploy, create a **Compose** service from this repo (`docker-compose.yml`). Put the same variables in the Environment tab (Dokploy writes `.env` next to the compose file). Set `D1_PROXY_URL` and `D1_PROXY_TOKEN` for the d1-proxy Worker (see `docs/d1-migration.md`). Point the domain at service `app`, container port `3000`. Run `pnpm db:migrate` (applies `db/migrations` to D1) before rolling out a schema change. The app container does not migrate on start. The routine scheduler is on by default (`DENI_SCHEDULER=true`). Keep a single app replica, or set `DENI_SCHEDULER=false` on extras.
+On Dokploy, create a **Compose** service from this repo (`docker-compose.yml`). Put the same variables in the Environment tab (Dokploy writes `.env` next to the compose file). Set `D1_PROXY_URL` and `D1_PROXY_TOKEN` for the d1-proxy Worker (see `docs/d1-migration.md`). Point the domain at service `app`, container port `3000`. Run `pnpm db:migrate` (applies `src/db/migrations` to D1) before rolling out a schema change. The app container does not migrate on start. The routine scheduler is on by default (`DENI_SCHEDULER=true`). Keep a single app replica, or set `DENI_SCHEDULER=false` on extras.
 
 Dockerfile-only deploys: build type **Dockerfile**, port `3000`, health check `/api/health`. Pass `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_SUPPORT_EMAIL` as build arguments.
 

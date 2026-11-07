@@ -12,7 +12,7 @@
   "ignorePatterns": [
     ".output/**",
     "dist/**",
-    "app/routeTree.gen.ts"
+    "src/routeTree.gen.ts"
   ],
   "rules": {
     "no-array-constructor": "error",

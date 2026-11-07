@@ -16,5 +16,7 @@ coverage
 .vercel
 .vscode
 .idea
-worker
+docs
+services
+tests
 dist

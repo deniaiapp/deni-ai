@@ -7,5 +7,5 @@ const native = (unified) => String.fromCodePoint(...unified.split("-").map((part
 const catalog = Object.entries(english.emojis).flatMap(([category, emojis]) => emojis.map((item) => {
   return [native(item.u), item.n.at(-1), item.n.join(" ").toLowerCase(), category, (item.v ?? []).map(native)];
 }));
-writeFileSync("lib/emoji-catalog.json", JSON.stringify(catalog));
+writeFileSync("src/lib/ui/emoji-catalog.json", JSON.stringify(catalog));
 writeFileSync("public/emoji-catalog.LICENSE.txt", readFileSync(`${root}LICENSE`));

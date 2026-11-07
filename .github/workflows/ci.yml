@@ -40,7 +40,7 @@ jobs:
         env:
           BETTER_AUTH_SECRET: build-placeholder-secret-not-used-at-runtime
           BETTER_AUTH_URL: http://localhost:3000
-      - run: sh scripts/smoke-standalone.sh
+      - run: sh tests/smoke-standalone.sh
         env:
           APP_ENCRYPTION_KEY: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
           BETTER_AUTH_SECRET: smoke-test-secret-not-used-in-production

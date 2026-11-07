@@ -15,9 +15,9 @@
     "jsx": "react-jsx",
     "incremental": true,
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": ["**/*.ts", "**/*.tsx", "**/*.mts"],
-  "exclude": ["node_modules", "d1-proxy", ".output", "dist"]
+  "exclude": ["node_modules", "services", ".output", "dist"]
 }

@@ -46,8 +46,8 @@ yarn-error.log*
 
 # Cloudflare Worker local state and secrets
 .wrangler/
-d1-proxy/.wrangler-*/
-d1-proxy/.dev.vars
+services/d1-proxy/.wrangler-*/
+services/d1-proxy/.dev.vars
 .deni/local.sqlite*
 /dist/
-slack-screenshots/
+/docs/slack-screenshots/

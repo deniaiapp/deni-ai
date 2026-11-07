@@ -3,7 +3,7 @@
 Text to paste into the "How will the scopes be used?" field of the OAuth consent screen
 (Google Cloud Console → Data Access). Each entry is 1000 characters or fewer.
 
-Scopes requested by the app (see `lib/builtin-plugins.ts`):
+Scopes requested by the app (see `src/lib/mcp/builtin-plugins.ts`):
 
 | Scope | Class | API |
 |---|---|---|
