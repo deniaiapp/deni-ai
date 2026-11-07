@@ -5,6 +5,7 @@ import { startTransition, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { BillingPlanId, ClientPlan, IndividualPlanId } from "@/lib/billing";
 import { isIndividualPlanId, isTeamPlan } from "@/lib/billing";
+import type { CancellationFeedback } from "@/lib/cancellation-feedback";
 import { trpc } from "@/lib/trpc/react";
 import { settingsUsageQueryOptions } from "@/lib/usage-query-options";
 import { ACTIVE_STATUSES, getOfferPercentOff, useBillingReceiptCopy } from "./billing-utils";
@@ -104,7 +105,14 @@ export function useBillingPage() {
   };
 
   const [shredOpen, setShredOpen] = useState(false);
+  // The cancel survey answer, sent when the shredder runs the cancellation.
+  const [cancelFeedback, setCancelFeedback] = useState<CancellationFeedback>({});
   const getReceiptCopy = useBillingReceiptCopy();
+
+  const handleCancelClick = (feedback: CancellationFeedback) => {
+    setCancelFeedback(feedback);
+    setShredOpen(true);
+  };
 
   const cancel = trpc.billing.cancelSubscription.useMutation({
     onSuccess: async () => {
@@ -279,6 +287,7 @@ export function useBillingPage() {
     activePlanId,
     usageItem,
     cancel,
+    cancelFeedback,
     cancelDate,
     cancelReceipt,
     changePlan,
@@ -291,6 +300,7 @@ export function useBillingPage() {
     errored,
     flashOffer,
     handleChangePlanClick,
+    handleCancelClick,
     handleCheckout,
     handleConfirmChangePlan,
     handleDialogOpenChange,

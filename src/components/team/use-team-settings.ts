@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { authClient } from "@/lib/auth-client";
 import type { TeamPlanId } from "@/lib/billing";
+import type { CancellationFeedback } from "@/lib/cancellation-feedback";
 import { useReloadCooldown } from "@/hooks/use-reload-cooldown";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { trpc } from "@/lib/trpc/react";
@@ -40,6 +41,8 @@ export function useTeamSettings() {
   const [isRemovingMember, setIsRemovingMember] = useState(false);
   const [updatingMemberRoleId, setUpdatingMemberRoleId] = useState<string | null>(null);
   const [shredOpen, setShredOpen] = useState(false);
+  // The cancel survey answer, sent when the shredder runs the cancellation.
+  const [cancelFeedback, setCancelFeedback] = useState<CancellationFeedback>({});
   const [orgNameDraft, setOrgNameDraft] = useState("");
   const [isSavingOrgName, setIsSavingOrgName] = useState(false);
   const [isSavingOrgLogo, setIsSavingOrgLogo] = useState(false);
@@ -662,7 +665,8 @@ export function useTeamSettings() {
     }
   }
 
-  async function handleCancel() {
+  function handleCancel(feedback: CancellationFeedback) {
+    setCancelFeedback(feedback);
     setShredOpen(true);
   }
 
@@ -670,7 +674,10 @@ export function useTeamSettings() {
     if (!activeOrg) {
       throw new Error(t("Failed to cancel subscription"));
     }
-    const result = await cancelSub.mutateAsync({ organizationId: activeOrg.id });
+    const result = await cancelSub.mutateAsync({
+      organizationId: activeOrg.id,
+      feedback: cancelFeedback,
+    });
     utils.organization.teamBillingStatus.setData({ organizationId: activeOrg.id }, (current) =>
       current
         ? {

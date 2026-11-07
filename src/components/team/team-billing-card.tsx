@@ -1,7 +1,7 @@
 import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { PlanHighlights } from "@/components/billing/plan-highlights";
-import { SubscriptionCancelDialog } from "@/components/billing/subscription-shredder";
+import { SubscriptionCancelDialog } from "@/components/billing/subscription-cancel-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { type TeamPlanId, isTeamPlanId } from "@/lib/billing";
 import { useBillingPlanCopy } from "@/lib/billing-plan-copy";
+import type { CancellationFeedback } from "@/lib/cancellation-feedback";
 import { formatCurrency, monthDayFormatter, monthDayYearFormatter } from "./team-utils";
 
 type TeamPlan = {
@@ -175,7 +176,7 @@ export function TeamBillingCard({
   onSubscribe: (planId: TeamPlanId) => void;
   onChangePlan: (planId: TeamPlanId) => void;
   onManage: () => void;
-  onCancel: () => void;
+  onCancel: (feedback: CancellationFeedback) => void;
   onResume: () => void;
 }) {
   const t = useExtracted();

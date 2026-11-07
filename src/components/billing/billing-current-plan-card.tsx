@@ -2,9 +2,10 @@ import { Link } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { useState } from "react";
 import type { BillingPlanId, ClientPlan } from "@/lib/billing";
+import type { CancellationFeedback } from "@/lib/cancellation-feedback";
 import { formatAppDate } from "@/lib/format-date";
 import { usePlanIntervalLabel, useTierLabel } from "./billing-utils";
-import { SubscriptionCancelDialog } from "./subscription-shredder";
+import { SubscriptionCancelDialog } from "./subscription-cancel-dialog";
 import { Button } from "../ui/button";
 import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { Spinner } from "../ui/spinner";
@@ -39,7 +40,7 @@ export function BillingCurrentPlanCard({
   cancelPending: boolean;
   resumePending: boolean;
   onPortal: () => void;
-  onCancel: () => void;
+  onCancel: (feedback: CancellationFeedback) => void;
   onResume: () => void;
 }) {
   const t = useExtracted();
