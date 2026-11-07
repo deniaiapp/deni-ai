@@ -27,7 +27,7 @@ cd deni-ai
 ### 2. Install dependencies
 
 ```bash
-npm install --global pnpm@12.8.1
+npm install --global pnpm@12.18.0
 pnpm install --frozen-lockfile
 ```
 
