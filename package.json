@@ -88,6 +88,6 @@
   "engines": {
     "node": ">=26"
   },
-  "packageManager": "pnpm@12.15.0",
+  "packageManager": "pnpm@12.18.0",
   "type": "module"
 }
