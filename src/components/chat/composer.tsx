@@ -1,4 +1,5 @@
 import { GlobeIcon } from "lucide-react";
+import { toast } from "sonner";
 import { useExtracted } from "use-intl";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -154,6 +155,11 @@ export function Composer({
           onSubmit(message);
         }}
         className={cn("h-auto flex-col", className)}
+        onError={(err) => {
+          if (err.code === "uploading") {
+            toast.info(t("Wait for your attachments to finish uploading, then send again."));
+          }
+        }}
         globalDrop={globalDrop}
         multiple={multiple}
         maxFiles={attachmentsEnabled ? undefined : 0}

@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { createContext, memo, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { Streamdown } from "streamdown";
+import { useExtracted } from "use-intl";
 import { streamdownLinkSafety } from "@/components/chat/streamdown-link-safety";
 import { streamdownOverrideComponents } from "@/components/chat/streamdown-overrides";
 import { useStreamdownPlugins } from "@/components/chat/streamdown-plugins";
@@ -216,11 +217,12 @@ export const MessageBranchSelector = ({ className, ...props }: MessageBranchSele
 export type MessageBranchPreviousProps = ComponentProps<typeof Button>;
 
 export const MessageBranchPrevious = ({ children, ...props }: MessageBranchPreviousProps) => {
+  const t = useExtracted();
   const { goToPrevious, totalBranches } = useMessageBranch();
 
   return (
     <Button
-      aria-label="Previous branch"
+      aria-label={t("Previous branch")}
       disabled={totalBranches <= 1}
       onClick={goToPrevious}
       size="icon-sm"
@@ -236,11 +238,12 @@ export const MessageBranchPrevious = ({ children, ...props }: MessageBranchPrevi
 export type MessageBranchNextProps = ComponentProps<typeof Button>;
 
 export const MessageBranchNext = ({ children, ...props }: MessageBranchNextProps) => {
+  const t = useExtracted();
   const { goToNext, totalBranches } = useMessageBranch();
 
   return (
     <Button
-      aria-label="Next branch"
+      aria-label={t("Next branch")}
       disabled={totalBranches <= 1}
       onClick={goToNext}
       size="icon-sm"
@@ -256,6 +259,7 @@ export const MessageBranchNext = ({ children, ...props }: MessageBranchNextProps
 export type MessageBranchPageProps = HTMLAttributes<HTMLSpanElement>;
 
 export const MessageBranchPage = ({ className, ...props }: MessageBranchPageProps) => {
+  const t = useExtracted();
   const { currentBranch, totalBranches } = useMessageBranch();
 
   return (
@@ -263,7 +267,10 @@ export const MessageBranchPage = ({ className, ...props }: MessageBranchPageProp
       className={cn("border-none bg-transparent text-muted-foreground shadow-none", className)}
       {...props}
     >
-      {currentBranch + 1} of {totalBranches}
+      {t("{current} of {total}", {
+        current: String(currentBranch + 1),
+        total: String(totalBranches),
+      })}
     </ButtonGroupText>
   );
 };
