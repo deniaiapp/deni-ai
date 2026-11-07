@@ -14,6 +14,8 @@ import {
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 import { Message, MessageContent, MessageResponse } from "@/components/ai-elements/message";
+import { CitationSourcesProvider } from "@/components/chat/inline-citation";
+import { collectCitationSources } from "@/lib/chat-citations";
 import { Composer, type ComposerMessage } from "@/components/chat/composer";
 import { ComparisonSettingsControls } from "@/components/chat/comparison-settings";
 import { SavedComparisonsList } from "@/components/chat/saved-comparisons-list";
@@ -48,11 +50,14 @@ function Answer({
       message.parts.flatMap((part) => (part.type === "text" ? [part.text] : [])),
     )
     .join("\n\n");
+  const citationSources = collectCitationSources(messages.flatMap((message) => message.parts));
   return (
     <Message from="assistant" className="max-w-none w-full">
       <MessageContent className="w-full min-w-0">
         {text ? (
-          <MessageResponse>{text}</MessageResponse>
+          <CitationSourcesProvider sources={citationSources}>
+            <MessageResponse>{text}</MessageResponse>
+          </CitationSourcesProvider>
         ) : (
           <p className="text-sm text-muted-foreground">
             {busy ? t("Generating…") : t("The answer will appear here.")}

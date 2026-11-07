@@ -124,11 +124,3 @@ export function extractChatRequestErrorText(error: unknown): string | undefined 
 
   return raw;
 }
-
-export function toDisplayChatRequestError(error: unknown, fallback: string): string {
-  const text = extractChatRequestErrorText(error);
-  if (text && isUserFacingChatRequestError(text)) {
-    return text;
-  }
-  return fallback;
-}

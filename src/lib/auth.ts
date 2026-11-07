@@ -24,6 +24,7 @@ import { env } from "@/env";
 import { OAUTH_CONSENT_PATH, OAUTH_LOGIN_PATH, TWO_FACTOR_PATH } from "@/lib/auth-paths";
 import { toSafeRedirectPath } from "@/lib/auth-redirect";
 import { resolveClientIp } from "@/lib/client-ip";
+import { resolveUserName } from "@/lib/default-user-name";
 import { checkSignupLimits, recordSignupRisk } from "@/lib/signup-risk";
 import { isEmailConfigured, sendEmail } from "@/lib/email";
 import { readEmailChangeToken } from "@/lib/email-change-token";
@@ -748,6 +749,10 @@ export const auth = betterAuth({
             user.email,
             provider === "google" || provider === "github" ? provider : undefined,
           );
+
+          // Magic-link sign-ups carry no name, and Better Auth stores "" for them.
+          const name = resolveUserName(user.name, user.email);
+          if (name !== user.name) return { data: { ...user, name } };
         },
         after: async (user, ctx) => {
           if (user.isAnonymous || !user.email) return;

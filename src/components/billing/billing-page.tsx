@@ -42,6 +42,7 @@ function BillingPageContent() {
     activePlanId,
     usageItem,
     cancel,
+    cancelFeedback,
     cancelDate,
     cancelReceipt,
     changePlan,
@@ -53,6 +54,7 @@ function BillingPageContent() {
     estimateQuery,
     errored,
     flashOffer,
+    handleCancelClick,
     handleChangePlanClick,
     handleCheckout,
     handleConfirmChangePlan,
@@ -129,7 +131,7 @@ function BillingPageContent() {
         cancelPending={cancel.isPending || shredOpen}
         resumePending={resume.isPending}
         onPortal={() => portal.mutate()}
-        onCancel={() => setShredOpen(true)}
+        onCancel={handleCancelClick}
         onResume={() => resume.mutate()}
       />
 
@@ -206,7 +208,7 @@ function BillingPageContent() {
         data={cancelReceipt}
         onClose={() => setShredOpen(false)}
         onConfirm={async () => {
-          await cancel.mutateAsync();
+          await cancel.mutateAsync({ feedback: cancelFeedback });
         }}
         open={shredOpen}
       />

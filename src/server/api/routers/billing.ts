@@ -19,6 +19,12 @@ import {
 } from "@/lib/billing-card-usage";
 import { isBillingDisabled } from "@/lib/billing-config";
 import { unchangedBillingSnapshot } from "@/lib/billing-snapshot";
+import {
+  cancellationFeedbackSchema,
+  normalizeCancellationFeedback,
+  toStripeCancellationDetails,
+} from "@/lib/cancellation-feedback";
+import { recordCancellationFeedback } from "@/lib/cancellation-feedback-record";
 import { getAccountDeletionStatus, getCardRemovalBlocker } from "@/lib/account-deletion-billing";
 import {
   createFlashOfferEndAt,
@@ -913,7 +919,8 @@ export const billingRouter = router({
     }),
   cancelSubscription: billingEnabledProcedure
     .use(stripeWrite("cancelSubscription"))
-    .mutation(async ({ ctx }) => {
+    .input(z.object({ feedback: cancellationFeedbackSchema.optional() }).optional())
+    .mutation(async ({ ctx, input }) => {
       const subscriptionState = await syncSubscription(ctx, ctx.userId);
       if (!subscriptionState.stripeSubscriptionId) {
         throw new TRPCError({
@@ -922,8 +929,17 @@ export const billingRouter = router({
         });
       }
 
+      const feedback = normalizeCancellationFeedback(input?.feedback);
+      const cancellationDetails = toStripeCancellationDetails(feedback);
       const canceled = await stripe.subscriptions.update(subscriptionState.stripeSubscriptionId, {
         cancel_at_period_end: true,
+        ...(cancellationDetails ? { cancellation_details: cancellationDetails } : {}),
+      });
+      await recordCancellationFeedback(ctx.db, {
+        userId: ctx.userId,
+        stripeSubscriptionId: subscriptionState.stripeSubscriptionId,
+        planId: subscriptionState.planId,
+        feedback,
       });
 
       const updates: Partial<BillingRecord> = {

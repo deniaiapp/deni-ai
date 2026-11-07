@@ -15,6 +15,12 @@ import {
 import { env } from "@/env";
 import { type BillingPlan, billingPlans, findPlanById, isTeamPlan } from "@/lib/billing";
 import { isBillingDisabled } from "@/lib/billing-config";
+import {
+  cancellationFeedbackSchema,
+  normalizeCancellationFeedback,
+  toStripeCancellationDetails,
+} from "@/lib/cancellation-feedback";
+import { recordCancellationFeedback } from "@/lib/cancellation-feedback-record";
 import { planDisplayCurrency, priceInCurrency } from "@/lib/plan-currency";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
 import { stripe } from "@/lib/stripe";
@@ -1218,7 +1224,12 @@ export const organizationRouter = router({
 
   cancelTeamSubscription: billingEnabledProcedure
     .use(stripeWrite("cancelTeamSubscription"))
-    .input(z.object({ organizationId: z.string().min(1) }))
+    .input(
+      z.object({
+        organizationId: z.string().min(1),
+        feedback: cancellationFeedbackSchema.optional(),
+      }),
+    )
     .mutation(async ({ ctx, input }) => {
       await verifyOrgOwnerOrAdmin(ctx, input.organizationId);
 
@@ -1230,8 +1241,18 @@ export const organizationRouter = router({
         });
       }
 
+      const feedback = normalizeCancellationFeedback(input.feedback);
+      const cancellationDetails = toStripeCancellationDetails(feedback);
       const canceled = await stripe.subscriptions.update(subscriptionState.stripeSubscriptionId, {
         cancel_at_period_end: true,
+        ...(cancellationDetails ? { cancellation_details: cancellationDetails } : {}),
+      });
+      await recordCancellationFeedback(ctx.db, {
+        userId: ctx.userId,
+        organizationId: input.organizationId,
+        stripeSubscriptionId: subscriptionState.stripeSubscriptionId,
+        planId: subscriptionState.planId,
+        feedback,
       });
 
       const updates: Partial<BillingRecord> = {

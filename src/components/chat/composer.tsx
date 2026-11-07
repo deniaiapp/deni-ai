@@ -1,4 +1,5 @@
 import { GlobeIcon } from "lucide-react";
+import { toast } from "sonner";
 import { useExtracted } from "use-intl";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
@@ -154,6 +155,11 @@ export function Composer({
           onSubmit(message);
         }}
         className={cn("h-auto flex-col", className)}
+        onError={(err) => {
+          if (err.code === "uploading") {
+            toast.info(t("Wait for your attachments to finish uploading, then send again."));
+          }
+        }}
         globalDrop={globalDrop}
         multiple={multiple}
         maxFiles={attachmentsEnabled ? undefined : 0}
@@ -165,7 +171,9 @@ export function Composer({
         )}
         <div
           className={cn(
-            "flex w-full min-w-0 items-center gap-1 p-2",
+            // Animate the padding with the tools row below so the composer height changes
+            // in one motion instead of snapping by the padding first.
+            "flex w-full min-w-0 items-center gap-1 p-2 transition-[padding] duration-200 ease-out motion-reduce:transition-none",
             isExpanded && !compact && "pb-0",
             compact && "py-2",
           )}
@@ -194,7 +202,13 @@ export function Composer({
             }}
             value={value}
             placeholder={placeholder}
-            className={cn("min-h-8 min-w-0 flex-1 px-1 py-1.5 leading-5", textareaClassName)}
+            className={cn(
+              // Mobile keeps 16px input text to avoid iOS focus zoom, but a 16px placeholder
+              // wraps beside the composer buttons. Keep the placeholder on one line at the
+              // desktop size so the empty composer stays one row tall.
+              "min-h-8 min-w-0 flex-1 px-1 py-1.5 leading-5 placeholder:text-sm placeholder:whitespace-nowrap",
+              textareaClassName,
+            )}
           />
           {voiceInput}
           <PromptInputSubmit

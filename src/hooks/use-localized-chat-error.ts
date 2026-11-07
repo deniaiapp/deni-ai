@@ -1,12 +1,23 @@
 import { useExtracted } from "use-intl";
-import { toDisplayChatRequestError } from "@/lib/chat-request-error";
+import {
+  extractChatRequestErrorText,
+  isUserFacingChatRequestError,
+} from "@/lib/chat-request-error";
 
-/** Translates the English chat error strings returned by `/api/chat`. */
+/**
+ * Translates the English chat error strings returned by `/api/chat`. Known
+ * messages are matched first; other text is shown only when it is user-facing,
+ * so internal errors fall back to the generic message.
+ */
 export function useLocalizedChatError() {
   const t = useExtracted();
 
   return (error: unknown): string => {
-    const text = toDisplayChatRequestError(error, t("An unexpected error occurred."));
+    const generic = t("An unexpected error occurred.");
+    const text = extractChatRequestErrorText(error);
+    if (!text) {
+      return generic;
+    }
 
     const unavailable = text.match(
       /^(.+) models are currently unavailable\. Please try again later\.$/,
@@ -80,8 +91,12 @@ export function useLocalizedChatError() {
         return t(
           "An attachment in this chat can't be used. It may be too large, unsupported, or unavailable.",
         );
+      case "Too many requests. Please slow down.":
+        return t("Too many requests. Please slow down.");
+      case "Chat not found":
+        return t("This chat couldn't be found. It may have been deleted.");
       default:
-        return text;
+        return isUserFacingChatRequestError(text) ? text : generic;
     }
   };
 }

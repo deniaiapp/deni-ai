@@ -1,5 +1,8 @@
 import { buildIntelligentUiInstruction, type VisualLayout } from "@/lib/intelligent-ui/prompt";
 
+const CITATION_EXAMPLE = "[cite:3]";
+const CITATION_MULTI_EXAMPLE = "[cite:3,5]";
+
 type BuildSystemPromptParams = {
   currentDate: string;
   persistentMemory: string | null;
@@ -71,8 +74,13 @@ export function buildChatSystemPrompt({
           "- Use the browse tool to open a specific URL and read its full page content (for example when the user shares a link, or when search snippets are not enough).",
         ]
       : []),
-    ...(searchToolEnabled || browseToolEnabled
-      ? ["- Always cite sources when using information from search or browse results."]
+    ...(searchToolEnabled
+      ? [
+          `- Cite search results inline: right after a sentence that uses a search result, write ${CITATION_EXAMPLE} with that result's \`id\` (for several results, ${CITATION_MULTI_EXAMPLE}). The app turns each marker into a link to the source, so cite where each claim is made instead of collecting URLs at the end. Only use ids from search results returned in this response, never inside code blocks, and never invent one.`,
+        ]
+      : []),
+    ...(browseToolEnabled
+      ? ["- Cite pages you opened with the browse tool as markdown links to their URLs."]
       : []),
   ];
 

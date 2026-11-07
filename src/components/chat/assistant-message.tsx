@@ -33,6 +33,8 @@ import {
 import { IntelligentUiMessageProvider } from "@/components/chat/intelligent-ui/intelligent-ui-context";
 import type { QuestionnaireToolOutput } from "@/lib/chat-tools/questionnaire";
 import { stripIntelligentUiBlocks } from "@/lib/intelligent-ui/schema";
+import { CitationSourcesProvider } from "@/components/chat/inline-citation";
+import { collectCitationSources, replaceCitationMarkers } from "@/lib/chat-citations";
 import { hasSuccessfulToolPart } from "@/components/chat/chat-utils";
 import type { ReasoningEffort } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -135,6 +137,7 @@ function AssistantMessage({
   const hasVideoResult = hasSuccessfulToolPart(message.parts, "tool-video");
   const questionnaireToolParts = message.parts?.filter(isQuestionnaireToolPart) ?? [];
   const sourceParts = message.parts?.filter((part) => part.type === "source-url") ?? [];
+  const citationSources = collectCitationSources(message.parts);
 
   if (followingAssistantMessage) {
     const followingQuestionnaireTitles = new Set(
@@ -171,7 +174,9 @@ function AssistantMessage({
             <IntelligentUiMessageProvider
               value={{ messageId: message.id, isStreaming: isStreamingThis }}
             >
-              <MessageResponse>{part.text}</MessageResponse>
+              <CitationSourcesProvider sources={citationSources}>
+                <MessageResponse>{part.text}</MessageResponse>
+              </CitationSourcesProvider>
             </IntelligentUiMessageProvider>
           </MessageContent>
           {i === textParts.length - 1 && state.showActions && (
@@ -313,7 +318,11 @@ function AssistantMessage({
                   onClick={() =>
                     speech.toggle(
                       `${message.id}-${i}`,
-                      stripIntelligentUiBlocks(part.text),
+                      replaceCitationMarkers(
+                        stripIntelligentUiBlocks(part.text),
+                        citationSources,
+                        "none",
+                      ),
                       locale === "ja" ? "ja-JP" : "en-US",
                     )
                   }
@@ -332,7 +341,9 @@ function AssistantMessage({
                 </MessageAction>
               ) : null}
               <MessageAction
-                onClick={() => navigator.clipboard.writeText(part.text)}
+                onClick={() =>
+                  navigator.clipboard.writeText(replaceCitationMarkers(part.text, citationSources))
+                }
                 label={t("Copy")}
                 tooltip={t("Copy")}
               >

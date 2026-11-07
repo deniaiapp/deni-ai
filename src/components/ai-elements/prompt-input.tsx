@@ -756,6 +756,15 @@ export const PromptInput = ({
             return (formData.get("message") as string) || "";
           })();
 
+      // Checked before the reset so the typed text survives the rejected submit.
+      if (files.some((file) => file.uploadStatus === "uploading")) {
+        onError?.({
+          code: "uploading",
+          message: "Attachments are still uploading.",
+        });
+        return;
+      }
+
       // Reset form immediately after capturing text to avoid race condition
       // where user input during async blob conversion would be lost
       if (!usingProvider) {
@@ -763,14 +772,6 @@ export const PromptInput = ({
       }
 
       try {
-        if (files.some((file) => file.uploadStatus === "uploading")) {
-          onError?.({
-            code: "uploading",
-            message: "Attachments are still uploading.",
-          });
-          return;
-        }
-
         const convertedFiles: FileUIPart[] = files
           .filter((file) => file.uploadStatus !== "error" && file.url)
           .map(
@@ -1098,6 +1099,7 @@ export const PromptInputSubmit = ({
   onStop,
   onClick,
   children,
+  disabled,
   ...props
 }: PromptInputSubmitProps) => {
   const t = useExtracted();
@@ -1134,7 +1136,7 @@ export const PromptInputSubmit = ({
       aria-label={isGenerating ? t("Stop") : isUploading ? t("Uploading") : t("Submit")}
       className={cn(className)}
       data-generating={isGenerating && onStop ? "true" : undefined}
-      disabled={props.disabled || (!isGenerating && isUploading)}
+      disabled={disabled || (!isGenerating && isUploading)}
       onClick={handleClick}
       size={size}
       type={isGenerating && onStop ? "button" : "submit"}

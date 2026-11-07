@@ -7,16 +7,6 @@ import { useLocalizeError } from "@/hooks/use-localize-error";
 import { formatMinorCurrency } from "@/lib/currency";
 import { formatReceiptOrderId } from "@/lib/stripe-checkout-receipt";
 import { cn } from "@/lib/utils";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "../ui/alert-dialog";
 import { formatReceiptDate } from "./format-receipt-date";
 import {
   ReceiptPaper,
@@ -102,47 +92,7 @@ function ShredStatus({ phase }: { phase: ShredPhase }) {
   );
 }
 
-/**
- * Asks before cancelling. Open the shredder only from `onConfirm`: it cancels the
- * subscription as soon as it mounts.
- */
-export function SubscriptionCancelDialog({
-  open,
-  onOpenChange,
-  description,
-  onConfirm,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  description: string;
-  onConfirm: () => void;
-}) {
-  const t = useExtracted();
-
-  return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>{t("Cancel subscription?")}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel>{t("Keep subscription")}</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={() => {
-              onOpenChange(false);
-              onConfirm();
-            }}
-          >
-            {t("Cancel subscription")}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
-
+/** Cancels through `onConfirm` as soon as it opens; ask first with `SubscriptionCancelDialog`. */
 export function SubscriptionShredder({
   open,
   data,
