@@ -132,7 +132,7 @@ export async function listQueuedJobs(limit = 100) {
   return rows.map(mapJob);
 }
 
-export async function createJob(options: {
+type NewJob = {
   userId: string;
   threadId: string;
   botId: string;
@@ -140,8 +140,11 @@ export async function createJob(options: {
   payload: JobPayload;
   idempotencyKey: string;
   maxAttempts?: number;
-}) {
+};
+
+async function insertJob(options: NewJob, claim: boolean) {
   const id = createId("job");
+  const now = new Date();
   await db
     .insert(agentJobs)
     .values({
@@ -150,19 +153,19 @@ export async function createJob(options: {
       threadId: options.threadId,
       botId: options.botId,
       kind: options.kind,
-      status: "queued",
+      status: claim ? "running" : "queued",
       payload: options.payload,
       result: null,
       checkpoint: null,
-      attempt: 0,
+      attempt: claim ? 1 : 0,
       maxAttempts: options.maxAttempts ?? 3,
       idempotencyKey: options.idempotencyKey,
       error: null,
-      lockedAt: null,
-      heartbeatAt: null,
-      startedAt: null,
+      lockedAt: claim ? now : null,
+      heartbeatAt: claim ? now : null,
+      startedAt: claim ? now : null,
       finishedAt: null,
-      updatedAt: new Date(),
+      updatedAt: now,
     })
     .onConflictDoNothing({ target: [agentJobs.userId, agentJobs.idempotencyKey] });
   const rows = await db
@@ -171,7 +174,22 @@ export async function createJob(options: {
     .where(and(eq(agentJobs.userId, options.userId), eq(agentJobs.idempotencyKey, options.idempotencyKey)))
     .limit(1);
   if (!rows[0]) throw new Error("Unable to persist job");
-  return mapJob(rows[0]);
+  return { job: mapJob(rows[0]), created: rows[0].id === id };
+}
+
+/** Queues a job for the background scheduler. */
+export async function createJob(options: NewJob) {
+  return (await insertJob(options, false)).job;
+}
+
+/**
+ * Creates a job that the caller runs itself. It starts out running, so the scheduler never sees it
+ * queued and cannot take it between creation and the caller's claim. When a job with the same
+ * idempotency key already exists, that job is returned with `claimed: false`.
+ */
+export async function createClaimedJob(options: NewJob) {
+  const { job, created } = await insertJob(options, true);
+  return { job, claimed: created };
 }
 
 export async function claimJob(userId: string, jobId: string, continuation?: {

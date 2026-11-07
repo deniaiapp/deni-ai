@@ -25,7 +25,7 @@ import { compactThread } from "@/lib/agent/compaction";
 import {
   checkpointJob,
   claimJob,
-  createJob,
+  createClaimedJob,
   finishJob,
   getJob,
   getJobByIdempotencyKey,
@@ -150,12 +150,15 @@ export async function handleChat(req: Request) {
   if (job && job.status !== "queued" && !continuationFrom) {
     return jobConflict(job);
   }
+  // A new job is created already claimed. Created as queued, the background scheduler could take
+  // it before this request claimed it, and the reply would run in the background.
+  let createdClaimed = false;
   if (!job) {
     const existing = await getJobByIdempotencyKey(userId, idempotencyKey);
     if (existing && existing.status !== "failed" && existing.status !== "cancelled") {
       return jobConflict(existing);
     }
-    job = await createJob({
+    const created = await createClaimedJob({
       userId,
       threadId: thread.id,
       botId: bot.id,
@@ -163,14 +166,17 @@ export async function handleChat(req: Request) {
       idempotencyKey,
       payload: { messages, runMode, locale },
     });
+    if (!created.claimed) return jobConflict(created.job);
+    job = created.job;
+    createdClaimed = true;
   }
-  if (resumeCandidate && job && !continuationFrom) {
+  if (resumeCandidate && job && !continuationFrom && !createdClaimed) {
     job = (await updateJob(userId, job.id, { payload: { ...job.payload, messages, runMode, locale } })) ?? job;
   }
   // Claim a waiting continuation with its updated input atomically. It is never
   // exposed as queued with old input for the background worker to pick up.
   if (!continuationFrom) await saveMessages(userId, thread.id, incoming);
-  const claimed = await claimJob(userId, job.id, continuationFrom ? {
+  const claimed = createdClaimed ? { job, claimed: true } : await claimJob(userId, job.id, continuationFrom ? {
     from: continuationFrom, threadId: thread.id, botId: bot.id, key: idempotencyKey, payload: { messages, runMode, locale },
   } : undefined);
   if (!claimed || !claimed.claimed || claimed.job.status !== "running") {

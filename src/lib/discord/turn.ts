@@ -19,7 +19,7 @@ import { translateError } from "@/i18n/standalone";
 import {
   checkpointJob,
   claimJob,
-  createJob,
+  createClaimedJob,
   finishJob,
   getJob,
   getJobByIdempotencyKey,
@@ -388,7 +388,8 @@ async function runBotTurn(options: {
     return executeTurn({ userId, locale, store, bot, thread, job: claimed.job, messages, requestMessage: incoming, assistantId: `${active.id}_assistant_${hash}`, runMode });
   }
 
-  const created = await createJob({
+  // Created already claimed so the background scheduler cannot take the turn first.
+  const created = await createClaimedJob({
     userId,
     threadId: thread.id,
     botId: bot.id,
@@ -396,10 +397,9 @@ async function runBotTurn(options: {
     idempotencyKey,
     payload: { messages, runMode, locale, source: "discord" },
   });
+  if (!created.claimed) return { kind: "none" };
   await saveMessages(userId, thread.id, [incoming]);
-  const claimed = await claimJob(userId, created.id);
-  if (!claimed?.claimed || claimed.job.status !== "running") return { kind: "none" };
-  return executeTurn({ userId, locale, store, bot, thread, job: claimed.job, messages, requestMessage: incoming, assistantId: `${created.id}_assistant_${hash}`, runMode });
+  return executeTurn({ userId, locale, store, bot, thread, job: created.job, messages, requestMessage: incoming, assistantId: `${created.job.id}_assistant_${hash}`, runMode });
 }
 
 function incomingMessage(discordMessageId: string, text: string): UIMessage {
