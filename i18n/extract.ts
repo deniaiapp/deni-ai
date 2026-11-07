@@ -1,14 +1,14 @@
 import { readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { parseSync } from "vite";
-import { locales, sourceLocale } from "./config.ts";
+import { translatedLocales } from "./config.ts";
 import { messageId } from "./message-id.ts";
 import { parsePo, serializePo, type PoCatalog, type PoEntry } from "./po.ts";
 
 // Collects every message passed to a translator from useExtracted(), getExtracted(), or
-// headTranslator() and syncs messages/*.po: new messages are added (translated to themselves in
-// the source locale and left empty elsewhere), unused ones are dropped, and existing translations
-// are kept.
+// headTranslator() and syncs messages/*.po: new messages are added with an empty translation,
+// unused ones are dropped, and existing translations are kept. The source locale (English) has no
+// catalog; its messages are shown as written.
 
 export const extractConfig = {
   srcPaths: ["app", "components", "lib"],
@@ -131,7 +131,7 @@ function mergeCatalog(existing: PoCatalog | undefined, locale: string, found: Ex
     const id = messageId(message);
     let entry = byId.get(id);
     if (!entry) {
-      const translation = locale === sourceLocale ? message : (previous.get(id)?.translation ?? "");
+      const translation = previous.get(id)?.translation ?? "";
       entry = { id, message, translation, references: [] };
       byId.set(id, entry);
     }
@@ -151,7 +151,7 @@ function mergeCatalog(existing: PoCatalog | undefined, locale: string, found: Ex
 export async function extractMessages(root: string): Promise<string[]> {
   const found = await collectMessages(root);
   const written: string[] = [];
-  for (const locale of locales) {
+  for (const locale of translatedLocales) {
     const file = path.join(root, extractConfig.messagesDir, `${locale}.po`);
     const current = await readFile(file, "utf8").catch(() => undefined);
     const next = serializePo(mergeCatalog(current === undefined ? undefined : parsePo(current), locale, found));
