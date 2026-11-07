@@ -37,7 +37,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY packages/disposable-email-domains ./packages/disposable-email-domains
 # Install before NODE_ENV=production so devDependencies (Vite, Tailwind, the
 # React Compiler) are present for the build.
-RUN --mount=type=cache,id=deni-ai-pnpm,target=/pnpm/store \
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile --store-dir=/pnpm/store
 
 ENV NODE_ENV=production
