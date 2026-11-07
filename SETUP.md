@@ -265,6 +265,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `pnpm run db:generate`                 | Generate Drizzle migrations          |
 | `pnpm run db:migrate`                  | Migrate using `.env`                 |
 | `pnpm run db:migrate:dev`              | Migrate using `.env.local`           |
+| `pnpm run db:migrate:canary`           | Migrate using `.env.canary`          |
 | `pnpm run db:push`                     | Push schema (dev)                    |
 | `pnpm run auth:generate`               | Regenerate better-auth schema        |
 | `pnpm run disposable:refresh`          | Refresh disposable-email domain list |
