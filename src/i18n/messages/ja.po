@@ -388,6 +388,11 @@ msgid "Sign-in was cancelled or failed. Try again."
 msgstr "ログインがキャンセルされたか、失敗しました。もう一度お試しください。"
 
 #: src/components/account/auth-form.tsx
+msgctxt "G2nLqf"
+msgid "Sign-in timed out. Sign in again."
+msgstr "サインインの有効期限が切れました。もう一度サインインしてください。"
+
+#: src/components/account/auth-form.tsx
 msgctxt "abq1vZ"
 msgid "Continue with your Deni AI account, Google, or GitHub, then confirm it is you once more."
 msgstr "Deni AI アカウント、Google、または GitHub で続行し、もう一度本人確認を行います。"

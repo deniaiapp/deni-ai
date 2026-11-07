@@ -310,7 +310,11 @@ export function SocialAuth({
 
   const message =
     localError ||
-    (error === "auth" ? t("Sign-in was cancelled or failed. Try again.") : error);
+    (error === "auth"
+      ? t("Sign-in was cancelled or failed. Try again.")
+      : error === "expired"
+        ? t("Sign-in timed out. Sign in again.")
+        : error);
 
   return (
     <AuthCard
@@ -529,14 +533,26 @@ function CodeForm({ method }: { method: "totp" | "email" }) {
   const sentOnce = useRef(false);
   const byEmail = method === "email";
 
+  // The pending sign-in lives in a cookie that better-auth expires after 10 minutes. Once it is
+  // gone no code can succeed, so start the sign-in over instead of showing the raw error.
+  const restartIfExpired = useCallback(
+    (nextError: { code?: string } | null) => {
+      if (nextError?.code !== "INVALID_TWO_FACTOR_COOKIE") return false;
+      void router.navigate({ to: "/sign-in", search: { error: "expired" } });
+      return true;
+    },
+    [router],
+  );
+
   const sendCode = useCallback(async () => {
     setSending(true);
     setError("");
     const { error: nextError } = await authClient.twoFactor.sendOtp();
+    if (restartIfExpired(nextError)) return;
     if (nextError) setError(nextError.message || t("Could not send a code"));
     else startCooldown();
     setSending(false);
-  }, [startCooldown, t]);
+  }, [restartIfExpired, startCooldown, t]);
 
   // Send once when the page opens; later codes come from the resend button.
   useEffect(() => {
@@ -554,6 +570,7 @@ function CodeForm({ method }: { method: "totp" | "email" }) {
       : byEmail
         ? await authClient.twoFactor.verifyOtp({ code, trustDevice })
         : await authClient.twoFactor.verifyTotp({ code, trustDevice });
+    if (restartIfExpired(result.error)) return;
     if (result.error) {
       setError(result.error.message || t("Invalid code"));
       setBusy(false);
