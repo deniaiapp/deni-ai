@@ -14,6 +14,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file=../../apps/web/.env ./node_modules/drizzle-kit/bin.cjs migrate",
     "db:migrate:canary": "node --env-file=../../apps/web/.env.canary ./node_modules/drizzle-kit/bin.cjs migrate",

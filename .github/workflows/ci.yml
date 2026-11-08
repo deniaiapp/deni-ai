@@ -1,0 +1,98 @@
+# Workspace checks for every package (apps/web, apps/support, services/agent-api
+# and packages/*). Each job installs the whole workspace once from the root
+# lockfile and runs the root `pnpm -r` scripts, which skip packages that do not
+# define the script.
+
+name: CI
+
+on:
+  push:
+    branches: ["canary"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Typecheck, lint, format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4 # version comes from package.json `packageManager`
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm lint
+      # oxfmt runs in the packages that define `format:check` (apps/support and
+      # services/agent-api are not oxfmt-formatted).
+      - run: pnpm format:check
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # vitest in apps/web and packages/*, `node --test` (PGlite) in the agent API.
+      - run: pnpm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # No secrets are needed: apps/web reads server env at runtime only.
+      - run: pnpm build
+      # The web build rewrites messages/en.json from the inline messages; a
+      # diff means a catalog change was not committed.
+      - name: Check that the build left no uncommitted changes
+        run: git diff --exit-code
+
+  db-schema:
+    name: Drizzle schema is migrated
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile --filter "@deniai/db..."
+      # `drizzle-kit generate` diffs the schema against the migration snapshots
+      # without a database connection. Any new or changed file means a schema
+      # edit is missing its generated migration.
+      - name: Generate public schema migrations (drizzle.config.ts)
+        working-directory: packages/db
+        run: pnpm exec drizzle-kit generate
+      - name: Generate flixa schema migrations (drizzle.flixa.config.ts)
+        working-directory: packages/db
+        run: pnpm exec drizzle-kit generate --config drizzle.flixa.config.ts
+      - name: Fail on pending migrations
+        run: |
+          changes="$(git status --porcelain -- packages/db)"
+          if [ -n "$changes" ]; then
+            echo "::error::Schema changes without a migration. Run pnpm --filter @deniai/db db:generate (and db:generate:flixa) and commit the result."
+            echo "$changes"
+            git diff -- packages/db
+            exit 1
+          fi

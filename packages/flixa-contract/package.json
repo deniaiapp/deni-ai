@@ -27,6 +27,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "oxlint",
     "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
     "test": "vitest run"
   },
   "dependencies": {
