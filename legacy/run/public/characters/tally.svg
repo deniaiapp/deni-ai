@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <style>.bob{animation:bob 4.4s ease-in-out infinite} .blink{transform-box:fill-box;transform-origin:center;animation:blink 5.2s infinite} @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.4px)}} @keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.12)}} @media (prefers-reduced-motion:reduce){*{animation:none!important}} .wink{transform-box:fill-box;transform-origin:center;animation:blink 4.6s 1s infinite}</style>
+  <path d="M13 64c0-9 8-14 19-14s19 5 19 14Z" fill="#5a3f66"/>
+  <path d="M24 53l8 3.5-8 3.5ZM40 53l-8 3.5 8 3.5Z" fill="#d6455f"/>
+  <circle cx="32" cy="56.5" r="2" fill="#b33550"/>
+  <g class="bob">
+    <rect x="28.5" y="44" width="7" height="9" fill="#7f5e8e"/>
+    <rect x="12" y="16" width="40" height="31" rx="9" fill="#b08cc0"/>
+    <rect x="16" y="20" width="32" height="23" rx="6" fill="#211c19"/>
+    <path d="M22.5 25l6-1.2" stroke="#ebcaff" stroke-width="1.6" stroke-linecap="round"/>
+    <rect x="23.5" y="27" width="5" height="9" rx="2.5" fill="#ebcaff"/>
+    <rect class="wink" x="35.5" y="27" width="5" height="9" rx="2.5" fill="#ebcaff"/>
+    <path d="M16 19q16-8 32 0l-3 3.5q-13-5-26 0Z" fill="#7fd6a0"/>
+    <rect x="10" y="17" width="44" height="3" rx="1.5" fill="#3f9e6a"/>
+  </g>
+</svg>

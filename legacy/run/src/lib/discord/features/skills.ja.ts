@@ -1,0 +1,26 @@
+/** Japanese strings for src/lib/discord/features/skills.ts. Keys must match the English text exactly. */
+export const ja: Record<string, string> = {
+  "A skill with this name already exists.": "同じ名前のスキルがすでに存在します。",
+  "Attach a text or Markdown file (.md or .txt).": "テキストまたは Markdown のファイル(.md または .txt)を添付してください。",
+  "Could not read that file. Attach it again.": "ファイルを読み込めませんでした。もう一度添付してください。",
+  "Created the skill {name}.": "スキル「{name}」を作成しました。",
+  "Delete the skill {name}? Teammates will no longer be able to read it.": "スキル「{name}」を削除しますか?チームメイトはこのスキルを読めなくなります。",
+  "Deleted the skill {name}.": "スキル「{name}」を削除しました。",
+  "Edit skill": "スキルを編集",
+  "Instructions": "指示",
+  "Name and instructions are required.": "名前と指示は必須です。",
+  "Name": "名前",
+  "New skill": "新しいスキル",
+  "No skill with that name. Run /skill list to see them.": "その名前のスキルはありません。/skill list で一覧を確認できます。",
+  "No skills yet. Create one with /skill create.": "スキルはまだありません。/skill create で作成できます。",
+  "Saved the skill {name}.": "スキル「{name}」を保存しました。",
+  "Skills ({count})": "スキル({count} 件)",
+  "That file is empty.": "ファイルが空です。",
+  "That file is too long. The limit is {limit} characters.": "ファイルが長すぎます。上限は {limit} 文字です。",
+  "That skill no longer exists.": "このスキルはもう存在しません。",
+  "The instructions of {name} are attached as a file.": "「{name}」の指示をファイルで添付しました。",
+  "When to use it, the steps, and how to check the result. Longer skills: attach a file.": "使う場面、手順、結果の確認方法を書きます。長いスキルはファイルを添付してください。",
+  "Your text is attached so nothing is lost.": "入力した内容が失われないよう、ファイルで添付しています。",
+  "{name} is longer than 4,000 characters, more than a Discord form holds. Edit the attached file and send it back with /skill edit file:.":
+    "「{name}」は 4,000 文字を超えていて、Discord のフォームには収まりません。添付したファイルを編集し、/skill edit の file: で送り返してください。",
+};

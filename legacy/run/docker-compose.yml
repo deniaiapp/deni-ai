@@ -1,0 +1,24 @@
+services:
+  app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL}
+        NEXT_PUBLIC_SUPPORT_EMAIL: ${NEXT_PUBLIC_SUPPORT_EMAIL:-}
+    image: deni-run
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3000"
+      DENI_SCHEDULER: ${DENI_SCHEDULER:-true}
+    expose:
+      - "3000"
+    volumes:
+      - deni-data:/app/.deni
+    restart: unless-stopped
+    stop_grace_period: 30s
+
+volumes:
+  deni-data:

@@ -1,0 +1,19 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "deni-run-d1-proxy",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-01",
+  "workers_dev": false,
+  "observability": { "enabled": true, "logs": { "enabled": true } },
+  "routes": [{ "pattern": "d1.deniai.app", "custom_domain": true }],
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "deni-run",
+      // Replace with the id printed by `wrangler d1 create deni-run`.
+      "database_id": "33181998-b599-4211-ad93-4e9f0d64e060",
+      "migrations_dir": "../../src/db/migrations",
+    },
+  ],
+  // Secret (not stored here): wrangler secret put PROXY_TOKEN
+}
