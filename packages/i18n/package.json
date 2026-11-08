@@ -1,0 +1,51 @@
+{
+  "name": "@deniai/i18n",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Deni AI locale config, Accept-Language negotiation, getExtracted() and the Vite plugin that extracts use-intl inline messages into catalogs",
+  "type": "module",
+  "exports": {
+    "./accept-language": "./src/accept-language.ts",
+    "./extracted": "./src/extracted.ts",
+    "./locales": "./src/locales.ts",
+    "./vite": "./src/vite/extract-messages.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@swc/core": "^1.16.20",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "next-intl-swc-plugin-extractor": "^4.14.9",
+    "react": "19.3.1",
+    "typescript": "^7.0.2",
+    "use-intl": "^4.14.9",
+    "vite": "^8.3.5",
+    "vitest": "^5.0.5"
+  },
+  "peerDependencies": {
+    "@swc/core": "^1.16.20",
+    "next-intl-swc-plugin-extractor": "^4.14.9",
+    "use-intl": "^4.14.9",
+    "vite": "^8.3.5"
+  },
+  "peerDependenciesMeta": {
+    "@swc/core": {
+      "optional": true
+    },
+    "next-intl-swc-plugin-extractor": {
+      "optional": true
+    },
+    "use-intl": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
+  }
+}

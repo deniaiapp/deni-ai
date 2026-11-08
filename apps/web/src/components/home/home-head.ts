@@ -1,4 +1,4 @@
-import type { AppLocale } from "@/i18n/locales";
+import type { AppLocale } from "@deniai/i18n/locales";
 import {
   HOME_DESCRIPTION,
   HOME_DESCRIPTION_JA,

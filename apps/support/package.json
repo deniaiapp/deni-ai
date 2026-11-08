@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^1.4.0",
+    "@deniai/i18n": "workspace:*",
     "@tanstack/react-router": "1.170.45",
     "@tanstack/react-router-devtools": "1.167.2",
     "@tanstack/react-start": "1.169.3",

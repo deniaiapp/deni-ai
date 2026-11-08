@@ -1,7 +1,7 @@
 import { createCsrfMiddleware, createMiddleware, createStart } from "@tanstack/react-start";
-import { getPreferredLocaleFromHeader } from "@/i18n/accept-language";
+import { getPreferredLocaleFromHeader } from "@deniai/i18n/accept-language";
 import { LOCALE_COOKIE, toAppLocale } from "@/i18n/locale";
-import { defaultLocale } from "@/i18n/locales";
+import { defaultLocale } from "@deniai/i18n/locales";
 import {
   isAppPath,
   isPublicLocalizablePath,

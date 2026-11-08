@@ -13,7 +13,7 @@ import { NotFoundPage } from "@/components/not-found-page";
 import { Toaster } from "@deniai/ui/components/sonner";
 import { ThemeProvider } from "@deniai/ui/components/theme-provider";
 import { getPreferredLocale, localeFromPathname } from "@/i18n/locale";
-import { defaultLocale } from "@/i18n/locales";
+import { defaultLocale } from "@deniai/i18n/locales";
 import { loadMessages, primeMessages } from "@/i18n/messages";
 import { GA_ID } from "@/lib/constants";
 import { getPlatformCapabilitiesFn } from "@/lib/platform-capabilities-functions";

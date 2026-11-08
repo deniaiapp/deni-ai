@@ -2,7 +2,7 @@ import { Link } from "@/lib/navigation";
 import { Mail, MapPin, MessagesSquare, Shield } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
-import { getExtracted } from "@/i18n/extracted";
+import { getExtracted } from "@deniai/i18n/extracted";
 import { pageHead } from "@/lib/seo";
 import { supportUrl } from "@/lib/support-url";
 

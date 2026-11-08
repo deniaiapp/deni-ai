@@ -6,7 +6,7 @@ import { nitro } from "nitro/vite";
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { defineConfig } from "vite";
-import { extractMessages } from "./vite/extract-messages.ts";
+import { extractMessages } from "@deniai/i18n/vite";
 import { routeRules } from "./vite/route-rules.ts";
 
 // Vite re-runs this config in the same process after an .env edit. Remember

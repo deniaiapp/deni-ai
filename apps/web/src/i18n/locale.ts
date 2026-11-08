@@ -1,7 +1,7 @@
 import { createIsomorphicFn } from "@tanstack/react-start";
 import { getCookie, getRequestHeader } from "@tanstack/react-start/server";
-import { getPreferredLocaleFromHeader } from "@/i18n/accept-language";
-import { type AppLocale, defaultLocale, locales } from "@/i18n/locales";
+import { getPreferredLocaleFromHeader } from "@deniai/i18n/accept-language";
+import { type AppLocale, defaultLocale, locales } from "@deniai/i18n/locales";
 import { JA_PREFIX } from "@/lib/locale-path";
 
 export const LOCALE_COOKIE = "locale";

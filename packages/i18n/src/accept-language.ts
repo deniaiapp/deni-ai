@@ -1,4 +1,4 @@
-import { type AppLocale, locales } from "@/i18n/locales";
+import { type AppLocale, locales } from "./locales";
 
 /**
  * Pick the highest-ranked supported locale from an Accept-Language header.

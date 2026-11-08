@@ -1,5 +1,5 @@
 import { type _useExtracted, type AbstractIntlMessages, createTranslator } from "use-intl";
-import type { AppLocale } from "@/i18n/locales";
+import type { AppLocale } from "./locales";
 
 export type IntlSnapshot = {
   locale: AppLocale;

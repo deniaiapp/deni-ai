@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
-import { getExtracted } from "@/i18n/extracted";
+import { getExtracted } from "@deniai/i18n/extracted";
 import { LoginButton } from "@/components/login-button";
 import { Button } from "@deniai/ui/components/button";
 import { pageHead } from "@/lib/seo";

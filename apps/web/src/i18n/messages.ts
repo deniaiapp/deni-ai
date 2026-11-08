@@ -1,5 +1,5 @@
 import type { AbstractIntlMessages } from "use-intl";
-import type { AppLocale } from "@/i18n/locales";
+import type { AppLocale } from "@deniai/i18n/locales";
 
 const catalogs = import.meta.glob<{ default: Record<string, string> }>("../../messages/*.json");
 

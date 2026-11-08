@@ -1,5 +1,5 @@
 import { defineConfig } from "vitest/config";
-import { extractMessages } from "./vite/extract-messages.ts";
+import { extractMessages } from "@deniai/i18n/vite";
 
 export default defineConfig({
   resolve: {

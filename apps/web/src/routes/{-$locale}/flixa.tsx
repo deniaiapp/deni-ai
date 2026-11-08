@@ -2,7 +2,7 @@ import { ArrowRight, Code2, Zap, Brain, Terminal, Download } from "lucide-react"
 import { Link } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
-import { getExtracted } from "@/i18n/extracted";
+import { getExtracted } from "@deniai/i18n/extracted";
 import { Button } from "@deniai/ui/components/button";
 import SiGoogle from "@icons-pack/react-simple-icons/icons/SiGoogle";
 import SiWindsurf from "@icons-pack/react-simple-icons/icons/SiWindsurf";

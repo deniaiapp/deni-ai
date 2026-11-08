@@ -1,4 +1,4 @@
-import type { IntlSnapshot } from "@/i18n/extracted";
+import type { IntlSnapshot } from "@deniai/i18n/extracted";
 import { getPreferredLocale } from "@/i18n/locale";
 import { loadMessages } from "@/i18n/messages";
 

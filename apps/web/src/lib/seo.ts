@@ -1,4 +1,4 @@
-import type { AppLocale } from "@/i18n/locales";
+import type { AppLocale } from "@deniai/i18n/locales";
 import { absoluteUrl, hreflangLanguages } from "@/lib/locale-path";
 import { PUBLIC_SITE_ORIGIN } from "@/lib/public-pages";
 

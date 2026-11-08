@@ -58,9 +58,10 @@ Read these when relevant rather than loading the whole project:
   helpers in `src/lib/navigation.tsx` for links built from strings.
 - Keep edits to generated `src/components/ui/` minimal and API-compatible.
 - Use `use-intl` `useExtracted()` for user-facing copy in components, and
-  `const t = getExtracted(intl)` from `@/i18n/extracted` in route `head`, loaders,
-  and server code. `vite/extract-messages.ts` compiles inline messages to catalog
-  keys and rewrites `messages/en.json`; keep `messages/ja.json` keys
+  `const t = getExtracted(intl)` from `@deniai/i18n/extracted` in route `head`,
+  loaders, and server code. The `@deniai/i18n/vite` plugin (`packages/i18n`,
+  registered in `vite.config.ts`) compiles inline messages to catalog keys and
+  rewrites `messages/en.json`; keep `messages/ja.json` keys
   synchronized, preserving placeholders and ICU syntax. Avoid locale-conditional
   copy when translations can express it. `/ja/*` URLs render public pages in
   Japanese through the optional `{-$locale}` route param.

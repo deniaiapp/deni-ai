@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@deniai/ui/components/select";
 import { changeLocale } from "@/i18n/locale-functions";
-import { type AppLocale, locales } from "@/i18n/locales";
+import { type AppLocale, locales } from "@deniai/i18n/locales";
 import { localizedPath } from "@/lib/locale-path";
 
 const localeLabels: Record<AppLocale, string> = {

@@ -2,7 +2,7 @@ import { Link } from "@/lib/navigation";
 import { ArrowRight, Sparkles } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
-import { getExtracted } from "@/i18n/extracted";
+import { getExtracted } from "@deniai/i18n/extracted";
 import { changelogEntries } from "@/lib/changelog";
 import { formatAppDate } from "@/lib/format-date";
 import { LoginButton } from "@/components/login-button";

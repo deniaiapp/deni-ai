@@ -1,8 +1,10 @@
+import { defaultLocale, locales } from '@deniai/i18n/locales';
 import { defineI18n } from 'fumadocs-core/i18n';
 
+// Same locales as the web app (@deniai/i18n/locales).
 export const i18n = defineI18n({
-  defaultLanguage: 'en',
-  languages: ['en', 'ja'],
+  defaultLanguage: defaultLocale,
+  languages: [...locales],
 });
 
 export type Language = (typeof i18n.languages)[number];

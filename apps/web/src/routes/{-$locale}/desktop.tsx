@@ -6,7 +6,7 @@ import type {
   DesktopRelease,
   DesktopReleaseAsset,
 } from "@/components/desktop/types";
-import { getExtracted } from "@/i18n/extracted";
+import { getExtracted } from "@deniai/i18n/extracted";
 import { pageHead } from "@/lib/seo";
 
 type GitHubRelease = {

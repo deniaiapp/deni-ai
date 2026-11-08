@@ -10,10 +10,11 @@ const EXTRACTOR_PLUGIN = require.resolve("next-intl-swc-plugin-extractor");
 /**
  * The SWC extractor only rewrites `getExtracted()` imported from this specifier.
  * Code outside React (route `head`, loaders, server handlers) imports it from
- * `@/i18n/extracted`, so the import is swapped around the SWC pass.
+ * `@deniai/i18n/extracted` (see `extractedSpecifier`), so the import is swapped
+ * around the SWC pass.
  */
 const EXTRACTOR_SERVER_SPECIFIER = '"next-intl/server"';
-const APP_EXTRACTED_SPECIFIER = '"@/i18n/extracted"';
+const DEFAULT_EXTRACTED_SPECIFIER = "@deniai/i18n/extracted";
 
 const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
 const IGNORED_DIRECTORIES = new Set(["node_modules", ".git", ".output", ".tanstack", "dist"]);
@@ -37,6 +38,11 @@ export type ExtractMessagesOptions = {
   locales: readonly string[];
   /** Set to `false` to only compile calls (tests) without touching catalogs. */
   writeCatalogs?: boolean;
+  /**
+   * Module that exports `getExtracted()` / `getTranslations()`; imports of it
+   * are compiled like `next-intl/server`. Defaults to `@deniai/i18n/extracted`.
+   */
+  extractedSpecifier?: string;
 };
 
 function usesExtraction(source: string) {
@@ -52,9 +58,10 @@ async function compile(
   absolutePath: string,
   source: string,
   isDevelopment: boolean,
+  extractedSpecifier: string,
 ) {
   const filePath = toPosix(path.relative(projectRoot, absolutePath));
-  const swappedSource = source.replaceAll(APP_EXTRACTED_SPECIFIER, EXTRACTOR_SERVER_SPECIFIER);
+  const swappedSource = source.replaceAll(extractedSpecifier, EXTRACTOR_SERVER_SPECIFIER);
   const result = await transform(swappedSource, {
     filename: filePath,
     sourceFileName: absolutePath,
@@ -80,7 +87,7 @@ async function compile(
     .map(({ id, message, reference }) => ({ id, message, reference }));
 
   return {
-    code: result.code.replaceAll(EXTRACTOR_SERVER_SPECIFIER, APP_EXTRACTED_SPECIFIER),
+    code: result.code.replaceAll(EXTRACTOR_SERVER_SPECIFIER, extractedSpecifier),
     map: result.map,
     messages,
   };
@@ -140,6 +147,9 @@ async function writeIfChanged(filePath: string, content: string) {
  * drop unused ones.
  */
 export function extractMessages(options: ExtractMessagesOptions): Plugin {
+  const extractedSpecifier = JSON.stringify(
+    options.extractedSpecifier ?? DEFAULT_EXTRACTED_SPECIFIER,
+  );
   let projectRoot = process.cwd();
   let isDevelopment = false;
   const messagesByFile = new Map<string, { source: string; messages: ExtractedMessage[] }>();
@@ -155,7 +165,8 @@ export function extractMessages(options: ExtractMessagesOptions): Plugin {
       return;
     }
     const messages = usesExtraction(source)
-      ? (await compile(projectRoot, absolutePath, source, isDevelopment)).messages
+      ? (await compile(projectRoot, absolutePath, source, isDevelopment, extractedSpecifier))
+          .messages
       : [];
     messagesByFile.set(absolutePath, { source, messages });
   }
@@ -255,7 +266,13 @@ export function extractMessages(options: ExtractMessagesOptions): Plugin {
       if (!usesExtraction(code) || !isSourceFile(path.resolve(filePath))) {
         return null;
       }
-      const result = await compile(projectRoot, path.resolve(filePath), code, isDevelopment);
+      const result = await compile(
+        projectRoot,
+        path.resolve(filePath),
+        code,
+        isDevelopment,
+        extractedSpecifier,
+      );
       return { code: result.code, map: result.map ?? null };
     },
   };
