@@ -107,7 +107,8 @@ async function authContext(): Promise<AgentAuthContext> {
     tier: "free",
     usageUnit: "units",
     usageReserved: true,
-    usageReservation: result.reservation,
+    // This suite covers the legacy path (FLIXA_USAGE_ENGINE=legacy).
+    usageReservation: result.reservation && { ...result.reservation, engine: "legacy" },
     usageEstimate: estimate,
     hasVerifiedPaymentMethod: false,
     tokenUsageMultiplier: 1,

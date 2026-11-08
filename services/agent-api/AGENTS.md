@@ -9,7 +9,8 @@ the monorepo root, and the Docker build context is the monorepo root
 
 Shared code lives in workspace packages: the `flixa` (and `public`) Drizzle schema
 in `@deniai/db`, pool sizes / usage tiers / token weights / education domains in
-`@deniai/billing`, and the public response shapes (`/v1/models`, `/v1/deni/usage`,
+`@deniai/billing`, the usage engine (reserve, settle, recover, summary, team usage
+policy, Max Mode credits, product ledger) in `@deniai/billing/server`, and the public response shapes (`/v1/models`, `/v1/deni/usage`,
 error envelope and codes, client headers) in `@deniai/flixa-contract`. When a
 public response or error code changes, update the contract and
 `tests/flixa-contract.test.ts` with it. Import the contract with `import type`
@@ -19,6 +20,32 @@ only, so zod is not bundled.
 `app.ts` builds the Hono app (middleware plus the `/v1` routers). `server.ts` is the Node.js entrypoint (`@hono/node-server`) and only wraps `app.ts`. Read config via `process.env`. Route handlers live in `routes/v1/` (`agent.ts`, `deni.ts`, `models.ts`). Shared request guards live in `middleware/`; `middleware/validateAgentAuth.ts` enforces the client access policy (Free/Go only from the listed clients, otherwise a 403 plan notice without a ban; Plus and above from any client; see the README). Domain logic is grouped under `utils/`: `utils/agent/` for model routing and upstream clients, and `utils/deni/` for auth, billing, usage, and DB access. API keys are hashed with `@deniai/auth/api-key/node` (`hashApiKeySync`), the same SHA-256 digest the web app stores when it issues keys; change key format or hashing only in `packages/auth`.
 
 There is no dedicated `src/` folder; keep new modules close to the feature they support. Follow the existing split: route layer in `routes/`, reusable logic in `utils/`, cross-cutting concerns in `middleware/`.
+
+## Usage engine (`FLIXA_USAGE_ENGINE`)
+
+Usage is reserved in `middleware/validateAgentAuth.ts` (`reserveFlixaUsage`) and
+settled once per request in `utils/agent/usageAccounting.ts` (`finalizeUsage` /
+`releaseReservedUsage` → `settleFlixaUsage`); both dispatch in
+`utils/deni/flixaUsage.ts` on `FLIXA_USAGE_ENGINE`:
+
+- `shared` (default): `createUsageEngine()` from `@deniai/billing/server`, bound in
+  `utils/deni/usageEngine.ts` to `getDeniDb()` (Drizzle on the same `pg` pool).
+  Reservations are `public.usage_reservation` rows with product `flixa` and id
+  `flixa:<uuid>`; a running request refreshes `observed_amount` every 30 s
+  (`startUsageLease`) so a crashed request is recovered at that amount.
+  `/v1/deni/usage` maps the engine's summary to the contract shape.
+- `legacy`: the raw-SQL path in `utils/deni/usage.ts` (`reserveUsageQuota`,
+  `settleUsageQuota`, `getDeniUsageInfo`) and its receipts in the deprecated
+  `flixa.usage_reservation`. Kept for rollback only; do not add features to it.
+- `shadow`: legacy is authoritative; the shared engine runs the same reservation
+  with `dryRun: true` (always rolled back) and differences are logged as
+  `flixa_usage_shadow_mismatch` JSON warnings. Must never write twice.
+
+Change usage rules in `packages/billing` (and its tests), not here. Behaviour of
+both paths and their differences: `packages/billing/docs/usage-engine.md`. Tests:
+`tests/usage-engine-{integration,parity,shadow}.test.ts` run the real routes and
+SQL on PGlite with the real `public` and `flixa` migrations
+(`tests/helpers/usage-db.ts`, fixtures from `@deniai/billing/testing`).
 
 ## Build, Test, and Development Commands
 Requires Node.js 26+ and pnpm. Install dependencies with `pnpm install` at the monorepo root. TypeScript runs directly through `tsx`; `.env` is loaded if present.

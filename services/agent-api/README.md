@@ -111,6 +111,8 @@ ANTHROPIC_API_KEY=your_anthropic_api_key_here
 # Optional performance safeguards
 FLIXA_UPSTREAM_TIMEOUT_MS=120000
 FLIXA_USAGE_FINALIZE_ASYNC=false
+# Usage engine: shared (default) | legacy (rollback) | shadow (compare)
+FLIXA_USAGE_ENGINE=shared
 ACCESS_LOG_ENABLED=false
 CLIENT_SIGNAL_ALLOWED_LOG_ENABLED=false
 # Local development only: bypass Flixa API/admin auth and related limits
@@ -131,15 +133,19 @@ fingerprint (`deni_xxxx…yyyy`) from `Authorization: Bearer` or `x-api-key`; th
 full secret is never written. Admin lookup can filter on that fingerprint.
 `FLIXA_USAGE_FINALIZE_ASYNC=true` returns token-metered responses without waiting
 for settlement. The estimated usage remains reserved until settlement completes.
+`FLIXA_USAGE_ENGINE` selects how usage is reserved and settled; see
+[Usage engine and rollout switch](#usage-engine-and-rollout-switch).
 
 ### Database
 
 Flixa uses the Deni AI Postgres database (`DENI_DATABASE_URL`). Its own tables live
 in the `flixa` schema and are defined with Drizzle in the monorepo package
 `@deniai/db` (`packages/db/src/flixa/schema.ts`, imported as `@deniai/db/flixa`):
-`ban`, `silent_ban_rule`, `silent_ban_hit`, and `usage_reservation`. Deni AI's tables
-in `public` are owned and migrated by apps/web; Flixa imports their definitions
-(`user`, `api_key`) from `@deniai/db`.
+`ban`, `silent_ban_rule`, `silent_ban_hit`, and `usage_reservation` (deprecated:
+only the legacy usage path writes it). Deni AI's tables in `public` are owned and
+migrated by apps/web; Flixa imports their definitions (`user`, `api_key`,
+`usage_quota`, `usage_reservation`, `product_usage`, billing and Max Mode tables)
+from `@deniai/db`.
 Query with `getDeniDb()` (Drizzle) or `getDeniPool()` (raw SQL) from `utils/deni/db.ts`.
 
 ```bash
@@ -173,12 +179,12 @@ running: copy their rows into `flixa.*` and drop them.
 
 ### Quota reservation and interrupted streams
 
-Requests atomically reserve estimated usage units (weighted tokens; 1M units =
-$0.50 of the shared monthly pool) in `usage_quota.used` before contacting a
-provider. Quota rows, Flixa's `product_usage` rows, and the usage endpoint's
-`unit` field all use `units`. The estimate includes the supplied output limit,
-or the model catalog's maximum output (16,384 tokens when unavailable). Requests
-whose estimate does not fit the remaining allowance receive 429; use a smaller
+Requests reserve estimated usage units (weighted tokens; 1M units = $0.50 of the
+shared monthly pool) in `usage_quota.used` before contacting a provider. Quota
+rows, Flixa's `product_usage` rows, and the usage endpoint's `unit` field all use
+`units`. The estimate includes the supplied output limit, or the model catalog's
+maximum output (16,384 tokens when unavailable). Requests whose estimate does not
+fit the remaining allowance receive 429 `USAGE_LIMIT_EXCEEDED`; use a smaller
 output limit or wait for in-flight requests to finish. The usage endpoint includes
 active reservations in `used`.
 
@@ -189,13 +195,47 @@ and tool-argument deltas. UTF-8 bytes / 4 is an approximation; cached history,
 media, and hidden reasoning may differ, so this is not an exact provider-token
 cap. Actual usage above an estimate is still recorded and blocks subsequent work.
 
-Receipts in `flixa.usage_reservation` make settlement idempotent and prevent old
-refunds from affecting a newly reset month or tier. On process termination or a DB
-settlement failure, the reserved estimate remains charged; outstanding receipts
-are retained for reconciliation. Do not blindly delete/refund them: provider work
-may already have completed. Receipt IDs are included in settlement failure logs.
-The accounting regression tests use an isolated PostgreSQL/WASM database and never
-connect to `DENI_DATABASE_URL`.
+### Usage engine and rollout switch
+
+Flixa and Deni AI chat share one usage engine, `createUsageEngine()` in
+`@deniai/billing/server` (`utils/deni/usageEngine.ts` binds it to this service's
+Drizzle database on the same `pg` pool). The behaviour of both paths and every
+difference between them is in
+[`packages/billing/docs/usage-engine.md`](../../packages/billing/docs/usage-engine.md).
+
+| `FLIXA_USAGE_ENGINE` | Reserve / settle | `GET /v1/deni/usage` | Writes |
+| --- | --- | --- | --- |
+| `shared` (default) | Shared engine: team usage policy, Max Mode credits (past the pool), deletion-pending accounts refused, reservation recovery | The web app's usage summary, same contract shape | `usage_quota`, `public.usage_reservation` (product `flixa`), `product_usage`, credit lots |
+| `legacy` | Previous raw-SQL path (`utils/deni/usage.ts`), for rollback | Legacy `getDeniUsageInfo` | `usage_quota`, `flixa.usage_reservation`, `product_usage` |
+| `shadow` | Legacy is authoritative; the shared engine runs the same reservation in a transaction that is always rolled back | Legacy | Legacy only |
+
+In `shadow`, a difference in the allow/deny decision, the reserved amount, or the
+remaining allowance is logged as one JSON line,
+`{"level":"warn","event":"flixa_usage_shadow_mismatch",...}` with both views, and
+a failed dry run as `flixa_usage_shadow_error` (it never blocks the request).
+Unknown values fall back to `shared` with a warning.
+
+With `shared`, a running request refreshes its reservation's `observed_amount`
+every 30 s. If the process dies, the reservation is recovered once it has been
+silent for 15 minutes, at the observed amount (an abandoned estimate is never
+billed): by the web app's usage and meter job, or by this service, which schedules
+a recovery run after a failed settlement. The agent API has no Stripe client, so
+Flixa settlements spend Max Mode credits without triggering an auto top-up.
+
+Before switching an environment to `shared` or `shadow`, apply the `public`
+migration `0075_usage_reservation_product` (an additive `product` column) from
+`@deniai/db`. Rollout: `shadow` in production, review the warnings, then
+`shared`; `legacy` stays available for one release.
+
+Legacy receipts in `flixa.usage_reservation` make the legacy settlement idempotent
+and prevent old refunds from affecting a newly reset month or tier. On process
+termination or a DB settlement failure, the reserved estimate remains charged;
+outstanding receipts are retained for reconciliation. Do not blindly delete/refund
+them: provider work may already have completed. Receipt IDs are included in
+settlement failure logs. The accounting tests (`usage-accounting`,
+`usage-engine-integration`, `usage-engine-parity`, `usage-engine-shadow`) use an
+isolated PostgreSQL/WASM database with the real migrations and never connect to
+`DENI_DATABASE_URL`.
 
 ### Client IPs and reverse proxies
 

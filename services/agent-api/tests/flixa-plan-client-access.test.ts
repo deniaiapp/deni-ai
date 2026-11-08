@@ -34,14 +34,18 @@ const getDeniBillingProfile = mock.fn(async (_userId: string) => {
   if (tier === "throw") throw new Error("connection timeout");
   return { billing: null, isTeam: false, tier, hasVerifiedPaymentMethod: false };
 });
-const reserveUsageQuota = mock.fn(async () => ({
+mock.module("../utils/deni/usage", {
+  exports: { ...usage, getDeniBillingProfile },
+});
+const flixaUsage = await import("../utils/deni/flixaUsage");
+const reserveFlixaUsage = mock.fn(async () => ({
   allowed: true,
   remaining: 1_000_000,
   reserved: false,
   unit: usage.USAGE_UNIT,
 }));
-mock.module("../utils/deni/usage", {
-  exports: { ...usage, getDeniBillingProfile, reserveUsageQuota },
+mock.module("../utils/deni/flixaUsage", {
+  exports: { ...flixaUsage, reserveFlixaUsage },
 });
 
 const { BANNED_ERROR_MESSAGE, CLIENT_UPDATE_REQUIRED_MESSAGE, MISSING_CLIENT_SIGNAL_MESSAGE } = ban;

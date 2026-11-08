@@ -13,7 +13,10 @@ import { user } from "./auth-schema";
  *   "usd_micros". These rows are the Deni Run budget ledger itself.
  *
  * `period_start` is the UTC calendar month, matching the quota reset window.
- * flixa-backend writes the `flixa` rows with raw SQL, so keep the shape stable.
+ * Chat and Flixa rows are written when the shared usage engine
+ * (`@deniai/billing/server`) settles a reservation; the agent API's legacy path
+ * (`FLIXA_USAGE_ENGINE=legacy`/`shadow`) still writes `flixa` rows with raw SQL,
+ * so keep the shape stable.
  */
 export const productUsage = pgTable(
   "product_usage",

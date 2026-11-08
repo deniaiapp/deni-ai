@@ -14,6 +14,21 @@ export {
 export type { ApiKeyValidationResult, RequestAuthSummary } from './auth';
 export { getDeniBillingProfile, getDeniUsageInfo, getUpgradeUrl, getVerifyUrl, USAGE_UNIT, reserveUsageQuota, settleUsageQuota } from './usage';
 export type { UsageTier, UsageUnit, UsageReservation } from './usage';
+export {
+  getFlixaUsageInfo,
+  getSharedDeniUsageInfo,
+  recordFlixaObservedUsage,
+  reserveFlixaUsage,
+  settleFlixaUsage,
+} from './flixaUsage';
+export type { FlixaReserveInput, FlixaReserveResult, FlixaUsageReservation } from './flixaUsage';
+export {
+  getFlixaUsageEngine,
+  getFlixaUsageEngineMode,
+  runFlixaUsageRecovery,
+  scheduleUsageRecovery,
+} from './usageEngine';
+export type { FlixaUsageEngineMode } from './usageEngine';
 export type { DeniUsageInfo, BillingRow, UsageQuotaRow } from './types';
 export { getModelCategory, hasQuotaForModel, getRequiredTierForModel, isTierSufficient } from './models';
 export type { ModelCategory } from './models';

@@ -1,5 +1,7 @@
 import { UsageEstimate } from "../utils/agent/usageEstimation";
-import { USAGE_UNIT, type UsageReservation, type UsageTier, type UsageUnit } from "../utils/deni/usage";
+import { USAGE_UNIT, type UsageTier, type UsageUnit } from "../utils/deni/usage";
+import { reserveFlixaUsage, type FlixaUsageReservation } from "../utils/deni/flixaUsage";
+import { startUsageLease } from "../utils/agent/usageAccounting";
 import { Context, Next } from 'hono';
 import type { ContentfulStatusCode } from 'hono/utils/http-status';
 import {
@@ -13,7 +15,6 @@ import {
   getRequiredTierForModel,
   isTierSufficient,
   getVerifyUrl,
-  reserveUsageQuota,
   isUserBannedFromFlixa,
   MISSING_CLIENT_SIGNAL_MESSAGE,
   BANNED_ERROR_MESSAGE,
@@ -39,8 +40,11 @@ export interface AgentAuthContext {
   modelCategory: 'basic' | 'premium';
   usageUnit: UsageUnit;
   usageReserved: boolean;
-  usageReservation?: UsageReservation;
+  /** The held estimate and the engine (`FLIXA_USAGE_ENGINE`) that settles it. */
+  usageReservation?: FlixaUsageReservation;
   usageEstimate?: UsageEstimate;
+  /** Stops the shared reservation's observed-usage heartbeat (set while it runs). */
+  stopUsageLease?: () => void;
   hasVerifiedPaymentMethod: boolean;
   /** Base model multiplier; long-context surcharge is applied at finalize. */
   tokenUsageMultiplier: number;
@@ -467,13 +471,14 @@ export async function validateAgentAuth(c: Context, next: Next) {
       type: 'invalid_request_error', param: null, code: 'invalid_parameter',
     } }, 400);
   }
-  const quotaReservation = await reserveUsageQuota(
-    keyValidation.userId,
-    modelCategory,
+  // Shared engine, legacy path or shadow comparison, per FLIXA_USAGE_ENGINE.
+  const quotaReservation = await reserveFlixaUsage({
+    userId: keyValidation.userId,
+    category: modelCategory,
     tier,
-    billingProfile.hasVerifiedPaymentMethod,
-    usageEstimate.reservationAmount,
-  );
+    hasVerifiedPaymentMethod: billingProfile.hasVerifiedPaymentMethod,
+    amount: usageEstimate.reservationAmount,
+  });
   if (!quotaReservation.allowed) {
     return c.json(
       {
@@ -495,7 +500,7 @@ export async function validateAgentAuth(c: Context, next: Next) {
   }
 
   // Store auth context for downstream handlers
-  c.set('agentAuth', {
+  const agentAuth: AgentAuthContext = {
     userId: keyValidation.userId,
     modelId: model,
     tier,
@@ -507,7 +512,9 @@ export async function validateAgentAuth(c: Context, next: Next) {
     hasVerifiedPaymentMethod: billingProfile.hasVerifiedPaymentMethod,
     tokenUsageMultiplier,
     usageMeteringEnabled: true,
-  } satisfies AgentAuthContext);
+  };
+  startUsageLease(agentAuth);
+  c.set('agentAuth', agentAuth);
 
   await next();
 }

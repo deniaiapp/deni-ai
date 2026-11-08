@@ -339,7 +339,9 @@ export async function getDeniBillingProfile(
 }
 
 /**
- * Fetch Deni AI user's plan info, usage, and remaining quota
+ * Legacy `GET /v1/deni/usage` (`FLIXA_USAGE_ENGINE=legacy`/`shadow`): the user's plan
+ * info, usage, and remaining quota. `shared` mode reports the shared engine's summary
+ * (`getSharedDeniUsageInfo` in flixaUsage.ts).
  */
 export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   const pool = getDeniPool();
@@ -426,9 +428,11 @@ export interface UsageReservation {
   category: ModelCategory;
 }
 
-/** Reserve estimated usage units (weighted tokens), including concurrent first requests.
- * The quota update and receipt (flixa.usage_reservation, see @deniai/db/flixa) are one
- * atomic PostgreSQL statement.
+/** Legacy path (`FLIXA_USAGE_ENGINE=legacy`/`shadow`): reserve estimated usage units
+ * (weighted tokens), including concurrent first requests. The quota update and receipt
+ * (flixa.usage_reservation, deprecated, see @deniai/db/flixa) are one atomic PostgreSQL
+ * statement. The default `shared` mode reserves through `@deniai/billing/server`
+ * instead (flixaUsage.ts).
  */
 export async function reserveUsageQuota(
   userId: string,
@@ -485,7 +489,7 @@ export async function reserveUsageQuota(
   };
 }
 
-/** Exactly-once adjustment, even if cancellation and completion race or retry.
+/** Legacy path: exactly-once adjustment, even if cancellation and completion race or retry.
  * Older receipts cannot subtract from a newly reset billing period/tier.
  * On DB failure the reservation remains charged and available for retry/audit.
  */

@@ -79,6 +79,13 @@ export const silentBanHit = flixa.table(
 );
 
 /**
+ * @deprecated Receipts of the legacy Flixa usage path only
+ * (`FLIXA_USAGE_ENGINE=legacy` or `shadow`). With the shared usage engine
+ * (`shared`, the default) Flixa reservations live in `public.usage_reservation`
+ * (product `flixa`) and nothing writes this table. Kept for rollback; a later
+ * flixa migration drops it once no unsettled receipts remain
+ * (packages/billing/docs/usage-engine.md).
+ *
  * Receipts for quota reserved in Deni AI's `usage_quota` and not yet settled.
  * `period_start` is the quota row's period start as epoch seconds text, so a
  * receipt from an earlier period or tier never adjusts a reset row.

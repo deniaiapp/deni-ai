@@ -6,7 +6,7 @@ import type {
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import {
-  getDeniUsageInfo,
+  getFlixaUsageInfo,
   getUpgradeUrl,
   getVerifyUrl,
   USAGE_UNIT,
@@ -99,8 +99,9 @@ async function handleBillingStatus(c: Context) {
   }
 
   try {
-    // Get usage info
-    const usageInfo: DeniUsageInfo = await getDeniUsageInfo(validationResult.userId);
+    // Shared engine summary (the numbers the web app shows), or legacy in
+    // FLIXA_USAGE_ENGINE=legacy/shadow.
+    const usageInfo: DeniUsageInfo = await getFlixaUsageInfo(validationResult.userId);
     return c.json(usageInfo, 200);
   } catch (error) {
     console.error('Failed to get Deni usage info:', error);
