@@ -44,9 +44,13 @@ beforeEach(() => {
 test("Continue saves one selected question/answer pair, with no pending metadata", async () => {
   expect(await caller().saveComparison({ messages })).toBe("saved-chat");
   expect(mocks.insert).toHaveBeenCalledOnce();
-  // The saved chat gets its message rows in the same transaction.
-  expect(mocks.execute).toHaveBeenCalledOnce();
-  expect(new PgDialect().sqlToQuery(mocks.execute.mock.calls[0][0]).params).toContain("saved-chat");
+  // The transaction marks itself as a row-aware writer, then the saved chat gets
+  // its message rows in the same transaction.
+  expect(mocks.execute).toHaveBeenCalledTimes(2);
+  expect(new PgDialect().sqlToQuery(mocks.execute.mock.calls[0][0]).sql).toContain(
+    "deni.chat_rows_writer",
+  );
+  expect(new PgDialect().sqlToQuery(mocks.execute.mock.calls[1][0]).params).toContain("saved-chat");
   expect(mocks.values).toHaveBeenCalledWith({
     uid: "user",
     title: "My comparison question",

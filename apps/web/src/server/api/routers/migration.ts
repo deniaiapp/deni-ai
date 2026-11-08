@@ -7,7 +7,7 @@ import { omitUnownedAttachmentParts } from "@/lib/attachments";
 import { MigrationPayloadTooLargeError, normalizeMigrationPayload } from "@/lib/migration";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { protectedProcedure, router } from "../trpc";
-import { syncChatMessageRows } from "@/lib/chat-message-rows";
+import { markChatRowsWriter, syncChatMessageRows } from "@/lib/chat-message-rows";
 
 /** Five bound parameters per chat row. */
 export const IMPORT_BATCH_SIZE = 1000;
@@ -93,6 +93,7 @@ export const migrationRouter = router({
       // One INSERT per batch keeps each statement below Postgres' 65,534 bind
       // parameter limit; the transaction keeps the import all-or-nothing.
       const importedChats = await ctx.db.transaction(async (tx) => {
+        await markChatRowsWriter(tx);
         let count = 0;
         for (let index = 0; index < values.length; index += IMPORT_BATCH_SIZE) {
           const inserted = await tx

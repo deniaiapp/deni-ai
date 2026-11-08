@@ -6,6 +6,7 @@ import { env } from "@/env";
 import { stringifyForJsonb } from "@/lib/jsonb";
 import {
   readStoredMessages,
+  markChatRowsWriter,
   syncChatMessageRows,
   syncLastChatMessageRow,
 } from "@/lib/chat-message-rows";
@@ -136,6 +137,7 @@ export async function updateChat(
   }
 
   const updatedChat = await db.transaction(async (tx) => {
+    await markChatRowsWriter(tx);
     const [row] = await tx
       .update(chats)
       .set(updates)
@@ -160,6 +162,7 @@ export async function replaceLastChatMessage(
   options?: { expectedGenerationId?: string | null },
 ) {
   const updatedChat = await db.transaction(async (tx) => {
+    await markChatRowsWriter(tx);
     const [row] = await tx
       .update(chats)
       .set({
@@ -225,6 +228,7 @@ export async function stopActiveChatGeneration(id: string, userId: string) {
     AND ${chats.messages}->-1->'metadata'->'pending' = 'true'::jsonb
   )`;
   const stopped = await db.transaction(async (tx) => {
+    await markChatRowsWriter(tx);
     const [row] = await tx
       .update(chats)
       .set({
@@ -265,6 +269,7 @@ export async function restoreStoppedRegeneration(
   messages: UIMessage[],
 ) {
   const restored = await db.transaction(async (tx) => {
+    await markChatRowsWriter(tx);
     const [row] = await tx
       .update(chats)
       .set({
@@ -319,6 +324,7 @@ export async function clearChatGenerationState(
   }
 
   const updatedChat = await db.transaction(async (tx) => {
+    await markChatRowsWriter(tx);
     const [row] = await tx
       .update(chats)
       .set(updates)

@@ -11,7 +11,11 @@ import {
   CHAT_OLDER_MESSAGE_COUNT,
   type ChatMessageWindow,
 } from "@/lib/chat-messages";
-import { readStoredMessages, syncChatMessageRows } from "@/lib/chat-message-rows";
+import {
+  markChatRowsWriter,
+  readStoredMessages,
+  syncChatMessageRows,
+} from "@/lib/chat-message-rows";
 import { z } from "zod";
 import type { db as Db } from "@/db/drizzle";
 import { chats, modelComparisons, projects } from "@/db/schema";
@@ -261,6 +265,7 @@ export const chatRouter = router({
           .slice(0, 80),
       );
       const saved = await ctx.db.transaction(async (tx) => {
+        await markChatRowsWriter(tx);
         const [row] = await tx
           .insert(chats)
           .values({

@@ -113,6 +113,18 @@ export function syncLastChatMessageRowSql(chatId: string): SQL {
     AND (jsonb_typeof(c.messages) <> 'array' OR jsonb_array_length(c.messages) <> c.message_count)`;
 }
 
+/**
+ * Marks the current transaction as a writer that keeps `chat_messages` in sync.
+ * Call it first in every transaction that writes `chats.messages` and then
+ * syncs the rows. The `chats` trigger (migration 0079) resets
+ * `message_count` to NULL for writes WITHOUT this marker, such as v7 sharing
+ * the database during the v8 beta, so reads fall back to the jsonb array
+ * instead of serving stale rows. Transaction-scoped, so it is safe with poolers.
+ */
+export async function markChatRowsWriter(executor: SqlExecutor) {
+  await executor.execute(sql`SELECT set_config('deni.chat_rows_writer', 'v8', true)`);
+}
+
 export async function syncChatMessageRows(executor: SqlExecutor, chatIds: readonly string[]) {
   if (chatIds.length === 0) return;
   await executor.execute(syncChatMessageRowsSql(chatIds));

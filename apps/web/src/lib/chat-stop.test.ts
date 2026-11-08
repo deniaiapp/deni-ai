@@ -119,10 +119,12 @@ test("stops the active generation and keeps its partial answer", async () => {
     parts: [{ type: "text", text: "partial and newer" }],
     metadata: {},
   });
-  // The same transaction refreshes the stored last message row.
-  expect(state.rowSyncs).toHaveLength(1);
-  expect(state.rowSyncs[0].sql).toContain("chat_messages");
-  expect(state.rowSyncs[0].params).toContain("chat-1");
+  // The same transaction marks itself as a row-aware writer, then refreshes the
+  // stored last message row.
+  expect(state.rowSyncs).toHaveLength(2);
+  expect(state.rowSyncs[0].sql).toContain("deni.chat_rows_writer");
+  expect(state.rowSyncs[1].sql).toContain("chat_messages");
+  expect(state.rowSyncs[1].params).toContain("chat-1");
 });
 
 test("a generation started between the read and the write is left untouched", async () => {
