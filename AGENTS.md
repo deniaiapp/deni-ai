@@ -13,7 +13,7 @@ the workspace layout and the rules that span apps.
 | `services/agent-api`                | `@deniai/agent-api`                 | Flixa agent API (Hono, formerly flixa-backend). Guide: `services/agent-api/AGENTS.md`                                                                                                |
 | `packages/disposable-email-domains` | `@deni-ai/disposable-email-domains` | Disposable email domain list                                                                                                                                                         |
 | `packages/db`                       | `@deniai/db`                        | Drizzle schema + migrations: `public` (web, `drizzle.config.ts`) and `flixa` (agent API, `drizzle.flixa.config.ts`, journal `flixa.__drizzle_migrations`)                            |
-| `packages/billing`                  | `@deniai/billing`                   | Pure billing rules shared by web and agent API: usage pool sizes, units per USD, usage tier multipliers, token weights, education domains                                            |
+| `packages/billing`                  | `@deniai/billing`                   | Billing rules shared by web and agent API: pure pool sizes, plan tiers, usage tier multipliers, token weights, education domains; `/server`: the usage engine (`createUsageEngine`)  |
 | `packages/flixa-contract`           | `@deniai/flixa-contract`            | Publishable (0.1.0, not published) zod schemas + types of the public Flixa API: device auth, API key format, error envelope and codes, client headers, models, usage, request bodies |
 | `packages/ui`                       | `@deniai/ui`                        | shadcn/ui components on Base UI used by the web app                                                                                                                                  |
 | `packages/emails`                   | `@deniai/emails`                    | react-email transactional templates and `renderEmail()` (HTML + plain text)                                                                                                          |
@@ -24,12 +24,15 @@ the workspace layout and the rules that span apps.
 The apps were imported with their full history (`git subtree add`), so
 `git log -- apps/web` shows the deni-ai history.
 
-`packages/{emails,i18n,ai,auth}` have READMEs listing their exports and what
-stayed in the web app. Packages never import an app:
+`packages/{emails,i18n,ai,auth,billing}` have READMEs listing their exports and
+what stayed in the web app. Packages never import an app:
 values that depend on env, the database or app services are passed in (for
 example `apps/web/src/lib/auth.ts` calls `createAuth()` with its env, db, email
-sender and callbacks). Not moved yet: reservation and settlement logic, and
-Deni Run (deni-ai-computer) is not imported.
+sender and callbacks). Usage reservation and settlement have one
+implementation, `createUsageEngine(deps)` in `@deniai/billing/server`, used by the
+web app and the agent API (`FLIXA_USAGE_ENGINE`, see
+`packages/billing/docs/usage-engine.md`). Deni Run (deni-ai-computer) is not
+imported.
 
 ## Workspace rules
 
@@ -55,6 +58,8 @@ Deni Run (deni-ai-computer) is not imported.
   copies: schema in `@deniai/db`, billing constants in `@deniai/billing`, public
   Flixa response shapes in `@deniai/flixa-contract` (change the contract and its
   tests with the server, and bump its version when the public shape changes).
+  Usage rules (quota, reservations, team usage policy, Max Mode, product ledger)
+  change only in `@deniai/billing/server`; both apps bind the same engine.
 - `@deniai/flixa-contract` is the only publishable package: workspace consumers
   use its TypeScript source, `pnpm --filter @deniai/flixa-contract build` emits
   `dist/`, and `publishConfig` points the packed `exports` there. Server code

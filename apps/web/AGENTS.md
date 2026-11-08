@@ -48,7 +48,11 @@ Read these when relevant rather than loading the whole project:
   (`packages/emails`; sending stays in `src/lib/email.ts`); locales and
   message extraction `@deniai/i18n` (`packages/i18n`; catalogs stay in
   `messages/`); UI components `@deniai/ui`; schema `@deniai/db`; billing rules
-  `@deniai/billing`.
+  `@deniai/billing`; the usage engine `@deniai/billing/server` (reserve, settle,
+  recover, summary, team usage policy, Max Mode credit spending, product ledger),
+  which `src/lib/usage.ts` binds to this app's database, billing switch, Stripe
+  auto top-up and recovery job. Flixa (services/agent-api) uses the same engine,
+  so change usage rules in `packages/billing`, not in `src/lib/usage.ts`.
 - Task-specific workflows: `.agents/skills/`; load only the applicable skill and
   references.
 
