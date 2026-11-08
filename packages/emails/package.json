@@ -15,7 +15,7 @@
     "lint": "oxlint",
     "format": "oxfmt --write",
     "format:check": "oxfmt --check",
-    "test": "vitest run"
+    "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache"
   },
   "dependencies": {
     "react-email": "^6.11.4"

@@ -24,7 +24,7 @@
     "tools:commit": "tsx --env-file-if-exists=.env.local ./tools/commit.ts",
     "tools:register-oauth-client": "tsx --env-file-if-exists=.env.local ./tools/register-oauth-client.ts",
     "disposable:refresh": "pnpm --filter @deni-ai/disposable-email-domains refresh",
-    "test": "vitest run",
+    "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache",
     "doctor": "react-doctor"
   },
   "dependencies": {
