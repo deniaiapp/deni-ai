@@ -11,6 +11,8 @@ export type AuthState = {
   betaAccess: boolean;
   /** Verified operator (ADMIN_EMAILS / ADMIN_EMAIL_DOMAINS): sees the admin settings. */
   isAdmin: boolean;
+  /** Run mode is on for this deployment (`RUN_ENABLED`). */
+  runEnabled: boolean;
 };
 
 // better-auth pulls in the database, mail templates and Stripe; load it on the
@@ -18,10 +20,12 @@ export type AuthState = {
 const getAuthStateFn = createServerFn({ method: "GET" }).handler(async (): Promise<AuthState> => {
   const { auth } = await import("@/lib/auth");
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
-  const [{ getTwoFactorPolicyForUser }, { hasBetaAccess, isBetaAdmin }] = await Promise.all([
-    import("@/lib/two-factor-policy.server"),
-    import("@/lib/beta-access.server"),
-  ]);
+  const [{ getTwoFactorPolicyForUser }, { hasBetaAccess, isBetaAdmin }, { env }] =
+    await Promise.all([
+      import("@/lib/two-factor-policy.server"),
+      import("@/lib/beta-access.server"),
+      import("@/env"),
+    ]);
   const user = session?.session ? session.user : null;
   return {
     signedIn: Boolean(session?.session),
@@ -29,6 +33,7 @@ const getAuthStateFn = createServerFn({ method: "GET" }).handler(async (): Promi
     twoFactor: await getTwoFactorPolicyForUser(session?.user ?? null),
     betaAccess: user ? await hasBetaAccess(user) : false,
     isAdmin: isBetaAdmin(user),
+    runEnabled: env.RUN_ENABLED,
   };
 });
 

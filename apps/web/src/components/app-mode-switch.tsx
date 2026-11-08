@@ -1,3 +1,4 @@
+import { useRouteContext } from "@tanstack/react-router";
 import { Bot, MessageSquare } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { getAppMode } from "@/lib/app-mode";
@@ -9,11 +10,17 @@ const itemClassName =
 
 /**
  * Sidebar switch between chat mode and Run mode. The active mode is the
- * "on" colour (sidebar-primary) and carries aria-current.
+ * "on" colour (sidebar-primary) and carries aria-current. Hidden while Run is
+ * switched off for the deployment (`RUN_ENABLED=false`).
  */
 export function AppModeSwitch() {
   const t = useExtracted();
   const mode = getAppMode(usePathname());
+  const runEnabled = useRouteContext({
+    from: "/_app",
+    select: (context) => context.authState.runEnabled,
+  });
+  if (!runEnabled) return null;
 
   return (
     <nav

@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { RuntimeAppProviders } from "@/components/runtime-app-providers";
 import { Spinner } from "@deniai/ui/components/spinner";
+import { getAppMode } from "@/lib/app-mode";
 import { BETA_ACCESS_PATH } from "@/lib/beta-access";
 import { getAuthState } from "@/lib/session-functions";
 import { signInPath } from "@/lib/sign-in-redirect";
@@ -42,6 +43,10 @@ export const Route = createFileRoute("/_app")({
       throw redirect({
         href: `${TWO_FACTOR_SETUP_PATH}?redirectTo=${encodeURIComponent(location.href)}`,
       });
+    }
+    // RUN_ENABLED=false: Run mode is switched off for this deployment.
+    if (!authState.runEnabled && getAppMode(location.pathname) === "run") {
+      throw redirect({ href: "/chat" });
     }
     return { authState };
   },

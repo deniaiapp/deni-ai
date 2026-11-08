@@ -155,6 +155,12 @@ export const env = createEnv({
      */
     STRIPE_WEBHOOK_ENABLED: z.stringbool().default(true),
     /**
+     * `false` turns Run mode off: the sidebar hides the chat / Run switch, `/run/*`
+     * pages redirect to `/chat`, `/api/run/*` answers 404 `run_disabled` and the
+     * in-process scheduler never starts. Run's data stays in the database.
+     */
+    RUN_ENABLED: z.stringbool().default(true),
+    /**
      * WebAuthn relying party ID for passkeys. Unset: the host of the auth URL
      * (deniai.app in production). beta.deniai.app sets `deniai.app` so passkeys
      * registered on deniai.app keep working there.

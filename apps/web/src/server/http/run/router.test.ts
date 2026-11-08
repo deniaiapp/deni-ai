@@ -16,13 +16,16 @@ const mocks = vi.hoisted(() => ({
   createTeammate: vi.fn(),
   finishMcpSignIn: vi.fn(),
   rateAllowed: true,
+  env: {
+    NEXT_PUBLIC_BETTER_AUTH_URL: "https://app.example",
+    DISCORD_BOT_TOKEN: undefined,
+    RUN_ENABLED: true,
+  },
 }));
 
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: async () => mocks.session } } }));
 vi.mock("@/i18n/locale", () => ({ getPreferredLocale: () => "ja" }));
-vi.mock("@/env", () => ({
-  env: { NEXT_PUBLIC_BETTER_AUTH_URL: "https://app.example", DISCORD_BOT_TOKEN: undefined },
-}));
+vi.mock("@/env", () => ({ env: mocks.env }));
 vi.mock("@/i18n/messages", () => ({ loadMessages: async () => ({}) }));
 vi.mock("@/lib/rate-limit", () => ({
   checkRateLimit: async () =>
@@ -72,6 +75,7 @@ beforeEach(() => {
   mocks.session = { session: { userId: "user-1" }, user: { isAnonymous: false } };
   mocks.configured = true;
   mocks.rateAllowed = true;
+  mocks.env.RUN_ENABLED = true;
   mocks.capabilities = {
     llm: false,
     webSearch: false,
@@ -82,6 +86,15 @@ beforeEach(() => {
   mocks.handleChat.mockClear();
   mocks.createTeammate.mockReset();
   mocks.finishMcpSignIn.mockReset();
+});
+
+test("RUN_ENABLED=false answers every Run endpoint with 404 run_disabled", async () => {
+  mocks.env.RUN_ENABLED = false;
+  for (const path of ["status", "state", "mcp/oauth/callback"]) {
+    const response = await request(path);
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "run_disabled" });
+  }
 });
 
 test("unauthenticated requests get 401", async () => {

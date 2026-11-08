@@ -136,6 +136,9 @@ tables of `@deniai/db`, read and written only through `@deniai/run`.
   UI shows a disabled state instead of failing. `RUN_SCHEDULER_IN_PROCESS=true` runs
   the job scheduler inside the web server for local development; in production it
   runs in `services/run-worker`.
+- Off switch: `RUN_ENABLED=false` hides the sidebar's mode switch (`authState.runEnabled`),
+  redirects `/run/*` to `/chat` in the `/_app` guard and answers `/api/run/*` with
+  404 `run_disabled`. The data stays; stop `services/run-worker` separately.
 - Usage: Run spends the shared pool through the engine (model cost as reported,
   browser $0.10/h and computer $0.15/h by default); teammates per plan come from
   `@deniai/run/billing/plans`.
