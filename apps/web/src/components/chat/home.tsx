@@ -37,6 +37,10 @@ export default function ChatHome() {
   const { push } = useRouter();
   const startNewChat = useNewChat();
   const session = authClient.useSession();
+  // Guests have a generated name; greet only people who chose theirs.
+  const firstName = session.data?.user.isAnonymous
+    ? null
+    : (session.data?.user.name?.trim().split(/\s+/)[0] ?? null);
   const { availableModels, platformCapabilities, canShowAds } = useAvailableModels();
   const { features } = platformCapabilities;
   const [input, setInput] = useState("");
@@ -143,15 +147,18 @@ export default function ChatHome() {
   return (
     <section
       aria-labelledby="chat-home-title"
-      className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto p-4 [justify-content:safe_center]"
+      className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 py-4 [justify-content:safe_center] md:px-6"
     >
-      <div className="w-full max-w-2xl space-y-6 py-6">
-        {/* Greeting */}
-        <div className="text-center space-y-2">
-          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" id="chat-home-title">
-            {t("What's on your mind?")}
-          </h1>
-        </div>
+      <div className="flex w-full max-w-[46rem] flex-col gap-6 py-6 md:gap-8">
+        {/* The one orchestrated moment of the app: the greeting settles in once. */}
+        <h1
+          id="chat-home-title"
+          className="animate-fade-in-up text-3xl leading-[1.1] font-semibold tracking-[-0.035em] text-balance md:text-4xl legacy:text-center legacy:text-2xl legacy:md:text-3xl"
+        >
+          {firstName
+            ? t("What's on your mind, {name}?", { name: firstName })
+            : t("What's on your mind?")}
+        </h1>
 
         {/* Composer */}
         <div>

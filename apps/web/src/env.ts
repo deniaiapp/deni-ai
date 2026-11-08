@@ -1,5 +1,6 @@
 import { createEnv } from "@t3-oss/env-core";
 import { z } from "zod";
+import { parseTwoFactorDeadline } from "@/lib/two-factor-policy";
 
 export const env = createEnv({
   /**
@@ -41,6 +42,15 @@ export const env = createEnv({
      * sign up and grant reset credits, like `ADMIN_EMAILS`.
      */
     ADMIN_EMAIL_DOMAINS: z.string().min(1).optional(),
+    /**
+     * From this ISO date or date-time, password accounts without Google or
+     * GitHub linked must turn on two-factor authentication (src/lib/two-factor-policy.ts).
+     * Before it they only see a reminder; unset keeps the reminder forever.
+     */
+    PASSWORD_2FA_REQUIRED_FROM: z
+      .string()
+      .refine((value) => parseTwoFactorDeadline(value) !== null, "Use an ISO date, e.g. 2027-01-15")
+      .optional(),
     OPENROUTER_API_KEY: z.string().min(1).optional(),
     /**
      * OpenAI-compatible Deni AI API. The key is required to expose OpenAI

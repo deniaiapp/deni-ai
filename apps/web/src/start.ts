@@ -26,6 +26,7 @@ const AUTH_REQUIRED_PREFIXES = [
   "/new",
   "/flixa/authorize",
   "/oauth",
+  "/two-factor",
 ] as const;
 
 function readCookies(request: Request) {

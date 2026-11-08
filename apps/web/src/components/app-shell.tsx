@@ -1,6 +1,7 @@
 import { dynamic } from "@/lib/dynamic";
 import { usePathname } from "@/lib/navigation";
 import { useEffect, useState } from "react";
+import { useRouteContext } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatRouteHost } from "@/components/chat/chat-route-host";
 import { SidebarInset, SidebarProvider } from "@deniai/ui/components/sidebar";
@@ -27,6 +28,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [chatSearchPath, setChatSearchPath] = useState<string | null>(null);
   const isChatSearchOpen = chatSearchPath === pathname;
   const startNewChat = useNewChat();
+  const twoFactor = useRouteContext({
+    from: "/_app",
+    select: (context) => context.authState.twoFactor,
+  });
 
   const setIsChatSearchOpen = (open: boolean) => {
     setChatSearchPath(open ? pathname : null);
@@ -77,9 +82,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {isChatSearchOpen ? <ChatSearch open onOpenChange={setIsChatSearchOpen} /> : null}
       <AppSidebar onOpenChatSearch={() => setIsChatSearchOpen(true)} />
       <SidebarInset className="min-h-0 overflow-hidden">
-        <TwoFactorBanner />
+        <TwoFactorBanner twoFactor={twoFactor} />
         <FlashOfferStrip />
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-3 md:p-5">
           {/* Chat routes: SPA host. Everything else: the matched route. */}
           <ChatRouteHost>{children}</ChatRouteHost>
         </div>

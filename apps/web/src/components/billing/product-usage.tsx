@@ -16,9 +16,9 @@ const SEGMENTS: Segment[] = ["chat", "flixa", "run"];
 
 /** One color per part of the pool, shared by the bar and its legend. */
 const SEGMENT_COLORS: Record<Segment, string> = {
-  chat: "bg-sky-500",
-  flixa: "bg-violet-500",
-  run: "bg-emerald-500",
+  chat: "bg-chart-1",
+  flixa: "bg-chart-2",
+  run: "bg-chart-3",
 };
 
 function percentOf(value: number, limit: number) {
@@ -92,7 +92,8 @@ export function CombinedUsageBar({
         <span
           className={cn(
             "tabular-nums text-foreground/80",
-            maxModeEnabled && "text-amber-600 dark:text-amber-400",
+            maxModeEnabled &&
+              "text-amber-600 dark:text-amber-400 next:font-semibold next:text-foreground",
           )}
         >
           {maxModeEnabled
@@ -146,7 +147,7 @@ export function CombinedUsageMeter({
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         {maxModeEnabled ? (
           <span className="flex items-center gap-1">
-            <Zap className="size-3 text-blue-500" />
+            <Zap className="size-3 text-blue-500 next:text-primary" />
             {t("Max Mode active")}
           </span>
         ) : (

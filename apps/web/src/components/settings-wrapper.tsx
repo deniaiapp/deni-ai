@@ -1,9 +1,29 @@
+import {
+  CreditCard,
+  FolderClosed,
+  KeyRound,
+  Megaphone,
+  Palette,
+  Shield,
+  Sparkles,
+  Upload,
+  User2,
+  Users,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { Link, usePathname } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import type React from "react";
 import { DocumentTitle } from "@/components/document-title";
-import { Card, CardContent } from "@deniai/ui/components/card";
 import { Spinner } from "@deniai/ui/components/spinner";
+import {
+  SettingsContent,
+  SettingsLayout,
+  SettingsNav,
+  SettingsNavFooter,
+  SettingsNavGroup,
+  SettingsNavItem,
+} from "@deniai/ui/components/settings-layout";
 import { CombinedUsageMeter } from "@/components/billing/product-usage";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { authClient } from "@/lib/auth-client";
@@ -11,44 +31,36 @@ import { formatAppDate } from "@/lib/format-date";
 import { isCheckoutSettingsRoute, isStandaloneSettingsRoute } from "@/lib/settings-routes";
 import { trpc } from "@/lib/trpc/react";
 import { settingsUsageQueryOptions } from "@/lib/usage-query-options";
-import { cn, formatCompactUsageValue } from "@/lib/utils";
+import { formatCompactUsageValue } from "@/lib/utils";
 import { Progress } from "@deniai/ui/components/progress";
 
-export default function SettingsWrapper({ children }: { children: React.ReactNode }) {
+type SettingsNavEntry = { label: string; href: string; icon: LucideIcon };
+
+/** Plan and usage summary under the settings nav. */
+function SettingsPlanSummary() {
   const t = useExtracted();
   const locale = useLocale();
-  const pathname = usePathname();
-  const isStandaloneRoute = isStandaloneSettingsRoute(pathname);
   const { features } = usePlatformCapabilities();
   const billingDisabled = !features.billing;
   const isAnonymous = Boolean(authClient.useSession().data?.user?.isAnonymous);
   const statusQuery = trpc.billing.status.useQuery(undefined, {
-    enabled: !billingDisabled && !isStandaloneRoute && !isAnonymous,
+    enabled: !billingDisabled && !isAnonymous,
     staleTime: 60_000,
   });
-  const usageQuery = trpc.billing.usage.useQuery(undefined, {
-    enabled: !isStandaloneRoute,
-    ...settingsUsageQueryOptions,
-  });
+  const usageQuery = trpc.billing.usage.useQuery(undefined, settingsUsageQueryOptions);
 
-  // Always keep {children} in the tree. Returning only a Spinner drops the page
-  // segment and breaks Next.js instant-navigation validation
-  // (instant-unrendered-segment).
-  if (isStandaloneRoute) {
+  if (usageQuery.isLoading || (!billingDisabled && !isAnonymous && statusQuery.isLoading)) {
     return (
-      <div className="mx-auto w-full max-w-5xl pb-12 pt-4">
-        <DocumentTitle title={isCheckoutSettingsRoute(pathname) ? t("Checkout") : t("Team")} />
-        {children}
+      <div className="flex min-h-20 items-center justify-center">
+        <Spinner className="size-4 text-muted-foreground" />
       </div>
     );
   }
 
-  const isUsageLoading =
-    usageQuery.isLoading || (!billingDisabled && !isAnonymous && statusQuery.isLoading);
   const status = statusQuery.data;
   const usage = usageQuery.data;
   const usages = usage?.usage;
-
+  const maxModeEnabled = features.billing && (usage?.maxModeEnabled ?? false);
   // Go through a verified educational address has no subscription, so no plan id or renewal.
   const isEducation = usage?.education === true;
   const plan = isEducation
@@ -58,181 +70,154 @@ export default function SettingsWrapper({ children }: { children: React.ReactNod
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
         .join(" ") || t("Free");
 
-  const settingsTabs = [
-    {
-      label: t("Appearance"),
-      value: "appearance",
-      href: "/settings/appearance",
-    },
-    {
-      label: t("Billing"),
-      value: "billing",
-      href: "/settings/billing",
-    },
-    {
-      label: t("Ads"),
-      value: "ads",
-      href: "/settings/ads",
-    },
-    {
-      label: t("Projects"),
-      value: "projects",
-      href: "/settings/projects",
-    },
-    {
-      label: t("Personalize"),
-      value: "memory",
-      href: "/settings/memory",
-    },
-    {
-      label: t("API Keys"),
-      value: "api-keys",
-      href: "/settings/api-keys",
-    },
-    {
-      label: t("Import"),
-      value: "import",
-      href: "/settings/import",
-    },
-  ].filter(
-    (tab) =>
-      (!billingDisabled || tab.value !== "billing") && (features.memory || tab.value !== "memory"),
-  );
-
-  const currentTabItem =
-    settingsTabs.find((tab) => pathname?.startsWith(tab.href)) ?? settingsTabs[0];
-  const currentTab = currentTabItem.value;
-
   return (
-    <div className="flex flex-col lg:flex-row gap-4 mx-auto w-full pb-12 pt-4 px-4 lg:px-0">
-      <DocumentTitle title={currentTabItem.label} />
-      <div className="flex flex-col gap-2 w-full lg:max-w-xs shrink-0">
-        {isUsageLoading ? (
-          <div className="flex min-h-24 items-center justify-center rounded-xl border border-muted-foreground/10 bg-muted/60">
-            <Spinner className="size-5" />
-          </div>
+    <div className="flex flex-col gap-3 px-3 text-sm">
+      {!billingDisabled ? (
+        <div className="flex flex-col gap-0.5">
+          <span className="text-xs text-muted-foreground">{t("Your Plan")}</span>
+          <span className="font-semibold">{plan}</span>
+          <span className="text-xs text-muted-foreground">
+            {isEducation
+              ? t("Included with your school email")
+              : t("Next update: {date}", {
+                  date: status?.currentPeriodEnd
+                    ? formatAppDate(status.currentPeriodEnd, locale)
+                    : "—",
+                })}
+          </span>
+        </div>
+      ) : null}
+      <div className="flex flex-col gap-1.5">
+        <span className="text-xs text-muted-foreground">
+          {t("Resets on {date}", {
+            date: usages?.[0]?.periodEnd ? formatAppDate(usages[0].periodEnd, locale) : "—",
+          })}
+        </span>
+        {usage?.pool ? (
+          <CombinedUsageMeter pool={usage.pool} maxModeEnabled={maxModeEnabled} />
         ) : (
-          <>
-            {!billingDisabled && (
-              <Card className="border-muted-foreground/10 bg-muted/60 shadow-none">
-                <CardContent>
-                  <div className="flex flex-col gap-1">
-                    <span className="font-medium text-muted-foreground">{t("Your Plan")}</span>
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-base font-semibold">{plan}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {isEducation
-                          ? t("Included with your school email")
-                          : t("Next update: {date}", {
-                              date: status?.currentPeriodEnd
-                                ? formatAppDate(status.currentPeriodEnd, locale)
-                                : "—",
-                            })}
-                      </span>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <Card className="border-muted-foreground/10 bg-muted/60 shadow-none">
-              <CardContent>
-                <div className="flex flex-col gap-1">
-                  <span className="font-medium text-muted-foreground">{t("Usage")}</span>
-                  <span className="text-sm">
-                    {t("Resets on {date}", {
-                      date: usages?.[0]?.periodEnd
-                        ? formatAppDate(usages[0].periodEnd, locale)
-                        : "—",
-                    })}
+          usages?.map((usageItem) => {
+            const hasLimit = !maxModeEnabled && usageItem.limit !== null && usageItem.limit > 0;
+            const usedPercent = hasLimit
+              ? Math.min((usageItem.used / (usageItem.limit ?? 1)) * 100, 100)
+              : 0;
+            return (
+              <div key={usageItem.category} className="flex flex-col gap-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span>{t("Usage")}</span>
+                  <span className="text-muted-foreground tabular-nums">
+                    {hasLimit
+                      ? t("{percent}% used", { percent: usedPercent.toFixed(1) })
+                      : `${formatCompactUsageValue(usageItem.used)} ${t("units")}`}
                   </span>
-                  {usage?.pool ? (
-                    <CombinedUsageMeter
-                      pool={usage.pool}
-                      maxModeEnabled={features.billing && usage.maxModeEnabled}
-                      className="py-1"
-                    />
-                  ) : (
-                    usages?.map((usageItem) => {
-                      const maxModeEnabled = features.billing && (usage?.maxModeEnabled ?? false);
-                      const unitLabel = t("units");
-                      const hasLimit =
-                        !maxModeEnabled && usageItem.limit !== null && usageItem.limit > 0;
-                      const usedPercent = hasLimit
-                        ? Math.min((usageItem.used / (usageItem.limit ?? 1)) * 100, 100)
-                        : 0;
-                      const remainingPercent = Math.max(100 - usedPercent, 0);
-                      const summaryLabel = maxModeEnabled
-                        ? `${formatCompactUsageValue(usageItem.used)} ${unitLabel}`
-                        : hasLimit
-                          ? t("{percent}% used", { percent: usedPercent.toFixed(1) })
-                          : `${formatCompactUsageValue(usageItem.used)} ${unitLabel}`;
-                      const progress = hasLimit ? usedPercent : 0;
-                      const remainingLabel = maxModeEnabled
-                        ? t("Unlimited")
-                        : hasLimit
-                          ? t("{percent}% remaining", { percent: remainingPercent.toFixed(1) })
-                          : t("Unlimited");
-                      const periodEndLabel = usageItem.periodEnd
-                        ? formatAppDate(usageItem.periodEnd, locale)
-                        : null;
-                      return (
-                        <div key={usageItem.category} className="space-y-2 text-sm py-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <span>{t("Usage")}</span>
-                            <span className="tabular-nums text-muted-foreground">
-                              {summaryLabel}
-                            </span>
-                          </div>
-                          <Progress value={progress} className="h-2" />
-                          <div className="flex items-center justify-between text-xs text-muted-foreground">
-                            <span>{remainingLabel}</span>
-                            {periodEndLabel && (
-                              <span>{t("Resets {date}", { date: periodEndLabel })}</span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })
-                  )}
                 </div>
-              </CardContent>
-            </Card>
-          </>
+                <Progress value={usedPercent} className="h-1.5" />
+              </div>
+            );
+          })
         )}
       </div>
-
-      <div className="w-full min-w-0 overflow-hidden">
-        {/* Nav links (not real tabs) — avoids Base UI TabsTrigger + Link nativeButton issues */}
-        <div className="-mx-4 mb-2 overflow-x-auto px-4 lg:mx-0 lg:px-0">
-          <nav
-            className="bg-muted group/tabs-list inline-flex h-9 w-max items-center justify-center rounded-xl p-[3px] text-muted-foreground lg:w-auto"
-            aria-label={t("Settings")}
-          >
-            {settingsTabs.map((tab) => {
-              const isActive = tab.value === currentTab;
-              return (
-                <Link
-                  key={tab.value}
-                  href={tab.href}
-                  aria-current={isActive ? "page" : undefined}
-                  className={cn(
-                    "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap capitalize transition-colors",
-                    "text-foreground/60 hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-1 focus-visible:outline-ring",
-                    isActive &&
-                      "bg-background text-foreground shadow-sm dark:border-input dark:bg-input/30 dark:text-foreground",
-                  )}
-                >
-                  {tab.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </div>
-        <Card>
-          <CardContent className="pt-6 pb-4">{children}</CardContent>
-        </Card>
-      </div>
     </div>
+  );
+}
+
+/**
+ * Settings frame for /settings/* and /account/*: section nav on the left (a
+ * scroller on narrow screens), the page on the right, plan and usage under the
+ * nav. Checkout and team pages render their own layout.
+ */
+export default function SettingsWrapper({
+  children,
+  hideNav = false,
+}: {
+  children: React.ReactNode;
+  /** Guests only see their account page. */
+  hideNav?: boolean;
+}) {
+  const t = useExtracted();
+  const pathname = usePathname();
+  const isStandaloneRoute = isStandaloneSettingsRoute(pathname);
+  const { features } = usePlatformCapabilities();
+  const billingDisabled = !features.billing;
+
+  // Always keep {children} in the tree so the route segment stays mounted.
+  if (isStandaloneRoute) {
+    return (
+      <div className="mx-auto w-full max-w-5xl pt-2 pb-12">
+        <DocumentTitle title={isCheckoutSettingsRoute(pathname) ? t("Checkout") : t("Team")} />
+        {children}
+      </div>
+    );
+  }
+
+  const groups: { label: string; items: SettingsNavEntry[] }[] = [
+    {
+      label: t("Account"),
+      items: [
+        { label: t("Account"), href: "/account/settings", icon: User2 },
+        { label: t("Security"), href: "/account/security", icon: Shield },
+        { label: t("API Keys"), href: "/settings/api-keys", icon: KeyRound },
+      ],
+    },
+    {
+      label: t("Preferences"),
+      items: [
+        { label: t("Appearance"), href: "/settings/appearance", icon: Palette },
+        ...(features.memory
+          ? [{ label: t("Personalize"), href: "/settings/memory", icon: Sparkles }]
+          : []),
+        { label: t("Projects"), href: "/settings/projects", icon: FolderClosed },
+        { label: t("Import"), href: "/settings/import", icon: Upload },
+      ],
+    },
+    {
+      label: t("Plan"),
+      items: [
+        ...(billingDisabled
+          ? []
+          : [{ label: t("Billing"), href: "/settings/billing", icon: CreditCard }]),
+        { label: t("Ads"), href: "/settings/ads", icon: Megaphone },
+        { label: t("Team"), href: "/settings/team", icon: Users },
+      ],
+    },
+  ];
+
+  const current = groups
+    .flatMap((group) => group.items)
+    .find((item) => pathname === item.href || pathname?.startsWith(`${item.href}/`));
+
+  return (
+    <SettingsLayout className="px-1 pt-2 pb-12 md:px-2">
+      {current ? <DocumentTitle title={current.label} /> : null}
+      {hideNav ? null : (
+        <SettingsNav aria-label={t("Settings")}>
+          {groups.map((group) => (
+            <SettingsNavGroup key={group.label} label={group.label}>
+              {group.items.map(({ label, href, icon: Icon }) => (
+                <SettingsNavItem
+                  key={href}
+                  active={current?.href === href}
+                  // On narrow screens the nav scrolls sideways; keep the current page in view.
+                  ref={
+                    current?.href === href
+                      ? (node: HTMLAnchorElement | null) =>
+                          node?.scrollIntoView({ block: "nearest", inline: "center" })
+                      : undefined
+                  }
+                  render={<Link href={href} />}
+                >
+                  <Icon aria-hidden="true" />
+                  {label}
+                </SettingsNavItem>
+              ))}
+            </SettingsNavGroup>
+          ))}
+          <SettingsNavFooter>
+            <SettingsPlanSummary />
+          </SettingsNavFooter>
+        </SettingsNav>
+      )}
+      <SettingsContent>{children}</SettingsContent>
+    </SettingsLayout>
   );
 }

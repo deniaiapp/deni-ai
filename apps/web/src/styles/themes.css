@@ -1,17 +1,18 @@
-.t3-chat,
-.dark > .t3-chat,
-.tangerine,
-.dark > .tangerine,
-.deep-dark,
-.dark > .deep-dark,
-.deep-dark-high-contrast,
-.dark > .deep-dark-high-contrast {
+/* Theme presets belong to the legacy UI (docs/design-system.md, "UI preference"). */
+:root[data-ui="legacy"] .t3-chat,
+:root[data-ui="legacy"].dark > .t3-chat,
+:root[data-ui="legacy"] .tangerine,
+:root[data-ui="legacy"].dark > .tangerine,
+:root[data-ui="legacy"] .deep-dark,
+:root[data-ui="legacy"].dark > .deep-dark,
+:root[data-ui="legacy"] .deep-dark-high-contrast,
+:root[data-ui="legacy"].dark > .deep-dark-high-contrast {
   --app-font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --app-font-serif: ui-serif, Georgia, serif;
   --app-font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 }
 
-.t3-chat {
+:root[data-ui="legacy"] .t3-chat {
   --background: oklch(0.9754 0.0084 325.6414);
   --foreground: oklch(0.3257 0.1161 325.0372);
   --card: oklch(0.9754 0.0084 325.6414);
@@ -63,7 +64,7 @@
   --spacing: 0.25rem;
 }
 
-.dark > .t3-chat {
+:root[data-ui="legacy"].dark > .t3-chat {
   --background: oklch(0.2409 0.0201 307.5346);
   --foreground: oklch(0.8398 0.0387 309.5391);
   --card: oklch(0.2803 0.0232 307.5413);
@@ -113,7 +114,7 @@
   --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
-.tangerine {
+:root[data-ui="legacy"] .tangerine {
   --background: oklch(0.9383 0.0042 236.4993);
   --foreground: oklch(0.3211 0 0);
   --card: oklch(1 0 0);
@@ -165,7 +166,7 @@
   --spacing: 0.25rem;
 }
 
-.dark > .tangerine {
+:root[data-ui="legacy"].dark > .tangerine {
   --background: oklch(0.2598 0.0306 262.6666);
   --foreground: oklch(0.9219 0 0);
   --card: oklch(0.3106 0.0301 268.6365);
@@ -215,7 +216,7 @@
   --shadow-2xl: 0px 1px 3px 0px hsl(0 0% 0% / 0.25);
 }
 
-.mono {
+:root[data-ui="legacy"] .mono {
   --background: oklch(1 0 0);
   --foreground: oklch(0.1448 0 0);
   --card: oklch(1 0 0);
@@ -271,15 +272,15 @@
   text-transform: lowercase;
 }
 
-.mono > input,
-.mono > textarea,
-.mono > button,
-.mono > select,
-.mono > option {
+:root[data-ui="legacy"] .mono > input,
+:root[data-ui="legacy"] .mono > textarea,
+:root[data-ui="legacy"] .mono > button,
+:root[data-ui="legacy"] .mono > select,
+:root[data-ui="legacy"] .mono > option {
   text-transform: lowercase;
 }
 
-.dark > .mono {
+:root[data-ui="legacy"].dark > .mono {
   --background: oklch(0.1448 0 0);
   --foreground: oklch(0.9851 0 0);
   --card: oklch(0.2134 0 0);
@@ -332,7 +333,7 @@
   --shadow-2xl: 0px 1px 0px 0px hsl(0 0% 0% / 0);
 }
 
-.deep-dark {
+:root[data-ui="legacy"] .deep-dark {
   --background: oklch(0.19 0.01 285);
   --foreground: oklch(0.96 0.01 260);
   --card: oklch(0.235 0.012 285);
@@ -384,7 +385,7 @@
   --spacing: 0.25rem;
 }
 
-.dark > .deep-dark {
+:root[data-ui="legacy"].dark > .deep-dark {
   --background: oklch(0 0 0);
   --foreground: oklch(0.97 0.006 260);
   --card: oklch(0.12 0.005 285);
@@ -434,7 +435,7 @@
   --shadow-2xl: 0px 42px 84px -32px hsl(0 0% 0% / 1);
 }
 
-.deep-dark-high-contrast {
+:root[data-ui="legacy"] .deep-dark-high-contrast {
   --background: oklch(0.07 0 0);
   --foreground: oklch(1 0 0);
   --card: oklch(0.13 0 0);
@@ -486,7 +487,7 @@
   --spacing: 0.25rem;
 }
 
-.dark > .deep-dark-high-contrast {
+:root[data-ui="legacy"].dark > .deep-dark-high-contrast {
   --background: oklch(0 0 0);
   --foreground: oklch(1 0 0);
   --card: oklch(0.08 0 0);

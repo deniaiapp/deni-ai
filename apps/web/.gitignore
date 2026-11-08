@@ -56,3 +56,6 @@ yarn-error.log*
 .claude-images/
 # internal one-off scripts (local only, may touch prod secrets)
 internal/
+
+# local test account written by scripts/seed-trial-user.ts
+.trial-account.local

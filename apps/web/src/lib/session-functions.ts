@@ -1,9 +1,12 @@
 import { createIsomorphicFn, createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
+import type { TwoFactorPolicy } from "@/lib/two-factor-policy";
 
 export type AuthState = {
   signedIn: boolean;
   isAnonymous: boolean;
+  /** The password-account two-factor rule for this user (src/lib/two-factor-policy.ts). */
+  twoFactor: TwoFactorPolicy;
 };
 
 // better-auth pulls in the database, mail templates and Stripe; load it on the
@@ -11,9 +14,11 @@ export type AuthState = {
 const getAuthStateFn = createServerFn({ method: "GET" }).handler(async (): Promise<AuthState> => {
   const { auth } = await import("@/lib/auth");
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
+  const { getTwoFactorPolicyForUser } = await import("@/lib/two-factor-policy.server");
   return {
     signedIn: Boolean(session?.session),
     isAnonymous: Boolean(session?.user?.isAnonymous),
+    twoFactor: await getTwoFactorPolicyForUser(session?.user ?? null),
   };
 });
 

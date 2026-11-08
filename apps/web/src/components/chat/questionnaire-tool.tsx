@@ -483,7 +483,14 @@ function QuestionnaireCard({
   return (
     <Message from="assistant">
       <MessageContent className="w-full">
-        <Card className="w-full gap-0 py-0">
+        {/* A questionnaire waiting for answers carries the "on" edge (design system). */}
+        <Card
+          className={
+            part.state === "input-available" && isInteractive
+              ? "w-full gap-0 py-0 next:border-l-4 next:border-l-highlight"
+              : "w-full gap-0 py-0"
+          }
+        >
           {part.state === "input-streaming" ? (
             <CardContent className="flex items-center gap-2 py-5 text-sm text-muted-foreground">
               <Spinner className="size-4" />

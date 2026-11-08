@@ -113,7 +113,7 @@ function ComparisonAccessNotice({
 
   if (isAnonymous && !hasComparison) {
     return (
-      <div className="space-y-3 rounded-xl border p-6">
+      <div className="space-y-3 rounded-card border bg-card p-6">
         <p>{t("Log in and upgrade to Pro (Team plans also available) to compare models.")}</p>
         <div className="flex flex-wrap gap-2">
           {billingEnabled && (
@@ -139,7 +139,7 @@ function ComparisonAccessNotice({
   if (usage.isPending) return <p>{t("Loading…")}</p>;
   if (usage.isError) return <p role="alert">{t("Unable to load your plan. Please try again.")}</p>;
   return (
-    <div className="rounded-xl border p-6 space-y-3">
+    <div className="space-y-3 rounded-card border bg-card p-6">
       <p>{t("Model comparison is available on Pro, including team plans.")}</p>
       {billingEnabled && (
         <Button render={<Link href="/settings/billing" />} nativeButton={false}>
@@ -350,7 +350,7 @@ function ComparisonTurns({
           ].map(({ name, answers, chat }, side) => (
             <article
               key={side}
-              className="min-w-0 rounded-xl border bg-card p-4 space-y-3"
+              className="min-w-0 space-y-3 rounded-card border bg-card p-4"
               aria-label={name}
             >
               <h2 className="text-xs font-medium text-muted-foreground">{name}</h2>
@@ -792,9 +792,16 @@ export function ModelComparison({
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
-      <header className="mx-auto w-full max-w-6xl shrink-0 space-y-2 px-4 pt-3">
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="text-sm font-semibold">{t("Compare models")}</h1>
+      <header className="mx-auto w-full max-w-6xl shrink-0 space-y-3 px-4 pt-1">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div className="flex min-w-0 flex-col gap-1">
+            <h1 className="text-2xl leading-8 font-semibold legacy:text-sm legacy:leading-5">
+              {t("Compare models")}
+            </h1>
+            <p className="text-sm text-muted-foreground legacy:hidden">
+              {t("Ask two models the same question and read the answers side by side.")}
+            </p>
+          </div>
           {comparison && (
             <ComparisonToolbar
               running={running}

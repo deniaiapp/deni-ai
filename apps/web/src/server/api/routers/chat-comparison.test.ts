@@ -1,7 +1,13 @@
+import { PgDialect } from "drizzle-orm/pg-core";
 import { beforeEach, expect, test, vi } from "vitest";
 import type { Context } from "../trpc";
 
-const mocks = vi.hoisted(() => ({ eligible: true, values: vi.fn(), insert: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  eligible: true,
+  values: vi.fn(),
+  insert: vi.fn(),
+  execute: vi.fn(),
+}));
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: {} }));
 vi.mock("@/lib/usage", () => ({ canCompareModels: async () => mocks.eligible }));
@@ -19,7 +25,12 @@ const messages = [
 ];
 const caller = () =>
   chatRouter.createCaller({
-    db: { insert: mocks.insert } as unknown as Context["db"],
+    db: {
+      insert: mocks.insert,
+      execute: mocks.execute,
+      transaction: (run: (tx: unknown) => Promise<unknown>) =>
+        run({ insert: mocks.insert, execute: mocks.execute }),
+    } as unknown as Context["db"],
     session: { session: { userId: "user" } } as Context["session"],
   });
 
@@ -33,6 +44,9 @@ beforeEach(() => {
 test("Continue saves one selected question/answer pair, with no pending metadata", async () => {
   expect(await caller().saveComparison({ messages })).toBe("saved-chat");
   expect(mocks.insert).toHaveBeenCalledOnce();
+  // The saved chat gets its message rows in the same transaction.
+  expect(mocks.execute).toHaveBeenCalledOnce();
+  expect(new PgDialect().sqlToQuery(mocks.execute.mock.calls[0][0]).params).toContain("saved-chat");
   expect(mocks.values).toHaveBeenCalledWith({
     uid: "user",
     title: "My comparison question",

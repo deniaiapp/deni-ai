@@ -106,7 +106,8 @@ export function PlanCard({
       className={cn(
         "flex flex-col",
         interval === "yearly" && "border-foreground/20 bg-muted/20",
-        offer && "border-amber-500/50 ring-2 ring-amber-500/25 dark:ring-amber-500/25",
+        offer &&
+          "border-amber-500/50 ring-2 ring-amber-500/25 dark:ring-amber-500/25 next:border-highlight next:ring-highlight/40",
         status.isCurrent && "border-foreground ring-1 ring-foreground/10",
       )}
     >
@@ -116,11 +117,11 @@ export function PlanCard({
             <div className="flex flex-wrap items-center gap-2">
               <CardTitle className="font-semibold">{tierName}</CardTitle>
               {offer ? (
-                <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300">
+                <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300 next:border-transparent next:bg-highlight next:text-highlight-foreground">
                   {t("{percent}% off", { percent: offerPercentOff.toString() })}
                 </Badge>
               ) : interval === "yearly" && savingsPercent > 0 ? (
-                <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300">
+                <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 next:border-transparent next:bg-success/15 next:text-success">
                   {t("Save {percent}%", { percent: savingsPercent.toString() })}
                 </Badge>
               ) : planCopy.badge ? (
@@ -208,7 +209,7 @@ export function PlanCard({
               </div>
             )}
             {offer?.kind === "timer" && (
-              <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300">
+              <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 next:text-foreground">
                 <Clock className="size-4" />
                 <span>{t("Offer ends in")}</span>
                 <OfferCountdown endsAt={offer.endsAt} className="font-mono font-semibold" />

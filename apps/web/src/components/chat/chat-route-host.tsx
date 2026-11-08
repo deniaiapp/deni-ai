@@ -167,7 +167,7 @@ function ChatPane({ id, isActive }: { id: string; isActive: boolean }) {
   const page = useChatPanePage(id, isActive, projectIdFromQuery);
 
   return (
-    <div className="-m-4 flex min-h-0 flex-1 overflow-hidden">
+    <div className="-m-3 flex min-h-0 flex-1 overflow-hidden md:-m-5">
       {isActive ? <ChatDocumentTitle chatId={id} fallbackTitle={page?.title} /> : null}
       {page ? (
         <ChatInterface
@@ -225,7 +225,7 @@ function ChatRouteHostInner() {
 
   if (route.kind === "home") {
     return (
-      <div className="-m-4 flex min-h-0 flex-1 overflow-hidden">
+      <div className="-m-3 flex min-h-0 flex-1 overflow-hidden md:-m-5">
         <DocumentTitle />
         <ChatHome />
       </div>

@@ -27,6 +27,7 @@ import { Spinner } from "@deniai/ui/components/spinner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { authClient } from "@/lib/auth-client";
 import { runWithLoading } from "@/lib/run-with-loading";
+import { resetAuthStateCache } from "@/lib/session-functions";
 import { cn } from "@/lib/utils";
 
 const CODE_LENGTH = 6;
@@ -63,6 +64,8 @@ export function TwoFactorSettings({ className }: TwoFactorSettingsProps) {
 
   const closeDialog = () => setStep(null);
   const finishEnrollment = (backupCodes: string[]) => {
+    // The app guard caches the two-factor rule; recheck it on the next navigation.
+    resetAuthStateCache();
     void refetchSession();
     setStep({ kind: "backup-codes", backupCodes });
   };
@@ -136,6 +139,7 @@ export function TwoFactorSettings({ className }: TwoFactorSettingsProps) {
               onCancel={closeDialog}
               onEnabled={(totpURI, backupCodes) => setStep({ kind: "scan", totpURI, backupCodes })}
               onDisabled={() => {
+                resetAuthStateCache();
                 void refetchSession();
                 toast.success(t("Two-factor authentication is off"));
                 closeDialog();

@@ -19,6 +19,7 @@ import { GA_ID } from "@/lib/constants";
 import { getPlatformCapabilitiesFn } from "@/lib/platform-capabilities-functions";
 import { HOME_ALTERNATE_NAMES, HOME_DESCRIPTION, HOME_TITLE, safeJsonLd } from "@/lib/seo";
 import { SIDEBAR_WIDTH_BOOT_SCRIPT } from "@/lib/sidebar-width";
+import { DEFAULT_UI_PREFERENCE, getUiPreference } from "@/lib/ui-preference";
 import appCss from "@/styles/globals.css?url";
 import themesCss from "@/styles/themes.css?url";
 
@@ -69,7 +70,7 @@ const SITE_JSON_LD = [
 export const Route = createRootRoute({
   beforeLoad: async ({ location }) => {
     const locale = localeFromPathname(location.pathname) ?? getPreferredLocale();
-    return { intl: { locale, messages: await loadMessages(locale) } };
+    return { intl: { locale, messages: await loadMessages(locale) }, ui: getUiPreference() };
   },
   // Server env decides these; one fetch per page load is enough.
   loader: () => getPlatformCapabilitiesFn(),
@@ -163,15 +164,26 @@ function RootDocument({ children }: { children: ReactNode }) {
   const intl = useRouteContext({ from: "__root__", select: (context) => context.intl });
   const locale = intl?.locale ?? defaultLocale;
   const messages = intl?.messages ?? {};
+  // Scopes the design tokens (next or legacy UI); see src/lib/ui-preference.ts.
+  const ui =
+    useRouteContext({ from: "__root__", select: (context) => context.ui }) ?? DEFAULT_UI_PREFERENCE;
   if (intl) {
     primeMessages(intl.locale, intl.messages);
   }
 
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} data-ui={ui} suppressHydrationWarning>
       <head>
-        <meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff" />
-        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171717" />
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: light)"
+          content={ui === "legacy" ? "#ffffff" : "#f5f7fb"}
+        />
+        <meta
+          name="theme-color"
+          media="(prefers-color-scheme: dark)"
+          content={ui === "legacy" ? "#171717" : "#0e1220"}
+        />
         <HeadContent />
       </head>
       <body className="font-sans antialiased min-w-full min-h-screen overflow-x-hidden transition-colors duration-500">

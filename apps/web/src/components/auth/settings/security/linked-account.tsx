@@ -18,6 +18,7 @@ import { Spinner } from "@deniai/ui/components/spinner";
 import { useFreshSessionGuard } from "@/hooks/use-fresh-session-guard";
 import { cn } from "@/lib/utils";
 import { FreshSessionDialog } from "./fresh-session-dialog";
+import { resetAuthStateCache } from "@/lib/session-functions";
 
 export type LinkedAccountProps = {
   account?: Account;
@@ -52,7 +53,12 @@ export function LinkedAccount({ account, provider }: LinkedAccountProps) {
   const { open, setOpen, guard, handleVerified } = useFreshSessionGuard();
 
   const { mutate: unlinkAccount, isPending: isUnlinking } = useUnlinkAccount(authClient, {
-    onSuccess: () => toast.success(localization.settings.accountUnlinked),
+    onSuccess: () => {
+      // Unlinking the last Google/GitHub account can subject the account to the
+      // two-factor rule; drop the cached guard answer.
+      resetAuthStateCache();
+      toast.success(localization.settings.accountUnlinked);
+    },
     onError: (error) => {
       if (!account) return;
       guard(error, () => unlinkAccount({ accountId: account.id }));

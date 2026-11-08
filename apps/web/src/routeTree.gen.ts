@@ -33,6 +33,7 @@ import { Route as Char123LocaleChar125FlixaRouteImport } from './routes/{-$local
 import { Route as Char123LocaleChar125HomeRouteImport } from './routes/{-$locale}/home'
 import { Route as Char123LocaleChar125ModelsRouteImport } from './routes/{-$locale}/models'
 import { Route as Char123LocaleChar125UseCasesRouteImport } from './routes/{-$locale}/use-cases'
+import { Route as AppAccountPathRouteImport } from './routes/_app/account/$path'
 import { Route as AppChatIndexRouteImport } from './routes/_app/chat/index'
 import { Route as AppChatIdRouteImport } from './routes/_app/chat/$id'
 import { Route as AppCompareIndexRouteImport } from './routes/_app/compare/index'
@@ -49,8 +50,8 @@ import { Route as AppSettingsAppearanceRouteImport } from './routes/_app/setting
 import { Route as AppSettingsImportRouteImport } from './routes/_app/settings/import'
 import { Route as AppSettingsMemoryRouteImport } from './routes/_app/settings/memory'
 import { Route as AppSettingsProjectsRouteImport } from './routes/_app/settings/projects'
-import { Route as AuthAccountPathRouteImport } from './routes/_auth/account/$path'
 import { Route as AuthAuthPathRouteImport } from './routes/_auth/auth/$path'
+import { Route as AuthTwoFactorSetupRouteImport } from './routes/_auth/two-factor/setup'
 import { Route as ApiAdsIndexRouteImport } from './routes/api/ads/index'
 import { Route as ApiAdsClickRouteImport } from './routes/api/ads/click'
 import { Route as ApiAdsViewRouteImport } from './routes/api/ads/view'
@@ -221,6 +222,11 @@ const Char123LocaleChar125UseCasesRoute =
     path: '/use-cases',
     getParentRoute: () => Char123LocaleChar125RouteRoute,
   } as any)
+const AppAccountPathRoute = AppAccountPathRouteImport.update({
+  id: '/account/$path',
+  path: '/account/$path',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppChatIndexRoute = AppChatIndexRouteImport.update({
   id: '/chat/',
   path: '/chat/',
@@ -301,14 +307,14 @@ const AppSettingsProjectsRoute = AppSettingsProjectsRouteImport.update({
   path: '/projects',
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
-const AuthAccountPathRoute = AuthAccountPathRouteImport.update({
-  id: '/account/$path',
-  path: '/account/$path',
-  getParentRoute: () => AuthRouteRoute,
-} as any)
 const AuthAuthPathRoute = AuthAuthPathRouteImport.update({
   id: '/auth/$path',
   path: '/auth/$path',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthTwoFactorSetupRoute = AuthTwoFactorSetupRouteImport.update({
+  id: '/two-factor/setup',
+  path: '/two-factor/setup',
   getParentRoute: () => AuthRouteRoute,
 } as any)
 const ApiAdsIndexRoute = ApiAdsIndexRouteImport.update({
@@ -558,6 +564,7 @@ export interface FileRoutesByFullPath {
   '/{-$locale}/models': typeof Char123LocaleChar125ModelsRoute
   '/{-$locale}/use-cases': typeof Char123LocaleChar125UseCasesRoute
   '/{-$locale}/': typeof Char123LocaleChar125IndexRoute
+  '/account/$path': typeof AppAccountPathRoute
   '/chat/$id': typeof AppChatIdRoute
   '/compare/$id': typeof AppCompareIdRoute
   '/flixa/authorize': typeof AppFlixaAuthorizeRoute
@@ -570,8 +577,8 @@ export interface FileRoutesByFullPath {
   '/settings/import': typeof AppSettingsImportRoute
   '/settings/memory': typeof AppSettingsMemoryRoute
   '/settings/projects': typeof AppSettingsProjectsRoute
-  '/account/$path': typeof AuthAccountPathRoute
   '/auth/$path': typeof AuthAuthPathRoute
+  '/two-factor/setup': typeof AuthTwoFactorSetupRoute
   '/api/ads/click': typeof ApiAdsClickRoute
   '/api/ads/view': typeof ApiAdsViewRoute
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
@@ -639,6 +646,7 @@ export interface FileRoutesByTo {
   '/{-$locale}/models': typeof Char123LocaleChar125ModelsRoute
   '/{-$locale}/use-cases': typeof Char123LocaleChar125UseCasesRoute
   '/{-$locale}': typeof Char123LocaleChar125IndexRoute
+  '/account/$path': typeof AppAccountPathRoute
   '/chat/$id': typeof AppChatIdRoute
   '/compare/$id': typeof AppCompareIdRoute
   '/flixa/authorize': typeof AppFlixaAuthorizeRoute
@@ -651,8 +659,8 @@ export interface FileRoutesByTo {
   '/settings/import': typeof AppSettingsImportRoute
   '/settings/memory': typeof AppSettingsMemoryRoute
   '/settings/projects': typeof AppSettingsProjectsRoute
-  '/account/$path': typeof AuthAccountPathRoute
   '/auth/$path': typeof AuthAuthPathRoute
+  '/two-factor/setup': typeof AuthTwoFactorSetupRoute
   '/api/ads/click': typeof ApiAdsClickRoute
   '/api/ads/view': typeof ApiAdsViewRoute
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
@@ -723,6 +731,7 @@ export interface FileRoutesById {
   '/{-$locale}/models': typeof Char123LocaleChar125ModelsRoute
   '/{-$locale}/use-cases': typeof Char123LocaleChar125UseCasesRoute
   '/{-$locale}/': typeof Char123LocaleChar125IndexRoute
+  '/_app/account/$path': typeof AppAccountPathRoute
   '/_app/chat/$id': typeof AppChatIdRoute
   '/_app/compare/$id': typeof AppCompareIdRoute
   '/_app/flixa/authorize': typeof AppFlixaAuthorizeRoute
@@ -735,8 +744,8 @@ export interface FileRoutesById {
   '/_app/settings/import': typeof AppSettingsImportRoute
   '/_app/settings/memory': typeof AppSettingsMemoryRoute
   '/_app/settings/projects': typeof AppSettingsProjectsRoute
-  '/_auth/account/$path': typeof AuthAccountPathRoute
   '/_auth/auth/$path': typeof AuthAuthPathRoute
+  '/_auth/two-factor/setup': typeof AuthTwoFactorSetupRoute
   '/api/ads/click': typeof ApiAdsClickRoute
   '/api/ads/view': typeof ApiAdsViewRoute
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
@@ -808,6 +817,7 @@ export interface FileRouteTypes {
     | '/{-$locale}/models'
     | '/{-$locale}/use-cases'
     | '/{-$locale}/'
+    | '/account/$path'
     | '/chat/$id'
     | '/compare/$id'
     | '/flixa/authorize'
@@ -820,8 +830,8 @@ export interface FileRouteTypes {
     | '/settings/import'
     | '/settings/memory'
     | '/settings/projects'
-    | '/account/$path'
     | '/auth/$path'
+    | '/two-factor/setup'
     | '/api/ads/click'
     | '/api/ads/view'
     | '/api/attachments/$id'
@@ -889,6 +899,7 @@ export interface FileRouteTypes {
     | '/{-$locale}/models'
     | '/{-$locale}/use-cases'
     | '/{-$locale}'
+    | '/account/$path'
     | '/chat/$id'
     | '/compare/$id'
     | '/flixa/authorize'
@@ -901,8 +912,8 @@ export interface FileRouteTypes {
     | '/settings/import'
     | '/settings/memory'
     | '/settings/projects'
-    | '/account/$path'
     | '/auth/$path'
+    | '/two-factor/setup'
     | '/api/ads/click'
     | '/api/ads/view'
     | '/api/attachments/$id'
@@ -972,6 +983,7 @@ export interface FileRouteTypes {
     | '/{-$locale}/models'
     | '/{-$locale}/use-cases'
     | '/{-$locale}/'
+    | '/_app/account/$path'
     | '/_app/chat/$id'
     | '/_app/compare/$id'
     | '/_app/flixa/authorize'
@@ -984,8 +996,8 @@ export interface FileRouteTypes {
     | '/_app/settings/import'
     | '/_app/settings/memory'
     | '/_app/settings/projects'
-    | '/_auth/account/$path'
     | '/_auth/auth/$path'
+    | '/_auth/two-factor/setup'
     | '/api/ads/click'
     | '/api/ads/view'
     | '/api/attachments/$id'
@@ -1236,6 +1248,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char123LocaleChar125UseCasesRouteImport
       parentRoute: typeof Char123LocaleChar125RouteRoute
     }
+    '/_app/account/$path': {
+      id: '/_app/account/$path'
+      path: '/account/$path'
+      fullPath: '/account/$path'
+      preLoaderRoute: typeof AppAccountPathRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/_app/chat/': {
       id: '/_app/chat/'
       path: '/chat'
@@ -1348,18 +1367,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsProjectsRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
-    '/_auth/account/$path': {
-      id: '/_auth/account/$path'
-      path: '/account/$path'
-      fullPath: '/account/$path'
-      preLoaderRoute: typeof AuthAccountPathRouteImport
-      parentRoute: typeof AuthRouteRoute
-    }
     '/_auth/auth/$path': {
       id: '/_auth/auth/$path'
       path: '/auth/$path'
       fullPath: '/auth/$path'
       preLoaderRoute: typeof AuthAuthPathRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/_auth/two-factor/setup': {
+      id: '/_auth/two-factor/setup'
+      path: '/two-factor/setup'
+      fullPath: '/two-factor/setup'
+      preLoaderRoute: typeof AuthTwoFactorSetupRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/api/ads/': {
@@ -1707,6 +1726,7 @@ const AppSettingsRouteRouteWithChildren =
 
 interface AppRouteRouteChildren {
   AppSettingsRouteRoute: typeof AppSettingsRouteRouteWithChildren
+  AppAccountPathRoute: typeof AppAccountPathRoute
   AppChatIdRoute: typeof AppChatIdRoute
   AppCompareIdRoute: typeof AppCompareIdRoute
   AppFlixaAuthorizeRoute: typeof AppFlixaAuthorizeRoute
@@ -1720,6 +1740,7 @@ interface AppRouteRouteChildren {
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppSettingsRouteRoute: AppSettingsRouteRouteWithChildren,
+  AppAccountPathRoute: AppAccountPathRoute,
   AppChatIdRoute: AppChatIdRoute,
   AppCompareIdRoute: AppCompareIdRoute,
   AppFlixaAuthorizeRoute: AppFlixaAuthorizeRoute,
@@ -1736,13 +1757,13 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 )
 
 interface AuthRouteRouteChildren {
-  AuthAccountPathRoute: typeof AuthAccountPathRoute
   AuthAuthPathRoute: typeof AuthAuthPathRoute
+  AuthTwoFactorSetupRoute: typeof AuthTwoFactorSetupRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
-  AuthAccountPathRoute: AuthAccountPathRoute,
   AuthAuthPathRoute: AuthAuthPathRoute,
+  AuthTwoFactorSetupRoute: AuthTwoFactorSetupRoute,
 }
 
 const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(

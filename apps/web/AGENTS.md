@@ -33,6 +33,13 @@ Read these when relevant rather than loading the whole project:
   `src/db/type-registry.ts` types its app-owned JSON columns. The `db:*` scripts
   here forward to `@deniai/db` and still read this app's `.env*` files. Runtime
   uses a pooled Postgres URL (`src/db/drizzle.ts`).
+- Chat transcripts: `chats.messages` (jsonb) is still written first, and every
+  write also syncs `chat_messages` (one row per message) in the same
+  transaction through `src/lib/chat-message-rows.ts`. Add new transcript writes
+  there too; reads go through `readStoredMessages()` (rows, or jsonb for chats
+  with `message_count` NULL). Backfill: `scripts/backfill-chat-messages.ts`.
+- Two-factor rule for password accounts: `src/lib/two-factor-policy.ts`
+  (`PASSWORD_2FA_REQUIRED_FROM`), enforced in the `/_app` route guard.
 - Auth: the Better Auth configuration is `createAuth()` in the `@deniai/auth`
   package (`packages/auth/src/server.ts`); `src/lib/auth.ts` calls it with this
   app's env, database, email sender and callbacks (sign-up policy, security
@@ -85,6 +92,29 @@ Read these when relevant rather than loading the whole project:
 - Update related documentation when changing user-facing behavior, environment
   configuration, deployment, or architecture.
 - Respond in the user's language; write code and identifiers in English.
+
+## Design system and the UI switch
+
+- The signed-in app uses the "Aizome" design system described in the root
+  `docs/design-system.md` (colour roles, type scale, radii, layout, screen
+  inventory). Read it before restyling a screen.
+- Tokens live in `src/styles/globals.css`: the next UI on `:root` / `.dark`,
+  the previous UI under `:root[data-ui="legacy"]`; theme presets
+  (`src/styles/themes.css`) apply only under legacy. Use semantic classes
+  (`bg-background`, `text-muted-foreground`, `bg-highlight`, `rounded-card`,
+  `rounded-field`…) instead of palette colours; for a difference between the
+  two UIs use the `next:` / `legacy:` variants. Token changes must keep
+  `src/styles/design-tokens.test.ts` (WCAG contrast) green.
+- The sidebar is an inverted token island (`[data-slot="sidebar"]`): semantic
+  classes inside it already resolve to on-indigo values.
+- Page structure comes from `@deniai/ui` primitives: `PageHeader`,
+  `PageSection` (settings rows), `SettingsLayout` (`src/components/settings-wrapper.tsx`
+  wires the nav) and `AppHeader`. Settings pages render through
+  `SettingsPageShell`; `/account/*` renders inside the app shell too.
+- `ui` preference: the `deni-ui` cookie (`next` | `legacy`, default `next`) read
+  by `src/lib/ui-preference.ts` in the root route, rendered as `<html data-ui>`
+  and switched in Appearance settings. Layout changes exist only in their new
+  form; legacy restores colours, type and radii.
 
 ## Verification
 

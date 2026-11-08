@@ -7,6 +7,7 @@ import { omitUnownedAttachmentParts } from "@/lib/attachments";
 import { MigrationPayloadTooLargeError, normalizeMigrationPayload } from "@/lib/migration";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { protectedProcedure, router } from "../trpc";
+import { syncChatMessageRows } from "@/lib/chat-message-rows";
 
 /** Five bound parameters per chat row. */
 export const IMPORT_BATCH_SIZE = 1000;
@@ -98,6 +99,11 @@ export const migrationRouter = router({
             .insert(chats)
             .values(values.slice(index, index + IMPORT_BATCH_SIZE))
             .returning({ id: chats.id });
+          // Same transaction: the imported transcripts also get their rows.
+          await syncChatMessageRows(
+            tx,
+            inserted.map((chat) => chat.id),
+          );
           count += inserted.length;
         }
         return count;

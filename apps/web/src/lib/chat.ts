@@ -4,6 +4,11 @@ import { db } from "@/db/drizzle";
 import { chats } from "@/db/schema";
 import { env } from "@/env";
 import { stringifyForJsonb } from "@/lib/jsonb";
+import {
+  readStoredMessages,
+  syncChatMessageRows,
+  syncLastChatMessageRow,
+} from "@/lib/chat-message-rows";
 import { createDeniOpenRouter } from "@deniai/ai/openrouter";
 
 type ChatUpdateFields = Partial<typeof chats.$inferInsert>;
@@ -39,12 +44,30 @@ export async function generateTitle(messages: UIMessage[]): Promise<string> {
   return text.trim().slice(0, 50) || "New Chat";
 }
 
+/**
+ * The chat row with its full transcript, read from `chat_messages` when the
+ * chat has complete rows and from the jsonb array otherwise.
+ */
 export async function getChatById(id: string, userId: string) {
   const [chat] = await db
-    .select()
+    .select({
+      id: chats.id,
+      uid: chats.uid,
+      projectId: chats.projectId,
+      activeGenerationId: chats.activeGenerationId,
+      stopRequestedAt: chats.stopRequestedAt,
+      title: chats.title,
+      pinned: chats.pinned,
+      folder: chats.folder,
+      tags: chats.tags,
+      created_at: chats.created_at,
+      updated_at: chats.updated_at,
+    })
     .from(chats)
     .where(and(eq(chats.id, id), eq(chats.uid, userId)));
-  return chat;
+  if (!chat) return undefined;
+  const stored = await readStoredMessages(db, id, userId, (total) => ({ start: 0, end: total }));
+  return { ...chat, messages: stored?.messages ?? [] };
 }
 
 /**
@@ -112,11 +135,15 @@ export async function updateChat(
     updates.activeGenerationId = options.nextGenerationId;
   }
 
-  const [updatedChat] = await db
-    .update(chats)
-    .set(updates)
-    .where(chatRowWhere(id, userId, options?.expectedGenerationId))
-    .returning({ id: chats.id, stopRequestedAt: chats.stopRequestedAt });
+  const updatedChat = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(chats)
+      .set(updates)
+      .where(chatRowWhere(id, userId, options?.expectedGenerationId))
+      .returning({ id: chats.id, stopRequestedAt: chats.stopRequestedAt });
+    if (row) await syncChatMessageRows(tx, [row.id]);
+    return row;
+  });
 
   if (!updatedChat) {
     throw new Error("Chat not found");
@@ -132,14 +159,18 @@ export async function replaceLastChatMessage(
   message: UIMessage,
   options?: { expectedGenerationId?: string | null },
 ) {
-  const [updatedChat] = await db
-    .update(chats)
-    .set({
-      messages: jsonbSetLastMessage(message),
-      updated_at: new Date(),
-    })
-    .where(chatRowWhere(id, userId, options?.expectedGenerationId))
-    .returning({ id: chats.id });
+  const updatedChat = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(chats)
+      .set({
+        messages: jsonbSetLastMessage(message),
+        updated_at: new Date(),
+      })
+      .where(chatRowWhere(id, userId, options?.expectedGenerationId))
+      .returning({ id: chats.id });
+    if (row) await syncLastChatMessageRow(tx, row.id);
+    return row;
+  });
 
   if (!updatedChat) {
     throw new Error("Chat not found");
@@ -193,26 +224,30 @@ export async function stopActiveChatGeneration(id: string, userId: string) {
     AND ${chats.messages}->-1->>'role' = 'assistant'
     AND ${chats.messages}->-1->'metadata'->'pending' = 'true'::jsonb
   )`;
-  const [stopped] = await db
-    .update(chats)
-    .set({
-      activeGenerationId: null,
-      updated_at: new Date(),
-      messages: sql`CASE WHEN ${lastIsPendingAssistant}
+  const stopped = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(chats)
+      .set({
+        activeGenerationId: null,
+        updated_at: new Date(),
+        messages: sql`CASE WHEN ${lastIsPendingAssistant}
         THEN ${chats.messages} #- ARRAY[${lastIndex}, 'metadata', 'pending']
         ELSE ${chats.messages}
       END`,
-    })
-    .where(
-      and(
-        eq(chats.id, id),
-        eq(chats.uid, userId),
-        generationId === null
-          ? isNull(chats.activeGenerationId)
-          : eq(chats.activeGenerationId, generationId),
-      ),
-    )
-    .returning({ id: chats.id });
+      })
+      .where(
+        and(
+          eq(chats.id, id),
+          eq(chats.uid, userId),
+          generationId === null
+            ? isNull(chats.activeGenerationId)
+            : eq(chats.activeGenerationId, generationId),
+        ),
+      )
+      .returning({ id: chats.id });
+    if (row) await syncLastChatMessageRow(tx, row.id);
+    return row;
+  });
 
   return stopped ? generationId : undefined;
 }
@@ -229,27 +264,31 @@ export async function restoreStoppedRegeneration(
   responseMessageId: string,
   messages: UIMessage[],
 ) {
-  const [restored] = await db
-    .update(chats)
-    .set({
-      messages: JSON.parse(stringifyForJsonb(messages)) as UIMessage[],
-      updated_at: new Date(),
-    })
-    .where(
-      and(
-        eq(chats.id, id),
-        eq(chats.uid, userId),
-        isNull(chats.activeGenerationId),
-        sql`jsonb_typeof(${chats.messages}) = 'array'
+  const restored = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(chats)
+      .set({
+        messages: JSON.parse(stringifyForJsonb(messages)) as UIMessage[],
+        updated_at: new Date(),
+      })
+      .where(
+        and(
+          eq(chats.id, id),
+          eq(chats.uid, userId),
+          isNull(chats.activeGenerationId),
+          sql`jsonb_typeof(${chats.messages}) = 'array'
           AND ${chats.messages}->-1->>'id' = ${responseMessageId}
           AND NOT EXISTS (
             SELECT 1
             FROM jsonb_array_elements(COALESCE(${chats.messages}->-1->'parts', '[]'::jsonb)) AS part
             WHERE part->>'type' <> 'step-start'
           )`,
-      ),
-    )
-    .returning({ id: chats.id });
+        ),
+      )
+      .returning({ id: chats.id });
+    if (row) await syncChatMessageRows(tx, [row.id]);
+    return row;
+  });
 
   return Boolean(restored);
 }
@@ -279,11 +318,17 @@ export async function clearChatGenerationState(
     updates.title = title;
   }
 
-  const [updatedChat] = await db
-    .update(chats)
-    .set(updates)
-    .where(and(eq(chats.id, id), eq(chats.uid, userId), eq(chats.activeGenerationId, generationId)))
-    .returning({ id: chats.id });
+  const updatedChat = await db.transaction(async (tx) => {
+    const [row] = await tx
+      .update(chats)
+      .set(updates)
+      .where(
+        and(eq(chats.id, id), eq(chats.uid, userId), eq(chats.activeGenerationId, generationId)),
+      )
+      .returning({ id: chats.id });
+    if (row && lastMessage) await syncLastChatMessageRow(tx, row.id);
+    return row;
+  });
 
   return updatedChat?.id ?? null;
 }

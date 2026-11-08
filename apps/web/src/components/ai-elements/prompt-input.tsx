@@ -826,7 +826,10 @@ export const PromptInput = ({
         type="file"
       />
       <form className={cn("w-full", className)} onSubmit={handleSubmit} ref={formRef} {...props}>
-        <InputGroup className="overflow-hidden">{children}</InputGroup>
+        {/* The composer floats on the sheet: card surface, softer border, larger radius. */}
+        <InputGroup className="overflow-hidden next:rounded-[20px] next:border-border next:bg-card next:shadow-md next:has-[[data-slot=input-group-control]:focus-visible]:border-ring">
+          {children}
+        </InputGroup>
       </form>
     </>
   );

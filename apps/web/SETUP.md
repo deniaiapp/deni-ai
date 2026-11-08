@@ -184,6 +184,7 @@ Notes:
 - Optional Deni AI API: set **`DENI_API_KEY`** (and optionally **`DENI_API_BASE_URL`**, default `https://api.deniai.app/v1`, an OpenAI-compatible Chat Completions endpoint) to expose OpenAI models, including GPT-6 Luna. OpenAI models on this route are sent as `openai/<id>` (e.g. `openai/gpt-6-sol`) and do not offer Pro or Fast mode. A missing key hides those models.
 - Operator administration: set `ADMIN_EMAILS` to a comma-separated list of account emails that can grant usage reset credits from **Settings → Billing** and receive dispute alerts. The address is read only on the server.
 - Operator email domains: set `ADMIN_EMAIL_DOMAINS` to a comma-separated list of domains (for example `deniai.app`). Addresses on these domains may sign up even though the domain is not on the sign-up allowlist, and accounts with a verified email there can grant reset credits, in addition to `ADMIN_EMAILS`. Dispute alerts still go only to the listed emails.
+- Two-factor requirement: set `PASSWORD_2FA_REQUIRED_FROM` to an ISO date (for example `2027-01-15`, midnight UTC) to require two-factor authentication for accounts that sign in with email and password and have neither Google nor GitHub linked. Until then the app header shows a reminder with the date; from then signed-in app pages redirect to `/two-factor/setup` (sign-out and **Settings → Security** stay reachable). Guests, accounts with Google or GitHub linked and accounts without a password are not affected. Unset, the reminder shows without a deadline and nothing is enforced.
 - **Email (Cloudflare Email Sending):** requires a Workers Paid plan and the sending domain (e.g. `deniai.app`) onboarded under **Email Service → Email Sending** in the Cloudflare dashboard (DNS/SPF/DKIM managed there). Create an API token with **Email Sending: Edit**, then set `CLOUDFLARE_ACCOUNT_ID` + `CLOUDFLARE_API_TOKEN`. From address defaults to `Deni AI <noreply@deniai.app>` (`EMAIL_FROM` in `src/lib/constants.ts`). When either env var is missing, magic link / verification / invite emails are disabled, and so is changing an account's email address. With email configured, a verified account changes its email in two steps: the current address approves the request, then the new address receives a verification link, and the email updates only after that link is opened.
 
 #### Generate `BETTER_AUTH_SECRET`
@@ -422,20 +423,20 @@ accounts are refused). To connect a Deni Run deployment:
 
 Schemas live in the `@deniai/db` package under `packages/db/src/schema/` (imported here as `@/db/schema`). Main domains:
 
-| Area                  | Purpose                                       |
-| --------------------- | --------------------------------------------- |
-| **auth-schema**       | Users, sessions, accounts, orgs (better-auth) |
-| **chat**              | Conversations and messages                    |
-| **api-keys**          | User API key records                          |
-| **memory**            | Personalization memories                      |
-| **project**           | Project context; legacy file records retained |
-| **billing**           | Stripe subscriptions / payment data           |
-| **usage**             | Platform usage and limits                     |
-| **product-usage**     | Monthly usage per product (Chat, Flixa, Run)  |
-| **oauth-provider**    | OAuth provider clients, tokens, consents      |
-| **reset-credit**      | Usage reset credit balances                   |
-| **team-usage-policy** | Team usage policies                           |
-| **device-auth**       | Device / desktop auth                         |
+| Area                  | Purpose                                                  |
+| --------------------- | -------------------------------------------------------- |
+| **auth-schema**       | Users, sessions, accounts, orgs (better-auth)            |
+| **chat**              | Conversations; `chat_messages` holds one row per message |
+| **api-keys**          | User API key records                                     |
+| **memory**            | Personalization memories                                 |
+| **project**           | Project context; legacy file records retained            |
+| **billing**           | Stripe subscriptions / payment data                      |
+| **usage**             | Platform usage and limits                                |
+| **product-usage**     | Monthly usage per product (Chat, Flixa, Run)             |
+| **oauth-provider**    | OAuth provider clients, tokens, consents                 |
+| **reset-credit**      | Usage reset credit balances                              |
+| **team-usage-policy** | Team usage policies                                      |
+| **device-auth**       | Device / desktop auth                                    |
 
 Schema change workflow:
 
@@ -449,6 +450,25 @@ migrations in `packages/db/migrations/`). The `flixa` schema in the same databas
 agent API (`services/agent-api`), which migrates it with
 `packages/db/drizzle.flixa.config.ts`. Its tables reference `public."user"` with `ON DELETE CASCADE`, so
 deleting an account removes its Flixa rows too.
+
+### Chat messages as rows
+
+`chat_messages` stores one row per message (`chat_id`, `seq`, `role`, `parts`,
+`metadata`). While it is introduced, `chats.messages` (jsonb) stays the write-side
+source: every write to it also rewrites the affected rows in the same transaction
+(`src/lib/chat-message-rows.ts`), and `chats.message_count` marks chats whose rows
+are complete. Reads use the rows and load older messages page by page; chats with
+`message_count` NULL (written before the migration and not touched since) fall
+back to the jsonb array. Backfill them after deploying the migration:
+
+```bash
+node --env-file=.env scripts/backfill-chat-messages.ts --dry-run   # count only
+node --env-file=.env scripts/backfill-chat-messages.ts             # batched, idempotent
+node --env-file=.env scripts/backfill-chat-messages.ts --verify    # compare rows with jsonb
+```
+
+`--all` resyncs chats that already have rows; `--batch-size=N` sets chats per
+transaction (default 200). Rerunning is safe.
 
 ## Deployment
 

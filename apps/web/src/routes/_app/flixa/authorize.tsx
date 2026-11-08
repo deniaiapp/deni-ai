@@ -166,8 +166,8 @@ function FlixaAuthorizeContent() {
       <div className="flex flex-1 items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-green-500/10">
-              <CheckCircle2 className="size-6 text-green-500" />
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-green-500/10 next:bg-success/10">
+              <CheckCircle2 className="size-6 text-green-500 next:text-success" />
             </div>
             <CardTitle>{t("Device Authorized")}</CardTitle>
             <CardDescription>
@@ -207,8 +207,8 @@ function FlixaAuthorizeContent() {
       <div className="flex flex-1 items-center justify-center">
         <Card className="w-full max-w-lg">
           <CardHeader className="text-center">
-            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-amber-500/10">
-              <KeyRound className="size-6 text-amber-600" />
+            <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full bg-amber-500/10 next:bg-highlight/25">
+              <KeyRound className="size-6 text-amber-600 next:text-foreground" />
             </div>
             <CardTitle>{t("API key limit reached")}</CardTitle>
             <CardDescription>
@@ -219,7 +219,7 @@ function FlixaAuthorizeContent() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+              <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase next:text-sm next:tracking-normal next:normal-case">
                 {t("Select an API key to revoke.")}
               </p>
               <RadioGroup
@@ -231,7 +231,7 @@ function FlixaAuthorizeContent() {
                   <label
                     key={apiKey.id}
                     htmlFor={`api-key-${apiKey.id}`}
-                    className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3 transition-colors hover:bg-muted/40"
+                    className="flex cursor-pointer items-start gap-3 rounded-xl border border-border p-3 transition-colors hover:bg-muted/40 next:rounded-card has-data-checked:next:border-primary has-data-checked:next:bg-secondary/50"
                   >
                     <RadioGroupItem
                       value={apiKey.id}
@@ -301,13 +301,16 @@ function FlixaAuthorizeContent() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
+          {/* The code is the thing to compare with the editor: set it like a ticket. */}
+          <div className="flex flex-col items-center gap-2 rounded-card border-2 border-dashed border-primary/40 bg-secondary/50 px-6 py-5 legacy:border-0 legacy:bg-transparent legacy:p-0">
+            <p className="text-xs font-medium tracking-wider text-muted-foreground uppercase next:text-sm next:tracking-normal next:normal-case">
               {t("Confirmation Code")}
             </p>
             <div className="flex items-center gap-1.5">
-              <Code2 className="size-5 text-muted-foreground" />
-              <span className="text-3xl font-mono font-bold tracking-[0.2em]">{code}</span>
+              <Code2 aria-hidden="true" className="size-5 text-muted-foreground" />
+              <span className="font-mono text-3xl font-bold tracking-[0.2em] text-secondary-foreground legacy:text-foreground">
+                {code}
+              </span>
             </div>
           </div>
           <div className="flex flex-col gap-2">
