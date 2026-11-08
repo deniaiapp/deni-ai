@@ -35,7 +35,7 @@ export function GuestSignInButton({
     platformCapabilities.auth.captcha && Boolean(clientEnv.NEXT_PUBLIC_TURNSTILE_SITE_KEY);
 
   // Keep the challenge dialog mounted while the new guest session navigates to /chat.
-  if (session && !isChallengeOpen) {
+  if (!platformCapabilities.auth.guests || (session && !isChallengeOpen)) {
     return null;
   }
 

@@ -9,13 +9,15 @@ import { Spinner } from "@deniai/ui/components/spinner";
 const getAccessibleProjectNameFn = createServerFn({ method: "GET" })
   .validator(z.object({ id: z.string() }))
   .handler(async ({ data }) => {
-    const [{ auth }, { db }, { getAccessibleProject }] = await Promise.all([
+    const [{ auth }, { db }, { getAccessibleProject }, { hasBetaAccess }] = await Promise.all([
       import("@/lib/auth"),
       import("@/db/drizzle"),
       import("@/lib/project-access"),
+      import("@/lib/beta-access.server"),
     ]);
     const session = await auth.api.getSession({ headers: getRequestHeaders() });
-    if (!session?.user) {
+    // Server functions are not behind the API gate in src/start.ts; check here too.
+    if (!session?.user || !(await hasBetaAccess(session.user))) {
       throw notFound();
     }
 

@@ -20,6 +20,7 @@ import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as Char123LocaleChar125RouteRouteImport } from './routes/{-$locale}/route'
 import { Route as DotwellKnownChangePasswordRouteImport } from './routes/[.]well-known/change-password'
 import { Route as AppSettingsRouteRouteImport } from './routes/_app/settings/route'
+import { Route as AuthPrivateBetaRouteImport } from './routes/_auth/private-beta'
 import { Route as ApiDeviceAuthRouteImport } from './routes/api/device-auth'
 import { Route as ApiUploadAttachmentRouteImport } from './routes/api/upload-attachment'
 import { Route as NewMessageRouteImport } from './routes/new/$message'
@@ -48,6 +49,7 @@ import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/ind
 import { Route as AppSettingsAdsRouteImport } from './routes/_app/settings/ads'
 import { Route as AppSettingsApiKeysRouteImport } from './routes/_app/settings/api-keys'
 import { Route as AppSettingsAppearanceRouteImport } from './routes/_app/settings/appearance'
+import { Route as AppSettingsBetaTestersRouteImport } from './routes/_app/settings/beta-testers'
 import { Route as AppSettingsImportRouteImport } from './routes/_app/settings/import'
 import { Route as AppSettingsMemoryRouteImport } from './routes/_app/settings/memory'
 import { Route as AppSettingsProjectsRouteImport } from './routes/_app/settings/projects'
@@ -145,6 +147,11 @@ const AppSettingsRouteRoute = AppSettingsRouteRouteImport.update({
   id: '/settings',
   path: '/settings',
   getParentRoute: () => AppRouteRoute,
+} as any)
+const AuthPrivateBetaRoute = AuthPrivateBetaRouteImport.update({
+  id: '/private-beta',
+  path: '/private-beta',
+  getParentRoute: () => AuthRouteRoute,
 } as any)
 const ApiDeviceAuthRoute = ApiDeviceAuthRouteImport.update({
   id: '/api/device-auth',
@@ -290,6 +297,11 @@ const AppSettingsApiKeysRoute = AppSettingsApiKeysRouteImport.update({
 const AppSettingsAppearanceRoute = AppSettingsAppearanceRouteImport.update({
   id: '/appearance',
   path: '/appearance',
+  getParentRoute: () => AppSettingsRouteRoute,
+} as any)
+const AppSettingsBetaTestersRoute = AppSettingsBetaTestersRouteImport.update({
+  id: '/beta-testers',
+  path: '/beta-testers',
   getParentRoute: () => AppSettingsRouteRoute,
 } as any)
 const AppSettingsImportRoute = AppSettingsImportRouteImport.update({
@@ -528,6 +540,7 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/settings': typeof AppSettingsRouteRouteWithChildren
   '/.well-known/change-password': typeof DotwellKnownChangePasswordRoute
+  '/private-beta': typeof AuthPrivateBetaRoute
   '/api/device-auth': typeof ApiDeviceAuthRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/new/$message': typeof NewMessageRoute
@@ -552,6 +565,7 @@ export interface FileRoutesByFullPath {
   '/settings/ads': typeof AppSettingsAdsRoute
   '/settings/api-keys': typeof AppSettingsApiKeysRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/settings/beta-testers': typeof AppSettingsBetaTestersRoute
   '/settings/import': typeof AppSettingsImportRoute
   '/settings/memory': typeof AppSettingsMemoryRoute
   '/settings/projects': typeof AppSettingsProjectsRoute
@@ -608,6 +622,7 @@ export interface FileRoutesByTo {
   '/robots.txt': typeof RobotsDottxtRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.well-known/change-password': typeof DotwellKnownChangePasswordRoute
+  '/private-beta': typeof AuthPrivateBetaRoute
   '/api/device-auth': typeof ApiDeviceAuthRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/new/$message': typeof NewMessageRoute
@@ -632,6 +647,7 @@ export interface FileRoutesByTo {
   '/settings/ads': typeof AppSettingsAdsRoute
   '/settings/api-keys': typeof AppSettingsApiKeysRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/settings/beta-testers': typeof AppSettingsBetaTestersRoute
   '/settings/import': typeof AppSettingsImportRoute
   '/settings/memory': typeof AppSettingsMemoryRoute
   '/settings/projects': typeof AppSettingsProjectsRoute
@@ -691,6 +707,7 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/_app/settings': typeof AppSettingsRouteRouteWithChildren
   '/.well-known/change-password': typeof DotwellKnownChangePasswordRoute
+  '/_auth/private-beta': typeof AuthPrivateBetaRoute
   '/api/device-auth': typeof ApiDeviceAuthRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/new/$message': typeof NewMessageRoute
@@ -715,6 +732,7 @@ export interface FileRoutesById {
   '/_app/settings/ads': typeof AppSettingsAdsRoute
   '/_app/settings/api-keys': typeof AppSettingsApiKeysRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
+  '/_app/settings/beta-testers': typeof AppSettingsBetaTestersRoute
   '/_app/settings/import': typeof AppSettingsImportRoute
   '/_app/settings/memory': typeof AppSettingsMemoryRoute
   '/_app/settings/projects': typeof AppSettingsProjectsRoute
@@ -775,6 +793,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/settings'
     | '/.well-known/change-password'
+    | '/private-beta'
     | '/api/device-auth'
     | '/api/upload-attachment'
     | '/new/$message'
@@ -799,6 +818,7 @@ export interface FileRouteTypes {
     | '/settings/ads'
     | '/settings/api-keys'
     | '/settings/appearance'
+    | '/settings/beta-testers'
     | '/settings/import'
     | '/settings/memory'
     | '/settings/projects'
@@ -855,6 +875,7 @@ export interface FileRouteTypes {
     | '/robots.txt'
     | '/sitemap.xml'
     | '/.well-known/change-password'
+    | '/private-beta'
     | '/api/device-auth'
     | '/api/upload-attachment'
     | '/new/$message'
@@ -879,6 +900,7 @@ export interface FileRouteTypes {
     | '/settings/ads'
     | '/settings/api-keys'
     | '/settings/appearance'
+    | '/settings/beta-testers'
     | '/settings/import'
     | '/settings/memory'
     | '/settings/projects'
@@ -937,6 +959,7 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/_app/settings'
     | '/.well-known/change-password'
+    | '/_auth/private-beta'
     | '/api/device-auth'
     | '/api/upload-attachment'
     | '/new/$message'
@@ -961,6 +984,7 @@ export interface FileRouteTypes {
     | '/_app/settings/ads'
     | '/_app/settings/api-keys'
     | '/_app/settings/appearance'
+    | '/_app/settings/beta-testers'
     | '/_app/settings/import'
     | '/_app/settings/memory'
     | '/_app/settings/projects'
@@ -1122,6 +1146,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteRouteImport
       parentRoute: typeof AppRouteRoute
+    }
+    '/_auth/private-beta': {
+      id: '/_auth/private-beta'
+      path: '/private-beta'
+      fullPath: '/private-beta'
+      preLoaderRoute: typeof AuthPrivateBetaRouteImport
+      parentRoute: typeof AuthRouteRoute
     }
     '/api/device-auth': {
       id: '/api/device-auth'
@@ -1317,6 +1348,13 @@ declare module '@tanstack/react-router' {
       path: '/appearance'
       fullPath: '/settings/appearance'
       preLoaderRoute: typeof AppSettingsAppearanceRouteImport
+      parentRoute: typeof AppSettingsRouteRoute
+    }
+    '/_app/settings/beta-testers': {
+      id: '/_app/settings/beta-testers'
+      path: '/beta-testers'
+      fullPath: '/settings/beta-testers'
+      preLoaderRoute: typeof AppSettingsBetaTestersRouteImport
       parentRoute: typeof AppSettingsRouteRoute
     }
     '/_app/settings/import': {
@@ -1643,6 +1681,7 @@ interface AppSettingsRouteRouteChildren {
   AppSettingsAdsRoute: typeof AppSettingsAdsRoute
   AppSettingsApiKeysRoute: typeof AppSettingsApiKeysRoute
   AppSettingsAppearanceRoute: typeof AppSettingsAppearanceRoute
+  AppSettingsBetaTestersRoute: typeof AppSettingsBetaTestersRoute
   AppSettingsImportRoute: typeof AppSettingsImportRoute
   AppSettingsMemoryRoute: typeof AppSettingsMemoryRoute
   AppSettingsProjectsRoute: typeof AppSettingsProjectsRoute
@@ -1659,6 +1698,7 @@ const AppSettingsRouteRouteChildren: AppSettingsRouteRouteChildren = {
   AppSettingsAdsRoute: AppSettingsAdsRoute,
   AppSettingsApiKeysRoute: AppSettingsApiKeysRoute,
   AppSettingsAppearanceRoute: AppSettingsAppearanceRoute,
+  AppSettingsBetaTestersRoute: AppSettingsBetaTestersRoute,
   AppSettingsImportRoute: AppSettingsImportRoute,
   AppSettingsMemoryRoute: AppSettingsMemoryRoute,
   AppSettingsProjectsRoute: AppSettingsProjectsRoute,
@@ -1725,11 +1765,13 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 )
 
 interface AuthRouteRouteChildren {
+  AuthPrivateBetaRoute: typeof AuthPrivateBetaRoute
   AuthAuthPathRoute: typeof AuthAuthPathRoute
   AuthTwoFactorSetupRoute: typeof AuthTwoFactorSetupRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
+  AuthPrivateBetaRoute: AuthPrivateBetaRoute,
   AuthAuthPathRoute: AuthAuthPathRoute,
   AuthTwoFactorSetupRoute: AuthTwoFactorSetupRoute,
 }

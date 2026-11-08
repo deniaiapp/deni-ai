@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly NEXT_PUBLIC_SENTRY_DSN?: string;
   readonly NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?: string;
   readonly NEXT_PUBLIC_TURNSTILE_SITE_KEY?: string;
+  readonly NEXT_PUBLIC_V7_URL?: string;
 }
 
 interface ImportMeta {

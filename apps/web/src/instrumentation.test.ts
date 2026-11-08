@@ -25,6 +25,7 @@ beforeEach(() => {
   vi.stubEnv("NODE_ENV", "production");
   vi.stubEnv("VERCEL", undefined);
   vi.stubEnv("DISABLE_BACKGROUND_JOBS", undefined);
+  vi.stubEnv("CRON_ENABLED", undefined);
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -59,3 +60,19 @@ test.each(["1", "true", "TRUE"])(
     expect(mocks.startBackgroundJobScheduler).not.toHaveBeenCalled();
   },
 );
+
+test.each(["false", "0", "off"])(
+  "CRON_ENABLED=%s keeps the shared-database jobs off but still checks model health",
+  async (value) => {
+    vi.stubEnv("CRON_ENABLED", value);
+    await register();
+    expect(mocks.startModelHealthScheduler).toHaveBeenCalledOnce();
+    expect(mocks.startBackgroundJobScheduler).not.toHaveBeenCalled();
+  },
+);
+
+test("CRON_ENABLED=true starts the background jobs as before", async () => {
+  vi.stubEnv("CRON_ENABLED", "true");
+  await register();
+  expect(mocks.startBackgroundJobScheduler).toHaveBeenCalledOnce();
+});

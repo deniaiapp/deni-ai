@@ -12,6 +12,26 @@ export function backgroundJobsDisabled() {
   return isFlagSet(process.env.DISABLE_BACKGROUND_JOBS);
 }
 
+/** zod's `stringbool()` false values, which `src/env.ts` validates `CRON_ENABLED` with. */
+const FALSE_VALUES = ["0", "false", "no", "off", "n", "disabled"];
+
+/**
+ * `CRON_ENABLED` (default true): `false` makes `/api/cron/*` no-ops and keeps
+ * the in-process jobs that write the shared database from starting, on a
+ * deployment that shares its database with one that runs them (the v8 beta).
+ */
+export function cronEnabled() {
+  return !FALSE_VALUES.includes(process.env.CRON_ENABLED?.trim().toLowerCase() ?? "");
+}
+
+/** The answer of every `/api/cron/*` route while `CRON_ENABLED=false`: success, nothing done. */
+export function cronDisabledResponse() {
+  return Response.json(
+    { skipped: true, reason: "cron_disabled" },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
 /** `NOINDEX`: ask search engines not to index or follow anything on this deployment. */
 export function indexingDisabled() {
   return isFlagSet(process.env.NOINDEX);

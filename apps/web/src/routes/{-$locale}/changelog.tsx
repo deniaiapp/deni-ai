@@ -1,7 +1,7 @@
 import { useExtracted, useLocale } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
 import { getExtracted } from "@deniai/i18n/extracted";
-import { changelogEntries } from "@/lib/changelog";
+import { changelogEntries, localizeChangelogEntry } from "@/lib/changelog";
 import { formatAppDate } from "@/lib/format-date";
 import { pageHead } from "@/lib/seo";
 
@@ -34,6 +34,7 @@ export const Route = createFileRoute("/{-$locale}/changelog")({
 function ChangelogPage() {
   const t = useExtracted();
   const locale = useLocale();
+  const entries = changelogEntries.map((entry) => localizeChangelogEntry(entry, locale));
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -59,7 +60,7 @@ function ChangelogPage() {
       </p>
 
       <ol className="mt-10 flex flex-col gap-10">
-        {changelogEntries.map((entry) => (
+        {entries.map((entry) => (
           <li key={entry.version}>
             <article>
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">

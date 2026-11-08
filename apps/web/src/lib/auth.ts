@@ -70,6 +70,7 @@ export const auth = createAuth({
   turnstileSecretKey: turnstileSecretKey && turnstileSiteKey ? turnstileSecretKey : undefined,
   trustedOAuthClientIds: deniRunOAuthClientId ? [deniRunOAuthClientId] : [],
   clientIpHeader: env.CLIENT_IP_HEADER,
+  passkeyRpID: env.PASSKEY_RP_ID,
   hooks: {
     resolveClientIp,
     toSafeRedirectPath,

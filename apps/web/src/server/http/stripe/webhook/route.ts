@@ -248,6 +248,14 @@ async function resolveBillingOwner(
 }
 
 export async function POST(req: Request) {
+  // STRIPE_WEBHOOK_ENABLED=false: another deployment on the same database (v7
+  // during the v8 beta) processes Stripe events; never handle them twice.
+  if (env.STRIPE_WEBHOOK_ENABLED === false) {
+    return Response.json(
+      { error: "Stripe webhook is disabled on this deployment", code: "stripe_webhook_disabled" },
+      { status: 503 },
+    );
+  }
   if (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET) {
     return Response.json({ error: "Stripe webhook is disabled" }, { status: 503 });
   }

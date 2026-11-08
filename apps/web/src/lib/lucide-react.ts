@@ -93,6 +93,7 @@ export { default as FileTextIcon } from "lucide-react/dist/esm/icons/file-text.m
 export { default as FileWarning } from "lucide-react/dist/esm/icons/file-exclamation-point.mjs";
 export { default as Film } from "lucide-react/dist/esm/icons/film.mjs";
 export { default as Fingerprint } from "lucide-react/dist/esm/icons/fingerprint-pattern.mjs";
+export { default as FlaskConical } from "lucide-react/dist/esm/icons/flask-conical.mjs";
 export { default as FolderClosed } from "lucide-react/dist/esm/icons/folder-closed.mjs";
 export { default as FolderKanban } from "lucide-react/dist/esm/icons/folder-kanban.mjs";
 export { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.mjs";

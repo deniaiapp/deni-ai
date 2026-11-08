@@ -2,6 +2,7 @@ import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { RuntimeAppProviders } from "@/components/runtime-app-providers";
 import { Spinner } from "@deniai/ui/components/spinner";
+import { BETA_ACCESS_PATH } from "@/lib/beta-access";
 import { getAuthState } from "@/lib/session-functions";
 import { signInPath } from "@/lib/sign-in-redirect";
 import { isAllowedWhileTwoFactorRequired, TWO_FACTOR_SETUP_PATH } from "@/lib/two-factor-policy";
@@ -26,6 +27,11 @@ export const Route = createFileRoute("/_app")({
     if (!authState.signedIn) {
       // Return to the requested page (e.g. a Flixa device code), not always /chat.
       throw redirect({ href: signInPath(location.href) });
+    }
+    // Private beta (BETA_ACCESS_REQUIRED): uninvited accounts and guests only
+    // see the private beta screen; their API calls are refused in src/start.ts.
+    if (!authState.betaAccess) {
+      throw redirect({ href: BETA_ACCESS_PATH });
     }
     // Password accounts past PASSWORD_2FA_REQUIRED_FROM without 2FA: only the
     // setup screen and security settings stay open (sign-out lives on both).

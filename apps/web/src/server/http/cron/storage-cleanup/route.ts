@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { env } from "@/env";
+import { cronDisabledResponse, cronEnabled } from "@/lib/deployment-flags";
 import { runStorageCleanupJob } from "@/lib/storage-cleanup-job";
 
 /**
@@ -8,6 +9,7 @@ import { runStorageCleanupJob } from "@/lib/storage-cleanup-job";
  * `runStorageCleanupJob`).
  */
 export async function GET(request: Request) {
+  if (!cronEnabled()) return cronDisabledResponse();
   if (!env.CRON_SECRET)
     return Response.json({ error: "Storage cleanup is disabled" }, { status: 503 });
   const expected = Buffer.from(`Bearer ${env.CRON_SECRET}`);

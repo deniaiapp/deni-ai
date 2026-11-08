@@ -3,6 +3,7 @@ import GettingStartedPage from "@/components/getting-started-page";
 import { RuntimeAppProviders } from "@/components/runtime-app-providers";
 import { Spinner } from "@deniai/ui/components/spinner";
 import { pageHead } from "@/lib/seo";
+import { BETA_ACCESS_PATH } from "@/lib/beta-access";
 import { getAuthState } from "@/lib/session-functions";
 
 function GettingStartedFallback() {
@@ -18,6 +19,9 @@ export const Route = createFileRoute("/getting-started")({
     const authState = await getAuthState();
     if (!authState.signedIn) {
       throw redirect({ href: "/" });
+    }
+    if (!authState.betaAccess) {
+      throw redirect({ href: BETA_ACCESS_PATH });
     }
   },
   head: () =>

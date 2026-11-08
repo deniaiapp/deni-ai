@@ -146,6 +146,12 @@ export type CreateAuthDeps = {
   trustedOAuthClientIds?: readonly string[];
   /** Single-value client IP header set by the trusted edge (CLIENT_IP_HEADER). */
   clientIpHeader?: string;
+  /**
+   * WebAuthn relying party ID (PASSKEY_RP_ID). Omit for the auth URL's host. A
+   * subdomain (beta.deniai.app) may use its parent (deniai.app) so passkeys
+   * registered there keep working; the origin is still checked per request.
+   */
+  passkeyRpID?: string;
   hooks: AuthAppHooks;
 };
 
@@ -574,7 +580,7 @@ export function createAuth(deps: CreateAuthDeps) {
         onLinkAccount: linkGuestAccount,
       }),
       twoFactor(),
-      passkey(),
+      passkey(deps.passkeyRpID ? { rpID: deps.passkeyRpID } : undefined),
       haveIBeenPwned(),
       lastLoginMethod(),
       // Deni AI is the identity provider for Deni Run (and other first-party apps).

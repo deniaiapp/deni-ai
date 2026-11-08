@@ -1,6 +1,7 @@
 import { accountRouter } from "./routers/account";
 import { apiKeysRouter } from "./routers/api-keys";
 import { attachmentsRouter } from "./routers/attachments";
+import { betaAccessRouter } from "./routers/beta-access";
 import { billingRouter } from "./routers/billing";
 import { chatRouter } from "./routers/chat";
 import { memoryRouter } from "./routers/memory";
@@ -15,6 +16,7 @@ export const appRouter = router({
   account: accountRouter,
   apiKeys: apiKeysRouter,
   attachments: attachmentsRouter,
+  betaAccess: betaAccessRouter,
   chat: chatRouter,
   memory: memoryRouter,
   billing: billingRouter,

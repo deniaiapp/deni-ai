@@ -3,15 +3,87 @@ export type ChangelogHighlight = {
   body: string;
 };
 
+import { appCodename } from "@/lib/version";
+
 export type ChangelogEntry = {
   version: string;
   codename?: string;
   date: string;
   summary: string;
   highlights: ChangelogHighlight[];
+  /** Japanese text of the entry, shown on /ja/changelog (entries without it show English). */
+  ja?: { summary: string; highlights: ChangelogHighlight[] };
 };
 
+/** The entry in the visitor's language: its Japanese text on /ja when it has one. */
+export function localizeChangelogEntry(entry: ChangelogEntry, locale: string): ChangelogEntry {
+  return locale === "ja" && entry.ja ? { ...entry, ...entry.ja } : entry;
+}
+
 export const changelogEntries: ChangelogEntry[] = [
+  {
+    version: "8.0",
+    codename: appCodename,
+    date: "2026-11-08",
+    summary:
+      "A private beta of the next Deni AI: a new design, Deni Run built in, simpler public pages, more reliable message storage, and two-factor sign-in for password accounts.",
+    highlights: [
+      {
+        title: "New design",
+        body: "Deni AI has a new look built around a deep indigo frame and a quiet paper-white sheet for your conversations, with clearer type, a rebuilt sidebar, chat home and settings, and a split sign-in screen. You can switch back to the previous colours in Settings > Appearance.",
+      },
+      {
+        title: "Deni Run built in",
+        body: "Deni Run now lives inside Deni AI: switch between Chat and Run in the sidebar to work with your teammates, routines and skills without a separate site. Run starts empty here, and spends the same usage pool as chat.",
+      },
+      {
+        title: "Simpler public pages",
+        body: "The public site has a single-row header, a short footer and one column per page. The separate guides, use cases, about and models pages were retired.",
+      },
+      {
+        title: "Message storage",
+        body: "Each chat message is now stored on its own, so long conversations open faster and load older messages as you scroll.",
+      },
+      {
+        title: "Two-factor sign-in for password accounts",
+        body: "Accounts that sign in only with a password are asked to turn on two-factor authentication. Link Google or GitHub instead if you prefer.",
+      },
+      {
+        title: "Fixes",
+        body: "The settings layout no longer jumps between sections, chat and comparisons stay inside the screen on phones, and Run reaches conversations through each teammate.",
+      },
+    ],
+    ja: {
+      summary:
+        "次の Deni AI のプライベートベータです。新しいデザイン、Deni Run の統合、シンプルになった公開ページ、より確実なメッセージ保存、パスワードアカウントの 2 段階認証を含みます。",
+      highlights: [
+        {
+          title: "新しいデザイン",
+          body: "深い藍色のフレームと、会話のための落ち着いた紙のような白いシートを軸にデザインを一新しました。文字を読みやすくし、サイドバー、チャットのホーム、設定を作り直し、サインイン画面を 2 分割にしました。以前の配色には 設定 > 外観 で戻せます。",
+        },
+        {
+          title: "Deni Run を統合",
+          body: "Deni Run が Deni AI の中で使えるようになりました。サイドバーでチャットと Run を切り替え、別のサイトに移らずにチームメイト、ルーティン、スキルを使えます。ここでの Run は空の状態から始まり、チャットと同じ使用量プールを消費します。",
+        },
+        {
+          title: "シンプルになった公開ページ",
+          body: "公開サイトのヘッダーを 1 行に、フッターを短くし、各ページを 1 カラムにしました。ガイド、ユースケース、概要、モデルの各ページは廃止しました。",
+        },
+        {
+          title: "メッセージの保存",
+          body: "チャットのメッセージを 1 件ずつ保存するようにしました。長い会話もすばやく開き、古いメッセージはスクロールに合わせて読み込みます。",
+        },
+        {
+          title: "パスワードアカウントの 2 段階認証",
+          body: "パスワードだけでサインインしているアカウントには、2 段階認証の設定をお願いしています。代わりに Google または GitHub を連携することもできます。",
+        },
+        {
+          title: "修正",
+          body: "設定のセクションを切り替えるとレイアウトがずれる問題、スマートフォンでチャットや比較が画面からはみ出す問題を修正し、Run では会話をチームメイトごとに開けるようにしました。",
+        },
+      ],
+    },
+  },
   {
     version: "7.11",
     codename: "Thunder Dragon",

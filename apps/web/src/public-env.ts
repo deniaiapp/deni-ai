@@ -10,4 +10,6 @@ export const clientEnv = {
   NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: import.meta.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
   NEXT_PUBLIC_TURNSTILE_SITE_KEY: import.meta.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
   NEXT_PUBLIC_DENI_RUN_URL: import.meta.env.NEXT_PUBLIC_DENI_RUN_URL || "https://run.deniai.app",
+  /** Deni AI v7, linked from the account menu and the private beta screen. */
+  NEXT_PUBLIC_V7_URL: import.meta.env.NEXT_PUBLIC_V7_URL || "https://deniai.app",
 } as const;

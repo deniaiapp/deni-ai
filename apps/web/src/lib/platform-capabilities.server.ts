@@ -45,6 +45,8 @@ export function getPlatformCapabilities(): PlatformCapabilities {
       socialProviders,
       captcha: hasValue(env.TURNSTILE_SECRET_KEY) && hasValue(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY),
       email: isEmailConfigured(),
+      // The private beta refuses guests (src/lib/beta-access.server.ts).
+      guests: !env.BETA_ACCESS_REQUIRED,
     },
   };
 }

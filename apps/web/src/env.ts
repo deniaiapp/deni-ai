@@ -135,6 +135,36 @@ export const env = createEnv({
     /** Set where the Run worker's Discord bot runs; the web app only shows the link card. */
     DISCORD_BOT_TOKEN: z.string().min(1).optional(),
     DISCORD_INVITE_URL: z.url().optional(),
+    /**
+     * Private beta gate (`true` on beta.deniai.app). Signed-in users need a
+     * `beta_access` row (or an admin email) to use the app or any signed-in
+     * API, and guest sign-in is refused. Default off, so local development and
+     * tests are unaffected (src/lib/beta-access.server.ts, docs/v8-beta-rollout.md).
+     */
+    BETA_ACCESS_REQUIRED: z.stringbool().default(false),
+    /**
+     * `false` turns `/api/cron/*` into no-ops and keeps the in-process jobs that
+     * write the shared database (usage recovery, storage and guest cleanup) from
+     * starting. For a deployment that shares its database with one that already
+     * runs them (the v8 beta next to v7).
+     */
+    CRON_ENABLED: z.stringbool().default(true),
+    /**
+     * `false` answers `/api/stripe/webhook` with 503 without reading the event,
+     * for a deployment whose Stripe events another deployment processes.
+     */
+    STRIPE_WEBHOOK_ENABLED: z.stringbool().default(true),
+    /**
+     * WebAuthn relying party ID for passkeys. Unset: the host of the auth URL
+     * (deniai.app in production). beta.deniai.app sets `deniai.app` so passkeys
+     * registered on deniai.app keep working there.
+     */
+    PASSKEY_RP_ID: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .regex(/^[a-z0-9.-]+$/, "PASSKEY_RP_ID must be a domain, e.g. deniai.app")
+      .optional(),
   },
   client: {
     /**
@@ -156,6 +186,8 @@ export const env = createEnv({
     NEXT_PUBLIC_SENTRY_DSN: z.string().min(1).optional(),
     /** Public Deni Run origin linked from the usage view. */
     NEXT_PUBLIC_DENI_RUN_URL: z.url().default("https://run.deniai.app"),
+    /** The previous Deni AI (v7), linked from the account menu and the private beta screen. */
+    NEXT_PUBLIC_V7_URL: z.url().default("https://deniai.app"),
   },
   clientPrefix: "NEXT_PUBLIC_",
   runtimeEnv: process.env,

@@ -1,5 +1,6 @@
 import {
   CreditCard,
+  FlaskConical,
   FolderClosed,
   KeyRound,
   Megaphone,
@@ -11,6 +12,7 @@ import {
   Users,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useRouteContext } from "@tanstack/react-router";
 import { Link, usePathname } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import type React from "react";
@@ -139,6 +141,10 @@ export default function SettingsWrapper({
   const isStandaloneRoute = isStandaloneSettingsRoute(pathname);
   const { features } = usePlatformCapabilities();
   const billingDisabled = !features.billing;
+  const isAdmin = useRouteContext({
+    from: "/_app",
+    select: (context) => context.authState.isAdmin,
+  });
 
   // Always keep {children} in the tree so the route segment stays mounted.
   if (isStandaloneRoute) {
@@ -180,6 +186,16 @@ export default function SettingsWrapper({
         { label: t("Team"), href: "/settings/team", icon: Users },
       ],
     },
+    ...(isAdmin
+      ? [
+          {
+            label: t("Admin"),
+            items: [
+              { label: t("Beta testers"), href: "/settings/beta-testers", icon: FlaskConical },
+            ],
+          },
+        ]
+      : []),
   ];
 
   const current = groups

@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { env } from "@/env";
+import { cronDisabledResponse, cronEnabled } from "@/lib/deployment-flags";
 import { runUsageAndMeterJob } from "@/lib/usage-and-meter-job";
 
 /**
@@ -7,6 +8,7 @@ import { runUsageAndMeterJob } from "@/lib/usage-and-meter-job";
  * already runs in-process when work is due (see SETUP.md).
  */
 export async function GET(request: Request) {
+  if (!cronEnabled()) return cronDisabledResponse();
   if (!env.CRON_SECRET)
     return Response.json({ error: "Usage recovery is disabled" }, { status: 503 });
   const expected = Buffer.from(`Bearer ${env.CRON_SECRET}`);

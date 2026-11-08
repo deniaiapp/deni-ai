@@ -1,4 +1,4 @@
-import { backgroundJobsDisabled } from "@/lib/deployment-flags";
+import { backgroundJobsDisabled, cronEnabled } from "@/lib/deployment-flags";
 import { getSentryOptions, loadSentry, sentryIntegrations } from "@/lib/sentry-options";
 
 /** One-time server startup: error reporting, diagnostics, and in-process schedulers. */
@@ -18,7 +18,8 @@ export async function register() {
     // Vercel (which sets `VERCEL` at runtime) can suspend a function instance
     // mid-run, leaving a billing job's per-user row lock held until its
     // connection drops; deployments there schedule the cron routes instead.
-    if (!process.env.VERCEL) {
+    // CRON_ENABLED=false: another deployment on the same database runs them.
+    if (!process.env.VERCEL && cronEnabled()) {
       const { startBackgroundJobScheduler } = await import("@/lib/background-job-scheduler");
       startBackgroundJobScheduler();
     }

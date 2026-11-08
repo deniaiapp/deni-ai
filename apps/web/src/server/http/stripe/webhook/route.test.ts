@@ -1,9 +1,12 @@
 import { expect, test, vi } from "vitest";
 import { stripe } from "@/lib/stripe";
 
-vi.mock("@/env", () => ({
-  env: { STRIPE_SECRET_KEY: "sk_test_local", STRIPE_WEBHOOK_SECRET: "whsec_local_test" },
+const env = vi.hoisted(() => ({
+  STRIPE_SECRET_KEY: "sk_test_local",
+  STRIPE_WEBHOOK_SECRET: "whsec_local_test",
+  STRIPE_WEBHOOK_ENABLED: true,
 }));
+vi.mock("@/env", () => ({ env }));
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/billing-card-usage", () => ({ getBillingFingerprintUpdates: vi.fn() }));
 vi.mock("@/lib/ad-checkout", () => ({
@@ -49,6 +52,29 @@ test("bounded parsing preserves the exact signed raw bytes", async () => {
       )
     ).status,
   ).toBe(200);
+});
+
+test("STRIPE_WEBHOOK_ENABLED=false refuses signed events without reading them", async () => {
+  const body =
+    '{"id": "evt_local", "type": "customer.subscription.deleted", "data": {"object": {}}}';
+  const signature = stripe.webhooks.generateTestHeaderString({
+    payload: body,
+    secret: "whsec_local_test",
+  });
+  const req = new Request("http://localhost/api/stripe/webhook", {
+    method: "POST",
+    headers: { "stripe-signature": signature },
+    body,
+  });
+  env.STRIPE_WEBHOOK_ENABLED = false;
+  try {
+    const response = await POST(req);
+    expect(response.status).toBe(503);
+    expect(await response.json()).toMatchObject({ code: "stripe_webhook_disabled" });
+    expect(req.bodyUsed).toBe(false);
+  } finally {
+    env.STRIPE_WEBHOOK_ENABLED = true;
+  }
 });
 
 test("unsigned oversized requests are rejected without body parsing", async () => {

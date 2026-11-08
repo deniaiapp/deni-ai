@@ -1,4 +1,14 @@
-import { CircleHelp, LogOut, Settings, UserIcon, UserPlus, Users, Zap } from "lucide-react";
+import {
+  ArrowUpRight,
+  CircleHelp,
+  LogOut,
+  MessageSquareText,
+  Settings,
+  UserIcon,
+  UserPlus,
+  Users,
+  Zap,
+} from "lucide-react";
 import { Link, useRouter } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
@@ -31,7 +41,9 @@ import { trpc } from "@/lib/trpc/react";
 import { liveUsageQueryOptions } from "@/lib/usage-query-options";
 import { cn } from "@/lib/utils";
 import { supportUrl } from "@/lib/support-url";
+import { betaFeedbackMailto } from "@/lib/beta-feedback";
 import { versions } from "@/lib/version";
+import { clientEnv } from "@/public-env";
 import {
   Tooltip,
   TooltipContent,
@@ -398,6 +410,30 @@ export function AccountMenu() {
           >
             <CircleHelp className="size-4" />
             <span className="flex-1">{t("Help Center")}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="gap-2 text-sm"
+            disabled={isMenuPending}
+            render={
+              <a
+                href={betaFeedbackMailto({
+                  subject: t("Deni AI v8 beta feedback"),
+                  version: `${versions.version} (${versions.codename})`,
+                })}
+                className="flex w-full"
+              />
+            }
+          >
+            <MessageSquareText className="size-4" />
+            <span className="flex-1">{t("Send feedback")}</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            className="gap-2 text-sm"
+            disabled={isMenuPending}
+            render={<a href={clientEnv.NEXT_PUBLIC_V7_URL} className="flex w-full" />}
+          >
+            <ArrowUpRight className="size-4" />
+            <span className="flex-1">{t("Go to Deni AI v7")}</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem

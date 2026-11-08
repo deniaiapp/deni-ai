@@ -18,6 +18,7 @@ const defaultCapabilities: PlatformCapabilities = {
     socialProviders: ["google", "github"],
     captcha: true,
     email: true,
+    guests: true,
   },
 };
 

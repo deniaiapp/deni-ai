@@ -12,6 +12,7 @@ import {
 import { signInPath } from "@/lib/sign-in-redirect";
 import { compressResponse } from "@/server/compression";
 import { indexingDisabled } from "@/lib/deployment-flags";
+import { isBetaGatedServerPath, isGuestSignInPath } from "@/lib/beta-access";
 
 const SESSION_COOKIE = "better-auth.session_token";
 const SECURE_SESSION_COOKIE = `__Secure-${SESSION_COOKIE}`;
@@ -27,6 +28,7 @@ const AUTH_REQUIRED_PREFIXES = [
   "/flixa/authorize",
   "/oauth",
   "/two-factor",
+  "/private-beta",
 ] as const;
 
 function readCookies(request: Request) {
@@ -151,6 +153,19 @@ const noindex = createMiddleware().server(async ({ next }) => {
   return { ...result, response };
 });
 
+/**
+ * Private beta (`BETA_ACCESS_REQUIRED`): signed-in users without access get a
+ * 403 `beta_access_required` from every signed-in server route, and guest
+ * sign-in is refused (src/lib/beta-access.server.ts). Pages are guarded by the
+ * `/_app` route, which sends them to the private beta screen.
+ */
+const betaAccessGate = createMiddleware().server(async ({ request, next }) => {
+  const { pathname } = new URL(request.url);
+  if (!isBetaGatedServerPath(pathname) && !isGuestSignInPath(pathname)) return next();
+  const { betaAccessGateResponse } = await import("@/lib/beta-access.server");
+  return (await betaAccessGateResponse(request)) ?? next();
+});
+
 export const startInstance = createStart(() => ({
-  requestMiddleware: [noindex, compression, serverFnCsrf, localeAndAuthRedirects],
+  requestMiddleware: [noindex, compression, serverFnCsrf, localeAndAuthRedirects, betaAccessGate],
 }));

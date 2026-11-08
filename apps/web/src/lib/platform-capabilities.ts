@@ -13,6 +13,8 @@ export type PlatformCapabilities = {
     captcha: boolean;
     /** Email sending is configured: verification, password reset and magic links work. */
     email: boolean;
+    /** Guest sign-in is offered (off behind the private beta gate). */
+    guests: boolean;
   };
 };
 
