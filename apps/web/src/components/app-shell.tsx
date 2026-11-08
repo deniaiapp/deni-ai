@@ -3,7 +3,7 @@ import { usePathname } from "@/lib/navigation";
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatRouteHost } from "@/components/chat/chat-route-host";
-import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@deniai/ui/components/sidebar";
 import { useNewChat } from "@/hooks/use-new-chat";
 import { SIDEBAR_WIDTH_CSS_VAR, SIDEBAR_WIDTH_DEFAULT } from "@/lib/sidebar-width";
 

@@ -16,19 +16,19 @@ import { useRouter } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { useTheme } from "next-themes";
 import { useEffect, useRef, useState } from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@deniai/ui/components/avatar";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent, CardFooter } from "@deniai/ui/components/card";
 import {
   Carousel,
   type CarouselApi,
   CarouselContent,
   CarouselItem,
-} from "@/components/ui/carousel";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Progress } from "@/components/ui/progress";
-import { Switch } from "@/components/ui/switch";
+} from "@deniai/ui/components/carousel";
+import { Input } from "@deniai/ui/components/input";
+import { Label } from "@deniai/ui/components/label";
+import { Progress } from "@deniai/ui/components/progress";
+import { Switch } from "@deniai/ui/components/switch";
 import { useThemePreset } from "@/hooks/use-theme-preset";
 import { authClient } from "@/lib/auth-client";
 import { type ThemeName, themePresets } from "@/lib/theme-presets";

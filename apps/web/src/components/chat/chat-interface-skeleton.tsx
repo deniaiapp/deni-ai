@@ -1,4 +1,4 @@
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@deniai/ui/components/skeleton";
 
 /**
  * Placeholder for /chat/$id while the pane chunk and messages load.

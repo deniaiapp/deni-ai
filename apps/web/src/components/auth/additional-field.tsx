@@ -10,9 +10,9 @@ import { useExtracted, useLocale } from "use-intl";
 import { type ComponentType, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { buttonVariants } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
+import { buttonVariants } from "@deniai/ui/components/button";
+import { Calendar } from "@deniai/ui/components/calendar";
+import { Checkbox } from "@deniai/ui/components/checkbox";
 import {
   Combobox,
   ComboboxContent,
@@ -20,27 +20,27 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from "@/components/ui/combobox";
-import { Field, FieldContent, FieldError, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+} from "@deniai/ui/components/combobox";
+import { Field, FieldContent, FieldError, FieldLabel } from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+} from "@deniai/ui/components/input-group";
+import { Label } from "@deniai/ui/components/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@deniai/ui/components/popover";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
+} from "@deniai/ui/components/select";
+import { Slider } from "@deniai/ui/components/slider";
+import { Switch } from "@deniai/ui/components/switch";
+import { Textarea } from "@deniai/ui/components/textarea";
 import { cn } from "@/lib/utils";
 
 export type AdditionalFieldProps = {

@@ -6,8 +6,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
+} from "@deniai/ui/components/select";
+import { Button } from "@deniai/ui/components/button";
 import { cn } from "@/lib/utils";
 
 export type ProjectOption = {

@@ -1,8 +1,8 @@
 import { useAuthPlugin } from "@better-auth-ui/react";
 import { Fingerprint } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent } from "@deniai/ui/components/card";
 import { passkeyPlugin } from "@/lib/auth/passkey-plugin";
 
 export type PasskeysEmptyProps = {

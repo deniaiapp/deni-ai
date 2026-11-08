@@ -3,8 +3,8 @@ import { useExtracted } from "use-intl";
 import type { FlashOfferLimit } from "@/lib/billing-offers";
 import { BILLING_PLANS_SECTION_ID } from "./billing-utils";
 import { OfferCountdown } from "./offer-countdown";
-import { Button } from "../ui/button";
-import { Card, CardContent } from "../ui/card";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent } from "@deniai/ui/components/card";
 
 export function BillingFlashOfferBanner({
   limit,

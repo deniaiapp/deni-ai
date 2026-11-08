@@ -14,16 +14,16 @@ import {
   AlertDialogHeader,
   AlertDialogMedia,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Field, FieldError } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/alert-dialog";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent } from "@deniai/ui/components/card";
+import { Field, FieldError } from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@deniai/ui/components/input-otp";
+import { Label } from "@deniai/ui/components/label";
+import { Skeleton } from "@deniai/ui/components/skeleton";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { authClient } from "@/lib/auth-client";
 import { runWithLoading } from "@/lib/run-with-loading";

@@ -1,9 +1,9 @@
 import { Download, FileJson, RotateCcw } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent } from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { triggerDownload } from "@/lib/chat-export";
 import { formatAppDate } from "@/lib/format-date";

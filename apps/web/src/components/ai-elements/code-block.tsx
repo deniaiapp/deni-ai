@@ -1,6 +1,6 @@
 import type { ComponentProps, HTMLAttributes } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import { highlightCode } from "@/lib/sugar-high-highlighter";
 import {
   Select,
@@ -8,7 +8,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@deniai/ui/components/select";
 import { cn } from "@/lib/utils";
 import { CheckIcon, CopyIcon } from "lucide-react";
 import {

@@ -3,12 +3,12 @@ import { CalendarCheck, CreditCard, RefreshCw } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import { formatAppDate } from "@/lib/format-date";
 import { cn } from "@/lib/utils";
-import { Button } from "../ui/button";
-import { Checkbox } from "../ui/checkbox";
-import { Input } from "../ui/input";
-import { Label } from "../ui/label";
-import { Spinner } from "../ui/spinner";
-import { Switch } from "../ui/switch";
+import { Button } from "@deniai/ui/components/button";
+import { Checkbox } from "@deniai/ui/components/checkbox";
+import { Input } from "@deniai/ui/components/input";
+import { Label } from "@deniai/ui/components/label";
+import { Spinner } from "@deniai/ui/components/spinner";
+import { Switch } from "@deniai/ui/components/switch";
 
 type DateLike = Date | string;
 

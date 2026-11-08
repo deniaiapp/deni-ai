@@ -1,7 +1,7 @@
 import { createFileRoute, redirect } from "@tanstack/react-router";
 import GettingStartedPage from "@/components/getting-started-page";
 import { RuntimeAppProviders } from "@/components/runtime-app-providers";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { pageHead } from "@/lib/seo";
 import { getAuthState } from "@/lib/session-functions";
 

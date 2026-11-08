@@ -1,7 +1,7 @@
 import { ChevronDown } from "lucide-react";
 import { type ReactNode, useId, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { Button } from "./ui/button";
+import { Button } from "@deniai/ui/components/button";
 
 type HeaderMegaMenuProps = {
   label: string;

@@ -2,7 +2,7 @@ import { ArrowRight } from "lucide-react";
 import { Link } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { GuestSignInButton } from "@/components/guest-sign-in-button";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 
 export function LoginButton() {
   const t = useExtracted();

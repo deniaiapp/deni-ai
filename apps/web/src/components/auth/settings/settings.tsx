@@ -2,7 +2,7 @@ import type { SettingsView } from "@better-auth-ui/core";
 import { useAuth, useAuthenticate } from "@better-auth-ui/react";
 import { Shield, User2 } from "lucide-react";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@deniai/ui/components/tabs";
 import { cn } from "@/lib/utils";
 import { AccountSettings } from "./account/account-settings";
 import { AuthLinkError } from "./auth-link-error";

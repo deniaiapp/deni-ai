@@ -3,19 +3,19 @@ import { useAuth, useFetchOptions, useSignInEmail } from "@better-auth-ui/react"
 import { useIsMutating } from "@tanstack/react-query";
 import { type SyntheticEvent, useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
+import { Checkbox } from "@deniai/ui/components/checkbox";
 import {
   Field,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldSeparator,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
+import { Label } from "@deniai/ui/components/label";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { TWO_FACTOR_PATH } from "@/lib/auth-paths";
 import { cn } from "@/lib/utils";
 import { ProviderButtons, type SocialLayout } from "./provider-buttons";

@@ -1,9 +1,15 @@
 import { ArrowRight, History, RefreshCw } from "lucide-react";
 import { useExtracted } from "use-intl";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { Avatar, AvatarFallback, AvatarImage } from "@deniai/ui/components/avatar";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { useReloadCooldown } from "@/hooks/use-reload-cooldown";
 import { shouldRetryQuery } from "@/lib/query-client";
 import { trpc } from "@/lib/trpc/react";

@@ -6,9 +6,9 @@ import { useExtracted } from "use-intl";
 import { startTransition, useEffect, useState, useSyncExternalStore } from "react";
 import { authClient } from "@/lib/auth-client";
 import { isCheckoutSettingsRoute } from "@/lib/settings-routes";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { SidebarTrigger } from "@/components/ui/sidebar";
+import { Button } from "@deniai/ui/components/button";
+import { Separator } from "@deniai/ui/components/separator";
+import { SidebarTrigger } from "@deniai/ui/components/sidebar";
 
 // Bump when a new announcement must reappear for previously dismissed users.
 const DISMISSED_KEY = "deni-announcements-2026-08-terms";

@@ -2,9 +2,9 @@ import { CopyIcon, ExternalLinkIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 import { useExtracted } from "use-intl";
 import { ArtifactLivePreview } from "@/components/chat/artifact-live-preview";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@deniai/ui/components/sheet";
 import { useArtifactPreview } from "@/components/chat/artifact-preview-context";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import { createSandboxedPreviewDocument } from "@/lib/artifact-preview-document";
 
 const HTML_PREVIEWABLE_LANGUAGES = new Set(["html", "htm"]);

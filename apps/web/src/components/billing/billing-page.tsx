@@ -12,8 +12,8 @@ import { BillingResetCard } from "./billing-reset-card";
 import { BillingUsageSection } from "./billing-usage-section";
 import { SubscriptionShredder } from "./subscription-shredder";
 import { useBillingPage } from "./use-billing-page";
-import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Spinner } from "../ui/spinner";
+import { Card, CardDescription, CardHeader, CardTitle } from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 function BillingDisabled() {
   const t = useExtracted();

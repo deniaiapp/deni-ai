@@ -4,7 +4,7 @@ import { Link } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { BlurReveal } from "@/components/blur-reveal";
 import { HighlightedText } from "@/components/highlighted-text";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import { DesktopDownloadPicker } from "./desktop-download-picker";
 import { DesktopFeaturesSection } from "./desktop-features-section";
 import type { DesktopDownloads } from "./types";

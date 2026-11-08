@@ -27,12 +27,16 @@ import {
 import { formatModelDeprecationDate } from "@/lib/constants";
 import { translateModelDescription, useModelDescriptionCopy } from "@/lib/model-description-copy";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@deniai/ui/components/collapsible";
+import { Input } from "@deniai/ui/components/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@deniai/ui/components/popover";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@deniai/ui/components/sheet";
 import type { ModelOption } from "./chat-composer";
 import { UsageTierBadge } from "./usage-tier-badge";
 

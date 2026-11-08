@@ -3,8 +3,14 @@ import { Loader2, XCircle } from "lucide-react";
 import { Link, useSearchParams } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
 import { authClient } from "@/lib/auth-client";
 import { OAUTH_LOGIN_PATH } from "@/lib/auth-paths";
 import { signInPath } from "@/lib/sign-in-redirect";

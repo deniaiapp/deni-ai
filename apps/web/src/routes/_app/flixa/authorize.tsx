@@ -3,9 +3,15 @@ import { CheckCircle2, Code2, KeyRound, Loader2, ShieldCheck, XCircle } from "lu
 import { Link, useSearchParams } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { RadioGroup, RadioGroupItem } from "@deniai/ui/components/radio-group";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { authClient } from "@/lib/auth-client";
 import { signInPath } from "@/lib/sign-in-redirect";

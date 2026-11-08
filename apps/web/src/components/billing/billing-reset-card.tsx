@@ -5,10 +5,10 @@ import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
 import type { ResetCreditPlanTier } from "@/lib/reset-credits";
 import { trpc } from "@/lib/trpc/react";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "../ui/field";
-import { Input } from "../ui/input";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
 import {
   Select,
   SelectContent,
@@ -16,10 +16,16 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select";
-import { Spinner } from "../ui/spinner";
-import { Separator } from "../ui/separator";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+} from "@deniai/ui/components/select";
+import { Spinner } from "@deniai/ui/components/spinner";
+import { Separator } from "@deniai/ui/components/separator";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
 
 const resetTargetTypes = ["all", "plan", "user"] as const;
 type ResetTargetType = (typeof resetTargetTypes)[number];

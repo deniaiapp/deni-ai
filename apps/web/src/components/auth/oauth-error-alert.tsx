@@ -1,7 +1,7 @@
 import { AlertCircleIcon, X } from "lucide-react";
 import { useExtracted } from "use-intl";
-import { Alert, AlertAction, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@deniai/ui/components/alert";
+import { Button } from "@deniai/ui/components/button";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { usePathname, useRouter, useSearchParams } from "@/lib/navigation";
 

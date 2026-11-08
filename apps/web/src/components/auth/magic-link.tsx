@@ -6,18 +6,18 @@ import { useIsMutating } from "@tanstack/react-query";
 import { type SyntheticEvent, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
 import {
   Field,
   FieldDescription,
   FieldError,
   FieldGroup,
   FieldSeparator,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
+import { Label } from "@deniai/ui/components/label";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { magicLinkPlugin } from "@/lib/auth/magic-link-plugin";
 import { toSafeRedirectPath } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";

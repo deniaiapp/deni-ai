@@ -1,7 +1,11 @@
 import { useExtracted } from "use-intl";
 import type { ComponentProps } from "react";
 
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@deniai/ui/components/collapsible";
 import { toSafeHref } from "@/lib/safe-href";
 import { cn } from "@/lib/utils";
 import { BookIcon, ChevronDownIcon } from "lucide-react";

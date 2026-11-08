@@ -3,7 +3,7 @@ import { useState, useSyncExternalStore } from "react";
 import { ImageIcon } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { defaultComponents, type ExtraProps } from "streamdown";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 
 export type StreamdownImageSource =
   /** `data:image/` and `blob:` URLs: no request leaves the browser. */

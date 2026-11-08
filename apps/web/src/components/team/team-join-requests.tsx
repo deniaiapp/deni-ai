@@ -2,9 +2,15 @@ import { useQueryClient } from "@tanstack/react-query";
 import { UserRound } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { trpc } from "@/lib/trpc/react";
 import { monthDayFormatter } from "./team-utils";

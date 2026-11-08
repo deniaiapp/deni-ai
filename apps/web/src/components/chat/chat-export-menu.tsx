@@ -3,14 +3,14 @@ import { DownloadIcon, FileJsonIcon, FileTextIcon, PrinterIcon } from "lucide-re
 import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Spinner } from "@/components/ui/spinner";
-import { Button } from "@/components/ui/button";
+import { Spinner } from "@deniai/ui/components/spinner";
+import { Button } from "@deniai/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@deniai/ui/components/dropdown-menu";
 import {
   exportAsJson,
   exportAsMarkdown,

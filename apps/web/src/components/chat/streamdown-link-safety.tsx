@@ -3,7 +3,7 @@ import { Check, Copy, ExternalLink } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { toast } from "sonner";
 import type { LinkSafetyConfig, LinkSafetyModalProps } from "streamdown";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@deniai/ui/components/dialog";
 
 function StreamdownLinkSafetyModal({ isOpen, onClose, onConfirm, url }: LinkSafetyModalProps) {
   const t = useExtracted();

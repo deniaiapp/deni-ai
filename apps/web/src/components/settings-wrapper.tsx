@@ -2,8 +2,8 @@ import { Link, usePathname } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import type React from "react";
 import { DocumentTitle } from "@/components/document-title";
-import { Card, CardContent } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { Card, CardContent } from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { CombinedUsageMeter } from "@/components/billing/product-usage";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { authClient } from "@/lib/auth-client";
@@ -12,7 +12,7 @@ import { isCheckoutSettingsRoute, isStandaloneSettingsRoute } from "@/lib/settin
 import { trpc } from "@/lib/trpc/react";
 import { settingsUsageQueryOptions } from "@/lib/usage-query-options";
 import { cn, formatCompactUsageValue } from "@/lib/utils";
-import { Progress } from "./ui/progress";
+import { Progress } from "@deniai/ui/components/progress";
 
 export default function SettingsWrapper({ children }: { children: React.ReactNode }) {
   const t = useExtracted();

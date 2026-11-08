@@ -6,9 +6,9 @@ import type { CancellationFeedback } from "@/lib/cancellation-feedback";
 import { formatAppDate } from "@/lib/format-date";
 import { usePlanIntervalLabel, useTierLabel } from "./billing-utils";
 import { SubscriptionCancelDialog } from "./subscription-cancel-dialog";
-import { Button } from "../ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Spinner } from "../ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardDescription, CardHeader, CardTitle } from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 export function BillingCurrentPlanCard({
   isEducation,

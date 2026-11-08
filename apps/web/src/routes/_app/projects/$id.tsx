@@ -3,7 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { ProjectPage } from "@/components/projects/project-page";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 /** Name of a project the signed-in user can open; 404 for anything else. */
 const getAccessibleProjectNameFn = createServerFn({ method: "GET" })

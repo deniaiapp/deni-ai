@@ -19,8 +19,8 @@ import { localizedPath } from "@/lib/locale-path";
 import DeniAIIcon from "./deni-ai-icon";
 import { HeaderMegaMenu } from "./header-mega-menu";
 import { LocaleSwitcher } from "./locale-switcher";
-import { buttonVariants } from "./ui/button-variants";
-import { Button } from "./ui/button";
+import { buttonVariants } from "@deniai/ui/components/button-variants";
+import { Button } from "@deniai/ui/components/button";
 import {
   Sheet,
   SheetClose,
@@ -29,7 +29,7 @@ import {
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "./ui/sheet";
+} from "@deniai/ui/components/sheet";
 
 type MegaMenuLink = {
   href: string;

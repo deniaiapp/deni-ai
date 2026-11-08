@@ -1,6 +1,6 @@
 import { useExtracted } from "use-intl";
 import { SettingsPageShell } from "@/components/settings-page-shell";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 /** Same title block as the loaded page, so the heading does not jump. */
 export function ProjectsSettingsLoading() {

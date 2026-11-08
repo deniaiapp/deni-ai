@@ -37,7 +37,7 @@ import { CitationSourcesProvider } from "@/components/chat/inline-citation";
 import { collectCitationSources, replaceCitationMarkers } from "@/lib/chat-citations";
 import { hasSuccessfulToolPart } from "@/components/chat/chat-utils";
 import type { ReasoningEffort } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,9 +47,14 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+} from "@deniai/ui/components/dropdown-menu";
+import { Input } from "@deniai/ui/components/input";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@deniai/ui/components/tooltip";
 import type { ModelOption } from "./chat-composer";
 
 interface RequestBody {

@@ -1,8 +1,8 @@
 import Bowser from "bowser";
 import { History, Monitor, Smartphone } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
-import { Card, CardContent } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { Card, CardContent } from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { formatAppDate } from "@/lib/format-date";
 import { trpc } from "@/lib/trpc/react";
 

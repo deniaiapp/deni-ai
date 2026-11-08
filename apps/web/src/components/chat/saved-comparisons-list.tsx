@@ -13,9 +13,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/alert-dialog";
+import { Button } from "@deniai/ui/components/button";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { trpc } from "@/lib/trpc/react";
 import type { AppRouter } from "@/server/api/root";

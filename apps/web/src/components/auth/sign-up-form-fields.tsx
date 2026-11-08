@@ -1,14 +1,14 @@
 import type { AdditionalField as AdditionalFieldType } from "@better-auth-ui/core";
 import { Eye, EyeOff } from "lucide-react";
-import { Field, FieldError } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Field, FieldError } from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
+} from "@deniai/ui/components/input-group";
+import { Label } from "@deniai/ui/components/label";
 import { AdditionalField } from "./additional-field";
 
 type Localization = {

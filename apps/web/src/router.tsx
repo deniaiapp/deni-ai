@@ -1,5 +1,5 @@
 import { createRouter } from "@tanstack/react-router";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { getSentryOptions, loadSentry, sentryIntegrations } from "@/lib/sentry-options";
 import { routeTree } from "./routeTree.gen";
 

@@ -3,8 +3,8 @@ import { Fingerprint, X } from "lucide-react";
 import { useLocale } from "use-intl";
 import { useState } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent } from "@deniai/ui/components/card";
 import { passkeyPlugin } from "@/lib/auth/passkey-plugin";
 import { formatAppDate } from "@/lib/format-date";
 

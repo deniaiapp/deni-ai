@@ -3,17 +3,17 @@ import { Eye, EyeOff } from "lucide-react";
 import { type SyntheticEvent, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldDescription, FieldError, FieldGroup } from "@/components/ui/field";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
+import { Field, FieldDescription, FieldError, FieldGroup } from "@deniai/ui/components/field";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from "@/components/ui/input-group";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/input-group";
+import { Label } from "@deniai/ui/components/label";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { cn } from "@/lib/utils";
 
 export type ResetPasswordProps = {

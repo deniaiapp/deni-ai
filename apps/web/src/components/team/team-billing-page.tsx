@@ -3,8 +3,8 @@ import { usePlatformCapabilities } from "@/components/platform-capabilities-prov
 import { useBillingReceiptCopy } from "@/components/billing/billing-utils";
 import { SubscriptionShredder } from "@/components/billing/subscription-shredder";
 import type { SubscriptionReceiptData } from "@/components/billing/subscription-receipt";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { Card, CardDescription, CardHeader, CardTitle } from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { TeamBillingCard } from "./team-billing-card";
 import { TeamChangePlanDialog } from "./team-change-plan-dialog";
 import { TeamMaxModeCard } from "./team-max-mode-card";

@@ -25,9 +25,9 @@ import {
   type ComparisonSettings,
 } from "@/lib/comparison-settings";
 import { models } from "@/lib/constants";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import { ChatComposerModelPicker } from "@/components/chat/chat-composer-model-picker";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { useAvailableModels } from "@/hooks/use-available-models";
 import { getComparisonTurns } from "@/lib/comparison-conversation";
 import { saveComparisonSession } from "@/lib/comparison-session-save";

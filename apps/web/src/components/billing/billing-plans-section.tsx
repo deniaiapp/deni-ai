@@ -7,9 +7,15 @@ import { cn } from "@/lib/utils";
 import { PlanCard } from "./billing-plan-card";
 import { BILLING_PLANS_SECTION_ID } from "./billing-utils";
 import { PlanHighlights } from "./plan-highlights";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
 
 type PlanActionProps = {
   activePlanId: string | undefined;

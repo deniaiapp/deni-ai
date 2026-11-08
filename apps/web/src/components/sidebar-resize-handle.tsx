@@ -1,6 +1,6 @@
 import { useExtracted } from "use-intl";
 import { useRef, useSyncExternalStore } from "react";
-import { useSidebar } from "@/components/ui/sidebar";
+import { useSidebar } from "@deniai/ui/components/sidebar";
 import {
   clampSidebarWidth,
   getServerSidebarWidth,

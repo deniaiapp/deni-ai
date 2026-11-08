@@ -8,7 +8,7 @@ import { makeTRPCClient } from "@/lib/trpc/client";
 import { trpc } from "@/lib/trpc/react";
 import { PlatformCapabilitiesProvider } from "./platform-capabilities-provider";
 import { ServiceWorkerRegistration } from "./pwa/service-worker-registration";
-import { TooltipProvider } from "./ui/tooltip";
+import { TooltipProvider } from "@deniai/ui/components/tooltip";
 
 const trpcClient = makeTRPCClient();
 

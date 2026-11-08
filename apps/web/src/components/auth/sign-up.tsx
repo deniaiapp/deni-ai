@@ -3,10 +3,10 @@ import { useAuth, useFetchOptions, useSignUpEmail } from "@better-auth-ui/react"
 import { useIsMutating } from "@tanstack/react-query";
 import { type SyntheticEvent, useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FieldDescription, FieldGroup, FieldSeparator } from "@/components/ui/field";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
+import { FieldDescription, FieldGroup, FieldSeparator } from "@deniai/ui/components/field";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { checkSignupEmail, signupEmailDenialMessage } from "@/lib/email-domain-policy";
 import { cn } from "@/lib/utils";
 import { ProviderButtons, type SocialLayout } from "./provider-buttons";

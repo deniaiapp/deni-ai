@@ -16,9 +16,15 @@ import { CheckoutReceiptForm, CheckoutReceiptFormPreview } from "./checkout-rece
 import { runWithLoading } from "@/lib/run-with-loading";
 import { SubscriptionShredder } from "./subscription-shredder";
 import { SubscriptionReceipt, type SubscriptionReceiptData } from "./subscription-receipt";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Spinner } from "../ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 type CheckoutSessionSummary = ReceiptCheckoutSessionSummary;
 

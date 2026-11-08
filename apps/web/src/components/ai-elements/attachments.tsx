@@ -2,9 +2,9 @@ import type { FileUIPart, SourceDocumentUIPart } from "ai";
 import { useExtracted } from "use-intl";
 import type { ComponentProps, HTMLAttributes, ReactNode } from "react";
 
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import { useLocalizeError } from "@/hooks/use-localize-error";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@deniai/ui/components/hover-card";
 import { cn } from "@/lib/utils";
 import {
   FileTextIcon,

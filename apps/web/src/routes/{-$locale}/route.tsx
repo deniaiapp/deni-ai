@@ -2,7 +2,7 @@ import { createFileRoute, notFound, Outlet, redirect } from "@tanstack/react-rou
 import Footer from "@/components/footer";
 import Header from "@/components/header";
 import { RuntimeAppProviders } from "@/components/runtime-app-providers";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { getPreferredLocale } from "@/i18n/locale";
 import { isPublicLocalizablePath, localizedPath } from "@/lib/locale-path";
 

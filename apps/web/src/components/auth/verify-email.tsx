@@ -2,10 +2,10 @@ import { useAuth, useSendVerificationEmail } from "@better-auth-ui/react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FieldDescription } from "@/components/ui/field";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
+import { FieldDescription } from "@deniai/ui/components/field";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { toSafeRedirectPath } from "@/lib/auth-redirect";
 import { cn } from "@/lib/utils";
 import { OpenEmailButton } from "./open-email-button";

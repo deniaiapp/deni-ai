@@ -2,8 +2,8 @@ import { Plus, Users } from "lucide-react";
 import { useExtracted } from "use-intl";
 import type { ReactNode } from "react";
 import { SettingsPageShell } from "@/components/settings-page-shell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent } from "@deniai/ui/components/card";
 import { TeamCreateDialog } from "./team-create-dialog";
 
 export function TeamEmptyState({

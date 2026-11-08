@@ -39,6 +39,7 @@
     "@deni-ai/disposable-email-domains": "workspace:*",
     "@deniai/billing": "workspace:*",
     "@deniai/db": "workspace:*",
+    "@deniai/ui": "workspace:*",
     "@dnd-kit/core": "^6.3.1",
     "@dnd-kit/utilities": "^3.2.2",
     "@fontsource-variable/inter": "^5.3.0",

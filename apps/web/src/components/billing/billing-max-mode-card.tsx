@@ -1,9 +1,15 @@
 import { Zap } from "lucide-react";
 import { useExtracted } from "use-intl";
-import { Badge } from "../ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Label } from "../ui/label";
-import { Switch } from "../ui/switch";
+import { Badge } from "@deniai/ui/components/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Label } from "@deniai/ui/components/label";
+import { Switch } from "@deniai/ui/components/switch";
 import {
   MaxModeCreditsPanel,
   type MaxModeAutoTopUpSettings,

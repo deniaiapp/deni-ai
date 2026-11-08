@@ -1,7 +1,7 @@
 import { TableIcon } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import { niceTicks } from "@/lib/intelligent-ui/format";
 import type { IntelligentUiBlockOf } from "@/lib/intelligent-ui/schema";
 import { cn } from "@/lib/utils";

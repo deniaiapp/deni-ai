@@ -8,8 +8,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/alert-dialog";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 export function MemoryClearDialog({
   open,

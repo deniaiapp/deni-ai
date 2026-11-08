@@ -4,8 +4,8 @@ import type { User } from "better-auth";
 import { User2 } from "lucide-react";
 import type { ReactNode } from "react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback, AvatarImage } from "@deniai/ui/components/avatar";
+import { Skeleton } from "@deniai/ui/components/skeleton";
 import { cn } from "@/lib/utils";
 
 export type UserAvatarProps = {

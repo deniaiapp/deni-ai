@@ -1,14 +1,14 @@
 import { Pencil, Trash2, Upload, Users } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { type ChangeEvent, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/dropdown-menu";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 export function TeamIconButton({
   logo,

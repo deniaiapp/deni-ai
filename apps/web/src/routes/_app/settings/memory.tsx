@@ -17,7 +17,7 @@ import {
 } from "@/components/memory/memory-types";
 import { SettingsPageShell } from "@/components/settings-page-shell";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@deniai/ui/components/card";
 import { trpc } from "@/lib/trpc/react";
 
 export const Route = createFileRoute("/_app/settings/memory")({

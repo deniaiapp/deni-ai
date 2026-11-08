@@ -17,13 +17,13 @@ import {
   AlertDialogMedia,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Field, FieldError } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/alert-dialog";
+import { Button, buttonVariants } from "@deniai/ui/components/button";
+import { Card, CardContent } from "@deniai/ui/components/card";
+import { Field, FieldError } from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
+import { Label } from "@deniai/ui/components/label";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { deleteUserPlugin } from "@/lib/auth/delete-user-plugin";
 import { trpc } from "@/lib/trpc/react";
 import { cn } from "@/lib/utils";

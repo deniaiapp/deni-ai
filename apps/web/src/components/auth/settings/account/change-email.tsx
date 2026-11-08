@@ -3,13 +3,13 @@ import { useExtracted } from "use-intl";
 import { type SyntheticEvent, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
-import { Field, FieldError } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent, CardFooter } from "@deniai/ui/components/card";
+import { Field, FieldError } from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
+import { Label } from "@deniai/ui/components/label";
+import { Skeleton } from "@deniai/ui/components/skeleton";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { cn } from "@/lib/utils";
 
 export type ChangeEmailProps = {

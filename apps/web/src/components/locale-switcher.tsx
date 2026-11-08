@@ -7,7 +7,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
+} from "@deniai/ui/components/select";
 import { changeLocale } from "@/i18n/locale-functions";
 import { type AppLocale, locales } from "@/i18n/locales";
 import { localizedPath } from "@/lib/locale-path";

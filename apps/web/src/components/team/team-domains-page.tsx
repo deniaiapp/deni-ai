@@ -3,11 +3,17 @@ import type { inferRouterOutputs } from "@trpc/server";
 import { useExtracted } from "use-intl";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldDescription, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Field, FieldDescription, FieldLabel } from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
 import {
   Select,
   SelectContent,
@@ -15,8 +21,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/select";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { TEAM_DOMAIN_JOIN_MODES, type TeamDomainJoinMode } from "@/lib/team-domain-policy";
 import { trpc } from "@/lib/trpc/react";

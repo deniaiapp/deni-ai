@@ -5,16 +5,16 @@ import { Trash2, Upload } from "lucide-react";
 import { type ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 import { UserAvatar } from "@/components/auth/user/user-avatar";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@deniai/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Field } from "@/components/ui/field";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/dropdown-menu";
+import { Field } from "@deniai/ui/components/field";
+import { Label } from "@deniai/ui/components/label";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { cn } from "@/lib/utils";
 
 export type ChangeAvatarProps = {

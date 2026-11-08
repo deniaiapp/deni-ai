@@ -3,7 +3,7 @@ import { Link, useRouter } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { toast } from "sonner";
 import {
   AlertDialog,
@@ -14,16 +14,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "@deniai/ui/components/alert-dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
-import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
+} from "@deniai/ui/components/dropdown-menu";
+import { Progress } from "@deniai/ui/components/progress";
+import { SidebarMenuButton, useSidebar } from "@deniai/ui/components/sidebar";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { authClient } from "@/lib/auth-client";
 import { CombinedUsageBar } from "@/components/billing/product-usage";
@@ -32,7 +32,12 @@ import { liveUsageQueryOptions } from "@/lib/usage-query-options";
 import { cn } from "@/lib/utils";
 import { supportUrl } from "@/lib/support-url";
 import { versions } from "@/lib/version";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@deniai/ui/components/tooltip";
 
 type UsageCategoryItem = {
   category: "basic" | "premium";

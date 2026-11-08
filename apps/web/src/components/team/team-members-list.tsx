@@ -10,17 +10,23 @@ import {
 } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { useState } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/dropdown-menu";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { cn } from "@/lib/utils";
 import type { Member } from "./team-types";
 import { useRoleLabel } from "./use-role-label";

@@ -10,10 +10,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../ui/alert-dialog";
-import { Checkbox } from "../ui/checkbox";
-import { Label } from "../ui/label";
-import { Spinner } from "../ui/spinner";
+} from "@deniai/ui/components/alert-dialog";
+import { Checkbox } from "@deniai/ui/components/checkbox";
+import { Label } from "@deniai/ui/components/label";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 export function BillingChangePlanDialog({
   open,

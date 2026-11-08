@@ -1,7 +1,7 @@
 import { useExtracted } from "use-intl";
 import { formatStorageBytes } from "@/lib/attachment-quota";
 import { trpc } from "@/lib/trpc/react";
-import { Progress } from "../ui/progress";
+import { Progress } from "@deniai/ui/components/progress";
 
 /** Attachment storage counted against the plan quota; hidden when storage is not configured. */
 export function AttachmentStorageUsage() {

@@ -5,7 +5,7 @@ import { getRequestHeaders } from "@tanstack/react-start/server";
 import { Settings } from "@/components/auth/settings/settings";
 import Footer from "@/components/footer";
 import Header from "@/components/header";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 /** Matches AuthProvider viewPaths.settings override (account → "settings"). */
 const ACCOUNT_SETTINGS_PATHS = ["settings", "security"] as const;

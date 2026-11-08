@@ -1,6 +1,6 @@
 import { useExtracted } from "use-intl";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent } from "@deniai/ui/components/card";
 import { Link } from "@/lib/navigation";
 
 /** Shown in place of (or above) a paid team feature when the team has no active plan. */

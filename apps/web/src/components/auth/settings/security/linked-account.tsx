@@ -11,10 +11,10 @@ import { Link2, Link2Off, Plug } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent } from "@deniai/ui/components/card";
+import { Skeleton } from "@deniai/ui/components/skeleton";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { useFreshSessionGuard } from "@/hooks/use-fresh-session-guard";
 import { cn } from "@/lib/utils";
 import { FreshSessionDialog } from "./fresh-session-dialog";

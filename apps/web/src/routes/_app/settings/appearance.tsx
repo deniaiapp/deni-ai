@@ -5,8 +5,14 @@ import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SettingsPageShell } from "@/components/settings-page-shell";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
 import { useThemePreset } from "@/hooks/use-theme-preset";
 import { setVisualLayout, useVisualLayout } from "@/hooks/use-visual-layout";
 import { type ThemeName, themePresets } from "@/lib/theme-presets";

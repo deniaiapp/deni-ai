@@ -15,10 +15,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "../ui/alert-dialog";
-import { Field, FieldLabel, FieldLegend, FieldSet } from "../ui/field";
-import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
-import { Textarea } from "../ui/textarea";
+} from "@deniai/ui/components/alert-dialog";
+import { Field, FieldLabel, FieldLegend, FieldSet } from "@deniai/ui/components/field";
+import { RadioGroup, RadioGroupItem } from "@deniai/ui/components/radio-group";
+import { Textarea } from "@deniai/ui/components/textarea";
 
 function useCancellationReasonLabel() {
   const t = useExtracted();

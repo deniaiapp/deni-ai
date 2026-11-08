@@ -2,8 +2,8 @@ import { Check, ChevronsUpDown, Plus, Users } from "lucide-react";
 import { Link } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { useState } from "react";
-import { Spinner } from "@/components/ui/spinner";
-import { Button } from "@/components/ui/button";
+import { Spinner } from "@deniai/ui/components/spinner";
+import { Button } from "@deniai/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,7 +12,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@deniai/ui/components/dropdown-menu";
 import { TeamCreateDialog } from "./team-create-dialog";
 import type { Organization, ReceivedInvitation } from "./team-types";
 

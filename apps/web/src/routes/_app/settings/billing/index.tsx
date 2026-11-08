@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useExtracted } from "use-intl";
 import { SettingsPageShell } from "@/components/settings-page-shell";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { dynamic } from "@/lib/dynamic";
 
 export const Route = createFileRoute("/_app/settings/billing/")({

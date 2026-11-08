@@ -34,14 +34,14 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@deniai/ui/components/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
+} from "@deniai/ui/components/dropdown-menu";
+import { Input } from "@deniai/ui/components/input";
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -49,10 +49,10 @@ import {
   SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/sidebar";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { mergeFolderGroups, normalizeTags } from "@/components/app-sidebar-utils";
 import { trpc } from "@/lib/trpc/react";
 

@@ -2,7 +2,7 @@ import type { UIMessage } from "ai";
 import { FolderKanban } from "lucide-react";
 import { dynamic } from "@/lib/dynamic";
 import { useExtracted } from "use-intl";
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@deniai/ui/components/badge";
 
 const ChatExportMenu = dynamic(
   () => import("@/components/chat/chat-export-menu").then((mod) => mod.ChatExportMenu),

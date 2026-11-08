@@ -4,7 +4,7 @@ import { useSetActiveSession } from "@better-auth-ui/react/plugins/multi-session
 import { ChevronsUpDown, LogIn, LogOut, Settings, UserPlus2 } from "lucide-react";
 import { isValidElement, type ReactElement, type ReactNode } from "react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@deniai/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +13,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@deniai/ui/components/dropdown-menu";
 import { cn } from "@/lib/utils";
 import { UserAvatar } from "./user-avatar";
 import { UserView } from "./user-view";

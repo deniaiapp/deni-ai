@@ -12,11 +12,11 @@ import {
 import { type SyntheticEvent, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Field, FieldError, FieldSeparator } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import { Field, FieldError, FieldSeparator } from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
+import { Label } from "@deniai/ui/components/label";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { useFreshSessionLocalization } from "@/hooks/use-fresh-session-localization";
 import { cn } from "@/lib/utils";
 

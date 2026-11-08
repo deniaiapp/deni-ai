@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, redirect } from "@tanstack/react-router";
 import { AppShell } from "@/components/app-shell";
 import { RuntimeAppProviders } from "@/components/runtime-app-providers";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { getAuthState } from "@/lib/session-functions";
 import { signInPath } from "@/lib/sign-in-redirect";
 

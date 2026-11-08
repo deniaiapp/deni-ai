@@ -1,9 +1,15 @@
 import { Download, ShieldCheck, Zap } from "lucide-react";
 import { useExtracted } from "use-intl";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
-import { Switch } from "@/components/ui/switch";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
+import { Switch } from "@deniai/ui/components/switch";
 import {
   MaxModeCreditsPanel,
   type MaxModeAutoTopUpSettings,

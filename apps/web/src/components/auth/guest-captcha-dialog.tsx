@@ -1,7 +1,7 @@
 import { useExtracted } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import {
   Dialog,
   DialogContent,
@@ -9,8 +9,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import { Spinner } from "@/components/ui/spinner";
+} from "@deniai/ui/components/dialog";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { LazyTurnstileCaptcha } from "@/lib/auth/captcha-plugin";
 import { authClient } from "@/lib/auth-client";
 import { signInAsGuest } from "@/lib/guest-sign-in";

@@ -1,8 +1,8 @@
 import { ExternalLinkIcon, GlobeIcon } from "lucide-react";
 import { createContext, type ComponentProps, type ReactNode, useContext } from "react";
 import { useExtracted } from "use-intl";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@deniai/ui/components/hover-card";
+import { Popover, PopoverContent, PopoverTrigger } from "@deniai/ui/components/popover";
 import { type CitationSource, parseCitationIds } from "@/lib/chat-citations";
 import { getSafeDisplayUrl, toSafeHref } from "@/lib/safe-href";
 

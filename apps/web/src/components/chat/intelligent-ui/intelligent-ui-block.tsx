@@ -1,7 +1,7 @@
 import { Sparkles } from "lucide-react";
 import { useExtracted } from "use-intl";
 import type { ReactNode } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@deniai/ui/components/skeleton";
 import { useIntelligentUiMessage } from "@/components/chat/intelligent-ui/intelligent-ui-context";
 import { IntelligentUiChart } from "@/components/chat/intelligent-ui/intelligent-ui-chart";
 import {

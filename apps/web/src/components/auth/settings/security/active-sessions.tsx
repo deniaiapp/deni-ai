@@ -1,8 +1,8 @@
 import { useAuth, useListSessions, useSession } from "@better-auth-ui/react";
 import { isSessionNotFreshError } from "@/lib/auth-error-utils";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@deniai/ui/components/card";
+import { Separator } from "@deniai/ui/components/separator";
+import { Skeleton } from "@deniai/ui/components/skeleton";
 import { useFreshSessionLocalization } from "@/hooks/use-fresh-session-localization";
 import { cn } from "@/lib/utils";
 import { ActiveSession } from "./active-session";

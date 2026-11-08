@@ -1,8 +1,8 @@
 import { getProviderId } from "@better-auth-ui/core";
 import { useAuth, useListAccounts } from "@better-auth-ui/react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@deniai/ui/components/card";
+import { Separator } from "@deniai/ui/components/separator";
+import { Skeleton } from "@deniai/ui/components/skeleton";
 import { cn } from "@/lib/utils";
 import { LinkedAccount } from "./linked-account";
 

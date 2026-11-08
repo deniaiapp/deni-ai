@@ -9,7 +9,7 @@ import {
   CodeBlockHeader,
   CodeBlockTitle,
 } from "@/components/ai-elements/code-block";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import { useArtifactPreview } from "@/components/chat/artifact-preview-context";
 import { IntelligentUiBlockView } from "@/components/chat/intelligent-ui/intelligent-ui-block";
 import { INTELLIGENT_UI_LANGUAGE } from "@/lib/intelligent-ui/schema";

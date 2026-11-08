@@ -2,15 +2,15 @@ import React from "react";
 import { m } from "motion/react";
 import { ChevronDown, Download, Package } from "lucide-react";
 import { useExtracted } from "use-intl";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@deniai/ui/components/button";
+import { Checkbox } from "@deniai/ui/components/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@deniai/ui/components/dropdown-menu";
 import type { DesktopDownloads, DesktopRelease } from "./types";
 
 type DownloadOption = {

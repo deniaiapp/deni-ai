@@ -1,9 +1,9 @@
 import { ArrowUpRight, Ban, TriangleAlert, Zap } from "lucide-react";
 import { Link } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { Alert, AlertDescription, AlertTitle } from "@deniai/ui/components/alert";
+import { Button } from "@deniai/ui/components/button";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { cn } from "@/lib/utils";
 
 interface UsageAlertsProps {

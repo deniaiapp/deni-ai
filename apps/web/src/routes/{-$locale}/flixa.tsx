@@ -3,7 +3,7 @@ import { Link } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
 import { getExtracted } from "@/i18n/extracted";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import SiGoogle from "@icons-pack/react-simple-icons/icons/SiGoogle";
 import SiWindsurf from "@icons-pack/react-simple-icons/icons/SiWindsurf";
 import { pageHead } from "@/lib/seo";

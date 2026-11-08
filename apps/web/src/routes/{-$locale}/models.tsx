@@ -7,7 +7,7 @@ import { models, type ModelDefinition } from "@/lib/constants";
 import { useModelDescriptionCopy } from "@/lib/model-description-copy";
 import { isModelProviderAvailable } from "@/lib/platform-capabilities";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import { authorLabels } from "@/components/models/models-author-labels";
 import { ModelsGrid } from "@/components/models/models-grid";
 import { pageHead } from "@/lib/seo";

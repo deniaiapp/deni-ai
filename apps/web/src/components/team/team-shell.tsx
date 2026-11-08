@@ -3,7 +3,7 @@ import { Link, usePathname } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import type { ReactNode } from "react";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@deniai/ui/components/skeleton";
 import { cn } from "@/lib/utils";
 import { useTeamSettingsContext } from "./team-settings-context";
 import { TeamSwitcher } from "./team-switcher";

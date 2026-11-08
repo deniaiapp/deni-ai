@@ -3,19 +3,19 @@ import { Link, useRouter } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import { Input } from "@deniai/ui/components/input";
+import { Label } from "@deniai/ui/components/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
-import { Textarea } from "@/components/ui/textarea";
+} from "@deniai/ui/components/select";
+import { Spinner } from "@deniai/ui/components/spinner";
+import { Textarea } from "@deniai/ui/components/textarea";
 import { useAvailableModels } from "@/hooks/use-available-models";
 import { INTENT_PREFETCH_DELAY_MS } from "@/hooks/use-intent-prefetch";
 import { useLocalizeError } from "@/hooks/use-localize-error";

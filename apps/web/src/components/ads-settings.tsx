@@ -2,9 +2,9 @@ import { useEffect, useState, type FormEvent } from "react";
 import { FileText, Pencil } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { SettingsPageShell } from "@/components/settings-page-shell";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@deniai/ui/components/alert";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
 import {
   Card,
   CardContent,
@@ -12,9 +12,9 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "@deniai/ui/components/card";
+import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@deniai/ui/components/empty";
+import { Checkbox } from "@deniai/ui/components/checkbox";
 import {
   Field,
   FieldDescription,
@@ -23,8 +23,8 @@ import {
   FieldLabel,
   FieldLegend,
   FieldSet,
-} from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
+} from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
 import {
   Select,
   SelectContent,
@@ -32,10 +32,10 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Spinner } from "@/components/ui/spinner";
-import { Textarea } from "@/components/ui/textarea";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+} from "@deniai/ui/components/select";
+import { Spinner } from "@deniai/ui/components/spinner";
+import { Textarea } from "@deniai/ui/components/textarea";
+import { ToggleGroup, ToggleGroupItem } from "@deniai/ui/components/toggle-group";
 import { campaignGroup, paginateCampaigns, type AdCampaignFilter } from "@/lib/ad-campaign-list";
 
 function variantFromForm(form: FormData, language: "japanese" | "english") {

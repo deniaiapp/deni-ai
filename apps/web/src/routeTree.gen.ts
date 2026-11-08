@@ -41,6 +41,7 @@ import { Route as AppFlixaAuthorizeRouteImport } from './routes/_app/flixa/autho
 import { Route as AppOauthAuthorizeRouteImport } from './routes/_app/oauth/authorize'
 import { Route as AppOauthConsentRouteImport } from './routes/_app/oauth/consent'
 import { Route as AppProjectsIdRouteImport } from './routes/_app/projects/$id'
+import { Route as AppRunIndexRouteImport } from './routes/_app/run/index'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAdsRouteImport } from './routes/_app/settings/ads'
 import { Route as AppSettingsApiKeysRouteImport } from './routes/_app/settings/api-keys'
@@ -258,6 +259,11 @@ const AppOauthConsentRoute = AppOauthConsentRouteImport.update({
 const AppProjectsIdRoute = AppProjectsIdRouteImport.update({
   id: '/projects/$id',
   path: '/projects/$id',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRunIndexRoute = AppRunIndexRouteImport.update({
+  id: '/run/',
+  path: '/run/',
   getParentRoute: () => AppRouteRoute,
 } as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
@@ -590,6 +596,7 @@ export interface FileRoutesByFullPath {
   '/{-$locale}/legal/tokusho': typeof Char123LocaleChar125LegalTokushoRoute
   '/chat/': typeof AppChatIndexRoute
   '/compare/': typeof AppCompareIndexRoute
+  '/run/': typeof AppRunIndexRoute
   '/settings/': typeof AppSettingsIndexRoute
   '/api/ads/': typeof ApiAdsIndexRoute
   '/api/chat/': typeof ApiChatIndexRoute
@@ -670,6 +677,7 @@ export interface FileRoutesByTo {
   '/{-$locale}/legal/tokusho': typeof Char123LocaleChar125LegalTokushoRoute
   '/chat': typeof AppChatIndexRoute
   '/compare': typeof AppCompareIndexRoute
+  '/run': typeof AppRunIndexRoute
   '/settings': typeof AppSettingsIndexRoute
   '/api/ads': typeof ApiAdsIndexRoute
   '/api/chat': typeof ApiChatIndexRoute
@@ -753,6 +761,7 @@ export interface FileRoutesById {
   '/{-$locale}/legal/tokusho': typeof Char123LocaleChar125LegalTokushoRoute
   '/_app/chat/': typeof AppChatIndexRoute
   '/_app/compare/': typeof AppCompareIndexRoute
+  '/_app/run/': typeof AppRunIndexRoute
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/api/ads/': typeof ApiAdsIndexRoute
   '/api/chat/': typeof ApiChatIndexRoute
@@ -837,6 +846,7 @@ export interface FileRouteTypes {
     | '/{-$locale}/legal/tokusho'
     | '/chat/'
     | '/compare/'
+    | '/run/'
     | '/settings/'
     | '/api/ads/'
     | '/api/chat/'
@@ -917,6 +927,7 @@ export interface FileRouteTypes {
     | '/{-$locale}/legal/tokusho'
     | '/chat'
     | '/compare'
+    | '/run'
     | '/settings'
     | '/api/ads'
     | '/api/chat'
@@ -999,6 +1010,7 @@ export interface FileRouteTypes {
     | '/{-$locale}/legal/tokusho'
     | '/_app/chat/'
     | '/_app/compare/'
+    | '/_app/run/'
     | '/_app/settings/'
     | '/api/ads/'
     | '/api/chat/'
@@ -1278,6 +1290,13 @@ declare module '@tanstack/react-router' {
       path: '/projects/$id'
       fullPath: '/projects/$id'
       preLoaderRoute: typeof AppProjectsIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/run/': {
+      id: '/_app/run/'
+      path: '/run'
+      fullPath: '/run/'
+      preLoaderRoute: typeof AppRunIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
     '/_app/settings/': {
@@ -1696,6 +1715,7 @@ interface AppRouteRouteChildren {
   AppProjectsIdRoute: typeof AppProjectsIdRoute
   AppChatIndexRoute: typeof AppChatIndexRoute
   AppCompareIndexRoute: typeof AppCompareIndexRoute
+  AppRunIndexRoute: typeof AppRunIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
@@ -1708,6 +1728,7 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppProjectsIdRoute: AppProjectsIdRoute,
   AppChatIndexRoute: AppChatIndexRoute,
   AppCompareIndexRoute: AppCompareIndexRoute,
+  AppRunIndexRoute: AppRunIndexRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(

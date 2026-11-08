@@ -3,7 +3,7 @@ import { m } from "motion/react";
 import { Link } from "@/lib/navigation";
 import { ArrowRight, BookOpenText, BrainCircuit, Code, PencilLine, Zap } from "lucide-react";
 import { useExtracted } from "use-intl";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 
 function FeatureCard({
   icon: Icon,

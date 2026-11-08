@@ -2,11 +2,17 @@ import type { ToolUIPart, UIMessage } from "ai";
 import { ChevronDownIcon, CircleCheckIcon } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Input } from "@deniai/ui/components/input";
 import { Message, MessageContent } from "@/components/ai-elements/message";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import {
   uniqueQuestionnaireParts,
   type QuestionnaireToolAnswer,

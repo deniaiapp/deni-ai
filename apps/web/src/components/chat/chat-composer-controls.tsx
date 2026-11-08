@@ -17,9 +17,17 @@ import {
   type ReasoningEffort,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { DropdownMenuCheckboxItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Button } from "@deniai/ui/components/button";
+import {
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+} from "@deniai/ui/components/dropdown-menu";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@deniai/ui/components/tooltip";
 
 type ToolChipProps = {
   icon: LucideIcon;

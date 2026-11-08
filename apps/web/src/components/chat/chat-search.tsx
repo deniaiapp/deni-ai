@@ -11,7 +11,7 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from "@/components/ui/command";
+} from "@deniai/ui/components/command";
 import { trpc } from "@/lib/trpc/react";
 
 function normalizeTags(value: unknown): string[] {

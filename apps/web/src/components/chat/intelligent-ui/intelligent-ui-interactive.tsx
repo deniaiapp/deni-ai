@@ -12,13 +12,13 @@ import {
 import { useExtracted, useLocale } from "use-intl";
 import { useEffect, useId, useRef, useState, useSyncExternalStore, type FormEvent } from "react";
 import { toast } from "sonner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import { Progress } from "@/components/ui/progress";
-import { Slider } from "@/components/ui/slider";
-import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import { Checkbox } from "@deniai/ui/components/checkbox";
+import { Input } from "@deniai/ui/components/input";
+import { Progress } from "@deniai/ui/components/progress";
+import { Slider } from "@deniai/ui/components/slider";
+import { Textarea } from "@deniai/ui/components/textarea";
 import {
   useIntelligentUiActions,
   useIntelligentUiMessage,

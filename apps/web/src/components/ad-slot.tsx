@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useExtracted, useLocale } from "use-intl";
 import { ArrowUpRight } from "lucide-react";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { cn } from "@/lib/utils";
 import type { AdCreative } from "@/lib/ads";
 

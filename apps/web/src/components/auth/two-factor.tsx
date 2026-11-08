@@ -3,14 +3,20 @@ import { useExtracted } from "use-intl";
 import { type FormEvent, useState } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Field, FieldDescription, FieldError, FieldGroup } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { Label } from "@/components/ui/label";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Checkbox } from "@deniai/ui/components/checkbox";
+import { Field, FieldDescription, FieldError, FieldGroup } from "@deniai/ui/components/field";
+import { Input } from "@deniai/ui/components/input";
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@deniai/ui/components/input-otp";
+import { Label } from "@deniai/ui/components/label";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { authClient } from "@/lib/auth-client";
 import { runWithLoading } from "@/lib/run-with-loading";
 import { cn } from "@/lib/utils";

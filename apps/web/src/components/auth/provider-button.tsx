@@ -8,8 +8,8 @@ import { renderProviderIcon, useAuth, useSignInSocial } from "@better-auth-ui/re
 import { useIsMutating } from "@tanstack/react-query";
 import type { ComponentProps } from "react";
 
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { toSafeRedirectPath } from "@/lib/auth-redirect";
 
 export type ProviderButtonProps = {

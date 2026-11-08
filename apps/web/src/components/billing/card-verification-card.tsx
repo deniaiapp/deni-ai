@@ -13,9 +13,15 @@ import { trpc } from "@/lib/trpc/react";
 import { runWithLoading } from "@/lib/run-with-loading";
 import { usdToUsageUnits, VERIFIED_FREE_POOL_USD } from "@deniai/billing";
 import { formatCompactUsageValue } from "@/lib/utils";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -23,8 +29,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "../ui/dialog";
-import { Spinner } from "../ui/spinner";
+} from "@deniai/ui/components/dialog";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 type Props = {
   isFreeTier: boolean;

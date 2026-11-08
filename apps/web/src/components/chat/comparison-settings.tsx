@@ -7,15 +7,15 @@ import {
   FieldLabel,
   FieldLegend,
   FieldSet,
-} from "@/components/ui/field";
+} from "@deniai/ui/components/field";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
+} from "@deniai/ui/components/select";
+import { Switch } from "@deniai/ui/components/switch";
 import {
   isReasoningEffort,
   OPENAI_FAST_MODE_MULTIPLIER,

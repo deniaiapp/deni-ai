@@ -2,7 +2,7 @@ import { getEmailProviderLink } from "@better-auth-ui/core";
 import { useAuth } from "@better-auth-ui/react";
 import { SquareArrowOutUpRight } from "lucide-react";
 
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@deniai/ui/components/button";
 import { cn } from "@/lib/utils";
 
 export type OpenEmailButtonProps = {

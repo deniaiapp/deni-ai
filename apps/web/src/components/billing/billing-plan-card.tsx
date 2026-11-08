@@ -13,11 +13,17 @@ import {
   useFormatPriceLabel,
   useTierLabel,
 } from "./billing-utils";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Spinner } from "../ui/spinner";
-import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
+import { Tabs, TabsList, TabsTrigger } from "@deniai/ui/components/tabs";
 
 export function PlanCard({
   plan,

@@ -1,6 +1,6 @@
 import { useExtracted } from "use-intl";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
+import { Input } from "@deniai/ui/components/input";
+import { Switch } from "@deniai/ui/components/switch";
 import { formatTokenLimit, numberFormatter } from "./team-utils";
 
 export type TeamMaxModeMemberPolicy = {

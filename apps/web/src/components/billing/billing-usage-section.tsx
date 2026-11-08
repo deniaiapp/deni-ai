@@ -2,10 +2,16 @@ import { Zap } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import { formatAppDate } from "@/lib/format-date";
 import { formatCompactUsageValue } from "@/lib/utils";
-import { Badge } from "../ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
-import { Progress } from "../ui/progress";
-import { Spinner } from "../ui/spinner";
+import { Badge } from "@deniai/ui/components/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Progress } from "@deniai/ui/components/progress";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { AttachmentStorageUsage } from "./attachment-storage-usage";
 import { CombinedUsageMeter, type UsagePoolView } from "./product-usage";
 

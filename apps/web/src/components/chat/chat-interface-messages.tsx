@@ -32,8 +32,8 @@ import type { GroupedMessage } from "@/hooks/use-chat-branches";
 import type { ReasoningEffort } from "@/lib/constants";
 import { useLocalizedChatError } from "@/hooks/use-localized-chat-error";
 import { shouldShowChatAd } from "@/lib/chat-ad-placement";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Spinner } from "@/components/ui/spinner";
+import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
+import { Spinner } from "@deniai/ui/components/spinner";
 import type { QuestionnaireToolOutput } from "@/lib/chat-tools/questionnaire";
 
 interface RequestBody {

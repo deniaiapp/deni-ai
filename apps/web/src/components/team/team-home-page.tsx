@@ -1,10 +1,16 @@
 import { Pencil } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
+import { Input } from "@deniai/ui/components/input";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { TeamDeleteDialog } from "./team-delete-dialog";
 import { TeamIconButton } from "./team-icon-button";
 import { TeamLeaveDialog } from "./team-leave-dialog";

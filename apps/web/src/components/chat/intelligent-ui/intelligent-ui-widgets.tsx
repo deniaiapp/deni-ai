@@ -14,8 +14,8 @@ import {
 import { useExtracted, useLocale } from "use-intl";
 import { useState } from "react";
 import { Streamdown } from "streamdown";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@deniai/ui/components/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@deniai/ui/components/tabs";
 import { streamdownLinkSafety } from "@/components/chat/streamdown-link-safety";
 import type { IntelligentUiBlockOf, IntelligentUiCellValue } from "@/lib/intelligent-ui/schema";
 import { cn } from "@/lib/utils";

@@ -2,7 +2,7 @@ import * as React from "react";
 import { AlertCircleIcon } from "lucide-react";
 import { startTransition, useEffect, useMemo, useReducer, useRef } from "react";
 import { useExtracted } from "use-intl";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { sha256Hex } from "@/lib/hash";
 import { cn } from "@/lib/utils";
 

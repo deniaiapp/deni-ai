@@ -1,7 +1,7 @@
 import { Mail } from "lucide-react";
 import { useExtracted } from "use-intl";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@deniai/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
 import type { Invitation } from "./team-types";
 import { monthDayFormatter } from "./team-utils";
 import { useRoleLabel } from "./use-role-label";

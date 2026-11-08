@@ -3,7 +3,7 @@ import { Link, usePathname } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { useEffect, useSyncExternalStore } from "react";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
-import { Button } from "@/components/ui/button";
+import { Button } from "@deniai/ui/components/button";
 import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc/react";
 import { OfferCountdown } from "./offer-countdown";

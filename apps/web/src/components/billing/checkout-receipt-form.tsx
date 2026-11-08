@@ -10,16 +10,20 @@ import { Link } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Checkbox } from "@deniai/ui/components/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@deniai/ui/components/collapsible";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { runWithLoading } from "@/lib/run-with-loading";
 import { formatCardBrand, formatPaymentMethodLabel } from "@/lib/stripe-checkout-receipt";
 import { cn } from "@/lib/utils";
 import { ReceiptPrinterCard, receiptDeviceCardClassName } from "./subscription-receipt";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Spinner } from "../ui/spinner";
+import { Button } from "@deniai/ui/components/button";
+import { Input } from "@deniai/ui/components/input";
+import { Spinner } from "@deniai/ui/components/spinner";
 
 function CheckoutTermsConsent({
   accepted,

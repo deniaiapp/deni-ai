@@ -4,7 +4,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@deniai/ui/components/dialog";
 import { useFreshSessionLocalization } from "@/hooks/use-fresh-session-localization";
 import { FreshSessionPrompt } from "./fresh-session-prompt";
 

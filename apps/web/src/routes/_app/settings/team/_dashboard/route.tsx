@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { useExtracted } from "use-intl";
 import type { ReactNode } from "react";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "@deniai/ui/components/spinner";
 import { TeamDomainSuggestion } from "@/components/team/team-domain-suggestion";
 import { TeamEmptyState } from "@/components/team/team-empty-state";
 import { TeamReceivedInvitations } from "@/components/team/team-received-invitations";

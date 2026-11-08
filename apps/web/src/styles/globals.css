@@ -5,6 +5,8 @@
 @import "@fontsource-variable/jetbrains-mono";
 
 @source "../../node_modules/streamdown/dist/*.js";
+/* Design system components live in packages/ui, outside this app. */
+@source "../../../../packages/ui/src";
 /* The client build writes .output before the SSR build compiles this file
    again; scanning it there adds classes and changes the CSS hash, so SSR HTML
    would link a stylesheet the client build never emitted. Tailwind skips

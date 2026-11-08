@@ -1,7 +1,7 @@
 import { Link } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Badge } from "@deniai/ui/components/badge";
+import { Button } from "@deniai/ui/components/button";
 
 export function NotFoundPage() {
   const t = useExtracted();

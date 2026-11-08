@@ -1,5 +1,5 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@deniai/ui/components/card";
+import { Skeleton } from "@deniai/ui/components/skeleton";
 
 export function PasskeySkeleton() {
   return (
