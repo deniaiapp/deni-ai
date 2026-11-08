@@ -1,12 +1,19 @@
 # Repository Guidelines
 
+This service is `@deniai/agent-api` (formerly flixa-backend) in the deni-ai
+monorepo; read the root `AGENTS.md` for the workspace layout. Paths below are
+relative to `services/agent-api/`; run commands from here or with
+`pnpm --filter @deniai/agent-api`. The lockfile and `pnpm-workspace.yaml` live at
+the monorepo root, and the Docker build context is the monorepo root
+(`docker build -f services/agent-api/Dockerfile .`).
+
 ## Project Structure & Module Organization
 `app.ts` builds the Hono app (middleware plus the `/v1` routers). `server.ts` is the Node.js entrypoint (`@hono/node-server`) and only wraps `app.ts`. Read config via `process.env`. Route handlers live in `routes/v1/` (`agent.ts`, `deni.ts`, `models.ts`). Shared request guards live in `middleware/`; `middleware/validateAgentAuth.ts` enforces the client access policy (Free/Go only from the listed clients, otherwise a 403 plan notice without a ban; Plus and above from any client; see the README). Domain logic is grouped under `utils/`: `utils/agent/` for model routing and upstream clients, and `utils/deni/` for auth, billing, usage, and DB access.
 
 There is no dedicated `src/` folder; keep new modules close to the feature they support. Follow the existing split: route layer in `routes/`, reusable logic in `utils/`, cross-cutting concerns in `middleware/`.
 
 ## Build, Test, and Development Commands
-Requires Node.js 26+ and pnpm. Install dependencies with `pnpm install`. TypeScript runs directly through `tsx`; `.env` is loaded if present.
+Requires Node.js 26+ and pnpm. Install dependencies with `pnpm install` at the monorepo root. TypeScript runs directly through `tsx`; `.env` is loaded if present.
 
 - `pnpm start`: start the API locally (`tsx server.ts`).
 - `pnpm dev`: start with auto-reload (`tsx watch`).

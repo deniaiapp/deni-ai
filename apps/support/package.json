@@ -1,5 +1,5 @@
 {
-  "name": "deni-ai-support",
+  "name": "@deniai/support",
   "private": true,
   "type": "module",
   "sideEffects": false,
@@ -9,6 +9,7 @@
     "start": "node .output/server/index.mjs",
     "preview": "vite preview",
     "types:check": "tsc --noEmit",
+    "typecheck": "tsc --noEmit",
     "lint": "oxlint"
   },
   "dependencies": {
@@ -37,6 +38,5 @@
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.5"
-  },
-  "packageManager": "pnpm@12.18.0"
+  }
 }

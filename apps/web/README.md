@@ -86,8 +86,10 @@ src/
   server/api/    # tRPC routers
 messages/        # en.json, ja.json
 migrations/      # Drizzle SQL migrations
-packages/        # Workspace packages (e.g. disposable-email-domains)
 ```
+
+Shared workspace packages (for example `disposable-email-domains`) live in the
+monorepo root `packages/` directory.
 
 ## Contributing
 

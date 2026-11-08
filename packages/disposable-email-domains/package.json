@@ -11,6 +11,13 @@
     "./domains.json": "./data/domains.json"
   },
   "scripts": {
-    "refresh": "tsx scripts/refresh.ts"
+    "refresh": "tsx scripts/refresh.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
   }
 }

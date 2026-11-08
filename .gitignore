@@ -1,0 +1,21 @@
+# dependencies
+node_modules
+.pnpm-debug.log*
+
+# build output and caches
+dist
+.output
+.nitro
+.tanstack
+*.tsbuildinfo
+coverage
+
+# env files (never commit secrets; each app documents its own .env.example)
+.env
+.env.*
+!.env.example
+
+# misc
+.DS_Store
+*.pem
+npm-debug.log*

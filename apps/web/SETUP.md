@@ -463,7 +463,7 @@ deleting an account removes its Flixa rows too.
 
 A multi-stage `Dockerfile` is included for self-hosting (e.g. Dokploy):
 
-- **Install:** pnpm 12.8.1 (`pnpm-lock.yaml`, `pnpm-workspace.yaml`), with a frozen lockfile.
+- **Install:** pnpm 12.18.0 with the monorepo root `pnpm-lock.yaml` and `pnpm-workspace.yaml`, with a frozen lockfile (only `@deniai/web` and its workspace packages are installed). The build context is the monorepo root.
 - **Build:** Node 26 runs `vite build`, which writes the Nitro Node.js server to `.output/` (server bundle, traced `node_modules`, and public assets). The build does not typecheck — run `pnpm run typecheck` locally or in CI.
 - Dependencies are installed in the build stage itself, so `node_modules` is an ordinary cached layer (reused while `pnpm-lock.yaml` is unchanged).
 - **Run:** Node 26 runs `node .output/server/index.mjs` on port **3000** (`PORT`; bind address `HOST`)
@@ -476,22 +476,23 @@ Dokploy application settings (typical):
 | Setting         | Value        |
 | --------------- | ------------ |
 | Build type      | Dockerfile   |
-| Dockerfile path | `Dockerfile` |
-| Context         | `.`          |
+| Dockerfile path | `apps/web/Dockerfile` |
+| Context         | `.` (monorepo root)   |
 | Port            | `3000`       |
 | Build cache     | enabled      |
 
-Put the same keys as production `.env` in the service **Environment** tab. Pass only the public `NEXT_PUBLIC_*` values (and optionally `SENTRY_ORG` / `SENTRY_PROJECT`) as **build-time** arguments: the build reads no server secrets, and build arguments stay in the build cache and image history. To upload Sentry source maps, provide `SENTRY_AUTH_TOKEN` as a build secret (`docker build --secret id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN`); without it the upload is skipped. See comments at the top of `Dockerfile`.
+Put the same keys as production `.env` in the service **Environment** tab. Pass only the public `NEXT_PUBLIC_*` values (and optionally `SENTRY_ORG` / `SENTRY_PROJECT`) as **build-time** arguments: the build reads no server secrets, and build arguments stay in the build cache and image history. To upload Sentry source maps, provide `SENTRY_AUTH_TOKEN` as a build secret (`docker build --secret id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN`); without it the upload is skipped. See comments at the top of `apps/web/Dockerfile`.
 
 Local example:
 
 ```bash
-docker build -t deni-ai \
+# From the monorepo root
+docker build -f apps/web/Dockerfile -t deni-ai \
   --build-arg NEXT_PUBLIC_BETTER_AUTH_URL=https://example.com \
   --build-arg NEXT_PUBLIC_TURNSTILE_SITE_KEY=... \
   .
 
-docker run --rm -p 3000:3000 --env-file .env.production deni-ai
+docker run --rm -p 3000:3000 --env-file apps/web/.env.production deni-ai
 ```
 
 ### Other platforms
@@ -529,7 +530,7 @@ The client IP keys the device-authorization rate limit, and anonymous Deni AI Ad
 - Device polling is limited to 60 requests per minute per resolved IP in addition to the per-code limit; approval attempts are limited to 10 per minute per authenticated account. Configure trusted client-IP headers and shared Redis as appropriate for your deployment; without Redis, limits are local to each process.
 - The tRPC procedures listed here, which call Stripe or read every row on each call, are limited per signed-in user with the shared rate limiter (Upstash when `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` are set, otherwise per instance), and refuse further calls with 429 `TOO_MANY_REQUESTS` ("Too many requests. Please try again later.") until that window, which starts at the first counted call, ends. Each procedure has its own budget per minute: 30 for `billing.status`, `billing.plans`, `billing.flashOffer`, `billing.estimatePlanChange`, `billing.getCheckoutSession`, `organization.teamPlans`, `organization.teamBillingStatus`, `organization.estimateTeamPlanChange`, `organization.invitationBillingImpact` and `organization.getTeamCheckoutSession`; 60 for `billing.maxModeStatus` and `organization.teamMaxModeSettings` (the team Max Mode editor refetches both after every saved field); 120 for `chat.getChats` (refetched after each sent message, which chat itself limits to 30 a minute, and after each sidebar delete, pin, edit or move); 10 for `billing.accountDeletionStatus` and for the Stripe-backed mutations `billing.createCheckoutSession`, `billing.createPortalSession`, `billing.changePlan`, `billing.cancelSubscription`, `billing.resumeSubscription`, `billing.enableMaxMode`, `billing.createMaxModeCreditCheckout`, `billing.updateMaxModeAutoTopUp`, `billing.removeVerifiedCard`, `organization.createTeamCheckoutSession`, `organization.createTeamPortalSession`, `organization.changeTeamPlan`, `organization.cancelTeamSubscription`, `organization.resumeTeamSubscription`, `organization.updateTeamMaxModeEnabled`, `organization.createTeamMaxModeCreditCheckout`, `organization.updateTeamMaxModeAutoTopUp` and `organization.syncSeatCount`. Card verification is budgeted per hour, since each verification intent is a $1 authorization its client secret can attempt with any card: 10 an hour each for `billing.createCardSetupIntent` and `billing.confirmCardSetup`. Reopening the card dialog reuses the account's newest verification intent still waiting for a card instead of creating another; each authorized card uses one up. The client caches these queries for 60 seconds without refetching on focus, so normal use stays several times below the budgets, and never retries a query refused with 429 (other failed queries are retried up to three times); the sidebar keeps showing the chats it already loaded when a refetch fails. Budgets are in `TRPC_RATE_LIMITS` (`src/server/api/trpc.ts`); add `rateLimited(name, limit)` before `.input()` on a new expensive procedure.
 - Generated HTML opened in another tab runs inside an iframe with `sandbox="allow-scripts"`, without application-origin access. Account exports include team projects only while the creator is still a member. Project mutations recheck current team membership and management rights in the write statement, including membership in the destination team when sharing. Only a project's creator can move it to another team or make it personal again; team owners and admins can still edit, archive, or delete it. When a creator deletes their account, their team projects pass to a current owner (or else admin) of that team instead of being deleted; personal projects are deleted.
-- KaTeX is overridden to a fixed release in `pnpm-workspace.yaml`. `shadcn` is a development dependency: install development dependencies in the build stage for its CSS, then deploy the standalone output. Check `pnpm audit --prod` for deployed dependencies and `pnpm audit` for development tools. At the time of this review, the unpatched [braces stack-exhaustion advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) remains in the development-only shadcn CLI graph; do not process untrusted glob patterns with that CLI and revisit the advisory when a fix is published.
+- KaTeX is overridden to a fixed release in the monorepo root `pnpm-workspace.yaml`. `shadcn` is a development dependency: install development dependencies in the build stage for its CSS, then deploy the standalone output. Check `pnpm audit --prod` for deployed dependencies and `pnpm audit` for development tools. At the time of this review, the unpatched [braces stack-exhaustion advisory](https://github.com/advisories/GHSA-vfj7-8cjw-p6xm) remains in the development-only shadcn CLI graph; do not process untrusted glob patterns with that CLI and revisit the advisory when a fix is published.
 
 ## Troubleshooting
 

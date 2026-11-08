@@ -1,0 +1,72 @@
+# Used by `docker build -f apps/web/Dockerfile .` (BuildKit reads
+# <Dockerfile>.dockerignore). Paths are relative to the monorepo root.
+
+# Other workspace members: only their manifests are needed for the frozen install
+apps/*
+!apps/web
+!apps/*/package.json
+services/*/*
+!services/*/package.json
+
+# Dependencies & build output
+**/node_modules
+**/.output
+**/.nitro
+**/.tanstack
+**/out
+**/build
+**/dist
+**/*.tsbuildinfo
+
+# Git / IDE / local tooling
+# apps/web/.gitignore stays: Tailwind skips the paths it lists when scanning for classes.
+.git
+**/.gitattributes
+**/.github
+**/.vscode
+**/.idea
+**/.claude
+**/.claude-images
+**/.agents
+**/.cursor
+**/.opencode
+**/.zed
+**/.yomiyasu
+**/.diagnostics.json
+**/.errors_by_file.json
+**/.vercel
+**/.vx
+
+# Env & secrets (inject at runtime)
+**/.env
+**/.env.*
+!apps/web/.env.example
+# Committed public NEXT_PUBLIC_* values; Vite reads it during `vite build`.
+!apps/web/.env.production
+
+# Docs & non-runtime paths
+**/*.md
+!packages/**/README.md
+apps/web/LICENSE
+apps/web/doctor.config.ts
+apps/web/renovate.json
+apps/web/skills-lock.json
+apps/web/components.json
+
+# Local-only / heavy paths
+apps/web/internal
+apps/web/tools
+apps/web/scripts
+packages/*/scripts
+**/coverage
+apps/web/public/sw.js.map
+**/ts-files.txt
+**/ts-files-after.txt
+
+# OS junk
+**/.DS_Store
+**/Thumbs.db
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+**/.pnpm-debug.log*

@@ -1,0 +1,19 @@
+# Used by `docker build -f apps/support/Dockerfile .` (BuildKit reads
+# <Dockerfile>.dockerignore). Paths are relative to the monorepo root.
+
+# Other workspace members: only their manifests are needed for the frozen install
+apps/*
+!apps/support
+!apps/*/package.json
+services/*/*
+!services/*/package.json
+
+**/node_modules
+**/.output
+**/.nitro
+**/.tanstack
+**/.source
+.git
+**/*.log
+**/.env
+**/.env.*

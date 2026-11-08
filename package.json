@@ -1,0 +1,25 @@
+{
+  "name": "deni-ai-monorepo",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --filter @deniai/web dev",
+    "dev:web": "pnpm --filter @deniai/web dev",
+    "dev:support": "pnpm --filter @deniai/support dev",
+    "dev:agent-api": "pnpm --filter @deniai/agent-api dev",
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "format": "pnpm -r run format",
+    "typecheck": "pnpm -r run typecheck",
+    "test": "pnpm -r run test"
+  },
+  "devDependencies": {
+    "oxfmt": "^0.75.0",
+    "oxlint": "^1.90.0",
+    "typescript": "^7.0.2"
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "packageManager": "pnpm@12.18.0"
+}

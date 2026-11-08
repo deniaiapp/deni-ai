@@ -2,45 +2,55 @@
 #
 # Dokploy (Dockerfile build)
 #   Build Type:      Dockerfile
-#   Dockerfile path: Dockerfile
-#   Docker context:  .
+#   Dockerfile path: apps/support/Dockerfile
+#   Docker context:  . (the monorepo root; apps/support/Dockerfile.dockerignore applies)
 #   Port:            3000
 #   Domain:          support.deniai.app
 #
 # No build arguments are needed. The support chat and forms read optional
 # runtime environment variables; see README.md and .env.example.
 #
-# Local:
-#   docker build -t deni-ai-support .
+# Local (from the monorepo root):
+#   docker build -f apps/support/Dockerfile -t deni-ai-support .
 #   docker run --rm -p 3000:3000 deni-ai-support
 
 FROM node:26-slim AS base
 WORKDIR /app
 RUN npm install --global pnpm@latest
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+# Every workspace manifest is copied so the frozen lockfile matches; only the
+# help center is installed.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY apps/web/package.json ./apps/web/
+COPY apps/support/package.json ./apps/support/
+COPY services/agent-api/package.json ./services/agent-api/
+COPY packages ./packages
 
 FROM base AS builder
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-  pnpm install --frozen-lockfile --store-dir=/pnpm/store
+  pnpm install --frozen-lockfile --filter "@deniai/support..." --store-dir=/pnpm/store
 ENV NODE_ENV=production
-COPY . .
+COPY apps/support ./apps/support
+WORKDIR /app/apps/support
 RUN pnpm run build
 
 # The server bundle still imports a few packages at runtime (react through a
 # CommonJS require, takumi-js for OG images, the search index), and takumi-js
 # loads its native renderer dynamically, so the runtime keeps production
-# node_modules instead of relying on Nitro's dependency tracing.
+# node_modules instead of relying on Nitro's dependency tracing. pnpm links
+# apps/support/node_modules into the root node_modules/.pnpm store, so both
+# directories are kept with the same layout.
 FROM base AS deps
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-  pnpm install --prod --frozen-lockfile --store-dir=/pnpm/store
+  pnpm install --prod --frozen-lockfile --filter "@deniai/support..." --store-dir=/pnpm/store
 
 FROM node:26-slim AS runner
-WORKDIR /app
+WORKDIR /app/apps/support
 ENV NODE_ENV=production \
   HOST=0.0.0.0 \
   PORT=3000
-COPY --from=deps --chown=node:node /app/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/.output ./.output
+COPY --from=deps --chown=node:node /app/node_modules /app/node_modules
+COPY --from=deps --chown=node:node /app/apps/support/node_modules ./node_modules
+COPY --from=builder --chown=node:node /app/apps/support/.output ./.output
 USER node
 EXPOSE 3000
 CMD ["node", ".output/server/index.mjs"]

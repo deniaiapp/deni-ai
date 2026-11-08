@@ -1,4 +1,8 @@
-# Agent guide for deni-ai
+# Agent guide for deni-ai (apps/web)
+
+This app is `@deniai/web` in the deni-ai monorepo; read the root `AGENTS.md`
+for the workspace layout. Paths below are relative to `apps/web/` unless they
+say otherwise; run app commands from here or with `pnpm --filter @deniai/web`.
 
 pnpm, Node.js 26+, TanStack Start (TanStack Router, Vite, Nitro), React Compiler,
 strict TypeScript, Tailwind v4, shadcn/ui, Drizzle/Postgres, and better-auth.
@@ -18,7 +22,9 @@ requested; see the Git policy below.
 
 Read these when relevant rather than loading the whole project:
 
-- Commands and dependency versions: `package.json` (pnpm required).
+- Commands and dependency versions: `package.json` (pnpm required). The
+  lockfile, `pnpm-workspace.yaml` (overrides, build allowlist), shared
+  `tsconfig.base.json` and oxlint/oxfmt configs live at the monorepo root.
 - Environment validation: `src/env.ts`; setup: `.env.example` and `SETUP.md`.
   Optional empty strings are treated as unset. Never hardcode secrets.
 - Database: `src/db/schema/`, `src/db/schema/index.ts`, `drizzle.config.ts`;
@@ -98,4 +104,4 @@ TanStack Start APIs change between versions. Read the skills bundled with the
 installed packages before writing route or server code:
 `node_modules/@tanstack/react-start/skills/` and the `skills/` folders of
 `@tanstack/start-client-core` and `@tanstack/router-core` (resolve them through
-`node_modules/.pnpm`).
+the monorepo root `node_modules/.pnpm`).

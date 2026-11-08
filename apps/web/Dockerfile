@@ -4,8 +4,8 @@
 # -------------------------
 # Application settings:
 #   Build Type:        Dockerfile
-#   Dockerfile path:   Dockerfile
-#   Docker context:    .
+#   Dockerfile path:   apps/web/Dockerfile
+#   Docker context:    . (the monorepo root; apps/web/Dockerfile.dockerignore applies)
 #   Port:              3000
 #
 # Environment (service Environment tab):
@@ -19,13 +19,16 @@
 #     without it the build skips the source map upload.
 #
 # Local:
-#   docker build -t deni-ai .
+#   # From the monorepo root:
+#   docker build -f apps/web/Dockerfile -t deni-ai .
 #   # With prod public/client values (repeat --build-arg per key, or use Dokploy):
-#   docker build -t deni-ai --build-arg NEXT_PUBLIC_BETTER_AUTH_URL=https://example.com .
-#   docker run --rm -p 3000:3000 --env-file .env.production deni-ai
+#   docker build -f apps/web/Dockerfile -t deni-ai --build-arg NEXT_PUBLIC_BETTER_AUTH_URL=https://example.com .
+#   docker run --rm -p 3000:3000 --env-file apps/web/.env.production deni-ai
 
 # ---------------------------------------------------------------------------
-# Install dependencies (pnpm workspaces + pnpm-lock.yaml), then build.
+# Install dependencies (pnpm workspace + the root pnpm-lock.yaml), then build.
+# Every workspace manifest is copied so the frozen lockfile matches; only
+# apps/web and the workspace packages it depends on are installed.
 # Dependencies are installed in the build stage itself: `node_modules` is an
 # ordinary layer (cached while the lockfile is unchanged), with no COPY of
 # thousands of files and no bind mount.
@@ -33,16 +36,20 @@
 FROM node:26-slim AS builder
 WORKDIR /app
 RUN npm install --global pnpm@latest
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-COPY packages/disposable-email-domains ./packages/disposable-email-domains
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY apps/web/package.json ./apps/web/
+COPY apps/support/package.json ./apps/support/
+COPY services/agent-api/package.json ./services/agent-api/
+COPY packages ./packages
 # Install before NODE_ENV=production so devDependencies (Vite, Tailwind, the
 # React Compiler) are present for the build.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-  pnpm install --frozen-lockfile --store-dir=/pnpm/store
+  pnpm install --frozen-lockfile --filter "@deniai/web..." --store-dir=/pnpm/store
 
 ENV NODE_ENV=production
 
-COPY . .
+COPY apps/web ./apps/web
+WORKDIR /app/apps/web
 
 # Only public values are build arguments: the build never reads server
 # secrets, which the runtime stage gets from the container environment.
@@ -95,7 +102,7 @@ ENV PORT=3000 \
 
 # Official Node.js images include a non-root `node` user/group.
 # `.output` holds the server bundle, its traced node_modules and public assets.
-COPY --from=builder --chown=node:node /app/.output ./.output
+COPY --from=builder --chown=node:node /app/apps/web/.output ./.output
 
 USER node
 EXPOSE 3000

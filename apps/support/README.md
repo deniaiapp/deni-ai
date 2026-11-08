@@ -5,6 +5,9 @@ The Deni AI help center (support.deniai.app), built with
 
 ## Development
 
+This app is `@deniai/support` in the deni-ai monorepo. Install from the
+monorepo root, then run commands here (or with `pnpm --filter @deniai/support`):
+
 ```bash
 pnpm install
 pnpm dev
@@ -54,8 +57,9 @@ also rate limited per IP in memory.
 
 ## Deployment
 
-Production runs on Dokploy from the `Dockerfile` (Build Type: Dockerfile,
-port 3000, domain support.deniai.app). Set the support variables above as
+Production runs on Dokploy from `apps/support/Dockerfile` with the monorepo
+root as the build context (Build Type: Dockerfile, port 3000, domain
+support.deniai.app). Set the support variables above as
 runtime environment variables; no build arguments are needed.
 
 `pnpm run build` produces a Node server in `.output/`. It still imports a few
