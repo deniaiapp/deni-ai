@@ -38,6 +38,7 @@
     "@better-auth/oauth-provider": "1.7.14",
     "@better-auth/passkey": "^1.7.14",
     "@deni-ai/disposable-email-domains": "workspace:*",
+    "@deniai/ai": "workspace:*",
     "@deniai/billing": "workspace:*",
     "@deniai/db": "workspace:*",
     "@deniai/emails": "workspace:*",

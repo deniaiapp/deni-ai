@@ -24,7 +24,7 @@ import {
   normalizeComparisonSettings,
   type ComparisonSettings,
 } from "@/lib/comparison-settings";
-import { models } from "@/lib/constants";
+import { models } from "@deniai/ai/models";
 import { Button } from "@deniai/ui/components/button";
 import { ChatComposerModelPicker } from "@/components/chat/chat-composer-model-picker";
 import { Spinner } from "@deniai/ui/components/spinner";

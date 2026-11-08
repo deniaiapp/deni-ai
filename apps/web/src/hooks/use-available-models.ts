@@ -5,7 +5,7 @@ import {
   getModelsForGuest,
   getModelsForPlanTier,
   isProModeAllowedForAccount,
-} from "@/lib/constants";
+} from "@deniai/ai/models";
 import { isModelProviderAvailable } from "@/lib/platform-capabilities";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { trpc } from "@/lib/trpc/react";

@@ -1,8 +1,8 @@
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, type LanguageModel } from "ai";
 import { env } from "@/env";
-import { models } from "@/lib/constants";
-import { createDeniOpenRouter } from "@/lib/openrouter-provider";
+import { models } from "@deniai/ai/models";
+import { createDeniOpenRouter } from "@deniai/ai/openrouter";
 
 const PROBE_TIMEOUT_MS = 30_000;
 const MAX_ERROR_LENGTH = 300;

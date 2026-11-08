@@ -178,7 +178,7 @@ Notes:
 - Better Auth self-service organization leave is audited server-side and reconciles licensed seats after successful authorization, just like member removal.
 - Device approval requires the configured public origin and `application/json`; initiate/poll remain available to extension clients without a browser Origin. Reverse proxies must preserve the browser's Origin header.
 - `pnpm test` runs `src/**/*.test.ts`. Keep each test next to the code it covers, and never let tests contact real auth services or databases.
-- When adding or changing supported models, update `src/lib/constants.ts`.
+- When adding or changing supported models, update `packages/ai/src/models.ts` (`@deniai/ai/models`).
 - `OPENROUTER_API_KEY` routes OpenAI-family and other OpenRouter models when voids mode is off. It also serves as the Anthropic fallback when `ANTHROPIC_API_KEY` is absent.
 - Optional voids.top mode: set `VOIDS_MODE=true` (or `1`) and provide **`VOIDS_API_KEY`** to send OpenAI and Anthropic traffic through the OpenAI-compatible voids.top gateway. Without the key, normal provider routing is used. Optional `VOIDS_BASE_URL` (default `https://capi.voids.top/v2`). When `VOIDS_MODE` is off, OpenAI uses OpenRouter and Anthropic uses its native key when present, otherwise OpenRouter.
 - Optional Deni AI API: set **`DENI_API_KEY`** (and optionally **`DENI_API_BASE_URL`**, default `https://api.deniai.app/v1`, an OpenAI-compatible Chat Completions endpoint) to expose OpenAI models, including GPT-6 Luna. OpenAI models on this route are sent as `openai/<id>` (e.g. `openai/gpt-6-sol`) and do not offer Pro or Fast mode. A missing key hides those models.

@@ -14,8 +14,8 @@ import {
   isProModeAllowedForAccount,
   models,
   resolveReasoningEffort,
-} from "@/lib/constants";
-import { createDeniOpenRouter } from "@/lib/openrouter-provider";
+} from "@deniai/ai/models";
+import { createDeniOpenRouter } from "@deniai/ai/openrouter";
 import { isModelProviderAvailable } from "@/lib/platform-capabilities";
 import { platformCapabilities } from "@/lib/platform-capabilities.server";
 import {

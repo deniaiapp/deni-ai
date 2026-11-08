@@ -207,11 +207,12 @@ Prefer not to hand-edit generated files under `src/components/ui/` unless necess
 
 1. Add env keys in `src/env.ts` and `.env.example` if needed
 2. Wire the provider in chat / generation libs under `src/lib/`
-3. Register models in `src/lib/constants.ts`
+3. Register models in `packages/ai/src/models.ts` (`@deniai/ai/models`)
 
 ### Chat tools
 
-Tools (search, browse, image, video) live under `src/lib/chat-tools/`.
+Tools (search, browse, image, video) live under `src/lib/chat-tools/`; pure tool definitions
+without app dependencies (the questionnaire) live in `packages/ai/src/tools/`.
 
 ## Reporting Issues
 

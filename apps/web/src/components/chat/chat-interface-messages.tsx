@@ -29,12 +29,12 @@ import { AdSlot } from "@/components/ad-slot";
 import { AssistantMessage } from "@/components/chat/assistant-message";
 import type { ModelOption } from "@/components/chat/chat-composer";
 import type { GroupedMessage } from "@/hooks/use-chat-branches";
-import type { ReasoningEffort } from "@/lib/constants";
+import type { ReasoningEffort } from "@deniai/ai/models";
 import { useLocalizedChatError } from "@/hooks/use-localized-chat-error";
 import { shouldShowChatAd } from "@/lib/chat-ad-placement";
 import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
 import { Spinner } from "@deniai/ui/components/spinner";
-import type { QuestionnaireToolOutput } from "@/lib/chat-tools/questionnaire";
+import type { QuestionnaireToolOutput } from "@deniai/ai/tools/questionnaire";
 
 interface RequestBody {
   model: string;

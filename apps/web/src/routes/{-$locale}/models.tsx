@@ -3,7 +3,7 @@ import { useExtracted, useLocale } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
 import { getExtracted } from "@deniai/i18n/extracted";
 import { LoginButton } from "@/components/login-button";
-import { models, type ModelDefinition } from "@/lib/constants";
+import { models, type ModelDefinition } from "@deniai/ai/models";
 import { useModelDescriptionCopy } from "@/lib/model-description-copy";
 import { isModelProviderAvailable } from "@/lib/platform-capabilities";
 import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";

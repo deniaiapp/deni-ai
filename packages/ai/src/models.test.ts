@@ -7,7 +7,7 @@ import {
   isModelAllowedForAccount,
   isProModeAllowedForAccount,
   models,
-} from "./constants";
+} from "./models";
 
 describe("model access", () => {
   const restrictedModel = models.find((model) => !isFreePlanModel(model.value));

@@ -21,7 +21,7 @@ vi.mock("@/lib/usage", () => ({ canCompareModels: async () => mocks.eligible }))
 
 import { chatRouter } from "./chat";
 import { chats, modelComparisons } from "@/db/schema";
-import { models } from "@/lib/constants";
+import { models } from "@deniai/ai/models";
 import { comparisonSettingsSchema } from "@/lib/comparison-settings";
 
 const messages = [

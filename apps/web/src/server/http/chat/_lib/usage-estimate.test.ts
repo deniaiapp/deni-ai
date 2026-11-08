@@ -1,7 +1,7 @@
 import { convertToModelMessages, type UIMessage } from "ai";
 import { expect, test } from "vitest";
 import type { ChatAttachmentCache } from "@/lib/chat-attachment-download";
-import { reasoningEffortValues, resolveReasoningEffort } from "@/lib/constants";
+import { reasoningEffortValues, resolveReasoningEffort } from "@deniai/ai/models";
 import {
   capGuestReasoningEffort,
   estimateGuestPromptTokens,

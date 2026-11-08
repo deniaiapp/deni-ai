@@ -9,7 +9,7 @@ import {
   reasoningEffortValues,
   type ModelEfforts,
   type ReasoningEffort,
-} from "@/lib/constants";
+} from "@deniai/ai/models";
 
 // Guests are billed per request, not per token, so bound the prompt and output a
 // single guest request can use.

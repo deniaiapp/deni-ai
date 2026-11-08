@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { calculateChatUsageAmount, resolveFinalChatUsageAmount } from "./chat-usage-amount";
-import { getEffectiveTokenMultiplier } from "./constants";
+import { getEffectiveTokenMultiplier } from "@deniai/ai/models";
 
 const model = "gpt-6-luna";
 

@@ -1,5 +1,5 @@
 import { createBrowseTool } from "./browse";
-import { createQuestionnaireTool } from "./questionnaire";
+import { createQuestionnaireTool } from "@deniai/ai/tools/questionnaire";
 import { createSearchTool } from "./search";
 import { platformCapabilities } from "@/lib/platform-capabilities.server";
 import type { CreateChatToolsOptions } from "./types";

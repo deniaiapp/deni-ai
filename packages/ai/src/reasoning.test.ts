@@ -1,6 +1,6 @@
 import { convertToModelMessages, type ModelMessage, type UIMessage } from "ai";
 import { expect, test } from "vitest";
-import { stripEarlierTurnReasoning } from "./chat-reasoning";
+import { stripEarlierTurnReasoning } from "./reasoning";
 
 const signed = (signature: string) => ({
   openrouter: {

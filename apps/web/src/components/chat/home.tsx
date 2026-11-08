@@ -8,7 +8,7 @@ import { ProjectSelect } from "@/components/projects/project-select";
 import { useAvailableModels } from "@/hooks/use-available-models";
 import { useNewChat } from "@/hooks/use-new-chat";
 import { setPreferredModel, usePreferredModel } from "@/hooks/use-preferred-model";
-import { defaultModel, getPreferredReasoningEffort, type ReasoningEffort } from "@/lib/constants";
+import { defaultModel, getPreferredReasoningEffort, type ReasoningEffort } from "@deniai/ai/models";
 import { authClient } from "@/lib/auth-client";
 import { trpc } from "@/lib/trpc/react";
 

@@ -39,7 +39,7 @@ import {
   withStableAttachmentUrls,
   type ResolvedAttachments,
 } from "@/lib/attachments";
-import { stripEarlierTurnReasoning } from "@/lib/chat-reasoning";
+import { stripEarlierTurnReasoning } from "@deniai/ai/reasoning";
 import { inlineTextAttachments } from "@/lib/chat-text-attachments";
 import {
   prepareBinaryAttachments,
@@ -58,7 +58,7 @@ import {
   startChatGeneration,
 } from "@/lib/chat-generation";
 import { createChatTools } from "@/lib/chat-tools";
-import { getModelContextWindow, getModelDefinition } from "@/lib/constants";
+import { getModelContextWindow, getModelDefinition } from "@deniai/ai/models";
 import { buildMemoryPrompt, getUserMemoryState, maybeAutoSaveMemories } from "@/lib/memory";
 import { platformCapabilities } from "@/lib/platform-capabilities.server";
 import { buildProjectPrompt } from "@/lib/project-context";

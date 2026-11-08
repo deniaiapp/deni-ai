@@ -31,12 +31,12 @@ import {
   isQuestionnaireToolPart,
 } from "@/components/chat/questionnaire-tool";
 import { IntelligentUiMessageProvider } from "@/components/chat/intelligent-ui/intelligent-ui-context";
-import type { QuestionnaireToolOutput } from "@/lib/chat-tools/questionnaire";
+import type { QuestionnaireToolOutput } from "@deniai/ai/tools/questionnaire";
 import { stripIntelligentUiBlocks } from "@/lib/intelligent-ui/schema";
 import { CitationSourcesProvider } from "@/components/chat/inline-citation";
 import { collectCitationSources, replaceCitationMarkers } from "@/lib/chat-citations";
 import { hasSuccessfulToolPart } from "@/components/chat/chat-utils";
-import type { ReasoningEffort } from "@/lib/constants";
+import type { ReasoningEffort } from "@deniai/ai/models";
 import { Button } from "@deniai/ui/components/button";
 import {
   DropdownMenu,

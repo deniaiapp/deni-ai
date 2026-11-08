@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { generateObject } from "ai";
-import { createDeniOpenRouter } from "../src/lib/openrouter-provider";
+import { createDeniOpenRouter } from "@deniai/ai/openrouter";
 import { z } from "zod";
 
 const DEFAULT_MODEL = "openai/gpt-6-luna";

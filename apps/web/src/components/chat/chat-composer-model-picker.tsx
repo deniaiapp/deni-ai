@@ -24,7 +24,7 @@ import {
   type ModelHealthStatus,
   useModelHealth,
 } from "@/hooks/use-model-health";
-import { formatModelDeprecationDate } from "@/lib/constants";
+import { formatModelDeprecationDate } from "@deniai/ai/models";
 import { translateModelDescription, useModelDescriptionCopy } from "@/lib/model-description-copy";
 import { cn } from "@/lib/utils";
 import { Badge } from "@deniai/ui/components/badge";

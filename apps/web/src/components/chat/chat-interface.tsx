@@ -23,13 +23,9 @@ import { getVisualLayout } from "@/hooks/use-visual-layout";
 import { authClient } from "@/lib/auth-client";
 import { ensureChatCreated } from "@/lib/chat-creation";
 import { CHAT_OLDER_MESSAGE_COUNT, mergeMessageWindow } from "@/lib/chat-messages";
-import type { QuestionnaireToolOutput } from "@/lib/chat-tools/questionnaire";
-import {
-  defaultModel,
-  GA_ID,
-  getPreferredReasoningEffort,
-  type ReasoningEffort,
-} from "@/lib/constants";
+import type { QuestionnaireToolOutput } from "@deniai/ai/tools/questionnaire";
+import { defaultModel, getPreferredReasoningEffort, type ReasoningEffort } from "@deniai/ai/models";
+import { GA_ID } from "@/lib/constants";
 import { trpc } from "@/lib/trpc/react";
 
 const ArtifactPreviewPanel = dynamic(

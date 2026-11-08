@@ -87,7 +87,7 @@ import { useInitialMessage } from "./use-initial-message";
 import { useKeyboardShortcuts } from "./use-keyboard-shortcuts";
 import { ensureChatCreated, isChatCreationPending, trackChatCreation } from "@/lib/chat-creation";
 import { mergeMessageWindow, sliceLatestMessages, sliceOlderMessages } from "@/lib/chat-messages";
-import { models } from "@/lib/constants";
+import { models } from "@deniai/ai/models";
 
 beforeEach(() => {
   vi.clearAllMocks();

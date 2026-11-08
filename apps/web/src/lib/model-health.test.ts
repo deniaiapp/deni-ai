@@ -2,7 +2,7 @@ import { beforeEach, expect, test, vi } from "vitest";
 import { getModelHealth, recordModelHealth } from "./model-health";
 
 vi.mock("@/env", () => ({ env: {} }));
-vi.mock("@/lib/openrouter-provider", () => ({ createDeniOpenRouter: vi.fn() }));
+vi.mock("@deniai/ai/openrouter", () => ({ createDeniOpenRouter: vi.fn() }));
 
 beforeEach(() => {
   delete (globalThis as { modelHealthResults?: unknown }).modelHealthResults;

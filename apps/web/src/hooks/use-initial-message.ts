@@ -1,7 +1,7 @@
 import type { useChat } from "@ai-sdk/react";
 import { useRouter, useSearchParams } from "@/lib/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
-import { models, resolveReasoningEffort, type ReasoningEffort } from "@/lib/constants";
+import { models, resolveReasoningEffort, type ReasoningEffort } from "@deniai/ai/models";
 
 const INITIAL_MESSAGE_STORAGE_KEY = "deni_initial_message:v1";
 

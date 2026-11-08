@@ -2,7 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test, vi } from "vitest";
 import { ChatComposerModelPicker } from "./chat-composer-model-picker";
-import { models } from "@/lib/constants";
+import { models } from "@deniai/ai/models";
 
 vi.mock("use-intl", () => import("@/test/intl-mock"));
 vi.mock("@/hooks/use-available-models", () => ({

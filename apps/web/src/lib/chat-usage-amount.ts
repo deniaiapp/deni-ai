@@ -1,4 +1,7 @@
-import { getEffectiveTokenMultiplier, type EffectiveTokenMultiplierOptions } from "@/lib/constants";
+import {
+  getEffectiveTokenMultiplier,
+  type EffectiveTokenMultiplierOptions,
+} from "@deniai/ai/models";
 import { computeWeightedUsageFromLanguageModelUsage } from "@/lib/token-weighting";
 
 type ModelUsage = Parameters<typeof computeWeightedUsageFromLanguageModelUsage>[0];

@@ -142,8 +142,8 @@ vi.mock("@/lib/chat-attachment-download", async () => {
   );
   return { ...actual, fitBinaryAttachmentsToBudget: vi.fn(async (messages) => messages) };
 });
-vi.mock("@/lib/constants", async () => {
-  const actual = await vi.importActual<typeof import("@/lib/constants")>("@/lib/constants");
+vi.mock("@deniai/ai/models", async () => {
+  const actual = await vi.importActual<typeof import("@deniai/ai/models")>("@deniai/ai/models");
   return { ...actual, getEffectiveTokenMultiplier: () => 1 };
 });
 vi.mock("ai", async () => {

@@ -18,7 +18,7 @@ import {
   type QuestionnaireToolAnswer,
   type QuestionnaireToolInput,
   type QuestionnaireToolOutput,
-} from "@/lib/chat-tools/questionnaire";
+} from "@deniai/ai/tools/questionnaire";
 
 export type QuestionnaireToolPart = ToolUIPart & { type: "tool-questionnaire" };
 

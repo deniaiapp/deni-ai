@@ -15,7 +15,7 @@ import {
   type ModelDefinition,
   type ModelEfforts,
   type ReasoningEffort,
-} from "@/lib/constants";
+} from "@deniai/ai/models";
 import { cn } from "@/lib/utils";
 import { Button } from "@deniai/ui/components/button";
 import {

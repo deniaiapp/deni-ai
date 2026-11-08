@@ -8,7 +8,7 @@ import {
   formatModelDeprecationDate,
   supportsOpenAILongContextPricing,
   type ModelDefinition,
-} from "@/lib/constants";
+} from "@deniai/ai/models";
 import { translateModelDescription } from "@/lib/model-description-copy";
 import { UsageTierBadge } from "@/components/chat/usage-tier-badge";
 import { authorLabels } from "./models-author-labels";

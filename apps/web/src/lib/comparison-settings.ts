@@ -3,7 +3,7 @@ import {
   reasoningEffortValues,
   resolveReasoningEffort,
   type ModelDefinition,
-} from "@/lib/constants";
+} from "@deniai/ai/models";
 
 export const comparisonToolNames = ["search", "browse"] as const;
 export const comparisonSettingsSchema = z.object({

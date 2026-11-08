@@ -4,7 +4,7 @@ import { db } from "@/db/drizzle";
 import { chats } from "@/db/schema";
 import { env } from "@/env";
 import { stringifyForJsonb } from "@/lib/jsonb";
-import { createDeniOpenRouter } from "@/lib/openrouter-provider";
+import { createDeniOpenRouter } from "@deniai/ai/openrouter";
 
 type ChatUpdateFields = Partial<typeof chats.$inferInsert>;
 

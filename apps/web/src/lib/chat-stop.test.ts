@@ -19,7 +19,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/env", () => ({ env: {} }));
-vi.mock("@/lib/openrouter-provider", () => ({ createDeniOpenRouter: vi.fn() }));
+vi.mock("@deniai/ai/openrouter", () => ({ createDeniOpenRouter: vi.fn() }));
 vi.mock("@/db/drizzle", () => {
   const dialect = new PgDialect();
   return {

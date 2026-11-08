@@ -5,7 +5,7 @@ import {
   createQuestionnaireTool,
   questionnaireToolInputSchema,
   uniqueQuestionnaireParts,
-} from "./questionnaire";
+} from "@deniai/ai/tools/questionnaire";
 
 const valid = {
   title: "Trip details",

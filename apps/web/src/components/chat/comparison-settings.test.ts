@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { expect, test, vi } from "vitest";
 import { ComparisonSettingsControls } from "./comparison-settings";
 import { comparisonSettingsSchema } from "@/lib/comparison-settings";
-import { models } from "@/lib/constants";
+import { models } from "@deniai/ai/models";
 
 vi.mock("use-intl", () => import("@/test/intl-mock"));
 

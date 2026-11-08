@@ -1,6 +1,6 @@
 import { Coins } from "lucide-react";
 import { useExtracted } from "use-intl";
-import { getUsageTierMultiplier, type UsageTier } from "@/lib/constants";
+import { getUsageTierMultiplier, type UsageTier } from "@deniai/ai/models";
 import { cn } from "@/lib/utils";
 
 /** "Tier N" for models whose tokens count more than once toward usage (Tier 2 and above). */

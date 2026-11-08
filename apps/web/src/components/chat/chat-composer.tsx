@@ -13,7 +13,7 @@ import {
   OPENAI_PRO_MODE_MULTIPLIER,
   type ModelDefinition,
   type ReasoningEffort,
-} from "@/lib/constants";
+} from "@deniai/ai/models";
 
 export type { ComposerMessage };
 

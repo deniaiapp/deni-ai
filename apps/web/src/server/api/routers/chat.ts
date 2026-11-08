@@ -14,7 +14,7 @@ import {
 import { z } from "zod";
 import type { db as Db } from "@/db/drizzle";
 import { chats, modelComparisons, projects } from "@/db/schema";
-import { models } from "@/lib/constants";
+import { models } from "@deniai/ai/models";
 import { comparisonSettingsSchema, normalizeComparisonSettings } from "@/lib/comparison-settings";
 import { toJsonbSafe, toPostgresText } from "@/lib/jsonb";
 import { protectedProcedure, rateLimited, router, TRPC_RATE_LIMITS } from "../trpc";

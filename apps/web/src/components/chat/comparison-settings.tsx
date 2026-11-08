@@ -22,7 +22,7 @@ import {
   OPENAI_PRO_MODE_MULTIPLIER,
   type ModelDefinition,
   type ReasoningEffort,
-} from "@/lib/constants";
+} from "@deniai/ai/models";
 import { normalizeComparisonSettings, type ComparisonSettings } from "@/lib/comparison-settings";
 
 export function ComparisonSettingsControls({
