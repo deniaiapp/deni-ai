@@ -190,7 +190,8 @@ export default function SettingsWrapper({
     <SettingsLayout className="px-1 pt-2 pb-12 md:px-2">
       {current ? <DocumentTitle title={current.label} /> : null}
       {hideNav ? null : (
-        <SettingsNav aria-label={t("Settings")}>
+        // Stick at the nav's resting offset so it does not shift once a page scrolls.
+        <SettingsNav aria-label={t("Settings")} className="lg:top-2">
           {groups.map((group) => (
             <SettingsNavGroup key={group.label} label={group.label}>
               {group.items.map(({ label, href, icon: Icon }) => (

@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { useRouteContext } from "@tanstack/react-router";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ChatRouteHost } from "@/components/chat/chat-route-host";
-import { SidebarInset, SidebarProvider } from "@deniai/ui/components/sidebar";
+import { AppHeader } from "@deniai/ui/components/app-header";
+import { SidebarInset, SidebarProvider, SidebarTrigger } from "@deniai/ui/components/sidebar";
+import { cn } from "@/lib/utils";
+import { isSettingsAreaRoute } from "@/lib/settings-routes";
 import { useNewChat } from "@/hooks/use-new-chat";
 import { SIDEBAR_WIDTH_CSS_VAR, SIDEBAR_WIDTH_DEFAULT } from "@/lib/sidebar-width";
 
@@ -14,7 +17,15 @@ const ChatSearch = dynamic(
 );
 const TwoFactorBanner = dynamic(
   () => import("@/components/two-factor-banner").then((mod) => mod.TwoFactorBanner),
-  { loading: () => null },
+  {
+    // Same bar as the loaded header (it always renders one), so the page below
+    // does not jump down when the chunk arrives.
+    loading: () => (
+      <AppHeader>
+        <SidebarTrigger className="-ml-1" />
+      </AppHeader>
+    ),
+  },
 );
 const FlashOfferStrip = dynamic(
   () => import("@/components/billing/flash-offer-strip").then((mod) => mod.FlashOfferStrip),
@@ -84,7 +95,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <SidebarInset className="min-h-0 overflow-hidden">
         <TwoFactorBanner twoFactor={twoFactor} />
         <FlashOfferStrip />
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-3 md:p-5">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-3 md:p-5",
+            // Settings pages differ in length; reserve the scrollbar so the
+            // layout keeps its width whether or not the page scrolls.
+            isSettingsAreaRoute(pathname) && "[scrollbar-gutter:stable]",
+          )}
+        >
           {/* Chat routes: SPA host. Everything else: the matched route. */}
           <ChatRouteHost>{children}</ChatRouteHost>
         </div>
