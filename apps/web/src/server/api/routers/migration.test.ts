@@ -21,6 +21,8 @@ const PARAMETERS_PER_CHAT = 5;
 
 const state = vi.hoisted(() => ({
   committed: [] as unknown[][],
+  /** Chat ids of each committed chat_messages sync statement. */
+  syncedRows: [] as string[][],
   largestStatement: 0,
   failOnBatch: null as number | null,
   attachments: [] as { id: string; userId: string }[],
@@ -35,8 +37,12 @@ function payload(count: number) {
 }
 
 /** A driver-like INSERT that enforces postgres.js' bind parameter limit. */
-function driver(pending: unknown[][]) {
+function driver(pending: unknown[][], synced: string[][] = state.syncedRows) {
   return {
+    // syncChatMessageRows: the chat ids whose message rows are written.
+    execute: async (query: SQL) => {
+      synced.push(dialect.sqlToQuery(query).params.filter((param) => typeof param === "string"));
+    },
     insert: () => ({
       values: (rows: unknown[]) => ({
         returning: async () => {
@@ -70,8 +76,10 @@ const caller = (session: Context["session"] = { session: { userId: "user-1" } } 
       }),
       transaction: async (run: (tx: unknown) => Promise<unknown>) => {
         const pending: unknown[][] = [];
-        const result = await run(driver(pending));
+        const synced: string[][] = [];
+        const result = await run(driver(pending, synced));
         state.committed.push(...pending);
+        state.syncedRows.push(...synced);
         return result;
       },
     } as unknown as Context["db"],
@@ -83,6 +91,7 @@ const userSession = (userId: string, isAnonymous = false) =>
 
 beforeEach(() => {
   state.committed = [];
+  state.syncedRows = [];
   state.failOnBatch = null;
   state.largestStatement = 0;
   state.attachments = [];
@@ -97,12 +106,15 @@ test("imports more tiny chats than one statement can bind", async () => {
   expect(state.committed.flat()).toHaveLength(total);
   expect(state.largestStatement).toBeGreaterThan(0);
   expect(state.largestStatement).toBeLessThan(DRIVER_MAX_PARAMETERS);
+  // Every imported chat gets its message rows, batch by batch, in the same transaction.
+  expect(state.syncedRows.reduce((sum, ids) => sum + new Set(ids).size, 0)).toBe(total);
 });
 
 test("a failing later statement rolls back the whole import", async () => {
   state.failOnBatch = 1;
   await expect(caller().import({ payload: payload(14_000) })).rejects.toThrow("insert failed");
   expect(state.committed).toEqual([]);
+  expect(state.syncedRows).toEqual([]);
 });
 
 test("strips NUL characters that Postgres rejects from imported titles and messages", () => {

@@ -7,10 +7,11 @@ import { markChatAttachmentsForDeletion, purgeDeletingAttachments } from "@/lib/
 import { canCompareModels } from "@/lib/usage";
 import { isComparisonConversation } from "@/lib/comparison-conversation";
 import {
+  CHAT_INITIAL_MESSAGE_COUNT,
   CHAT_OLDER_MESSAGE_COUNT,
-  sliceLatestMessages,
-  sliceOlderMessages,
+  type ChatMessageWindow,
 } from "@/lib/chat-messages";
+import { readStoredMessages, syncChatMessageRows } from "@/lib/chat-message-rows";
 import { z } from "zod";
 import type { db as Db } from "@/db/drizzle";
 import { chats, modelComparisons, projects } from "@/db/schema";
@@ -46,23 +47,31 @@ async function loadValidatedMessages(raw: unknown): Promise<UIMessage[]> {
   return validated.success ? validated.data : [];
 }
 
-async function loadChatMessages(
+/**
+ * A validated window of a chat transcript, read page by page from
+ * `chat_messages` (or the jsonb array for chats without complete rows).
+ */
+async function loadChatMessageWindow(
   database: typeof Db,
   userId: string,
   id: string,
-): Promise<UIMessage[] | null> {
-  const [row] = await database
-    .select({ messages: chats.messages })
-    .from(chats)
-    .where(and(eq(chats.id, id), eq(chats.uid, userId)))
-    .limit(1);
-
-  if (!row) {
+  pick: (total: number) => { start: number; end: number },
+): Promise<ChatMessageWindow | null> {
+  const stored = await readStoredMessages(database, id, userId, pick);
+  if (!stored) {
     return null;
   }
-
-  return loadValidatedMessages(row.messages);
+  return {
+    messages: await loadValidatedMessages(stored.messages),
+    oldestIndex: stored.start,
+    hasMore: stored.start > 0,
+    total: stored.total,
+  };
 }
+
+const latestWindow =
+  (count = CHAT_INITIAL_MESSAGE_COUNT) =>
+  (total: number) => ({ start: Math.max(0, total - count), end: total });
 
 async function loadChatPage(
   database: typeof Db,
@@ -74,7 +83,6 @@ async function loadChatPage(
       id: chats.id,
       title: chats.title,
       projectId: chats.projectId,
-      messages: chats.messages,
       projectName: projects.name,
       projectDefaultModel: projects.defaultModel,
     })
@@ -97,7 +105,12 @@ async function loadChatPage(
     }
   }
 
-  const window = sliceLatestMessages(await loadValidatedMessages(row.messages));
+  const window = (await loadChatMessageWindow(database, userId, id, latestWindow())) ?? {
+    messages: [],
+    oldestIndex: 0,
+    hasMore: false,
+    total: 0,
+  };
 
   return {
     id: row.id,
@@ -247,14 +260,18 @@ export const chatRouter = router({
           .trim()
           .slice(0, 80),
       );
-      const [saved] = await ctx.db
-        .insert(chats)
-        .values({
-          uid: ctx.userId,
-          title: title || "Model comparison",
-          messages,
-        })
-        .returning({ id: chats.id });
+      const saved = await ctx.db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(chats)
+          .values({
+            uid: ctx.userId,
+            title: title || "Model comparison",
+            messages,
+          })
+          .returning({ id: chats.id });
+        await syncChatMessageRows(tx, [row.id]);
+        return row;
+      });
       return saved.id;
     }),
   /**
@@ -333,20 +350,27 @@ export const chatRouter = router({
       }),
     )
     .query(async ({ ctx, input }) => {
-      const all = await loadChatMessages(ctx.db, ctx.userId, input.id);
-      if (!all) {
+      const limit = Math.max(1, input.limit ?? CHAT_OLDER_MESSAGE_COUNT);
+      const window = await loadChatMessageWindow(ctx.db, ctx.userId, input.id, (total) => {
+        const end = Math.max(0, Math.min(input.beforeIndex, total));
+        return { start: Math.max(0, end - limit), end };
+      });
+      if (!window) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Chat not found" });
       }
-      return sliceOlderMessages(all, input.beforeIndex, input.limit ?? CHAT_OLDER_MESSAGE_COUNT);
+      return window;
     }),
   getChatTranscript: protectedProcedure
     .input(z.object({ id: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      const all = await loadChatMessages(ctx.db, ctx.userId, input.id);
-      if (!all) {
+      const window = await loadChatMessageWindow(ctx.db, ctx.userId, input.id, (total) => ({
+        start: 0,
+        end: total,
+      }));
+      if (!window) {
         throw new TRPCError({ code: "NOT_FOUND", message: "Chat not found" });
       }
-      return all;
+      return window.messages;
     }),
   /**
    * Lightweight generation status for recovering a pending assistant message.

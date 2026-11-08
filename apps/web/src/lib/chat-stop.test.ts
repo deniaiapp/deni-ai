@@ -16,58 +16,63 @@ const state = vi.hoisted(() => ({
   updates: [] as { params: unknown[]; sql: string }[],
   /** Updates that set only the stop time: their WHERE clause and set values. */
   stopUpdates: [] as { where: { params: unknown[]; sql: string }; values: unknown }[],
+  /** chat_messages sync statements run after a transcript update. */
+  rowSyncs: [] as { params: unknown[]; sql: string }[],
 }));
 
 vi.mock("@/env", () => ({ env: {} }));
 vi.mock("@deniai/ai/openrouter", () => ({ createDeniOpenRouter: vi.fn() }));
 vi.mock("@/db/drizzle", () => {
   const dialect = new PgDialect();
-  return {
-    db: {
-      select: () => ({
-        from: () => ({
-          where: () => ({
-            limit: async () => {
-              const rows = state.row ? [{ activeGenerationId: state.row.activeGenerationId }] : [];
-              state.betweenReadAndWrite?.();
-              return rows;
-            },
-          }),
-        }),
-      }),
-      update: () => ({
-        set: (values: { messages: SQL }) => ({
-          where: (condition: SQL) => {
-            if (!("messages" in values)) {
-              state.stopUpdates.push({ where: dialect.sqlToQuery(condition), values });
-            }
-            return {
-              returning: async () => {
-                const where = dialect.sqlToQuery(condition);
-                const set = dialect.sqlToQuery(values.messages);
-                state.updates.push({ params: [...where.params, ...set.params], sql: set.sql });
-                const row = state.row;
-                if (!row) return [];
-                const expected = where.sql.includes('"active_generation_id" is null')
-                  ? null
-                  : where.params.at(-1);
-                if (row.activeGenerationId !== expected) return [];
-                // Postgres evaluates the CASE / #- expression on the current row.
-                const last = row.messages.at(-1);
-                if (last?.role === "assistant" && last.metadata?.pending === true) {
-                  const metadata = { ...last.metadata };
-                  delete metadata.pending;
-                  row.messages = [...row.messages.slice(0, -1), { ...last, metadata }];
-                }
-                row.activeGenerationId = null;
-                return [{ id: "chat-1" }];
-              },
-            };
+  const db = {
+    transaction: (run: (tx: unknown) => Promise<unknown>) => run(db),
+    execute: async (query: SQL) => {
+      state.rowSyncs.push(dialect.sqlToQuery(query));
+    },
+    select: () => ({
+      from: () => ({
+        where: () => ({
+          limit: async () => {
+            const rows = state.row ? [{ activeGenerationId: state.row.activeGenerationId }] : [];
+            state.betweenReadAndWrite?.();
+            return rows;
           },
         }),
       }),
-    },
+    }),
+    update: () => ({
+      set: (values: { messages: SQL }) => ({
+        where: (condition: SQL) => {
+          if (!("messages" in values)) {
+            state.stopUpdates.push({ where: dialect.sqlToQuery(condition), values });
+          }
+          return {
+            returning: async () => {
+              const where = dialect.sqlToQuery(condition);
+              const set = dialect.sqlToQuery(values.messages);
+              state.updates.push({ params: [...where.params, ...set.params], sql: set.sql });
+              const row = state.row;
+              if (!row) return [];
+              const expected = where.sql.includes('"active_generation_id" is null')
+                ? null
+                : where.params.at(-1);
+              if (row.activeGenerationId !== expected) return [];
+              // Postgres evaluates the CASE / #- expression on the current row.
+              const last = row.messages.at(-1);
+              if (last?.role === "assistant" && last.metadata?.pending === true) {
+                const metadata = { ...last.metadata };
+                delete metadata.pending;
+                row.messages = [...row.messages.slice(0, -1), { ...last, metadata }];
+              }
+              row.activeGenerationId = null;
+              return [{ id: "chat-1" }];
+            },
+          };
+        },
+      }),
+    }),
   };
+  return { db };
 });
 
 const { recordChatStopRequestedAt, stopActiveChatGeneration } = await import("./chat");
@@ -88,6 +93,7 @@ const pendingAnswer = (id: string, text: string): StoredMessage => ({
 
 beforeEach(() => {
   state.row = null;
+  state.rowSyncs = [];
   state.betweenReadAndWrite = null;
   state.updates = [];
   state.stopUpdates = [];
@@ -113,6 +119,10 @@ test("stops the active generation and keeps its partial answer", async () => {
     parts: [{ type: "text", text: "partial and newer" }],
     metadata: {},
   });
+  // The same transaction refreshes the stored last message row.
+  expect(state.rowSyncs).toHaveLength(1);
+  expect(state.rowSyncs[0].sql).toContain("chat_messages");
+  expect(state.rowSyncs[0].params).toContain("chat-1");
 });
 
 test("a generation started between the read and the write is left untouched", async () => {
