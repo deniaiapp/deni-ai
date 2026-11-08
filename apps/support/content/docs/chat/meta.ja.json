@@ -1,0 +1,10 @@
+{
+  "title": "チャット",
+  "icon": "MessageSquare",
+  "pages": [
+    "using-chat",
+    "troubleshooting",
+    "import-conversations",
+    "memory-and-projects"
+  ]
+}

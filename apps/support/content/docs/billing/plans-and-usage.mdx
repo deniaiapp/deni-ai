@@ -1,0 +1,173 @@
+---
+title: Plans and usage
+description: What the Free, Go, Plus, and Pro plans include, how usage is counted, and what happens at the limit.
+---
+
+Deni AI has four plans for individuals: Free, Go, Plus, and Pro.
+Each plan comes with one monthly usage pool that Deni AI chat, Flixa, and Deni Run all share.
+
+You can see your plan and how much of this month's usage is left in [Settings › Billing](https://deniai.app/settings/billing).
+
+## Plans
+
+| | Free | Go | Plus | Pro |
+| --- | --- | --- | --- | --- |
+| Billing | Free | Monthly | Monthly or yearly | Monthly or yearly |
+| Monthly usage | 20M units | 60M units (3× Free) | 200M units (10× Free) | 400M units (20× Free) |
+| Models | A few models (more with a verified card) | More models than Free | All models except Pro-only ones | All models |
+| Ads | Shown | None | None | None |
+| Max Mode | — | Yes | Yes | Yes |
+
+Prices are shown on the plan cards in [Settings › Billing](https://deniai.app/settings/billing). To subscribe or switch plans, see [Payments and changing plans](/en/billing/payments).
+
+### Free
+
+- Models: GPT-6 Luna, Claude Haiku 5.5, and Gemini 3.8 Flash.
+- Ads appear in chat and on the home page.
+- **Verify a card** to unlock more models (the same ones as Go) and more monthly usage. Deni AI places a temporary $1 authorization and releases it right away. Your card isn't charged.
+
+Some new accounts start with a smaller allowance. In that case, Settings › Billing says "Your free allowance is currently limited". Adding a card lifts the limit.
+
+### Go
+
+- Everything in Free, with 3× the monthly usage.
+- More models than Free.
+- No ads.
+- Max Mode credits to keep going past the limit.
+
+Go is billed monthly only.
+
+### Go for students and educators
+
+Students and educators get Go for free. Sign in with a school email address and verify it, and your account moves to Go automatically. You don't need to apply or add a card.
+
+- **Eligible domains:** addresses ending in `.edu`, `.ac.jp`, `.ed.jp`, `.ac.uk`, `.sch.uk`, `.edu.au`, `.ac.nz`, `.ac.kr`, `.edu.tw`, `.edu.sg`, or `.edu.hk`. Only schools can get these domains.
+- **Accounts that already exist** move to Go too, as long as the email on the account is a verified school address.
+- **Paid plans come first.** If you subscribe to Plus or Pro, or join a team, that plan applies instead.
+- **Max Mode isn't included,** because it needs a paid plan.
+- If you change your account email to a non-school address, the account goes back to Free.
+
+Settings › Billing shows "Go (free for education)" while this applies.
+
+If your school's domain isn't on the list, [ask us to add it](/en/contact?category=education). Include the school's name, its email domain, and its official website. We add domains that only the school can issue addresses on.
+
+### Plus
+
+- Everything in Go, with 10× Free's monthly usage.
+- All models except Pro-only ones, including more models in Flixa.
+- Use Flixa from any coding agent. See [Use Flixa with external coding tools](/en/flixa/external-tools).
+
+### Pro
+
+- Everything in Plus, with 20× Free's monthly usage.
+- Pro-only models.
+- Compare two models side by side.
+
+For teams, Pro for Teams gives every member Pro benefits with per-seat billing. See [Pro for Teams](/en/teams/pro-for-teams).
+
+## How usage is counted
+
+Usage is counted in **usage units**, not in messages.
+Deni AI chat and Flixa count the tokens each request uses. Deni Run counts what it costs to run.
+
+Not every token counts the same:
+
+- **Output tokens** (what the model writes) count more than input tokens.
+- **Cached input** (text the model has already seen in the conversation) counts much less.
+- **Each web search** costs 10,000 units.
+
+### Model usage tiers
+
+Larger models use more of your pool. In the model picker, a model with a **Tier** badge counts more per token.
+Hover over the badge to see the multiplier. Models without a badge are Tier 1.
+
+| Tier | Each token counts as |
+| --- | --- |
+| 1 | 1× |
+| 2 | 1.5× |
+| 3 | 2× |
+| 4 | 3× |
+| 5 | 4× |
+| 6 | 5× |
+| 7 | 6× |
+| 8 | 8× |
+| 9 | 10× |
+| 10 | 12× |
+
+On OpenAI models with a 1M-token context window, a request with more than 200,000 input tokens counts double.
+
+### Where to check
+
+The **Usage** card in [Settings › Billing](https://deniai.app/settings/billing) shows how much of this month's pool you've used, split by Deni AI Chat, Flixa, and Deni Run, and the date it resets.
+In Flixa, you can also run `flixa usage`.
+
+## When usage resets
+
+The pool resets on the 1st of every month at 00:00 UTC (09:00 in Japan), whatever day you subscribed.
+Unused usage doesn't carry over to the next month.
+
+If you change plans in the middle of a month, the new plan's pool applies right away. Usage you've already spent this month still counts toward it.
+
+## When you reach the limit
+
+When the pool runs out, new requests in Deni AI chat and Flixa stop until the next reset.
+If you hit the limit during a long response, the response can stop early.
+
+Chat warns you when you're running low, and shows a notice once you reach the limit. The notice has buttons for what you can do next:
+
+| Notice | What to do |
+| --- | --- |
+| "Usage limit reached" | Click **Upgrade plan**, or wait for the reset. On a limited Free allowance, click **Verify a card**. |
+| "Buy Max Mode credits to continue" | Click **Buy credits** to buy Max Mode credits. |
+| "Enable Max Mode to continue" | You have credits. Click **Enable Max Mode** to keep going with them. |
+
+If the notice is still there after you upgrade or buy credits, click **Refresh usage**.
+
+### Usage reset credits
+
+If you have usage reset credits, the **Usage reset credits** card in Settings › Billing shows how many you have.
+Click **Reset limits now** to use one and clear your Deni AI chat and Flixa usage right away.
+
+## Max Mode
+
+Max Mode lets you keep using Deni AI past your plan's monthly pool with prepaid credits. It's available on Go, Plus, and Pro.
+
+1. Open the **Max Mode** card in [Settings › Billing](https://deniai.app/settings/billing).
+2. Click **Buy credits** and pick a pack (5, 10, 25, or 50 credits) or enter a custom amount from 5 to 500.
+3. Turn on the **Max Mode** switch.
+
+Once your pool runs out, usage is taken from your credits instead.
+
+| | |
+| --- | --- |
+| Value | 1 credit = $1 of usage past your plan's pool (2M units) |
+| Price | Charged in US dollars. Checkout may show the amount in your local currency. |
+| Expiry | 180 days after purchase. The credits that expire first are used first. |
+| Refunds | Used credits can't be refunded. |
+
+Max Mode only works while you have credits left. When they run out, you're stopped at the limit again.
+
+### Auto top-up
+
+Turn on **Auto top-up** to buy credits automatically when your balance falls below a threshold you set (1–100 credits).
+The amount it buys must be 5–500 credits and at least the threshold.
+
+Auto top-up charges the card you saved with **Save this card for auto top-up** when buying credits, or your plan's card if you didn't save one.
+If an auto top-up fails, auto top-up turns itself off and the card shows the error.
+
+<Callout title="Max Mode needs an active, renewing subscription">
+  You can buy and spend credits only while your paid plan is active. If you've cancelled your subscription, even before the period ends, Max Mode is unavailable. Unused credits stay on your account until they expire.
+</Callout>
+
+On Pro for Teams, the team shares one credit balance, and the team owner buys and manages it.
+
+## Ads
+
+Ads appear on the Free plan and for guests, in chat and on the home page. Go, Plus, and Pro have no ads.
+
+[Settings › Ads](https://deniai.app/settings/ads) doesn't turn ads off. It's **Deni AI Ads**, where you can advertise your own product to Deni AI users: create an ad, submit it for AI review, then pay to publish it.
+
+## Guests
+
+If you use Deni AI without signing in, you get a one-time allowance of 1M units that doesn't reset each month, and only a limited set of models.
+Guests can't subscribe or buy credits. Sign in to choose a plan. See [Guest accounts](/en/account/guest-accounts).

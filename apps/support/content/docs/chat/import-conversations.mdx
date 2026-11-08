@@ -1,0 +1,92 @@
+---
+title: Import your ChatGPT and Claude conversations
+description: Move your chat history from ChatGPT, Claude, or another Deni AI account into Deni AI.
+---
+
+You can bring your past conversations into Deni AI from an export file.
+Each conversation becomes a regular chat in your sidebar.
+
+You can import from:
+
+| Source | File to upload |
+| --- | --- |
+| ChatGPT | `conversations.json` from your ChatGPT data export |
+| Claude | `conversations.json` from your Claude data export |
+| Deni AI | The JSON file from a Deni AI account export |
+
+Guest accounts can't import. Sign in first.
+
+## Get your export
+
+1. Request a data export from the service's settings.
+2. When it's ready, download it and unzip it.
+3. Find `conversations.json` inside.
+
+Upload `conversations.json` itself, not the ZIP file.
+
+To export from Deni AI, see [Data and privacy](/en/account/data-and-privacy).
+
+## Upload the file
+
+1. Open [Settings › Import](https://deniai.app/settings/import).
+2. Click **Choose file** and pick the JSON file.
+3. Wait for the import to finish. You'll see "Imported N chats (N messages)."
+
+The imported chats appear in your sidebar right away.
+
+## What's imported
+
+| Item | What happens |
+| --- | --- |
+| Titles | Kept. A conversation with no title becomes "Imported Chat 1", "Imported Chat 2", and so on. |
+| Dates | The original created and last-updated dates are kept, so imported chats sort among your older chats. |
+| Messages | Your messages and the assistant's replies are imported as text. ChatGPT code blocks stay as code blocks. |
+| Edited or regenerated messages | Only the latest branch of each conversation is imported. Earlier versions are left out. |
+| Claude's thinking | Imported as the reply's reasoning. |
+| Tool calls and tool results | Left out. |
+| Images and attached files | Left out. A note such as `[image attachment omitted]` or `[attachment omitted: file name]` marks where they were. |
+| Text Claude read from a document | When the Claude export includes the document's text, it's imported as `[Attached file: file name]` followed by that text. |
+
+Imported chats aren't added to a project.
+A Deni AI export contains only the text of each message, so that's what you get back.
+
+## Limits
+
+- One file of up to 25 MB.
+- Up to 20,000 conversations and 200,000 messages per file. Message parts, such as Claude attachments, also count toward the 200,000.
+- Up to 5 imports per hour.
+
+An import is all or nothing. If it fails, no chats are added.
+
+## Importing the same file twice
+
+<Callout title="Importing twice creates duplicates">
+  Imported chats are added to your account, not merged with existing ones.
+  If you import the same file again, you get a second copy of every chat. Delete the copies you don't need from the sidebar.
+</Callout>
+
+## Troubleshooting
+
+**"That file isn't valid JSON."**
+
+The file isn't a JSON file. Unzip the export and upload `conversations.json`, not the ZIP file.
+
+**"No conversations found to import."**
+
+The file doesn't contain any conversations Deni AI can read. Check that you picked `conversations.json` and not another file from the export.
+
+**Warnings after the import**
+
+Conversations with no usable messages (for example, ones that are empty or contain only tool output) are skipped. They're listed under the warnings, by their position in the file.
+
+**An error says the data is too large**
+
+The file is over 25 MB, or it has more than 20,000 conversations or 200,000 messages.
+
+**"Too many requests. Please try again later."**
+
+You've imported 5 times in the last hour. Wait and try again.
+
+**"Import failed."**
+
+Something else went wrong, and nothing was imported. Try again. If it keeps failing, [contact us](https://deniai.app/contact).

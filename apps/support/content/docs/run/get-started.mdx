@@ -1,0 +1,140 @@
+---
+title: Get started with Deni Run
+description: What Deni Run is, how to sign in and link your Deni AI account, teammates and models, how it uses your plan's usage, and your data.
+---
+
+[Deni Run](https://run.deniai.app) is a web app where you give tasks to AI teammates.
+Each teammate works on its own computer, with a browser, a file workspace, and a Linux terminal that belong only to your account.
+It can research a topic, fill in forms, organize files, or run scripts without touching your own machine.
+
+Deni Run is included with every Deni AI plan and has no billing of its own. It uses the same monthly usage as Deni AI chat and Flixa.
+
+## Sign in
+
+1. Open [run.deniai.app](https://run.deniai.app) and select **Continue with Deni AI**, **Continue with Google**, or **Continue with GitHub**. You can also select **Sign in with passkey**.
+2. Confirm it's you a second time with a passkey, a code sent by email, or an authenticator app. Deni Run always asks for this second step.
+
+Passkeys work only on the site where you registered them.
+Email codes are limited to 5 per account every 15 minutes.
+
+## Link your Deni AI account
+
+Deni Run uses the plan of your Deni AI account. Until one is linked, teammates can't start any work.
+
+If you signed in with **Continue with Deni AI**, your account is already linked. Otherwise:
+
+1. Open **Account** in Deni Run.
+2. Select **Connect Deni AI account** and sign in to Deni AI.
+
+Once linked, **Account** shows **Manage plan and usage**, which opens [Settings › Billing](https://deniai.app/settings/billing) in Deni AI.
+
+<Callout title="Guest accounts can't use Deni Run">
+  A Deni AI guest account can't be linked. Sign up for Deni AI first. See [Guest accounts](/en/account/guest-accounts).
+</Callout>
+
+## Give a teammate a task
+
+Deni Run comes with teammates such as Chief, Research, and Operations. To create your own, select **New teammate**.
+Each teammate keeps its own memory, skills, and routines.
+
+1. Pick a teammate and describe the task, such as researching a topic, filling in a form, or organizing files.
+2. Watch the teammate's screen live while it works.
+3. Approve risky steps when asked. Results are saved in your workspace.
+
+When a site needs you to sign in, enter a two-factor code, or solve a CAPTCHA, take control of the live browser, finish that step yourself, and hand it back.
+
+### Approvals
+
+Read-only actions run without asking.
+Anything else, such as deleting files or running commands that change things, waits for your approval. To stop being asked about an action you trust, select **Always allow** on the approval, or turn it on for that tool in **Plugins**.
+Every call to an MCP server you added yourself needs approval unless you've allowed that tool.
+
+### Models
+
+Choose a model in the picker:
+
+| Model | Based on | Use it for |
+| --- | --- | --- |
+| Run | Claude Sonnet 5.5 | Faster, uses less of your usage |
+| Run+ | Claude Opus 5.5 | Harder tasks |
+
+Each model has four reasoning levels: Default, High, xhigh, and Max. Higher levels use more of your usage. The picker shows roughly how much each choice costs compared with Run at Default.
+
+### Teammate limits
+
+| Plan | Teammates |
+| --- | --- |
+| Free | Up to 5 |
+| Go | Up to 10 |
+| Plus | Up to 15 |
+| Pro | Up to 25 |
+
+When you reach the limit, Deni Run shows "Teammate limit reached". To add more teammates, upgrade your Deni AI plan.
+
+### Files
+
+You can attach up to 10 files to a message, each 10 MB or smaller. Attached files are saved to the teammate's workspace.
+
+## Connect apps
+
+In **Plugins**, you can connect apps so a teammate can search, read, and draft or send on your behalf.
+Gmail, Google Drive, GitHub, Discord, Slack, Notion, Linear, Jira, Sentry, Stripe, and your own MCP servers are available.
+Each one is off until you connect it.
+
+1. Open **Plugins** and select **Browse connectors**.
+2. Search for the app and select **Connect**.
+
+When nobody is watching, background work can use only read-only tools from connected apps.
+
+### Discord
+
+You can also talk to your teammates in Discord direct messages.
+
+1. In **Plugins**, find **Talk to teammates in Discord DMs** and select **Link**.
+2. Send the code shown to the Deni Run bot in a Discord direct message. The code works once and expires after 10 minutes.
+
+Discord server channels aren't supported. Steps that need the browser, such as signing in to a site, have to be finished in the Deni Run web app.
+
+## Usage
+
+Deni Run spends your Deni AI plan's monthly usage, shared with Deni AI chat and Flixa. It counts:
+
+- Model use
+- Time on the teammate's browser
+- Time on the teammate's computer
+
+Deni Run counts the cost after each step runs, so a task can go slightly past your remaining usage.
+
+| | Free | Go | Plus | Pro |
+| --- | --- | --- | --- | --- |
+| Monthly usage (shared) | 20M units | 60M units | 200M units | 400M units |
+
+The pool resets on the 1st of every month at 00:00 UTC. In Deni Run, **Plan and usage** shows how much of this month's usage you've used, split by Deni AI Chat, Flixa, and Deni Run.
+For exact numbers, see the **Usage** card in [Settings › Billing](https://deniai.app/settings/billing).
+
+When the pool runs out, Deni Run shows "Monthly usage used up", and teammates stop working until the reset.
+Usage reset credits clear Deni AI chat and Flixa usage only, not Deni Run's. Max Mode credits don't extend Deni Run either.
+
+To change your plan, select **Manage plan on Deni AI**. Plans are bought on Deni AI. See [Plans and usage](/en/billing/plans-and-usage).
+
+## Your data
+
+- Each account's workspace files, browser sessions, and computers are kept separate from everyone else's.
+- Deni AI receives your Deni AI account ID and the cost of what you use.
+- Messages are processed through OpenRouter and the model providers it routes to. They aren't used to train models.
+- Deni Run doesn't use your data for ads or sell it.
+- Tokens for connected apps are stored encrypted.
+
+### Download or delete your data
+
+In **Account**:
+
+- **Download JSON** downloads your teammates, conversations, skills, routines, and usage. API keys are left out.
+- **Delete account** deletes your Deni Run sign-in, workspace files, conversations, teammates, and billing records. Type `DELETE` to confirm.
+
+Deleting your Deni Run account doesn't delete your Deni AI account. See [Your data and privacy](/en/account/data-and-privacy).
+
+## Get help
+
+For Deni Run questions, use the **Support** page at [run.deniai.app](https://run.deniai.app), or [contact us](/en/contact).
+Tell us which teammate you were using and what happened.
