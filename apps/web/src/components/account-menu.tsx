@@ -41,7 +41,7 @@ import { trpc } from "@/lib/trpc/react";
 import { liveUsageQueryOptions } from "@/lib/usage-query-options";
 import { cn } from "@/lib/utils";
 import { supportUrl } from "@/lib/support-url";
-import { betaFeedbackMailto } from "@/lib/beta-feedback";
+import { betaFeedbackUrl } from "@/lib/beta-feedback";
 import { versions } from "@/lib/version";
 import { clientEnv } from "@/public-env";
 import {
@@ -416,10 +416,12 @@ export function AccountMenu() {
             disabled={isMenuPending}
             render={
               <a
-                href={betaFeedbackMailto({
-                  subject: t("Deni AI v8 beta feedback"),
+                href={betaFeedbackUrl({
+                  locale,
                   version: `${versions.version} (${versions.codename})`,
                 })}
+                target="_blank"
+                rel="noreferrer"
                 className="flex w-full"
               />
             }

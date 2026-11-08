@@ -1,15 +1,11 @@
-import { SUPPORT_EMAIL } from "@/lib/constants";
+import { supportUrl } from "@/lib/support-url";
 
 /**
- * `mailto:` link of the account menu's "Send feedback" item: the support
- * address with a v8 beta subject and the app version, so feedback is easy to
- * tell apart in the inbox.
+ * Link of the account menu's "Send feedback" item: the help center's feedback
+ * form (`support.deniai.app/{en,ja}/feedback`). `from=v8` makes the form start
+ * with the v8 beta template, which includes `version`.
  */
-export function betaFeedbackMailto({ subject, version }: { subject: string; version: string }) {
-  const params = new URLSearchParams({
-    subject,
-    body: `\n\n—\nDeni AI ${version}`,
-  });
-  // mailto bodies expect %20, not the + URLSearchParams writes for spaces.
-  return `mailto:${SUPPORT_EMAIL}?${params.toString().replace(/\+/g, "%20")}`;
+export function betaFeedbackUrl({ locale, version }: { locale: string; version: string }) {
+  const params = new URLSearchParams({ from: "v8", version });
+  return `${supportUrl(locale, "/feedback")}?${params.toString()}`;
 }
