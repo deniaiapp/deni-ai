@@ -18,6 +18,8 @@ allowBuilds:
   sharp: true
   msgpackr-extract: false
 
+# Packages must be published at least 12 hours (in minutes) before they install.
+minimumReleaseAge: 720
 minimumReleaseAgeExclude:
   - "@ai-sdk/gateway@4.0.101"
   - "@ai-sdk/mcp@2.0.63"
