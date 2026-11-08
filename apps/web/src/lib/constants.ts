@@ -1,3 +1,5 @@
+import { getUsageTierMultiplier, USAGE_TIER_MULTIPLIERS, type UsageTier } from "@deniai/billing";
+
 export type Author = "openai" | "anthropic" | "google" | "xai";
 
 export const reasoningEffortValues = [
@@ -71,27 +73,10 @@ export type ModelDeprecation = {
 };
 
 /**
- * Usage tiers and the quota multiplier of each. Flixa (flixa-backend
- * utils/agent/usage-tiers.ts) uses the same ladder; keep them in sync.
+ * Usage tiers and the quota multiplier of each, shared with Flixa
+ * (services/agent-api) through `@deniai/billing`.
  */
-export const USAGE_TIER_MULTIPLIERS = {
-  1: 1,
-  2: 1.5,
-  3: 2,
-  4: 3,
-  5: 4,
-  6: 5,
-  7: 6,
-  8: 8,
-  9: 10,
-  10: 12,
-} as const;
-
-export type UsageTier = keyof typeof USAGE_TIER_MULTIPLIERS;
-
-export function getUsageTierMultiplier(tier: UsageTier | undefined): number {
-  return tier ? USAGE_TIER_MULTIPLIERS[tier] : 1;
-}
+export { getUsageTierMultiplier, USAGE_TIER_MULTIPLIERS, type UsageTier };
 
 export type ModelDefinition = {
   name: string;

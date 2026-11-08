@@ -10,7 +10,7 @@ const database = await import("../utils/deni/db");
 const getDeniPool = mock.fn(database.getDeniPool);
 mock.module("../utils/deni/db", { exports: { ...database, getDeniPool } });
 const { getDeniBillingProfile } = await import("../utils/deni/usage");
-const { isEducationalEmail } = await import("../utils/deni/education");
+const { isEducationalEmail } = await import("@deniai/billing");
 
 const db = new PGlite();
 

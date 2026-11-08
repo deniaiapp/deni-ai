@@ -1,0 +1,20 @@
+{
+  "name": "@deniai/billing",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Pure usage-pool, usage-tier, token-weighting and education-domain rules shared by Deni AI chat and Flixa",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt --write",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

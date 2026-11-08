@@ -14,44 +14,28 @@
  * )
  *
  * Caller multiplies by the model-specific `tokenUsageMultiplier`.
+ *
+ * The weights, their env overrides and the weighted sum are shared with Flixa
+ * (services/agent-api) through `@deniai/billing`.
  */
 
+import {
+  computeWeightedTokens as computeWeightedTokensWith,
+  resolveTokenUsageWeights,
+  type TokenUsageBreakdown,
+  type TokenUsageWeights,
+} from "@deniai/billing";
 import { env } from "@/env";
 
-export type TokenUsageBreakdown = {
-  input: number;
-  cacheRead: number;
-  cacheWrite: number;
-  output: number;
-};
-
-export type TokenUsageWeights = {
-  input: number;
-  cacheRead: number;
-  cacheWrite: number;
-  output: number;
-};
-
-const DEFAULT_WEIGHTS: TokenUsageWeights = {
-  input: 1,
-  cacheRead: 0.1,
-  cacheWrite: 1.25,
-  output: 5,
-};
-
-function parseWeight(value: string | undefined, fallback: number): number {
-  if (!value) return fallback;
-  const parsed = Number.parseFloat(value);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-}
+export type { TokenUsageBreakdown, TokenUsageWeights };
 
 export function getTokenUsageWeights(): TokenUsageWeights {
-  return {
-    input: parseWeight(env.FLIXA_USAGE_WEIGHT_INPUT, DEFAULT_WEIGHTS.input),
-    cacheRead: parseWeight(env.FLIXA_USAGE_WEIGHT_CACHE_READ, DEFAULT_WEIGHTS.cacheRead),
-    cacheWrite: parseWeight(env.FLIXA_USAGE_WEIGHT_CACHE_WRITE, DEFAULT_WEIGHTS.cacheWrite),
-    output: parseWeight(env.FLIXA_USAGE_WEIGHT_OUTPUT, DEFAULT_WEIGHTS.output),
-  };
+  return resolveTokenUsageWeights({
+    FLIXA_USAGE_WEIGHT_INPUT: env.FLIXA_USAGE_WEIGHT_INPUT,
+    FLIXA_USAGE_WEIGHT_CACHE_READ: env.FLIXA_USAGE_WEIGHT_CACHE_READ,
+    FLIXA_USAGE_WEIGHT_CACHE_WRITE: env.FLIXA_USAGE_WEIGHT_CACHE_WRITE,
+    FLIXA_USAGE_WEIGHT_OUTPUT: env.FLIXA_USAGE_WEIGHT_OUTPUT,
+  });
 }
 
 function nonNegative(value: number | null | undefined): number {
@@ -110,12 +94,7 @@ export function computeWeightedTokens(
   breakdown: TokenUsageBreakdown,
   weights: TokenUsageWeights = getTokenUsageWeights(),
 ): number {
-  return Math.ceil(
-    breakdown.input * weights.input +
-      breakdown.cacheRead * weights.cacheRead +
-      breakdown.cacheWrite * weights.cacheWrite +
-      breakdown.output * weights.output,
-  );
+  return computeWeightedTokensWith(breakdown, weights);
 }
 
 /**

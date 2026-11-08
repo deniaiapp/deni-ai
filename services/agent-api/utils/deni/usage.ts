@@ -1,9 +1,17 @@
+import {
+  FLAGGED_FREE_POOL_USD,
+  isEducationalEmail,
+  USAGE_POOL_USD,
+  USAGE_UNITS_PER_USD,
+  USAGE_UNITS_PER_USD_MICRO,
+  VERIFIED_FREE_POOL_USD,
+  type SubscriptionTier,
+} from "@deniai/billing";
 import { getDeniPool } from "./db";
-import { isEducationalEmail } from "./education";
 import type { DeniUsageInfo, BillingRow, UsageQuotaRow } from "./types";
 import type { ModelCategory } from "./models";
 
-export type UsageTier = "free" | "go" | "plus" | "pro";
+export type UsageTier = SubscriptionTier;
 /** The only quota unit: pool usage units (1M units = $0.50). */
 export type UsageUnit = "units";
 
@@ -23,20 +31,10 @@ const BILLING_PRIORITY_ORDER = `CASE
   ELSE 2
 END`;
 
-// One monthly pool per plan, shared by Deni AI chat, Flixa, and Deni Run. Must match
-// deni-ai/src/lib/usage-pool.ts: the pool is priced in USD, and weighted tokens and
-// Deni Run's cost are both counted in usage units (1M units = $0.50).
-const USAGE_POOL_USD: Record<UsageTier, number> = {
-  free: 10,
-  go: 30,
-  plus: 100,
-  pro: 200,
-};
-const VERIFIED_FREE_POOL_USD = 15;
-const FLAGGED_FREE_POOL_USD = 2;
-const USAGE_UNITS_PER_USD = 2_000_000;
-/** Deni Run's ledger (product_usage, product 'run') is in micro-dollars. */
-const USAGE_UNITS_PER_USD_MICRO = USAGE_UNITS_PER_USD / 1_000_000;
+// One monthly pool per plan, shared by Deni AI chat, Flixa, and Deni Run
+// (@deniai/billing): the pool is priced in USD, and weighted tokens and Deni Run's
+// cost (product_usage, product 'run', in micro-dollars) are both counted in usage
+// units (1M units = $0.50).
 
 export const USAGE_UNIT: UsageUnit = "units";
 

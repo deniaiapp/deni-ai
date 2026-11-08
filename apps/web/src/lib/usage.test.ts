@@ -55,7 +55,7 @@ vi.mock("./usage-and-meter-schedule", () => ({ requestUsageAndMeterCheck: vi.fn(
 vi.mock("./stripe", () => ({ stripe: {} }));
 const dialect = new PgDialect();
 const now = new Date("2026-06-01T00:00:00Z");
-// The Pro pool (usage-pool.ts): $200 = 400M units, all on the basic row in these tests.
+// The Pro pool (@deniai/billing): $200 = 400M units, all on the basic row in these tests.
 const limit = 400_000_000;
 const field = (name: string) => name.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
 function matches(row: object, condition: SQL): boolean {

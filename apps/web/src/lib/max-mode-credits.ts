@@ -8,7 +8,7 @@ import { isBillingDisabled } from "@/lib/billing-config";
 import { usageMonthStart } from "@/lib/product-usage-ledger";
 import { stripe } from "@/lib/stripe";
 import { checkoutCardPaymentMethodOptions } from "@/lib/stripe-checkout";
-import { usageUnitsToUsd, usdToUsageUnits } from "@/lib/usage-pool";
+import { usageUnitsToUsd, usdToUsageUnits } from "@deniai/billing";
 
 /** One credit buys $1 of the plan pool (2M usage units). */
 export const MAX_MODE_CREDIT_UNITS = usdToUsageUnits(1);

@@ -11,7 +11,7 @@ import { stripeJsPromise } from "@/lib/stripe-js";
 import { trpc } from "@/lib/trpc/react";
 
 import { runWithLoading } from "@/lib/run-with-loading";
-import { usdToUsageUnits, VERIFIED_FREE_POOL_USD } from "@/lib/usage-pool";
+import { usdToUsageUnits, VERIFIED_FREE_POOL_USD } from "@deniai/billing";
 import { formatCompactUsageValue } from "@/lib/utils";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";

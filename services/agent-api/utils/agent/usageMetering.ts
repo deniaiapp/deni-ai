@@ -17,26 +17,11 @@
  * Set all weights to 1 to restore plain total-token metering.
  */
 
-interface UsageWeights {
-  input: number;
-  cacheRead: number;
-  cacheWrite: number;
-  output: number;
-}
+import { resolveTokenUsageWeights, type TokenUsageWeights } from "@deniai/billing";
 
-function getWeight(envKey: string, fallback: number): number {
-  const raw = process.env[envKey];
-  if (!raw) return fallback;
-  const parsed = Number.parseFloat(raw);
-  return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
-const USAGE_WEIGHTS: UsageWeights = {
-  input: getWeight("FLIXA_USAGE_WEIGHT_INPUT", 1),
-  cacheRead: getWeight("FLIXA_USAGE_WEIGHT_CACHE_READ", 0.1),
-  cacheWrite: getWeight("FLIXA_USAGE_WEIGHT_CACHE_WRITE", 1.25),
-  output: getWeight("FLIXA_USAGE_WEIGHT_OUTPUT", 5),
-};
+// Defaults and env parsing are shared with Deni AI chat (@deniai/billing). Read
+// once at startup.
+const USAGE_WEIGHTS: TokenUsageWeights = resolveTokenUsageWeights(process.env);
 
 function num(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;

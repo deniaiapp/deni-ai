@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { useExtracted } from "use-intl";
 
 import { getPlanTier, type BillingPlanId } from "@/lib/billing";
-import { USAGE_POOL_USD } from "@/lib/usage-pool";
+import { USAGE_POOL_USD } from "@deniai/billing";
 
 export type BillingPlanCopy = {
   tagline: string;
@@ -10,7 +10,7 @@ export type BillingPlanCopy = {
   badge?: string;
 };
 
-// Multipliers from the shared monthly pool in src/lib/usage-pool.ts (Free $10,
+// Multipliers from the shared monthly pool in @deniai/billing (Free $10,
 // Go $30, Plus $100, Pro $200), all against Free so the plans compare directly.
 const poolRatio = (tier: keyof typeof USAGE_POOL_USD, vs: keyof typeof USAGE_POOL_USD) =>
   Math.round((USAGE_POOL_USD[tier] / USAGE_POOL_USD[vs]) * 10) / 10;

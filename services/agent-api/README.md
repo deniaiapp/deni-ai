@@ -259,8 +259,8 @@ unless you also send a Deni API key. ChatGPT login tokens are not Flixa keys.
 ### Education accounts
 
 An account with a verified email on a restricted educational domain (`.edu`,
-`.ac.jp`, `.ac.uk`, and the rest of `utils/deni/education.ts`, kept in sync with
-Deni AI's sign-up allowlist) is treated as Go at no charge when it has no paid
+`.ac.jp`, `.ac.uk`, and the rest of `ALLOWED_EDU_DOMAIN_SUFFIXES` in the shared
+`@deniai/billing` package, which Deni AI's sign-up allowlist also uses) is treated as Go at no charge when it has no paid
 or team plan, matching Deni AI. Guest accounts never qualify.
 
 ### Client access policy
@@ -355,7 +355,7 @@ pnpm test
 ## Project Structure
 
 ```
-flixa-backend/
+services/agent-api/
 ├── server.ts                  # Main server file (Hono + Node.js)
 ├── tsconfig.json              # TypeScript configuration
 ├── routes/

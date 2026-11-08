@@ -9,7 +9,7 @@ import {
   usageMonthStart,
 } from "@/lib/product-usage-ledger";
 import { getUsageSummary, type SubscriptionTier } from "@/lib/usage";
-import { usageUnitsToUsd } from "@/lib/usage-pool";
+import { usageUnitsToUsd } from "@deniai/billing";
 
 export type { UsageProduct } from "@/lib/product-usage-ledger";
 export type DeniRunMetric = "model" | "browser" | "computer";

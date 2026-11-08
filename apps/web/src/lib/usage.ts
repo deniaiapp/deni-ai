@@ -27,12 +27,13 @@ import {
 import { recordProductUsage, usageMonthStart } from "./product-usage-ledger";
 import {
   FLAGGED_FREE_POOL_USD,
+  type SubscriptionTier,
   USAGE_POOL_USD,
   USAGE_UNITS_PER_USD_MICRO,
   usageUnitsToUsd,
   usdToUsageUnits,
   VERIFIED_FREE_POOL_USD,
-} from "./usage-pool";
+} from "@deniai/billing";
 import { isBillingDisabled } from "./billing-config";
 import { requestUsageAndMeterCheck } from "./usage-and-meter-schedule";
 
@@ -46,9 +47,9 @@ const ACTIVE_BILLING_STATUSES = new Set(["active", "trialing", "past_due", "paid
 export type UsageCategory = "basic" | "premium";
 
 export const SHARED_USAGE_CATEGORY: UsageCategory = "basic";
-export type SubscriptionTier = "free" | "go" | "plus" | "pro";
+export type { SubscriptionTier };
 /**
- * Quota rows count usage units (usage-pool.ts): weighted tokens for chat and Flixa,
+ * Quota rows count usage units (@deniai/billing): weighted tokens for chat and Flixa,
  * converted provider cost for Deni Run. Rows stored as "tokens" or "requests" before
  * 2026-11 read as a different unit and reset.
  */
@@ -82,7 +83,7 @@ const GUEST_USAGE_LIMITS: Record<UsageCategory, number> = {
   premium: 0,
 };
 
-/** The plan's monthly pool in usage units, shared by chat, Flixa, and Deni Run (usage-pool.ts). */
+/** The plan's monthly pool in usage units, shared by chat, Flixa, and Deni Run (@deniai/billing). */
 export function getUsagePoolUnits(tier: SubscriptionTier) {
   return usdToUsageUnits(USAGE_POOL_USD[tier]);
 }
@@ -980,7 +981,7 @@ export type UsageSnapshot = {
   periodEnd: Date | null;
 };
 
-/** The shared monthly pool, in usage units (usage-pool.ts); null for guests. */
+/** The shared monthly pool, in usage units (@deniai/billing); null for guests. */
 export type UsagePoolSnapshot = {
   limit: number;
   /** Use by product: Deni AI chat, Flixa, and Deni Run. */

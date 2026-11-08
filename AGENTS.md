@@ -13,6 +13,7 @@ the workspace layout and the rules that span apps.
 | `services/agent-api`                | `@deniai/agent-api`                 | Flixa agent API (Hono, formerly flixa-backend). Guide: `services/agent-api/AGENTS.md`                                                                     |
 | `packages/disposable-email-domains` | `@deni-ai/disposable-email-domains` | Disposable email domain list                                                                                                                              |
 | `packages/db`                       | `@deniai/db`                        | Drizzle schema + migrations: `public` (web, `drizzle.config.ts`) and `flixa` (agent API, `drizzle.flixa.config.ts`, journal `flixa.__drizzle_migrations`) |
+| `packages/billing`                  | `@deniai/billing`                   | Pure billing rules shared by web and agent API: usage pool sizes, units per USD, usage tier multipliers, token weights, education domains                 |
 
 The apps were imported with their full history (`git subtree add`), so
 `git log -- apps/web` shows the deni-ai history.

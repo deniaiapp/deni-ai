@@ -20,7 +20,24 @@
  * OAuth (Google / GitHub) uses the same domain allowlist. Google OAuth also
  * permits Gmail / Googlemail. Alias checks remain email-registration-only;
  * OAuth mailbox identities are supplied by the verified provider.
+ *
+ * The educational-domain part is shared with Flixa (services/agent-api) through
+ * `@deniai/billing`, because it also grants Go at no charge.
  */
+
+import {
+  ALLOWED_EDU_DOMAIN_SUFFIXES,
+  extractEmailDomain,
+  isAllowedEducationalDomain,
+  isEducationalEmail,
+} from "@deniai/billing";
+
+export {
+  ALLOWED_EDU_DOMAIN_SUFFIXES,
+  extractEmailDomain,
+  isAllowedEducationalDomain,
+  isEducationalEmail,
+};
 
 /** Google consumer mail — email/password and magic-link sign-up forbidden. */
 export const GOOGLE_MAIL_DOMAINS: ReadonlySet<string> = new Set(["gmail.com", "googlemail.com"]);
@@ -114,48 +131,6 @@ export const ALLOWED_EMAIL_PROVIDERS: ReadonlySet<string> = new Set([
   "earthlink.net",
 ]);
 
-/**
- * Educational domain suffixes with restricted registration (institutions only).
- *
- * Match when `domain === suffix` or `domain.endsWith("." + suffix)`.
- * Open / high-abuse namespaces (e.g. `.edu.kg`, bare `.ac` Ascension TLD,
- * most `.edu.<cc>` without real eligibility checks) are intentionally omitted.
- *
- * Add a suffix here only when the registry limits names to real schools.
- */
-export const ALLOWED_EDU_DOMAIN_SUFFIXES: readonly string[] = [
-  // United States — sponsored gTLD, eligibility-restricted
-  "edu",
-  // Japan — JPRS academic / school namespaces
-  "ac.jp",
-  "ed.jp",
-  // United Kingdom — JANET academic / school
-  "ac.uk",
-  "sch.uk",
-  // Australia — auDA education eligibility
-  "edu.au",
-  // New Zealand — academic
-  "ac.nz",
-  // South Korea — academic
-  "ac.kr",
-  // Taiwan — education
-  "edu.tw",
-  // Singapore — education
-  "edu.sg",
-  // Hong Kong — education
-  "edu.hk",
-];
-
-export function extractEmailDomain(email: string): string | null {
-  const trimmed = email.trim().toLowerCase();
-  const at = trimmed.lastIndexOf("@");
-  if (at <= 0 || at === trimmed.length - 1) return null;
-  // strip trailing dots / ignore display-name forms
-  const domain = trimmed.slice(at + 1).replace(/\.+$/, "");
-  if (!domain || domain.includes(" ") || domain.includes("@")) return null;
-  return domain;
-}
-
 export function extractEmailLocalPart(email: string): string | null {
   const trimmed = email.trim().toLowerCase();
   const at = trimmed.lastIndexOf("@");
@@ -163,32 +138,6 @@ export function extractEmailLocalPart(email: string): string | null {
   const local = trimmed.slice(0, at);
   if (!local || local.includes(" ")) return null;
   return local;
-}
-
-function domainMatchesSuffix(domain: string, suffix: string): boolean {
-  return domain === suffix || domain.endsWith(`.${suffix}`);
-}
-
-/**
- * Educational domain check (restricted-registration allowlist only).
- * - `mit.edu`, `cs.stanford.edu` → allowed (US `.edu`)
- * - `u-tokyo.ac.jp`, `school.ed.jp` → allowed
- * - `ox.ac.uk`, `uni.edu.au` → allowed
- * - `cmuk.edu.kg`, `foo.edu.co`, bare `something.ac` → denied
- */
-export function isAllowedEducationalDomain(domain: string): boolean {
-  const d = domain.toLowerCase();
-  const labels = d.split(".").filter(Boolean);
-  // Need at least school.edu or school.ac.jp
-  if (labels.length < 2) return false;
-
-  return ALLOWED_EDU_DOMAIN_SUFFIXES.some((suffix) => domainMatchesSuffix(d, suffix));
-}
-
-/** Whether an address is on a restricted educational domain (see {@link isAllowedEducationalDomain}). */
-export function isEducationalEmail(email: string): boolean {
-  const domain = extractEmailDomain(email);
-  return domain !== null && isAllowedEducationalDomain(domain);
 }
 
 export function isGoogleMailDomain(domain: string): boolean {

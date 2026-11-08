@@ -54,7 +54,7 @@ beforeEach(() => {
 });
 
 const summary = () => getUsageSummary({ userId: "user", now: new Date("2026-06-10") });
-// One pool for all usage ($ x 2M units, see usage-pool.ts).
+// One pool for all usage ($ x 2M units, see @deniai/billing).
 const limits = async () => (await summary()).pool?.limit;
 
 test("an unflagged Free account gets the normal Free pool", async () => {
