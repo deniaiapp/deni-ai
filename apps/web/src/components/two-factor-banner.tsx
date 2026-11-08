@@ -6,8 +6,9 @@ import { useExtracted } from "use-intl";
 import { startTransition, useEffect, useState, useSyncExternalStore } from "react";
 import { authClient } from "@/lib/auth-client";
 import { isCheckoutSettingsRoute } from "@/lib/settings-routes";
+import { cn } from "@/lib/utils";
+import { AppHeader } from "@deniai/ui/components/app-header";
 import { Button } from "@deniai/ui/components/button";
-import { Separator } from "@deniai/ui/components/separator";
 import { SidebarTrigger } from "@deniai/ui/components/sidebar";
 
 // Bump when a new announcement must reappear for previously dismissed users.
@@ -49,6 +50,7 @@ function dismissTwoFactorBanner() {
   window.dispatchEvent(new Event(DISMISSED_EVENT));
 }
 
+/** The header bar of the app sheet: sidebar trigger plus one dismissable announcement. */
 export function TwoFactorBanner() {
   const t = useExtracted();
   const pathname = usePathname();
@@ -58,10 +60,10 @@ export function TwoFactorBanner() {
     getDismissedSnapshot,
     getServerDismissedSnapshot,
   );
-  const visible = !dismissed;
   const shouldReduceMotion = useReducedMotion();
   const [announcementIndex, setAnnouncementIndex] = useState(0);
   const twoFactorEnabled = Boolean(session.data?.user?.twoFactorEnabled);
+  const visible = !dismissed;
 
   const announcements: Announcement[] = [
     {
@@ -71,7 +73,7 @@ export function TwoFactorBanner() {
       href: "/flixa",
       external: false,
       icon: Code2,
-      iconClassName: "text-sky-500",
+      iconClassName: "text-primary",
     },
     {
       id: "changelog",
@@ -80,7 +82,7 @@ export function TwoFactorBanner() {
       href: "/changelog",
       external: true,
       icon: ScrollText,
-      iconClassName: "text-amber-500",
+      iconClassName: "text-primary",
     },
     ...(!twoFactorEnabled
       ? [
@@ -91,7 +93,7 @@ export function TwoFactorBanner() {
             href: "/account/security",
             external: false,
             icon: ShieldCheck,
-            iconClassName: "text-emerald-500",
+            iconClassName: "text-success",
           },
         ]
       : []),
@@ -118,34 +120,23 @@ export function TwoFactorBanner() {
     return () => window.clearInterval(intervalId);
   }, [visible, announcements.length]);
 
+  if (isCheckoutSettingsRoute(pathname) || !visible) {
+    return (
+      <AppHeader>
+        <SidebarTrigger className="-ml-1" />
+      </AppHeader>
+    );
+  }
+
   const visibleAnnouncementIndex = announcementIndex < announcements.length ? announcementIndex : 0;
   const announcement = announcements[visibleAnnouncementIndex] ?? announcements[0];
   const AnnouncementIcon = announcement.icon;
 
-  if (isCheckoutSettingsRoute(pathname) || pathname === "/account/settings") {
-    return (
-      <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-      </header>
-    );
-  }
-
-  if (!visible) {
-    return (
-      <header className="flex h-10 shrink-0 items-center gap-2 border-b px-4">
-        <SidebarTrigger className="-ml-1" />
-        <Separator orientation="vertical" className="mr-2 h-4" />
-      </header>
-    );
-  }
-
   return (
-    <header className="flex h-10 w-full shrink-0 items-center gap-2 border-b bg-secondary/50 px-4 text-sm">
+    <AppHeader className="text-sm">
       <SidebarTrigger className="-ml-1" />
-      <Separator orientation="vertical" className="h-4" />
       <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-        <div className="relative h-full min-w-0 flex-1" aria-live="polite" aria-atomic="true">
+        <div className="relative h-6 min-w-0 flex-1" aria-live="polite" aria-atomic="true">
           <LazyMotion features={domAnimation} strict>
             <AnimatePresence initial={false} mode="wait">
               <m.div
@@ -153,12 +144,12 @@ export function TwoFactorBanner() {
                 initial={shouldReduceMotion ? false : { opacity: 0, y: 4 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={shouldReduceMotion ? { opacity: 1 } : { opacity: 0, y: -4 }}
-                transition={{ duration: shouldReduceMotion ? 0 : 0.3, ease: "easeOut" }}
+                transition={{ duration: shouldReduceMotion ? 0 : 0.24, ease: [0.2, 0, 0, 1] }}
                 className="absolute inset-0 flex min-w-0 items-center gap-2"
               >
                 <AnnouncementIcon
                   aria-hidden="true"
-                  className={`size-3.5 shrink-0 ${announcement.iconClassName}`}
+                  className={cn("size-4 shrink-0", announcement.iconClassName)}
                 />
                 <span className="min-w-0 truncate text-muted-foreground">
                   {announcement.message}
@@ -167,7 +158,7 @@ export function TwoFactorBanner() {
                   href={announcement.href}
                   target={announcement.external ? "_blank" : undefined}
                   rel={announcement.external ? "noreferrer" : undefined}
-                  className="group inline-flex shrink-0 items-center gap-1 font-medium text-foreground transition-colors hover:text-primary hover:underline"
+                  className="group inline-flex shrink-0 items-center gap-1 font-medium text-primary underline-offset-4 hover:underline"
                 >
                   {announcement.linkLabel}
                   <ArrowRight className="size-3 transition-transform duration-200 group-hover:translate-x-0.5" />
@@ -178,14 +169,14 @@ export function TwoFactorBanner() {
         </div>
         <Button
           variant="ghost"
-          size="icon"
-          className="my-auto size-5 shrink-0"
+          size="icon-xs"
+          className="shrink-0"
           onClick={dismissTwoFactorBanner}
           aria-label={t("Dismiss")}
         >
-          <X className="size-3" />
+          <X />
         </Button>
       </div>
-    </header>
+    </AppHeader>
   );
 }

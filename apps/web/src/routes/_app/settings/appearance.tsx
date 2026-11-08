@@ -1,21 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { Check, Moon, Sun, Monitor, Sparkles, AlignLeft } from "lucide-react";
+import { createFileRoute, useRouteContext, useRouter } from "@tanstack/react-router";
+import { AlignLeft, Check, Monitor, Moon, Sparkles, Sun } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { useTheme } from "next-themes";
 import { useSyncExternalStore } from "react";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { SettingsPageShell } from "@/components/settings-page-shell";
-import { Button } from "@deniai/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@deniai/ui/components/card";
+  PageSection,
+  PageSectionContent,
+  PageSectionDescription,
+  PageSectionHeader,
+  PageSectionTitle,
+} from "@deniai/ui/components/page-section";
 import { useThemePreset } from "@/hooks/use-theme-preset";
 import { setVisualLayout, useVisualLayout } from "@/hooks/use-visual-layout";
 import { type ThemeName, themePresets } from "@/lib/theme-presets";
+import { storeUiPreference, type UiPreference } from "@/lib/ui-preference";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/settings/appearance")({
@@ -31,18 +32,98 @@ function useHasMounted() {
   );
 }
 
+type ChoiceOption<T extends string> = {
+  value: T;
+  title: string;
+  description?: string;
+  icon?: LucideIcon;
+  preview?: string[];
+};
+
+/** A radio group of bordered choices; the selected one gets a check and an indigo edge. */
+function ChoiceGroup<T extends string>({
+  label,
+  options,
+  value,
+  onChange,
+  columns = 2,
+}: {
+  label: string;
+  options: ChoiceOption<T>[];
+  value: T | undefined;
+  onChange: (value: T) => void;
+  columns?: 2 | 3;
+}) {
+  return (
+    <div
+      role="radiogroup"
+      aria-label={label}
+      className={cn("grid grid-cols-1 gap-2", columns === 3 ? "sm:grid-cols-3" : "sm:grid-cols-2")}
+    >
+      {options.map(({ value: optionValue, title, description, icon: Icon, preview }) => {
+        const selected = value === optionValue;
+        return (
+          <button
+            key={optionValue}
+            type="button"
+            role="radio"
+            aria-checked={selected}
+            onClick={() => onChange(optionValue)}
+            className={cn(
+              "flex items-start gap-3 rounded-card border p-3 text-left transition-colors duration-(--duration-fast)",
+              "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+              selected
+                ? "border-primary bg-secondary/60 ring-1 ring-primary legacy:border-foreground legacy:bg-accent legacy:ring-0"
+                : "border-border hover:bg-accent/60",
+            )}
+          >
+            {Icon ? <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0" /> : null}
+            <span className="flex min-w-0 flex-1 flex-col gap-1">
+              <span className="text-sm font-medium">{title}</span>
+              {description ? (
+                <span className="text-xs text-muted-foreground">{description}</span>
+              ) : null}
+              {preview ? (
+                <span className="mt-1 flex w-full gap-1" aria-hidden="true">
+                  {preview.map((bar) => (
+                    <span key={bar} className={cn("h-1.5 flex-1 rounded-full", bar)} />
+                  ))}
+                </span>
+              ) : null}
+            </span>
+            <span
+              aria-hidden="true"
+              className={cn(
+                "inline-flex size-5 shrink-0 items-center justify-center rounded-full",
+                selected
+                  ? "bg-primary text-primary-foreground legacy:bg-foreground legacy:text-background"
+                  : "border border-input",
+              )}
+            >
+              {selected ? <Check className="size-3" /> : null}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function AppearancePage() {
   const t = useExtracted();
+  const router = useRouter();
   const hasMounted = useHasMounted();
   const { theme, setTheme } = useTheme();
   const { preset, setPreset } = useThemePreset();
   const visualLayout = useVisualLayout();
-  const activeTheme = preset;
+  const ui = useRouteContext({ from: "__root__", select: (context) => context.ui });
   // Avoid hydration mismatch: server always sees theme as undefined.
   const activeMode = hasMounted ? theme : undefined;
 
-  const handleSelect = (value: ThemeName) => {
-    setPreset(value);
+  const changeUi = async (value: UiPreference) => {
+    storeUiPreference(value);
+    // Re-run the root route so React renders <html data-ui> with the new value.
+    await router.invalidate();
   };
 
   const getPresetCopy = (key: ThemeName) => {
@@ -50,20 +131,11 @@ function AppearancePage() {
       case "default":
         return { title: t("Default"), description: t("Clean, neutral gray tones") };
       case "t3-chat":
-        return {
-          title: t("T3 Chat"),
-          description: t("Pink & violet inspired chat vibe"),
-        };
+        return { title: t("T3 Chat"), description: t("Pink & violet inspired chat vibe") };
       case "tangerine":
-        return {
-          title: t("Tangerine"),
-          description: t("Bright, warm, and friendly"),
-        };
+        return { title: t("Tangerine"), description: t("Bright, warm, and friendly") };
       case "mono":
-        return {
-          title: t("Mono"),
-          description: t("Neutral grayscale, minimal distractions"),
-        };
+        return { title: t("Mono"), description: t("Neutral grayscale, minimal distractions") };
       case "deep-dark":
         return {
           title: t("Deep Dark"),
@@ -79,153 +151,128 @@ function AppearancePage() {
     }
   };
 
-  const themeModes = [
-    { value: "light", label: t("Light"), icon: Sun },
-    { value: "dark", label: t("Dark"), icon: Moon },
-    { value: "system", label: t("System"), icon: Monitor },
-  ];
-
-  const visualLayoutOptions = [
-    {
-      value: "rich",
-      icon: Sparkles,
-      title: t("Rich"),
-      description: t(
-        "Answers can include charts, checklists, calculators, and other interactive elements when they help",
-      ),
-    },
-    {
-      value: "simple",
-      icon: AlignLeft,
-      title: t("Simple"),
-      description: t("Mostly text. Visual elements appear only when you ask for them"),
-    },
-  ] as const;
-
   return (
     <SettingsPageShell title={t("Appearance")} description={t("Customize your visual experience")}>
-      {/* Language Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">{t("Language")}</CardTitle>
-          <CardDescription>{t("Choose your preferred language for the interface")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <LocaleSwitcher />
-        </CardContent>
-      </Card>
+      <div>
+        <PageSection>
+          <PageSectionHeader>
+            <PageSectionTitle>{t("Interface")}</PageSectionTitle>
+            <PageSectionDescription>
+              {t("Switch between the new design and the previous one on this browser")}
+            </PageSectionDescription>
+          </PageSectionHeader>
+          <PageSectionContent>
+            <ChoiceGroup
+              label={t("Interface")}
+              value={ui}
+              onChange={(value) => void changeUi(value)}
+              options={[
+                {
+                  value: "next",
+                  title: t("New design"),
+                  description: t("Indigo frame, calmer type and roomier settings"),
+                  preview: ["bg-[#182052]", "bg-[#33419d]", "bg-[#f2b036]", "bg-[#f5f7fb]"],
+                },
+                {
+                  value: "legacy",
+                  title: t("Previous design"),
+                  description: t("Neutral gray tones and the color themes below"),
+                  preview: ["bg-[#171717]", "bg-[#737373]", "bg-[#f5f5f5]"],
+                },
+              ]}
+            />
+          </PageSectionContent>
+        </PageSection>
 
-      {/* Theme Mode Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">{t("Mode")}</CardTitle>
-          <CardDescription>{t("Select light, dark, or system preference")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-2">
-            {themeModes.map(({ value, label, icon: Icon }) => (
-              <Button
-                key={value}
-                variant={activeMode === value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTheme(value)}
-                className="flex-1 flex-col md:flex-row py-8! md:py-2! gap-2 h-9"
-              >
-                <Icon className="size-4" />
-                {label}
-              </Button>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+        <PageSection>
+          <PageSectionHeader>
+            <PageSectionTitle>{t("Mode")}</PageSectionTitle>
+            <PageSectionDescription>
+              {t("Select light, dark, or system preference")}
+            </PageSectionDescription>
+          </PageSectionHeader>
+          <PageSectionContent>
+            <ChoiceGroup
+              label={t("Mode")}
+              columns={3}
+              value={activeMode}
+              onChange={setTheme}
+              options={[
+                { value: "light", title: t("Light"), icon: Sun },
+                { value: "dark", title: t("Dark"), icon: Moon },
+                { value: "system", title: t("System"), icon: Monitor },
+              ]}
+            />
+          </PageSectionContent>
+        </PageSection>
 
-      {/* Intelligent UI Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">{t("Layout and visuals")}</CardTitle>
-          <CardDescription>
-            {t("Choose how much answers use visual and interactive elements")}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2" role="radiogroup">
-            {visualLayoutOptions.map(({ value, icon: Icon, title, description }) => {
-              const selected = hasMounted && visualLayout === value;
-              return (
-                <button
-                  key={value}
-                  aria-checked={selected}
-                  type="button"
-                  role="radio"
-                  onClick={() => setVisualLayout(value)}
-                  className={cn(
-                    "flex items-start gap-3 rounded-xl border p-3 text-left transition-colors",
-                    selected ? "border-foreground bg-accent" : "border-border hover:bg-accent/50",
-                  )}
-                >
-                  <Icon className="mt-0.5 size-4 shrink-0" />
-                  <span className="min-w-0 flex-1 space-y-0.5">
-                    <span className="block text-sm font-medium">{title}</span>
-                    <span className="block text-xs text-muted-foreground">{description}</span>
-                  </span>
-                  {selected && (
-                    <span className="inline-flex size-5 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-                      <Check className="size-3" />
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+        <PageSection>
+          <PageSectionHeader>
+            <PageSectionTitle>{t("Language")}</PageSectionTitle>
+            <PageSectionDescription>
+              {t("Choose your preferred language for the interface")}
+            </PageSectionDescription>
+          </PageSectionHeader>
+          <PageSectionContent>
+            <LocaleSwitcher />
+          </PageSectionContent>
+        </PageSection>
 
-      {/* Theme Presets Section */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm font-medium">{t("Color Theme")}</CardTitle>
-          <CardDescription>{t("Choose a color palette that suits your style")}</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {themePresets.map((presetItem) => {
-              const selected = activeTheme === presetItem.key;
-              const copy = getPresetCopy(presetItem.key);
-              return (
-                <button
-                  key={presetItem.key}
-                  type="button"
-                  onClick={() => handleSelect(presetItem.key)}
-                  className={cn(
-                    "group relative flex flex-col gap-2 rounded-xl border p-3 text-left transition-colors",
-                    selected ? "border-foreground bg-accent" : "border-border hover:bg-accent/50",
-                  )}
-                >
-                  {/* Content */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="space-y-0.5">
-                      <p className="font-medium text-sm">{copy.title}</p>
-                      <p className="text-xs text-muted-foreground">{copy.description}</p>
-                    </div>
-                    {selected && (
-                      <span className="inline-flex items-center justify-center size-5 rounded-full bg-foreground text-background shrink-0">
-                        <Check className="size-3" />
-                      </span>
-                    )}
-                  </div>
+        <PageSection>
+          <PageSectionHeader>
+            <PageSectionTitle>{t("Layout and visuals")}</PageSectionTitle>
+            <PageSectionDescription>
+              {t("Choose how much answers use visual and interactive elements")}
+            </PageSectionDescription>
+          </PageSectionHeader>
+          <PageSectionContent>
+            <ChoiceGroup
+              label={t("Layout and visuals")}
+              value={hasMounted ? visualLayout : undefined}
+              onChange={setVisualLayout}
+              options={[
+                {
+                  value: "rich",
+                  icon: Sparkles,
+                  title: t("Rich"),
+                  description: t(
+                    "Answers can include charts, checklists, calculators, and other interactive elements when they help",
+                  ),
+                },
+                {
+                  value: "simple",
+                  icon: AlignLeft,
+                  title: t("Simple"),
+                  description: t("Mostly text. Visual elements appear only when you ask for them"),
+                },
+              ]}
+            />
+          </PageSectionContent>
+        </PageSection>
 
-                  {/* Color Preview */}
-                  <div className="flex w-full gap-1" aria-hidden>
-                    {(presetItem.preview ?? []).map((bar) => (
-                      <div key={bar} className={cn("h-1.5 flex-1 rounded-full", bar)} />
-                    ))}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
+        {ui === "legacy" ? (
+          <PageSection>
+            <PageSectionHeader>
+              <PageSectionTitle>{t("Color Theme")}</PageSectionTitle>
+              <PageSectionDescription>
+                {t("Choose a color palette that suits your style")}
+              </PageSectionDescription>
+            </PageSectionHeader>
+            <PageSectionContent>
+              <ChoiceGroup
+                label={t("Color Theme")}
+                value={preset}
+                onChange={setPreset}
+                options={themePresets.map((presetItem) => ({
+                  value: presetItem.key,
+                  ...getPresetCopy(presetItem.key),
+                  preview: presetItem.preview,
+                }))}
+              />
+            </PageSectionContent>
+          </PageSection>
+        ) : null}
+      </div>
     </SettingsPageShell>
   );
 }

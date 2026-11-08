@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <SidebarInset className="min-h-0 overflow-hidden">
         <TwoFactorBanner />
         <FlashOfferStrip />
-        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-auto p-3 md:p-5">
           {/* Chat routes: SPA host. Everything else: the matched route. */}
           <ChatRouteHost>{children}</ChatRouteHost>
         </div>

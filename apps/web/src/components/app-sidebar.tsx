@@ -32,6 +32,7 @@ import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
+  SidebarMenuButton,
   SidebarMenuItem,
 } from "@deniai/ui/components/sidebar";
 import { Spinner } from "@deniai/ui/components/spinner";
@@ -268,67 +269,60 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
   };
 
   return (
-    <Sidebar className="border-r border-sidebar-border">
-      <SidebarContent className="px-3 py-4">
-        <SidebarGroup>
-          <div className="mb-4 flex items-center justify-between">
-            <Link href="/chat" className="flex items-center gap-2">
-              <DeniAIIcon className="size-7 text-sidebar-foreground" />
-              <h1 className="text-base font-semibold tracking-tight text-sidebar-foreground">
-                {t("Deni AI")}
-              </h1>
-            </Link>
-          </div>
+    <Sidebar variant="inset">
+      <SidebarContent className="gap-0 px-2 pt-3 pb-2">
+        <SidebarGroup className="gap-3 pb-2">
+          <Link
+            href="/chat"
+            className="flex h-8 items-center gap-2 self-start rounded-md px-1.5 focus-visible:outline-2 focus-visible:outline-sidebar-ring"
+          >
+            <DeniAIIcon className="size-6 text-sidebar-foreground" />
+            <span className="text-[15px] font-semibold tracking-[-0.02em] text-sidebar-foreground">
+              {t("Deni AI")}
+            </span>
+          </Link>
           <AppModeSwitch />
           {isRunMode ? null : (
-            <SidebarGroupContent>
-              <SidebarMenu className="gap-0">
+            <SidebarGroupContent className="flex flex-col gap-1">
+              <Button
+                className="group/newchat h-9 w-full justify-start gap-2 font-medium"
+                onClick={handleNewChat}
+              >
+                <Plus className="size-4" />
+                {t("New Chat")}
+                <Kbd className="ml-auto bg-transparent text-current opacity-0 transition-opacity duration-150 group-hover/newchat:opacity-70 group-focus-visible/newchat:opacity-70">
+                  Ctrl+N
+                </Kbd>
+              </Button>
+              <SidebarMenu className="mt-1">
                 <SidebarMenuItem>
-                  <Button
-                    className="group/newchat h-9 w-full justify-start gap-2 rounded-t-lg rounded-b-none font-medium"
-                    onClick={handleNewChat}
-                  >
-                    <Plus className="size-4" />
-                    {t("New Chat")}
-                    <Kbd className="ml-auto opacity-0 transition-opacity duration-150 group-hover/newchat:opacity-100 bg-sidebar text-sidebar-foreground/80">
-                      Ctrl+N
-                    </Kbd>
-                  </Button>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <Button
-                    className="group/search h-9 w-full justify-start gap-2 rounded-none font-medium"
-                    onClick={onOpenChatSearch}
-                    variant="outline"
-                  >
-                    <MessageSquare className="size-4" />
+                  <SidebarMenuButton className="group/search" onClick={onOpenChatSearch}>
+                    <MessageSquare />
                     <span>{t("Chat Search")}</span>
-                    <Kbd className="ml-auto opacity-0 transition-opacity duration-150 group-hover/search:opacity-100 bg-sidebar text-sidebar-foreground/80">
+                    <Kbd className="ml-auto bg-transparent text-muted-foreground opacity-0 transition-opacity duration-150 group-hover/search:opacity-100">
                       Ctrl+K
                     </Kbd>
-                  </Button>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <Button
-                    className="h-9 w-full justify-start gap-2 rounded-none font-medium"
-                    variant="outline"
+                  <SidebarMenuButton
+                    isActive={pathname?.startsWith("/compare")}
                     render={<Link href="/compare" />}
-                    nativeButton={false}
                   >
-                    <GitCompareArrows className="size-4" />
+                    <GitCompareArrows />
                     <span>{t("Compare models")}</span>
-                  </Button>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
-                  <Button
-                    className="h-9 w-full justify-start gap-2 rounded-t-none rounded-b-lg font-medium"
-                    variant="outline"
+                  <SidebarMenuButton
+                    isActive={
+                      pathname === "/settings/projects" || pathname?.startsWith("/projects/")
+                    }
                     render={<Link href="/settings/projects" />}
-                    nativeButton={false}
                   >
-                    <FolderClosed className="size-4" />
+                    <FolderClosed />
                     <span>{t("Projects")}</span>
-                  </Button>
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
@@ -348,7 +342,7 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
           />
         )}
 
-        <SidebarGroup className="mt-auto w-full border-t border-sidebar-border pt-4">
+        <SidebarGroup className="mt-auto w-full border-t border-sidebar-border pt-2">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>

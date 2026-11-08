@@ -3,8 +3,9 @@ import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeaders } from "@tanstack/react-start/server";
 import { Settings } from "@/components/auth/settings/settings";
-import Footer from "@/components/footer";
-import Header from "@/components/header";
+import SettingsWrapper from "@/components/settings-wrapper";
+import { SettingsPageShell } from "@/components/settings-page-shell";
+import { useExtracted } from "use-intl";
 import { Spinner } from "@deniai/ui/components/spinner";
 
 /** Matches AuthProvider viewPaths.settings override (account → "settings"). */
@@ -20,13 +21,13 @@ const getAccountSessionFn = createServerFn({ method: "GET" }).handler(async () =
 
 function AccountPageFallback() {
   return (
-    <main className="flex min-h-[50vh] items-center justify-center pt-24" id="main-content">
+    <div className="flex min-h-[50vh] items-center justify-center">
       <Spinner className="size-5" />
-    </main>
+    </div>
   );
 }
 
-export const Route = createFileRoute("/_auth/account/$path")({
+export const Route = createFileRoute("/_app/account/$path")({
   loader: async ({ params, location }) => {
     if (!(ACCOUNT_SETTINGS_PATHS as readonly string[]).includes(params.path)) {
       throw notFound();
@@ -63,16 +64,25 @@ export const Route = createFileRoute("/_auth/account/$path")({
 function AccountPage() {
   const { path } = Route.useParams();
   const { dehydratedState, isGuest } = Route.useLoaderData();
+  const t = useExtracted();
+  const isSecurity = path === "security";
 
   return (
     <HydrationBoundary state={dehydratedState}>
-      <main className="pt-24" id="main-content">
-        <Header />
-        <div className="mx-auto w-full max-w-3xl px-8 pb-12">
-          <Settings path={path} hideNav={isGuest} />
-        </div>
-        <Footer />
-      </main>
+      {/* Inside the app shell with the other settings; the account/security tabs
+          became entries of the settings nav. */}
+      <SettingsWrapper hideNav={isGuest}>
+        <SettingsPageShell
+          title={isSecurity ? t("Security") : t("Account")}
+          description={
+            isSecurity
+              ? t("Password, two-factor authentication, passkeys and sessions")
+              : t("Your profile, email and connected data")
+          }
+        >
+          <Settings path={path} hideNav />
+        </SettingsPageShell>
+      </SettingsWrapper>
     </HydrationBoundary>
   );
 }

@@ -1,7 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/inter";
+/* The optical-size build: large sizes switch to Inter Display automatically. */
+@import "@fontsource-variable/inter/opsz.css";
 @import "@fontsource-variable/jetbrains-mono";
 
 @source "../../node_modules/streamdown/dist/*.js";
@@ -17,10 +18,180 @@
 @source not "../../dist";
 
 @custom-variant dark (&:is(.dark *));
+/* The two UI generations (docs/design-system.md, "UI preference"). */
+@custom-variant legacy (&:where([data-ui="legacy"] *));
+@custom-variant next (&:where(:root:not([data-ui="legacy"]) *));
 
+/* ========================================================================
+   Next UI ("Aizome") tokens: the default. docs/design-system.md describes the
+   roles; src/styles/design-tokens.test.ts checks their contrast.
+   ======================================================================== */
 :root {
   --font-inter: "Inter Variable";
   --font-jetbrains-mono: "JetBrains Mono Variable";
+  --background: oklch(0.975 0.006 272);
+  --foreground: oklch(0.22 0.045 272);
+  --card: oklch(0.995 0.002 272);
+  --card-foreground: oklch(0.22 0.045 272);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.22 0.045 272);
+  --primary: oklch(0.42 0.15 272);
+  --primary-foreground: oklch(0.99 0.004 272);
+  --secondary: oklch(0.935 0.022 272);
+  --secondary-foreground: oklch(0.28 0.08 272);
+  --muted: oklch(0.95 0.012 272);
+  --muted-foreground: oklch(0.47 0.04 272);
+  --accent: oklch(0.93 0.026 272);
+  --accent-foreground: oklch(0.22 0.045 272);
+  --highlight: oklch(0.8 0.15 78);
+  --highlight-foreground: oklch(0.22 0.045 272);
+  --success: oklch(0.5 0.12 160);
+  --success-foreground: oklch(0.99 0.004 160);
+  --destructive: oklch(0.53 0.2 25);
+  --destructive-foreground: oklch(0.99 0.004 25);
+  --border: oklch(0.89 0.016 272);
+  --input: oklch(0.62 0.04 272);
+  --ring: oklch(0.5 0.17 272);
+  --chart-1: oklch(0.48 0.16 272);
+  --chart-2: oklch(0.76 0.15 78);
+  --chart-3: oklch(0.6 0.11 185);
+  --chart-4: oklch(0.62 0.16 0);
+  --chart-5: oklch(0.55 0.03 272);
+  --sidebar: oklch(0.27 0.09 272);
+  --sidebar-foreground: oklch(0.96 0.012 272);
+  --sidebar-primary: oklch(0.8 0.15 78);
+  --sidebar-primary-foreground: oklch(0.22 0.045 272);
+  --sidebar-accent: oklch(0.34 0.1 272);
+  --sidebar-accent-foreground: oklch(0.99 0.004 272);
+  --sidebar-border: oklch(0.37 0.085 272);
+  --sidebar-ring: oklch(0.8 0.15 78);
+
+  --radius: 0.625rem;
+  --radius-sheet-value: 18px;
+  --radius-card-value: 14px;
+  --radius-menu-value: 12px;
+  --radius-dialog-value: 18px;
+  --radius-field-value: 10px;
+  --radius-button-value: 10px;
+  --radius-badge-value: 6px;
+
+  --shadow-tint: 272 60% 12%;
+  --shadow-2xs: 0 1px 0 hsl(var(--shadow-tint) / 0.04);
+  --shadow-xs: 0 1px 2px hsl(var(--shadow-tint) / 0.06);
+  --shadow-sm:
+    0 1px 2px hsl(var(--shadow-tint) / 0.06), 0 2px 8px -2px hsl(var(--shadow-tint) / 0.08);
+  --shadow: var(--shadow-sm);
+  --shadow-md:
+    0 2px 4px hsl(var(--shadow-tint) / 0.06), 0 8px 20px -6px hsl(var(--shadow-tint) / 0.12);
+  --shadow-lg:
+    0 4px 8px -2px hsl(var(--shadow-tint) / 0.08), 0 16px 32px -8px hsl(var(--shadow-tint) / 0.18);
+  --shadow-xl:
+    0 8px 16px -4px hsl(var(--shadow-tint) / 0.1), 0 24px 48px -12px hsl(var(--shadow-tint) / 0.22);
+  --shadow-2xl:
+    0 12px 24px -6px hsl(var(--shadow-tint) / 0.12),
+    0 32px 64px -16px hsl(var(--shadow-tint) / 0.28);
+
+  --ease-out-quint: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 120ms;
+  --duration-base: 180ms;
+  --duration-slow: 240ms;
+
+  --app-font-sans:
+    var(--font-inter), "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", ui-sans-serif, system-ui,
+    sans-serif;
+  --app-font-serif: ui-serif, Georgia, serif;
+  --app-font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
+  --app-font-display: var(--app-font-sans);
+}
+
+.dark {
+  --background: oklch(0.185 0.03 272);
+  --foreground: oklch(0.94 0.012 272);
+  --card: oklch(0.215 0.034 272);
+  --card-foreground: oklch(0.94 0.012 272);
+  --popover: oklch(0.235 0.036 272);
+  --popover-foreground: oklch(0.95 0.01 272);
+  --primary: oklch(0.78 0.1 272);
+  --primary-foreground: oklch(0.18 0.05 272);
+  --secondary: oklch(0.27 0.045 272);
+  --secondary-foreground: oklch(0.93 0.016 272);
+  --muted: oklch(0.245 0.034 272);
+  --muted-foreground: oklch(0.73 0.03 272);
+  --accent: oklch(0.29 0.05 272);
+  --accent-foreground: oklch(0.96 0.01 272);
+  --highlight: oklch(0.83 0.14 80);
+  --highlight-foreground: oklch(0.2 0.04 272);
+  --success: oklch(0.75 0.13 160);
+  --success-foreground: oklch(0.2 0.04 160);
+  --destructive: oklch(0.7 0.17 25);
+  --destructive-foreground: oklch(0.18 0.04 25);
+  --border: oklch(0.31 0.04 272);
+  --input: oklch(0.5 0.05 272);
+  --ring: oklch(0.76 0.12 272);
+  --chart-1: oklch(0.72 0.12 272);
+  --chart-2: oklch(0.82 0.14 80);
+  --chart-3: oklch(0.74 0.11 185);
+  --chart-4: oklch(0.72 0.15 0);
+  --chart-5: oklch(0.7 0.03 272);
+  --sidebar: oklch(0.14 0.03 272);
+  --sidebar-foreground: oklch(0.92 0.014 272);
+  --sidebar-primary: oklch(0.83 0.14 80);
+  --sidebar-primary-foreground: oklch(0.2 0.04 272);
+  --sidebar-accent: oklch(0.23 0.045 272);
+  --sidebar-accent-foreground: oklch(0.97 0.008 272);
+  --sidebar-border: oklch(0.25 0.04 272);
+  --sidebar-ring: oklch(0.83 0.14 80);
+
+  --shadow-tint: 272 60% 3%;
+  --shadow-sm:
+    0 1px 2px hsl(var(--shadow-tint) / 0.4), 0 2px 8px -2px hsl(var(--shadow-tint) / 0.4);
+  --shadow: var(--shadow-sm);
+  --shadow-md:
+    0 2px 4px hsl(var(--shadow-tint) / 0.4), 0 8px 20px -6px hsl(var(--shadow-tint) / 0.5);
+  --shadow-lg:
+    0 4px 8px -2px hsl(var(--shadow-tint) / 0.45), 0 16px 32px -8px hsl(var(--shadow-tint) / 0.6);
+  --shadow-xl:
+    0 8px 16px -4px hsl(var(--shadow-tint) / 0.5), 0 24px 48px -12px hsl(var(--shadow-tint) / 0.65);
+  --shadow-2xl:
+    0 12px 24px -6px hsl(var(--shadow-tint) / 0.55), 0 32px 64px -16px hsl(var(--shadow-tint) / 0.7);
+}
+
+/* The sidebar is an inverted island: generic roles map to on-indigo values so
+   components with semantic classes (the Run sidebar, in-place menus) stay
+   legible. Portaled popovers keep the page roles. */
+:root:not([data-ui="legacy"]) [data-slot="sidebar"] {
+  --background: var(--sidebar);
+  --foreground: var(--sidebar-foreground);
+  --card: oklch(0.31 0.09 272);
+  --card-foreground: var(--sidebar-foreground);
+  --primary: oklch(0.97 0.01 272);
+  --primary-foreground: oklch(0.27 0.09 272);
+  --secondary: oklch(0.32 0.09 272);
+  --secondary-foreground: var(--sidebar-foreground);
+  --muted: oklch(0.31 0.085 272);
+  --muted-foreground: oklch(0.8 0.04 272);
+  --accent: var(--sidebar-accent);
+  --accent-foreground: var(--sidebar-accent-foreground);
+  --border: var(--sidebar-border);
+  --input: oklch(0.55 0.08 272);
+  --ring: var(--sidebar-ring);
+  color-scheme: dark;
+}
+
+:root:not([data-ui="legacy"]).dark [data-slot="sidebar"] {
+  --card: oklch(0.18 0.035 272);
+  --primary: oklch(0.92 0.02 272);
+  --primary-foreground: oklch(0.18 0.05 272);
+  --secondary: oklch(0.2 0.04 272);
+  --muted: oklch(0.19 0.035 272);
+  --muted-foreground: oklch(0.72 0.03 272);
+  --input: oklch(0.42 0.05 272);
+}
+
+/* ========================================================================
+   Legacy tokens (the previous neutral UI), kept for `ui=legacy`.
+   ======================================================================== */
+:root[data-ui="legacy"] {
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -35,7 +206,12 @@
   --muted-foreground: oklch(0.556 0 0);
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
+  --highlight: oklch(0.97 0 0);
+  --highlight-foreground: oklch(0.205 0 0);
+  --success: oklch(0.52 0.13 150);
+  --success-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.577 0.245 27.325);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
@@ -44,7 +220,6 @@
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -53,9 +228,32 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+
+  --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+  --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 1px 2px -1px hsl(0 0% 0% / 0.1);
+  --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 2px 4px -1px hsl(0 0% 0% / 0.1);
+  --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 4px 6px -1px hsl(0 0% 0% / 0.1);
+  --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.1), 0 8px 10px -1px hsl(0 0% 0% / 0.1);
+  --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+
+  --app-font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
-.dark {
+/* Declared on body so the legacy theme presets (which set --radius on body)
+   resolve them. */
+:root[data-ui="legacy"] body {
+  --radius-sheet-value: 1rem;
+  --radius-card-value: calc(var(--radius) * 2.6);
+  --radius-menu-value: calc(var(--radius) + 8px);
+  --radius-dialog-value: calc(var(--radius) * 2.6);
+  --radius-field-value: calc(var(--radius) * 2.2);
+  --radius-button-value: calc(var(--radius) * 2.6);
+  --radius-badge-value: calc(var(--radius) * 2.2);
+}
+
+:root[data-ui="legacy"].dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -70,7 +268,12 @@
   --muted-foreground: oklch(0.708 0 0);
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
+  --highlight: oklch(0.269 0 0);
+  --highlight-foreground: oklch(0.985 0 0);
+  --success: oklch(0.72 0.15 150);
+  --success-foreground: oklch(0.145 0 0);
   --destructive: oklch(0.704 0.191 22.216);
+  --destructive-foreground: oklch(0.985 0 0);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
@@ -104,6 +307,10 @@
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
+  --color-highlight: var(--highlight);
+  --color-highlight-foreground: var(--highlight-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
@@ -133,6 +340,16 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
   --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Component radii (docs/design-system.md, "Radii"). */
+  --radius-sheet: var(--radius-sheet-value);
+  --radius-card: var(--radius-card-value);
+  --radius-menu: var(--radius-menu-value);
+  --radius-dialog: var(--radius-dialog-value);
+  --radius-field: var(--radius-field-value);
+  --radius-button: var(--radius-button-value);
+  --radius-badge: var(--radius-badge-value);
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);
@@ -143,8 +360,8 @@
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
   --font-heading: var(--font-sans);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+
+  --ease-out-quint: var(--ease-out-quint);
 }
 
 @layer base {
@@ -160,14 +377,19 @@
   }
 
   body {
-    --app-font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-    --app-font-serif: ui-serif, Georgia, serif;
-    --app-font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
-    --app-font-display: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.02em;
+    font-optical-sizing: auto;
+    font-feature-settings:
+      "cv11" 1,
+      "ss01" 1;
+    letter-spacing: -0.006em;
+  }
+
+  /* Japanese text: no negative tracking, a looser line. */
+  :lang(ja) body {
+    letter-spacing: 0;
   }
 
   /* SidebarResizeHandle drag: follow the pointer without the width transition. */
@@ -185,29 +407,18 @@
     }
   }
 
-  body.mono,
-  body .mono {
-    letter-spacing: normal;
-  }
-
-  h1 {
-    @apply font-sans font-semibold tracking-tight leading-[1.1];
-  }
-
+  h1,
   h2 {
-    @apply font-sans font-semibold tracking-tight leading-[1.15];
+    @apply font-sans font-semibold leading-[1.15];
+    letter-spacing: -0.025em;
   }
 
   h3,
   h4,
   h5,
   h6 {
-    @apply font-sans font-medium tracking-tight leading-[1.2];
-  }
-
-  body:not(.mono) p,
-  body:not(.mono) div {
-    @apply font-sans font-medium tracking-tight;
+    @apply font-sans font-semibold leading-[1.25];
+    letter-spacing: -0.015em;
   }
 
   button {
@@ -215,16 +426,52 @@
   }
 
   ::selection {
-    background: oklch(0.205 0 0 / 0.12);
-  }
-
-  .dark ::selection {
-    background: oklch(0.922 0 0 / 0.2);
+    background: color-mix(in oklab, var(--primary) 22%, transparent);
   }
 
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+
+  /* Legacy body: medium weight everywhere and tighter tracking. */
+  [data-ui="legacy"] body {
+    font-feature-settings: normal;
+    letter-spacing: -0.02em;
+  }
+
+  [data-ui="legacy"] body.mono,
+  [data-ui="legacy"] body .mono {
+    letter-spacing: normal;
+  }
+
+  [data-ui="legacy"] h1,
+  [data-ui="legacy"] h2,
+  [data-ui="legacy"] h3,
+  [data-ui="legacy"] h4,
+  [data-ui="legacy"] h5,
+  [data-ui="legacy"] h6 {
+    letter-spacing: var(--tracking-tight);
+  }
+
+  [data-ui="legacy"] h3,
+  [data-ui="legacy"] h4,
+  [data-ui="legacy"] h5,
+  [data-ui="legacy"] h6 {
+    @apply font-medium;
+  }
+
+  [data-ui="legacy"] body:not(.mono) p,
+  [data-ui="legacy"] body:not(.mono) div {
+    @apply font-sans font-medium tracking-tight;
+  }
+
+  [data-ui="legacy"] ::selection {
+    background: oklch(0.205 0 0 / 0.12);
+  }
+
+  [data-ui="legacy"].dark ::selection {
+    background: oklch(0.922 0 0 / 0.2);
   }
 }
 
@@ -402,13 +649,9 @@
 
   /* Glass - simplified to subtle background */
   .glass {
-    background: oklch(1 0 0 / 0.85);
+    background: color-mix(in oklab, var(--background) 85%, transparent);
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
-  }
-
-  .dark .glass {
-    background: oklch(0.145 0 0 / 0.85);
   }
 
   /* No noise texture */

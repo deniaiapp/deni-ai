@@ -130,6 +130,7 @@ export { default as Mail } from "lucide-react/dist/esm/icons/mail.mjs";
 export { default as MailX } from "lucide-react/dist/esm/icons/mail-x.mjs";
 export { default as MapPin } from "lucide-react/dist/esm/icons/map-pin.mjs";
 export { default as Menu } from "lucide-react/dist/esm/icons/menu.mjs";
+export { default as Megaphone } from "lucide-react/dist/esm/icons/megaphone.mjs";
 export { default as MessageSquare } from "lucide-react/dist/esm/icons/message-square.mjs";
 export { default as MessageSquareIcon } from "lucide-react/dist/esm/icons/message-square.mjs";
 export { default as MessageSquareQuote } from "lucide-react/dist/esm/icons/message-square-quote.mjs";

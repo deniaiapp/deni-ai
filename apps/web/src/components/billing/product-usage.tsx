@@ -16,9 +16,9 @@ const SEGMENTS: Segment[] = ["chat", "flixa", "run"];
 
 /** One color per part of the pool, shared by the bar and its legend. */
 const SEGMENT_COLORS: Record<Segment, string> = {
-  chat: "bg-sky-500",
-  flixa: "bg-violet-500",
-  run: "bg-emerald-500",
+  chat: "bg-chart-1",
+  flixa: "bg-chart-2",
+  run: "bg-chart-3",
 };
 
 function percentOf(value: number, limit: number) {
