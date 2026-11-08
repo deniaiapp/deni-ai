@@ -203,7 +203,7 @@ structure and takes the new tokens, radii and type (plus targeted fixes).
 | Two-factor setup (required)                    | New screen                                                               |
 | Flixa device authorize                         | Restyled: the code as a dashed ticket, token status colours              |
 | Deni Run (`/run`)                              | Not edited here; inherits tokens and the inverted sidebar                |
-| Marketing / public pages (`/{-$locale}/*`)     | Not rebuilt; inherit tokens                                              |
+| Public pages (`/{-$locale}/*`)                 | Rebuilt: single-row header, short footer, one text column per page       |
 
 ## UI preference (next / legacy)
 

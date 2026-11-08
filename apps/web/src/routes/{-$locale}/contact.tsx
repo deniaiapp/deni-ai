@@ -1,8 +1,8 @@
 import { Link } from "@/lib/navigation";
-import { Mail, MapPin, MessagesSquare, Shield } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
 import { getExtracted } from "@deniai/i18n/extracted";
+import { localizedPath } from "@/lib/locale-path";
 import { pageHead } from "@/lib/seo";
 import { supportUrl } from "@/lib/support-url";
 
@@ -37,38 +37,8 @@ function ContactPage() {
   const locale = useLocale();
   const headline = t("Contact Deni AI");
   const description = t(
-    "Use this page when you need a human response about the product, privacy, billing, or commercial disclosure. We keep support simple: one clear email address and public documentation for common questions.",
+    "Email contact@deniai.app for account questions, billing issues, privacy requests and partnership inquiries.",
   );
-
-  const channels = [
-    {
-      icon: Mail,
-      title: t("Email support"),
-      body: t(
-        "Write to contact@deniai.app for account questions, billing issues, privacy requests, partnership notes, and commercial disclosure requests.",
-      ),
-      detail: "contact@deniai.app",
-      href: "mailto:contact@deniai.app",
-    },
-    {
-      icon: MessagesSquare,
-      title: t("Self-serve answers"),
-      body: t(
-        "Many product questions are already answered in the Help Center, FAQ, AI Guides, Use Cases, Terms, and Privacy Policy. Start there if you need an immediate explanation.",
-      ),
-      detail: t("Open the Help Center"),
-      href: supportUrl(locale),
-    },
-    {
-      icon: Shield,
-      title: t("Privacy and legal"),
-      body: t(
-        "For data handling, account security, or legal terms, review the privacy policy and terms first, then email us with the relevant account address and request type.",
-      ),
-      detail: t("Open privacy policy"),
-      href: "/legal/privacy-policy",
-    },
-  ];
 
   const tips = [
     t("Include the email address on the account when the issue is account-specific."),
@@ -79,6 +49,14 @@ function ContactPage() {
     t(
       "For billing questions, include the approximate purchase date and the plan name if you know it.",
     ),
+  ];
+
+  const links = [
+    { href: supportUrl(locale), label: t("Help Center") },
+    { href: localizedPath("/faq", locale), label: t("FAQ") },
+    { href: localizedPath("/legal/privacy-policy", locale), label: t("Privacy Policy") },
+    { href: localizedPath("/legal/terms", locale), label: t("Terms of Service") },
+    { href: localizedPath("/legal/tokusho", locale), label: t("特定商取引法") },
   ];
 
   const jsonLd = {
@@ -96,98 +74,56 @@ function ContactPage() {
   };
 
   return (
-    <main className="min-h-screen bg-background" id="main-content">
+    <main id="main-content" className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 md:py-16">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
+      <h1 className="text-3xl font-semibold text-balance">{headline}</h1>
+      <p className="mt-4 max-w-[60ch] text-base text-muted-foreground">{description}</p>
+      <p className="mt-6">
+        <a
+          href="mailto:contact@deniai.app"
+          className="text-base font-medium text-primary underline-offset-4 hover:underline"
+        >
+          contact@deniai.app
+        </a>
+      </p>
 
-      <section className="px-4 pb-12 pt-32 md:pb-16 md:pt-40">
-        <div className="mx-auto max-w-3xl">
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
-            {t("Contact")}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
-            {headline}
-          </h1>
-          <p className="mt-6 text-base leading-8 text-muted-foreground">{description}</p>
-        </div>
+      <section aria-labelledby="contact-tips" className="mt-12">
+        <h2 id="contact-tips" className="text-lg font-semibold">
+          {t("What to include")}
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {t(
+            "We do not need passwords or full chat exports for most requests. Share only the details needed to identify the issue.",
+          )}
+        </p>
+        <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm">
+          {tips.map((tip) => (
+            <li key={tip}>{tip}</li>
+          ))}
+        </ul>
       </section>
 
-      <section className="px-4 pb-12">
-        <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-3">
-          {channels.map((channel) => {
-            const Icon = channel.icon;
-            return (
-              <article
-                key={channel.title}
-                className="rounded-[1.5rem] border border-border/70 bg-card p-6"
-              >
-                <div className="inline-flex size-11 items-center justify-center rounded-2xl bg-secondary">
-                  <Icon className="size-5" />
-                </div>
-                <h2 className="mt-5 text-xl font-semibold tracking-tight">{channel.title}</h2>
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">{channel.body}</p>
-                <Link
-                  href={channel.href}
-                  className="mt-5 inline-flex text-sm font-medium text-foreground underline-offset-4 hover:underline"
-                >
-                  {channel.detail}
-                </Link>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="px-4 pb-20 md:pb-28">
-        <div className="mx-auto grid max-w-5xl gap-4 md:grid-cols-[1.2fr_0.8fr]">
-          <article className="rounded-[1.5rem] border border-border/70 bg-card p-6 md:p-8">
-            <h2 className="text-2xl font-semibold tracking-tight">
-              {t("How to get a useful reply faster")}
-            </h2>
-            <p className="mt-4 text-sm leading-7 text-muted-foreground">
-              {t(
-                "Clear context helps us respond accurately. We do not need passwords or full chat exports for most requests. Share only the minimum details needed to identify the issue.",
-              )}
-            </p>
-            <ul className="mt-6 space-y-3 text-sm leading-7 text-muted-foreground">
-              {tips.map((tip) => (
-                <li key={tip} className="flex gap-3">
-                  <span className="mt-2 size-1.5 shrink-0 rounded-full bg-foreground/50" />
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </article>
-
-          <article className="rounded-[1.5rem] border border-border/70 bg-secondary/20 p-6 md:p-8">
-            <div className="inline-flex size-11 items-center justify-center rounded-2xl bg-secondary">
-              <MapPin className="size-5" />
-            </div>
-            <h2 className="mt-5 text-xl font-semibold tracking-tight">{t("Operator details")}</h2>
-            <p className="mt-3 text-sm leading-7 text-muted-foreground">
-              {t(
-                "Commercial disclosure for Japan, including operator and payment information, is published on the designated commercial transactions page.",
-              )}
-            </p>
-            <Link
-              href="/legal/tokusho"
-              className="mt-5 inline-flex text-sm font-medium underline-offset-4 hover:underline"
-            >
-              {t("特定商取引法")}
-            </Link>
-            <p className="mt-6 text-sm leading-7 text-muted-foreground">
-              {t("Primary contact email:")}{" "}
-              <a
-                href="mailto:contact@deniai.app"
-                className="font-medium text-foreground underline-offset-4 hover:underline"
-              >
-                contact@deniai.app
-              </a>
-            </p>
-          </article>
-        </div>
+      <section aria-labelledby="contact-links" className="mt-12">
+        <h2 id="contact-links" className="text-lg font-semibold">
+          {t("Help and policies")}
+        </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {t(
+            "Commercial disclosure for Japan, including operator and payment information, is on the 特定商取引法 page.",
+          )}
+        </p>
+        <ul className="mt-4 flex flex-col gap-2 text-sm">
+          {links.map((link) => (
+            <li key={link.href}>
+              <Link href={link.href} className="text-primary underline-offset-4 hover:underline">
+                {link.label}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
     </main>
   );

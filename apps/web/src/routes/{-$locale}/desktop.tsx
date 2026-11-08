@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createServerFn } from "@tanstack/react-start";
-import { DesktopClient } from "@/components/desktop/desktop-client";
+import { useExtracted } from "use-intl";
+import { DesktopDownloadPicker } from "@/components/desktop/desktop-download-picker";
 import type {
   DesktopDownloads,
   DesktopRelease,
@@ -88,7 +89,7 @@ export const Route = createFileRoute("/{-$locale}/desktop")({
     const t = getExtracted(intl);
     const title = t("Deni Chat desktop app for Windows and macOS");
     const description = t(
-      "Download the official Deni Chat desktop app for Windows and macOS. Tray access, notifications, and quick reopen. Use the web app on mobile — no Android APK.",
+      "Download the official Deni AI desktop app for Windows and macOS: tray access and reply notifications. On phones, use Deni AI in the browser — there is no Android APK.",
     );
 
     return pageHead({
@@ -109,6 +110,7 @@ export const Route = createFileRoute("/{-$locale}/desktop")({
 });
 
 function DesktopPage() {
+  const t = useExtracted();
   const downloads = Route.useLoaderData();
   const jsonLd = {
     "@context": "https://schema.org",
@@ -124,17 +126,39 @@ function DesktopPage() {
       price: "0",
       priceCurrency: "USD",
     },
-    description:
-      "Official Deni Chat desktop app for Windows and macOS. Tray access, notifications, and quick reopen. Not an Android APK.",
+    description: "Official Deni Chat desktop app for Windows and macOS. Not an Android APK.",
   };
 
+  const requirements = [
+    t("Windows, macOS or Linux. Choose the build that matches your processor."),
+    t("An internet connection."),
+  ];
+
   return (
-    <>
+    <main id="main-content" className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 md:py-16">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
-      <DesktopClient downloads={downloads} />
-    </>
+      <h1 className="text-3xl font-semibold text-balance">{t("Deni AI Desktop")}</h1>
+      <p className="mt-4 max-w-[60ch] text-base text-muted-foreground">
+        {t(
+          "The official Deni AI desktop app for Windows and macOS. It stays in the system tray and shows notifications for replies. On phones, use Deni AI in the browser; there is no Android app.",
+        )}
+      </p>
+
+      <DesktopDownloadPicker downloads={downloads} />
+
+      <section aria-labelledby="desktop-requirements" className="mt-12">
+        <h2 id="desktop-requirements" className="text-lg font-semibold">
+          {t("Requirements")}
+        </h2>
+        <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm">
+          {requirements.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </section>
+    </main>
   );
 }

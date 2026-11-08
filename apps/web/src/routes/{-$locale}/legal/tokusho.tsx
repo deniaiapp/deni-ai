@@ -36,7 +36,7 @@ const items = [
 function TokushoPage() {
   return (
     <main className="min-h-screen bg-background" id="main-content">
-      <div className="mx-auto max-w-3xl px-4 pb-16 pt-28 sm:px-6">
+      <div className="mx-auto max-w-3xl px-4 pb-16 pt-12 sm:px-6">
         <div className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">特定商取引法に基づく表記</h1>
           <p className="mt-2 text-sm text-muted-foreground">最終更新日: 2025年12月31日</p>

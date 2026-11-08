@@ -1,8 +1,8 @@
 import { Link } from "@/lib/navigation";
-import { ArrowRight, CircleHelp } from "lucide-react";
-import { useExtracted } from "use-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { createFileRoute } from "@tanstack/react-router";
 import { getExtracted } from "@deniai/i18n/extracted";
+import { localizedPath } from "@/lib/locale-path";
 import { pageHead } from "@/lib/seo";
 
 export const Route = createFileRoute("/{-$locale}/faq")({
@@ -33,10 +33,7 @@ export const Route = createFileRoute("/{-$locale}/faq")({
 
 function FaqPage() {
   const t = useExtracted();
-  const headline = t("Frequently asked questions");
-  const description = t(
-    "This FAQ explains how Deni AI works, what is free, how model choice works, and what you should know about privacy and responsible use before you open a chat.",
-  );
+  const locale = useLocale();
 
   const groups = [
     {
@@ -69,7 +66,7 @@ function FaqPage() {
         {
           question: t("Is Deni AI free to try?"),
           answer: t(
-            "Yes. Free access is available with usage limits. Paid plans expand capacity and unlock higher-cost models. The public site explains features, use cases, and policies before you create an account.",
+            "Yes. Free access is available with usage limits. Paid plans expand capacity and unlock higher-cost models.",
           ),
         },
         {
@@ -86,19 +83,19 @@ function FaqPage() {
         {
           question: t("Which AI models can I use?"),
           answer: t(
-            "Supported model families are listed on the Models page and can change as providers release updates. The product goal is practical access to major families such as GPT, Claude, Gemini, Grok, and other capable models, not a static logo wall.",
+            "The model picker in chat lists the available models. They include major families such as GPT, Claude, Gemini and Grok, and the list changes as providers release updates.",
           ),
         },
         {
           question: t("How should I choose a model?"),
           answer: t(
-            "Start from the task and the cost of being wrong. Use a fast model for low-risk drafting, a stronger reasoning model when assumptions matter, and a coding-capable model when output must fit a real codebase. See the model selection guide for a full workflow.",
+            "Start from the task and the cost of being wrong. Use a fast model for low-risk drafting, a stronger reasoning model when assumptions matter, and a coding-capable model when output must fit a real codebase.",
           ),
         },
         {
           question: t("Should I trust every AI answer?"),
           answer: t(
-            "No. Treat AI output as a draft. Verify facts, recalculate numbers, test code, and rewrite important text in your own words before you publish, send, or ship it. The verification guide explains a practical review routine.",
+            "No. Treat AI output as a draft. Verify facts, recalculate numbers, test code, and rewrite important text in your own words before you publish, send, or ship it.",
           ),
         },
       ],
@@ -141,12 +138,6 @@ function FaqPage() {
             "No. AI can help draft questions, summarize options, and organize notes, but legal, medical, financial, and safety-critical decisions still need qualified human judgment and verified sources.",
           ),
         },
-        {
-          question: t("Where can I learn good multi-model habits?"),
-          answer: t(
-            "Read the AI Guides. They cover model selection, verification, prompt patterns, privacy, and study.",
-          ),
-        },
       ],
     },
   ];
@@ -167,79 +158,39 @@ function FaqPage() {
   };
 
   return (
-    <main className="min-h-screen bg-background" id="main-content">
+    <main id="main-content" className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 md:py-16">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
       />
 
-      <section className="px-4 pb-12 pt-32 md:pb-16 md:pt-40">
-        <div className="mx-auto max-w-3xl">
-          <div className="mb-5 inline-flex size-11 items-center justify-center rounded-2xl bg-secondary">
-            <CircleHelp className="size-5" />
-          </div>
-          <p className="mb-3 text-sm font-semibold uppercase tracking-[0.18em] text-muted-foreground/70">
-            {t("FAQ")}
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl">
-            {headline}
-          </h1>
-          <p className="mt-6 text-base leading-8 text-muted-foreground">{description}</p>
-        </div>
-      </section>
+      <h1 className="text-3xl font-semibold text-balance">{t("Frequently asked questions")}</h1>
 
-      <section className="px-4 pb-20 md:pb-28">
-        <div className="mx-auto max-w-3xl space-y-12">
-          {groups.map((group) => (
-            <div key={group.title}>
-              <h2 className="text-2xl font-semibold tracking-tight">{group.title}</h2>
-              <div className="mt-6 space-y-4">
-                {group.items.map((item) => (
-                  <article
-                    key={item.question}
-                    className="rounded-[1.5rem] border border-border/70 bg-card p-6"
-                  >
-                    <h3 className="text-lg font-semibold tracking-tight">{item.question}</h3>
-                    <p className="mt-3 text-sm leading-7 text-muted-foreground">{item.answer}</p>
-                  </article>
-                ))}
-              </div>
-            </div>
-          ))}
+      <div className="mt-10 flex flex-col gap-12">
+        {groups.map((group) => (
+          <section key={group.title}>
+            <h2 className="text-lg font-semibold">{group.title}</h2>
+            <dl className="mt-4 divide-y divide-border border-y border-border">
+              {group.items.map((item) => (
+                <div key={item.question} className="py-4">
+                  <dt className="text-sm font-medium">{item.question}</dt>
+                  <dd className="mt-1.5 text-sm text-muted-foreground">{item.answer}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        ))}
+      </div>
 
-          <div className="rounded-[1.5rem] border border-border/70 bg-secondary/20 p-6 md:p-8">
-            <h2 className="text-xl font-semibold tracking-tight">{t("Still need help?")}</h2>
-            <p className="mt-3 text-sm leading-7 text-muted-foreground">
-              {t(
-                "If your question is not covered here, contact us or read the longer guides on model choice, verification, and multi-model workflows.",
-              )}
-            </p>
-            <div className="mt-6 flex flex-wrap gap-3">
-              <Link
-                href="/contact"
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-secondary"
-              >
-                {t("Contact")}
-                <ArrowRight className="size-4" />
-              </Link>
-              <Link
-                href="/desktop"
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-secondary"
-              >
-                {t("Download desktop app")}
-                <ArrowRight className="size-4" />
-              </Link>
-              <Link
-                href="/guides"
-                className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-4 py-2 text-sm font-medium hover:bg-secondary"
-              >
-                {t("AI Guides")}
-                <ArrowRight className="size-4" />
-              </Link>
-            </div>
-          </div>
-        </div>
-      </section>
+      <p className="mt-12 text-sm text-muted-foreground">
+        {t("Question not answered here?")}{" "}
+        <Link
+          href={localizedPath("/contact", locale)}
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          {t("Contact us")}
+        </Link>
+      </p>
     </main>
   );
 }

@@ -1,95 +1,28 @@
+import { Link } from "@/lib/navigation";
+import { useExtracted, useLocale } from "use-intl";
+import { AdSlot } from "@/components/ad-slot";
+import { GuestSignInButton } from "@/components/guest-sign-in-button";
+import { authClient } from "@/lib/auth-client";
+import { localizedPath } from "@/lib/locale-path";
 import { HOME_ALTERNATE_NAMES } from "@/lib/seo";
-import { useExtracted } from "use-intl";
-import { ClientHome } from "./home-client";
+import { Button } from "@deniai/ui/components/button";
 
-function HomeJsonLd() {
-  const t = useExtracted();
-  const webApplicationDescription = t(
-    "Open Deni Chat in your browser. Deni AI gives you GPT, Claude, Gemini and more in one free workspace.",
-  );
-  const jsonLd = [
-    {
-      "@context": "https://schema.org",
-      "@type": "WebApplication",
-      name: "Deni AI",
-      alternateName: [...HOME_ALTERNATE_NAMES],
-      url: "https://deniai.app",
-      description: webApplicationDescription,
-      applicationCategory: "UtilitiesApplication",
-      operatingSystem: "Web, Windows, macOS",
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "USD",
-      },
+function HomeJsonLd({ description }: { description: string }) {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Deni AI",
+    alternateName: [...HOME_ALTERNATE_NAMES],
+    url: "https://deniai.app",
+    description,
+    applicationCategory: "UtilitiesApplication",
+    operatingSystem: "Web, Windows, macOS",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
     },
-    {
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      mainEntity: [
-        {
-          "@type": "Question",
-          name: t("Is Deni Chat the same as Deni AI?"),
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: t(
-              "Yes. Deni Chat is the chat workspace of Deni AI. Both names refer to the same free multi-model AI chat site at deniai.app, with GPT, Claude, Gemini, and other models in one place.",
-            ),
-          },
-        },
-        {
-          "@type": "Question",
-          name: t("Is there a Deni Chat APK or Android app?"),
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: t(
-              "Deni Chat runs in the browser on any phone, so you do not need an APK. The official installable app is the Deni AI desktop app for Windows and macOS at deniai.app/desktop. Avoid third-party APK sites that claim to offer Deni Chat for Android.",
-            ),
-          },
-        },
-        {
-          "@type": "Question",
-          name: t("What makes Deni AI different from a single-model chat app?"),
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: t(
-              "Deni AI lets people compare and switch between multiple providers in one place so they can choose the model that fits the task.",
-            ),
-          },
-        },
-        {
-          "@type": "Question",
-          name: t("Who is Deni AI for?"),
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: t(
-              "Deni AI is for people who use AI repeatedly in real workflows, including developers, founders, students, operators, and teams.",
-            ),
-          },
-        },
-        {
-          "@type": "Question",
-          name: t("Is Deni AI free to try?"),
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: t(
-              "Yes. Free access is available with usage limits, and the public site explains features, guides, privacy, and policies before signup.",
-            ),
-          },
-        },
-        {
-          "@type": "Question",
-          name: t("Where can I learn good multi-model habits?"),
-          acceptedAnswer: {
-            "@type": "Answer",
-            text: t(
-              "The AI Guides cover model selection, answer verification, bilingual writing, when not to use AI, and practical multi-model habits.",
-            ),
-          },
-        },
-      ],
-    },
-  ];
+  };
 
   return (
     <script
@@ -99,11 +32,80 @@ function HomeJsonLd() {
   );
 }
 
+/** `/home` and `/ja`: what Deni AI is, a way into chat, and the other products. */
 export function HomePage() {
+  const t = useExtracted();
+  const locale = useLocale();
+  const session = authClient.useSession();
+  const description = t(
+    "Deni AI is a chat app where you can use GPT, Claude, Gemini and other AI models in one place, in the browser or in the desktop app.",
+  );
+
+  const products = [
+    {
+      href: localizedPath("/flixa", locale),
+      title: "Flixa",
+      body: t("AI coding agent for VS Code, Cursor and other editors."),
+    },
+    {
+      href: localizedPath("/desktop", locale),
+      title: t("Desktop app"),
+      body: t("Deni AI for Windows and macOS."),
+    },
+    {
+      href: "/run",
+      title: "Deni Run",
+      body: t(
+        "AI teammates that work on tasks with their own browser and computer. Sign in to use it.",
+      ),
+    },
+  ];
+
   return (
-    <>
-      <HomeJsonLd />
-      <ClientHome />
-    </>
+    <main id="main-content" className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6 md:py-24">
+      <HomeJsonLd description={description} />
+
+      <h1 className="text-3xl font-semibold text-balance sm:text-4xl">
+        {t("Chat with GPT, Claude, Gemini and more")}
+      </h1>
+      <p className="mt-4 max-w-[60ch] text-base text-muted-foreground">{description}</p>
+
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+        <Button size="lg" render={<Link href="/chat" />} nativeButton={false}>
+          {t("Start chatting")}
+        </Button>
+        <GuestSignInButton />
+      </div>
+
+      {!session.isPending && (
+        <AdSlot
+          viewerId={session.data?.user.id ?? "public"}
+          chatId="home"
+          placement="home"
+          visible
+          requestInFlight={false}
+          className="mt-8 max-w-xl"
+        />
+      )}
+
+      <section aria-labelledby="home-products" className="mt-16 border-t border-border pt-8">
+        <h2 id="home-products" className="text-lg font-semibold">
+          {t("Also from Deni AI")}
+        </h2>
+        <ul className="mt-4 flex flex-col gap-4">
+          {products.map((product) => (
+            <li key={product.href}>
+              <Link
+                href={product.href}
+                className="text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                {product.title}
+              </Link>
+              <p className="text-sm text-muted-foreground">{product.body}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+    </main>
   );
 }

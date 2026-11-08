@@ -1,21 +1,12 @@
 import React from "react";
-import { m } from "motion/react";
-import { ChevronDown, Download, Package } from "lucide-react";
+import { Download } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { Button } from "@deniai/ui/components/button";
 import { Checkbox } from "@deniai/ui/components/checkbox";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@deniai/ui/components/dropdown-menu";
 import type { DesktopDownloads, DesktopRelease } from "./types";
 
 type DownloadOption = {
   id: string;
-  shortLabel: string;
   href: string;
   os: "windows" | "macos" | "linux";
   arch: "x64" | "arm64";
@@ -123,13 +114,9 @@ function parseDownloadOptions(assets: DesktopRelease["assets"]): DownloadOption[
         return [];
       }
 
-      const archLabel = arch === "arm64" ? "ARM64" : "x64";
-      const macLabel = os === "macos" ? (arch === "arm64" ? "Silicon" : "Intel") : "";
-
       return [
         {
           id: name,
-          shortLabel: `${macLabel ? `${macLabel} ` : archLabel} ${format}`,
           href,
           os,
           arch,
@@ -179,10 +166,10 @@ function getOsText(os: DownloadOption["os"]): string {
 const OS_ORDER = ["windows", "macos", "linux"] as const;
 
 function selectionChipClassName(active: boolean): string {
-  return `rounded-full border px-3 py-1.5 text-sm transition-colors ${
+  return `rounded-md border px-3 py-1.5 text-sm transition-colors ${
     active
-      ? "border-foreground bg-foreground text-background"
-      : "border-border bg-background/70 text-muted-foreground hover:bg-background"
+      ? "border-primary bg-primary text-primary-foreground"
+      : "border-input text-muted-foreground hover:bg-accent hover:text-accent-foreground"
   }`;
 }
 
@@ -204,8 +191,27 @@ function pickDefaultOption(
   );
 }
 
+type PreferredPlatform = ReturnType<typeof detectPreferredPlatform>;
+
+const SERVER_PLATFORM: PreferredPlatform = { os: null, arch: null };
+let clientPlatform: PreferredPlatform | undefined;
+
+function getClientPlatform(): PreferredPlatform {
+  clientPlatform ??= detectPreferredPlatform();
+  return clientPlatform;
+}
+
+const subscribeToNothing = () => () => {};
+
 export function DesktopDownloadPicker({ downloads }: { downloads: DesktopDownloads }) {
   const t = useExtracted();
+  // The server cannot know the visitor's platform: render its default first and
+  // switch to the detected build after hydration.
+  const preferred = React.useSyncExternalStore(
+    subscribeToNothing,
+    getClientPlatform,
+    () => SERVER_PLATFORM,
+  );
   const [includePrerelease, setIncludePrerelease] = React.useState(false);
   const latestOptions = parseDownloadOptions(downloads.latestRelease.assets);
   const prereleaseOptions = parseDownloadOptions(downloads.prerelease?.assets ?? []);
@@ -236,7 +242,7 @@ export function DesktopDownloadPicker({ downloads }: { downloads: DesktopDownloa
   };
   const currentOs =
     (selectedOs && options.some((option) => option.os === selectedOs) ? selectedOs : null) ??
-    pickDefaultOption(options, detectPreferredPlatform())?.os ??
+    pickDefaultOption(options, preferred)?.os ??
     null;
   const availableArchs = (() => {
     if (!currentOs) {
@@ -253,6 +259,7 @@ export function DesktopDownloadPicker({ downloads }: { downloads: DesktopDownloa
   })();
   const currentArch =
     (selectedArch && availableArchs.includes(selectedArch) ? selectedArch : null) ??
+    (preferred.arch && availableArchs.includes(preferred.arch) ? preferred.arch : null) ??
     availableArchs[0] ??
     null;
   const availableFormats =
@@ -265,162 +272,94 @@ export function DesktopDownloadPicker({ downloads }: { downloads: DesktopDownloa
     null;
   const selectedOption =
     availableFormats.find((option) => option.format === currentFormat) ??
-    pickDefaultOption(options, detectPreferredPlatform()) ??
+    pickDefaultOption(options, preferred) ??
     null;
 
   return (
-    <section id="download" className="relative px-4 py-8">
-      <div className="mx-auto max-w-5xl">
-        <m.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          whileInView={{ opacity: 1, scale: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.8 }}
-          className="relative overflow-hidden rounded-[2.5rem] border-2 border-border bg-card/50 p-12 md:p-16 text-center shadow-2xl backdrop-blur-sm"
-        >
-          <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_50%_50%,rgba(var(--primary),0.1),transparent)]" />
-          <h2 className="mb-6 text-3xl font-semibold tracking-tight md:text-6xl">
-            {t("Ready to try Deni AI Desktop?")}
-          </h2>
-          <p className="mx-auto mb-10 max-w-2xl text-xl leading-relaxed text-muted-foreground">
-            {t(
-              "Use Deni AI with desktop-native convenience and keep your assistant close without keeping a browser tab open.",
-            )}
-          </p>
-          {hasPrerelease ? (
-            <div className="mx-auto mb-6 flex w-full max-w-2xl items-center justify-center gap-3 rounded-2xl border border-border/70 bg-background/70 px-4 py-3 text-sm text-muted-foreground">
-              <label className="flex cursor-pointer items-center gap-2">
-                <Checkbox
-                  checked={includePrerelease}
-                  onCheckedChange={(checked) => setIncludePrerelease(checked === true)}
-                />
-                <span>{t("Pre-release")}</span>
-              </label>
-            </div>
-          ) : null}
-          {options.length > 0 && selectedOption ? (
-            <div className="mx-auto mb-4 flex w-full max-w-2xl flex-col items-stretch justify-center gap-3">
-              {availableOs.length > 1 ? (
-                <div className="flex flex-wrap justify-center gap-2">
-                  {availableOs.map((os) => (
-                    <button
-                      key={os}
-                      type="button"
-                      aria-pressed={currentOs === os}
-                      onClick={() => selectOs(os)}
-                      className={selectionChipClassName(currentOs === os)}
-                    >
-                      {getOsText(os)}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              <div className="flex w-full flex-col items-stretch justify-center sm:flex-row">
-                <Button
-                  size="lg"
-
-                  className="h-12 rounded-b-none rounded-r-none! rounded-t-xl bg-primary px-6 text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 sm:rounded-r-none sm:rounded-b-xl sm:rounded-l-xl"
-                  render={<a href={selectedOption.href} target="_blank" rel="noreferrer" />}
-                  nativeButton={false}
-                >
-                  <Download className="size-4" />
-                  {t("Download")} {getOsText(selectedOption.os)}
-                </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        size="lg"
-                        variant="default"
-                        className="h-12 rounded-t-none rounded-l-none! rounded-b-xl border-0 border-t border-primary-foreground/15 bg-primary px-4 text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 sm:w-14 sm:rounded-l-none sm:rounded-r-xl sm:rounded-b-xl sm:rounded-t-xl sm:border-t-0 sm:border-l"
-                      />
-                    }
+    <section id="download" aria-labelledby="desktop-download" className="mt-10">
+      <h2 id="desktop-download" className="text-lg font-semibold">
+        {t("Download")}
+      </h2>
+      <div className="mt-4 flex flex-col items-start gap-4">
+        {hasPrerelease ? (
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={includePrerelease}
+              onCheckedChange={(checked) => setIncludePrerelease(checked === true)}
+            />
+            <span>{t("Pre-release")}</span>
+          </label>
+        ) : null}
+        {options.length > 0 && selectedOption ? (
+          <>
+            {availableOs.length > 1 ? (
+              <div className="flex flex-wrap gap-2">
+                {availableOs.map((os) => (
+                  <button
+                    key={os}
+                    type="button"
+                    aria-pressed={currentOs === os}
+                    onClick={() => selectOs(os)}
+                    className={selectionChipClassName(currentOs === os)}
                   >
-                    <ChevronDown className="size-4" />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="w-64 rounded-2xl border-border/60 bg-background/95 p-3 shadow-2xl backdrop-blur"
-                  >
-                    {osOptions.macos.length > 0 ? (
-                      <DropdownMenuItem
-                        className="p-1.5 font-medium"
-                        onClick={() => selectOs("macos")}
-                      >
-                        {t("macOS build")}
-                      </DropdownMenuItem>
-                    ) : null}
-                    {osOptions.macos.length > 0 &&
-                    (osOptions.windows.length > 0 || osOptions.linux.length > 0) ? (
-                      <DropdownMenuSeparator className="my-2" />
-                    ) : null}
-                    {osOptions.windows.length > 0 ? (
-                      <DropdownMenuItem
-                        className="p-1.5 font-medium"
-                        onClick={() => selectOs("windows")}
-                      >
-                        {t("Windows build")}
-                      </DropdownMenuItem>
-                    ) : null}
-                    {osOptions.windows.length > 0 && osOptions.linux.length > 0 ? (
-                      <DropdownMenuSeparator className="my-2" />
-                    ) : null}
-                    {osOptions.linux.length > 0 ? (
-                      <DropdownMenuItem
-                        className="p-1.5 font-medium"
-                        onClick={() => selectOs("linux")}
-                      >
-                        {t("Linux build")}
-                      </DropdownMenuItem>
-                    ) : null}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                    {getOsText(os)}
+                  </button>
+                ))}
               </div>
-              {availableArchs.length > 1 ? (
-                <div className="flex flex-wrap justify-center gap-2">
-                  {availableArchs.map((arch) => (
-                    <button
-                      key={arch}
-                      type="button"
-                      onClick={() => {
-                        setSelectedArch(arch);
-                        setSelectedFormat(null);
-                      }}
-                      className={selectionChipClassName(currentArch === arch)}
-                    >
-                      {getArchLabel(currentOs ?? selectedOption.os, arch)}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-              {availableFormats.length > 1 ? (
-                <div className="flex flex-wrap justify-center gap-2">
-                  {availableFormats.map((option) => (
-                    <button
-                      key={option.id}
-                      type="button"
-                      onClick={() => setSelectedFormat(option.format)}
-                      className={selectionChipClassName(currentFormat === option.format)}
-                    >
-                      {getFormatLabel(option.format)}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-          <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-muted-foreground">
-            <a
-              href={downloads.releasesUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 underline underline-offset-4 transition-opacity hover:opacity-80"
+            ) : null}
+            {availableArchs.length > 1 ? (
+              <div className="flex flex-wrap gap-2">
+                {availableArchs.map((arch) => (
+                  <button
+                    key={arch}
+                    type="button"
+                    aria-pressed={currentArch === arch}
+                    onClick={() => {
+                      setSelectedArch(arch);
+                      setSelectedFormat(null);
+                    }}
+                    className={selectionChipClassName(currentArch === arch)}
+                  >
+                    {getArchLabel(currentOs ?? selectedOption.os, arch)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {availableFormats.length > 1 ? (
+              <div className="flex flex-wrap gap-2">
+                {availableFormats.map((option) => (
+                  <button
+                    key={option.id}
+                    type="button"
+                    aria-pressed={currentFormat === option.format}
+                    onClick={() => setSelectedFormat(option.format)}
+                    className={selectionChipClassName(currentFormat === option.format)}
+                  >
+                    {getFormatLabel(option.format)}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <Button
+              size="lg"
+              render={<a href={selectedOption.href} target="_blank" rel="noreferrer" />}
+              nativeButton={false}
             >
-              <Package className="size-4" />
-              {t("View all releases")}
-            </a>
-          </div>
-        </m.div>
+              <Download className="size-4" />
+              {t("Download")} ({getOsText(selectedOption.os)},{" "}
+              {getArchLabel(selectedOption.os, selectedOption.arch)},{" "}
+              {getFormatLabel(selectedOption.format)})
+            </Button>
+          </>
+        ) : null}
+        <a
+          href={downloads.releasesUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm text-primary underline-offset-4 hover:underline"
+        >
+          {t("View all releases")}
+        </a>
       </div>
     </section>
   );
