@@ -15,11 +15,14 @@ the workspace layout and the rules that span apps.
 | `packages/db`                       | `@deniai/db`                        | Drizzle schema + migrations: `public` (web, `drizzle.config.ts`) and `flixa` (agent API, `drizzle.flixa.config.ts`, journal `flixa.__drizzle_migrations`)                            |
 | `packages/billing`                  | `@deniai/billing`                   | Billing rules shared by web and agent API: pure pool sizes, plan tiers, usage tier multipliers, token weights, education domains; `/server`: the usage engine (`createUsageEngine`)  |
 | `packages/flixa-contract`           | `@deniai/flixa-contract`            | Publishable (0.1.0, not published) zod schemas + types of the public Flixa API: device auth, API key format, error envelope and codes, client headers, models, usage, request bodies |
-| `packages/ui`                       | `@deniai/ui`                        | shadcn/ui components on Base UI used by the web app                                                                                                                                  |
+| `packages/ui`                       | `@deniai/ui`                        | shadcn/ui components on Base UI and layout primitives (PageHeader, PageSection, SettingsLayout, AppHeader) of the design system in `docs/design-system.md`                           |
 | `packages/emails`                   | `@deniai/emails`                    | react-email transactional templates and `renderEmail()` (HTML + plain text)                                                                                                          |
 | `packages/i18n`                     | `@deniai/i18n`                      | Locale list (web and support), Accept-Language negotiation, `getExtracted()`, and the `extractMessages()` Vite plugin that rewrites `apps/web/messages/*.json`                       |
 | `packages/ai`                       | `@deniai/ai`                        | Chat model catalog and plan access rules, OpenRouter provider factory, reasoning helpers, pure chat tools (questionnaire)                                                            |
 | `packages/auth`                     | `@deniai/auth`                      | Better Auth server factory `createAuth(deps)`, React client, auth route paths, API key generation and hashing (web and agent API)                                                    |
+
+`docs/design-system.md` is the design brief of the web app (tokens, type, layout, screen
+inventory, the `next`/`legacy` UI switch).
 
 The apps were imported with their full history (`git subtree add`), so
 `git log -- apps/web` shows the deni-ai history.

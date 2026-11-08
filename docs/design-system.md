@@ -12,11 +12,11 @@ comparison tool and an agent runner (Deni Run), used heavily in Japanese and
 English, by students and developers who keep it open all day. The screen is a
 reading and writing surface first: long answers, code, tables.
 
-The name gives the direction. *Ai* (藍) is indigo, the dye of aizome cloth.
+The name gives the direction. _Ai_ (藍) is indigo, the dye of aizome cloth.
 The app is framed in a deep indigo band (the sidebar and the frame around the
 page) holding a cool, paper-white sheet where the conversation happens. The
 indigo frame is the one bold element; everything on the sheet stays quiet,
-legible and dense enough for work. A turmeric yellow (*ukon*), the traditional
+legible and dense enough for work. A turmeric yellow (_ukon_), the traditional
 partner of indigo in Japanese textiles, marks the few things that are "on":
 the current chat, the active mode, Max Mode.
 
@@ -30,23 +30,23 @@ as dead grey. Contrast targets: body text and muted text ≥ 4.5:1 on the
 surfaces they sit on, UI boundaries that carry meaning (inputs, focus) ≥ 3:1.
 `src/styles/design-tokens.test.ts` checks the pairs below in both modes.
 
-| Role                       | Light                       | Dark                       | Use                                      |
-| -------------------------- | --------------------------- | -------------------------- | ---------------------------------------- |
-| `background` (paper)       | `0.975 0.006 272`           | `0.185 0.03 272`           | The sheet: page and conversation surface |
-| `foreground` (sumi ink)    | `0.22 0.045 272`            | `0.94 0.012 272`           | Body text                                |
-| `card`                     | `0.995 0.002 272`           | `0.215 0.034 272`          | Grouped content on the sheet             |
-| `popover`                  | `1 0 0`                     | `0.235 0.036 272`          | Menus, popovers, dialogs                 |
-| `primary` (ai)             | `0.42 0.15 272`             | `0.78 0.1 272`             | Primary actions, links, selection        |
-| `secondary` (kamenozoki)   | `0.935 0.022 272`           | `0.27 0.045 272`           | Secondary buttons, user message bubble   |
-| `muted` / `muted-fg`       | `0.95 0.012` / `0.47 0.04`  | `0.245 0.034` / `0.73 0.03`| Quiet fills, secondary text              |
-| `accent`                   | `0.93 0.026 272`            | `0.29 0.05 272`            | Hover and pressed fills                  |
-| `highlight` (ukon)         | `0.8 0.15 78`               | `0.83 0.14 80`             | "On" markers; always with ink text       |
-| `destructive`              | `0.53 0.2 25`               | `0.7 0.17 25`              | Destructive actions and errors           |
-| `success`                  | `0.5 0.12 160`              | `0.75 0.13 160`            | Confirmations, healthy status            |
-| `border` / `input`         | `0.89 0.016` / `0.8 0.03`   | `0.31 0.04` / `0.42 0.05`  | Hairlines / field outlines               |
-| `ring`                     | `0.5 0.17 272`              | `0.76 0.12 272`            | Focus outline                            |
-| `sidebar` (kachi-iro)      | `0.27 0.09 272`             | `0.14 0.03 272`            | The indigo frame                         |
-| `sidebar-foreground`       | `0.96 0.012 272`            | `0.9 0.015 272`            | Text on the frame                        |
+| Role                     | Light                      | Dark                        | Use                                      |
+| ------------------------ | -------------------------- | --------------------------- | ---------------------------------------- |
+| `background` (paper)     | `0.975 0.006 272`          | `0.185 0.03 272`            | The sheet: page and conversation surface |
+| `foreground` (sumi ink)  | `0.22 0.045 272`           | `0.94 0.012 272`            | Body text                                |
+| `card`                   | `0.995 0.002 272`          | `0.215 0.034 272`           | Grouped content on the sheet             |
+| `popover`                | `1 0 0`                    | `0.235 0.036 272`           | Menus, popovers, dialogs                 |
+| `primary` (ai)           | `0.42 0.15 272`            | `0.78 0.1 272`              | Primary actions, links, selection        |
+| `secondary` (kamenozoki) | `0.935 0.022 272`          | `0.27 0.045 272`            | Secondary buttons, user message bubble   |
+| `muted` / `muted-fg`     | `0.95 0.012` / `0.47 0.04` | `0.245 0.034` / `0.73 0.03` | Quiet fills, secondary text              |
+| `accent`                 | `0.93 0.026 272`           | `0.29 0.05 272`             | Hover and pressed fills                  |
+| `highlight` (ukon)       | `0.8 0.15 78`              | `0.83 0.14 80`              | "On" markers; always with ink text       |
+| `destructive`            | `0.53 0.2 25`              | `0.7 0.17 25`               | Destructive actions and errors           |
+| `success`                | `0.5 0.12 160`             | `0.75 0.13 160`             | Confirmations, healthy status            |
+| `border` / `input`       | `0.89 0.016` / `0.8 0.03`  | `0.31 0.04` / `0.42 0.05`   | Hairlines / field outlines               |
+| `ring`                   | `0.5 0.17 272`             | `0.76 0.12 272`             | Focus outline                            |
+| `sidebar` (kachi-iro)    | `0.27 0.09 272`            | `0.14 0.03 272`             | The indigo frame                         |
+| `sidebar-foreground`     | `0.96 0.012 272`           | `0.9 0.015 272`             | Text on the frame                        |
 
 The sidebar is an inverted island: inside `[data-slot="sidebar"]` the generic
 roles (`foreground`, `muted-foreground`, `accent`, `border`, `primary`, …) are
@@ -68,20 +68,21 @@ Inter. **JetBrains Mono Variable** is for code only, never for labels.
 Japanese falls back to Hiragino Sans / Noto Sans JP / Yu Gothic UI with a
 looser line height (`:lang(ja)`).
 
-Scale (major third, 16px reading base, 14px UI base):
+Scale (Tailwind steps, 15px reading base, 14px UI base):
 
-| Token            | Size / line height | Weight | Tracking | Use                                |
-| ---------------- | ------------------ | ------ | -------- | ---------------------------------- |
-| `text-xs`        | 12 / 16            | 500    | 0        | Meta, counters, badges             |
-| `text-sm`        | 14 / 20            | 400    | -0.006em | UI text, buttons, menus            |
-| `text-base`      | 16 / 26            | 400    | -0.011em | Message prose, descriptions        |
-| `text-lg`        | 20 / 28            | 600    | -0.018em | Section titles                     |
-| `text-2xl`       | 25 / 32            | 650    | -0.025em | Page titles (`PageHeader`)         |
-| `text-4xl`       | 39 / 44            | 650    | -0.035em | The chat home greeting only        |
+| Token         | Size / line height | Weight | Tracking | Use                                |
+| ------------- | ------------------ | ------ | -------- | ---------------------------------- |
+| `text-xs`     | 12 / 16            | 500    | 0        | Meta, counters, badges             |
+| `text-sm`     | 14 / 20            | 400    | -0.006em | UI text, buttons, menus            |
+| `text-[15px]` | 15 / 24            | 400    | -0.006em | Message prose (assistant and user) |
+| `text-base`   | 16 / 26            | 400    | -0.011em | Long-form descriptions             |
+| `text-lg`     | 18 / 28            | 600    | -0.018em | Section titles                     |
+| `text-2xl`    | 24 / 32            | 600    | -0.025em | Page titles (`PageHeader`)         |
+| `text-4xl`    | 36 / 40            | 600    | -0.035em | The chat home greeting only        |
 
 Rules: sentence case everywhere; no all-caps eyebrows; weight, not colour,
 separates heading levels; numbers in usage and billing use `tabular-nums`.
-Line length for prose stays under ~75 characters (`max-w-[46rem]` at 16px).
+Line length for prose stays under ~80 characters (`max-w-[46rem]` at 15px).
 
 ## Spacing, layout and grid
 
@@ -108,7 +109,7 @@ Line length for prose stays under ~75 characters (`max-w-[46rem]` at 16px).
 - Mobile (< 768px): the sheet is full-bleed (no frame), the sidebar is a drawer
   of the same indigo, and the header bar is sticky with the trigger on the left.
 - Reading column: `max-w-[46rem]`, centred in the sheet, text left-aligned.
-- Settings: `SettingsLayout` gives a vertical section nav (left, 15rem) and the
+- Settings: `SettingsLayout` gives a vertical section nav (left, 14rem) and the
   page (right, max 52rem). Each `PageSection` is a row: title and description in
   a narrow column, controls in the wide one; rows are separated by hairlines,
   not boxed in cards. Below 1024px the nav becomes a horizontal scroller.
@@ -117,15 +118,15 @@ Line length for prose stays under ~75 characters (`max-w-[46rem]` at 16px).
 
 Radius follows nesting depth rather than one value everywhere:
 
-| Token             | Next   | Legacy (unchanged look) | Use                              |
-| ----------------- | ------ | ----------------------- | -------------------------------- |
-| `--radius-sheet`  | 18px   | 16px                    | The app sheet                    |
-| `--radius-card`   | 14px   | `radius × 2.6`          | Cards, panels, plan cards        |
-| `--radius-menu`   | 12px   | `radius + 8px`          | Popovers, menus, select lists    |
-| `--radius-dialog` | 18px   | `radius × 2.6`          | Dialogs and sheets               |
-| `--radius-field`  | 10px   | `radius × 2.2`          | Inputs, selects, textareas       |
-| `--radius-button` | 10px   | `radius × 2.6`          | Buttons                          |
-| `--radius-badge`  | 6px    | `radius × 2.2`          | Badges, status chips             |
+| Token             | Next | Legacy (unchanged look) | Use                           |
+| ----------------- | ---- | ----------------------- | ----------------------------- |
+| `--radius-sheet`  | 18px | 16px                    | The app sheet                 |
+| `--radius-card`   | 14px | `radius × 2.6`          | Cards, panels, plan cards     |
+| `--radius-menu`   | 12px | `radius + 8px`          | Popovers, menus, select lists |
+| `--radius-dialog` | 18px | `radius × 2.6`          | Dialogs and sheets            |
+| `--radius-field`  | 10px | `radius × 2.2`          | Inputs, selects, textareas    |
+| `--radius-button` | 10px | `radius × 2.6`          | Buttons                       |
+| `--radius-badge`  | 6px  | `radius × 2.2`          | Badges, status chips          |
 
 Utilities: `rounded-card`, `rounded-menu`, `rounded-dialog`, `rounded-field`,
 `rounded-button`, `rounded-badge`, `rounded-sheet`.
@@ -135,12 +136,12 @@ Utilities: `rounded-card`, `rounded-menu`, `rounded-dialog`, `rounded-field`,
 Hairlines first, shadows only for things that float above the sheet. Shadow
 colour is indigo-tinted, never neutral black at 10%.
 
-| Level | Token         | Use                                        |
-| ----- | ------------- | ------------------------------------------ |
-| 0     | none + border | Cards and sections on the sheet            |
-| 1     | `shadow-sm`   | The sheet on the frame, the composer       |
-| 2     | `shadow-lg`   | Menus, popovers, tooltips                  |
-| 3     | `shadow-2xl`  | Dialogs and the mobile drawer              |
+| Level | Token         | Use                                  |
+| ----- | ------------- | ------------------------------------ |
+| 0     | none + border | Cards and sections on the sheet      |
+| 1     | `shadow-sm`   | The sheet on the frame, the composer |
+| 2     | `shadow-lg`   | Menus, popovers, tooltips            |
+| 3     | `shadow-2xl`  | Dialogs and the mobile drawer        |
 
 ## Motion
 
@@ -179,24 +180,30 @@ respects `prefers-reduced-motion` (global override in `globals.css`).
 
 ## Screen inventory
 
-| Screen                                         | State in next UI                                   |
-| ---------------------------------------------- | -------------------------------------------------- |
-| App shell, sidebar, mode switch, mobile drawer | Rebuilt (inset frame, inverted sidebar)            |
-| Chat home                                      | Rebuilt (greeting, composer, suggestions)          |
-| Conversation, messages, tool/approval cards    | Restyled on new tokens and message layout          |
-| Artifacts panel                                | Restyled                                           |
-| Composer and model picker                      | Restyled                                           |
-| Chat search (⌘K)                               | Restyled                                           |
-| Model comparison                               | Restyled                                           |
-| Projects (list, detail)                        | Restyled on `PageHeader`                           |
-| Settings: every sub-page                       | Rebuilt on `SettingsLayout` / `PageSection`        |
-| Account and security (`/account/*`)            | Rebuilt on `SettingsLayout`                        |
-| Billing (plans, usage, Max Mode), team pages   | Restyled on `PageHeader` / `PageSection`           |
-| Auth pages                                     | Rebuilt (split layout with indigo panel)           |
-| Two-factor setup (required)                    | New screen                                         |
-| Flixa device authorize                         | Rebuilt                                            |
-| Deni Run (`/run`)                              | Not edited here; inherits tokens                   |
-| Marketing / public pages (`/{-$locale}/*`)     | Not rebuilt; inherit tokens                        |
+"Rebuilt" means a new layout or structure; "restyled" means the screen keeps its
+structure and takes the new tokens, radii and type (plus targeted fixes).
+
+| Screen                                         | State in next UI                                                         |
+| ---------------------------------------------- | ------------------------------------------------------------------------ |
+| App shell, sidebar, mode switch, mobile drawer | Rebuilt: inset frame, inverted sidebar, `AppHeader`                      |
+| Chat home                                      | Rebuilt: left-aligned greeting, floating composer                        |
+| Conversation, messages, tool/approval cards    | Restyled: 15px prose, user bubble, highlight edge on open questionnaires |
+| Artifacts panel                                | Restyled (tokens)                                                        |
+| Composer and model picker                      | Restyled: card surface, 20px radius, token toggles                       |
+| Chat search (⌘K)                               | Restyled (tokens, dialog radius)                                         |
+| Model comparison                               | Restyled: page title and description, card panes                         |
+| Projects list                                  | Rebuilt on `PageHeader` (no wrapping card)                               |
+| Project detail                                 | Restyled (tokens)                                                        |
+| Settings frame and every sub-page              | Rebuilt frame (`SettingsLayout`, `PageHeader` on every page)             |
+| Appearance                                     | Rebuilt on `PageSection` rows (with the UI switch)                       |
+| Personalize, API keys, import, ads             | Restyled inside the new frame (their cards kept)                         |
+| Account and security (`/account/*`)            | Rebuilt: moved into the app shell and settings frame                     |
+| Billing (plans, usage, Max Mode), team pages   | Restyled: header, token accents for offers and Max Mode                  |
+| Auth pages                                     | Rebuilt: split layout with the indigo panel                              |
+| Two-factor setup (required)                    | New screen                                                               |
+| Flixa device authorize                         | Restyled: the code as a dashed ticket, token status colours              |
+| Deni Run (`/run`)                              | Not edited here; inherits tokens and the inverted sidebar                |
+| Marketing / public pages (`/{-$locale}/*`)     | Not rebuilt; inherit tokens                                              |
 
 ## UI preference (next / legacy)
 
