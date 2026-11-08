@@ -1,12 +1,4 @@
-import {
-  Archive,
-  ArchiveRestore,
-  ExternalLink,
-  FolderKanban,
-  Plus,
-  Trash2,
-  Users,
-} from "lucide-react";
+import { Archive, ArchiveRestore, ExternalLink, Plus, Trash2, Users } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { Link, useRouter } from "@/lib/navigation";
 import { useState } from "react";
@@ -14,13 +6,6 @@ import { toast } from "sonner";
 import { SettingsPageShell } from "@/components/settings-page-shell";
 import { Badge } from "@deniai/ui/components/badge";
 import { Button } from "@deniai/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@deniai/ui/components/card";
 import {
   Select,
   SelectContent,
@@ -222,123 +207,112 @@ export function ProjectsSettingsPage() {
   }
 
   return (
-    <SettingsPageShell title={t("Projects")}>
-      <Card className="min-w-0">
-        <CardHeader>
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="space-y-1">
-              <CardTitle className="flex items-center gap-2">
-                <FolderKanban className="size-4" />
-                {t("Projects")}
-              </CardTitle>
-              <CardDescription>
-                {t("Organize chats with custom instructions and a default model.")}
-              </CardDescription>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {organizations.length > 0 ? (
-                <Select
-                  value={createScope}
-                  onValueChange={(value) => {
-                    if (value !== null) setCreateScope(value);
-                  }}
-                >
-                  <SelectTrigger size="sm" className="min-w-40">
-                    <SelectValue>
-                      {createScope === "__personal__"
-                        ? t("Personal")
-                        : (organizations.find((org) => org.id === createScope)?.name ??
-                          t("Personal"))}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="__personal__">{t("Personal")}</SelectItem>
-                    {organizations.map((org) => (
-                      <SelectItem key={org.id} value={org.id} disabled={!org.canShareProjects}>
-                        {org.canShareProjects
-                          ? org.name
-                          : t("{team} (paid team plan)", { team: org.name })}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              ) : null}
-              <Button onClick={handleCreateProject} disabled={createProject.isPending}>
-                {createProject.isPending ? <Spinner /> : <Plus className="size-4" />}
-                {t("New project")}
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {projectsQuery.isLoading ? (
-            <div className="flex min-h-32 items-center justify-center">
-              <Spinner />
-            </div>
-          ) : activeProjects.length === 0 ? (
-            <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-              {t("No projects yet. Create one to organize chats with custom context.")}
-            </div>
-          ) : (
-            <>
-              {personalActive.length > 0 ? (
-                <div className="space-y-2">
-                  {organizations.length > 0 ? (
-                    <h2 className="text-sm font-medium text-muted-foreground">{t("Personal")}</h2>
-                  ) : null}
-                  {personalActive.map((project) => (
-                    <ProjectListRow
-                      key={project.id}
-                      project={project}
-                      archived={false}
-                      pending={pending}
-                      onArchive={(id) => archiveProject.mutate({ id })}
-                      onRestore={(id) => restoreProject.mutate({ id })}
-                      onDelete={(id) => deleteProject.mutate({ id })}
-                    />
-                  ))}
-                </div>
-              ) : null}
-              {teamGroups.map((group) => (
-                <div key={group.org.id} className="space-y-2">
-                  <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-                    <Users className="size-3.5" />
-                    {group.org.name}
-                  </h2>
-                  {group.projects.map((project) => (
-                    <ProjectListRow
-                      key={project.id}
-                      project={project}
-                      archived={false}
-                      pending={pending}
-                      onArchive={(id) => archiveProject.mutate({ id })}
-                      onRestore={(id) => restoreProject.mutate({ id })}
-                      onDelete={(id) => deleteProject.mutate({ id })}
-                    />
-                  ))}
-                </div>
-              ))}
-            </>
-          )}
-
-          {archivedProjects.length > 0 ? (
-            <div className="space-y-2">
-              <h2 className="text-sm font-medium text-muted-foreground">{t("Archived")}</h2>
-              {archivedProjects.map((project) => (
-                <ProjectListRow
-                  key={project.id}
-                  project={project}
-                  archived
-                  pending={pending}
-                  onArchive={(id) => archiveProject.mutate({ id })}
-                  onRestore={(id) => restoreProject.mutate({ id })}
-                  onDelete={(id) => deleteProject.mutate({ id })}
-                />
-              ))}
-            </div>
+    <SettingsPageShell
+      title={t("Projects")}
+      description={t("Organize chats with custom instructions and a default model.")}
+      actions={
+        <>
+          {organizations.length > 0 ? (
+            <Select
+              value={createScope}
+              onValueChange={(value) => {
+                if (value !== null) setCreateScope(value);
+              }}
+            >
+              <SelectTrigger size="sm" className="min-w-40">
+                <SelectValue>
+                  {createScope === "__personal__"
+                    ? t("Personal")
+                    : (organizations.find((org) => org.id === createScope)?.name ?? t("Personal"))}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__personal__">{t("Personal")}</SelectItem>
+                {organizations.map((org) => (
+                  <SelectItem key={org.id} value={org.id} disabled={!org.canShareProjects}>
+                    {org.canShareProjects
+                      ? org.name
+                      : t("{team} (paid team plan)", { team: org.name })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           ) : null}
-        </CardContent>
-      </Card>
+          <Button onClick={handleCreateProject} disabled={createProject.isPending}>
+            {createProject.isPending ? <Spinner /> : <Plus className="size-4" />}
+            {t("New project")}
+          </Button>
+        </>
+      }
+    >
+      <div className="flex min-w-0 flex-col gap-6">
+        {projectsQuery.isLoading ? (
+          <div className="flex min-h-32 items-center justify-center">
+            <Spinner />
+          </div>
+        ) : activeProjects.length === 0 ? (
+          <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
+            {t("No projects yet. Create one to organize chats with custom context.")}
+          </div>
+        ) : (
+          <>
+            {personalActive.length > 0 ? (
+              <div className="space-y-2">
+                {organizations.length > 0 ? (
+                  <h2 className="text-sm font-medium text-muted-foreground">{t("Personal")}</h2>
+                ) : null}
+                {personalActive.map((project) => (
+                  <ProjectListRow
+                    key={project.id}
+                    project={project}
+                    archived={false}
+                    pending={pending}
+                    onArchive={(id) => archiveProject.mutate({ id })}
+                    onRestore={(id) => restoreProject.mutate({ id })}
+                    onDelete={(id) => deleteProject.mutate({ id })}
+                  />
+                ))}
+              </div>
+            ) : null}
+            {teamGroups.map((group) => (
+              <div key={group.org.id} className="space-y-2">
+                <h2 className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                  <Users className="size-3.5" />
+                  {group.org.name}
+                </h2>
+                {group.projects.map((project) => (
+                  <ProjectListRow
+                    key={project.id}
+                    project={project}
+                    archived={false}
+                    pending={pending}
+                    onArchive={(id) => archiveProject.mutate({ id })}
+                    onRestore={(id) => restoreProject.mutate({ id })}
+                    onDelete={(id) => deleteProject.mutate({ id })}
+                  />
+                ))}
+              </div>
+            ))}
+          </>
+        )}
+
+        {archivedProjects.length > 0 ? (
+          <div className="space-y-2">
+            <h2 className="text-sm font-medium text-muted-foreground">{t("Archived")}</h2>
+            {archivedProjects.map((project) => (
+              <ProjectListRow
+                key={project.id}
+                project={project}
+                archived
+                pending={pending}
+                onArchive={(id) => archiveProject.mutate({ id })}
+                onRestore={(id) => restoreProject.mutate({ id })}
+                onDelete={(id) => deleteProject.mutate({ id })}
+              />
+            ))}
+          </div>
+        ) : null}
+      </div>
     </SettingsPageShell>
   );
 }

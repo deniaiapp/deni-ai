@@ -37,12 +37,12 @@ export function UsageAlerts({ status, usage, enableMaxMode, onRefreshUsage }: Us
       {(status.isUsageLow || status.isUsageBlocked) && (
         <Alert
           className={cn(
-            "mt-3 border-amber-500/50 bg-amber-100/40 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-50",
+            "mt-3 border-amber-500/50 bg-amber-100/40 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-50 next:border-highlight next:bg-highlight/15 next:text-foreground dark:next:bg-highlight/10",
             status.isUsageBlocked &&
               !offersMaxMode &&
               "border-destructive/40 bg-destructive/10 text-destructive-foreground dark:border-destructive/30",
             offersMaxMode &&
-              "border-blue-500/50 bg-blue-100/40 text-blue-900 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-50",
+              "border-blue-500/50 bg-blue-100/40 text-blue-900 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-50 next:border-primary/40 next:bg-secondary next:text-secondary-foreground",
           )}
         >
           {offersMaxMode ? (

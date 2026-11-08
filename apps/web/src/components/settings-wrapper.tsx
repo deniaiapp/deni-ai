@@ -197,6 +197,13 @@ export default function SettingsWrapper({
                 <SettingsNavItem
                   key={href}
                   active={current?.href === href}
+                  // On narrow screens the nav scrolls sideways; keep the current page in view.
+                  ref={
+                    current?.href === href
+                      ? (node: HTMLAnchorElement | null) =>
+                          node?.scrollIntoView({ block: "nearest", inline: "center" })
+                      : undefined
+                  }
                   render={<Link href={href} />}
                 >
                   <Icon aria-hidden="true" />

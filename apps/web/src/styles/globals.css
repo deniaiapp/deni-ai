@@ -475,6 +475,14 @@
   }
 }
 
+/* Streamdown frames tables and code actions with `bg-sidebar`; in the next UI the
+   sidebar is the indigo frame, so give those frames the quiet muted surface. */
+:root:not([data-ui="legacy"]) [data-streamdown="table-wrapper"],
+:root:not([data-ui="legacy"]) [data-streamdown="code-block-actions"],
+:root:not([data-ui="legacy"]) [data-streamdown="mermaid-block-actions"] {
+  background-color: var(--muted);
+}
+
 /* Sugar High token colors (github-light / github-dark-ish) */
 :root {
   --sh-identifier: var(--foreground);

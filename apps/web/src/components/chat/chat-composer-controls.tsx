@@ -368,7 +368,7 @@ export function ChatComposerTools({
             tooltip={isGuest ? t("Log in to use Fast mode") : fastModeTitle}
             active={fastMode && !isGuest}
             locked={isGuest}
-            activeClassName="bg-sky-500/15 text-sky-700 hover:bg-sky-500/20 dark:text-sky-400"
+            activeClassName="bg-sky-500/15 text-sky-700 hover:bg-sky-500/20 dark:text-sky-400 next:bg-secondary next:text-secondary-foreground next:hover:bg-accent"
             onToggle={() => onFastModeChange(!fastMode)}
           />
         )}
@@ -379,7 +379,7 @@ export function ChatComposerTools({
             tooltip={isGuest ? t("Log in to use Pro mode") : proModeTitle}
             active={proMode && !isGuest}
             locked={isGuest}
-            activeClassName="bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400"
+            activeClassName="bg-amber-500/15 text-amber-700 hover:bg-amber-500/20 dark:text-amber-400 next:bg-highlight/30 next:text-foreground next:hover:bg-highlight/40"
             onToggle={() => onProModeChange(!proMode)}
           />
         )}
