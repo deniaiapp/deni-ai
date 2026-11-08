@@ -1,0 +1,2 @@
+CREATE INDEX "billing_payment_method_fingerprint_idx" ON "billing" USING btree ("payment_method_fingerprint");--> statement-breakpoint
+CREATE INDEX "billing_trial_payment_method_fingerprint_idx" ON "billing" USING btree ("trial_payment_method_fingerprint");

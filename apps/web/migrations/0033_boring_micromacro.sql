@@ -1,0 +1,1 @@
+DROP TABLE "palette_image_cache" CASCADE;

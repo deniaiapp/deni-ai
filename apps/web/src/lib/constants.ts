@@ -1,0 +1,582 @@
+export type Author = "openai" | "anthropic" | "google" | "xai";
+
+export const reasoningEffortValues = [
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+] as const;
+export type ReasoningEffort = (typeof reasoningEffortValues)[number];
+export type ModelEfforts = readonly ReasoningEffort[] | false;
+
+export function isReasoningEffort(value: string): value is ReasoningEffort {
+  return (reasoningEffortValues as readonly string[]).includes(value);
+}
+
+export function getPreferredReasoningEffort(efforts: ModelEfforts): ReasoningEffort {
+  if (efforts === false) {
+    return "high";
+  }
+
+  const preferredOrder: readonly ReasoningEffort[] = [
+    "high",
+    "medium",
+    "low",
+    "minimal",
+    "none",
+    "xhigh",
+    "max",
+  ];
+
+  for (const effort of preferredOrder) {
+    if (efforts.includes(effort)) {
+      return effort;
+    }
+  }
+
+  return efforts[0] ?? "high";
+}
+
+export function resolveReasoningEffort(
+  efforts: ModelEfforts,
+  requestedEffort: string | null | undefined,
+): ReasoningEffort | undefined {
+  if (efforts === false) {
+    return undefined;
+  }
+
+  if (requestedEffort && isReasoningEffort(requestedEffort) && efforts.includes(requestedEffort)) {
+    return requestedEffort;
+  }
+
+  return getPreferredReasoningEffort(efforts);
+}
+
+export type Models = {
+  [key: string]: {
+    author: Author;
+    model: string;
+    label: string;
+    provider: string;
+  };
+};
+
+export type ModelDeprecation = {
+  date: string;
+  kind: "retirement" | "shutdown";
+  tentative?: boolean;
+};
+
+/**
+ * Usage tiers and the quota multiplier of each. Flixa (flixa-backend
+ * utils/agent/usage-tiers.ts) uses the same ladder; keep them in sync.
+ */
+export const USAGE_TIER_MULTIPLIERS = {
+  1: 1,
+  2: 1.5,
+  3: 2,
+  4: 3,
+  5: 4,
+  6: 5,
+  7: 6,
+  8: 8,
+  9: 10,
+  10: 12,
+} as const;
+
+export type UsageTier = keyof typeof USAGE_TIER_MULTIPLIERS;
+
+export function getUsageTierMultiplier(tier: UsageTier | undefined): number {
+  return tier ? USAGE_TIER_MULTIPLIERS[tier] : 1;
+}
+
+export type ModelDefinition = {
+  name: string;
+  value: string;
+  author: Author;
+  description?: string;
+  featured?: boolean;
+  /**
+   * When true, the model is limited to the Plus / Pro / Team tiers.
+   * Go and card verification on the Free plan do not unlock it.
+   */
+  paidOnly?: boolean;
+  /**
+   * When true, the model is limited to the Pro tier (including team plans).
+   * Plus, Go, and Free accounts cannot use it.
+   */
+  proOnly?: boolean;
+  default?: boolean;
+  provider?: string;
+  efforts: ModelEfforts;
+  contextWindow?: number;
+  /**
+   * Usage tier (see {@link USAGE_TIER_MULTIPLIERS}): each token counts as the
+   * tier's multiplier toward the user's monthly quota. `undefined` means
+   * Tier 1 (1×).
+   * Shown to users as "Tier N" in the UI.
+   */
+  usageTier?: UsageTier;
+  /**
+   * When true, the model supports OpenAI Pro reasoning mode
+   * (`reasoning.mode: "pro"`), available on GPT-5.6 and GPT-6. Enabling Pro
+   * multiplies usage by {@link OPENAI_PRO_MODE_MULTIPLIER} on top of the base
+   * token multiplier.
+   */
+  supportsProMode?: boolean;
+  /**
+   * When true, the model supports OpenAI Fast mode (`service_tier: "fast"`,
+   * formerly Priority Processing). Enabling Fast multiplies usage by
+   * {@link OPENAI_FAST_MODE_MULTIPLIER} on top of the base token multiplier.
+   */
+  supportsFastMode?: boolean;
+  /**
+   * Provider lifecycle details from an upcoming deprecation or retirement notice.
+   * The date is stored as an ISO calendar date (`YYYY-MM-DD`). A tentative date
+   * is the provider's earliest stated retirement date, not a confirmed shutdown.
+   */
+  deprecation?: ModelDeprecation;
+};
+
+export function formatModelDeprecationDate(date: string, locale: string): string {
+  const parsedDate = new Date(`${date}T00:00:00Z`);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return date;
+  }
+
+  return new Intl.DateTimeFormat(locale, {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+    year: "numeric",
+  }).format(parsedDate);
+}
+
+// Usage tiers follow the mean standard input/output price per 1M tokens:
+// < $5 = Tier 1 (1x), < $10 = Tier 2 (1.5x), < $20 = Tier 3 (2x), < $40 = Tier 4 (3x),
+// < $60 = Tier 5 (4x), < $80 = Tier 6 (5x), otherwise Tier 7 (6x); Tiers 8-10 (8x, 10x,
+// 12x) continue the ladder. Models that used the premium quota before usage was merged
+// into one pool are rated at twice their price tier's multiplier (premium usage was
+// worth about twice as much): 1.5x -> Tier 4 (3x), 2x -> Tier 5 (4x), 3x -> Tier 7 (6x).
+// Exception: Claude Sonnet 5.5 stays Tier 2 (1.5x).
+// Rates checked 2026-09-23 against:
+// https://developers.openai.com/api/docs/pricing
+// https://platform.claude.com/docs/en/about-claude/pricing
+// https://ai.google.dev/gemini-api/docs/pricing
+// https://console.groq.com/docs/models
+// https://openrouter.ai/api/v1/models (routed model variants)
+// Pro/Fast mode and long-context multipliers are applied separately.
+// Exception: Sol models are rated Tier 4 (3x), above their price tier, because they carry
+// most basic usage (GPT-6.x Sol: about $0.67 per 1M quota units).
+const catalogModels: readonly ModelDefinition[] = [
+  {
+    name: "GPT-6 Astra",
+    value: "gpt-6-astra",
+    supportsProMode: true,
+    supportsFastMode: true,
+    usageTier: 7,
+    author: "openai",
+    description: "OpenAI flagship for complex reasoning, coding, and agentic work.",
+    paidOnly: true,
+    featured: true,
+    efforts: ["low", "medium", "high", "max"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "GPT-6 Sol",
+    value: "gpt-6-sol",
+    usageTier: 4,
+    author: "openai",
+    description: "High-end GPT-6 model for demanding reasoning, coding, and agentic work.",
+    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    supportsProMode: true,
+    supportsFastMode: true,
+    contextWindow: 1_050_000,
+  },
+  {
+    name: "GPT-6.1 Sol",
+    value: "gpt-6.1-sol",
+    usageTier: 4,
+    author: "openai",
+    description: "High-end GPT-6.1 model for demanding reasoning, coding, and agentic work.",
+    featured: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
+    supportsProMode: true,
+    supportsFastMode: true,
+    contextWindow: 1_050_000,
+  },
+  {
+    name: "GPT-6 Luna",
+    value: "gpt-6-luna",
+    usageTier: 1,
+    author: "openai",
+    description: "Fast, cost-efficient GPT-6 model for high-volume tasks.",
+    featured: true,
+    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    supportsProMode: true,
+    supportsFastMode: true,
+    contextWindow: 1_050_000,
+  },
+  {
+    name: "GPT-5.6 Sol",
+    value: "gpt-5.6-sol",
+    usageTier: 4,
+    author: "openai",
+    proOnly: true,
+    description: "OpenAI flagship for complex reasoning, coding, and agentic work.",
+    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    supportsProMode: true,
+    supportsFastMode: true,
+    contextWindow: 1_050_000,
+  },
+  {
+    name: "GPT-5.6 Terra",
+    value: "gpt-5.6-terra",
+    usageTier: 2,
+    author: "openai",
+    proOnly: true,
+    description: "Balanced GPT-5.6 model for everyday work at half the cost of Sol.",
+    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    supportsProMode: true,
+    supportsFastMode: true,
+    contextWindow: 1_050_000,
+  },
+  {
+    name: "GPT-5.6 Luna",
+    value: "gpt-5.6-luna",
+    usageTier: 1,
+    author: "openai",
+    proOnly: true,
+    description: "Fastest, most affordable GPT-5.6 model for high-volume tasks.",
+    default: true,
+    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    supportsProMode: true,
+    supportsFastMode: true,
+    contextWindow: 1_050_000,
+  },
+  {
+    name: "Gemini 3.8 Flash",
+    value: "gemini-3.8-flash",
+    usageTier: 1,
+    author: "google",
+    description: "Best for coding and agentic tasks",
+    featured: true,
+    efforts: ["low", "medium", "high"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "Gemini 3.5 Flash Lite",
+    value: "gemini-3.5-flash-lite",
+    usageTier: 1,
+    author: "google",
+    description: "Best for high volume tasks",
+    efforts: ["minimal", "low", "medium", "high"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "Claude Opus 5.5",
+    value: "claude-opus-5.5",
+    usageTier: 5,
+    author: "anthropic",
+    description: "Anthropic's flagship for agentic coding, computer use, and knowledge work.",
+    featured: true,
+    efforts: ["low", "medium", "high", "max"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "Claude Fable 5.1",
+    value: "claude-fable-5.1",
+    usageTier: 7,
+    author: "anthropic",
+    description:
+      "Successor to Claude Fable 5 for long-running agentic coding, knowledge work, and research.",
+    paidOnly: true,
+    featured: true,
+    efforts: ["low", "medium", "high", "max"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "Claude Fable 5",
+    value: "claude-fable-5",
+    usageTier: 7,
+    author: "anthropic",
+    description: "Anthropic's most capable model for long-horizon agentic work.",
+    paidOnly: true,
+    efforts: ["low", "medium", "high", "max"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "Claude Opus 5",
+    value: "claude-opus-5",
+    usageTier: 5,
+    author: "anthropic",
+    description: "For complex agentic coding and enterprise work.",
+    efforts: ["low", "medium", "high", "max"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "Claude Sonnet 5.5",
+    value: "claude-sonnet-5.5",
+    usageTier: 2,
+    author: "anthropic",
+    description: "Fast, balanced model for coding, agents, and everyday knowledge work.",
+    featured: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "Claude Sonnet 5",
+    value: "claude-sonnet-5",
+    usageTier: 4,
+    author: "anthropic",
+    description: "Balanced Claude 5 model for coding, writing, and everyday agentic work.",
+    efforts: ["low", "medium", "high", "max"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "Claude Haiku 5.5",
+    value: "claude-haiku-5.5",
+    usageTier: 1,
+    author: "anthropic",
+    description: "Fast, lightweight Claude 5 model for everyday chat and quick reasoning.",
+    featured: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
+    contextWindow: 1_000_000,
+  },
+  // {
+  //   name: "Grok 4.5",
+  //   value: "grok-4.5",
+  //   author: "xai",
+  //   description: "xAI's smartest model for coding, knowledge work, and STEM.",
+  //   featured: true,
+  //   efforts: ["low", "high"],
+  //   contextWindow: 500_000,
+  // },
+  // {
+  //   name: "Grok 4.3",
+  //   value: "grok-4.3",
+  //   author: "xai",
+  //   description: "Strong all-around Grok model for reasoning, coding, and everyday agentic work.",
+  //   efforts: ["low", "high"],
+  //   contextWindow: 1_000_000,
+  // },
+  // {
+  //   name: "Grok 4.20",
+  //   value: "grok-4.20",
+  //   author: "xai",
+  //   description: "Long-context Grok model for research, tool use, and multi-step tasks.",
+  //   efforts: ["low", "high"],
+  //   contextWindow: 2_000_000,
+  // },
+  // {
+  //   name: "Grok 4.20 Multi Agent",
+  //   value: "grok-4.20-multi-agent",
+  //   author: "xai",
+  //   description: "Multi-agent Grok 4.20 for deep research with coordinated tool use.",
+  //   efforts: false,
+  //   contextWindow: 2_000_000,
+  // },
+  // {
+  //   name: "Grok Build",
+  //   value: "grok-build-0.1",
+  //   author: "xai",
+  //   description: "Fast coding model for agentic software engineering and Grok Build workflows.",
+  //   efforts: false,
+  //   contextWindow: 256_000,
+  // },
+];
+
+/**
+ * Routes every OpenAI model through the Deni AI API. Pro and Fast modes depend
+ * on OpenRouter (`*-pro` slugs, `service_tier`), so they are not offered on the
+ * Deni route.
+ */
+function withDeniRouting(model: ModelDefinition): ModelDefinition {
+  if (model.author !== "openai") {
+    return model;
+  }
+  const { supportsProMode: _pro, supportsFastMode: _fast, ...rest } = model;
+  return { ...rest, provider: "deni" };
+}
+
+export const models: readonly ModelDefinition[] = catalogModels.map(withDeniRouting);
+
+export const defaultModel = models.find((model) => model.value === "gpt-6-luna") ?? models[0];
+
+/**
+ * Models available on the Free plan.
+ * Verified cards and Go unlock the catalog except `paidOnly` and `proOnly`
+ * models; Plus unlocks everything except `proOnly` models, and Pro / Team unlock
+ * everything.
+ */
+export const FREE_PLAN_MODEL_VALUES = [
+  "gpt-6-luna",
+  "claude-haiku-5.5",
+  "gemini-3.8-flash",
+] as const;
+
+const freePlanModelSet = new Set<string>(FREE_PLAN_MODEL_VALUES);
+
+/** Guest sessions are intentionally limited to the default Luna model. */
+export const GUEST_MODEL_VALUES = ["gpt-6-luna"] as const;
+
+const guestModelSet = new Set<string>(GUEST_MODEL_VALUES);
+
+export function isFreePlanModel(modelValue: string): boolean {
+  return freePlanModelSet.has(modelValue);
+}
+
+export function isPaidOnlyModel(modelValue: string): boolean {
+  return models.some((model) => model.value === modelValue && model.paidOnly);
+}
+
+export function isProOnlyModel(modelValue: string): boolean {
+  return models.some((model) => model.value === modelValue && model.proOnly);
+}
+
+export function isGuestModel(modelValue: string): boolean {
+  return guestModelSet.has(modelValue);
+}
+
+export function getModelsForGuest() {
+  return models.filter((model) => isGuestModel(model.value));
+}
+
+export function isModelAllowedForAccount(
+  modelValue: string,
+  tier: "free" | "go" | "plus" | "pro" | null | undefined,
+  hasVerifiedPaymentMethod = false,
+): boolean {
+  if (isProOnlyModel(modelValue)) {
+    return tier === "pro";
+  }
+
+  if (tier === "plus" || tier === "pro") {
+    return true;
+  }
+
+  if (isPaidOnlyModel(modelValue)) {
+    return false;
+  }
+
+  // Go matches a Free account with a verified card.
+  return tier === "go" || hasVerifiedPaymentMethod || isFreePlanModel(modelValue);
+}
+
+/** Pro mode is limited to Plus and Pro; Go and card verification on Free do not unlock it. */
+export function isProModeAllowedForAccount(
+  tier: "free" | "go" | "plus" | "pro" | null | undefined,
+): boolean {
+  return tier === "plus" || tier === "pro";
+}
+
+export function getModelsForPlanTier(
+  tier: "free" | "go" | "plus" | "pro" | null | undefined,
+  hasVerifiedPaymentMethod = false,
+) {
+  return models.filter((model) =>
+    isModelAllowedForAccount(model.value, tier, hasVerifiedPaymentMethod),
+  );
+}
+
+// Google Analytics
+export const GA_ID = "G-B5H8G73JTN";
+
+// Email configuration
+export const EMAIL_FROM = "Deni AI <noreply@deniai.app>";
+
+export function getModelDefinition(modelId: string) {
+  return models.find((model) => model.value === modelId);
+}
+
+export function getModelContextWindow(modelId: string) {
+  return getModelDefinition(modelId)?.contextWindow;
+}
+
+export function getModelTokenMultiplier(modelId: string): number {
+  return getUsageTierMultiplier(getModelDefinition(modelId)?.usageTier);
+}
+
+/**
+ * OpenAI 1M-class models bill each request at a premium when its prompt
+ * exceeds this input-token threshold: 2× usage for that request once input
+ * > 200K tokens. Tool-step prompts are separate requests.
+ */
+export const OPENAI_LONG_CONTEXT_INPUT_THRESHOLD = 200_000;
+export const OPENAI_LONG_CONTEXT_MULTIPLIER = 2;
+const OPENAI_LONG_CONTEXT_MIN_WINDOW = 1_000_000;
+
+/**
+ * GPT-5.6 and GPT-6 Pro reasoning modes multiply billed usage by this factor
+ * on top of the model's base token multiplier (product policy: base × 3).
+ */
+export const OPENAI_PRO_MODE_MULTIPLIER = 3;
+
+/**
+ * OpenAI Fast mode (`service_tier: "fast"`) multiplies billed usage by this
+ * factor on top of the model's base token multiplier (API Fast pricing: 2×).
+ */
+export const OPENAI_FAST_MODE_MULTIPLIER = 2;
+
+export function supportsOpenAILongContextPricing(modelId: string): boolean {
+  const model = getModelDefinition(modelId);
+  if (!model || model.author !== "openai") {
+    return false;
+  }
+  return (model.contextWindow ?? 0) >= OPENAI_LONG_CONTEXT_MIN_WINDOW;
+}
+
+export function supportsModelProMode(modelId: string): boolean {
+  return Boolean(getModelDefinition(modelId)?.supportsProMode);
+}
+
+export function supportsModelFastMode(modelId: string): boolean {
+  return Boolean(getModelDefinition(modelId)?.supportsFastMode);
+}
+
+/**
+ * Returns 2 when an OpenAI 1M-context model request exceeds the long-context
+ * input threshold; otherwise 1.
+ */
+export function getOpenAILongContextMultiplier(modelId: string, inputTokens: number): number {
+  if (!supportsOpenAILongContextPricing(modelId)) {
+    return 1;
+  }
+  if (!Number.isFinite(inputTokens) || inputTokens <= OPENAI_LONG_CONTEXT_INPUT_THRESHOLD) {
+    return 1;
+  }
+  return OPENAI_LONG_CONTEXT_MULTIPLIER;
+}
+
+export type EffectiveTokenMultiplierOptions = {
+  proMode?: boolean;
+  fastMode?: boolean;
+};
+
+/**
+ * Combines the static model token multiplier with optional Pro-mode 3×,
+ * Fast-mode 2×, and OpenAI long-context 2× pricing when `inputTokens` is
+ * provided and exceeds the threshold.
+ */
+export function getEffectiveTokenMultiplier(
+  modelId: string,
+  inputTokens?: number,
+  options?: EffectiveTokenMultiplierOptions,
+): number {
+  const base = getModelTokenMultiplier(modelId);
+  const proMultiplier =
+    options?.proMode && supportsModelProMode(modelId) ? OPENAI_PRO_MODE_MULTIPLIER : 1;
+  const fastMultiplier =
+    options?.fastMode && supportsModelFastMode(modelId) ? OPENAI_FAST_MODE_MULTIPLIER : 1;
+  const withModes = base * proMultiplier * fastMultiplier;
+  if (typeof inputTokens !== "number") {
+    return withModes;
+  }
+  return withModes * getOpenAILongContextMultiplier(modelId, inputTokens);
+}
+
+// Transactional emails are rendered with react-email components under
+// `src/emails/*` and sent from `src/lib/auth.ts`.

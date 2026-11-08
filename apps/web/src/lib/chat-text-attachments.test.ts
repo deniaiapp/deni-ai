@@ -1,0 +1,270 @@
+import type { UIMessage } from "ai";
+import { afterEach, expect, test, vi } from "vitest";
+
+// Stored files are read through signed URLs into this bucket.
+vi.mock("@/env", () => ({
+  env: {
+    R2_ACCOUNT_ID: "acct",
+    R2_ACCESS_KEY_ID: "access-key",
+    R2_SECRET_ACCESS_KEY: "secret-key",
+    R2_BUCKET: "deni-files",
+  },
+}));
+
+const { inlineTextAttachments } = await import("./chat-text-attachments");
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+function dataUrl(text: string, type = "application/json") {
+  return `data:${type};base64,${Buffer.from(text).toString("base64")}`;
+}
+
+function textAt(message: UIMessage | undefined, index: number) {
+  return (message?.parts[index] as { text: string } | undefined)?.text ?? "";
+}
+
+function userMessage(parts: UIMessage["parts"]): UIMessage {
+  return { id: "m1", role: "user", parts };
+}
+
+test("replaces text attachments with their contents and keeps other parts", async () => {
+  const image = {
+    type: "file",
+    mediaType: "image/png",
+    url: "https://acct.r2.cloudflarestorage.com/deni-files/attachments/a",
+  } as const;
+  const [message] = await inlineTextAttachments([
+    userMessage([
+      { type: "text", text: "Summarize" },
+      {
+        type: "file",
+        mediaType: "application/json",
+        filename: "data.json",
+        url: dataUrl('{"a":1}'),
+      },
+      image,
+    ]),
+  ]);
+
+  expect(message?.parts[0]).toEqual({ type: "text", text: "Summarize" });
+  expect(message?.parts[1]).toEqual({
+    type: "text",
+    text: '<attached_file name="data.json">\n{"a":1}\n</attached_file>',
+  });
+  expect(message?.parts[2]).toBe(image);
+});
+
+test("recognizes a text file by name when the stored media type is empty", async () => {
+  const [message] = await inlineTextAttachments([
+    userMessage([
+      { type: "file", mediaType: "", filename: "notes.py", url: dataUrl("print(1)", "") },
+    ]),
+  ]);
+  expect(message?.parts[0]).toMatchObject({ type: "text" });
+  expect(textAt(message, 0)).toContain("print(1)");
+});
+
+test("never fetches URLs outside the attachment store", async () => {
+  const fetchMock = vi.fn();
+  vi.stubGlobal("fetch", fetchMock);
+
+  const [message] = await inlineTextAttachments([
+    userMessage([
+      { type: "file", mediaType: "text/plain", filename: "a.txt", url: "http://169.254.169.254/x" },
+      {
+        type: "file",
+        mediaType: "text/plain",
+        filename: "b.txt",
+        url: "https://evil.example/deni-files/x",
+      },
+      {
+        type: "file",
+        mediaType: "text/plain",
+        filename: "c.txt",
+        url: "https://acct.r2.cloudflarestorage.com/other-bucket/key",
+      },
+    ]),
+  ]);
+
+  expect(fetchMock).not.toHaveBeenCalled();
+  expect(textAt(message, 0)).toContain('"a.txt" could not be read');
+  expect(textAt(message, 1)).toContain('"b.txt" could not be read');
+  expect(textAt(message, 2)).toContain('"c.txt" could not be read');
+});
+
+test("stops reading a stored file that streams past the size cap", async () => {
+  const chunk = new Uint8Array(1024 * 1024).fill(97);
+  let sent = 0;
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      sent += 1;
+      controller.enqueue(chunk);
+      if (sent >= 100) controller.close();
+    },
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => new Response(body)),
+  );
+
+  const [message] = await inlineTextAttachments([
+    userMessage([
+      {
+        type: "file",
+        mediaType: "text/plain",
+        filename: "big.txt",
+        url: "https://acct.r2.cloudflarestorage.com/deni-files/attachments/big",
+      },
+    ]),
+  ]);
+
+  expect(textAt(message, 0)).toContain('"big.txt" could not be read');
+  expect(sent).toBeLessThan(10);
+});
+
+test("keeps the newest attachments when the total is too long", async () => {
+  const half = "a".repeat(300_000);
+  const [older, newer] = await inlineTextAttachments([
+    userMessage([
+      {
+        type: "file",
+        mediaType: "text/plain",
+        filename: "old.txt",
+        url: dataUrl(half, "text/plain"),
+      },
+    ]),
+    userMessage([
+      {
+        type: "file",
+        mediaType: "text/plain",
+        filename: "new.txt",
+        url: dataUrl(half, "text/plain"),
+      },
+    ]),
+  ]);
+
+  expect(textAt(newer, 0)).not.toContain("Truncated");
+  expect(textAt(older, 0)).toContain("[Truncated: only the first 100,000");
+});
+
+test("fetches stored attachments without following redirects", async () => {
+  const fetchMock = vi.fn(async () => new Response("hello"));
+  vi.stubGlobal("fetch", fetchMock);
+
+  const [message] = await inlineTextAttachments([
+    userMessage([
+      {
+        type: "file",
+        mediaType: "text/plain",
+        filename: "a.txt",
+        url: "https://acct.r2.cloudflarestorage.com/deni-files/attachments/key",
+      },
+    ]),
+  ]);
+
+  expect(fetchMock).toHaveBeenCalledWith(
+    expect.any(URL),
+    expect.objectContaining({ redirect: "error" }),
+  );
+  expect(textAt(message, 0)).toContain("hello");
+});
+
+test("truncates very long files with a notice and leaves assistant messages alone", async () => {
+  const long = "a".repeat(400_050);
+  const assistant: UIMessage = {
+    id: "m2",
+    role: "assistant",
+    parts: [{ type: "file", mediaType: "text/plain", url: dataUrl("x", "text/plain") }],
+  };
+  const [message, untouched] = await inlineTextAttachments([
+    userMessage([
+      {
+        type: "file",
+        mediaType: "text/plain",
+        filename: "long.txt",
+        url: dataUrl(long, "text/plain"),
+      },
+    ]),
+    assistant,
+  ]);
+
+  expect(textAt(message, 0)).toContain("[Truncated: only the first 400,000");
+  expect(untouched).toBe(assistant);
+});
+
+test("bounds the cache even when stored files are empty", async () => {
+  const fetchMock = vi.fn(async () => new Response(""));
+  vi.stubGlobal("fetch", fetchMock);
+  const emptyFile = (index: number) =>
+    ({
+      type: "file",
+      mediaType: "text/plain",
+      filename: "empty.txt",
+      url: `https://acct.r2.cloudflarestorage.com/deni-files/attachments/empty?copy=${index}`,
+    }) as const;
+  const request = (indexes: number[]) =>
+    inlineTextAttachments([userMessage(indexes.map((index) => emptyFile(index)))]);
+
+  await request([0]);
+  await request([0]);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+
+  // Each request reads at most 20 files; send many distinct empty ones.
+  for (let start = 1; start <= 2000; start += 20) {
+    await request(Array.from({ length: 20 }, (_, offset) => start + offset));
+  }
+  fetchMock.mockClear();
+
+  await request([2000]);
+  expect(fetchMock).not.toHaveBeenCalled();
+  await request([0]);
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+});
+
+test("caches a stored file under its stable key, not its per-request signed URL", async () => {
+  const fetchMock = vi.fn(async () => new Response("private notes"));
+  vi.stubGlobal("fetch", fetchMock);
+  const request = (signature: string) => {
+    const url = `https://acct.r2.cloudflarestorage.com/deni-files/attachments/stable-key?signature=${signature}`;
+    return inlineTextAttachments(
+      [
+        userMessage([
+          { type: "file", mediaType: "text/plain", filename: "notes.txt", url },
+          { type: "file", mediaType: "text/plain", filename: "again.txt", url },
+        ]),
+      ],
+      new Map([[url, "attachment:user:stable-id"]]),
+    );
+  };
+
+  const [first] = await request("first");
+  const [second] = await request("second");
+  expect(fetchMock).toHaveBeenCalledTimes(1);
+  expect(textAt(first, 0)).toContain("private notes");
+  expect(textAt(second, 1)).toContain("private notes");
+});
+
+test("a URL spelled like a stable key never reads that file's cached text", async () => {
+  const fetchMock = vi.fn(async () => new Response("secret"));
+  vi.stubGlobal("fetch", fetchMock);
+  const url = "https://acct.r2.cloudflarestorage.com/deni-files/attachments/victim?signature=s";
+  await inlineTextAttachments(
+    [userMessage([{ type: "file", mediaType: "text/plain", filename: "a.txt", url }])],
+    new Map([[url, "attachment:victim:victim-id"]]),
+  );
+
+  const [message] = await inlineTextAttachments([
+    userMessage([
+      {
+        type: "file",
+        mediaType: "text/plain",
+        filename: "a.txt",
+        url: "attachment:victim:victim-id",
+      },
+    ]),
+  ]);
+  expect(textAt(message, 0)).not.toContain("secret");
+  expect(textAt(message, 0)).toContain("could not be read");
+});

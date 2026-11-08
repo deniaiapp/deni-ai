@@ -1,0 +1,1 @@
+ALTER TABLE "usage_quota" ADD COLUMN "unit" text;

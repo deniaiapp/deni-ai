@@ -1,0 +1,58 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+.vx
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+package-lock.json
+
+# testing
+/coverage
+
+# vite / tanstack start / nitro (/.next is left over from the Next.js build)
+/.next/
+/.output/
+/.nitro/
+/.tanstack/
+/.swc/
+/dist/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# env files (can opt-in for committing if needed)
+.env.local
+.env
+.env.production
+.env.canary
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+
+# react-doctor scan output (regenerate with `pnpm doctor`; stale copies mislead)
+.diagnostics.json
+.errors_by_file.json
+
+# claude
+.claude-images/
+# internal one-off scripts (local only, may touch prod secrets)
+internal/

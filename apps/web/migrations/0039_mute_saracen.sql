@@ -1,0 +1,1 @@
+ALTER TABLE "affiliate_profile" ADD COLUMN "reward_preference" text DEFAULT 'reset_credits' NOT NULL;

@@ -1,0 +1,3 @@
+DROP INDEX "affiliate_reward_referrer_type_milestone_idx";--> statement-breakpoint
+CREATE UNIQUE INDEX "affiliate_reward_referrer_type_referral_idx" ON "affiliate_reward" USING btree ("referrer_id","type","referral_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "affiliate_reward_registration_milestone_idx" ON "affiliate_reward" USING btree ("referrer_id","milestone") WHERE "affiliate_reward"."type" = 'registration_reset';

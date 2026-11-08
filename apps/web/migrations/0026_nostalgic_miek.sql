@@ -1,0 +1,2 @@
+ALTER TABLE "chats" ADD COLUMN "active_generation_id" text;--> statement-breakpoint
+CREATE UNIQUE INDEX "chat_share_recipients_share_recipient_idx" ON "chat_share_recipients" USING btree ("share_id","recipient_id");

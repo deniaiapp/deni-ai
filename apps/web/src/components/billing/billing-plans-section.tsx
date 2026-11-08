@@ -1,0 +1,183 @@
+import { Users } from "lucide-react";
+import { Link } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
+import type { ClientPlan, IndividualPlanId } from "@/lib/billing";
+import { useTeamPlanHighlights } from "@/lib/billing-plan-copy";
+import { cn } from "@/lib/utils";
+import { PlanCard } from "./billing-plan-card";
+import { BILLING_PLANS_SECTION_ID } from "./billing-utils";
+import { PlanHighlights } from "./plan-highlights";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
+
+type PlanActionProps = {
+  activePlanId: string | undefined;
+  isSubscribed: boolean;
+  hasActiveSubscription: boolean;
+  isOnTeamPlan: boolean;
+  pendingPlanId: IndividualPlanId | null;
+  isEstimateLoading: boolean;
+  cancelDate: number | null;
+  changePlan: { isPending: boolean; variables?: { planId: IndividualPlanId } };
+  checkout: { isPending: boolean; variables?: { planId: IndividualPlanId } };
+  onChangePlanClick: (plan: ClientPlan) => void;
+  onCheckout: (planId: IndividualPlanId) => void;
+};
+
+export function BillingPlansSection({
+  erroredMessage,
+  hasActiveSubscription,
+  goMonthly,
+  selectedPlusPlan,
+  plusMonthly,
+  plusInterval,
+  onPlusIntervalChange,
+  selectedProPlan,
+  proMonthly,
+  proInterval,
+  onProIntervalChange,
+  isOnTeamPlan,
+  isEducation,
+  planActions,
+}: {
+  erroredMessage?: string | null;
+  hasActiveSubscription: boolean;
+  goMonthly?: ClientPlan;
+  selectedPlusPlan?: ClientPlan;
+  plusMonthly?: ClientPlan;
+  plusInterval: "monthly" | "yearly";
+  onPlusIntervalChange: (interval: "monthly" | "yearly") => void;
+  selectedProPlan?: ClientPlan;
+  proMonthly?: ClientPlan;
+  proInterval: "monthly" | "yearly";
+  onProIntervalChange: (interval: "monthly" | "yearly") => void;
+  isOnTeamPlan: boolean;
+  /** Go comes free with a verified educational address, so it is the current plan. */
+  isEducation: boolean;
+  planActions: PlanActionProps;
+}) {
+  const t = useExtracted();
+  const teamHighlights = useTeamPlanHighlights();
+  const {
+    activePlanId,
+    isSubscribed,
+    pendingPlanId,
+    isEstimateLoading,
+    cancelDate,
+    changePlan,
+    checkout,
+    onChangePlanClick,
+    onCheckout,
+  } = planActions;
+
+  if (erroredMessage) {
+    return (
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle>{t("Error")}</CardTitle>
+          <CardDescription>{erroredMessage}</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  return (
+    <>
+      <div id={BILLING_PLANS_SECTION_ID} className="scroll-mt-6 space-y-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {goMonthly && (
+            <PlanCard
+              plan={goMonthly}
+              status={{
+                isCurrent:
+                  (goMonthly.id === activePlanId && isSubscribed) || (isEducation && !isSubscribed),
+                hasActiveSubscription,
+                isLoadingEstimate: pendingPlanId === goMonthly.id && isEstimateLoading,
+                isOnTeamPlan,
+              }}
+              cancelDate={cancelDate}
+              activePlanId={activePlanId}
+              changePlan={changePlan}
+              checkout={checkout}
+              onChangePlanClick={onChangePlanClick}
+              onCheckout={onCheckout}
+            />
+          )}
+
+          {selectedPlusPlan && (
+            <PlanCard
+              plan={selectedPlusPlan}
+              monthlyPlan={plusMonthly}
+              interval={plusInterval}
+              onIntervalChange={onPlusIntervalChange}
+              status={{
+                isCurrent: selectedPlusPlan.id === activePlanId && isSubscribed,
+                hasActiveSubscription,
+                isLoadingEstimate: pendingPlanId === selectedPlusPlan.id && isEstimateLoading,
+                isOnTeamPlan,
+              }}
+              cancelDate={cancelDate}
+              activePlanId={activePlanId}
+              changePlan={changePlan}
+              checkout={checkout}
+              onChangePlanClick={onChangePlanClick}
+              onCheckout={onCheckout}
+            />
+          )}
+
+          {selectedProPlan && (
+            <PlanCard
+              plan={selectedProPlan}
+              monthlyPlan={proMonthly}
+              interval={proInterval}
+              onIntervalChange={onProIntervalChange}
+              status={{
+                isCurrent: selectedProPlan.id === activePlanId && isSubscribed,
+                hasActiveSubscription,
+                isLoadingEstimate: pendingPlanId === selectedProPlan.id && isEstimateLoading,
+                isOnTeamPlan,
+              }}
+              cancelDate={cancelDate}
+              activePlanId={activePlanId}
+              changePlan={changePlan}
+              checkout={checkout}
+              onChangePlanClick={onChangePlanClick}
+              onCheckout={onCheckout}
+            />
+          )}
+        </div>
+      </div>
+
+      <Card
+        className={cn(
+          "border-border/80",
+          isOnTeamPlan && "border-foreground ring-1 ring-foreground/10",
+        )}
+      >
+        <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <Users className="size-4 text-muted-foreground" />
+              <CardTitle className="text-sm font-medium">{t("Teams")}</CardTitle>
+              {isOnTeamPlan && (
+                <Badge variant="secondary" className="text-xs">
+                  {t("Current plan")}
+                </Badge>
+              )}
+            </div>
+            <CardDescription>
+              {t("Give your whole team Pro access with per-seat pricing.")}
+            </CardDescription>
+          </div>
+          <Button size="sm" render={<Link href="/settings/team" />} nativeButton={false}>
+            {t("Manage Team")}
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <PlanHighlights items={teamHighlights} />
+        </CardContent>
+      </Card>
+    </>
+  );
+}

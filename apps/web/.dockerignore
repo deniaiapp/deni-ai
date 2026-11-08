@@ -1,0 +1,63 @@
+# Dependencies & build output
+node_modules
+**/node_modules
+.output
+.nitro
+.tanstack
+out
+build
+dist
+*.tsbuildinfo
+
+# Git / IDE / local tooling
+# .gitignore stays: Tailwind skips the paths it lists when scanning for classes.
+.git
+.gitattributes
+.github
+.vscode
+.idea
+.claude
+.claude-images
+.agents
+.diagnostics.json
+.errors_by_file.json
+.vercel
+.vx
+
+# Env & secrets (inject at runtime)
+.env
+.env.*
+!.env.example
+# Committed public NEXT_PUBLIC_* values; Next.js reads it during `next build`.
+!.env.production
+
+# Docs & non-runtime paths
+*.md
+!packages/**/README.md
+LICENSE
+CODE_OF_CONDUCT.md
+CONTRIBUTING.md
+SECURITY.md
+AGENTS.md
+CLAUDE.md
+doctor.config.ts
+renovate.json
+skills-lock.json
+components.json
+
+# Local-only / heavy paths
+internal
+tools
+scripts
+coverage
+public/sw.js.map
+ts-files.txt
+ts-files-after.txt
+
+# OS junk
+.DS_Store
+Thumbs.db
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*

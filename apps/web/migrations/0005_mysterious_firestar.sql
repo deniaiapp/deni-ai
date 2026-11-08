@@ -1,0 +1,1 @@
+ALTER TABLE "billing" ADD COLUMN "cancel_at" integer;

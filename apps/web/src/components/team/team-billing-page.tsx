@@ -1,0 +1,167 @@
+import { useExtracted } from "use-intl";
+import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
+import { useBillingReceiptCopy } from "@/components/billing/billing-utils";
+import { SubscriptionShredder } from "@/components/billing/subscription-shredder";
+import type { SubscriptionReceiptData } from "@/components/billing/subscription-receipt";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Spinner } from "@/components/ui/spinner";
+import { TeamBillingCard } from "./team-billing-card";
+import { TeamChangePlanDialog } from "./team-change-plan-dialog";
+import { TeamMaxModeCard } from "./team-max-mode-card";
+import { useTeamSettingsContext } from "./team-settings-context";
+
+export function TeamBillingPage() {
+  const t = useExtracted();
+  const { features } = usePlatformCapabilities();
+  const getReceiptCopy = useBillingReceiptCopy();
+  const {
+    isOwner,
+    isAdmin,
+    isRoleLoading,
+    activeOrg,
+    teamBillingQuery,
+    teamMaxModeQuery,
+    teamPlans,
+    createTeamCheckout,
+    changeTeamPlan,
+    pendingTeamPlanId,
+    teamPlanEstimateQuery,
+    isChangePlanDialogOpen,
+    hasAgreedToTeamPlanChange,
+    setHasAgreedToTeamPlanChange,
+    cancelSub,
+    resumeSub,
+    updateTeamMaxMode,
+    updateTeamMaxModeDefaultPolicy,
+    updateMemberMaxModePolicy,
+    buyTeamMaxModeCredits,
+    updateTeamMaxModeAutoTopUp,
+    handleBuyTeamMaxModeCredits,
+    handleSaveTeamMaxModeAutoTopUp,
+    handleSubscribe,
+    handleChangePlan,
+    handleChangePlanDialogOpenChange,
+    confirmChangePlan,
+    handleManage,
+    handleCancel,
+    confirmCancel,
+    shredOpen,
+    setShredOpen,
+    handleResume,
+    handleTeamMaxModeToggle,
+    updateMemberPolicy,
+    updateDefaultPolicy,
+    handleDefaultLimitChange,
+    handleMemberLimitChange,
+    handleExportMaxModeCsv,
+  } = useTeamSettingsContext();
+
+  const teamPlanId = teamBillingQuery.data?.planId ?? "pro_team_monthly";
+  const teamPlan = teamPlans.find((plan) => plan.id === teamPlanId) ?? teamPlans[0];
+
+  if (!features.billing) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("Billing unavailable")}</CardTitle>
+          <CardDescription>
+            {t("Plans, checkout, and billing management are turned off.")}
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  if (isRoleLoading) {
+    return (
+      <div className="flex min-h-[20vh] items-center justify-center">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("Billing")}</CardTitle>
+          <CardDescription>{t("Only team owners and admins can manage billing.")}</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <TeamBillingCard
+        isOwner={isOwner}
+        isLoading={teamBillingQuery.isLoading}
+        billingStatus={teamBillingQuery.data}
+        plans={teamPlans}
+        checkoutPending={createTeamCheckout.isPending}
+        checkoutPlanId={createTeamCheckout.variables?.planId}
+        changePending={changeTeamPlan.isPending || teamPlanEstimateQuery.isFetching}
+        changePlanId={pendingTeamPlanId ?? changeTeamPlan.variables?.planId}
+        cancelPending={cancelSub.isPending || shredOpen}
+        resumePending={resumeSub.isPending}
+        onSubscribe={handleSubscribe}
+        onChangePlan={handleChangePlan}
+        onManage={handleManage}
+        onCancel={handleCancel}
+        onResume={handleResume}
+      />
+
+      <TeamChangePlanDialog
+        open={isChangePlanDialogOpen}
+        onOpenChange={handleChangePlanDialogOpenChange}
+        planId={pendingTeamPlanId}
+        seatCount={
+          teamPlanEstimateQuery.data?.memberCount ?? teamBillingQuery.data?.memberCount ?? 0
+        }
+        estimate={teamPlanEstimateQuery}
+        hasAgreed={hasAgreedToTeamPlanChange}
+        onHasAgreedChange={setHasAgreedToTeamPlanChange}
+        isPending={changeTeamPlan.isPending}
+        onConfirm={confirmChangePlan}
+      />
+
+      <TeamMaxModeCard
+        isLoading={teamMaxModeQuery.isLoading}
+        settings={teamMaxModeQuery.data}
+        teamTogglePending={updateTeamMaxMode.isPending}
+        defaultPolicyPending={updateTeamMaxModeDefaultPolicy.isPending}
+        memberPolicyPending={updateMemberMaxModePolicy.isPending}
+        onTeamToggle={handleTeamMaxModeToggle}
+        onDefaultPolicyChange={updateDefaultPolicy}
+        onDefaultLimitChange={handleDefaultLimitChange}
+        onMemberPolicyChange={updateMemberPolicy}
+        onMemberLimitChange={handleMemberLimitChange}
+        onExportCsv={handleExportMaxModeCsv}
+        buyPending={buyTeamMaxModeCredits.isPending || buyTeamMaxModeCredits.isSuccess}
+        onBuy={handleBuyTeamMaxModeCredits}
+        autoTopUpPending={updateTeamMaxModeAutoTopUp.isPending}
+        onSaveAutoTopUp={handleSaveTeamMaxModeAutoTopUp}
+      />
+
+      <SubscriptionShredder
+        data={
+          {
+            sessionId: activeOrg?.id ?? "team-cancel",
+            ...getReceiptCopy(teamPlanId, "/settings/team", t("Home")),
+            amountTotal: teamPlan?.amount ?? 0,
+            amountSubtotal: teamPlan?.amount ?? null,
+            amountTax: null,
+            amountDiscount: null,
+            currency: teamPlan?.currency ?? "usd",
+            paymentMethodBrand: null,
+            paymentMethodLast4: null,
+            paidAt: teamBillingQuery.data?.currentPeriodEnd ?? null,
+          } satisfies SubscriptionReceiptData
+        }
+        onClose={() => setShredOpen(false)}
+        onConfirm={confirmCancel}
+        open={shredOpen}
+      />
+    </div>
+  );
+}

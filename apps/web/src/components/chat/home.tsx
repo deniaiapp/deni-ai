@@ -1,0 +1,205 @@
+import { useRouter } from "@/lib/navigation";
+import { useExtracted } from "use-intl";
+import { useState } from "react";
+import { toast } from "sonner";
+import { ChatComposer, type ComposerMessage } from "@/components/chat/chat-composer";
+import { AdSlot } from "@/components/ad-slot";
+import { ProjectSelect } from "@/components/projects/project-select";
+import { useAvailableModels } from "@/hooks/use-available-models";
+import { useNewChat } from "@/hooks/use-new-chat";
+import { setPreferredModel, usePreferredModel } from "@/hooks/use-preferred-model";
+import { defaultModel, getPreferredReasoningEffort, type ReasoningEffort } from "@/lib/constants";
+import { authClient } from "@/lib/auth-client";
+import { trpc } from "@/lib/trpc/react";
+
+// Storage key for passing initial message data to chat page
+const INITIAL_MESSAGE_STORAGE_KEY = "deni_initial_message:v1";
+
+export type InitialMessageData = {
+  text: string;
+  files: Array<{
+    type: "file";
+    filename?: string;
+    mediaType: string;
+    url: string;
+  }>;
+  webSearch: boolean;
+  model: string;
+  reasoningEffort: ReasoningEffort;
+  proMode: boolean;
+  fastMode: boolean;
+  deepResearch: boolean;
+  projectId: string | null;
+};
+
+export default function ChatHome() {
+  const t = useExtracted();
+  const { push } = useRouter();
+  const startNewChat = useNewChat();
+  const session = authClient.useSession();
+  const { availableModels, platformCapabilities, canShowAds } = useAvailableModels();
+  const { features } = platformCapabilities;
+  const [input, setInput] = useState("");
+  const preferredModel = usePreferredModel();
+  const [modelOverride, setModel] = useState<string | null>(null);
+  const [webSearch, setWebSearch] = useState(false);
+  const [reasoningEffort, setReasoningEffort] = useState<ReasoningEffort>(() =>
+    getPreferredReasoningEffort(defaultModel.efforts),
+  );
+  const [proMode, setProMode] = useState(false);
+  const [fastMode, setFastMode] = useState(false);
+  const [deepResearch, setDeepResearch] = useState(false);
+  const [projectId, setProjectId] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const projectsQuery = trpc.projects.list.useQuery();
+  const isAvailable = (value: string | null): value is string =>
+    value !== null && availableModels.some((entry) => entry.value === value);
+  // Derive instead of storing a fallback: the plan tier loads after the first
+  // render, and a paid preferred model must win once it becomes available.
+  const model = isAvailable(modelOverride)
+    ? modelOverride
+    : isAvailable(preferredModel)
+      ? preferredModel
+      : isAvailable(defaultModel.value) || availableModels.length === 0
+        ? defaultModel.value
+        : availableModels[0].value;
+  const effectiveWebSearch = features.webSearch && webSearch;
+  const effectiveDeepResearch = features.webSearch && deepResearch;
+
+  const handleProjectChange = (nextProjectId: string | null) => {
+    setProjectId(nextProjectId);
+    const nextProject = projectsQuery.data?.find((project) => project.id === nextProjectId);
+    const nextModel = nextProject?.defaultModel;
+    if (nextModel && availableModels.some((entry) => entry.value === nextModel)) {
+      setModel(nextModel);
+    }
+  };
+
+  const handleSubmit = (
+    message: ComposerMessage,
+    options: {
+      model: string;
+      webSearch: boolean;
+      reasoningEffort: ReasoningEffort;
+      proMode: boolean;
+      fastMode: boolean;
+      deepResearch: boolean;
+    },
+  ) => {
+    if ((!message.text.trim() && message.files.length === 0) || isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const initialMessageData: InitialMessageData = {
+        text: message.text,
+        files: message.files.map((file) => ({
+          type: "file" as const,
+          filename: file.filename,
+          mediaType: file.mediaType,
+          url: file.url,
+        })),
+        webSearch: options.webSearch,
+        model: options.model,
+        reasoningEffort: options.reasoningEffort,
+        proMode: options.proMode,
+        fastMode: options.fastMode,
+        deepResearch: options.deepResearch,
+        projectId,
+      };
+
+      sessionStorage.setItem(INITIAL_MESSAGE_STORAGE_KEY, JSON.stringify(initialMessageData));
+
+      startNewChat({ projectId });
+    } catch (error) {
+      console.error("Failed to start chat:", error);
+      toast.error(t("An error occurred while starting the chat."));
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleModelChange = (value: string) => {
+    setModel(value);
+    setPreferredModel(value);
+    const nextModel = availableModels.find((entry) => entry.value === value);
+    if (!nextModel?.supportsProMode) {
+      setProMode(false);
+    }
+    if (!nextModel?.supportsFastMode) {
+      setFastMode(false);
+    }
+    const nextEfforts = nextModel?.efforts;
+    if (!nextEfforts) {
+      return;
+    }
+    setReasoningEffort((current) =>
+      nextEfforts.includes(current) ? current : getPreferredReasoningEffort(nextEfforts),
+    );
+  };
+
+  return (
+    <section
+      aria-labelledby="chat-home-title"
+      className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto p-4 [justify-content:safe_center]"
+    >
+      <div className="w-full max-w-2xl space-y-6 py-6">
+        {/* Greeting */}
+        <div className="text-center space-y-2">
+          <h1 className="text-2xl md:text-3xl font-semibold tracking-tight" id="chat-home-title">
+            {t("What's on your mind?")}
+          </h1>
+        </div>
+
+        {/* Composer */}
+        <div>
+          <ChatComposer
+            bottomContent={
+              <div className="w-full flex flex-col md:flex-row gap-2">
+                <ProjectSelect
+                  projects={projectsQuery.data ?? []}
+                  value={projectId}
+                  onValueChange={handleProjectChange}
+                  onCreateClick={() => push("/settings/projects")}
+                  className="flex-wrap"
+                />
+              </div>
+            }
+            value={input}
+            onValueChange={setInput}
+            onSubmit={handleSubmit}
+            placeholder={t("Ask me anything...")}
+            isSubmitDisabled={isSubmitting || availableModels.length === 0}
+            availableModels={availableModels}
+            model={model}
+            onModelChange={handleModelChange}
+            webSearch={effectiveWebSearch}
+            onWebSearchChange={(enabled) => setWebSearch(enabled && features.webSearch)}
+            webSearchAvailable={features.webSearch}
+            reasoningEffort={reasoningEffort}
+            onReasoningEffortChange={setReasoningEffort}
+            proMode={proMode}
+            onProModeChange={setProMode}
+            fastMode={fastMode}
+            onFastModeChange={setFastMode}
+            deepResearch={effectiveDeepResearch}
+            onDeepResearchChange={(enabled) => setDeepResearch(enabled && features.webSearch)}
+          />
+        </div>
+
+        {canShowAds && !session.isPending && (
+          <AdSlot
+            viewerId={session.data?.user.id ?? "public"}
+            chatId="home"
+            placement="home"
+            visible
+            requestInFlight={false}
+            className="max-w-3xl"
+          />
+        )}
+      </div>
+    </section>
+  );
+}
