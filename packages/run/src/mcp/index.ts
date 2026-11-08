@@ -1,19 +1,26 @@
-import "@tanstack/react-start/server-only";
-
 import { and, desc, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { mcpConnections } from "@/db/schema";
+import { db, runConfig } from "../runtime";
+import { runMcpConnections } from "@deniai/db";
 import { encryptSecret, decryptSecret } from "../data/secrets";
 import { createId } from "../data/ids";
 import { mcpCatalogEntry } from "./catalog";
 import { slackArgumentNames } from "./slack";
-import { beginMcpOAuth, completeMcpOAuth, decodeOAuth, encodeOAuth, McpAuthRequiredError, refreshMcpOAuth, tokenExpiring, type McpOAuth } from "./oauth";
+import {
+  beginMcpOAuth,
+  completeMcpOAuth,
+  decodeOAuth,
+  encodeOAuth,
+  McpAuthRequiredError,
+  refreshMcpOAuth,
+  tokenExpiring,
+  type McpOAuth,
+} from "./oauth";
 import { mutateStore, readStore } from "../data/store";
 import type { McpConnection } from "../types";
 
 type McpHeaders = Record<string, string>;
 
-type McpRow = typeof mcpConnections.$inferSelect;
+type McpRow = typeof runMcpConnections.$inferSelect;
 type McpTool = {
   name: string;
   title?: string;
@@ -29,11 +36,15 @@ const toolLists = new Map<string, McpTool[]>();
 const refreshes = new Map<string, Promise<McpOAuth | null>>();
 
 function encodeHeaders(headers: McpHeaders): McpHeaders {
-  return Object.fromEntries(Object.entries(headers).map(([name, value]) => [name, encryptSecret(value)]));
+  return Object.fromEntries(
+    Object.entries(headers).map(([name, value]) => [name, encryptSecret(value)]),
+  );
 }
 
 function decodeHeaders(headers: McpHeaders): McpHeaders {
-  return Object.fromEntries(Object.entries(headers).map(([name, value]) => [name, decryptSecret(value)]));
+  return Object.fromEntries(
+    Object.entries(headers).map(([name, value]) => [name, decryptSecret(value)]),
+  );
 }
 
 function publicConnection(row: McpRow): McpConnection {
@@ -74,7 +85,8 @@ function validateHeaders(headers: unknown): McpHeaders {
   for (const [name, value] of Object.entries(headers)) {
     if (!/^[A-Za-z0-9-]+$/.test(name)) throw new Error(`Invalid MCP header: ${name}`);
     if (name.toLowerCase() === "authorization") continue;
-    if (typeof value !== "string" || value.length > 8_000) throw new Error(`Invalid MCP header: ${name}`);
+    if (typeof value !== "string" || value.length > 8_000)
+      throw new Error(`Invalid MCP header: ${name}`);
     output[name] = value;
   }
   return output;
@@ -83,17 +95,17 @@ function validateHeaders(headers: unknown): McpHeaders {
 export async function listMcpConnections(userId: string) {
   const rows = await db
     .select()
-    .from(mcpConnections)
-    .where(eq(mcpConnections.userId, userId))
-    .orderBy(desc(mcpConnections.createdAt));
+    .from(runMcpConnections)
+    .where(eq(runMcpConnections.userId, userId))
+    .orderBy(desc(runMcpConnections.createdAt));
   return rows.map(publicConnection);
 }
 
 async function getMcpRow(userId: string, id: string) {
   const rows = await db
     .select()
-    .from(mcpConnections)
-    .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.id, id)))
+    .from(runMcpConnections)
+    .where(and(eq(runMcpConnections.userId, userId), eq(runMcpConnections.id, id)))
     .limit(1);
   return rows[0] ?? null;
 }
@@ -116,17 +128,21 @@ export async function saveMcpConnection(options: {
   const now = new Date();
   // Names identify connections in Discord commands, so they are unique per account ignoring case.
   const taken = await db
-    .select({ id: mcpConnections.id, name: mcpConnections.name })
-    .from(mcpConnections)
-    .where(eq(mcpConnections.userId, options.userId));
-  if (taken.some((row) => row.id !== options.id && row.name.trim().toLowerCase() === name.toLowerCase())) {
+    .select({ id: runMcpConnections.id, name: runMcpConnections.name })
+    .from(runMcpConnections)
+    .where(eq(runMcpConnections.userId, options.userId));
+  if (
+    taken.some(
+      (row) => row.id !== options.id && row.name.trim().toLowerCase() === name.toLowerCase(),
+    )
+  ) {
     throw new Error("An MCP connection with this name already exists");
   }
   if (options.id) {
     const existing = await getMcpRow(options.userId, options.id);
     if (!existing) throw new Error("MCP connection not found");
     const [row] = await db
-      .update(mcpConnections)
+      .update(runMcpConnections)
       .set({
         name,
         url,
@@ -137,12 +153,14 @@ export async function saveMcpConnection(options: {
         updatedAt: now,
         lastError: null,
       })
-      .where(and(eq(mcpConnections.userId, options.userId), eq(mcpConnections.id, options.id)))
+      .where(
+        and(eq(runMcpConnections.userId, options.userId), eq(runMcpConnections.id, options.id)),
+      )
       .returning();
     return row ? publicConnection(row) : null;
   }
   const [row] = await db
-    .insert(mcpConnections)
+    .insert(runMcpConnections)
     .values({
       id: createId("mcp"),
       userId: options.userId,
@@ -160,18 +178,18 @@ export async function saveMcpConnection(options: {
 /** On or off without touching the stored test result, which saveMcpConnection resets. */
 export async function setMcpConnectionEnabled(userId: string, id: string, enabled: boolean) {
   const rows = await db
-    .update(mcpConnections)
+    .update(runMcpConnections)
     .set({ enabled, updatedAt: new Date() })
-    .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.id, id)))
-    .returning({ id: mcpConnections.id });
+    .where(and(eq(runMcpConnections.userId, userId), eq(runMcpConnections.id, id)))
+    .returning({ id: runMcpConnections.id });
   return rows.length > 0;
 }
 
 export async function deleteMcpConnection(userId: string, id: string) {
   const result = await db
-    .delete(mcpConnections)
-    .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.id, id)))
-    .returning({ id: mcpConnections.id });
+    .delete(runMcpConnections)
+    .where(and(eq(runMcpConnections.userId, userId), eq(runMcpConnections.id, id)))
+    .returning({ id: runMcpConnections.id });
   return result.length > 0;
 }
 
@@ -194,9 +212,9 @@ async function saveOAuth(row: McpRow, oauth: McpOAuth | null) {
   const value = oauth ? encodeOAuth(oauth) : null;
   row.oauth = value;
   await db
-    .update(mcpConnections)
+    .update(runMcpConnections)
     .set({ oauth: value, updatedAt: new Date() })
-    .where(and(eq(mcpConnections.userId, row.userId), eq(mcpConnections.id, row.id)));
+    .where(and(eq(runMcpConnections.userId, row.userId), eq(runMcpConnections.id, row.id)));
 }
 
 async function refreshRow(row: McpRow, oauth: McpOAuth) {
@@ -227,7 +245,12 @@ async function authorization(row: McpRow) {
   return `Bearer ${oauth.accessToken}`;
 }
 
-async function requestMcp(row: McpRow, method: string, params?: unknown, retried = false): Promise<unknown> {
+async function requestMcp(
+  row: McpRow,
+  method: string,
+  params?: unknown,
+  retried = false,
+): Promise<unknown> {
   const headers: Record<string, string> = {
     Accept: "application/json, text/event-stream",
     "Content-Type": "application/json",
@@ -254,11 +277,18 @@ async function requestMcp(row: McpRow, method: string, params?: unknown, retried
     const streamSession = stream.headers.get("mcp-session-id");
     if (streamSession) sessions.set(`${row.userId}:${row.id}`, streamSession);
     const streamText = await stream.text();
-    const endpointMatch = streamText.match(/event:\s*endpoint\s*\r?\n(?:id:.*\r?\n)?data:\s*([^\r\n]+)/i);
-    const endpointLine = streamText.split(/\r?\n/).find((line) => line.startsWith("data:") && /^\s*https?:\/\//.test(line.slice(5)));
+    const endpointMatch = streamText.match(
+      /event:\s*endpoint\s*\r?\n(?:id:.*\r?\n)?data:\s*([^\r\n]+)/i,
+    );
+    const endpointLine = streamText
+      .split(/\r?\n/)
+      .find((line) => line.startsWith("data:") && /^\s*https?:\/\//.test(line.slice(5)));
     const endpoint = endpointMatch?.[1]?.trim() || endpointLine?.slice(5).trim();
     if (!endpoint) {
-      const data = parseMcpResponse(streamText) as { result?: unknown; error?: { message?: string } };
+      const data = parseMcpResponse(streamText) as {
+        result?: unknown;
+        error?: { message?: string };
+      };
       if (data.error) throw new Error(data.error.message || "MCP request failed");
       return data.result ?? data;
     }
@@ -279,7 +309,8 @@ async function requestMcp(row: McpRow, method: string, params?: unknown, retried
   const text = await response.text();
   if (response.status === 401 && row.oauth) {
     const oauth = decodeOAuth(row.oauth);
-    if (!retried && oauth && (await refreshRow(row, oauth))?.accessToken) return requestMcp(row, method, params, true);
+    if (!retried && oauth && (await refreshRow(row, oauth))?.accessToken)
+      return requestMcp(row, method, params, true);
     throw new McpAuthRequiredError();
   }
   if (!response.ok) throw new Error(`MCP request failed (${response.status})`);
@@ -309,21 +340,26 @@ export async function testMcpConnection(userId: string, id: string) {
     await ensureInitialized(row);
     const result = await requestMcp(row, "tools/list");
     await db
-      .update(mcpConnections)
+      .update(runMcpConnections)
       .set({ lastTestAt: new Date(), lastError: null, updatedAt: new Date() })
-      .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.id, id)));
+      .where(and(eq(runMcpConnections.userId, userId), eq(runMcpConnections.id, id)));
     return { ok: true, tools: rememberTools(row, result) };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     await db
-      .update(mcpConnections)
+      .update(runMcpConnections)
       .set({ lastTestAt: new Date(), lastError: message, updatedAt: new Date() })
-      .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.id, id)));
+      .where(and(eq(runMcpConnections.userId, userId), eq(runMcpConnections.id, id)));
     throw new Error(message);
   }
 }
 
-export async function callMcpTool(userId: string, id: string, name: string, argumentsValue: unknown) {
+export async function callMcpTool(
+  userId: string,
+  id: string,
+  name: string,
+  argumentsValue: unknown,
+) {
   const row = await getMcpRow(userId, id);
   if (!row || !row.enabled) throw new Error("MCP connection is not available");
   if (!name.trim() || name.length > 160) throw new Error("MCP tool name is invalid");
@@ -352,8 +388,14 @@ function rememberTools(row: McpRow, result: unknown) {
  * tools that a catalog server marks read-only also run freely, since those servers are known.
  * Read-only hints from custom servers are not trusted.
  */
-export async function mcpCallPreapproved(userId: string, id: string, name: string, options?: { readOnly?: boolean }) {
-  if (!options?.readOnly && (await readStore(userId)).mcpAlwaysAllow?.[`${id}:${name}`]) return true;
+export async function mcpCallPreapproved(
+  userId: string,
+  id: string,
+  name: string,
+  options?: { readOnly?: boolean },
+) {
+  if (!options?.readOnly && (await readStore(userId)).mcpAlwaysAllow?.[`${id}:${name}`])
+    return true;
   const row = await getMcpRow(userId, id);
   if (!row?.enabled || !mcpCatalogEntry(row.catalogId)) return false;
   const key = `${userId}:${id}`;
@@ -366,16 +408,22 @@ export async function mcpCallPreapproved(userId: string, id: string, name: strin
  * description, and argument descriptions from its tools/list entry, and readable names for IDs
  * among the arguments where the connector can look them up (Slack channels and people).
  */
-export async function describeMcpTool(userId: string, id: string, name: string, args?: Record<string, unknown>) {
+export async function describeMcpTool(
+  userId: string,
+  id: string,
+  name: string,
+  args?: Record<string, unknown>,
+) {
   const row = await getMcpRow(userId, id);
   if (!row) throw new Error("MCP connection not found");
   const key = `${userId}:${id}`;
   if (!toolLists.has(key)) await listMcpTools(userId, id).catch(() => undefined);
   const tool = toolLists.get(key)?.find((item) => item.name === name);
   const properties = tool?.inputSchema?.properties ?? {};
-  const names = row.catalogId === "slack" && args
-    ? await slackArgumentNames(key, args, (tool, input) => callMcpTool(userId, id, tool, input))
-    : {};
+  const names =
+    row.catalogId === "slack" && args
+      ? await slackArgumentNames(key, args, (tool, input) => callMcpTool(userId, id, tool, input))
+      : {};
   return {
     connection: { id: row.id, name: row.name, catalogId: row.catalogId ?? null },
     names,
@@ -388,7 +436,10 @@ export async function describeMcpTool(userId: string, id: string, name: string, 
           arguments: Object.fromEntries(
             Object.entries(properties).map(([argument, schema]) => [
               argument,
-              { title: schema?.title ?? null, description: schema?.description?.slice(0, 300) ?? null },
+              {
+                title: schema?.title ?? null,
+                description: schema?.description?.slice(0, 300) ?? null,
+              },
             ]),
           ),
         }
@@ -396,7 +447,12 @@ export async function describeMcpTool(userId: string, id: string, name: string, 
   };
 }
 
-export async function setMcpAlwaysAllow(userId: string, id: string, name: string, enabled: boolean) {
+export async function setMcpAlwaysAllow(
+  userId: string,
+  id: string,
+  name: string,
+  enabled: boolean,
+) {
   if (!(await getMcpRow(userId, id))) throw new Error("MCP connection not found");
   if (!name.trim() || name.length > 160) throw new Error("MCP tool name is invalid");
   await mutateStore(userId, (store) => {
@@ -420,47 +476,84 @@ async function catalogRow(userId: string, catalogId: string) {
   if (!entry) throw new Error("Unknown connector");
   const rows = await db
     .select()
-    .from(mcpConnections)
-    .where(and(eq(mcpConnections.userId, userId), eq(mcpConnections.catalogId, catalogId)))
+    .from(runMcpConnections)
+    .where(and(eq(runMcpConnections.userId, userId), eq(runMcpConnections.catalogId, catalogId)))
     .limit(1);
   if (rows[0]) return rows[0];
-  const taken = await db.select({ name: mcpConnections.name }).from(mcpConnections).where(eq(mcpConnections.userId, userId));
+  const taken = await db
+    .select({ name: runMcpConnections.name })
+    .from(runMcpConnections)
+    .where(eq(runMcpConnections.userId, userId));
   const names = new Set(taken.map((row) => row.name.trim().toLowerCase()));
   let name = entry.name;
   for (let index = 2; names.has(name.toLowerCase()); index += 1) name = `${entry.name} ${index}`;
   const [row] = await db
-    .insert(mcpConnections)
-    .values({ id: createId("mcp"), userId, name, url: entry.url, transport: "streamable-http", headers: {}, catalogId, enabled: true })
+    .insert(runMcpConnections)
+    .values({
+      id: createId("mcp"),
+      userId,
+      name,
+      url: entry.url,
+      transport: "streamable-http",
+      headers: {},
+      catalogId,
+      enabled: true,
+    })
     .returning();
   if (!row) throw new Error("MCP connection not found");
   return row;
+}
+
+/** The OAuth client a catalog connector without dynamic registration uses (Slack). */
+function connectorClient(clientEnv: { id: string; secret: string }) {
+  const slack = runConfig().slackMcp;
+  if (clientEnv.id !== "SLACK_MCP_CLIENT_ID" || !slack) return null;
+  return { clientId: slack.clientId, clientSecret: slack.clientSecret ?? undefined };
 }
 
 /**
  * Begin OAuth for a connection, adding a catalog connector first. Returns the URL to send the
  * browser to, or a null URL when the server needs no sign-in.
  */
-export async function startMcpSignIn(userId: string, target: { id?: string; catalogId?: string }, appUrl: string) {
+export async function startMcpSignIn(
+  userId: string,
+  target: { id?: string; catalogId?: string },
+  appUrl: string = runConfig().appUrl,
+) {
   // Check the connector's client before adding its row, so a failed connect leaves nothing behind.
   const requested = target.catalogId ? mcpCatalogEntry(target.catalogId) : undefined;
-  if (requested?.clientEnv && !process.env[requested.clientEnv.id]?.trim()) throw new Error("This connector is not set up on this server yet");
-  const row = target.catalogId ? await catalogRow(userId, target.catalogId) : target.id ? await getMcpRow(userId, target.id) : null;
+  if (requested?.clientEnv && !connectorClient(requested.clientEnv))
+    throw new Error("This connector is not set up on this server yet");
+  const row = target.catalogId
+    ? await catalogRow(userId, target.catalogId)
+    : target.id
+      ? await getMcpRow(userId, target.id)
+      : null;
   if (!row) throw new Error("MCP connection not found");
   const entry = mcpCatalogEntry(row.catalogId);
   let client: { clientId: string; clientSecret?: string } | undefined;
   if (entry?.clientEnv) {
-    const clientId = process.env[entry.clientEnv.id]?.trim();
-    if (!clientId) throw new Error("This connector is not set up on this server yet");
-    client = { clientId, clientSecret: process.env[entry.clientEnv.secret]?.trim() || undefined };
+    client = connectorClient(entry.clientEnv) ?? undefined;
+    if (!client) throw new Error("This connector is not set up on this server yet");
   }
-  const started = await beginMcpOAuth({ mcpUrl: row.url, appUrl, stateKey: row.id, previous: decodeOAuth(row.oauth), client, scope: entry?.scope });
+  const started = await beginMcpOAuth({
+    mcpUrl: row.url,
+    appUrl,
+    stateKey: row.id,
+    previous: decodeOAuth(row.oauth),
+    client,
+    scope: entry?.scope,
+  });
   if (!started) return { connection: publicConnection(row), authorizeUrl: null };
   await saveOAuth(row, started.oauth);
   return { connection: publicConnection(row), authorizeUrl: started.authorizeUrl };
 }
 
 /** Finish OAuth from the callback, then check the connection by listing its tools. */
-export async function finishMcpSignIn(userId: string, params: { state: string; code: string; iss?: string | null }) {
+export async function finishMcpSignIn(
+  userId: string,
+  params: { state: string; code: string; iss?: string | null },
+) {
   const id = params.state.split(".")[0] ?? "";
   const row = await getMcpRow(userId, id);
   const oauth = decodeOAuth(row?.oauth);
@@ -471,4 +564,3 @@ export async function finishMcpSignIn(userId: string, params: { state: string; c
   await testMcpConnection(userId, id).catch(() => undefined);
   return publicConnection((await getMcpRow(userId, id)) ?? row);
 }
-

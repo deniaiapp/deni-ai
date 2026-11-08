@@ -3,40 +3,47 @@ export const ja: Record<string, string> = {
   "not tested": "未テスト",
   "last test passed {time}": "前回のテストは成功({time})",
   "last test failed {time}: {error}": "前回のテストは失敗({time}): {error}",
-  "on": "オン",
-  "off": "オフ",
+  on: "オン",
+  off: "オフ",
   "token saved": "トークン保存済み",
   "Connected to {name}. Discovered 1 tool.": "{name} に接続しました。ツールが 1 個見つかりました。",
-  "Connected to {name}. Discovered {count} tools.": "{name} に接続しました。ツールが {count} 個見つかりました。",
+  "Connected to {name}. Discovered {count} tools.":
+    "{name} に接続しました。ツールが {count} 個見つかりました。",
   "Test failed for {name}: {error}": "{name} のテストに失敗しました: {error}",
   "It is turned off, so teammates cannot call it until you run /mcp enable.":
     "この接続はオフのため、/mcp enable を実行するまでチームメイトは呼び出せません。",
   "Add an MCP server": "MCP サーバーを追加",
-  "Name": "名前",
+  Name: "名前",
   "My tools": "マイツール",
   "Server URL": "サーバー URL",
-  "Transport": "トランスポート",
+  Transport: "トランスポート",
   "Bearer token (optional)": "Bearer トークン(任意)",
   "Stored encrypted and never shown again.": "暗号化して保存され、二度と表示されません。",
   "Extra headers (optional)": "追加ヘッダー(任意)",
-  "One per line, as Key: value. Values are stored encrypted.": "1 行に 1 つ、Key: value の形式で入力してください。値は暗号化して保存されます。",
+  "One per line, as Key: value. Values are stored encrypted.":
+    "1 行に 1 つ、Key: value の形式で入力してください。値は暗号化して保存されます。",
   "Name and URL are required.": "名前と URL は必須です。",
-  "Header line {line} is not in the form Key: value.": "ヘッダーの {line} 行目が Key: value の形式になっていません。",
+  "Header line {line} is not in the form Key: value.":
+    "ヘッダーの {line} 行目が Key: value の形式になっていません。",
   "A connection named {name} already exists. Choose another name, or delete that one first.":
     "{name} という名前の接続はすでにあります。別の名前にするか、先にその接続を削除してください。",
   "Could not save the connection: {error}": "接続を保存できませんでした: {error}",
   "Could not save the connection.": "接続を保存できませんでした。",
   "Saved {name} ({host}, {transport}). Test it before asking a teammate to call it.":
     "{name}({host}、{transport})を保存しました。チームメイトに呼び出させる前にテストしてください。",
-  "The token and header values are stored encrypted and are not shown again.": "トークンとヘッダーの値は暗号化して保存され、今後表示されることはありません。",
+  "The token and header values are stored encrypted and are not shown again.":
+    "トークンとヘッダーの値は暗号化して保存され、今後表示されることはありません。",
   "The Authorization header was left out. Put the token in the bearer token field instead.":
     "Authorization ヘッダーは保存していません。トークンは Bearer トークン欄に入力してください。",
   "Test now": "今すぐテスト",
-  "No MCP connections yet. Add one with /mcp add.": "MCP 接続はまだありません。/mcp add で追加できます。",
-  "No MCP connection with that name. Run /mcp list to see yours.": "その名前の MCP 接続はありません。/mcp list で一覧を確認してください。",
+  "No MCP connections yet. Add one with /mcp add.":
+    "MCP 接続はまだありません。/mcp add で追加できます。",
+  "No MCP connection with that name. Run /mcp list to see yours.":
+    "その名前の MCP 接続はありません。/mcp list で一覧を確認してください。",
   "{name} is already on.": "{name} はすでにオンです。",
   "{name} is already off.": "{name} はすでにオフです。",
-  "Turned on {name}. Teammates can call its tools.": "{name} をオンにしました。チームメイトはそのツールを呼び出せます。",
+  "Turned on {name}. Teammates can call its tools.":
+    "{name} をオンにしました。チームメイトはそのツールを呼び出せます。",
   "Turned off {name}. Teammates cannot call its tools until you turn it on again.":
     "{name} をオフにしました。再びオンにするまで、チームメイトはそのツールを呼び出せません。",
   "Delete the MCP connection {name}? Its saved token and headers are deleted too, and teammates can no longer call it.":
@@ -46,30 +53,37 @@ export const ja: Record<string, string> = {
   "That form is no longer valid.": "このフォームはもう使えません。",
   "not connected": "未接続",
   "not set up on this server": "このサーバーでは未設定",
-  "connected": "接続済み",
+  connected: "接続済み",
   "needs sign-in": "要サインイン",
-  "Connectors": "コネクタ",
+  Connectors: "コネクタ",
   "Connect one with /mcp connect.": "/mcp connect で接続できます。",
   "Custom servers": "カスタムサーバー",
   "Signing in needs the app's address, which this server does not have set.":
     "サインインにはアプリのアドレスが必要ですが、このサーバーには設定されていません。",
-  "Could not start signing in to {name}: {error}": "{name} へのサインインを開始できませんでした: {error}",
+  "Could not start signing in to {name}: {error}":
+    "{name} へのサインインを開始できませんでした: {error}",
   "{name} does not need a sign-in. It is connected.": "{name} はサインイン不要です。接続しました。",
   "Open the link below in a browser where you are signed in to Deni Run to connect {name}. It works for 15 minutes.":
     "{name} に接続するには、Deni Run にサインインしているブラウザーで下のリンクを開いてください。リンクの有効期限は 15 分です。",
   "If that browser is not signed in, you are asked to sign in first. Then run /mcp connect again for a fresh link.":
     "そのブラウザーでサインインしていない場合は、先にサインインを求められます。その後、/mcp connect をもう一度実行して新しいリンクを取得してください。",
   "Sign in to {name}": "{name} にサインイン",
-  "No connector with that name. Run /mcp list to see them.": "その名前のコネクタはありません。/mcp list で一覧を確認してください。",
+  "No connector with that name. Run /mcp list to see them.":
+    "その名前のコネクタはありません。/mcp list で一覧を確認してください。",
   "{name} is not connected.": "{name} は接続されていません。",
   "Disconnect {name}? Its sign-in is deleted, and teammates can no longer call it.":
     "{name} の接続を解除しますか?サインイン情報は削除され、チームメイトは呼び出せなくなります。",
   // Errors from src/lib/mcp/index.ts and src/lib/mcp/oauth.ts, shown through discordErrorText.
-  "This connector is not set up on this server yet": "このコネクタはこのサーバーではまだ設定されていません",
+  "This connector is not set up on this server yet":
+    "このコネクタはこのサーバーではまだ設定されていません",
   "Unknown connector": "不明なコネクタです",
   "Sign in to this MCP server again": "この MCP サーバーに再度サインインしてください",
-  "This MCP server does not publish how to sign in": "この MCP サーバーはサインイン方法を公開していません",
-  "This MCP server does not support secure sign-in (PKCE)": "この MCP サーバーは安全なサインイン(PKCE)に対応していません",
-  "This MCP server needs an OAuth client that Deni Run does not have": "この MCP サーバーには Deni Run が持っていない OAuth クライアントが必要です",
-  "Could not register Deni Run with this MCP server": "この MCP サーバーに Deni Run を登録できませんでした",
+  "This MCP server does not publish how to sign in":
+    "この MCP サーバーはサインイン方法を公開していません",
+  "This MCP server does not support secure sign-in (PKCE)":
+    "この MCP サーバーは安全なサインイン(PKCE)に対応していません",
+  "This MCP server needs an OAuth client that Deni Run does not have":
+    "この MCP サーバーには Deni Run が持っていない OAuth クライアントが必要です",
+  "Could not register Deni Run with this MCP server":
+    "この MCP サーバーに Deni Run を登録できませんでした",
 };

@@ -1,111 +1,143 @@
-import "@tanstack/react-start/server-only";
-
-import { type UIMessage } from "ai";
-import { nextCron } from "../agent";
 import { createHash } from "node:crypto";
-import {
-  createJob,
-  getJobByIdempotencyKey,
-  listQueuedJobs,
-  recoverStaleJobs,
-} from "./index";
-import { translatorFor } from "@/i18n/standalone";
-import { runBackgroundJob } from "./runner";
+import type { UIMessage } from "ai";
+import { nextCron } from "./cron";
+import { claimNextJobs, createJob, getJobByIdempotencyKey, recoverStaleJobs } from "./index";
+import { translatorFor } from "../i18n/standalone";
+import { runClaimedJob } from "./runner";
 import {
   listDueRoutineUserIds,
-  listUserStores,
   loadMessages,
   mutateStore,
   readStore,
   saveMessages,
 } from "../data/store";
+import { runConfig, runLogger } from "../runtime";
+import type { AgentJob } from "../types";
 
-const DEFAULT_CONCURRENCY = 4;
-const MAX_CONCURRENCY = 16;
-const configuredConcurrency = Number.parseInt(process.env.DENI_SCHEDULER_CONCURRENCY ?? "", 10);
-const SCHEDULER_CONCURRENCY = Number.isFinite(configuredConcurrency)
-  ? Math.min(Math.max(configuredConcurrency, 1), MAX_CONCURRENCY)
-  : DEFAULT_CONCURRENCY;
+/**
+ * The Run scheduler. Each tick: recover jobs whose lease expired, enqueue due routines,
+ * then claim queued jobs (`FOR UPDATE SKIP LOCKED`) up to the configured concurrency and
+ * run them in this process. Several schedulers (the worker and an in-process dev
+ * scheduler) can run against one database; the queue keeps each job with one of them.
+ * The host decides whether to start it (`services/run-worker`, or the web app with
+ * `RUN_SCHEDULER_IN_PROCESS=true`).
+ */
+
+const DEFAULT_INTERVAL_MS = 30_000;
 
 const g = globalThis as typeof globalThis & {
-  __deniScheduler?: boolean;
-  __deniSchedulerTick?: Promise<void>;
-  __deniSchedulerJobs?: Map<string, Promise<void>>;
+  __deniRunScheduler?: { timer: ReturnType<typeof setInterval>; stopping: boolean };
+  __deniRunSchedulerTick?: Promise<void>;
+  __deniRunSchedulerJobs?: Map<string, Promise<void>>;
 };
 
 function activeJobs() {
-  if (!g.__deniSchedulerJobs) g.__deniSchedulerJobs = new Map();
-  return g.__deniSchedulerJobs;
+  if (!g.__deniRunSchedulerJobs) g.__deniRunSchedulerJobs = new Map();
+  return g.__deniRunSchedulerJobs;
 }
 
-export function startScheduler() {
-  if (g.__deniScheduler || process.env.DENI_SCHEDULER !== "true") return;
-  g.__deniScheduler = true;
-  setInterval(() => {
-    tick().catch((error) => {
-      console.error("[deni scheduler]", error);
-      void import("../report").then(({ reportError }) => reportError(error, "scheduler"));
-    });
-  }, 30_000);
-  tick().catch(() => undefined);
+/** Jobs this process is running now. */
+export function runningJobCount() {
+  return activeJobs().size;
 }
 
-/** Run stale recovery before claiming work so a process restart cannot strand a task. */
+/**
+ * Start ticking (immediately, then every `intervalMs`). Returns a stop function that stops
+ * claiming new work and waits for the jobs this process is running. Starting twice in one
+ * process returns the existing scheduler's stop function.
+ */
+export function startScheduler(options?: { intervalMs?: number }): () => Promise<void> {
+  if (!g.__deniRunScheduler) {
+    const timer = setInterval(() => {
+      tick().catch((error) => runLogger().error("[run scheduler]", error));
+    }, options?.intervalMs ?? DEFAULT_INTERVAL_MS);
+    timer.unref?.();
+    g.__deniRunScheduler = { timer, stopping: false };
+    tick().catch((error) => runLogger().error("[run scheduler]", error));
+  }
+  return stopScheduler;
+}
+
+async function stopScheduler() {
+  const scheduler = g.__deniRunScheduler;
+  if (scheduler) {
+    scheduler.stopping = true;
+    clearInterval(scheduler.timer);
+  }
+  await g.__deniRunSchedulerTick?.catch(() => undefined);
+  await Promise.allSettled(activeJobs().values());
+  delete g.__deniRunScheduler;
+}
+
+/** One scheduler pass. Concurrent calls in one process share the pass in flight. */
 export async function tick() {
-  const previous = g.__deniSchedulerTick;
+  const previous = g.__deniRunSchedulerTick;
   if (previous) return previous;
   const current = runTick();
-  g.__deniSchedulerTick = current;
+  g.__deniRunSchedulerTick = current;
   try {
     await current;
   } finally {
-    if (g.__deniSchedulerTick === current) delete g.__deniSchedulerTick;
+    if (g.__deniRunSchedulerTick === current) delete g.__deniRunSchedulerTick;
   }
 }
 
 async function runTick() {
   await recoverStaleJobs().catch((error) => {
-    console.error("[deni scheduler] stale job recovery", error);
+    runLogger().error("[run scheduler] stale job recovery", error);
   });
-  let userIds: string[];
-  try {
-    userIds = await listDueRoutineUserIds(new Date());
-  } catch {
-    userIds = (await listUserStores()).map((row) => row.userId);
-  }
-  for (const userId of userIds) {
+  if (g.__deniRunScheduler?.stopping) return;
+  const now = new Date();
+  for (const userId of await listDueRoutineUserIds(now)) {
     const store = await readStore(userId);
-    const now = Date.now();
-    const due = (store.routines ?? []).filter(
-      (item) => item.enabled && item.nextRunAt && new Date(item.nextRunAt).getTime() <= now,
+    const due = store.routines.filter(
+      (item) =>
+        item.enabled && item.nextRunAt && new Date(item.nextRunAt).getTime() <= now.getTime(),
     );
-    for (const routine of due) await enqueueRoutine(userId, routine.id);
+    for (const routine of due) {
+      await enqueueRoutine(userId, routine.id).catch((error) =>
+        runLogger().error("[run scheduler] routine", routine.id, error),
+      );
+    }
   }
+  if (g.__deniRunScheduler?.stopping) return;
 
   const running = activeJobs();
-  const capacity = SCHEDULER_CONCURRENCY - running.size;
+  const capacity = runConfig().schedulerConcurrency - running.size;
   if (capacity <= 0) return;
-  // Jobs are claimed one at a time in runBackgroundJob; another scheduler process can
-  // safely observe the same queue because the claim is protected by a row lock. The
-  // in-process limit keeps one worker from starting the entire queue at once.
-  for (const job of await listQueuedJobs(capacity)) {
-    if (running.has(job.id)) continue;
-    const task = runBackgroundJob(job.userId ?? "", job.id)
-      .catch((error) => {
-        console.error("[deni scheduler] job", job.id, error);
-      })
-      .then(() => undefined);
-    running.set(job.id, task);
-    void task.finally(() => {
-      if (running.get(job.id) === task) running.delete(job.id);
-    });
-  }
+  for (const job of await claimNextJobs(capacity)) startClaimed(job);
 }
 
-async function enqueueRoutine(userId: string, routineId: string) {
+function startClaimed(job: AgentJob) {
+  const running = activeJobs();
+  const task = runClaimedJob(job)
+    .catch((error) => runLogger().error("[run scheduler] job", job.id, error))
+    .then(() => undefined);
+  running.set(job.id, task);
+  void task.finally(() => {
+    if (running.get(job.id) === task) running.delete(job.id);
+  });
+}
+
+/** Wait for the jobs this process started (tests and graceful shutdown). */
+export async function waitForRunningJobs() {
+  await Promise.allSettled(activeJobs().values());
+}
+
+/**
+ * Queue a due routine run. The idempotency key includes the scheduled time and revision,
+ * so a second scheduler (or a retried tick) cannot queue the same run twice.
+ */
+export async function enqueueRoutine(userId: string, routineId: string) {
   const store = await readStore(userId);
   const routine = store.routines.find((item) => item.id === routineId);
-  if (!routine || !routine.enabled || !routine.nextRunAt || new Date(routine.nextRunAt).getTime() > Date.now()) return null;
+  if (
+    !routine ||
+    !routine.enabled ||
+    !routine.nextRunAt ||
+    new Date(routine.nextRunAt).getTime() > Date.now()
+  )
+    return null;
   const bot = store.bots.find((item) => item.id === routine.botId);
   if (!bot) return null;
   const scheduledFor = routine.nextRunAt;
@@ -133,15 +165,30 @@ async function enqueueRoutine(userId: string, routineId: string) {
     botId: bot.id,
     kind: "routine",
     idempotencyKey,
-    payload: { messages, routineId: routine.id, routineRevision, runMode: store.config.runMode, locale: routine.locale },
+    payload: {
+      messages,
+      routineId: routine.id,
+      routineRevision,
+      runMode: store.config.runMode,
+      locale: routine.locale,
+    },
     maxAttempts: 2,
   });
-  // Advance the schedule at enqueue time. This prevents duplicate kickoff messages while
-  // a long task is running; the run history is finalized by the worker.
+  // Advance the schedule at enqueue time so a long run cannot be queued again.
   await mutateStore(userId, (next) => {
     const item = next.routines.find((entry) => entry.id === routine.id);
-    if (!item || !item.enabled || item.nextRunAt !== scheduledFor || (item.revision ?? 0) !== routineRevision) return;
-    item.nextRunAt = nextCron(item.cron, item.timezone || next.config.timezone, new Date(scheduledFor));
+    if (
+      !item ||
+      !item.enabled ||
+      item.nextRunAt !== scheduledFor ||
+      (item.revision ?? 0) !== routineRevision
+    )
+      return;
+    item.nextRunAt = nextCron(
+      item.cron,
+      item.timezone || next.config.timezone,
+      new Date(scheduledFor),
+    );
   });
   return job;
 }

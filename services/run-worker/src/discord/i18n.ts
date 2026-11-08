@@ -1,6 +1,12 @@
 import { scrubServerPaths } from "./text";
-import { fill, resolveServerLocale, translateMessage, translatorFor, type Translate } from "@/i18n/standalone";
-import { ja as base } from "@/i18n/standalone-ja";
+import {
+  fill,
+  resolveServerLocale,
+  translateMessage,
+  translatorFor,
+  type Translate,
+} from "@deniai/run/i18n/standalone";
+import { ja as base } from "@deniai/run/i18n/standalone-ja";
 import { ja as computer } from "./features/computer.ja";
 import { ja as core } from "./features/core.ja";
 import { ja as files } from "./features/files.ja";
@@ -44,7 +50,8 @@ export function discordTranslator(locale?: unknown): Translate {
   const resolved = resolveServerLocale(locale);
   const strings = own[resolved];
   const shared = translatorFor(resolved);
-  return (message, params) => (message in strings ? fill(strings[message], params) : shared(message, params));
+  return (message, params) =>
+    message in strings ? fill(strings[message], params) : shared(message, params);
 }
 
 /**
@@ -55,5 +62,7 @@ export function discordTranslator(locale?: unknown): Translate {
 export function discordErrorText(locale: unknown, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
   const strings = own[resolveServerLocale(locale)];
-  return scrubServerPaths(message in strings ? strings[message] : translateMessage(locale, message));
+  return scrubServerPaths(
+    message in strings ? strings[message] : translateMessage(locale, message),
+  );
 }

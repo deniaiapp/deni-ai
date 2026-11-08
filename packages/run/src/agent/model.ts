@@ -15,7 +15,16 @@ export const MODEL_PRICES_USD_PER_MTOK: Record<string, { input: number; output: 
   "anthropic/claude-haiku-5.5": { input: 0.15, output: 0.75 },
 };
 
-export const RUN_MODE_IDS = ["default", "high", "xhigh", "max", "plus-default", "plus-high", "plus-xhigh", "plus-max"] as const;
+export const RUN_MODE_IDS = [
+  "default",
+  "high",
+  "xhigh",
+  "max",
+  "plus-default",
+  "plus-high",
+  "plus-xhigh",
+  "plus-max",
+] as const;
 export type RunMode = (typeof RUN_MODE_IDS)[number];
 export type ReasoningEffort = "medium" | "high" | "xhigh" | "max";
 

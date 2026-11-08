@@ -108,7 +108,13 @@ function localDateToUtc(
   let candidate = desired;
   for (let i = 0; i < 3; i++) {
     const actual = partsFor(formatter, new Date(candidate));
-    const actualWall = Date.UTC(actual.year, actual.month - 1, actual.day, actual.hour, actual.minute);
+    const actualWall = Date.UTC(
+      actual.year,
+      actual.month - 1,
+      actual.day,
+      actual.hour,
+      actual.minute,
+    );
     const correction = desired - actualWall;
     if (correction === 0) return new Date(candidate);
     candidate += correction;
@@ -135,10 +141,17 @@ function requireCronField(field: string, min: number, max: number, isDow = false
         end = start;
       }
     }
-    if (!Number.isInteger(start) || !Number.isInteger(end) || start < min || end > max || start > end) {
+    if (
+      !Number.isInteger(start) ||
+      !Number.isInteger(end) ||
+      start < min ||
+      end > max ||
+      start > end
+    ) {
       throw new Error("Invalid cron expression");
     }
-    for (let value = start; value <= end; value += step) values.add(isDow && value === 7 ? 0 : value);
+    for (let value = start; value <= end; value += step)
+      values.add(isDow && value === 7 ? 0 : value);
   }
   return values;
 }

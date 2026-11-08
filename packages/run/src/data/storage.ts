@@ -1,5 +1,3 @@
-import "@tanstack/react-start/server-only";
-
 import {
   DeleteObjectCommand,
   DeleteObjectsCommand,
@@ -8,7 +6,8 @@ import {
   PutObjectCommand,
   S3Client,
 } from "@aws-sdk/client-s3";
-import { userStorageKey } from "./paths";
+import { primeStorageKey, userStorageKey } from "./paths";
+import { runConfig } from "../runtime";
 
 type S3Config = {
   bucket: string;
@@ -16,10 +15,6 @@ type S3Config = {
 };
 
 let cachedConfig: S3Config | null | undefined;
-
-function envValue(name: string) {
-  return process.env[name]?.trim() || undefined;
-}
 
 function normalizeS3Endpoint(endpoint: string, bucket: string) {
   try {
@@ -52,39 +47,30 @@ function isMissingObjectError(error: unknown) {
 
 function getS3Config(): S3Config | null {
   if (cachedConfig !== undefined) return cachedConfig;
-  const endpoint = envValue("S3_ENDPOINT");
-  const region = envValue("S3_REGION") || "auto";
-  const accessKeyId = envValue("S3_ACCESS_KEY_ID");
-  const secretAccessKey = envValue("S3_SECRET_ACCESS_KEY");
-  const bucket = envValue("S3_BUCKET");
-  const values = [endpoint, accessKeyId, secretAccessKey, bucket];
-  if (values.every(Boolean)) {
-    const normalizedEndpoint = normalizeS3Endpoint(endpoint!, bucket!);
-    let r2 = false;
-    try {
-      r2 = /r2\.cloudflarestorage\.com$/i.test(new URL(normalizedEndpoint).host);
-    } catch {
-      r2 = false;
-    }
-    const forcePathStyle = envValue("S3_FORCE_PATH_STYLE");
-    cachedConfig = {
-      bucket: bucket!,
-      client: new S3Client({
-        endpoint: normalizedEndpoint,
-        region,
-        forcePathStyle: forcePathStyle === "true" || (forcePathStyle !== "false" && r2),
-        credentials: { accessKeyId: accessKeyId!, secretAccessKey: secretAccessKey! },
-      }),
-    };
-    return cachedConfig;
+  const config = runConfig().s3;
+  if (!config) {
+    cachedConfig = null;
+    return null;
   }
-  if (values.some(Boolean)) {
-    throw new Error(
-      "S3_ENDPOINT, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY, and S3_BUCKET must be configured together",
-    );
+  const endpoint = config.endpoint
+    ? normalizeS3Endpoint(config.endpoint, config.bucket)
+    : undefined;
+  let r2 = false;
+  try {
+    r2 = endpoint ? /r2\.cloudflarestorage\.com$/i.test(new URL(endpoint).host) : false;
+  } catch {
+    r2 = false;
   }
-  cachedConfig = null;
-  return null;
+  cachedConfig = {
+    bucket: config.bucket,
+    client: new S3Client({
+      ...(endpoint ? { endpoint } : {}),
+      region: config.region,
+      forcePathStyle: config.forcePathStyle || r2,
+      credentials: { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey },
+    }),
+  };
+  return cachedConfig;
 }
 
 export function hasObjectStorage() {
@@ -106,6 +92,7 @@ export async function putUserObject(
   contentType = "application/octet-stream",
   options?: { ifMatch?: string; ifNoneMatch?: string },
 ) {
+  await primeStorageKey(userId);
   const config = getS3Config();
   if (!config) return false;
   await config.client.send(
@@ -122,6 +109,7 @@ export async function putUserObject(
 }
 
 export async function getUserObject(userId: string, suffix: string) {
+  await primeStorageKey(userId);
   const config = getS3Config();
   if (!config) return null;
   try {
@@ -153,6 +141,7 @@ export function objectSuffixFromKey(userId: string, key: string) {
 }
 
 export async function listUserObjects(userId: string, suffixPrefix: string) {
+  await primeStorageKey(userId);
   const config = getS3Config();
   if (!config) return [];
   const prefix = suffixPrefix
@@ -177,6 +166,7 @@ export async function listUserObjects(userId: string, suffixPrefix: string) {
 }
 
 export async function deleteUserObjects(userId: string, suffixes: string[]) {
+  await primeStorageKey(userId);
   const config = getS3Config();
   if (!config || suffixes.length === 0) return;
   const keys = suffixes.map((suffix) => ({ Key: objectKey(userId, suffix) }));
@@ -191,6 +181,7 @@ export async function deleteUserObjects(userId: string, suffixes: string[]) {
 }
 
 export async function deleteAllUserStorage(userId: string) {
+  await primeStorageKey(userId);
   const objects = await listUserObjects(userId, "");
   const suffixes = objects
     .map((item) => objectSuffixFromKey(userId, item.key))
@@ -199,6 +190,7 @@ export async function deleteAllUserStorage(userId: string) {
 }
 
 export async function deleteUserObject(userId: string, suffix: string) {
+  await primeStorageKey(userId);
   const config = getS3Config();
   if (!config) return;
   await config.client.send(

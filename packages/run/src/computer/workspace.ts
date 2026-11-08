@@ -1,11 +1,11 @@
-import "@tanstack/react-start/server-only";
-
 import { createHash } from "node:crypto";
+import { runConfig } from "../runtime";
 import { mkdir, mkdtemp, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { WorkspaceNode } from "../types";
 import {
   jailPath,
+  primeStorageKey,
   toWorkspacePath,
   userDataDir,
   userWorkspaceDir,
@@ -70,7 +70,7 @@ async function ensureRemoteWorkspace(userId: string) {
 
 async function ensureWorkspace(userId: string) {
   const remote = hasObjectStorage();
-  if (process.env.NODE_ENV === "production" && !remote) {
+  if (runConfig().production && !remote) {
     throw new Error("S3-compatible workspace storage is required in production");
   }
   if (remote) {
@@ -152,6 +152,7 @@ function buildRemoteNodes(
 }
 
 export async function listWorkspace(userId: string, rel = ".", depth = 3) {
+  await primeStorageKey(userId);
   const normalized = normalizePath(rel);
   const root = await ensureWorkspace(userId);
   if (root) return walkLocal(root, normalized || ".", depth);
@@ -167,6 +168,7 @@ export async function listWorkspace(userId: string, rel = ".", depth = 3) {
 }
 
 export async function readWorkspaceFile(userId: string, rel: string) {
+  await primeStorageKey(userId);
   const normalized = normalizePath(rel);
   if (!normalized) throw new Error("A file path is required");
   const root = await ensureWorkspace(userId);
@@ -190,6 +192,7 @@ export async function readWorkspaceFile(userId: string, rel: string) {
 }
 
 export async function writeWorkspaceFile(userId: string, rel: string, content: string) {
+  await primeStorageKey(userId);
   const normalized = normalizePath(rel);
   if (!normalized) throw new Error("A file path is required");
   const root = await ensureWorkspace(userId);
@@ -204,7 +207,13 @@ export async function writeWorkspaceFile(userId: string, rel: string, content: s
 }
 
 /** Binary-safe write, for files people send in (images, PDFs, archives). */
-export async function writeWorkspaceBytes(userId: string, rel: string, data: Uint8Array, contentType = "application/octet-stream") {
+export async function writeWorkspaceBytes(
+  userId: string,
+  rel: string,
+  data: Uint8Array,
+  contentType = "application/octet-stream",
+) {
+  await primeStorageKey(userId);
   const normalized = normalizePath(rel);
   if (!normalized) throw new Error("A file path is required");
   if (data.byteLength > MAX_DOWNLOAD_FILE_SIZE) throw new Error("File is too large to upload");
@@ -220,6 +229,7 @@ export async function writeWorkspaceBytes(userId: string, rel: string, data: Uin
 }
 
 export async function makeWorkspaceDir(userId: string, rel: string) {
+  await primeStorageKey(userId);
   const normalized = normalizePath(rel);
   if (!normalized) throw new Error("A directory path is required");
   const root = await ensureWorkspace(userId);
@@ -232,6 +242,7 @@ export async function makeWorkspaceDir(userId: string, rel: string) {
 }
 
 export async function listWorkspaceFiles(userId: string, prefix = "") {
+  await primeStorageKey(userId);
   const normalized = normalizePath(prefix);
   const root = await ensureWorkspace(userId);
   if (root) {
@@ -275,6 +286,7 @@ export async function listWorkspaceFiles(userId: string, prefix = "") {
 }
 
 export async function readWorkspaceBytes(userId: string, rel: string) {
+  await primeStorageKey(userId);
   const normalized = normalizePath(rel);
   if (!normalized) throw new Error("A file path is required");
   const root = await ensureWorkspace(userId);
@@ -292,6 +304,7 @@ export async function readWorkspaceBytes(userId: string, rel: string) {
 }
 
 export async function collectWorkspaceFiles(userId: string, rels: string[]) {
+  await primeStorageKey(userId);
   const targets = rels.length > 0 ? rels : [""];
   const seen = new Set<string>();
   const files: { path: string; size: number }[] = [];
@@ -311,7 +324,11 @@ export function normalizeWorkspacePath(rel: string) {
 }
 
 /** The file or folder at rel (the root for ""), or null when nothing is there. */
-export async function findWorkspaceEntry(userId: string, rel: string): Promise<WorkspaceNode | null> {
+export async function findWorkspaceEntry(
+  userId: string,
+  rel: string,
+): Promise<WorkspaceNode | null> {
+  await primeStorageKey(userId);
   const normalized = normalizePath(rel);
   if (!normalized) return { name: "", path: "/", type: "dir" };
   const parent = path.posix.dirname(normalized);
@@ -338,6 +355,7 @@ export async function zipWorkspaceFiles(
   rels: string[],
   limits: { maxFiles?: number; maxBytes?: number } = {},
 ): Promise<WorkspaceZip> {
+  await primeStorageKey(userId);
   const maxFiles = Math.min(limits.maxFiles ?? WORKSPACE_ZIP_MAX_FILES, WORKSPACE_ZIP_MAX_FILES);
   const maxBytes = Math.min(limits.maxBytes ?? WORKSPACE_ZIP_MAX_BYTES, WORKSPACE_ZIP_MAX_BYTES);
   const listed = await collectWorkspaceFiles(userId, rels);
@@ -359,6 +377,7 @@ export async function zipWorkspaceFiles(
 }
 
 export async function deleteWorkspacePaths(userId: string, rels: string[]) {
+  await primeStorageKey(userId);
   const unique = [...new Set(rels.map((rel) => normalizePath(rel)).filter(Boolean))].sort(
     (a, b) => a.length - b.length,
   );
@@ -371,6 +390,7 @@ export async function deleteWorkspacePaths(userId: string, rels: string[]) {
 }
 
 export async function deleteWorkspaceContents(userId: string) {
+  await primeStorageKey(userId);
   const files = await listWorkspaceFiles(userId);
   const top = new Set<string>();
   for (const file of files) top.add(file.path.split("/")[0] ?? file.path);
@@ -378,6 +398,7 @@ export async function deleteWorkspaceContents(userId: string) {
 }
 
 export async function deleteWorkspacePath(userId: string, rel: string) {
+  await primeStorageKey(userId);
   const normalized = normalizePath(rel);
   if (!normalized) throw new Error("The workspace root cannot be deleted");
   const root = await ensureWorkspace(userId);
@@ -395,6 +416,7 @@ export async function deleteWorkspacePath(userId: string, rel: string) {
 }
 
 export async function prepareCommandWorkspace(userId: string) {
+  await primeStorageKey(userId);
   const localRoot = await ensureLocalWorkspace(userId);
   if (!hasObjectStorage()) return localRoot;
   const root = await mkdtemp(path.join(userDataDir(userId), "workspace-command-"));
@@ -421,6 +443,7 @@ export async function prepareCommandWorkspace(userId: string) {
 }
 
 export async function syncCommandWorkspace(userId: string, root: string) {
+  await primeStorageKey(userId);
   if (!hasObjectStorage()) return;
   const snapshot = commandWorkspaceSnapshots.get(root);
   if (!snapshot || snapshot.userId !== userId) {
@@ -470,9 +493,7 @@ export async function syncCommandWorkspace(userId: string, root: string) {
             current.size === original.size &&
             current.hash === original.hash;
       const remoteAlreadyMatches =
-        current !== undefined &&
-        current.size === local.size &&
-        current.hash === local.hash;
+        current !== undefined && current.size === local.size && current.hash === local.hash;
       if (remoteAlreadyMatches) continue;
       if (!remoteUnchanged) {
         throw new Error(`Workspace changed while the command was running: /${rel}`);

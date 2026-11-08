@@ -1,18 +1,5 @@
-import "@tanstack/react-start/server-only";
-
-import {
-  DeniAiAccountMissingError,
-  DeniAiUnavailableError,
-  cachedDeniRunUsage,
-  deniAiUrl,
-  deniAiUsageConfigured,
-  fetchDeniRunUsage,
-  getLinkedDeniAiUserId,
-  reportDeniRunCost,
-  type DeniRunCostMetric,
-  type DeniRunUsage,
-} from "../auth/deni-ai";
 import { MODEL_PRICES_USD_PER_MTOK } from "../agent/model";
+import { runConfig, runDeps, runLogger, type RunBudget, type RunCostMetric } from "../runtime";
 import {
   TIER_BUDGET_USD,
   TIER_NAMES,
@@ -29,105 +16,69 @@ export { UsageLimitError, isUsageLimitError };
 export type { UsageSnapshot } from "./plans";
 
 /**
- * Deni Run spends a monthly USD budget that belongs to the user's Deni AI plan.
- * Deni AI keeps the ledger: Deni Run checks the remaining budget before work and
- * reports what model calls, browser time, and computer time actually cost.
+ * Deni Run spends the monthly pool of the user's Deni AI plan, shared with chat and
+ * Flixa. On the platform the shared usage engine (`@deniai/billing/server`) is called
+ * directly through the host's {@link RunUsageBinding}: Run checks the remaining budget
+ * before work and records model, browser and computer cost in the product ledger
+ * (`product_usage`, product `run`, micro-dollars) after it is incurred.
  */
 
-function hourlyRate(name: string, fallback: number) {
-  const value = Number(process.env[name]);
-  return Number.isFinite(value) && value >= 0 && process.env[name]?.trim() ? value : fallback;
-}
-
-/** USD per hour of Steel browser and E2B sandbox time (provider cost; override per deployment). */
+/** USD of Steel browser time (default $0.10 per hour; `RUN_BROWSER_USD_PER_HOUR`). */
 export function browserCostUsd(ms: number) {
-  return (Math.max(0, ms) / 3_600_000) * hourlyRate("DENI_RUN_BROWSER_USD_PER_HOUR", 0.1);
+  return (Math.max(0, ms) / 3_600_000) * runConfig().browserUsdPerHour;
 }
 
+/** USD of E2B sandbox time (default $0.15 per hour; `RUN_COMPUTER_USD_PER_HOUR`). */
 export function computerCostUsd(ms: number) {
-  return (Math.max(0, ms) / 3_600_000) * hourlyRate("DENI_RUN_COMPUTER_USD_PER_HOUR", 0.15);
+  return (Math.max(0, ms) / 3_600_000) * runConfig().computerUsdPerHour;
 }
 
 export function currentUsageMonth(at = new Date()) {
   return `${at.getUTCFullYear()}-${String(at.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
-type Budget =
-  | { metered: false }
-  | { metered: true; linked: false }
-  | { metered: true; linked: true; deniUserId: string; usage: DeniRunUsage };
-
-async function resolveBudget(userId: string): Promise<Budget> {
-  if (!deniAiUsageConfigured()) {
-    // A development deployment without Deni AI runs unmetered; production must be configured.
-    if (process.env.NODE_ENV === "production") {
-      throw new DeniAiUnavailableError("Deni AI usage is not configured on this deployment.");
-    }
-    return { metered: false };
-  }
-  const deniUserId = await getLinkedDeniAiUserId(userId);
-  if (!deniUserId) return { metered: true, linked: false };
-  try {
-    return { metered: true, linked: true, deniUserId, usage: await fetchDeniRunUsage(deniUserId) };
-  } catch (error) {
-    if (error instanceof DeniAiAccountMissingError) return { metered: true, linked: false };
-    throw error;
-  }
-}
-
-/** Without a linked Deni AI plan (or on an unmetered development deployment), Free limits apply. */
-function tierOf(budget: Budget): DeniTier {
-  return budget.metered && budget.linked ? budget.usage.tier : "free";
+async function budget(userId: string): Promise<RunBudget> {
+  return runDeps().usage.getRunBudget(userId);
 }
 
 function snapshotFrom(
-  budget: Budget,
+  usage: RunBudget,
   store: Store,
   live?: { pendingBrowserMs?: number; pendingComputerMs?: number },
 ): UsageSnapshot {
-  const tier = tierOf(budget);
-  const usage = budget.metered && budget.linked ? budget.usage : null;
-  const pending = browserCostUsd(live?.pendingBrowserMs ?? 0) + computerCostUsd(live?.pendingComputerMs ?? 0);
-  const limit = usage?.limitUsd ?? TIER_BUDGET_USD[tier];
+  const tier = usage.tier as DeniTier;
+  const pending =
+    browserCostUsd(live?.pendingBrowserMs ?? 0) + computerCostUsd(live?.pendingComputerMs ?? 0);
+  const limit = usage.limitUsd || TIER_BUDGET_USD[tier];
   const percent = (usd: number) => (limit > 0 ? (usd / limit) * 100 : 0);
   const parts = {
-    chat: percent(usage?.poolUsd.chat ?? 0),
-    flixa: percent(usage?.poolUsd.flixa ?? 0),
-    run: percent((usage?.poolUsd.run ?? 0) + pending),
+    chat: percent(usage.poolUsd.chat),
+    flixa: percent(usage.poolUsd.flixa),
+    run: percent(usage.poolUsd.run + pending),
   };
   return {
-    linked: budget.metered ? budget.linked : true,
-    metered: budget.metered,
+    linked: true,
+    metered: true,
     plan: tier,
     planName: TIER_NAMES[tier],
     period: currentUsageMonth(),
-    periodEnd: usage?.periodEnd ?? null,
+    periodEnd: usage.periodEnd.toISOString(),
     pool: { usedPercent: parts.chat + parts.flixa + parts.run, parts },
     teammates: { used: store.bots.length, limit: TIER_TEAMMATES[tier] },
-    manageUrl: usage?.manageUrl ?? `${deniAiUrl()}/settings/billing`,
+    manageUrl: `${runConfig().appUrl}/settings/billing`,
   };
 }
 
-/** The usage shown in the workspace; null while Deni AI cannot be reached. */
+/** The usage shown in Run mode; null when the engine cannot be read. */
 export async function usageSnapshot(
   userId: string,
   store: Store,
   live?: { pendingBrowserMs?: number; pendingComputerMs?: number },
-  options?: { cachedOnly?: boolean },
 ): Promise<UsageSnapshot | null> {
   try {
-    if (options?.cachedOnly) {
-      // Opening the workspace should not wait on Deni AI. Without a cached budget, answer null
-      // now and warm the cache, so the request the client sends next finds it.
-      const deniUserId = deniAiUsageConfigured() ? await getLinkedDeniAiUserId(userId) : null;
-      if (deniUserId && !cachedDeniRunUsage(deniUserId)) {
-        void fetchDeniRunUsage(deniUserId).catch(() => undefined);
-        return null;
-      }
-    }
-    return snapshotFrom(await resolveBudget(userId), store, live);
+    return snapshotFrom(await budget(userId), store, live);
   } catch (error) {
-    console.error("deni ai usage snapshot", error);
+    runLogger().error("[run] usage snapshot", error);
     return null;
   }
 }
@@ -136,38 +87,31 @@ export async function getUsageSnapshot(userId: string) {
   return usageSnapshot(userId, await readStore(userId));
 }
 
-function budgetError(budget: Extract<Budget, { linked: true }>) {
-  const tier = budget.usage.tier;
+function budgetError(tier: DeniTier) {
   return new UsageLimitError(
     "budget",
     `This month's Deni AI usage is used up on ${TIER_NAMES[tier]}. Upgrade your Deni AI plan to keep going.`,
   );
 }
 
-/** Work that spends budget needs a linked Deni AI account with budget left. */
+/** Work that spends the pool needs budget left. */
 async function assertBudget(userId: string) {
-  const budget = await resolveBudget(userId);
-  if (!budget.metered) return;
-  if (!budget.linked) {
-    throw new UsageLimitError("link", "Connect your Deni AI account to use Deni Run.");
-  }
-  if (budget.usage.usedUsd >= budget.usage.limitUsd) throw budgetError(budget);
+  const usage = await budget(userId);
+  if (usage.remainingUsd <= 0) throw budgetError(usage.tier as DeniTier);
 }
 
 export const assertCanUseTokens = assertBudget;
 export const assertCanStartBrowser = assertBudget;
 export const assertCanStartComputer = assertBudget;
 
-/** Running sessions stop once the budget, including their unreported time, is spent. */
+/** Running sessions stop once the pool, including their unrecorded time, is spent. */
 async function isBudgetSpent(userId: string, pendingUsd: number) {
   try {
-    const budget = await resolveBudget(userId);
-    if (!budget.metered) return false;
-    if (!budget.linked) return true;
-    return budget.usage.usedUsd + pendingUsd >= budget.usage.limitUsd;
+    const usage = await budget(userId);
+    return usage.remainingUsd - pendingUsd <= 0;
   } catch (error) {
-    // Do not cut a live session off because Deni AI is briefly unreachable.
-    console.error("deni ai budget check", error);
+    // Do not cut a live session off because the budget could not be read once.
+    runLogger().error("[run] budget check", error);
     return false;
   }
 }
@@ -180,11 +124,16 @@ export function isComputerLimitReached(userId: string, pendingMs = 0) {
   return isBudgetSpent(userId, computerCostUsd(pendingMs));
 }
 
+/** Teammates per plan: Free 5, Go 10, Plus 15, Pro 25 (`TIER_TEAMMATES`). */
+export async function teammateLimit(userId: string) {
+  const usage = await budget(userId).catch(() => null);
+  const tier = (usage?.tier ?? "free") as DeniTier;
+  return { tier, limit: TIER_TEAMMATES[tier] };
+}
+
 export async function assertCanCreateTeammate(userId: string) {
   const store = await readStore(userId);
-  const budget = await resolveBudget(userId).catch((): Budget => ({ metered: true, linked: false }));
-  const tier = tierOf(budget);
-  const limit = TIER_TEAMMATES[tier];
+  const { tier, limit } = await teammateLimit(userId);
   if (store.bots.length >= limit) {
     throw new UsageLimitError(
       "teammates",
@@ -193,15 +142,13 @@ export async function assertCanCreateTeammate(userId: string) {
   }
 }
 
-/** Report incurred cost. Failures are logged; undelivered cost is retried with the next report. */
-async function recordCost(userId: string, metric: DeniRunCostMetric, costUsd: number) {
-  if (!(costUsd > 0) || !deniAiUsageConfigured()) return;
+/** Record incurred cost in the shared ledger. Failures are logged, never thrown. */
+async function recordCost(userId: string, metric: RunCostMetric, costUsd: number) {
+  if (!(costUsd > 0)) return;
   try {
-    const deniUserId = await getLinkedDeniAiUserId(userId);
-    if (!deniUserId) return;
-    await reportDeniRunCost(deniUserId, metric, costUsd);
+    await runDeps().usage.recordRunCost({ userId, metric, costUsd });
   } catch (error) {
-    console.error(`report deni run ${metric} cost`, error);
+    runLogger().error(`[run] record ${metric} cost`, error);
   }
 }
 
@@ -232,8 +179,9 @@ export function modelCostUsd(
   result: { usage?: ModelUsage; providerMetadata?: unknown },
   modelId: string,
 ) {
-  const usage = (result.providerMetadata as { openrouter?: { usage?: OpenRouterUsage } } | undefined)?.openrouter
-    ?.usage;
+  const usage = (
+    result.providerMetadata as { openrouter?: { usage?: OpenRouterUsage } } | undefined
+  )?.openrouter?.usage;
   const reported = usdAmount(usage?.cost);
   const byok = (result.usage?.raw as { is_byok?: unknown } | undefined)?.is_byok === true;
   const upstream = usdAmount(usage?.costDetails?.upstreamInferenceCost);

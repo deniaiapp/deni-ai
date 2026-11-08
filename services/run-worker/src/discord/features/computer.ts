@@ -1,7 +1,10 @@
-import "@tanstack/react-start/server-only";
-
 import { scrubServerPaths } from "../text";
-import { AttachmentBuilder, type ChatInputCommandInteraction, escapeMarkdown, time } from "discord.js";
+import {
+  AttachmentBuilder,
+  type ChatInputCommandInteraction,
+  escapeMarkdown,
+  time,
+} from "discord.js";
 import {
   billLiveBrowser,
   getScreenshot,
@@ -10,7 +13,7 @@ import {
   screenshot,
   stopSandbox,
   withBrowserLive,
-} from "@/lib/computer";
+} from "@deniai/run/computer/index";
 import {
   type ComponentInteraction,
   confirmRow,
@@ -23,9 +26,9 @@ import {
   truncate,
   updateMessage,
 } from "../ui";
-import { billLiveSandbox } from "@/lib/computer/sandbox";
-import { readStore } from "@/lib/data/store";
-import type { ComputerState, Store } from "@/lib/types";
+import { billLiveSandbox } from "@deniai/run/computer/sandbox";
+import { readStore } from "@deniai/run/data/store";
+import type { ComputerState, Store } from "@deniai/run/types";
 
 /**
  * The account-level computer, as the web panel shows it when no task is selected. Discord has no
@@ -86,7 +89,8 @@ async function latestScreen(userId: string, computer: ComputerState) {
 
 /** Capture now: the owning task's page when it has one, otherwise the account's own page. */
 async function captureLatest(userId: string, jobId?: string) {
-  const capture = (scope?: string) => withTimeout(screenshot(userId, scope), CAPTURE_TIMEOUT_MS).catch(() => null);
+  const capture = (scope?: string) =>
+    withTimeout(screenshot(userId, scope), CAPTURE_TIMEOUT_MS).catch(() => null);
   if (jobId && (await capture(jobId))) return getScreenshot(userId, jobId);
   return (await capture()) ? getScreenshot(userId) : null;
 }
@@ -107,36 +111,60 @@ async function showStatus(interaction: ChatInputCommandInteraction, { link, tr }
     tr("Status: {status}", { status: escapeMarkdown(truncate(statusLabel(computer, tr), 200)) }),
     teammate && busy(computer) ? tr("Teammate: {name}", { name: escapeMarkdown(teammate) }) : "",
     pageLine(computer, tr),
-    image && computer.screenshotAt ? tr("Screen captured {time}.", { time: time(new Date(computer.screenshotAt), "R") }) : "",
+    image && computer.screenshotAt
+      ? tr("Screen captured {time}.", { time: time(new Date(computer.screenshotAt), "R") })
+      : "",
     tr("Browser: {state}", { state: computer.browserLive ? tr("running") : tr("not running") }),
     tr("Sandbox: {state}", { state: computer.sandboxLive ? tr("running") : tr("not running") }),
-    computer.lastError ? tr("Last error: {error}", { error: escapeMarkdown(truncate(scrubServerPaths(computer.lastError), 300)) }) : "",
-    computer.status === "takeover" ? tr("Your teammate is waiting for you in the browser. Run /computer takeover.") : "",
+    computer.lastError
+      ? tr("Last error: {error}", {
+          error: escapeMarkdown(truncate(scrubServerPaths(computer.lastError), 300)),
+        })
+      : "",
+    computer.status === "takeover"
+      ? tr("Your teammate is waiting for you in the browser. Run /computer takeover.")
+      : "",
   ].filter(Boolean);
   const activity = (computer.activity ?? []).slice(0, ACTIVITY_SHOWN);
   if (activity.length) {
     lines.push(
       `\n**${tr("Recent activity")}**`,
-      ...activity.map((item) => `• ${time(new Date(item.at), "R")} ${escapeMarkdown(truncate(item.title, 150))}`),
+      ...activity.map(
+        (item) => `• ${time(new Date(item.at), "R")} ${escapeMarkdown(truncate(item.title, 150))}`,
+      ),
     );
   }
-  await respond(interaction, { content: lines.join("\n"), files: image ? [screenFile(image)] : [] });
+  await respond(interaction, {
+    content: lines.join("\n"),
+    files: image ? [screenFile(image)] : [],
+  });
 }
 
-async function captureScreen(interaction: ChatInputCommandInteraction, { link, tr }: FeatureContext) {
+async function captureScreen(
+  interaction: ChatInputCommandInteraction,
+  { link, tr }: FeatureContext,
+) {
   const { computer } = await currentComputer(link.userId);
   if (!computer.browserLive) {
-    await respond(interaction, tr("The browser is not running. It starts when a teammate needs it."));
+    await respond(
+      interaction,
+      tr("The browser is not running. It starts when a teammate needs it."),
+    );
     return;
   }
   const image = await captureLatest(link.userId, computer.activeJobId ?? undefined);
   const after = (await currentComputer(link.userId)).computer;
   if (!image) {
-    const reason = after.lastError ? `\n${tr("Last error: {error}", { error: escapeMarkdown(truncate(scrubServerPaths(after.lastError), 300)) })}` : "";
+    const reason = after.lastError
+      ? `\n${tr("Last error: {error}", { error: escapeMarkdown(truncate(scrubServerPaths(after.lastError), 300)) })}`
+      : "";
     await respond(interaction, `${tr("Could not capture the screen.")}${reason}`);
     return;
   }
-  await respond(interaction, { content: pageLine(after, tr) || tr("The screen right now."), files: [screenFile(image)] });
+  await respond(interaction, {
+    content: pageLine(after, tr) || tr("The screen right now."),
+    files: [screenFile(image)],
+  });
 }
 
 async function release(userId: string, tr: Translate) {
@@ -146,7 +174,9 @@ async function release(userId: string, tr: Translate) {
   const after = (await currentComputer(userId)).computer;
   // A task's own page is not the account's, as on the web; /computer stop closes those too.
   return after.browserLive
-    ? tr("Closed the browser. A teammate's task still has its own page open; /computer stop closes everything.")
+    ? tr(
+        "Closed the browser. A teammate's task still has its own page open; /computer stop closes everything.",
+      )
     : tr("Closed the browser.");
 }
 
@@ -173,23 +203,40 @@ async function confirmOrRun(
     const name = teammateName(store, computer.workingBotId);
     const question =
       action === "release"
-        ? tr("{name} is using the computer. Close the browser anyway?", { name: name ? escapeMarkdown(name) : tr("A teammate") })
-        : tr("{name} is using the computer. Stop it anyway?", { name: name ? escapeMarkdown(name) : tr("A teammate") });
+        ? tr("{name} is using the computer. Close the browser anyway?", {
+            name: name ? escapeMarkdown(name) : tr("A teammate"),
+          })
+        : tr("{name} is using the computer. Stop it anyway?", {
+            name: name ? escapeMarkdown(name) : tr("A teammate"),
+          });
     const label = action === "release" ? tr("Close the browser") : tr("Stop the computer");
-    await respond(interaction, { content: question, components: [confirmRow(PREFIX, [action], tr, label)] });
+    await respond(interaction, {
+      content: question,
+      components: [confirmRow(PREFIX, [action], tr, label)],
+    });
     return;
   }
-  await respond(interaction, action === "release" ? await release(link.userId, tr) : await stop(link.userId, tr));
+  await respond(
+    interaction,
+    action === "release" ? await release(link.userId, tr) : await stop(link.userId, tr),
+  );
 }
 
-async function explainTakeover(interaction: ChatInputCommandInteraction, { link, tr }: FeatureContext) {
+async function explainTakeover(
+  interaction: ChatInputCommandInteraction,
+  { link, tr }: FeatureContext,
+) {
   const { store, computer } = await currentComputer(link.userId);
   const name = teammateName(store, computer.workingBotId);
   const lines = [
     computer.status === "takeover"
-      ? tr("{name} is waiting for you to finish a step in the browser.", { name: name ? escapeMarkdown(name) : tr("Your teammate") })
+      ? tr("{name} is waiting for you to finish a step in the browser.", {
+          name: name ? escapeMarkdown(name) : tr("Your teammate"),
+        })
       : "",
-    tr("Taking control of the browser needs the app, where you can click and type on the live screen."),
+    tr(
+      "Taking control of the browser needs the app, where you can click and type on the live screen.",
+    ),
     inApp(tr),
     tr("When you are done, send a message here and your teammate continues."),
   ].filter(Boolean);
@@ -199,21 +246,40 @@ async function explainTakeover(interaction: ChatInputCommandInteraction, { link,
 export const feature: DiscordFeature = {
   prefix: PREFIX,
   commands: [
-    dmCommand("computer", "See and control your teammates' computer", "チームメイトのコンピューターを確認・操作")
+    dmCommand(
+      "computer",
+      "See and control your teammates' computer",
+      "チームメイトのコンピューターを確認・操作",
+    )
       .addSubcommand((sub) =>
-        sub.setName("status").setDescription("What the computer is doing, with the latest screen").setDescriptionLocalization("ja", "コンピューターの状態と最新の画面"),
+        sub
+          .setName("status")
+          .setDescription("What the computer is doing, with the latest screen")
+          .setDescriptionLocalization("ja", "コンピューターの状態と最新の画面"),
       )
       .addSubcommand((sub) =>
-        sub.setName("screenshot").setDescription("Capture the browser screen now").setDescriptionLocalization("ja", "ブラウザの画面を今すぐ撮影"),
+        sub
+          .setName("screenshot")
+          .setDescription("Capture the browser screen now")
+          .setDescriptionLocalization("ja", "ブラウザの画面を今すぐ撮影"),
       )
       .addSubcommand((sub) =>
-        sub.setName("release").setDescription("Close the browser").setDescriptionLocalization("ja", "ブラウザを閉じる"),
+        sub
+          .setName("release")
+          .setDescription("Close the browser")
+          .setDescriptionLocalization("ja", "ブラウザを閉じる"),
       )
       .addSubcommand((sub) =>
-        sub.setName("stop").setDescription("Close the browser and pause the sandbox").setDescriptionLocalization("ja", "ブラウザを閉じてサンドボックスを一時停止"),
+        sub
+          .setName("stop")
+          .setDescription("Close the browser and pause the sandbox")
+          .setDescriptionLocalization("ja", "ブラウザを閉じてサンドボックスを一時停止"),
       )
       .addSubcommand((sub) =>
-        sub.setName("takeover").setDescription("Take control of the browser yourself").setDescriptionLocalization("ja", "自分でブラウザを操作する"),
+        sub
+          .setName("takeover")
+          .setDescription("Take control of the browser yourself")
+          .setDescriptionLocalization("ja", "自分でブラウザを操作する"),
       ),
   ],
   async command(interaction, ctx) {
@@ -227,6 +293,9 @@ export const feature: DiscordFeature = {
     if (!interaction.isButton() || (args[0] !== "release" && args[0] !== "stop")) return;
     // Closing a browser can take longer than Discord's 3 seconds.
     await interaction.deferUpdate();
-    await updateMessage(interaction, args[0] === "release" ? await release(link.userId, tr) : await stop(link.userId, tr));
+    await updateMessage(
+      interaction,
+      args[0] === "release" ? await release(link.userId, tr) : await stop(link.userId, tr),
+    );
   },
 };

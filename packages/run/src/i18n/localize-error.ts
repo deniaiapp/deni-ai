@@ -1,102 +1,52 @@
-import "@tanstack/react-start/server-only";
-
-import { getExtracted, getLocale } from "@/i18n/server";
-import { translateMessage } from "./standalone";
-import { USAGE_LIMIT_HEADER, type UsageLimitError } from "@/lib/billing/plans";
-import { getUsageSnapshot } from "@/lib/billing/usage";
+import { translateError, translateMessage, translatorFor } from "./standalone";
+import { USAGE_LIMIT_HEADER, type UsageLimitError } from "../billing/plans";
+import { getUsageSnapshot } from "../billing/usage";
 
 /**
- * Translates the English messages that lib code throws so API routes can return them in the
- * viewer's language. Messages that are not mapped here fall back to the
- * shared server dictionary, and anything still unknown is returned unchanged.
+ * Translate the English messages lib code throws so hosts can answer in the viewer's
+ * language (the server dictionary in standalone-ja.ts). Unknown messages are returned
+ * unchanged.
  */
-export async function localizeError(error: unknown, fallback?: string): Promise<string> {
-  const t = await getExtracted();
+export function localizeError(error: unknown, locale: unknown, fallback?: string): string {
   const message = error instanceof Error ? error.message : typeof error === "string" ? error : "";
-  if (!message) return fallback ?? t("Something went wrong");
-
-  const exact: Record<string, () => string> = {
-    "Invalid cron expression": () => t("Invalid cron expression"),
-    "Could not revoke access at Google. Try again.": () => t("Could not revoke access at Google. Try again."),
-    "Could not revoke access at GitHub. Try again.": () => t("Could not revoke access at GitHub. Try again."),
-    "Cron expression has no matching time in the next five years": () => t("Cron expression has no matching time in the next five years"),
-    "MCP URL is invalid": () => t("MCP URL is invalid"),
-    "MCP URL must use http or https": () => t("MCP URL must use http or https"),
-    "MCP connection name is required": () => t("MCP connection name is required"),
-    "MCP connection not found": () => t("MCP connection not found"),
-    "An MCP connection with this name already exists": () => t("An MCP connection with this name already exists"),
-    "MCP connection is not available": () => t("MCP connection is not available"),
-    "MCP tool name is invalid": () => t("MCP tool name is invalid"),
-    "MCP request failed": () => t("MCP request failed"),
-    "Sign in to this MCP server again": () => t("Sign in to this MCP server again"),
-    "This MCP server does not publish how to sign in": () => t("This MCP server does not publish how to sign in"),
-    "This MCP server does not support secure sign-in (PKCE)": () => t("This MCP server does not support secure sign-in (PKCE)"),
-    "This MCP server needs an OAuth client that Deni Run does not have": () => t("This MCP server needs an OAuth client that Deni Run does not have"),
-    "Could not register Deni Run with this MCP server": () => t("Could not register Deni Run with this MCP server"),
-    "This sign-in link has expired. Start again.": () => t("This sign-in link has expired. Start again."),
-    "The MCP server refused the sign-in. Start again.": () => t("The MCP server refused the sign-in. Start again."),
-    "This connector is not set up on this server yet": () => t("This connector is not set up on this server yet"),
-    "Unknown connector": () => t("Unknown connector"),
-    "Path is outside the workspace": () => t("Path is outside the workspace"),
-    "A file path is required": () => t("A file path is required"),
-    "A directory path is required": () => t("A directory path is required"),
-    "File is too large (maximum 1 MB)": () => t("File is too large (maximum 1 MB)"),
-    "File is too large to download": () => t("File is too large to download"),
-    "File not found": () => t("File not found"),
-    "Path is a directory": () => t("Path is a directory"),
-    "The workspace root cannot be deleted": () => t("The workspace root cannot be deleted"),
-    "Artifact path must stay inside the workspace": () => t("Artifact path must stay inside the workspace"),
-    "Unable to register artifact": () => t("Unable to register artifact"),
-    "Invalid URL": () => t("Invalid URL"),
-    "Only http(s) URLs are allowed": () => t("Only http(s) URLs are allowed"),
-    "Invalid plugin operation": () => t("Invalid plugin operation"),
-    "Connect write access first": () => t("Connect write access first"),
-    "Result too large to display": () => t("Result too large to display"),
-    "Input too large": () => t("Input too large"),
-    "No teammate matched that mention. Choose a name or use @everyone.": () => t("No teammate matched that mention. Choose a name or use @everyone."),
-    "Conversation no longer exists": () => t("Conversation no longer exists"),
-    "Reply target not found": () => t("Reply target not found"),
-    "Choose a valid time.": () => t("Choose a valid time."),
-    "Choose a weekday.": () => t("Choose a weekday."),
-    "Choose a day between 1 and 31.": () => t("Choose a day between 1 and 31."),
-    "Checkout URL is unavailable": () => t("Checkout URL is unavailable"),
-  };
-  const known = exact[message];
-  if (known) return known();
-
-  let match: RegExpMatchArray | null;
-  if ((match = message.match(/^Invalid timezone: (.+)$/))) return t("Invalid timezone: {timezone}", { timezone: match[1] });
-  if ((match = message.match(/^Invalid MCP header: (.+)$/))) return t("Invalid MCP header: {name}", { name: match[1] });
-  if ((match = message.match(/^MCP SSE connection failed \((\d+)\)$/))) return t("MCP SSE connection failed ({status})", { status: match[1] });
-  if ((match = message.match(/^MCP request failed \((\d+)\)$/))) return t("MCP request failed ({status})", { status: match[1] });
-  if ((match = message.match(/^Connect (\w+)( write access)? in Plugins first\.$/))) {
-    return match[2]
-      ? t("Connect {service} write access in Plugins first.", { service: match[1] })
-      : t("Connect {service} in Plugins first.", { service: match[1] });
-  }
-  if ((match = message.match(/^Reconnect (\w+) in Plugins\.$/))) return t("Reconnect {service} in Plugins.", { service: match[1] });
-
-  return translateMessage(await getLocale(), message);
+  if (!message) return fallback ?? translatorFor(locale)("Something went wrong");
+  return translateError(locale, error);
 }
 
 /** Usage limits are phrased from the Deni AI plan at the time of the request. */
-export async function localizeUsageLimit(userId: string, error: UsageLimitError): Promise<string> {
-  const t = await getExtracted();
+export async function localizeUsageLimit(
+  userId: string,
+  error: UsageLimitError,
+  locale: unknown,
+): Promise<string> {
+  const t = translatorFor(locale);
   if (error.metric === "link") return t("Connect your Deni AI account to use Deni Run.");
   const usage = await getUsageSnapshot(userId);
-  if (!usage) return translateMessage(await getLocale(), error.message);
+  if (!usage) return translateMessage(locale, error.message);
   const plan = usage.planName;
   if (error.metric === "budget") {
-    return t("This month's Deni AI usage is used up on {plan}. Upgrade your Deni AI plan to keep going.", { plan });
+    return t(
+      "This month's Deni AI usage is used up on {plan}. Upgrade your Deni AI plan to keep going.",
+      { plan },
+    );
   }
-  return t("Teammate limit reached ({limit} on {plan}). Upgrade your Deni AI plan to add more teammates.", { limit: String(usage.teammates.limit), plan });
+  return t(
+    "Teammate limit reached ({limit} on {plan}). Upgrade your Deni AI plan to add more teammates.",
+    { limit: String(usage.teammates.limit), plan },
+  );
 }
 
-/** A chat 402 whose header tells the client which limit stopped the message. */
-export async function usageLimitResponse(userId: string, error: UsageLimitError) {
-  return new Response(await localizeUsageLimit(userId, error), {
-    status: 402,
-    headers: { [USAGE_LIMIT_HEADER]: error.metric },
-  });
+/**
+ * A 402 whose `x-usage-limit` header names the limit that stopped the request; the body is
+ * `{ error, code: "usage_limit", metric }` with the message in the viewer's language.
+ */
+export async function usageLimitResponse(userId: string, error: UsageLimitError, locale: unknown) {
+  return Response.json(
+    {
+      error: await localizeUsageLimit(userId, error, locale),
+      code: error.code,
+      metric: error.metric,
+    },
+    { status: 402, headers: { [USAGE_LIMIT_HEADER]: error.metric } },
+  );
 }
-

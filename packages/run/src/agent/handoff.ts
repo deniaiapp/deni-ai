@@ -1,12 +1,10 @@
-import "@tanstack/react-start/server-only";
-
 import { convertToModelMessages, isStepCount, streamText, type UIMessage } from "ai";
 import { createId, nowIso } from "../data/ids";
 import { getDeniModel } from "./llm";
 import { messagesForModel } from "../chat/messages";
 import { loadMessages, mutateStore, readStore, saveMessages } from "../data/store";
 import type { HandoffSnapshot, HandoffStep } from "../types";
-import { translateError, translateMessage, translatorFor } from "@/i18n/standalone";
+import { translateError, translateMessage, translatorFor } from "../i18n/standalone";
 import { assertCanUseTokens, isUsageLimitError, recordModelUsage } from "../billing/usage";
 import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "../chat/message-bubbles";
 
@@ -34,9 +32,7 @@ export async function getHandoff(userId: string, id: string): Promise<HandoffSna
 }
 
 export async function listHandoffs(userId: string): Promise<HandoffSnapshot[]> {
-  const live = [...handoffs().values()]
-    .filter((run) => run.userId === userId)
-    .map(snapshotOf);
+  const live = [...handoffs().values()].filter((run) => run.userId === userId).map(snapshotOf);
   const store = await readStore(userId);
   const saved = store.handoffs ?? [];
   const byId = new Map<string, HandoffSnapshot>();
@@ -114,7 +110,11 @@ export async function startHandoff(opts: {
     await assertCanUseTokens(opts.userId);
   } catch (error) {
     if (isUsageLimitError(error)) {
-      return { error: translateMessage(opts.locale, error.message), deliveredTo: target.name, threadId: thread.id };
+      return {
+        error: translateMessage(opts.locale, error.message),
+        deliveredTo: target.name,
+        threadId: thread.id,
+      };
     }
     throw error;
   }
@@ -225,7 +225,10 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
   const assistant: UIMessage = {
     id: `${run.id}_assistant`,
     role: "assistant",
-    metadata: { ...BUBBLE_BREAK_METADATA, author: { id: target.id, name: target.name, accent: target.accent } },
+    metadata: {
+      ...BUBBLE_BREAK_METADATA,
+      author: { id: target.id, name: target.name, accent: target.accent },
+    },
     parts: [{ type: "text", text: reply }],
   };
   await saveMessages(run.userId, run.threadId, [assistant]);

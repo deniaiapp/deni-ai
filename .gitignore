@@ -19,3 +19,8 @@ coverage
 .DS_Store
 *.pem
 npm-debug.log*
+
+# Deni Run local data (workspace mirrors, browser profiles, test data) and trial credentials
+.deni/
+.deni-test/
+.trial-*.local

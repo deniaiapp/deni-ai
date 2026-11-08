@@ -12,6 +12,10 @@ export type Bot = {
   createdAt: string;
   updatedAt: string;
   memory: MemoryEntry[];
+  /** Tool groups the teammate may use; null or undefined: all (see TEAMMATE_TOOL_GROUPS). */
+  tools?: string[] | null;
+  /** Whether the teammate may use the shared computer. Undefined means yes. */
+  computerAccess?: boolean;
 };
 
 export type MemoryEntry = {
@@ -89,6 +93,8 @@ export type ComputerState = {
   steelDebugUrl: string | null;
   browserLive?: boolean;
   sandboxLive?: boolean;
+  /** Which providers this deployment has; the UI disables the computer panel without them. */
+  capabilities?: { browser: boolean; sandbox: boolean; files: boolean };
   /** Per-job browser/workspace state. The account still owns the underlying profile and files. */
   workspaces?: Record<string, ComputerWorkspaceState>;
   activity: ComputerActivity[];

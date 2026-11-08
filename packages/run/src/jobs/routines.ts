@@ -1,5 +1,3 @@
-import "@tanstack/react-start/server-only";
-
 import { z } from "zod";
 import { nextCron } from "./cron";
 import { createId, nowIso } from "../data/ids";
@@ -24,7 +22,10 @@ const updateSchema = fields.partial().extend({ id });
 export type CreateRoutineInput = z.input<typeof createSchema>;
 export type UpdateRoutineInput = z.input<typeof updateSchema>;
 /** field is the first invalid field (name, instructions, cron, ...), so callers can say which one. */
-export type RoutineResult = { ok: true; routine: Routine } | { ok: false; reason: "invalid"; field: string } | { ok: false; reason: "not_found" };
+export type RoutineResult =
+  | { ok: true; routine: Routine }
+  | { ok: false; reason: "invalid"; field: string }
+  | { ok: false; reason: "not_found" };
 
 function invalid(error: z.ZodError): RoutineResult {
   return { ok: false, reason: "invalid", field: String(error.issues[0]?.path[0]) };
@@ -35,17 +36,37 @@ function invalid(error: z.ZodError): RoutineResult {
  * to. Throws the English cron errors (invalid expression or timezone) before anything is saved.
  * locale is the language background runs write in.
  */
-export async function createRoutine(userId: string, input: CreateRoutineInput, locale: string): Promise<RoutineResult> {
+export async function createRoutine(
+  userId: string,
+  input: CreateRoutineInput,
+  locale: string,
+): Promise<RoutineResult> {
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const data = parsed.data;
   const routine = await mutateStore(userId, (store) => {
     const thread = store.threads.find((entry) => entry.id === data.threadId);
-    if (!store.bots.some((bot) => bot.id === data.botId) || !thread?.botIds.includes(data.botId)) return null;
+    if (!store.bots.some((bot) => bot.id === data.botId) || !thread?.botIds.includes(data.botId))
+      return null;
     const timezone = data.timezone ?? store.config.timezone;
     const nextRunAt = nextCron(data.cron, timezone);
     const enabled = data.enabled ?? true;
-    const item: Routine = { id: createId("rtn"), botId: data.botId, threadId: data.threadId, name: data.name, instructions: data.instructions, cron: data.cron, timezone, enabled, revision: 0, lastRunAt: null, nextRunAt: enabled ? nextRunAt : null, lastError: null, createdAt: nowIso(), locale };
+    const item: Routine = {
+      id: createId("rtn"),
+      botId: data.botId,
+      threadId: data.threadId,
+      name: data.name,
+      instructions: data.instructions,
+      cron: data.cron,
+      timezone,
+      enabled,
+      revision: 0,
+      lastRunAt: null,
+      nextRunAt: enabled ? nextRunAt : null,
+      lastError: null,
+      createdAt: nowIso(),
+      locale,
+    };
     store.routines.push(item);
     return item;
   });
@@ -56,7 +77,11 @@ export async function createRoutine(userId: string, input: CreateRoutineInput, l
  * Change any of a routine's fields. A real change bumps the revision, so a run scheduled from the
  * old version is skipped, and clears the last error. Throws the English cron errors.
  */
-export async function updateRoutine(userId: string, input: UpdateRoutineInput, locale: string): Promise<RoutineResult> {
+export async function updateRoutine(
+  userId: string,
+  input: UpdateRoutineInput,
+  locale: string,
+): Promise<RoutineResult> {
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) return invalid(parsed.error);
   const data = parsed.data;
@@ -66,18 +91,32 @@ export async function updateRoutine(userId: string, input: UpdateRoutineInput, l
     const cron = data.cron ?? item.cron;
     const timezone = data.timezone ?? item.timezone ?? store.config.timezone;
     const enabled = data.enabled ?? item.enabled;
-    const scheduleChanged = cron !== item.cron || timezone !== item.timezone || enabled !== item.enabled;
+    const scheduleChanged =
+      cron !== item.cron || timezone !== item.timezone || enabled !== item.enabled;
     // Validate edits even when disabled, but allow an invalid legacy routine to be switched off.
-    const nextRunAt = data.cron !== undefined || data.timezone !== undefined || (enabled && scheduleChanged) ? nextCron(cron, timezone) : item.nextRunAt;
-    const changed = scheduleChanged || (data.name !== undefined && data.name !== item.name) || (data.instructions !== undefined && data.instructions !== item.instructions);
+    const nextRunAt =
+      data.cron !== undefined || data.timezone !== undefined || (enabled && scheduleChanged)
+        ? nextCron(cron, timezone)
+        : item.nextRunAt;
+    const changed =
+      scheduleChanged ||
+      (data.name !== undefined && data.name !== item.name) ||
+      (data.instructions !== undefined && data.instructions !== item.instructions);
     item.name = data.name ?? item.name;
     item.instructions = data.instructions ?? item.instructions;
     item.cron = cron;
     item.timezone = timezone;
     item.enabled = enabled;
     item.locale = locale;
-    item.nextRunAt = enabled ? (scheduleChanged || !item.nextRunAt ? nextRunAt ?? nextCron(cron, timezone) : item.nextRunAt) : null;
-    if (changed) { item.revision = (item.revision ?? 0) + 1; item.lastError = null; }
+    item.nextRunAt = enabled
+      ? scheduleChanged || !item.nextRunAt
+        ? (nextRunAt ?? nextCron(cron, timezone))
+        : item.nextRunAt
+      : null;
+    if (changed) {
+      item.revision = (item.revision ?? 0) + 1;
+      item.lastError = null;
+    }
     return item;
   });
   return routine ? { ok: true, routine } : { ok: false, reason: "not_found" };

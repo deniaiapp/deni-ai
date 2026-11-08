@@ -35,7 +35,11 @@ export function mergeJobSnapshots(previous: AgentJob[], incoming: AgentJob[]) {
     const currentTerminal = TERMINAL.has(current.status);
     const nextTerminal = TERMINAL.has(next.status);
     if (currentTerminal && !nextTerminal && !isNewerJob(next, current)) continue;
-    if (currentTerminal === false && nextTerminal && timestamp(next.updatedAt) < timestamp(current.updatedAt)) {
+    if (
+      currentTerminal === false &&
+      nextTerminal &&
+      timestamp(next.updatedAt) < timestamp(current.updatedAt)
+    ) {
       continue;
     }
     if (
@@ -68,7 +72,9 @@ export function groupJobsByThread(jobs: AgentJob[]) {
 }
 
 export function jobVisualState(jobs: AgentJob[]): JobVisualState | undefined {
-  const current = jobs.find((job) => ACTIVE.has(job.status) || WAITING.has(job.status) || job.status === "uncertain");
+  const current = jobs.find(
+    (job) => ACTIVE.has(job.status) || WAITING.has(job.status) || job.status === "uncertain",
+  );
   if (!current) return undefined;
   if (ACTIVE.has(current.status)) return "running";
   return current.status === "uncertain" ? "attention" : "waiting";
@@ -86,16 +92,21 @@ export function shouldMarkThreadUnread(
 ) {
   return Boolean(
     previousStatus &&
-      (ACTIVE.has(previousStatus) || WAITING.has(previousStatus)) &&
-      ["completed", "failed", "cancelled"].includes(nextStatus) &&
-      threadId !== activeThreadId,
+    (ACTIVE.has(previousStatus) || WAITING.has(previousStatus)) &&
+    ["completed", "failed", "cancelled"].includes(nextStatus) &&
+    threadId !== activeThreadId,
   );
 }
 
 /** Unread notifications about jobs in the open thread. The person already sees those results there. */
-export function notificationsSeenInThread(notifications: AppNotification[], threadJobs: AgentJob[] | undefined) {
+export function notificationsSeenInThread(
+  notifications: AppNotification[],
+  threadJobs: AgentJob[] | undefined,
+) {
   const jobIds = new Set((threadJobs ?? []).map((job) => job.id));
-  return notifications.filter((item) => !item.readAt && item.jobId && jobIds.has(item.jobId)).map((item) => item.id);
+  return notifications
+    .filter((item) => !item.readAt && item.jobId && jobIds.has(item.jobId))
+    .map((item) => item.id);
 }
 
 export function canCommitThreadResponse(activeThreadId: string | null, responseThreadId: string) {

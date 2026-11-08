@@ -1,5 +1,3 @@
-import "@tanstack/react-start/server-only";
-
 import {
   ActionRowBuilder,
   ButtonBuilder,
@@ -21,8 +19,8 @@ import {
   truncate,
   updateMessage,
 } from "../ui";
-import { listNotifications, markAllNotificationsRead } from "@/lib/jobs/notifications";
-import type { AppNotification } from "@/lib/types";
+import { listNotifications, markAllNotificationsRead } from "@deniai/run/jobs/notifications";
+import type { AppNotification } from "@deniai/run/types";
 
 /** Whether background work is DMed here (src/lib/discord/push.ts sends it), and the app's inbox. */
 
@@ -40,7 +38,9 @@ async function setNotify(userId: string, notify: boolean, tr: Translate) {
   await setDiscordPrefs(userId, { notify });
   return notify
     ? `${tr("Notifications are on.")}\n${whatIsSent(tr)}`
-    : tr("Notifications are off. You still find them in the app and with /inbox. Turn them back on with /notify on.");
+    : tr(
+        "Notifications are off. You still find them in the app and with /inbox. Turn them back on with /notify on.",
+      );
 }
 
 async function notifyStatus(userId: string, tr: Translate) {
@@ -64,7 +64,10 @@ async function inbox(userId: string, tr: Translate) {
   const header = `**${tr("Unread notifications")}**`;
   const list = bulletList(unread.map(inboxEntry), tr, "", MESSAGE_LIMIT - header.length - 100);
   const row = new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-    new ButtonBuilder().setCustomId(customId(PREFIX, "readall")).setLabel(tr("Mark all read")).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(customId(PREFIX, "readall"))
+      .setLabel(tr("Mark all read"))
+      .setStyle(ButtonStyle.Secondary),
   );
   return { content: `${header}\n${list}`, components: [row] };
 }
@@ -72,10 +75,32 @@ async function inbox(userId: string, tr: Translate) {
 export const feature: DiscordFeature = {
   prefix: PREFIX,
   commands: [
-    dmCommand("notify", "Choose whether background work is reported here", "バックグラウンドの作業をここで知らせるかを選択")
-      .addSubcommand((sub) => sub.setName("on").setDescription("DM me when background work ends or needs me").setDescriptionLocalization("ja", "バックグラウンドの作業が終わったときや対応が必要なときに DM する"))
-      .addSubcommand((sub) => sub.setName("off").setDescription("Stop these DMs").setDescriptionLocalization("ja", "この DM を止める"))
-      .addSubcommand((sub) => sub.setName("status").setDescription("Show whether notifications are on and what is sent").setDescriptionLocalization("ja", "通知のオン・オフと送られる内容を表示")),
+    dmCommand(
+      "notify",
+      "Choose whether background work is reported here",
+      "バックグラウンドの作業をここで知らせるかを選択",
+    )
+      .addSubcommand((sub) =>
+        sub
+          .setName("on")
+          .setDescription("DM me when background work ends or needs me")
+          .setDescriptionLocalization(
+            "ja",
+            "バックグラウンドの作業が終わったときや対応が必要なときに DM する",
+          ),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("off")
+          .setDescription("Stop these DMs")
+          .setDescriptionLocalization("ja", "この DM を止める"),
+      )
+      .addSubcommand((sub) =>
+        sub
+          .setName("status")
+          .setDescription("Show whether notifications are on and what is sent")
+          .setDescriptionLocalization("ja", "通知のオン・オフと送られる内容を表示"),
+      ),
     dmCommand("inbox", "Show unread notifications", "未読の通知を表示"),
   ],
   async command(interaction, { link, tr }) {
@@ -84,7 +109,8 @@ export const feature: DiscordFeature = {
       return;
     }
     const sub = interaction.options.getSubcommand();
-    if (sub === "on" || sub === "off") await respond(interaction, await setNotify(link.userId, sub === "on", tr));
+    if (sub === "on" || sub === "off")
+      await respond(interaction, await setNotify(link.userId, sub === "on", tr));
     else await respond(interaction, await notifyStatus(link.userId, tr));
   },
   async component(interaction, { link, tr }, args) {
@@ -93,6 +119,9 @@ export const feature: DiscordFeature = {
     await markAllNotificationsRead(link.userId);
     // Keep the list visible so the person still sees what they just marked.
     const note = tr("Marked all notifications as read.");
-    await updateMessage(interaction, `${truncate(interaction.message.content, MESSAGE_LIMIT - note.length - 2)}\n\n${note}`);
+    await updateMessage(
+      interaction,
+      `${truncate(interaction.message.content, MESSAGE_LIMIT - note.length - 2)}\n\n${note}`,
+    );
   },
 };

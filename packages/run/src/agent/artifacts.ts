@@ -1,17 +1,15 @@
-import "@tanstack/react-start/server-only";
-
 import { and, desc, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { jobArtifacts } from "@/db/schema";
+import { db } from "../runtime";
+import { runArtifacts } from "@deniai/db";
 import { createId } from "../data/ids";
 import type { Artifact } from "../types";
 
-function mapArtifact(row: typeof jobArtifacts.$inferSelect): Artifact {
+function mapArtifact(row: typeof runArtifacts.$inferSelect): Artifact {
   return {
     id: row.id,
     jobId: row.jobId,
     threadId: row.threadId,
-    botId: row.botId,
+    botId: row.teammateId,
     path: row.path,
     title: row.title,
     mimeType: row.mimeType,
@@ -32,17 +30,20 @@ export async function registerArtifact(options: {
   description?: string | null;
 }) {
   const normalizedPath = options.path.trim().replace(/^\/+/, "");
-  if (!normalizedPath || normalizedPath.split("/").some((part) => part === ".." || part.startsWith("."))) {
+  if (
+    !normalizedPath ||
+    normalizedPath.split("/").some((part) => part === ".." || part.startsWith("."))
+  ) {
     throw new Error("Artifact path must stay inside the workspace");
   }
   const [row] = await db
-    .insert(jobArtifacts)
+    .insert(runArtifacts)
     .values({
       id: createId("art"),
       userId: options.userId,
       jobId: options.jobId ?? null,
       threadId: options.threadId,
-      botId: options.botId ?? null,
+      teammateId: options.botId ?? null,
       path: normalizedPath,
       title: options.title.trim() || normalizedPath,
       mimeType: options.mimeType?.trim() || "text/plain",
@@ -56,20 +57,20 @@ export async function registerArtifact(options: {
 export async function getArtifact(userId: string, id: string) {
   const rows = await db
     .select()
-    .from(jobArtifacts)
-    .where(and(eq(jobArtifacts.userId, userId), eq(jobArtifacts.id, id)))
+    .from(runArtifacts)
+    .where(and(eq(runArtifacts.userId, userId), eq(runArtifacts.id, id)))
     .limit(1);
   return rows[0] ? mapArtifact(rows[0]) : null;
 }
 
 export async function listArtifacts(userId: string, threadId?: string) {
-  const conditions = [eq(jobArtifacts.userId, userId)];
-  if (threadId) conditions.push(eq(jobArtifacts.threadId, threadId));
+  const conditions = [eq(runArtifacts.userId, userId)];
+  if (threadId) conditions.push(eq(runArtifacts.threadId, threadId));
   const rows = await db
     .select()
-    .from(jobArtifacts)
+    .from(runArtifacts)
     .where(and(...conditions))
-    .orderBy(desc(jobArtifacts.createdAt))
+    .orderBy(desc(runArtifacts.createdAt))
     .limit(200);
   return rows.map(mapArtifact);
 }

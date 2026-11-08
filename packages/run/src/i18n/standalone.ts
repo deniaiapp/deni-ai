@@ -42,7 +42,9 @@ function patternsFor(locale: Locale): Pattern[] {
 
 export function fill(template: string, params?: Record<string, string | number>) {
   if (!params) return template;
-  return template.replace(/\{(\w+)\}/g, (whole, name: string) => (name in params ? String(params[name]) : whole));
+  return template.replace(/\{(\w+)\}/g, (whole, name: string) =>
+    name in params ? String(params[name]) : whole,
+  );
 }
 
 export function resolveServerLocale(value: unknown): Locale {

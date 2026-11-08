@@ -1,0 +1,33 @@
+{
+  "name": "@deniai/run-worker",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Deni Run worker: the job scheduler (routines, stale-lease recovery, job claiming) and, behind RUN_DISCORD_ENABLED, the Discord bot",
+  "type": "module",
+  "scripts": {
+    "start": "tsx --env-file-if-exists=.env src/worker.ts",
+    "dev": "tsx watch --env-file-if-exists=.env src/worker.ts",
+    "build": "esbuild src/worker.ts --bundle --platform=node --format=esm --target=node26 --outfile=dist/worker.mjs --packages=bundle --external:playwright-core --external:playwright --external:zlib-sync --external:bufferutil --external:utf-8-validate --external:@discordjs/opus --banner:js=\"import { createRequire as __runCreateRequire } from 'node:module'; const require = __runCreateRequire(import.meta.url);\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache"
+  },
+  "dependencies": {
+    "@deniai/billing": "workspace:*",
+    "@deniai/db": "workspace:*",
+    "@deniai/run": "workspace:*",
+    "ai": "^7.0.155",
+    "discord.js": "^14.28.1",
+    "postgres": "^3.4.9"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "drizzle-orm": "^0.45.4",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

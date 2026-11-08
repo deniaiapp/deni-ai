@@ -1,5 +1,3 @@
-import "@tanstack/react-start/server-only";
-
 import type { DiscordFeature } from "../ui";
 import { feature as computer } from "./computer";
 import { feature as files } from "./files";
@@ -13,4 +11,15 @@ import { feature as tasks } from "./tasks";
 import { feature as team } from "./team";
 
 /** Every Discord area outside the core chat commands, in the order /help lists them. */
-export const features: DiscordFeature[] = [team, groups, tasks, files, skills, routines, computer, plugins, mcp, notify];
+export const features: DiscordFeature[] = [
+  team,
+  groups,
+  tasks,
+  files,
+  skills,
+  routines,
+  computer,
+  plugins,
+  mcp,
+  notify,
+];

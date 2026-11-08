@@ -1,6 +1,5 @@
-import "@tanstack/react-start/server-only";
-
 import { validAvatarIcon } from "./avatar";
+import { normalizeToolGroups } from "./tools";
 import { createId, nowIso } from "../data/ids";
 import { mutateStore } from "../data/store";
 import type { Bot, Thread } from "../types";
@@ -21,6 +20,9 @@ export type TeammateInput = {
   job?: string;
   instructions?: string;
   icon?: string | null;
+  /** Tool groups (see TEAMMATE_TOOL_GROUPS); null gives every group. */
+  tools?: string[] | null;
+  computerAccess?: boolean;
 };
 
 export type CreateTeammateResult =
@@ -29,16 +31,23 @@ export type CreateTeammateResult =
   | { ok: false; reason: "name_required" }
   | { ok: false; reason: "limit"; error: UsageLimitError };
 
-export type UpdateTeammateResult = { ok: true; bot: Bot } | { ok: false; reason: "invalid_icon" | "not_found" };
+export type UpdateTeammateResult =
+  | { ok: true; bot: Bot }
+  | { ok: false; reason: "invalid_icon" | "not_found" };
 
 export function isDefaultTeammate(id: string) {
   return DEFAULT_TEAMMATE_IDS.includes(id);
 }
 
 /** A new teammate and its DM, within the plan's teammate limit. */
-export async function createTeammate(userId: string, input: TeammateInput, options?: { preview?: string }): Promise<CreateTeammateResult> {
+export async function createTeammate(
+  userId: string,
+  input: TeammateInput,
+  options?: { preview?: string },
+): Promise<CreateTeammateResult> {
   const name = input.name?.trim();
-  if (input.icon !== undefined && !validAvatarIcon(input.icon)) return { ok: false, reason: "invalid_icon" };
+  if (input.icon !== undefined && !validAvatarIcon(input.icon))
+    return { ok: false, reason: "invalid_icon" };
   if (!name) return { ok: false, reason: "name_required" };
   try {
     await assertCanCreateTeammate(userId);
@@ -56,6 +65,8 @@ export async function createTeammate(userId: string, input: TeammateInput, optio
       input.instructions?.trim() ||
       `You are Deni Run's teammate "${name}". Complete the assigned work on the computer.`,
     accent: ACCENTS[Math.floor(Math.random() * ACCENTS.length)],
+    tools: normalizeToolGroups(input.tools),
+    computerAccess: input.computerAccess ?? true,
     createdAt: at,
     updatedAt: at,
     memory: [],
@@ -81,8 +92,13 @@ export async function createTeammate(userId: string, input: TeammateInput, optio
 }
 
 /** Empty fields keep their current value. A rename also renames the teammate's DM. */
-export async function updateTeammate(userId: string, id: string, input: TeammateInput): Promise<UpdateTeammateResult> {
-  if (input.icon !== undefined && !validAvatarIcon(input.icon)) return { ok: false, reason: "invalid_icon" };
+export async function updateTeammate(
+  userId: string,
+  id: string,
+  input: TeammateInput,
+): Promise<UpdateTeammateResult> {
+  if (input.icon !== undefined && !validAvatarIcon(input.icon))
+    return { ok: false, reason: "invalid_icon" };
   const bot = await mutateStore(userId, (store) => {
     const item = store.bots.find((entry) => entry.id === id);
     if (!item) return null;
@@ -90,6 +106,8 @@ export async function updateTeammate(userId: string, id: string, input: Teammate
     if (input.job) item.job = input.job.trim();
     if (input.instructions) item.instructions = input.instructions;
     if (input.icon !== undefined) item.icon = input.icon || null;
+    if (input.tools !== undefined) item.tools = normalizeToolGroups(input.tools);
+    if (input.computerAccess !== undefined) item.computerAccess = input.computerAccess;
     item.updatedAt = nowIso();
     const dm = store.threads.find((thread) => thread.kind === "dm" && thread.botIds[0] === id);
     if (dm) dm.title = item.name;
@@ -99,7 +117,10 @@ export async function updateTeammate(userId: string, id: string, input: Teammate
 }
 
 /** Removes the teammate with every conversation it is part of, groups included, and its routines. */
-export async function deleteTeammate(userId: string, id: string): Promise<{ ok: true; deleted: boolean } | { ok: false; reason: "default" }> {
+export async function deleteTeammate(
+  userId: string,
+  id: string,
+): Promise<{ ok: true; deleted: boolean } | { ok: false; reason: "default" }> {
   if (isDefaultTeammate(id)) return { ok: false, reason: "default" };
   const deleted = await mutateStore(userId, (store) => {
     const before = store.bots.length;

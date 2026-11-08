@@ -13,7 +13,7 @@ export const TIER_NAMES: Record<DeniTier, string> = {
   pro: "Pro",
 };
 
-/** Mirrors USAGE_POOL_USD in Deni AI (src/lib/usage-pool.ts); Deni AI is authoritative. */
+/** Mirrors USAGE_POOL_USD in @deniai/billing, which is authoritative. */
 export const TIER_BUDGET_USD: Record<DeniTier, number> = {
   free: 10,
   go: 30,
@@ -46,7 +46,10 @@ export class UsageLimitError extends Error {
 }
 
 export function isUsageLimitError(error: unknown): error is UsageLimitError {
-  return error instanceof UsageLimitError || (error as { code?: string } | null | undefined)?.code === "usage_limit";
+  return (
+    error instanceof UsageLimitError ||
+    (error as { code?: string } | null | undefined)?.code === "usage_limit"
+  );
 }
 
 /** Names the limit on a chat 402 so the client can offer to connect or upgrade instead of failing. */

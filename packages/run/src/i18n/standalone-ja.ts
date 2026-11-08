@@ -60,11 +60,11 @@ export const ja: Record<string, string> = {
   "files:write": "ファイル: 書き込み",
   "files:mkdir": "ファイル: フォルダー作成",
   "files:delete": "ファイル: 削除",
-  "list": "一覧",
-  "read": "読み取り",
-  "write": "書き込み",
-  "mkdir": "フォルダー作成",
-  "delete": "削除",
+  list: "一覧",
+  read: "読み取り",
+  write: "書き込み",
+  mkdir: "フォルダー作成",
+  delete: "削除",
 
   // Notifications
   "{name} needs your help": "{name} さんの操作が必要です",
@@ -72,9 +72,11 @@ export const ja: Record<string, string> = {
   "{name} could not finish the task": "{name} さんはタスクを完了できませんでした",
   "{name} could not save the result": "{name} さんは結果を保存できませんでした",
   "Task is waiting for approval": "タスクが承認待ちです",
-  "Review the requested action in the conversation before continuing.": "続行する前に、会話内で求められている操作を確認してください。",
+  "Review the requested action in the conversation before continuing.":
+    "続行する前に、会話内で求められている操作を確認してください。",
   "Task needs setup": "タスクにセットアップが必要です",
-  "Add an OpenRouter API key before retrying this task.": "このタスクを再試行する前に、OpenRouter の API キーを追加してください。",
+  "Add an OpenRouter API key before retrying this task.":
+    "このタスクを再試行する前に、OpenRouter の API キーを追加してください。",
   "Task paused by usage limit": "使用量の上限によりタスクが一時停止しました",
   "Task needs review before retry": "再試行の前にタスクの確認が必要です",
   "The worker stopped unexpectedly after a checkpoint. Review external side effects, then retry explicitly.":
@@ -90,7 +92,8 @@ export const ja: Record<string, string> = {
 
   // Job state
   "Conversation was deleted": "会話が削除されました",
-  "Routine was disabled, deleted, or changed before this run started.": "この実行が始まる前に、ルーティンが無効化、削除、または変更されました。",
+  "Routine was disabled, deleted, or changed before this run started.":
+    "この実行が始まる前に、ルーティンが無効化、削除、または変更されました。",
   "OPENROUTER_API_KEY is missing": "OPENROUTER_API_KEY が設定されていません",
   "Cancelled by user": "ユーザーがキャンセルしました",
   "Worker lease expired; review this task before retrying to avoid duplicate side effects":
@@ -100,11 +103,11 @@ export const ja: Record<string, string> = {
   "Unable to persist job": "ジョブを保存できませんでした",
 
   // Handoffs
-  "Starting": "開始中",
-  "Failed": "失敗",
-  "Thinking": "考え中",
-  "Writing": "作成中",
-  "Done": "完了",
+  Starting: "開始中",
+  Failed: "失敗",
+  Thinking: "考え中",
+  Writing: "作成中",
+  Done: "完了",
   "Finished without a written report.": "報告書は書かれずに終了しました。",
   "[Handoff from {name}]": "[{name} さんからの引き継ぎ]",
 
@@ -113,23 +116,30 @@ export const ja: Record<string, string> = {
   "Steel returned no browser context": "Steel からブラウザーコンテキストが返されませんでした",
   "STEEL_API_KEY is required in production": "本番環境では STEEL_API_KEY が必要です",
   "E2B_API_KEY is required in production": "本番環境では E2B_API_KEY が必要です",
-  "S3-compatible screenshot storage is required in production": "本番環境では S3 互換のスクリーンショットストレージが必要です",
-  "S3-compatible workspace storage is required in production": "本番環境では S3 互換のワークスペースストレージが必要です",
+  "S3-compatible screenshot storage is required in production":
+    "本番環境では S3 互換のスクリーンショットストレージが必要です",
+  "S3-compatible workspace storage is required in production":
+    "本番環境では S3 互換のワークスペースストレージが必要です",
   "A selector or x,y coordinates are required": "セレクターまたは x,y 座標が必要です",
   "Sandbox was stopped": "サンドボックスが停止されました",
   "Invalid object path": "オブジェクトのパスが正しくありません",
   "APP_ENCRYPTION_KEY is required": "APP_ENCRYPTION_KEY が必要です",
-  "APP_ENCRYPTION_KEY must decode to 32 bytes": "APP_ENCRYPTION_KEY は 32 バイトにデコードできる必要があります",
+  "APP_ENCRYPTION_KEY must decode to 32 bytes":
+    "APP_ENCRYPTION_KEY は 32 バイトにデコードできる必要があります",
   "Stored secret is not encrypted": "保存されているシークレットは暗号化されていません",
   "Invalid encrypted secret": "暗号化されたシークレットが正しくありません",
   "Workspace sync snapshot is missing; refusing to overwrite remote files":
     "ワークスペースの同期スナップショットがないため、リモートのファイルは上書きしません",
-  "Workspace changed while the command was running: /{path}": "コマンドの実行中にワークスペースが変更されました: /{path}",
-  "Workspace file changed while it was being synced: /{path}": "同期中にワークスペースのファイルが変更されました: /{path}",
-  "{message}; local command workspace was preserved at {path}": "{message}。ローカルのコマンド用ワークスペースは {path} に保持されました",
+  "Workspace changed while the command was running: /{path}":
+    "コマンドの実行中にワークスペースが変更されました: /{path}",
+  "Workspace file changed while it was being synced: /{path}":
+    "同期中にワークスペースのファイルが変更されました: /{path}",
+  "{message}; local command workspace was preserved at {path}":
+    "{message}。ローカルのコマンド用ワークスペースは {path} に保持されました",
 
   // Search
-  "EXA_API_KEY is not configured; web search is unavailable": "EXA_API_KEY が設定されていないため、ウェブ検索は利用できません",
+  "EXA_API_KEY is not configured; web search is unavailable":
+    "EXA_API_KEY が設定されていないため、ウェブ検索は利用できません",
   "query is required": "query は必須です",
   "Web search request failed: {message}": "ウェブ検索のリクエストに失敗しました: {message}",
   "Web search failed ({status}): {detail}": "ウェブ検索に失敗しました ({status}): {detail}",
@@ -147,7 +157,8 @@ export const ja: Record<string, string> = {
   "Issue number and comment required": "Issue 番号とコメントが必要です",
   "Title and body required": "タイトルと本文が必要です",
   "Head and base branches required": "head と base のブランチが必要です",
-  "{service} request failed ({status}): {detail}": "{service} のリクエストに失敗しました ({status}): {detail}",
+  "{service} request failed ({status}): {detail}":
+    "{service} のリクエストに失敗しました ({status}): {detail}",
 
   // Billing and store
   "STRIPE_SECRET_KEY is not configured": "STRIPE_SECRET_KEY が設定されていません",
@@ -160,7 +171,8 @@ export const ja: Record<string, string> = {
 
   // Messages thrown by lib code (mirrors src/i18n/localize-error.ts)
   "Invalid cron expression": "cron式が正しくありません",
-  "Cron expression has no matching time in the next five years": "cron式に一致する時刻が今後5年間にありません",
+  "Cron expression has no matching time in the next five years":
+    "cron式に一致する時刻が今後5年間にありません",
   "MCP URL is invalid": "MCPのURLが正しくありません",
   "MCP URL must use http or https": "MCPのURLには http または https を使用してください",
   "MCP connection name is required": "MCP接続名は必須です",
@@ -177,7 +189,8 @@ export const ja: Record<string, string> = {
   "File not found": "ファイルが見つかりません",
   "Path is a directory": "パスはディレクトリです",
   "The workspace root cannot be deleted": "ワークスペースのルートは削除できません",
-  "Artifact path must stay inside the workspace": "成果物のパスはワークスペース内にある必要があります",
+  "Artifact path must stay inside the workspace":
+    "成果物のパスはワークスペース内にある必要があります",
   "Unable to register artifact": "成果物を登録できません",
   "Invalid URL": "URLが正しくありません",
   "Only http(s) URLs are allowed": "http(s) のURLのみ使用できます",
@@ -185,7 +198,8 @@ export const ja: Record<string, string> = {
   "Connect write access first": "先に書き込みアクセスを接続してください",
   "Result too large to display": "結果が大きすぎて表示できません",
   "Input too large": "入力が大きすぎます",
-  "No teammate matched that mention. Choose a name or use @everyone.": "そのメンションに一致するチームメイトがいません。名前を選ぶか、@everyone を使ってください。",
+  "No teammate matched that mention. Choose a name or use @everyone.":
+    "そのメンションに一致するチームメイトがいません。名前を選ぶか、@everyone を使ってください。",
   "Conversation no longer exists": "会話は存在しません",
   "Reply target not found": "返信先が見つかりません",
   "Choose a valid time.": "有効な時刻を選んでください。",
@@ -196,7 +210,8 @@ export const ja: Record<string, string> = {
   "Invalid MCP header: {name}": "MCPヘッダーが正しくありません: {name}",
   "MCP SSE connection failed ({status})": "MCPのSSE接続に失敗しました({status})",
   "MCP request failed ({status})": "MCPリクエストに失敗しました({status})",
-  "Connect {service} write access in Plugins first.": "先にプラグインで{service}の書き込みアクセスを接続してください。",
+  "Connect {service} write access in Plugins first.":
+    "先にプラグインで{service}の書き込みアクセスを接続してください。",
   "Connect {service} in Plugins first.": "先にプラグインで{service}を接続してください。",
   "Reconnect {service} in Plugins.": "プラグインで{service}を再接続してください。",
 
@@ -217,31 +232,56 @@ export const ja: Record<string, string> = {
   "missing signature": "署名がありません",
   "invalid signature": "署名が正しくありません",
   // Discord
-  "{name} needs your approval before continuing.": "{name} さんが続行する前にあなたの承認を求めています。",
+  "{name} needs your approval before continuing.":
+    "{name} さんが続行する前にあなたの承認を求めています。",
   "The task was cancelled.": "タスクはキャンセルされました。",
-  "{name} needs your help on the computer. Open the app, finish the step, then send a message here.": "{name} さんがコンピューター上での操作を必要としています。アプリを開いて手順を終えてから、ここにメッセージを送ってください。",
-  "Create a teammate in the app first, then message again.": "先にアプリでチームメイトを作成してから、もう一度メッセージを送ってください。",
-  "Add an OpenRouter API key in the app before using Discord.": "Discord を使う前に、アプリで OpenRouter API キーを追加してください。",
+  "{name} needs your help on the computer. Open the app, finish the step, then send a message here.":
+    "{name} さんがコンピューター上での操作を必要としています。アプリを開いて手順を終えてから、ここにメッセージを送ってください。",
+  "Create a teammate in the app first, then message again.":
+    "先にアプリでチームメイトを作成してから、もう一度メッセージを送ってください。",
+  "Add an OpenRouter API key in the app before using Discord.":
+    "Discord を使う前に、アプリで OpenRouter API キーを追加してください。",
   "A task is waiting for your approval in the app.": "アプリでタスクがあなたの承認を待っています。",
   "{name} is still working on your last message.": "{name} さんは直前のメッセージの作業中です。",
   "This approval is no longer pending.": "この承認はすでに保留中ではありません。",
-  "Could not resume the task. Please send your message again.": "タスクを再開できませんでした。もう一度メッセージを送ってください。",
-  "Too many requests. Wait a moment and try again.": "リクエストが多すぎます。少し待ってからもう一度お試しください。",
-  "Approve": "承認",
-  "Deny": "拒否",
+  "Could not resume the task. Please send your message again.":
+    "タスクを再開できませんでした。もう一度メッセージを送ってください。",
+  "Too many requests. Wait a moment and try again.":
+    "リクエストが多すぎます。少し待ってからもう一度お試しください。",
+  Approve: "承認",
+  Deny: "拒否",
   "Approved.": "承認しました。",
   "Denied.": "拒否しました。",
-  "Linked to {account}. Send a message to talk to your teammate. If this is not your account, send /unlink.": "{account} と連携しました。メッセージを送るとチームメイトと話せます。ご自身のアカウントでない場合は /unlink を送ってください。",
-  "Part of this request is too long to show in Discord. Open the app to review and answer it.": "この依頼は長すぎて Discord では全文を表示できません。アプリで内容を確認してから回答してください。",
-  "That code is invalid or expired. Create a new one in the app.": "コードが無効か期限切れです。アプリで新しいコードを作成してください。",
-  "Link your account first: open the app, go to Discord settings, create a code, and send it to me here.": "先にアカウントを連携してください。アプリの Discord 設定でコードを作成し、ここに送ってください。",
-  "Unlinked. This Discord account no longer reaches your workspace.": "連携を解除しました。この Discord アカウントからワークスペースには届かなくなります。",
-  "No teammate with that name. Run /teammate to see the list.": "その名前のチームメイトはいません。/teammate で一覧を確認できます。",
+  "Linked to {account}. Send a message to talk to your teammate. If this is not your account, send /unlink.":
+    "{account} と連携しました。メッセージを送るとチームメイトと話せます。ご自身のアカウントでない場合は /unlink を送ってください。",
+  "Part of this request is too long to show in Discord. Open the app to review and answer it.":
+    "この依頼は長すぎて Discord では全文を表示できません。アプリで内容を確認してから回答してください。",
+  "That code is invalid or expired. Create a new one in the app.":
+    "コードが無効か期限切れです。アプリで新しいコードを作成してください。",
+  "Link your account first: open the app, go to Discord settings, create a code, and send it to me here.":
+    "先にアカウントを連携してください。アプリの Discord 設定でコードを作成し、ここに送ってください。",
+  "Unlinked. This Discord account no longer reaches your workspace.":
+    "連携を解除しました。この Discord アカウントからワークスペースには届かなくなります。",
+  "No teammate with that name. Run /teammate to see the list.":
+    "その名前のチームメイトはいません。/teammate で一覧を確認できます。",
   "Now talking to {name}.": "{name} さんと話しています。",
   "Now using {mode}. {cost}": "{mode} に切り替えました。{cost}",
   "Current setting: {mode}. {cost}": "現在の設定: {mode}。{cost}",
   "~{multiplier}× cost": "コスト 約{multiplier}倍",
-  "{name} is still working or waiting for you. Finish or stop that task, then reset.": "{name} さんは作業中か、あなたの対応を待っています。そのタスクを終えるか停止してから、リセットしてください。",
+  "{name} is still working or waiting for you. Finish or stop that task, then reset.":
+    "{name} さんは作業中か、あなたの対応を待っています。そのタスクを終えるか停止してから、リセットしてください。",
   "The conversation with {name} is already fresh.": "{name} さんとの会話はすでに新しい状態です。",
-  "Started a new conversation with {name}. Earlier messages stay in the app but are no longer sent.": "{name} さんとの会話をリセットしました。これまでのメッセージはアプリに残りますが、今後は送信されません。",
+  "Started a new conversation with {name}. Earlier messages stay in the app but are no longer sent.":
+    "{name} さんとの会話をリセットしました。これまでのメッセージはアプリに残りますが、今後は送信されません。",
+  "Run is not connected to a language model on this server yet.":
+    "このサーバーではまだ Run が言語モデルに接続されていません。",
+  "Conversation not found.": "会話が見つかりません。",
+  "Teammate not found": "チームメイトが見つかりません",
+  "Something went wrong": "問題が発生しました",
+  "The terminal is not configured on this server (E2B_API_KEY is not set).":
+    "このサーバーではターミナルが設定されていません（E2B_API_KEY が未設定です）。",
+  "The browser is not configured on this server (STEEL_API_KEY is not set).":
+    "このサーバーではブラウザーが設定されていません（STEEL_API_KEY が未設定です）。",
+  "Gmail, Google Drive, and GitHub plugins are not available in Deni AI yet. Use an MCP connector instead.":
+    "Gmail、Google ドライブ、GitHub のプラグインは Deni AI ではまだ使えません。代わりに MCP コネクターを使ってください。",
 };

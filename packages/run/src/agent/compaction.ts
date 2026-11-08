@@ -1,12 +1,10 @@
-import "@tanstack/react-start/server-only";
-
 import { generateText, type UIMessage } from "ai";
 import { speaker } from "./history";
 import { createId } from "../data/ids";
 import { getSummaryModel } from "./llm";
 import { withoutBubbleBreaks } from "../chat/message-bubbles";
 import { compactionMessage, compactionPlan, estimateTokens } from "../chat/messages";
-import { reportError } from "../report";
+import { runLogger } from "../runtime";
 import { saveMessages } from "../data/store";
 import type { Bot } from "../types";
 import { recordModelSteps } from "../billing/usage";
@@ -41,10 +39,19 @@ function transcriptEntry(message: UIMessage, bot: Pick<Bot, "name">) {
   const lines = message.parts.flatMap((part) => {
     if (part.type === "text") return [withoutBubbleBreaks(part.text)];
     if (!part.type.startsWith("tool-") && part.type !== "dynamic-tool") return [];
-    const tool = part as { type: string; toolName?: string; input?: unknown; output?: unknown; errorText?: string };
-    const name = tool.type === "dynamic-tool" ? (tool.toolName ?? "tool") : tool.type.slice("tool-".length);
+    const tool = part as {
+      type: string;
+      toolName?: string;
+      input?: unknown;
+      output?: unknown;
+      errorText?: string;
+    };
+    const name =
+      tool.type === "dynamic-tool" ? (tool.toolName ?? "tool") : tool.type.slice("tool-".length);
     const result = tool.errorText ? `error: ${tool.errorText}` : json(tool.output);
-    return [`[${name} ${clip(json(tool.input), TOOL_INPUT_LIMIT)}] → ${clip(result, TOOL_OUTPUT_LIMIT)}`];
+    return [
+      `[${name} ${clip(json(tool.input), TOOL_INPUT_LIMIT)}] → ${clip(result, TOOL_OUTPUT_LIMIT)}`,
+    ];
   });
   return `${speaker(message, bot)}: ${lines.join("\n") || "(no text)"}`;
 }
@@ -70,11 +77,23 @@ function chunked(entries: string[]) {
   return { chunks, partial: false };
 }
 
-async function summarize(userId: string, threadId: string, bot: Pick<Bot, "name">, plan: NonNullable<ReturnType<typeof compactionPlan>>) {
-  const { chunks, partial } = chunked(plan.messages.map((message) => transcriptEntry(message, bot)));
+async function summarize(
+  userId: string,
+  threadId: string,
+  bot: Pick<Bot, "name">,
+  plan: NonNullable<ReturnType<typeof compactionPlan>>,
+) {
+  const { chunks, partial } = chunked(
+    plan.messages.map((message) => transcriptEntry(message, bot)),
+  );
   const { model, modelId } = await getSummaryModel(userId);
   const ask = async (parts: string[]) => {
-    const result = await generateText({ model, system: COMPACT_SYSTEM, prompt: parts.filter(Boolean).join("\n\n"), maxOutputTokens: 8_000 });
+    const result = await generateText({
+      model,
+      system: COMPACT_SYSTEM,
+      prompt: parts.filter(Boolean).join("\n\n"),
+      maxOutputTokens: 8_000,
+    });
     await recordModelSteps(userId, result.steps, modelId);
     return result.text.trim();
   };
@@ -86,9 +105,15 @@ async function summarize(userId: string, threadId: string, bot: Pick<Bot, "name"
   } else {
     // A long stretch is summarized part by part at once, then merged in order, so compaction
     // takes two rounds of requests however much it covers.
-    const parts = await Promise.all(chunks.map((chunk) => ask([`New messages:\n${chunk.join("\n\n")}`])));
+    const parts = await Promise.all(
+      chunks.map((chunk) => ask([`New messages:\n${chunk.join("\n\n")}`])),
+    );
     if (parts.some((part) => !part)) return undefined;
-    summary = await ask([previous, leftOut, `New messages, already summarized in parts, oldest first:\n${parts.map((part, index) => `Part ${index + 1}:\n${part}`).join("\n\n")}`]);
+    summary = await ask([
+      previous,
+      leftOut,
+      `New messages, already summarized in parts, oldest first:\n${parts.map((part, index) => `Part ${index + 1}:\n${part}`).join("\n\n")}`,
+    ]);
   }
   if (!summary) return undefined;
   const marker = compactionMessage(createId("compact"), plan.throughMessageId, summary);
@@ -104,7 +129,12 @@ const inFlight = new Map<string, Promise<UIMessage | undefined>>();
  * them. Teammates replying in parallel share one compaction. Returns the thread with the marker;
  * if summarizing fails, the thread unchanged, and the token trim keeps the request in budget.
  */
-export async function compactThread(options: { userId: string; threadId: string; bot: Pick<Bot, "name">; messages: UIMessage[] }) {
+export async function compactThread(options: {
+  userId: string;
+  threadId: string;
+  bot: Pick<Bot, "name">;
+  messages: UIMessage[];
+}) {
   const { userId, threadId, bot, messages } = options;
   if (messages.findLast((message) => message.role !== "system")?.role !== "user") return messages;
   const plan = compactionPlan(messages);
@@ -114,7 +144,7 @@ export async function compactThread(options: { userId: string; threadId: string;
   if (!pending) {
     pending = summarize(userId, threadId, bot, plan)
       .catch((error) => {
-        reportError(error, "compact conversation");
+        runLogger().error("[run] compact conversation", error);
         return undefined;
       })
       .finally(() => inFlight.delete(key));

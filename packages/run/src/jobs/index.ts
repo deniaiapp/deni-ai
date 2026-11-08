@@ -1,24 +1,73 @@
-import "@tanstack/react-start/server-only";
-
-import { translatorFor } from "@/i18n/standalone";
-import { and, asc, desc, eq, getTableColumns, gt, inArray, isNull, lt, or, sql } from "drizzle-orm";
-import { db } from "@/db";
-import { agentJobs, jobEvents } from "@/db/schema";
+import { hostname } from "node:os";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  gt,
+  inArray,
+  isNull,
+  lte,
+  or,
+  sql,
+} from "drizzle-orm";
+import { runJobEvents, runJobs } from "@deniai/db";
+import { translatorFor } from "../i18n/standalone";
+import { db } from "../runtime";
 import { createId } from "../data/ids";
 import type { AgentJob, JobEvent, JobStatus } from "../types";
 import { createNotification } from "./notifications";
 
-const LEASE_MS = 5 * 60_000;
+/**
+ * The Run job queue on Postgres. Workers claim queued rows with
+ * `FOR UPDATE SKIP LOCKED` inside a transaction, so concurrent schedulers never take
+ * the same job; a claim sets a lease (`lease_expires_at`) that heartbeats renew. A
+ * lease that runs out while the job is running marks it `uncertain`: the job may have
+ * had external side effects, so it is not replayed without review.
+ */
+
+/** How long a claim lasts without a heartbeat. */
+export const JOB_LEASE_MS = 5 * 60_000;
 
 type JobPayload = Record<string, unknown>;
+type JobRow = typeof runJobs.$inferSelect;
+
+/** Statuses that keep a thread busy. */
+export const ACTIVE_JOB_STATUSES: JobStatus[] = [
+  "queued",
+  "running",
+  "finalizing",
+  "waiting_approval",
+  "waiting_takeover",
+];
+
+const CANCELLABLE: JobStatus[] = [
+  "queued",
+  "running",
+  "finalizing",
+  "paused",
+  "uncertain",
+  "waiting_approval",
+  "waiting_takeover",
+];
+
+/** This process's lease owner id. */
+export const WORKER_ID = `${hostname()}:${process.pid}:${createId().slice(0, 6)}`;
 
 const jobSummaryColumns = {
-  ...getTableColumns(agentJobs),
+  ...getTableColumns(runJobs),
   // Job payloads contain entire conversations. Never fetch them for a status poll.
-  payload: sql<JobPayload>`'{}'`.mapWith(() => ({}) as JobPayload),
+  payload: sql<JobPayload>`'{}'::jsonb`.mapWith(() => ({}) as JobPayload),
   result: sql<Record<string, unknown> | null>`NULL`.mapWith(() => null),
-  checkpoint: sql<Record<string, unknown> | null>`CASE WHEN ${agentJobs.checkpoint} IS NULL THEN NULL ELSE json_object('text', substr(coalesce(${agentJobs.checkpoint} ->> '$.text', ''), 1, 2000), 'step', ${agentJobs.checkpoint} -> '$.step', 'updatedAt', ${agentJobs.checkpoint} -> '$.updatedAt') END`.mapWith((value: unknown) =>
-    typeof value === "string" ? (JSON.parse(value) as Record<string, unknown>) : null,
+  checkpoint: sql<Record<
+    string,
+    unknown
+  > | null>`CASE WHEN ${runJobs.checkpoint} IS NULL THEN NULL ELSE jsonb_build_object('text', left(coalesce(${runJobs.checkpoint} ->> 'text', ''), 2000), 'step', ${runJobs.checkpoint} -> 'step', 'updatedAt', ${runJobs.checkpoint} -> 'updatedAt') END`.mapWith(
+    (value: unknown) =>
+      typeof value === "string"
+        ? (JSON.parse(value) as Record<string, unknown>)
+        : ((value as Record<string, unknown> | null) ?? null),
   ),
 };
 
@@ -26,14 +75,14 @@ function asDate(value: Date | string | null | undefined) {
   return value ? new Date(value).toISOString() : null;
 }
 
-function mapJob(row: typeof agentJobs.$inferSelect): AgentJob {
+function mapJob(row: JobRow): AgentJob {
   return {
     id: row.id,
     userId: row.userId,
     threadId: row.threadId,
-    botId: row.botId,
-    kind: row.kind as AgentJob["kind"],
-    status: row.status as JobStatus,
+    botId: row.teammateId,
+    kind: row.kind,
+    status: row.status,
     payload: row.payload,
     result: row.result,
     checkpoint: row.checkpoint,
@@ -50,7 +99,7 @@ function mapJob(row: typeof agentJobs.$inferSelect): AgentJob {
   };
 }
 
-function mapEvent(row: typeof jobEvents.$inferSelect): JobEvent {
+function mapEvent(row: typeof runJobEvents.$inferSelect): JobEvent {
   return {
     id: row.id,
     jobId: row.jobId,
@@ -61,11 +110,13 @@ function mapEvent(row: typeof jobEvents.$inferSelect): JobEvent {
   };
 }
 
+const leaseUntil = (at: Date) => new Date(at.getTime() + JOB_LEASE_MS);
+
 export async function getJob(userId: string, jobId: string) {
   const rows = await db
     .select()
-    .from(agentJobs)
-    .where(and(eq(agentJobs.userId, userId), eq(agentJobs.id, jobId)))
+    .from(runJobs)
+    .where(and(eq(runJobs.userId, userId), eq(runJobs.id, jobId)))
     .limit(1);
   return rows[0] ? mapJob(rows[0]) : null;
 }
@@ -73,8 +124,8 @@ export async function getJob(userId: string, jobId: string) {
 export async function getJobByIdempotencyKey(userId: string, idempotencyKey: string) {
   const rows = await db
     .select()
-    .from(agentJobs)
-    .where(and(eq(agentJobs.userId, userId), eq(agentJobs.idempotencyKey, idempotencyKey)))
+    .from(runJobs)
+    .where(and(eq(runJobs.userId, userId), eq(runJobs.idempotencyKey, idempotencyKey)))
     .limit(1);
   return rows[0] ? mapJob(rows[0]) : null;
 }
@@ -82,52 +133,62 @@ export async function getJobByIdempotencyKey(userId: string, idempotencyKey: str
 /** Whether any job in the thread is still running or parked waiting for the person. */
 export async function hasActiveThreadJob(userId: string, threadId: string) {
   const rows = await db
-    .select({ id: agentJobs.id })
-    .from(agentJobs)
-    .where(and(
-      eq(agentJobs.userId, userId),
-      eq(agentJobs.threadId, threadId),
-      inArray(agentJobs.status, ["queued", "running", "finalizing", "waiting_approval", "waiting_takeover"]),
-    ))
+    .select({ id: runJobs.id })
+    .from(runJobs)
+    .where(
+      and(
+        eq(runJobs.userId, userId),
+        eq(runJobs.threadId, threadId),
+        inArray(runJobs.status, ACTIVE_JOB_STATUSES),
+      ),
+    )
     .limit(1);
   return rows.length > 0;
 }
 
-export async function listJobs(userId: string, options?: { threadId?: string; limit?: number; summary?: boolean }) {
-  const conditions = [eq(agentJobs.userId, userId)];
-  if (options?.threadId) conditions.push(eq(agentJobs.threadId, options.threadId));
+export async function listJobs(
+  userId: string,
+  options?: { threadId?: string; limit?: number; summary?: boolean },
+) {
+  const conditions = [eq(runJobs.userId, userId)];
+  if (options?.threadId) conditions.push(eq(runJobs.threadId, options.threadId));
   const rows = await db
-    .select(options?.summary ? jobSummaryColumns : getTableColumns(agentJobs))
-    .from(agentJobs)
+    .select(options?.summary ? jobSummaryColumns : getTableColumns(runJobs))
+    .from(runJobs)
     .where(and(...conditions))
-    .orderBy(desc(agentJobs.createdAt))
+    .orderBy(desc(runJobs.createdAt))
     .limit(Math.min(Math.max(options?.limit ?? 50, 1), 200));
   return rows.map(mapJob);
 }
 
 /** Return recent history plus every active job so an old long-running task never disappears. */
 export async function listJobOverview(userId: string, limit = 200, summary = false) {
-  const recentIds = db.select({ id: agentJobs.id })
-    .from(agentJobs)
-    .where(eq(agentJobs.userId, userId))
-    .orderBy(desc(agentJobs.createdAt))
+  const recentIds = db
+    .select({ id: runJobs.id })
+    .from(runJobs)
+    .where(eq(runJobs.userId, userId))
+    .orderBy(desc(runJobs.createdAt))
     .limit(Math.min(Math.max(limit, 1), 500));
-  const rows = await db.select(summary ? jobSummaryColumns : getTableColumns(agentJobs))
-    .from(agentJobs)
-    .where(and(eq(agentJobs.userId, userId), or(
-      inArray(agentJobs.status, ["queued", "running", "finalizing", "waiting_approval", "waiting_takeover"]),
-      inArray(agentJobs.id, recentIds),
-    )))
-    .orderBy(desc(agentJobs.createdAt));
+  const rows = await db
+    .select(summary ? jobSummaryColumns : getTableColumns(runJobs))
+    .from(runJobs)
+    .where(
+      and(
+        eq(runJobs.userId, userId),
+        or(inArray(runJobs.status, ACTIVE_JOB_STATUSES), inArray(runJobs.id, recentIds)),
+      ),
+    )
+    .orderBy(desc(runJobs.createdAt));
   return rows.map(mapJob);
 }
 
-export async function listQueuedJobs(limit = 100) {
+/** Queued jobs that may run now, oldest first (read-only; claim with {@link claimNextJobs}). */
+export async function listQueuedJobs(limit = 100, at = new Date()) {
   const rows = await db
     .select()
-    .from(agentJobs)
-    .where(eq(agentJobs.status, "queued"))
-    .orderBy(asc(agentJobs.createdAt))
+    .from(runJobs)
+    .where(and(eq(runJobs.status, "queued"), lte(runJobs.runAfter, at)))
+    .orderBy(asc(runJobs.runAfter), asc(runJobs.createdAt))
     .limit(Math.min(Math.max(limit, 1), 500));
   return rows.map(mapJob);
 }
@@ -145,126 +206,196 @@ type NewJob = {
 async function insertJob(options: NewJob, claim: boolean) {
   const id = createId("job");
   const now = new Date();
-  await db
-    .insert(agentJobs)
+  const inserted = await db
+    .insert(runJobs)
     .values({
       id,
       userId: options.userId,
       threadId: options.threadId,
-      botId: options.botId,
+      teammateId: options.botId,
       kind: options.kind,
       status: claim ? "running" : "queued",
       payload: options.payload,
-      result: null,
-      checkpoint: null,
       attempt: claim ? 1 : 0,
       maxAttempts: options.maxAttempts ?? 3,
       idempotencyKey: options.idempotencyKey,
-      error: null,
+      lockedBy: claim ? WORKER_ID : null,
       lockedAt: claim ? now : null,
+      leaseExpiresAt: claim ? leaseUntil(now) : null,
       heartbeatAt: claim ? now : null,
       startedAt: claim ? now : null,
-      finishedAt: null,
+      runAfter: now,
+      createdAt: now,
       updatedAt: now,
     })
-    .onConflictDoNothing({ target: [agentJobs.userId, agentJobs.idempotencyKey] });
-  const rows = await db
-    .select()
-    .from(agentJobs)
-    .where(and(eq(agentJobs.userId, options.userId), eq(agentJobs.idempotencyKey, options.idempotencyKey)))
-    .limit(1);
-  if (!rows[0]) throw new Error("Unable to persist job");
-  return { job: mapJob(rows[0]), created: rows[0].id === id };
+    .onConflictDoNothing({ target: [runJobs.userId, runJobs.idempotencyKey] })
+    .returning();
+  if (inserted[0]) return { job: mapJob(inserted[0]), created: true };
+  const existing = await getJobByIdempotencyKey(options.userId, options.idempotencyKey);
+  if (!existing) throw new Error("Unable to persist job");
+  return { job: existing, created: false };
 }
 
-/** Queues a job for the background scheduler. */
+/**
+ * Queues a job for the background scheduler. The idempotency key is unique per user:
+ * creating the same job twice returns the first one.
+ */
 export async function createJob(options: NewJob) {
   return (await insertJob(options, false)).job;
 }
 
 /**
- * Creates a job that the caller runs itself. It starts out running, so the scheduler never sees it
- * queued and cannot take it between creation and the caller's claim. When a job with the same
- * idempotency key already exists, that job is returned with `claimed: false`.
+ * Creates a job that the caller runs itself. It starts out running with this process's
+ * lease, so the scheduler never sees it queued. When a job with the same idempotency key
+ * already exists, that job is returned with `claimed: false`.
  */
 export async function createClaimedJob(options: NewJob) {
   const { job, created } = await insertJob(options, true);
   return { job, claimed: created };
 }
 
-export async function claimJob(userId: string, jobId: string, continuation?: {
-  from: "waiting_takeover" | "waiting_approval";
-  threadId: string;
-  botId: string;
-  key: string;
-  payload: Record<string, unknown>;
-}) {
-  // No row lock on D1: decide from a read, then make the UPDATE itself the guard by
-  // repeating the observed state in its WHERE clause. If another worker got there first
-  // the update matches nothing and the caller sees the winner's job instead.
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const [row] = await db
-      .select()
-      .from(agentJobs)
-      .where(and(eq(agentJobs.userId, userId), eq(agentJobs.id, jobId)));
-    if (!row) return null;
-    if (continuation && (row.threadId !== continuation.threadId || row.botId !== continuation.botId || row.status !== continuation.from || row.payload.continuationKey === continuation.key)) {
-      return { job: mapJob(row), claimed: false };
-    }
-    const staleBefore = new Date(Date.now() - LEASE_MS);
-    const stale = row.status === "running" && (!row.heartbeatAt || row.heartbeatAt < staleBefore);
-    if (!continuation && row.status !== "queued" && !stale) return { job: mapJob(row), claimed: false };
-    if (!continuation && row.attempt >= row.maxAttempts && !stale) {
-      return { job: mapJob(row), claimed: false };
-    }
-    const now = new Date();
-    const [claimed] = await db
-      .update(agentJobs)
-      .set({
-        status: "running",
-        attempt: continuation ? row.attempt : row.attempt + 1,
-        ...(continuation ? { payload: { ...row.payload, ...continuation.payload, continuationKey: continuation.key } } : {}),
-        lockedAt: now,
-        heartbeatAt: now,
-        startedAt: row.startedAt ?? now,
-        updatedAt: now,
-        error: null,
-      })
+/**
+ * Claim up to `limit` runnable queued jobs for this worker. `FOR UPDATE SKIP LOCKED`
+ * makes concurrent claimers skip each other's rows instead of waiting or double-claiming.
+ */
+export async function claimNextJobs(limit: number, options?: { workerId?: string; at?: Date }) {
+  if (limit <= 0) return [];
+  const at = options?.at ?? new Date();
+  const workerId = options?.workerId ?? WORKER_ID;
+  return db.transaction(async (tx) => {
+    const candidates = await tx
+      .select({ id: runJobs.id })
+      .from(runJobs)
       .where(
         and(
-          eq(agentJobs.userId, userId),
-          eq(agentJobs.id, jobId),
-          eq(agentJobs.status, row.status),
-          eq(agentJobs.attempt, row.attempt),
-          row.heartbeatAt ? eq(agentJobs.heartbeatAt, row.heartbeatAt) : isNull(agentJobs.heartbeatAt),
-          eq(agentJobs.updatedAt, row.updatedAt),
+          eq(runJobs.status, "queued"),
+          lte(runJobs.runAfter, at),
+          sql`${runJobs.attempt} < ${runJobs.maxAttempts}`,
+        ),
+      )
+      .orderBy(asc(runJobs.runAfter), asc(runJobs.createdAt))
+      .limit(limit)
+      .for("update", { skipLocked: true });
+    if (!candidates.length) return [];
+    const rows = await tx
+      .update(runJobs)
+      .set({
+        status: "running",
+        attempt: sql`${runJobs.attempt} + 1`,
+        lockedBy: workerId,
+        lockedAt: at,
+        leaseExpiresAt: leaseUntil(at),
+        heartbeatAt: at,
+        startedAt: sql`coalesce(${runJobs.startedAt}, ${at.toISOString()}::timestamptz)`,
+        error: null,
+        updatedAt: at,
+      })
+      .where(
+        inArray(
+          runJobs.id,
+          candidates.map((row) => row.id),
         ),
       )
       .returning();
-    if (claimed) return { job: mapJob(claimed), claimed: true };
-  }
-  const latest = await getJob(userId, jobId);
-  return latest ? { job: latest, claimed: false } : null;
+    return rows.map(mapJob);
+  });
 }
 
-export async function updateJob(
+/**
+ * Claim one specific job: a queued job (the retry endpoint), a running job whose lease
+ * expired, or — with `continuation` — a job parked in `waiting_approval` /
+ * `waiting_takeover` that the person just answered. The row is locked while deciding.
+ */
+export async function claimJob(
   userId: string,
   jobId: string,
-  patch: Partial<{
+  continuation?: {
+    from: "waiting_takeover" | "waiting_approval";
+    threadId: string;
+    botId: string;
+    key: string;
     payload: Record<string, unknown>;
-    status: JobStatus;
-    result: Record<string, unknown> | null;
-    checkpoint: Record<string, unknown> | null;
-    error: string | null;
-    lockedAt: Date | null;
-    heartbeatAt: Date | null;
-    finishedAt: Date | null;
-  }>,
+  },
+  options?: { workerId?: string; at?: Date },
 ) {
+  const at = options?.at ?? new Date();
+  const workerId = options?.workerId ?? WORKER_ID;
+  return db.transaction(async (tx) => {
+    const [row] = await tx
+      .select()
+      .from(runJobs)
+      .where(and(eq(runJobs.userId, userId), eq(runJobs.id, jobId)))
+      .for("update");
+    if (!row) return null;
+    if (
+      continuation &&
+      (row.threadId !== continuation.threadId ||
+        row.teammateId !== continuation.botId ||
+        row.status !== continuation.from ||
+        row.payload.continuationKey === continuation.key)
+    ) {
+      return { job: mapJob(row), claimed: false };
+    }
+    const expired =
+      row.status === "running" &&
+      (!row.leaseExpiresAt || row.leaseExpiresAt.getTime() <= at.getTime());
+    if (!continuation) {
+      if (row.status !== "queued" && !expired) return { job: mapJob(row), claimed: false };
+      if (row.attempt >= row.maxAttempts && !expired) return { job: mapJob(row), claimed: false };
+      if (row.runAfter.getTime() > at.getTime() && !expired)
+        return { job: mapJob(row), claimed: false };
+    }
+    const [claimed] = await tx
+      .update(runJobs)
+      .set({
+        status: "running",
+        attempt: continuation ? row.attempt : row.attempt + 1,
+        ...(continuation
+          ? {
+              payload: {
+                ...row.payload,
+                ...continuation.payload,
+                continuationKey: continuation.key,
+              },
+            }
+          : {}),
+        lockedBy: workerId,
+        lockedAt: at,
+        leaseExpiresAt: leaseUntil(at),
+        heartbeatAt: at,
+        startedAt: row.startedAt ?? at,
+        updatedAt: at,
+        error: null,
+      })
+      .where(eq(runJobs.id, row.id))
+      .returning();
+    return claimed ? { job: mapJob(claimed), claimed: true } : { job: mapJob(row), claimed: false };
+  });
+}
+
+type JobPatch = Partial<{
+  payload: Record<string, unknown>;
+  status: JobStatus;
+  result: Record<string, unknown> | null;
+  checkpoint: Record<string, unknown> | null;
+  error: string | null;
+  lockedAt: Date | null;
+  heartbeatAt: Date | null;
+  finishedAt: Date | null;
+}>;
+
+function releaseLease(patch: JobPatch) {
+  // Leaving running/finalizing gives the lease back.
+  return patch.status && patch.status !== "running" && patch.status !== "finalizing"
+    ? { lockedBy: null, lockedAt: null, leaseExpiresAt: null }
+    : {};
+}
+
+export async function updateJob(userId: string, jobId: string, patch: JobPatch) {
   const [row] = await db
-    .update(agentJobs)
-    .set({ ...patch, updatedAt: new Date() })
-    .where(and(eq(agentJobs.userId, userId), eq(agentJobs.id, jobId)))
+    .update(runJobs)
+    .set({ ...patch, ...releaseLease(patch), updatedAt: new Date() })
+    .where(and(eq(runJobs.userId, userId), eq(runJobs.id, jobId)))
     .returning();
   return row ? mapJob(row) : null;
 }
@@ -274,34 +405,31 @@ export async function transitionJob(
   userId: string,
   jobId: string,
   from: JobStatus | JobStatus[],
-  patch: Partial<{
-    payload: Record<string, unknown>;
-    status: JobStatus;
-    result: Record<string, unknown> | null;
-    checkpoint: Record<string, unknown> | null;
-    error: string | null;
-    lockedAt: Date | null;
-    heartbeatAt: Date | null;
-    finishedAt: Date | null;
-  }>,
+  patch: JobPatch,
 ) {
   const states = Array.isArray(from) ? from : [from];
   const [row] = await db
-    .update(agentJobs)
-    .set({ ...patch, updatedAt: new Date() })
-    .where(
-      and(
-        eq(agentJobs.userId, userId),
-        eq(agentJobs.id, jobId),
-        inArray(agentJobs.status, states),
-      ),
-    )
+    .update(runJobs)
+    .set({ ...patch, ...releaseLease(patch), updatedAt: new Date() })
+    .where(and(eq(runJobs.userId, userId), eq(runJobs.id, jobId), inArray(runJobs.status, states)))
     .returning();
   return row ? mapJob(row) : null;
 }
 
-export async function heartbeatJob(userId: string, jobId: string) {
-  return transitionJob(userId, jobId, ["running", "finalizing"], { heartbeatAt: new Date() });
+/** Renew the lease of a running job. Returns null once the job was cancelled or taken over. */
+export async function heartbeatJob(userId: string, jobId: string, at = new Date()) {
+  const [row] = await db
+    .update(runJobs)
+    .set({ heartbeatAt: at, leaseExpiresAt: leaseUntil(at), updatedAt: at })
+    .where(
+      and(
+        eq(runJobs.userId, userId),
+        eq(runJobs.id, jobId),
+        inArray(runJobs.status, ["running", "finalizing"]),
+      ),
+    )
+    .returning();
+  return row ? mapJob(row) : null;
 }
 
 export async function finishJob(
@@ -320,101 +448,147 @@ export async function finishJob(
   });
 }
 
+/** Save progress after a step (resume point and UI progress); also renews the lease. */
 export async function checkpointJob(
   userId: string,
   jobId: string,
   checkpoint: Record<string, unknown>,
   eventKind = "checkpoint",
 ) {
-  const job = await transitionJob(userId, jobId, ["running", "finalizing"], {
-    checkpoint,
-    heartbeatAt: new Date(),
-  });
-  if (job) await appendJobEvent(userId, jobId, eventKind, checkpoint);
-  return job;
+  const at = new Date();
+  const [row] = await db
+    .update(runJobs)
+    .set({ checkpoint, heartbeatAt: at, leaseExpiresAt: leaseUntil(at), updatedAt: at })
+    .where(
+      and(
+        eq(runJobs.userId, userId),
+        eq(runJobs.id, jobId),
+        inArray(runJobs.status, ["running", "finalizing"]),
+      ),
+    )
+    .returning();
+  if (row) await appendJobEvent(userId, jobId, eventKind, checkpoint);
+  return row ? mapJob(row) : null;
 }
 
+/**
+ * Append an event with the next per-job sequence number. The job row is locked while the
+ * number is chosen, so concurrent writers of the same job queue up.
+ */
 export async function appendJobEvent(
   userId: string,
   jobId: string,
   kind: string,
   payload: JobPayload = {},
 ) {
-  // The next sequence is computed inside the INSERT itself, and the unique
-  // (user, job, sequence) index rejects a concurrent writer that picked the same number.
-  // The loser simply retries with the new maximum.
-  for (let attempt = 0; attempt < 8; attempt++) {
-    try {
-      const [row] = await db
-        .insert(jobEvents)
-        .values({
-          id: createId("evt"),
-          userId,
-          jobId,
-          kind,
-          payload,
-          sequence: sql`(select coalesce(max(${jobEvents.sequence}), 0) + 1 from ${jobEvents} where ${jobEvents.userId} = ${userId} and ${jobEvents.jobId} = ${jobId})`,
-        })
-        .returning();
-      return row ? mapEvent(row) : null;
-    } catch (error) {
-      if (!/UNIQUE constraint failed/i.test(String((error as Error)?.message))) throw error;
-      await new Promise((resolve) => setTimeout(resolve, 10 * (attempt + 1)));
-    }
-  }
-  throw new Error("Unable to record job event");
+  return db.transaction(async (tx) => {
+    const [job] = await tx
+      .select({ id: runJobs.id })
+      .from(runJobs)
+      .where(and(eq(runJobs.userId, userId), eq(runJobs.id, jobId)))
+      .for("update");
+    if (!job) return null;
+    const [last] = await tx
+      .select({ sequence: sql<number>`coalesce(max(${runJobEvents.sequence}), 0)`.mapWith(Number) })
+      .from(runJobEvents)
+      .where(eq(runJobEvents.jobId, jobId));
+    const [row] = await tx
+      .insert(runJobEvents)
+      .values({
+        id: createId("evt"),
+        userId,
+        jobId,
+        kind,
+        payload,
+        sequence: (last?.sequence ?? 0) + 1,
+      })
+      .returning();
+    return row ? mapEvent(row) : null;
+  });
 }
 
 export async function listJobEvents(userId: string, jobId: string, after = 0) {
   const rows = await db
     .select()
-    .from(jobEvents)
+    .from(runJobEvents)
     .where(
-      and(eq(jobEvents.userId, userId), eq(jobEvents.jobId, jobId), gt(jobEvents.sequence, after)),
+      and(
+        eq(runJobEvents.userId, userId),
+        eq(runJobEvents.jobId, jobId),
+        gt(runJobEvents.sequence, after),
+      ),
     )
-    .orderBy(asc(jobEvents.sequence));
+    .orderBy(asc(runJobEvents.sequence));
   return rows.map(mapEvent);
 }
 
+/**
+ * Cancel a job. A running job's worker sees the status at its next step (or heartbeat)
+ * and stops; `cancel_requested_at` records when the person asked.
+ */
 export async function cancelJob(userId: string, jobId: string, locale?: string) {
+  const now = new Date();
   const [row] = await db
-    .update(agentJobs)
-    .set({ status: "cancelled", error: translatorFor(locale)("Cancelled by user"), finishedAt: new Date(), updatedAt: new Date() })
+    .update(runJobs)
+    .set({
+      status: "cancelled",
+      error: translatorFor(locale)("Cancelled by user"),
+      cancelRequestedAt: now,
+      finishedAt: now,
+      lockedBy: null,
+      lockedAt: null,
+      leaseExpiresAt: null,
+      updatedAt: now,
+    })
     .where(
-      and(
-        eq(agentJobs.userId, userId),
-        eq(agentJobs.id, jobId),
-        inArray(agentJobs.status, ["queued", "running", "paused", "uncertain", "waiting_approval", "waiting_takeover"]),
-      ),
+      and(eq(runJobs.userId, userId), eq(runJobs.id, jobId), inArray(runJobs.status, CANCELLABLE)),
     )
     .returning();
   if (row) await appendJobEvent(userId, jobId, "cancelled", { reason: "user" });
   return row ? mapJob(row) : null;
 }
 
-export async function retryJob(userId: string, jobId: string, options?: { reviewed?: boolean }) {
+/** Whether the job was cancelled (or deleted) since it was claimed. */
+export async function isJobCancelled(userId: string, jobId: string) {
+  const job = await getJob(userId, jobId);
+  return !job || job.status === "cancelled";
+}
+
+/**
+ * Queue a failed (or reviewed uncertain) job again. `delayMs` backs the next claim off;
+ * the attempt counter is only bumped when a worker claims it.
+ */
+export async function retryJob(
+  userId: string,
+  jobId: string,
+  options?: { reviewed?: boolean; delayMs?: number },
+) {
   const current = await getJob(userId, jobId);
   if (!current) return null;
   if (!["failed", "uncertain"].includes(current.status) || current.attempt >= current.maxAttempts) {
     return current;
   }
   if (current.status === "uncertain" && !options?.reviewed) return current;
+  const now = new Date();
   const [row] = await db
-    .update(agentJobs)
+    .update(runJobs)
     .set({
       status: "queued",
       error: null,
       result: null,
       finishedAt: null,
+      lockedBy: null,
       lockedAt: null,
+      leaseExpiresAt: null,
       heartbeatAt: null,
-      updatedAt: new Date(),
+      runAfter: new Date(now.getTime() + Math.max(0, options?.delayMs ?? 0)),
+      updatedAt: now,
     })
     .where(
       and(
-        eq(agentJobs.userId, userId),
-        eq(agentJobs.id, jobId),
-        inArray(agentJobs.status, ["failed", "uncertain"]),
+        eq(runJobs.userId, userId),
+        eq(runJobs.id, jobId),
+        inArray(runJobs.status, ["failed", "uncertain"]),
       ),
     )
     .returning();
@@ -422,32 +596,46 @@ export async function retryJob(userId: string, jobId: string, options?: { review
   return row ? mapJob(row) : current;
 }
 
+/**
+ * Jobs whose lease ran out while running become `uncertain` (never replayed blindly),
+ * with an event and a notification. Rows are locked with SKIP LOCKED so two schedulers
+ * recover each job once.
+ */
 export async function recoverStaleJobs(at = new Date()) {
-  const cutoff = new Date(at.getTime() - LEASE_MS);
-  const stale = await db
-    .select()
-    .from(agentJobs)
-    .where(
-      and(
-        inArray(agentJobs.status, ["running", "finalizing"]),
-        or(isNull(agentJobs.heartbeatAt), lt(agentJobs.heartbeatAt, cutoff)),
-      ),
-    )
-    .limit(100);
-  for (const job of stale) {
+  const recovered = await db.transaction(async (tx) => {
+    const stale = await tx
+      .select()
+      .from(runJobs)
+      .where(
+        and(
+          inArray(runJobs.status, ["running", "finalizing"]),
+          or(isNull(runJobs.leaseExpiresAt), lte(runJobs.leaseExpiresAt, at)),
+        ),
+      )
+      .limit(100)
+      .for("update", { skipLocked: true });
+    for (const job of stale) {
+      const tr = translatorFor(job.payload.locale);
+      await tx
+        .update(runJobs)
+        .set({
+          status: "uncertain",
+          error: tr(
+            "Worker lease expired; review this task before retrying to avoid duplicate side effects",
+          ),
+          lockedBy: null,
+          lockedAt: null,
+          leaseExpiresAt: null,
+          heartbeatAt: null,
+          finishedAt: null,
+          updatedAt: at,
+        })
+        .where(eq(runJobs.id, job.id));
+    }
+    return stale;
+  });
+  for (const job of recovered) {
     const tr = translatorFor(job.payload.locale);
-    const nextStatus: JobStatus = "uncertain";
-    await db
-      .update(agentJobs)
-      .set({
-        status: nextStatus,
-        error: tr("Worker lease expired; review this task before retrying to avoid duplicate side effects"),
-        lockedAt: null,
-        heartbeatAt: null,
-        updatedAt: at,
-        finishedAt: null,
-      })
-      .where(and(eq(agentJobs.id, job.id), inArray(agentJobs.status, ["running", "finalizing"])));
     await appendJobEvent(job.userId, job.id, "uncertain", {
       reason: "worker_lease_expired",
       checkpoint: job.checkpoint ?? {},
@@ -457,10 +645,10 @@ export async function recoverStaleJobs(at = new Date()) {
       jobId: job.id,
       kind: "failed",
       title: tr("Task needs review before retry"),
-      body: tr("The worker stopped unexpectedly after a checkpoint. Review external side effects, then retry explicitly."),
+      body: tr(
+        "The worker stopped unexpectedly after a checkpoint. Review external side effects, then retry explicitly.",
+      ),
     }).catch(() => undefined);
   }
-  return stale.length;
+  return recovered.length;
 }
-
-export const JOB_LEASE_MS = LEASE_MS;

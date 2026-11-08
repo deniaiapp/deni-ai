@@ -1,12 +1,10 @@
-import "@tanstack/react-start/server-only";
-
 import { createId, nowIso } from "../data/ids";
 import { mutateStore } from "../data/store";
 import type { Bot, Store, Thread } from "../types";
 
 /**
  * Creating and editing group conversations, shared by the web routes and the Discord bot.
- * Deleting a group is deleteGroupThread in src/lib/data/store.ts, since it also removes its jobs.
+ * Deleting a group is deleteGroupThread in data/store.ts, since it also removes its jobs.
  */
 
 export const GROUP_TITLE_MAX = 120;
@@ -22,7 +20,9 @@ class GroupError extends Error {
   }
 }
 
-async function guarded<T>(work: () => Promise<T>): Promise<T | { ok: false; reason: GroupFailure }> {
+async function guarded<T>(
+  work: () => Promise<T>,
+): Promise<T | { ok: false; reason: GroupFailure }> {
   try {
     return await work();
   } catch (error) {
@@ -32,12 +32,17 @@ async function guarded<T>(work: () => Promise<T>): Promise<T | { ok: false; reas
 }
 
 /** A group of at least two of the user's teammates. Ids that are not theirs are dropped. */
-export async function createGroup(userId: string, input: GroupInput): Promise<{ ok: true; thread: Thread } | { ok: false; reason: GroupFailure }> {
+export async function createGroup(
+  userId: string,
+  input: GroupInput,
+): Promise<{ ok: true; thread: Thread } | { ok: false; reason: GroupFailure }> {
   const id = createId("grp");
   const at = nowIso();
   return guarded(async () => {
     const thread = await mutateStore(userId, (store) => {
-      const botIds = [...new Set(input.botIds)].filter((botId) => store.bots.some((bot) => bot.id === botId));
+      const botIds = [...new Set(input.botIds)].filter((botId) =>
+        store.bots.some((bot) => bot.id === botId),
+      );
       if (botIds.length < 2) throw new GroupError("invalid_members");
       const created: Thread = {
         id,
@@ -76,10 +81,12 @@ export function applyGroupEdits(
   thread: Thread,
   edits: GroupEdits,
 ): { ok: true; disabledRoutines: number } | { ok: false; reason: "not_group" | "invalid_members" } {
-  if (edits.title === undefined && edits.icon === undefined && edits.botIds === undefined) return { ok: true, disabledRoutines: 0 };
+  if (edits.title === undefined && edits.icon === undefined && edits.botIds === undefined)
+    return { ok: true, disabledRoutines: 0 };
   if (thread.kind !== "group") return { ok: false, reason: "not_group" };
   const ids = edits.botIds && [...new Set(edits.botIds)];
-  if (ids && (ids.length < 2 || ids.some((id) => !store.bots.some((bot) => bot.id === id)))) return { ok: false, reason: "invalid_members" };
+  if (ids && (ids.length < 2 || ids.some((id) => !store.bots.some((bot) => bot.id === id))))
+    return { ok: false, reason: "invalid_members" };
   if (edits.title !== undefined) thread.title = edits.title;
   if (edits.icon !== undefined) thread.icon = edits.icon || null;
   let disabledRoutines = 0;
@@ -101,9 +108,12 @@ export async function updateGroup(
   userId: string,
   groupId: string,
   edits: { title?: string; botIds?: readonly string[] },
-): Promise<{ ok: true; thread: Thread; disabledRoutines: number } | { ok: false; reason: GroupFailure }> {
+): Promise<
+  { ok: true; thread: Thread; disabledRoutines: number } | { ok: false; reason: GroupFailure }
+> {
   const title = edits.title?.trim();
-  if (edits.title !== undefined && (!title || title.length > GROUP_TITLE_MAX)) return { ok: false, reason: "invalid_title" };
+  if (edits.title !== undefined && (!title || title.length > GROUP_TITLE_MAX))
+    return { ok: false, reason: "invalid_title" };
   return guarded(() =>
     mutateStore(userId, (store) => {
       const thread = store.threads.find((item) => item.id === groupId && item.kind === "group");
@@ -127,10 +137,12 @@ export function groupMembers(store: Store, thread: Thread): Bot[] {
 
 /**
  * The group plain Discord DMs go to: the one chosen with /group talk, if it still exists and
- * has members. Mirrors the routing in src/lib/discord/turn.ts.
+ * has members. Mirrors the routing of the Discord bot (services/run-worker).
  */
 export function discordTargetGroup(store: Store) {
   const threadId = store.discord?.threadId;
-  const thread = threadId ? store.threads.find((item) => item.id === threadId && item.kind === "group") : undefined;
+  const thread = threadId
+    ? store.threads.find((item) => item.id === threadId && item.kind === "group")
+    : undefined;
   return thread && groupMembers(store, thread).length ? thread : null;
 }

@@ -1,4 +1,4 @@
-import "@tanstack/react-start/server-only";
+import { runLogger } from "../runtime";
 
 import { releaseBrowserTakeover } from "../computer/browser-workspaces";
 import { setComputer } from "../computer";
@@ -18,7 +18,12 @@ export async function cancelAndReleaseJob(userId: string, jobId: string, locale?
   // release its workspace here; otherwise the computer keeps showing "Your help is needed".
   if (before?.status === "waiting_takeover" || before?.status === "waiting_approval") {
     await releaseBrowserTakeover(userId, jobId).catch(() => undefined);
-    await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId }).catch(() => undefined);
+    await setComputer(userId, {
+      status: "idle",
+      workingLabel: "",
+      workingBotId: null,
+      jobId,
+    }).catch(() => undefined);
   }
   return job;
 }
@@ -36,8 +41,12 @@ export async function releaseStaleApproval(userId: string, jobId: string) {
     lockedAt: null,
   });
   if (!job) return null;
-  await appendJobEvent(userId, jobId, "cancelled", { reason: "stale_approval" }).catch(() => undefined);
-  await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId }).catch(() => undefined);
+  await appendJobEvent(userId, jobId, "cancelled", { reason: "stale_approval" }).catch(
+    () => undefined,
+  );
+  await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId }).catch(
+    () => undefined,
+  );
   return job;
 }
 
@@ -53,12 +62,16 @@ export type RetryResult =
  * tab or an expired Discord interaction cannot stop it. An uncertain task may already have
  * had side effects, so it only runs again with reviewed.
  */
-export async function retryAndRunJob(userId: string, jobId: string, options?: { reviewed?: boolean }): Promise<RetryResult> {
+export async function retryAndRunJob(
+  userId: string,
+  jobId: string,
+  options?: { reviewed?: boolean },
+): Promise<RetryResult> {
   const job = await retryJob(userId, jobId, { reviewed: options?.reviewed === true });
   if (!job) return { ok: false, reason: "not_found" };
   if (job.status !== "queued") return { ok: false, reason: "not_retryable", job };
   const finished = runBackgroundJob(userId, job.id).catch((error) => {
-    console.error("[jobs] retry failed", error);
+    runLogger().error("[jobs] retry failed", error);
     return null;
   });
   return { ok: true, job, finished };

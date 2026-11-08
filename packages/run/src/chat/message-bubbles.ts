@@ -30,7 +30,12 @@ export function splitBubbleBreaks(text: string): string[] {
     const delimiter = line.match(FENCE);
     if (delimiter) {
       if (!fence) fence = { marker: delimiter[1][0], length: delimiter[1].length };
-      else if (delimiter[1][0] === fence.marker && delimiter[1].length >= fence.length && !delimiter[2].trim()) fence = null;
+      else if (
+        delimiter[1][0] === fence.marker &&
+        delimiter[1].length >= fence.length &&
+        !delimiter[2].trim()
+      )
+        fence = null;
     } else if (!fence && line.trim() === BUBBLE_BREAK) {
       flush();
       continue;
@@ -65,7 +70,12 @@ export function splitAssistantBubbles(text: string, breaks = false): string[] {
     const delimiter = line.match(/^ {0,3}(`{3,}|~{3,})(.*)$/);
     if (delimiter) {
       if (!fence) fence = { marker: delimiter[1][0], length: delimiter[1].length };
-      else if (delimiter[1][0] === fence.marker && delimiter[1].length >= fence.length && !delimiter[2].trim()) fence = null;
+      else if (
+        delimiter[1][0] === fence.marker &&
+        delimiter[1].length >= fence.length &&
+        !delimiter[2].trim()
+      )
+        fence = null;
       current.push(line);
       continue;
     }
@@ -74,11 +84,15 @@ export function splitAssistantBubbles(text: string, breaks = false): string[] {
       let nextIndex = index + 1;
       while (nextIndex < lines.length && !lines[nextIndex].trim()) nextIndex++;
       const next = lines[nextIndex] ?? "";
-      const headingNeedsBody = /^ {0,3}#{1,6}\s/.test(previous) || /^ {0,3}(?:={3,}|-{3,})\s*$/.test(previous);
+      const headingNeedsBody =
+        /^ {0,3}#{1,6}\s/.test(previous) || /^ {0,3}(?:={3,}|-{3,})\s*$/.test(previous);
       const listContinues = current.some(isList) && (isList(next) || /^\s{2,}\S/.test(next));
       const quoteContinues = /^\s*>/.test(previous) && /^\s*>/.test(next);
       const indentedCodeContinues = /^(?: {4}|\t)\S/.test(next);
-      if (!headingNeedsBody && !listContinues && !quoteContinues && !indentedCodeContinues) { flush(); continue; }
+      if (!headingNeedsBody && !listContinues && !quoteContinues && !indentedCodeContinues) {
+        flush();
+        continue;
+      }
     }
     current.push(line);
   }

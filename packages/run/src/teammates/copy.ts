@@ -7,14 +7,22 @@ export type TeammateCopy = {
   preview: string;
 };
 
-export const DEFAULT_TEAMMATE_CHARACTERS: Record<string, AvatarCharacter> = { chief: "navi", research: "loupe", ops: "gear" };
+export const DEFAULT_TEAMMATE_CHARACTERS: Record<string, AvatarCharacter> = {
+  chief: "navi",
+  research: "loupe",
+  ops: "gear",
+};
 
 /**
  * Default teammates and starter DMs keep the words they were created with until someone edits
  * them. Words still matching any language's starting copy switch to the viewer's language, and
  * default teammates that never had an icon get their character. Returns whether anything changed.
  */
-export function applyTeammateCopy(store: Store, copies: TeammateCopy[], current: TeammateCopy): boolean {
+export function applyTeammateCopy(
+  store: Store,
+  copies: TeammateCopy[],
+  current: TeammateCopy,
+): boolean {
   let changed = false;
   for (const bot of store.bots) {
     const wanted = current.bots[bot.id];
@@ -41,7 +49,10 @@ export function applyTeammateCopy(store: Store, copies: TeammateCopy[], current:
       thread.title = bot.name;
       changed = true;
     }
-    if (thread.lastPreview !== current.preview && copies.some((copy) => copy.preview === thread.lastPreview)) {
+    if (
+      thread.lastPreview !== current.preview &&
+      copies.some((copy) => copy.preview === thread.lastPreview)
+    ) {
       thread.lastPreview = current.preview;
       changed = true;
     }

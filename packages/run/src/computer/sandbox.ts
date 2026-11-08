@@ -1,11 +1,9 @@
-import "@tanstack/react-start/server-only";
-
-import { Sandbox } from "e2b";
+import { requireSandbox, sandboxProvider, type SandboxHandle } from "./providers";
 import { mutateStore, readStore } from "../data/store";
 import { assertCanStartComputer, isComputerLimitReached, recordTimeUsage } from "../billing/usage";
 
 type UserSandbox = {
-  sandbox: Sandbox;
+  sandbox: SandboxHandle;
   idleTimer?: ReturnType<typeof setTimeout>;
   startedAt: number;
   lastBilledAt: number;
@@ -33,12 +31,9 @@ export function pendingComputerMs(userId: string) {
   return Math.max(0, Date.now() - at);
 }
 
+/** Whether a sandbox provider (E2B) is configured. */
 export function hasE2B() {
-  return Boolean(process.env.E2B_API_KEY);
-}
-
-function sandboxTimeoutMs() {
-  return Number(process.env.E2B_SANDBOX_TIMEOUT_MS ?? 600_000);
+  return Boolean(sandboxProvider());
 }
 
 async function billSandboxTime(
@@ -98,7 +93,7 @@ export async function getUserSandbox(userId: string) {
   try {
     const handle = await promise;
     if (sandboxes().get(userId) !== promise) {
-      await handle.sandbox.pause({ keepMemory: false }).catch(() => undefined);
+      await handle.sandbox.pause().catch(() => undefined);
       throw new Error("Sandbox was stopped");
     }
     touchSandbox(userId, handle);
@@ -119,7 +114,7 @@ export async function stopUserSandbox(userId: string) {
       if (handle.idleTimer) clearTimeout(handle.idleTimer);
       await billSandboxTime(userId, handle).catch(() => undefined);
       sandboxBilledAt().delete(userId);
-      await handle.sandbox.pause({ keepMemory: false }).catch(() => undefined);
+      await handle.sandbox.pause().catch(() => undefined);
       return { stopped: true as const };
     }
   }
@@ -129,20 +124,22 @@ export async function stopUserSandbox(userId: string) {
   const sandboxId = store.computer.e2bSandboxId;
   if (!sandboxId) return { stopped: false as const, reason: "already stopped" };
 
-  const paused = await Sandbox.pause(sandboxId, { keepMemory: false }).catch(() => false);
+  const provider = sandboxProvider();
+  if (!provider) return { stopped: false as const, reason: "already stopped" };
+  const paused = await provider.pause(sandboxId);
   return paused
     ? { stopped: true as const }
     : { stopped: false as const, reason: "already stopped" };
 }
 
 async function createUserSandbox(userId: string): Promise<UserSandbox> {
+  const provider = requireSandbox();
   const store = await readStore(userId);
-  const timeoutMs = sandboxTimeoutMs();
-  let sandbox: Sandbox;
+  let sandbox: SandboxHandle;
 
   if (store.computer.e2bSandboxId) {
     try {
-      sandbox = await Sandbox.connect(store.computer.e2bSandboxId, { timeoutMs });
+      sandbox = await provider.connect(store.computer.e2bSandboxId);
       const now = Date.now();
       sandboxBilledAt().set(userId, now);
       return { sandbox, startedAt: now, lastBilledAt: now };
@@ -151,15 +148,9 @@ async function createUserSandbox(userId: string): Promise<UserSandbox> {
     }
   }
 
-  sandbox = await Sandbox.create({
-    timeoutMs,
-    lifecycle: {
-      onTimeout: "pause",
-      autoResume: false,
-    },
-  });
+  sandbox = await provider.create();
   await mutateStore(userId, (next) => {
-    next.computer.e2bSandboxId = sandbox.sandboxId;
+    next.computer.e2bSandboxId = sandbox.id;
   });
   const now = Date.now();
   sandboxBilledAt().set(userId, now);
@@ -167,10 +158,12 @@ async function createUserSandbox(userId: string): Promise<UserSandbox> {
 }
 
 function touchSandbox(userId: string, handle: UserSandbox) {
+  const provider = sandboxProvider();
   if (handle.idleTimer) clearTimeout(handle.idleTimer);
-  handle.sandbox.setTimeout(sandboxTimeoutMs()).catch(() => undefined);
-  const idleMs = Number(process.env.E2B_SANDBOX_IDLE_MS ?? 600_000);
+  if (!provider) return;
+  handle.sandbox.setTimeout(provider.timeoutMs).catch(() => undefined);
   handle.idleTimer = setTimeout(() => {
     stopUserSandbox(userId).catch(() => undefined);
-  }, idleMs);
+  }, provider.idleMs);
+  handle.idleTimer.unref?.();
 }

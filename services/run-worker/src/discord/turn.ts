@@ -1,5 +1,3 @@
-import "@tanstack/react-start/server-only";
-
 import { createHash } from "node:crypto";
 import {
   convertToModelMessages,
@@ -8,14 +6,14 @@ import {
   toUIMessageStream,
   type UIMessage,
 } from "ai";
-import { buildInstructions, createDeniTools, deniToolApproval } from "../agent";
-import { getApiKey } from "../data/config";
-import { releaseBrowserTakeover } from "../computer/browser-workspaces";
-import { setComputer } from "../computer";
-import { hasOpenApproval, hasPendingWorkflowWait } from "../chat/run-state";
-import { releaseStaleApproval } from "../jobs/actions";
+import { buildInstructions, createDeniTools, deniToolApproval } from "@deniai/run/agent/index";
+import { getApiKey } from "@deniai/run/data/config";
+import { releaseBrowserTakeover } from "@deniai/run/computer/browser-workspaces";
+import { setComputer } from "@deniai/run/computer/index";
+import { hasOpenApproval, hasPendingWorkflowWait } from "@deniai/run/chat/run-state";
+import { releaseStaleApproval } from "@deniai/run/jobs/actions";
 import { discordErrorText, discordTranslator as translatorFor } from "./i18n";
-import { translateError } from "@/i18n/standalone";
+import { translateError } from "@deniai/run/i18n/standalone";
 import {
   checkpointJob,
   claimJob,
@@ -26,22 +24,22 @@ import {
   heartbeatJob,
   listJobs,
   transitionJob,
-} from "../jobs";
-import { getDeniModel } from "../agent/llm";
-import { groupContext, groupRecipients } from "../chat/group-chat";
-import { discordTargetGroup, groupMembers } from "../chat/groups";
-import { messagesForModel, mergeThreadMessages } from "../chat/messages";
-import { compactThread } from "../agent/compaction";
-import { messagesWithReplyContext } from "../chat/message-actions";
-import { parseRunMode } from "../agent/model";
-import { createNotification } from "../jobs/notifications";
-import { assertRateLimit, RateLimitError } from "../billing/rate-limit";
-import { reportError } from "../report";
-import { loadMessages, readStore, saveMessages } from "../data/store";
-import { resetThreadContext } from "../agent/thread-context";
-import type { AgentJob, Bot, Store, Thread } from "../types";
-import { assertCanUseTokens, recordModelUsage } from "../billing/usage";
-import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "../chat/message-bubbles";
+} from "@deniai/run/jobs/index";
+import { getDeniModel } from "@deniai/run/agent/llm";
+import { groupContext, groupRecipients } from "@deniai/run/chat/group-chat";
+import { discordTargetGroup, groupMembers } from "@deniai/run/chat/groups";
+import { messagesForModel, mergeThreadMessages } from "@deniai/run/chat/messages";
+import { compactThread } from "@deniai/run/agent/compaction";
+import { messagesWithReplyContext } from "@deniai/run/chat/message-actions";
+import { parseRunMode } from "@deniai/run/agent/model";
+import { createNotification } from "@deniai/run/jobs/notifications";
+import { assertRateLimit, RateLimitError } from "./rate-limit";
+import { reportError } from "./report";
+import { loadMessages, readStore, saveMessages } from "@deniai/run/data/store";
+import { resetThreadContext } from "@deniai/run/agent/thread-context";
+import type { AgentJob, Bot, Store, Thread } from "@deniai/run/types";
+import { assertCanUseTokens, recordModelUsage } from "@deniai/run/billing/usage";
+import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "@deniai/run/chat/message-bubbles";
 
 /** What the Discord layer should show after a turn. It never needs to know about jobs or UI messages. */
 export type PendingApproval = { tool: string; summary: string; truncated: boolean };
@@ -51,7 +49,14 @@ export const APPROVAL_SUMMARY_LIMIT = 600;
 
 export type TurnOutcome =
   | { kind: "reply"; botName: string; text: string }
-  | { kind: "approval"; botName: string; jobId: string; round: string; pending: PendingApproval[]; text: string }
+  | {
+      kind: "approval";
+      botName: string;
+      jobId: string;
+      round: string;
+      pending: PendingApproval[];
+      text: string;
+    }
   | { kind: "takeover"; botName: string; text: string }
   | { kind: "notice"; text: string }
   | { kind: "none" };
@@ -63,14 +68,25 @@ type ToolPart = {
   toolName?: string;
   state?: string;
   input?: unknown;
-  approval?: { id: string; approved?: boolean; isAutomatic?: boolean; requestReason?: string; reason?: string };
+  approval?: {
+    id: string;
+    approved?: boolean;
+    isAutomatic?: boolean;
+    requestReason?: string;
+    reason?: string;
+  };
 };
 
-const isToolPart = (part: { type: string }) => part.type.startsWith("tool-") || part.type === "dynamic-tool";
+const isToolPart = (part: { type: string }) =>
+  part.type.startsWith("tool-") || part.type === "dynamic-tool";
 
 function pendingApprovalParts(message: UIMessage) {
   return (message.parts as unknown as ToolPart[]).filter(
-    (part) => isToolPart(part) && part.state === "approval-requested" && Boolean(part.approval?.id) && !part.approval?.isAutomatic,
+    (part) =>
+      isToolPart(part) &&
+      part.state === "approval-requested" &&
+      Boolean(part.approval?.id) &&
+      !part.approval?.isAutomatic,
   );
 }
 
@@ -86,12 +102,17 @@ function summarize(input: unknown) {
     text = String(input);
   }
   const shown = (text ?? "").replace(/```/g, "'''");
-  return { summary: shown.slice(0, APPROVAL_SUMMARY_LIMIT), truncated: shown.length > APPROVAL_SUMMARY_LIMIT };
+  return {
+    summary: shown.slice(0, APPROVAL_SUMMARY_LIMIT),
+    truncated: shown.length > APPROVAL_SUMMARY_LIMIT,
+  };
 }
 
 /** Identifies one round of approval requests so a button from an earlier round cannot answer a later one. */
 export function approvalRound(message: UIMessage) {
-  const ids = pendingApprovalParts(message).map((part) => part.approval?.id ?? "").sort();
+  const ids = pendingApprovalParts(message)
+    .map((part) => part.approval?.id ?? "")
+    .sort();
   return createHash("sha256").update(ids.join("|")).digest("hex").slice(0, 8);
 }
 
@@ -106,12 +127,23 @@ function finalText(message: UIMessage | undefined) {
   }
   const text = tail.join("").trim();
   if (text) return text;
-  return message.parts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n\n").trim();
+  return message.parts
+    .flatMap((part) => (part.type === "text" ? [part.text] : []))
+    .join("\n\n")
+    .trim();
 }
 
-export function approvalOutcome(message: UIMessage, jobId: string, bot: Pick<Bot, "name">, locale?: string): TurnOutcome {
+export function approvalOutcome(
+  message: UIMessage,
+  jobId: string,
+  bot: Pick<Bot, "name">,
+  locale?: string,
+): TurnOutcome {
   const tr = translatorFor(locale);
-  const pending = pendingApprovalParts(message).map((part) => ({ tool: toolName(part), ...summarize(part.input) }));
+  const pending = pendingApprovalParts(message).map((part) => ({
+    tool: toolName(part),
+    ...summarize(part.input),
+  }));
   return {
     kind: "approval",
     botName: bot.name,
@@ -158,10 +190,24 @@ type TurnInput = {
  * failed, or parked waiting for approval/takeover.
  */
 async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
-  const { userId, locale, store, bot, thread, job, messages, requestMessage, assistantId, runMode } = input;
+  const {
+    userId,
+    locale,
+    store,
+    bot,
+    thread,
+    job,
+    messages,
+    requestMessage,
+    assistantId,
+    runMode,
+  } = input;
   const tr = translatorFor(locale);
   const author = { id: bot.id, name: bot.name, accent: bot.accent };
-  const streamHistory = [...messages.filter((message) => message.id !== requestMessage.id), requestMessage];
+  const streamHistory = [
+    ...messages.filter((message) => message.id !== requestMessage.id),
+    requestMessage,
+  ];
   let failure: unknown;
   let response: UIMessage | undefined;
   let aborted = false;
@@ -172,15 +218,25 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
     failureHandled = true;
     const message = translateError(locale, error);
     // The turn's error goes to the chat and the notification; a computer error was already recorded by its tool.
-    await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId: job.id }).catch(() => undefined);
+    await setComputer(userId, {
+      status: "idle",
+      workingLabel: "",
+      workingBotId: null,
+      jobId: job.id,
+    }).catch(() => undefined);
     // deniToolApproval may already have parked the job before the reply could be saved.
-    const failed = await transitionJob(userId, job.id, ["running", "finalizing", "waiting_approval", "waiting_takeover"], {
-      status: "failed",
-      error: message,
-      finishedAt: new Date(),
-      heartbeatAt: null,
-      lockedAt: null,
-    }).catch(() => null);
+    const failed = await transitionJob(
+      userId,
+      job.id,
+      ["running", "finalizing", "waiting_approval", "waiting_takeover"],
+      {
+        status: "failed",
+        error: message,
+        finishedAt: new Date(),
+        heartbeatAt: null,
+        lockedAt: null,
+      },
+    ).catch(() => null);
     if (failed) {
       await createNotification({
         userId,
@@ -198,8 +254,16 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
     const modelHistory = await compactThread({ userId, threadId: thread.id, bot, messages });
     // A new turn starts from a clean slate: an error left by an earlier run would otherwise stay
     // on the computer panel until the computer next did something.
-    if (store.computer.lastError) void setComputer(userId, { lastError: null }).catch(() => undefined);
-    const tools = createDeniTools({ userId, bot, threadId: thread.id, jobId: job.id, allowHandoff: !group, locale });
+    if (store.computer.lastError)
+      void setComputer(userId, { lastError: null }).catch(() => undefined);
+    const tools = createDeniTools({
+      userId,
+      bot,
+      threadId: thread.id,
+      jobId: job.id,
+      allowHandoff: !group,
+      locale,
+    });
     const result = streamText({
       model,
       instructions:
@@ -208,7 +272,11 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
           store.skills,
           store.bots.map((item) => ({ id: item.id, name: item.name, job: item.job })),
         ) + (group ? groupNote(bot.name) : ""),
-      messages: await convertToModelMessages(messagesForModel(messagesWithReplyContext(group ? groupContext(modelHistory, bot.id) : modelHistory))),
+      messages: await convertToModelMessages(
+        messagesForModel(
+          messagesWithReplyContext(group ? groupContext(modelHistory, bot.id) : modelHistory),
+        ),
+      ),
       tools,
       toolApproval: deniToolApproval({ userId, jobId: job.id, locale }),
       stopWhen: isLoopFinished(),
@@ -227,7 +295,8 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
           checkpointJob(userId, job.id, checkpoint),
           recordModelUsage(userId, step, modelId),
         ]).then((results) => {
-          for (const item of results) if (item.status === "rejected") console.error("persist discord step", item.reason);
+          for (const item of results)
+            if (item.status === "rejected") console.error("persist discord step", item.reason);
         });
       },
       onError: (event) => {
@@ -254,7 +323,15 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
     if (failure) throw failure;
 
     if (response) {
-      const stored = { ...response, metadata: { ...((response.metadata as object) ?? {}), ...BUBBLE_BREAK_METADATA, author, jobId: job.id } } as UIMessage;
+      const stored = {
+        ...response,
+        metadata: {
+          ...(response.metadata as object | undefined),
+          ...BUBBLE_BREAK_METADATA,
+          author,
+          jobId: job.id,
+        },
+      } as UIMessage;
       response = stored;
       await saveMessages(userId, thread.id, [stored]);
     }
@@ -271,13 +348,23 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
       return {
         kind: "takeover",
         botName: bot.name,
-        text: tr("{name} needs your help on the computer. Open the app, finish the step, then send a message here.", { name: bot.name }),
+        text: tr(
+          "{name} needs your help on the computer. Open the app, finish the step, then send a message here.",
+          { name: bot.name },
+        ),
       };
     }
 
-    await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId: job.id }).catch(() => undefined);
+    await setComputer(userId, {
+      status: "idle",
+      workingLabel: "",
+      workingBotId: null,
+      jobId: job.id,
+    }).catch(() => undefined);
     const text = finalText(response) || tr("Task completed.");
-    const completed = await finishJob(userId, job.id, "completed", { result: { status: "completed" } });
+    const completed = await finishJob(userId, job.id, "completed", {
+      result: { status: "completed" },
+    });
     if (completed) {
       await createNotification({
         userId,
@@ -302,11 +389,22 @@ async function preflight(userId: string, locale: string): Promise<Preflight> {
   try {
     await assertRateLimit(userId, "discord-chat", 20);
   } catch (error) {
-    if (error instanceof RateLimitError) return { ok: false, outcome: { kind: "notice", text: tr("Too many requests. Wait a moment and try again.") } };
+    if (error instanceof RateLimitError)
+      return {
+        ok: false,
+        outcome: { kind: "notice", text: tr("Too many requests. Wait a moment and try again.") },
+      };
     throw error;
   }
   const store = await readStore(userId);
-  if (!(await getApiKey(userId))) return { ok: false, outcome: { kind: "notice", text: tr("Add an OpenRouter API key in the app before using Discord.") } };
+  if (!(await getApiKey(userId)))
+    return {
+      ok: false,
+      outcome: {
+        kind: "notice",
+        text: tr("Add an OpenRouter API key in the app before using Discord."),
+      },
+    };
   try {
     await assertCanUseTokens(userId);
   } catch (error) {
@@ -345,7 +443,7 @@ async function runBotTurn(options: {
   );
   if (active?.status === "waiting_approval") {
     const persisted = await loadMessages(userId, thread.id);
-    if (!hasOpenApproval(persisted, active.id) && await releaseStaleApproval(userId, active.id)) {
+    if (!hasOpenApproval(persisted, active.id) && (await releaseStaleApproval(userId, active.id))) {
       active = undefined;
     } else {
       // Only a Discord-started job can be answered with these buttons; the web chat owns the rest.
@@ -358,7 +456,10 @@ async function runBotTurn(options: {
     }
   }
   if (active && active.status !== "waiting_takeover") {
-    return { kind: "notice", text: tr("{name} is still working on your last message.", { name: bot.name }) };
+    return {
+      kind: "notice",
+      text: tr("{name} is still working on your last message.", { name: bot.name }),
+    };
   }
 
   if (await getJobByIdempotencyKey(userId, idempotencyKey)) return { kind: "none" };
@@ -378,14 +479,38 @@ async function runBotTurn(options: {
     if (!claimed?.claimed || claimed.job.status !== "running") return { kind: "none" };
     try {
       await releaseBrowserTakeover(userId, active.id);
-      await setComputer(userId, { status: "idle", workingLabel: "", workingBotId: null, jobId: active.id });
+      await setComputer(userId, {
+        status: "idle",
+        workingLabel: "",
+        workingBotId: null,
+        jobId: active.id,
+      });
       await saveMessages(userId, thread.id, [incoming]);
     } catch (error) {
-      await transitionJob(userId, active.id, "running", { status: "waiting_takeover", payload: claimed.job.payload, lockedAt: null, heartbeatAt: null });
+      await transitionJob(userId, active.id, "running", {
+        status: "waiting_takeover",
+        payload: claimed.job.payload,
+        lockedAt: null,
+        heartbeatAt: null,
+      });
       reportError(error, "resume discord takeover");
-      return { kind: "notice", text: tr("Could not resume the task. Please send your message again.") };
+      return {
+        kind: "notice",
+        text: tr("Could not resume the task. Please send your message again."),
+      };
     }
-    return executeTurn({ userId, locale, store, bot, thread, job: claimed.job, messages, requestMessage: incoming, assistantId: `${active.id}_assistant_${hash}`, runMode });
+    return executeTurn({
+      userId,
+      locale,
+      store,
+      bot,
+      thread,
+      job: claimed.job,
+      messages,
+      requestMessage: incoming,
+      assistantId: `${active.id}_assistant_${hash}`,
+      runMode,
+    });
   }
 
   // Created already claimed so the background scheduler cannot take the turn first.
@@ -399,7 +524,18 @@ async function runBotTurn(options: {
   });
   if (!created.claimed) return { kind: "none" };
   await saveMessages(userId, thread.id, [incoming]);
-  return executeTurn({ userId, locale, store, bot, thread, job: created.job, messages, requestMessage: incoming, assistantId: `${created.job.id}_assistant_${hash}`, runMode });
+  return executeTurn({
+    userId,
+    locale,
+    store,
+    bot,
+    thread,
+    job: created.job,
+    messages,
+    requestMessage: incoming,
+    assistantId: `${created.job.id}_assistant_${hash}`,
+    runMode,
+  });
 }
 
 function incomingMessage(discordMessageId: string, text: string): UIMessage {
@@ -419,7 +555,8 @@ export async function runDiscordMessage(options: {
   const checked = await preflight(userId, locale);
   if (!checked.ok) return checked.outcome;
   const target = pickBot(checked.store, options.botId);
-  if (!target) return { kind: "notice", text: tr("Create a teammate in the app first, then message again.") };
+  if (!target)
+    return { kind: "notice", text: tr("Create a teammate in the app first, then message again.") };
   return runBotTurn({
     userId,
     locale,
@@ -455,15 +592,25 @@ async function runDiscordGroupMessage(
       try {
         await assertRateLimit(userId, "chat", 40);
       } catch (error) {
-        if (error instanceof RateLimitError) return { kind: "notice", text: `${bot.name}: ${tr("Too many requests. Wait a moment and try again.")}` } as TurnOutcome;
+        if (error instanceof RateLimitError)
+          return {
+            kind: "notice",
+            text: `${bot.name}: ${tr("Too many requests. Wait a moment and try again.")}`,
+          } as TurnOutcome;
         throw error;
       }
-      return runBotTurn({ userId, locale, store, bot, thread: group.thread, incoming, idempotencyKey: `discord:${options.discordMessageId}:${bot.id}` }).catch(
-        (error): TurnOutcome => {
-          reportError(error, "discord group turn");
-          return { kind: "notice", text: `${bot.name}: ${discordErrorText(locale, error)}` };
-        },
-      );
+      return runBotTurn({
+        userId,
+        locale,
+        store,
+        bot,
+        thread: group.thread,
+        incoming,
+        idempotencyKey: `discord:${options.discordMessageId}:${bot.id}`,
+      }).catch((error): TurnOutcome => {
+        reportError(error, "discord group turn");
+        return { kind: "notice", text: `${bot.name}: ${discordErrorText(locale, error)}` };
+      });
     }),
   );
 }
@@ -481,28 +628,54 @@ export async function runDiscordConversation(options: {
   const checked = await preflight(options.userId, options.locale);
   if (!checked.ok) return { group: group.thread.title, outcomes: [checked.outcome] };
   const current = pickGroup(checked.store) ?? group;
-  return { group: current.thread.title, outcomes: await runDiscordGroupMessage(options, checked.store, current) };
+  return {
+    group: current.thread.title,
+    outcomes: await runDiscordGroupMessage(options, checked.store, current),
+  };
 }
 
 /** /reset: later turns in the current conversation start fresh. The history stays in the app. */
-export async function resetDiscordConversation(options: { userId: string; botId: string | null; locale: string }) {
+export async function resetDiscordConversation(options: {
+  userId: string;
+  botId: string | null;
+  locale: string;
+}) {
   const tr = translatorFor(options.locale);
   const store = await readStore(options.userId);
   const group = pickGroup(store);
   const teammate = group ? null : pickBot(store, options.botId);
-  const target = group ? { name: group.thread.title, thread: group.thread } : teammate ? { name: teammate.bot.name, thread: teammate.thread } : null;
+  const target = group
+    ? { name: group.thread.title, thread: group.thread }
+    : teammate
+      ? { name: teammate.bot.name, thread: teammate.thread }
+      : null;
   if (!target) return tr("Create a teammate in the app first, then message again.");
   const result = await resetThreadContext(options.userId, target.thread.id);
   const name = { name: target.name };
   if (result === "missing") return tr("Create a teammate in the app first, then message again.");
   if (group) {
-    if (result === "busy") return tr("A teammate in the group {name} is still working or waiting for you. Finish or stop that task, then reset.", name);
-    if (result === "unchanged") return tr("The conversation in the group {name} is already fresh.", name);
-    return tr("Started a new conversation in the group {name}. Earlier messages stay in the app but are no longer sent.", name);
+    if (result === "busy")
+      return tr(
+        "A teammate in the group {name} is still working or waiting for you. Finish or stop that task, then reset.",
+        name,
+      );
+    if (result === "unchanged")
+      return tr("The conversation in the group {name} is already fresh.", name);
+    return tr(
+      "Started a new conversation in the group {name}. Earlier messages stay in the app but are no longer sent.",
+      name,
+    );
   }
-  if (result === "busy") return tr("{name} is still working or waiting for you. Finish or stop that task, then reset.", name);
+  if (result === "busy")
+    return tr(
+      "{name} is still working or waiting for you. Finish or stop that task, then reset.",
+      name,
+    );
   if (result === "unchanged") return tr("The conversation with {name} is already fresh.", name);
-  return tr("Started a new conversation with {name}. Earlier messages stay in the app but are no longer sent.", name);
+  return tr(
+    "Started a new conversation with {name}. Earlier messages stay in the app but are no longer sent.",
+    name,
+  );
 }
 
 /** Apply an Approve/Deny button press to every request of that round and resume the job. */
@@ -517,21 +690,35 @@ export async function runDiscordApproval(options: {
   const tr = translatorFor(locale);
   const stale: TurnOutcome = { kind: "notice", text: tr("This approval is no longer pending.") };
   const job = await getJob(userId, options.jobId);
-  if (!job || job.kind !== "chat" || job.status !== "waiting_approval" || job.payload.source !== "discord") return stale;
+  if (
+    !job ||
+    job.kind !== "chat" ||
+    job.status !== "waiting_approval" ||
+    job.payload.source !== "discord"
+  )
+    return stale;
   const store = await readStore(userId);
   const bot = store.bots.find((item) => item.id === job.botId);
   const thread = store.threads.find((item) => item.id === job.threadId);
   if (!bot || !thread) return stale;
   const persisted = await loadMessages(userId, thread.id);
   // In a group several teammates can wait at once, so only this job's own request counts there.
-  const target = pendingRequestFor(persisted, job.id)
-    ?? (thread.kind === "dm" ? persisted.findLast((message) => message.role === "assistant" && pendingApprovalParts(message).length) : undefined);
+  const target =
+    pendingRequestFor(persisted, job.id) ??
+    (thread.kind === "dm"
+      ? persisted.findLast(
+          (message) => message.role === "assistant" && pendingApprovalParts(message).length,
+        )
+      : undefined);
   if (!target || approvalRound(target) !== options.round) return stale;
 
   const responded = {
     ...target,
     parts: (target.parts as unknown as ToolPart[]).map((part) =>
-      isToolPart(part) && part.state === "approval-requested" && part.approval && !part.approval.isAutomatic
+      isToolPart(part) &&
+      part.state === "approval-requested" &&
+      part.approval &&
+      !part.approval.isAutomatic
         ? {
             ...part,
             state: "approval-responded",
@@ -544,7 +731,9 @@ export async function runDiscordApproval(options: {
         : part,
     ),
   } as UIMessage;
-  const runMode = parseRunMode(typeof job.payload.runMode === "string" ? job.payload.runMode : store.config.runMode);
+  const runMode = parseRunMode(
+    typeof job.payload.runMode === "string" ? job.payload.runMode : store.config.runMode,
+  );
   const messages = mergeThreadMessages(persisted, [responded]);
   const claimed = await claimJob(userId, job.id, {
     from: "waiting_approval",
@@ -557,11 +746,30 @@ export async function runDiscordApproval(options: {
   try {
     await saveMessages(userId, thread.id, [responded]);
   } catch (error) {
-    await transitionJob(userId, job.id, "running", { status: "waiting_approval", payload: job.payload, lockedAt: null, heartbeatAt: null });
+    await transitionJob(userId, job.id, "running", {
+      status: "waiting_approval",
+      payload: job.payload,
+      lockedAt: null,
+      heartbeatAt: null,
+    });
     reportError(error, "resume discord approval");
-    return { kind: "notice", text: tr("Could not resume the task. Please send your message again.") };
+    return {
+      kind: "notice",
+      text: tr("Could not resume the task. Please send your message again."),
+    };
   }
-  return executeTurn({ userId, locale, store, bot, thread, job: claimed.job, messages, requestMessage: responded, assistantId: responded.id, runMode });
+  return executeTurn({
+    userId,
+    locale,
+    store,
+    bot,
+    thread,
+    job: claimed.job,
+    messages,
+    requestMessage: responded,
+    assistantId: responded.id,
+    runMode,
+  });
 }
 
 /** A short id for Discord component custom ids, which are limited to 100 characters. */

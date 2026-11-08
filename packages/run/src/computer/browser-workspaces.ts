@@ -1,33 +1,34 @@
-import "@tanstack/react-start/server-only";
-
 import { and, eq, isNull, or } from "drizzle-orm";
-import { db } from "@/db";
-import { browserWorkspaces } from "@/db/schema";
+import { db } from "../runtime";
+import { runBrowserWorkspaces } from "@deniai/db";
 
 export async function claimBrowserTakeover(userId: string, jobId: string) {
   const rows = await db
-    .update(browserWorkspaces)
+    .update(runBrowserWorkspaces)
     .set({ takeoverJobId: jobId, status: "takeover", updatedAt: new Date() })
     .where(
       and(
-        eq(browserWorkspaces.userId, userId),
-        eq(browserWorkspaces.jobId, jobId),
-        or(isNull(browserWorkspaces.takeoverJobId), eq(browserWorkspaces.takeoverJobId, jobId)),
+        eq(runBrowserWorkspaces.userId, userId),
+        eq(runBrowserWorkspaces.jobId, jobId),
+        or(
+          isNull(runBrowserWorkspaces.takeoverJobId),
+          eq(runBrowserWorkspaces.takeoverJobId, jobId),
+        ),
       ),
     )
-    .returning({ id: browserWorkspaces.id });
+    .returning({ id: runBrowserWorkspaces.id });
   return rows.length > 0;
 }
 
 export async function releaseBrowserTakeover(userId: string, jobId: string) {
   await db
-    .update(browserWorkspaces)
+    .update(runBrowserWorkspaces)
     .set({ takeoverJobId: null, status: "idle", updatedAt: new Date() })
     .where(
       and(
-        eq(browserWorkspaces.userId, userId),
-        eq(browserWorkspaces.jobId, jobId),
-        eq(browserWorkspaces.takeoverJobId, jobId),
+        eq(runBrowserWorkspaces.userId, userId),
+        eq(runBrowserWorkspaces.jobId, jobId),
+        eq(runBrowserWorkspaces.takeoverJobId, jobId),
       ),
     );
 }

@@ -1,16 +1,24 @@
-import "@tanstack/react-start/server-only";
-
-import { writeWorkspaceBytes } from "../computer/workspace";
+import { writeWorkspaceBytes } from "@deniai/run/computer/workspace";
 
 /** Discord lets bots receive files up to this size; the workspace accepts the same. */
 export const ATTACHMENT_LIMIT = 10_000_000;
 const ATTACHMENT_COUNT = 10;
 
-export type IncomingAttachment = { name: string; url: string; size: number; contentType: string | null };
+export type IncomingAttachment = {
+  name: string;
+  url: string;
+  size: number;
+  contentType: string | null;
+};
 
 /** A name that is safe as one path segment and still recognizable. */
 export function attachmentFileName(name: string) {
-  const cleaned = name.normalize("NFC").replace(/[\\/:*?"<>|\x00-\x1f]+/g, "_").replace(/^\.+/, "").trim();
+  const cleaned = name
+    .normalize("NFC")
+    // oxlint-disable-next-line no-control-regex -- strip control characters from file names
+    .replace(/[\\/:*?"<>|\x00-\x1f]+/g, "_")
+    .replace(/^\.+/, "")
+    .trim();
   return (cleaned || "file").slice(-100);
 }
 
@@ -18,7 +26,11 @@ export function attachmentFileName(name: string) {
  * Save files sent in a Discord DM to /inbox/discord/ in the workspace, so the teammate can work
  * with them. Each gets a timestamp prefix, so sending the same name twice keeps both.
  */
-export async function saveDiscordAttachments(userId: string, attachments: IncomingAttachment[], now = new Date()) {
+export async function saveDiscordAttachments(
+  userId: string,
+  attachments: IncomingAttachment[],
+  now = new Date(),
+) {
   const saved: string[] = [];
   const skipped: { name: string; reason: "size" | "count" | "download" }[] = [];
   const stamp = now.toISOString().replace(/[-:]/g, "").replace(/\..+$/, "");

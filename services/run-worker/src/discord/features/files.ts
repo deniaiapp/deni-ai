@@ -1,5 +1,3 @@
-import "@tanstack/react-start/server-only";
-
 import { createHash } from "node:crypto";
 import {
   ActionRowBuilder,
@@ -11,7 +9,7 @@ import {
   StringSelectMenuBuilder,
   time,
 } from "discord.js";
-import { getArtifact, listArtifacts } from "@/lib/agent/artifacts";
+import { getArtifact, listArtifacts } from "@deniai/run/agent/artifacts";
 import {
   bulletList,
   choices,
@@ -29,8 +27,8 @@ import {
   truncate,
   updateMessage,
 } from "../ui";
-import { readStore } from "@/lib/data/store";
-import type { WorkspaceNode } from "@/lib/types";
+import { readStore } from "@deniai/run/data/store";
+import type { WorkspaceNode } from "@deniai/run/types";
 import {
   deleteWorkspacePath,
   findWorkspaceEntry,
@@ -39,7 +37,7 @@ import {
   normalizeWorkspacePath,
   readWorkspaceBytes,
   zipWorkspaceFiles,
-} from "@/lib/computer/workspace";
+} from "@deniai/run/computer/workspace";
 
 const PREFIX = "fl";
 /** Discord's upload cap for a bot is 10 MiB; stay a little under it. */
@@ -72,7 +70,8 @@ function treeLines(nodes: WorkspaceNode[], tr: Translate, indent = 0): string[] 
     `${pad}${node.name}${node.type === "dir" ? "/" : `  ${formatSize(node.size ?? 0)}`}`,
     ...(node.type === "dir" ? treeLines(node.children ?? [], tr, indent + 1) : []),
   ]);
-  if (nodes.length > shownNodes.length) lines.push(`${pad}${tr("+{count} more", { count: nodes.length - shownNodes.length })}`);
+  if (nodes.length > shownNodes.length)
+    lines.push(`${pad}${tr("+{count} more", { count: nodes.length - shownNodes.length })}`);
   return lines;
 }
 
@@ -103,9 +102,14 @@ function tooLarge(rel: string, size: string, tr: Translate) {
  * A file as an attachment, or a folder as a zip, within Discord's upload limit. The zip keeps
  * the web download's file-count cap and the tighter of the two size caps.
  */
-export async function packageWorkspacePath(userId: string, rel: string, tr: Translate): Promise<Package> {
+export async function packageWorkspacePath(
+  userId: string,
+  rel: string,
+  tr: Translate,
+): Promise<Package> {
   const files = await listWorkspaceFiles(userId, rel);
-  if (!files.length) return { content: tr("Nothing to send at {path}.", { path: code(shown(rel)) }) };
+  if (!files.length)
+    return { content: tr("Nothing to send at {path}.", { path: code(shown(rel)) }) };
   const single = files.length === 1 && files[0]?.path === rel ? files[0] : undefined;
   if (single) {
     if (single.size > UPLOAD_LIMIT) return { content: tooLarge(rel, formatSize(single.size), tr) };
@@ -116,17 +120,23 @@ export async function packageWorkspacePath(userId: string, rel: string, tr: Tran
     };
   }
   const zip = await zipWorkspaceFiles(userId, [rel], { maxBytes: UPLOAD_LIMIT });
-  if (!zip.ok && zip.reason === "empty") return { content: tr("Nothing to send at {path}.", { path: code(shown(rel)) }) };
+  if (!zip.ok && zip.reason === "empty")
+    return { content: tr("Nothing to send at {path}.", { path: code(shown(rel)) }) };
   if (!zip.ok && zip.reason === "too_many") {
     return {
       content: `${tr("{path} has more than {max} files, too many to zip here.", { path: code(shown(rel)), max: zip.max })}\n${inApp(tr)}`,
     };
   }
   const total = files.reduce((sum, item) => sum + item.size, 0);
-  if (!zip.ok || zip.data.byteLength > UPLOAD_LIMIT) return { content: tooLarge(rel, formatSize(total), tr) };
+  if (!zip.ok || zip.data.byteLength > UPLOAD_LIMIT)
+    return { content: tooLarge(rel, formatSize(total), tr) };
   const name = `${rel.split("/").at(-1) || "workspace"}.zip`;
   return {
-    content: tr("{path} as a zip ({size}, files: {count}).", { path: code(shown(rel)), count: zip.files, size: formatSize(zip.data.byteLength) }),
+    content: tr("{path} as a zip ({size}, files: {count}).", {
+      path: code(shown(rel)),
+      count: zip.files,
+      size: formatSize(zip.data.byteLength),
+    }),
     files: [new AttachmentBuilder(zip.data, { name })],
   };
 }
@@ -139,7 +149,13 @@ async function listFolder(interaction: ChatInputCommandInteraction, { link, tr }
     return;
   }
   if (entry.type === "file") {
-    await respond(interaction, tr("{path} is a file ({size}). Use /files get to download it.", { path: code(shown(rel)), size: formatSize(entry.size ?? 0) }));
+    await respond(
+      interaction,
+      tr("{path} is a file ({size}). Use /files get to download it.", {
+        path: code(shown(rel)),
+        size: formatSize(entry.size ?? 0),
+      }),
+    );
     return;
   }
   const nodes = await listWorkspace(link.userId, rel || ".", LIST_DEPTH);
@@ -151,7 +167,10 @@ async function listFolder(interaction: ChatInputCommandInteraction, { link, tr }
   const footer = tr("Use /files get with a path to download a file, or a folder as a zip.");
   // One message: header, fences, and footer come out of the budget, with room for "+N more".
   const budget = MESSAGE_LIMIT - header.length - footer.length - 40;
-  await respond(interaction, `${header}\n${codeBlock(fitLines(treeLines(nodes, tr), budget, tr))}\n${footer}`);
+  await respond(
+    interaction,
+    `${header}\n${codeBlock(fitLines(treeLines(nodes, tr), budget, tr))}\n${footer}`,
+  );
 }
 
 async function sendPath(interaction: ChatInputCommandInteraction, { link, tr }: FeatureContext) {
@@ -177,15 +196,22 @@ async function deleteTarget(userId: string, args: string[]) {
   const candidates = new Set<string>();
   for (const file of await listWorkspaceFiles(userId)) {
     const parts = file.path.split("/");
-    for (let index = 1; index <= parts.length; index += 1) candidates.add(parts.slice(0, index).join("/"));
+    for (let index = 1; index <= parts.length; index += 1)
+      candidates.add(parts.slice(0, index).join("/"));
   }
   return [...candidates].find((candidate) => pathHash(candidate) === wanted) ?? "";
 }
 
-async function confirmDelete(interaction: ChatInputCommandInteraction, { link, tr }: FeatureContext) {
+async function confirmDelete(
+  interaction: ChatInputCommandInteraction,
+  { link, tr }: FeatureContext,
+) {
   const rel = normalizeWorkspacePath(interaction.options.getString("path", true));
   if (!rel) {
-    await respond(interaction, tr("The whole workspace cannot be deleted from Discord. Name a file or folder inside it."));
+    await respond(
+      interaction,
+      tr("The whole workspace cannot be deleted from Discord. Name a file or folder inside it."),
+    );
     return;
   }
   const entry = await findWorkspaceEntry(link.userId, rel);
@@ -195,44 +221,72 @@ async function confirmDelete(interaction: ChatInputCommandInteraction, { link, t
   }
   const question =
     entry.type === "dir"
-      ? tr("Delete the folder {path} and everything in it (files: {count})? This cannot be undone.", {
-          path: code(shown(rel)),
-          count: (await listWorkspaceFiles(link.userId, rel)).length,
-        })
+      ? tr(
+          "Delete the folder {path} and everything in it (files: {count})? This cannot be undone.",
+          {
+            path: code(shown(rel)),
+            count: (await listWorkspaceFiles(link.userId, rel)).length,
+          },
+        )
       : tr("Delete {path}? This cannot be undone.", { path: code(shown(rel)) });
-  await respond(interaction, { content: question, components: [confirmRow(PREFIX, deleteArgs(rel), tr)] });
+  await respond(interaction, {
+    content: question,
+    components: [confirmRow(PREFIX, deleteArgs(rel), tr)],
+  });
 }
 
-async function runDelete(interaction: ComponentInteraction, { link, tr }: FeatureContext, args: string[]) {
+async function runDelete(
+  interaction: ComponentInteraction,
+  { link, tr }: FeatureContext,
+  args: string[],
+) {
   await interaction.deferUpdate();
   const rel = await deleteTarget(link.userId, args);
   const entry = rel ? await findWorkspaceEntry(link.userId, rel) : null;
   if (!rel || !entry) {
-    await updateMessage(interaction, `${interaction.message.content}\n\n${tr("That file or folder is no longer there.")}`);
+    await updateMessage(
+      interaction,
+      `${interaction.message.content}\n\n${tr("That file or folder is no longer there.")}`,
+    );
     return;
   }
   await deleteWorkspacePath(link.userId, rel);
   await updateMessage(interaction, tr("Deleted {path}.", { path: code(shown(rel)) }));
 }
 
-async function showDeliverables(interaction: ChatInputCommandInteraction, { link, tr }: FeatureContext) {
-  const [artifacts, store] = await Promise.all([listArtifacts(link.userId), readStore(link.userId)]);
+async function showDeliverables(
+  interaction: ChatInputCommandInteraction,
+  { link, tr }: FeatureContext,
+) {
+  const [artifacts, store] = await Promise.all([
+    listArtifacts(link.userId),
+    readStore(link.userId),
+  ]);
   if (!artifacts.length) {
-    await respond(interaction, tr("No deliverables yet. Files your teammates hand over show up here."));
+    await respond(
+      interaction,
+      tr("No deliverables yet. Files your teammates hand over show up here."),
+    );
     return;
   }
   const names = new Map(store.bots.map((bot) => [bot.id, bot.name]));
   const recent = artifacts.slice(0, MENU_SIZE);
   const lines = recent.map((artifact) => {
     const teammate = artifact.botId ? names.get(artifact.botId) : undefined;
-    const parts = [`**${escapeMarkdown(truncate(artifact.title, 100))}**`, code(shown(truncate(artifact.path, 200)))];
+    const parts = [
+      `**${escapeMarkdown(truncate(artifact.title, 100))}**`,
+      code(shown(truncate(artifact.path, 200))),
+    ];
     if (teammate) parts.push(escapeMarkdown(teammate));
     parts.push(time(new Date(artifact.createdAt), "R"));
     return parts.join(" · ");
   });
   const header =
     artifacts.length > recent.length
-      ? tr("The latest {count} of {total} deliverables:", { count: recent.length, total: artifacts.length })
+      ? tr("The latest {count} of {total} deliverables:", {
+          count: recent.length,
+          total: artifacts.length,
+        })
       : tr("Recent deliverables:");
   const footer = tr("Choose one below to get the file.");
   const menu = new StringSelectMenuBuilder()
@@ -264,11 +318,21 @@ async function sendDeliverable(interaction: ComponentInteraction, { link, tr }: 
   const rel = normalizeWorkspacePath(artifact.path);
   const found = rel ? await findWorkspaceEntry(link.userId, rel) : null;
   if (!found) {
-    await interaction.followUp({ content: tr("The file for {title} is no longer in the workspace.", { title: escapeMarkdown(artifact.title) }) });
+    await interaction.followUp({
+      content: tr("The file for {title} is no longer in the workspace.", {
+        title: escapeMarkdown(artifact.title),
+      }),
+    });
     return;
   }
   const result = await packageWorkspacePath(link.userId, rel, tr);
-  await interaction.followUp({ content: truncate(`**${escapeMarkdown(truncate(artifact.title, 200))}**\n${result.content}`, MESSAGE_LIMIT), files: result.files ?? [] });
+  await interaction.followUp({
+    content: truncate(
+      `**${escapeMarkdown(truncate(artifact.title, 200))}**\n${result.content}`,
+      MESSAGE_LIMIT,
+    ),
+    files: result.files ?? [],
+  });
 }
 
 async function withTimeout<T>(promise: Promise<T>, milliseconds: number) {
@@ -285,19 +349,35 @@ async function withTimeout<T>(promise: Promise<T>, milliseconds: number) {
   }
 }
 
-const pathOption = (required: boolean, description: string, ja: string) => (option: SlashCommandStringOption) =>
-  option.setName("path").setDescription(description).setDescriptionLocalization("ja", ja).setRequired(required).setAutocomplete(true);
+const pathOption =
+  (required: boolean, description: string, ja: string) => (option: SlashCommandStringOption) =>
+    option
+      .setName("path")
+      .setDescription(description)
+      .setDescriptionLocalization("ja", ja)
+      .setRequired(required)
+      .setAutocomplete(true);
 
 export const feature: DiscordFeature = {
   prefix: PREFIX,
   commands: [
-    dmCommand("files", "Browse, download, and delete workspace files", "ワークスペースのファイルを閲覧・ダウンロード・削除")
+    dmCommand(
+      "files",
+      "Browse, download, and delete workspace files",
+      "ワークスペースのファイルを閲覧・ダウンロード・削除",
+    )
       .addSubcommand((sub) =>
         sub
           .setName("list")
           .setDescription("Show a folder and what is inside")
           .setDescriptionLocalization("ja", "フォルダの中身を表示")
-          .addStringOption(pathOption(false, "Folder (the whole workspace when empty)", "フォルダ（空欄ならワークスペース全体）")),
+          .addStringOption(
+            pathOption(
+              false,
+              "Folder (the whole workspace when empty)",
+              "フォルダ（空欄ならワークスペース全体）",
+            ),
+          ),
       )
       .addSubcommand((sub) =>
         sub
@@ -332,12 +412,17 @@ export const feature: DiscordFeature = {
     const focused = interaction.options.getFocused(true);
     const foldersOnly = interaction.options.getSubcommand() === "list";
     try {
-      const nodes = flatten(await withTimeout(listWorkspace(link.userId, ".", SUGGEST_DEPTH), SUGGEST_TIMEOUT_MS)).filter(
+      const nodes = flatten(
+        await withTimeout(listWorkspace(link.userId, ".", SUGGEST_DEPTH), SUGGEST_TIMEOUT_MS),
+      ).filter(
         // A longer value would be cut by Discord's 100 character cap and name another path.
         (node) => node.path.length <= 100 && (!foldersOnly || node.type === "dir"),
       );
-      const label = (node: WorkspaceNode) => (node.type === "dir" ? `${node.path}/` : `${node.path} (${formatSize(node.size ?? 0)})`);
-      await interaction.respond(focused.name === "path" ? choices(nodes, focused.value, label, (node) => node.path) : []);
+      const label = (node: WorkspaceNode) =>
+        node.type === "dir" ? `${node.path}/` : `${node.path} (${formatSize(node.size ?? 0)})`;
+      await interaction.respond(
+        focused.name === "path" ? choices(nodes, focused.value, label, (node) => node.path) : [],
+      );
     } catch {
       await interaction.respond([]).catch(() => undefined);
     }

@@ -1,5 +1,3 @@
-import "@tanstack/react-start/server-only";
-
 import {
   ActionRowBuilder,
   ApplicationIntegrationType,
@@ -18,8 +16,9 @@ import {
   type StringSelectMenuInteraction,
 } from "discord.js";
 import type { DiscordLink } from "./link";
-import type { Translate } from "@/i18n/standalone";
-import { splitBubbleBreaks } from "../chat/message-bubbles";
+import type { Translate } from "@deniai/run/i18n/standalone";
+import { runConfig } from "@deniai/run/runtime";
+import { splitBubbleBreaks } from "@deniai/run/chat/message-bubbles";
 
 export type { Translate };
 
@@ -53,8 +52,16 @@ export type DiscordFeature = {
   command?: (interaction: ChatInputCommandInteraction, ctx: FeatureContext) => Promise<void>;
   autocomplete?: (interaction: AutocompleteInteraction, ctx: FeatureContext) => Promise<void>;
   /** args are the custom id parts after the prefix. Not acknowledged yet: deferUpdate or show a modal. */
-  component?: (interaction: ComponentInteraction, ctx: FeatureContext, args: string[]) => Promise<void>;
-  modal?: (interaction: ModalSubmitInteraction, ctx: FeatureContext, args: string[]) => Promise<void>;
+  component?: (
+    interaction: ComponentInteraction,
+    ctx: FeatureContext,
+    args: string[],
+  ) => Promise<void>;
+  modal?: (
+    interaction: ModalSubmitInteraction,
+    ctx: FeatureContext,
+    args: string[],
+  ) => Promise<void>;
 };
 
 /** A slash command that only exists in the bot's DMs, with an optional Japanese description. */
@@ -63,7 +70,10 @@ export function dmCommand(name: string, description: string, ja?: string) {
     .setName(name)
     .setDescription(description)
     .setContexts(InteractionContextType.BotDM)
-    .setIntegrationTypes(ApplicationIntegrationType.GuildInstall, ApplicationIntegrationType.UserInstall);
+    .setIntegrationTypes(
+      ApplicationIntegrationType.GuildInstall,
+      ApplicationIntegrationType.UserInstall,
+    );
   return ja ? builder.setDescriptionLocalization("ja", ja) : builder;
 }
 
@@ -92,7 +102,11 @@ function splitAtLimit(text: string, limit: number) {
   let rest = text.trim();
   while (rest.length > limit) {
     const window = rest.slice(0, limit);
-    const cut = Math.max(window.lastIndexOf("\n\n"), window.lastIndexOf("\n"), window.lastIndexOf(" "));
+    const cut = Math.max(
+      window.lastIndexOf("\n\n"),
+      window.lastIndexOf("\n"),
+      window.lastIndexOf(" "),
+    );
     const at = cut > limit / 2 ? cut : limit;
     chunks.push(rest.slice(0, at).trimEnd());
     rest = rest.slice(at).trimStart();
@@ -103,7 +117,11 @@ function splitAtLimit(text: string, limit: number) {
 
 export type Reply =
   | string
-  | { content?: string; files?: AttachmentBuilder[]; components?: ActionRowBuilder<MessageActionRowComponentBuilder>[] };
+  | {
+      content?: string;
+      files?: AttachmentBuilder[];
+      components?: ActionRowBuilder<MessageActionRowComponentBuilder>[];
+    };
 
 /**
  * Answer an interaction whether or not it was deferred. Long text is split over follow-up
@@ -120,7 +138,8 @@ export async function respond(interaction: RepliableInteraction, reply: Reply) {
       files: last ? (payload.files ?? []) : [],
       components: last ? (payload.components ?? []) : [],
     };
-    if (index === 0 && (interaction.deferred || interaction.replied)) await interaction.editReply(message);
+    if (index === 0 && (interaction.deferred || interaction.replied))
+      await interaction.editReply(message);
     else if (index === 0) await interaction.reply(message);
     else await interaction.followUp(message);
   }
@@ -133,22 +152,36 @@ export async function updateMessage(
   components: ActionRowBuilder<MessageActionRowComponentBuilder>[] = [],
 ) {
   const shown = truncate(content, MESSAGE_LIMIT);
-  if (interaction.deferred || interaction.replied) await interaction.editReply({ content: shown, components });
+  if (interaction.deferred || interaction.replied)
+    await interaction.editReply({ content: shown, components });
   else await interaction.update({ content: shown, components });
 }
 
 /** Confirm and Cancel for a destructive action. The router answers prefix:cancel itself. */
 export function confirmRow(prefix: string, args: string[], tr: Translate, label?: string) {
   return new ActionRowBuilder<MessageActionRowComponentBuilder>().addComponents(
-    new ButtonBuilder().setCustomId(customId(prefix, ...args)).setLabel(label ?? tr("Delete")).setStyle(ButtonStyle.Danger),
-    new ButtonBuilder().setCustomId(customId(prefix, "cancel")).setLabel(tr("Cancel")).setStyle(ButtonStyle.Secondary),
+    new ButtonBuilder()
+      .setCustomId(customId(prefix, ...args))
+      .setLabel(label ?? tr("Delete"))
+      .setStyle(ButtonStyle.Danger),
+    new ButtonBuilder()
+      .setCustomId(customId(prefix, "cancel"))
+      .setLabel(tr("Cancel"))
+      .setStyle(ButtonStyle.Secondary),
   );
 }
 
-/** The web app's address, for the few things Discord cannot do (OAuth, live browser control). */
+/**
+ * The web app's address, for the few things Discord cannot do (OAuth, live browser
+ * control). Paths are Run-mode paths ("/" is the Run home, "/settings" Run settings);
+ * "/upgrade" opens the Deni AI plan page.
+ */
 export function appUrl(path = "/") {
-  const base = (process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/+$/, "");
-  return base ? `${base}${path.startsWith("/") ? path : `/${path}`}` : "";
+  const base = runConfig().appUrl.replace(/\/+$/, "");
+  if (!base) return "";
+  const normalized = path.startsWith("/") ? path : `/${path}`;
+  if (normalized === "/upgrade") return `${base}/settings/billing`;
+  return `${base}/run${normalized === "/" ? "" : normalized}`;
 }
 
 /** "Open the app" with a link when the address is configured. */
@@ -167,7 +200,12 @@ export function codeBlock(text: string, language = "") {
 }
 
 /** A bullet list that fits one message, ending with "+N more" when it does not. */
-export function bulletList(items: string[], tr: Translate, empty: string, limit = MESSAGE_LIMIT - 100) {
+export function bulletList(
+  items: string[],
+  tr: Translate,
+  empty: string,
+  limit = MESSAGE_LIMIT - 100,
+) {
   if (!items.length) return empty;
   const lines: string[] = [];
   let used = 0;
@@ -184,7 +222,12 @@ export function bulletList(items: string[], tr: Translate, empty: string, limit 
 }
 
 /** Up to 25 autocomplete choices whose label contains the typed text. */
-export function choices<T>(items: T[], query: string, label: (item: T) => string, value: (item: T) => string) {
+export function choices<T>(
+  items: T[],
+  query: string,
+  label: (item: T) => string,
+  value: (item: T) => string,
+) {
   const wanted = query.trim().toLowerCase();
   return items
     .filter((item) => !wanted || label(item).toLowerCase().includes(wanted))
@@ -193,8 +236,14 @@ export function choices<T>(items: T[], query: string, label: (item: T) => string
 }
 
 /** Find by id first (what autocomplete submits), then by case-insensitive name. */
-export function findByIdOrName<T extends { id: string; name: string }>(items: T[], typed: string | null | undefined) {
+export function findByIdOrName<T extends { id: string; name: string }>(
+  items: T[],
+  typed: string | null | undefined,
+) {
   const value = typed?.trim();
   if (!value) return undefined;
-  return items.find((item) => item.id === value) ?? items.find((item) => item.name.toLowerCase() === value.toLowerCase());
+  return (
+    items.find((item) => item.id === value) ??
+    items.find((item) => item.name.toLowerCase() === value.toLowerCase())
+  );
 }

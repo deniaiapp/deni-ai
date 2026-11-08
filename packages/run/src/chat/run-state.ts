@@ -64,9 +64,13 @@ export function lastAssistantText(messages: UIMessage[]) {
 export function hasOpenApproval(messages: UIMessage[], jobId: string) {
   return messages.some((message) => {
     const owner = (message.metadata as { jobId?: unknown } | undefined)?.jobId;
-    return message.role === "assistant" && (owner === undefined || owner === jobId) && message.parts.some((part) => {
-      const value = part as { state?: string; approval?: { id?: string } };
-      return value.state === "approval-requested" && Boolean(value.approval?.id);
-    });
+    return (
+      message.role === "assistant" &&
+      (owner === undefined || owner === jobId) &&
+      message.parts.some((part) => {
+        const value = part as { state?: string; approval?: { id?: string } };
+        return value.state === "approval-requested" && Boolean(value.approval?.id);
+      })
+    );
   });
 }

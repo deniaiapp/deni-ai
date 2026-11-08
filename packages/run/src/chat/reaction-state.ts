@@ -18,7 +18,11 @@ export function createReactionState(
   function publish() {
     snapshot = { ...confirmed };
     for (const operation of pending.values()) {
-      snapshot[operation.messageId] = updateReactions(snapshot[operation.messageId] ?? [], operation.emoji, operation.selected);
+      snapshot[operation.messageId] = updateReactions(
+        snapshot[operation.messageId] ?? [],
+        operation.emoji,
+        operation.selected,
+      );
     }
     listeners.forEach((listener) => listener());
   }
@@ -27,7 +31,12 @@ export function createReactionState(
     getSnapshot: () => snapshot,
     getRevision: () => revision,
     hasPending: () => pending.size > 0,
-    subscribe(listener: () => void) { listeners.add(listener); return () => { listeners.delete(listener); }; },
+    subscribe(listener: () => void) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
     hydrate(value: ReactionMap, startedAt: number) {
       if (startedAt !== revision || pending.size) return;
       confirmed = { ...value };
@@ -43,17 +52,31 @@ export function createReactionState(
         let error: unknown;
         try {
           const result = await save(messageId, emoji, selected);
-          confirmed = { ...confirmed, [messageId]: updateReactions(confirmed[messageId] ?? [], emoji, result[messageId]?.includes(emoji) ?? false) };
-        } catch (cause) { error = cause; }
+          confirmed = {
+            ...confirmed,
+            [messageId]: updateReactions(
+              confirmed[messageId] ?? [],
+              emoji,
+              result[messageId]?.includes(emoji) ?? false,
+            ),
+          };
+        } catch (cause) {
+          error = cause;
+        }
         const latest = pending.get(key)?.version === version;
         if (latest) pending.delete(key);
         ++revision;
         publish();
         if (error && latest) throw error;
       });
-      const settled = task.then(() => undefined, () => undefined);
+      const settled = task.then(
+        () => undefined,
+        () => undefined,
+      );
       queues.set(messageId, settled);
-      void settled.then(() => { if (queues.get(messageId) === settled) queues.delete(messageId); });
+      void settled.then(() => {
+        if (queues.get(messageId) === settled) queues.delete(messageId);
+      });
       return task;
     },
   };

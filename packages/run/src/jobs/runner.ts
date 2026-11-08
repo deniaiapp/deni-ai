@@ -1,10 +1,7 @@
-import "@tanstack/react-start/server-only";
-
 import { convertToModelMessages, generateText, isLoopFinished, type UIMessage } from "ai";
 import { buildInstructions, createDeniTools, deniHandoffToolApproval } from "../agent";
-import { getApiKey } from "../data/config";
 import { finishJob, checkpointJob, claimJob, heartbeatJob, getJob } from "./index";
-import { getDeniModel } from "../agent/llm";
+import { getDeniModel, hasLanguageModel } from "../agent/llm";
 import { nowIso } from "../data/ids";
 import { loadMessages, mutateStore, readStore, saveMessages } from "../data/store";
 import { createNotification } from "./notifications";
@@ -16,7 +13,7 @@ import { parseRunMode } from "../agent/model";
 import type { AgentJob } from "../types";
 import { messagesWithReplyContext } from "../chat/message-actions";
 import { groupContext } from "../chat/group-chat";
-import { translateError, translatorFor } from "@/i18n/standalone";
+import { translateError, translatorFor } from "../i18n/standalone";
 import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "../chat/message-bubbles";
 
 function payloadMessages(job: AgentJob): UIMessage[] {
@@ -24,16 +21,28 @@ function payloadMessages(job: AgentJob): UIMessage[] {
   return Array.isArray(value) ? (value as UIMessage[]) : [];
 }
 
+/** Renew the lease at least this often while a model call runs (the lease lasts 5 minutes). */
+export const JOB_HEARTBEAT_MS = 30_000;
 
 /**
- * Execute a queued job without a request lifecycle. This is used by the scheduler and
- * retry endpoint, so a browser disconnect cannot terminate the work. The DB lease makes
- * concurrent scheduler ticks and process restarts safe.
+ * Claim one queued job and run it without a request lifecycle (the retry endpoint and
+ * Discord), so a browser disconnect cannot terminate the work.
  */
 export async function runBackgroundJob(userId: string, jobId: string) {
   const claimed = await claimJob(userId, jobId);
   if (!claimed || !claimed.claimed || claimed.job.status !== "running") return claimed?.job ?? null;
-  const job = claimed.job;
+  return runClaimedJob(claimed.job);
+}
+
+/**
+ * Run a job this process already claimed (the scheduler claims a batch with
+ * `claimNextJobs`). A heartbeat renews the lease every {@link JOB_HEARTBEAT_MS} while the
+ * model works, each step is checkpointed, and a cancellation seen at a heartbeat or step
+ * aborts the model call. The assistant message id is derived from the job id, so a retry
+ * replaces the reply instead of adding a second one.
+ */
+export async function runClaimedJob(job: AgentJob): Promise<AgentJob | null> {
+  const userId = job.userId ?? "";
   const locale = typeof job.payload.locale === "string" ? job.payload.locale : undefined;
   const tr = translatorFor(locale);
   const store = await readStore(userId);
@@ -44,7 +53,9 @@ export async function runBackgroundJob(userId: string, jobId: string) {
   if (job.kind === "routine") {
     const routine = store.routines.find((item) => item.id === job.payload.routineId);
     if (!routine?.enabled || (routine.revision ?? 0) !== (job.payload.routineRevision ?? 0)) {
-      await finishJob(userId, job.id, "cancelled", { error: tr("Routine was disabled, deleted, or changed before this run started.") });
+      await finishJob(userId, job.id, "cancelled", {
+        error: tr("Routine was disabled, deleted, or changed before this run started."),
+      });
       return getJob(userId, job.id);
     }
   }
@@ -53,8 +64,7 @@ export async function runBackgroundJob(userId: string, jobId: string) {
     await finishJob(userId, job.id, "failed", { error: tr("bot not found") });
     return getJob(userId, job.id);
   }
-  const apiKey = await getApiKey(userId);
-  if (!apiKey) {
+  if (!(await hasLanguageModel(userId))) {
     await finishJob(userId, job.id, "failed", { error: tr("OPENROUTER_API_KEY is missing") });
     await createNotification({
       userId,
@@ -67,6 +77,15 @@ export async function runBackgroundJob(userId: string, jobId: string) {
   }
 
   const messages = payloadMessages(job);
+  const abort = new AbortController();
+  const heartbeat = setInterval(() => {
+    void heartbeatJob(userId, job.id)
+      .then((current) => {
+        if (!current) abort.abort();
+      })
+      .catch(() => undefined);
+  }, JOB_HEARTBEAT_MS);
+  heartbeat.unref?.();
   const isGroup = store.threads.find((thread) => thread.id === job.threadId)?.kind === "group";
   try {
     await assertCanUseTokens(userId);
@@ -94,13 +113,29 @@ export async function runBackgroundJob(userId: string, jobId: string) {
         store.skills,
         store.bots.map((item) => ({ id: item.id, name: item.name, job: item.job })),
       ),
-      messages: await convertToModelMessages(messagesForModel(messagesWithReplyContext(isGroup ? groupContext(modelHistory, bot.id) : modelHistory))),
-      tools: createDeniTools({ userId, bot, threadId: job.threadId, jobId: job.id, allowHandoff: !isGroup, locale }),
+      messages: await convertToModelMessages(
+        messagesForModel(
+          messagesWithReplyContext(isGroup ? groupContext(modelHistory, bot.id) : modelHistory),
+        ),
+      ),
+      tools: createDeniTools({
+        userId,
+        bot,
+        threadId: job.threadId,
+        jobId: job.id,
+        allowHandoff: !isGroup,
+        locale,
+      }),
       // Only a text reply is saved below, so an approval card could never be answered and the
       // job would stay in waiting_approval. Deny those actions; the reply explains what is left.
-      toolApproval: deniHandoffToolApproval(locale, tr("Background tasks cannot wait for approval"), userId),
+      toolApproval: deniHandoffToolApproval(
+        locale,
+        tr("Background tasks cannot wait for approval"),
+        userId,
+      ),
       stopWhen: isLoopFinished(),
       providerOptions,
+      abortSignal: abort.signal,
       onStepFinish: async (step) => {
         await heartbeatJob(userId, job.id).catch(() => undefined);
         await checkpointJob(userId, job.id, {
@@ -109,7 +144,10 @@ export async function runBackgroundJob(userId: string, jobId: string) {
           updatedAt: nowIso(),
         }).catch(() => undefined);
         const current = await getJob(userId, job.id);
-        if (!current || current.status === "cancelled") throw new Error(tr("Job cancelled or conversation deleted"));
+        if (!current || current.status === "cancelled") {
+          abort.abort();
+          throw new Error(tr("Job cancelled or conversation deleted"));
+        }
       },
     });
     await recordModelSteps(userId, result.steps, modelId);
@@ -118,7 +156,11 @@ export async function runBackgroundJob(userId: string, jobId: string) {
     const assistant: UIMessage = {
       id: `${job.id}_assistant`,
       role: "assistant",
-      metadata: { ...BUBBLE_BREAK_METADATA, author: { id: bot.id, name: bot.name, accent: bot.accent }, jobId: job.id },
+      metadata: {
+        ...BUBBLE_BREAK_METADATA,
+        author: { id: bot.id, name: bot.name, accent: bot.accent },
+        jobId: job.id,
+      },
       parts: [{ type: "text", text: result.text || tr("Task completed.") }],
     };
     await saveMessages(userId, job.threadId, [assistant]);
@@ -160,12 +202,15 @@ export async function runBackgroundJob(userId: string, jobId: string) {
         userId,
         jobId: job.id,
         kind: "failed",
-        title: usageError ? tr("Task paused by usage limit") : tr("{name} could not finish the task", { name: bot.name }),
+        title: usageError
+          ? tr("Task paused by usage limit")
+          : tr("{name} could not finish the task", { name: bot.name }),
         body: message,
       }).catch(() => undefined);
     }
     return failed;
   } finally {
+    clearInterval(heartbeat);
     await setComputer(userId, {
       status: "idle",
       workingLabel: "",

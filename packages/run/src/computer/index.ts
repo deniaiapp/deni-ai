@@ -1,17 +1,20 @@
-import "@tanstack/react-start/server-only";
-
-import Steel from "steel-sdk";
-import { exec } from "node:child_process";
 import { mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import { promisify } from "node:util";
-import type { Browser, BrowserContext, Page } from "playwright";
+import type { Browser, BrowserContext, Page } from "playwright-core";
 import { mutateStore, readStore } from "../data/store";
-import { db } from "@/db";
-import { browserWorkspaces } from "@/db/schema";
+import { db, runConfig, runLogger } from "../runtime";
+import { runBrowserWorkspaces } from "@deniai/db";
 import { emitComputer, lastComputer, listShells, pushShell } from "./events";
-import { userBrowserDir, userScreenPath } from "../data/paths";
+import { userScreenPath } from "../data/paths";
 import { getUserObject, hasObjectStorage, putUserObject } from "../data/storage";
+import {
+  browserProvider,
+  computerCapabilities,
+  ComputerNotConfiguredError,
+  requireBrowser,
+  type BrowserProvider,
+  type SandboxHandle,
+} from "./providers";
 import {
   billUserSandbox,
   getUserSandbox,
@@ -36,7 +39,6 @@ import type { ComputerState, ShellRecord } from "../types";
 import { createId, nowIso } from "../data/ids";
 import { assertCanStartBrowser, isBrowserLimitReached, recordTimeUsage } from "../billing/usage";
 
-const execAsync = promisify(exec);
 const VIEWPORT = { width: 1280, height: 800 };
 const DANGEROUS = [
   /\b(sudo|doas|pkexec|su)\b/i,
@@ -56,7 +58,7 @@ const DANGEROUS = [
   /\b(nc|ncat|netcat)\b.*\s(-e|-c)\b/i,
   /\/dev\/tcp\b/i,
   /\b(curl|wget|fetch)\b.*\|\s*(sh|bash|zsh|python|perl|ruby|node)\b/i,
-  /\b(bash|sh|zsh|python|perl|ruby|node|pwsh|powershell)\s+[-\/]c\b/i,
+  /\b(bash|sh|zsh|python|perl|ruby|node|pwsh|powershell)\s+[-/]c\b/i,
   /\beval\b/i,
   /\bbase64\b.*\|\s*(sh|bash)/i,
   /\b(reg\s+delete|bcdedit)\b/i,
@@ -89,7 +91,7 @@ type BrowserSession = {
   browser?: Browser;
   context: BrowserContext;
   page: Page;
-  steel?: Steel;
+  provider?: BrowserProvider;
   steelSessionId?: string;
   idleTimer?: ReturnType<typeof setTimeout>;
   closed?: boolean;
@@ -248,7 +250,10 @@ export async function setComputer(
       ...patchRest
     } = patch;
     // An error belongs to the work that hit it: new work clears it unless it reports its own.
-    const rest = patchRest.status === "working" && patchRest.lastError === undefined ? { ...patchRest, lastError: null } : patchRest;
+    const rest =
+      patchRest.status === "working" && patchRest.lastError === undefined
+        ? { ...patchRest, lastError: null }
+        : patchRest;
     const explicitStatus = rest.status;
 
     const applyGlobalPatch = () => {
@@ -270,18 +275,16 @@ export async function setComputer(
           | "takeover"
           | "error",
         workingLabel: rest.workingLabel ?? previous?.workingLabel ?? "",
-        url: rest.url !== undefined ? rest.url : previous?.url ?? null,
-        title: rest.title !== undefined ? rest.title : previous?.title ?? null,
-        lastError: rest.lastError !== undefined ? rest.lastError : previous?.lastError ?? null,
+        url: rest.url !== undefined ? rest.url : (previous?.url ?? null),
+        title: rest.title !== undefined ? rest.title : (previous?.title ?? null),
+        lastError: rest.lastError !== undefined ? rest.lastError : (previous?.lastError ?? null),
         updatedAt: nowIso(),
       };
       store.computer.workspaces[jobId] = next;
 
       const currentOwner = store.computer.activeJobId ?? null;
       const currentWorkspace = currentOwner ? store.computer.workspaces[currentOwner] : undefined;
-      const currentOwnerBusy = Boolean(
-        currentWorkspace && currentWorkspace.status !== "idle",
-      );
+      const currentOwnerBusy = Boolean(currentWorkspace && currentWorkspace.status !== "idle");
 
       // A job-scoped update must never clear another job's account-level indicator. A
       // new job can take ownership after the previous owner is idle; otherwise its
@@ -316,12 +319,12 @@ export async function setComputer(
     const workspace = state.workspaces?.[scopedJobId];
     if (workspace) {
       await db
-        .insert(browserWorkspaces)
+        .insert(runBrowserWorkspaces)
         .values({
           id: `bw_${userId.slice(0, 8)}_${scopedJobId.slice(0, 40)}`,
           userId,
           jobId: scopedJobId,
-          botId: workspace.botId,
+          teammateId: workspace.botId,
           pageKey: scopedJobId,
           status: workspace.status,
           url: workspace.url,
@@ -330,9 +333,9 @@ export async function setComputer(
           updatedAt: new Date(),
         })
         .onConflictDoUpdate({
-          target: [browserWorkspaces.userId, browserWorkspaces.jobId],
+          target: [runBrowserWorkspaces.userId, runBrowserWorkspaces.jobId],
           set: {
-            botId: workspace.botId,
+            teammateId: workspace.botId,
             status: workspace.status,
             url: workspace.url,
             title: workspace.title,
@@ -340,7 +343,7 @@ export async function setComputer(
             updatedAt: new Date(),
           },
         })
-        .catch((error) => console.error("[computer] workspace state", error));
+        .catch((error) => runLogger().error("[computer] workspace state", error));
     }
   }
   emitComputer(userId, state);
@@ -360,6 +363,7 @@ export function withBrowserLive(userId: string, computer: ComputerState): Comput
     ...computer,
     browserLive: hasBrowserSession(userId) || Boolean(computer.steelSessionId),
     sandboxLive: hasUserSandbox(userId) || Boolean(computer.e2bSandboxId),
+    capabilities: computerCapabilities(),
   };
 }
 
@@ -380,36 +384,43 @@ export function computerForJob(computer: ComputerState, jobId?: string) {
   };
 }
 
-function steelClient() {
-  const steelApiKey = process.env.STEEL_API_KEY;
-  if (!steelApiKey) return null;
+async function connectRemoteSession(
+  userId: string,
+  provider: BrowserProvider,
+  remote: { id: string; profileId: string | null; debugUrl: string | null },
+  jobId?: string,
+): Promise<BrowserSession> {
+  const browser = await provider.connect(remote);
+  const context = browser.contexts()[0];
+  if (!context) throw new Error("The browser provider returned no browser context");
+  const page = context.pages()[0] ?? (await context.newPage());
+  const now = Date.now();
   return {
-    apiKey: steelApiKey,
-    steel: new Steel({
-      steelAPIKey: steelApiKey,
-      baseURL: process.env.STEEL_BASE_URL || "https://api.steel.dev",
-    }),
+    browser,
+    context,
+    page,
+    provider,
+    steelSessionId: remote.id,
+    startedAt: now,
+    lastBilledAt: now,
+    scopeKey: browserScopeKey(userId, jobId),
+    ownsContext: true,
   };
 }
 
-function steelWebsocketUrl(session: { id: string; websocketUrl?: string }, apiKey: string) {
-  if (!session.websocketUrl) {
-    return `wss://connect.steel.dev?apiKey=${encodeURIComponent(apiKey)}&sessionId=${session.id}`;
-  }
-  const join = session.websocketUrl.includes("?") ? "&" : "?";
-  return `${session.websocketUrl}${join}apiKey=${encodeURIComponent(apiKey)}`;
-}
-
-async function reconnectSteelSession(userId: string, jobId?: string): Promise<BrowserSession | null> {
-  const client = steelClient();
-  if (!client) return null;
+async function reconnectSteelSession(
+  userId: string,
+  jobId?: string,
+): Promise<BrowserSession | null> {
+  const provider = browserProvider();
+  if (!provider) return null;
   const existing = await readStore(userId);
   const sessionId = existing.computer.steelSessionId;
   if (jobId) return null;
   if (!sessionId) return null;
   try {
-    const remote = await client.steel.sessions.retrieve(sessionId);
-    if (remote.status !== "live") {
+    const remote = await provider.retrieve(sessionId);
+    if (!remote) {
       await mutateStore(userId, (store) => {
         if (store.computer.steelSessionId === sessionId) {
           store.computer.steelSessionId = null;
@@ -418,30 +429,13 @@ async function reconnectSteelSession(userId: string, jobId?: string): Promise<Br
       }).catch(() => undefined);
       return null;
     }
-    const { chromium } = await import("playwright");
-    const websocketUrl = steelWebsocketUrl(remote, client.apiKey);
-    const browser = await chromium.connectOverCDP(websocketUrl);
-    const context = browser.contexts()[0];
-    if (!context) throw new Error("Steel returned no browser context");
-    const page = context.pages()[0] ?? (await context.newPage());
-    const now = Date.now();
-    const session: BrowserSession = {
-      browser,
-      context,
-      page,
-      steel: client.steel,
-      steelSessionId: remote.id,
-      startedAt: now,
-      lastBilledAt: now,
-      scopeKey: browserScopeKey(userId, jobId),
-      ownsContext: true,
-    };
+    const session = await connectRemoteSession(userId, provider, remote, jobId);
     browserSessions().set(browserScopeKey(userId, jobId), Promise.resolve(session));
-    browserBilledAt().set(browserScopeKey(userId, jobId), now);
+    browserBilledAt().set(browserScopeKey(userId, jobId), session.startedAt);
     await setComputer(userId, {
       steelSessionId: remote.id,
       steelDebugUrl: remote.debugUrl ?? existing.computer.steelDebugUrl,
-      url: page.url() || "about:blank",
+      url: session.page.url() || "about:blank",
       lastError: null,
       browserLive: true,
       ...(jobId ? { jobId } : {}),
@@ -453,7 +447,10 @@ async function reconnectSteelSession(userId: string, jobId?: string): Promise<Br
   }
 }
 
-async function getExistingBrowserSession(userId: string, jobId?: string): Promise<BrowserSession | null> {
+async function getExistingBrowserSession(
+  userId: string,
+  jobId?: string,
+): Promise<BrowserSession | null> {
   const key = browserScopeKey(userId, jobId);
   const existing = browserSessions().get(key);
   if (!existing) return reconnectSteelSession(userId, jobId);
@@ -464,9 +461,7 @@ async function getExistingBrowserSession(userId: string, jobId?: string): Promis
       return reconnectSteelSession(userId, jobId);
     }
     touchSteelSession(userId, session);
-    await billBrowserTime(userId, session, { minDeltaMs: 5_000 }).catch(
-      () => undefined,
-    );
+    await billBrowserTime(userId, session, { minDeltaMs: 5_000 }).catch(() => undefined);
     if (await isBrowserLimitReached(userId, pendingBrowserMs(userId))) {
       await releaseBrowser(userId, jobId);
       return null;
@@ -535,12 +530,13 @@ async function isBrowserSessionUsable(session: BrowserSession) {
 }
 
 function touchSteelSession(userId: string, session: BrowserSession) {
-  if (!session.steel || !session.steelSessionId) return;
+  if (!session.provider || !session.steelSessionId) return;
   if (session.idleTimer) clearTimeout(session.idleTimer);
-  const idleMs = Number(process.env.STEEL_SESSION_IDLE_MS ?? 600_000);
+  const scope = session.scopeKey.split(":").at(-1);
   session.idleTimer = setTimeout(() => {
-    releaseBrowser(userId, session.scopeKey.split(":").at(-1) === "default" ? undefined : session.scopeKey.split(":").at(-1)).catch(() => undefined);
-  }, idleMs);
+    releaseBrowser(userId, scope === "default" ? undefined : scope).catch(() => undefined);
+  }, session.provider.idleMs);
+  session.idleTimer.unref?.();
 }
 
 export async function releaseBrowser(userId: string, jobId?: string, options?: { all?: boolean }) {
@@ -587,8 +583,8 @@ async function closeBrowserSession(userId: string, session: BrowserSession) {
   if (session.idleTimer) clearTimeout(session.idleTimer);
   await billBrowserTime(userId, session).catch(() => undefined);
   browserBilledAt().delete(session.scopeKey);
-  if (session.steel && session.steelSessionId) {
-    await session.steel.sessions.release(session.steelSessionId).catch(() => undefined);
+  if (session.provider && session.steelSessionId) {
+    await session.provider.release(session.steelSessionId).catch(() => undefined);
     await mutateStore(userId, (store) => {
       if (store.computer.steelSessionId === session.steelSessionId) {
         store.computer.steelSessionId = null;
@@ -599,7 +595,8 @@ async function closeBrowserSession(userId: string, session: BrowserSession) {
   const scopedPagesRemain = [...browserSessions().keys()].some(
     (key) => key.startsWith(`${userId}:`) && !key.endsWith(":default"),
   );
-  const preserveSharedContext = session.scopeKey.endsWith(":default") && !session.browser && scopedPagesRemain;
+  const preserveSharedContext =
+    session.scopeKey.endsWith(":default") && !session.browser && scopedPagesRemain;
   if (session.ownsContext !== false || preserveSharedContext) {
     await session.browser?.close().catch(() => undefined);
     if (!preserveSharedContext) await session.context.close().catch(() => undefined);
@@ -618,124 +615,34 @@ async function closeBrowserSession(userId: string, session: BrowserSession) {
           screenshotAt: null,
           browserLive: false,
         }),
-    ...(session.scopeKey.endsWith(":default")
-      ? {}
-      : { jobId: session.scopeKey.split(":").at(-1) }),
+    ...(session.scopeKey.endsWith(":default") ? {} : { jobId: session.scopeKey.split(":").at(-1) }),
   }).catch(() => undefined);
 }
 
 async function createBrowser(userId: string, jobId?: string): Promise<BrowserSession> {
-  const { chromium } = await import("playwright");
-  const steelApiKey = process.env.STEEL_API_KEY;
-
-  if (steelApiKey) {
-    const reconnected = await reconnectSteelSession(userId, jobId);
-    if (reconnected) return reconnected;
-    const steel = new Steel({
-      steelAPIKey: steelApiKey,
-      baseURL: process.env.STEEL_BASE_URL || "https://api.steel.dev",
-    });
-    const existing = await readStore(userId);
-    const profileId = existing.computer.steelProfileId || undefined;
-    let session: Awaited<ReturnType<typeof steel.sessions.create>> | undefined;
-    try {
-      session = await steel.sessions.create({
-        ...(profileId ? { profileId } : {}),
-        persistProfile: true,
-        headless: false,
-        timeout: Number(process.env.STEEL_SESSION_TIMEOUT_MS ?? 900_000),
-        dimensions: VIEWPORT,
-        debugConfig: { interactive: true, systemCursor: true },
-      });
-      const websocketUrl = session.websocketUrl
-        ? `${session.websocketUrl}${session.websocketUrl.includes("?") ? "&" : "?"}apiKey=${encodeURIComponent(steelApiKey)}`
-        : `wss://connect.steel.dev?apiKey=${encodeURIComponent(steelApiKey)}&sessionId=${session.id}`;
-      const browser = await chromium.connectOverCDP(websocketUrl);
-      const context = browser.contexts()[0];
-      if (!context) throw new Error("Steel returned no browser context");
-      const page = context.pages()[0] ?? (await context.newPage());
-      await setComputer(userId, {
-        steelSessionId: session.id,
-        steelProfileId: session.profileId ?? profileId ?? null,
-        steelDebugUrl: session.debugUrl ?? null,
-        url: page.url() || "about:blank",
-        lastError: null,
-        browserLive: true,
-        ...(jobId ? { jobId } : {}),
-      });
-      const now = Date.now();
-      browserBilledAt().set(browserScopeKey(userId, jobId), now);
-      return {
-        browser,
-        context,
-        page,
-        steel,
-        steelSessionId: session.id,
-        startedAt: now,
-        lastBilledAt: now,
-        scopeKey: browserScopeKey(userId, jobId),
-        ownsContext: true,
-      };
-    } catch (error) {
-      if (session) await steel.sessions.release(session.id).catch(() => undefined);
-      throw error;
-    }
-  }
-
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("STEEL_API_KEY is required in production");
-  }
-
-  if (jobId) {
-    let basePromise = browserBases().get(userId);
-    if (!basePromise) {
-      basePromise = createBrowser(userId);
-      browserBases().set(userId, basePromise);
-    }
-    const base = await basePromise;
-    const page = await base.context.newPage();
-    await page.setViewportSize(VIEWPORT);
-    const now = Date.now();
+  const provider = requireBrowser();
+  const reconnected = await reconnectSteelSession(userId, jobId);
+  if (reconnected) return reconnected;
+  const existing = await readStore(userId);
+  const profileId = existing.computer.steelProfileId || null;
+  const remote = await provider.create({ profileId, viewport: VIEWPORT });
+  try {
+    const session = await connectRemoteSession(userId, provider, remote, jobId);
     await setComputer(userId, {
-      url: page.url() || "about:blank",
+      steelSessionId: remote.id,
+      steelProfileId: remote.profileId ?? profileId,
+      steelDebugUrl: remote.debugUrl,
+      url: session.page.url() || "about:blank",
       lastError: null,
       browserLive: true,
-      jobId,
+      ...(jobId ? { jobId } : {}),
     });
-    return {
-      context: base.context,
-      page,
-      startedAt: now,
-      lastBilledAt: now,
-      scopeKey: browserScopeKey(userId, jobId),
-      ownsContext: false,
-      accountKey: userId,
-    };
+    browserBilledAt().set(browserScopeKey(userId, jobId), session.startedAt);
+    return session;
+  } catch (error) {
+    await provider.release(remote.id).catch(() => undefined);
+    throw error;
   }
-
-  const context = await chromium.launchPersistentContext(userBrowserDir(userId), {
-    headless: true,
-    viewport: VIEWPORT,
-    args: ["--disable-dev-shm-usage", "--no-sandbox"],
-  });
-  const page = context.pages()[0] ?? (await context.newPage());
-  await page.setViewportSize(VIEWPORT);
-  await setComputer(userId, {
-    url: page.url() || "about:blank",
-    lastError: null,
-    browserLive: true,
-  });
-  const now = Date.now();
-  browserBilledAt().set(browserScopeKey(userId), now);
-  return {
-    context,
-    page,
-    startedAt: now,
-    lastBilledAt: now,
-    scopeKey: browserScopeKey(userId),
-    ownsContext: true,
-    accountKey: userId,
-  };
 }
 
 async function recordShell(userId: string, record: ShellRecord) {
@@ -745,11 +652,8 @@ async function recordShell(userId: string, record: ShellRecord) {
   });
 }
 
-async function uploadWorkspaceToSandbox(
-  sandbox: Awaited<ReturnType<typeof getUserSandbox>>,
-  root: string,
-) {
-  await sandbox.files.makeDir("/workspace");
+async function uploadWorkspaceToSandbox(sandbox: SandboxHandle, root: string) {
+  await sandbox.makeDir("/workspace");
   const directories: string[] = [];
   const files: string[] = [];
   async function collect(dir: string) {
@@ -766,19 +670,16 @@ async function uploadWorkspaceToSandbox(
   }
   await collect(root);
   for (const directory of directories) {
-    await sandbox.files.makeDir(`/workspace/${directory}`);
+    await sandbox.makeDir(`/workspace/${directory}`);
   }
   for (const file of files) {
     const contents = await readFile(path.join(root, file));
-    await sandbox.files.write(`/workspace/${file}`, Uint8Array.from(contents).buffer);
+    await sandbox.writeFile(`/workspace/${file}`, Uint8Array.from(contents).buffer);
   }
 }
 
-async function downloadWorkspaceFromSandbox(
-  sandbox: Awaited<ReturnType<typeof getUserSandbox>>,
-  root: string,
-) {
-  const entries = await sandbox.files.list("/workspace", { depth: 20 });
+async function downloadWorkspaceFromSandbox(sandbox: SandboxHandle, root: string) {
+  const entries = await sandbox.list("/workspace", { depth: 20 });
   await rm(root, { recursive: true, force: true });
   await mkdir(root, { recursive: true });
   for (const entry of entries) {
@@ -789,7 +690,7 @@ async function downloadWorkspaceFromSandbox(
     }
     const destination = path.join(root, ...rel.split("/"));
     await mkdir(path.dirname(destination), { recursive: true });
-    const content = await sandbox.files.read(entry.path, { format: "bytes" });
+    const content = await sandbox.readFile(entry.path);
     await writeFile(destination, content);
   }
 }
@@ -803,7 +704,7 @@ async function runE2BCommand(
   const sandbox = await getUserSandbox(userId);
   await uploadWorkspaceToSandbox(sandbox, root);
   try {
-    const result = await sandbox.commands.run(command, {
+    const result = await sandbox.run(command, {
       cwd: "/workspace",
       timeoutMs,
     });
@@ -878,48 +779,9 @@ export async function runCommand(
     await recordShell(userId, record);
     return record;
   }
-  if (process.env.NODE_ENV === "production") {
-    throw new Error("E2B_API_KEY is required in production");
-  }
-
-  const cwd = await prepareCommandWorkspace(userId);
-  const record: ShellRecord = {
-    id: createId("sh"),
-    at: nowIso(),
-    command,
-    cwd,
-    exitCode: null,
-    stdout: "",
-    stderr: "",
-  };
-  try {
-    const { stdout, stderr } = await execAsync(command, {
-      cwd,
-      timeout: timeoutMs,
-      encoding: "utf8",
-      maxBuffer: 2 * 1024 * 1024,
-      env: { ...process.env, FORCE_COLOR: "0" },
-    });
-    record.stdout = clip(stdout);
-    record.stderr = clip(stderr);
-    record.exitCode = 0;
-  } catch (error) {
-    const err = error as {
-      stdout?: string;
-      stderr?: string;
-      code?: number;
-      message?: string;
-      killed?: boolean;
-    };
-    record.stdout = clip(err.stdout ?? "");
-    record.stderr = clip(err.stderr ?? err.message ?? String(error));
-    record.exitCode = typeof err.code === "number" ? err.code : 1;
-    if (err.killed) record.stderr = `${record.stderr}\n(timeout)`;
-  } finally {
-    await syncCommandWorkspace(userId, cwd);
-  }
-  await recordShell(userId, record);
-  return record;
+  throw new ComputerNotConfiguredError(
+    "The terminal is not configured on this server (E2B_API_KEY is not set).",
+  );
 }
 
 function clip(text: string, max = 12_000) {
@@ -946,7 +808,7 @@ export async function screenshot(userId: string, jobId?: string): Promise<string
       ...(jobId ? { jobId } : {}),
     });
     const remoteStorage = hasObjectStorage();
-    if (process.env.NODE_ENV === "production" && !remoteStorage) {
+    if (runConfig().production && !remoteStorage) {
       throw new Error("S3-compatible screenshot storage is required in production");
     }
     persistScreenshot(userId, image, remoteStorage, jobId);
@@ -965,7 +827,7 @@ export async function getScreenshot(userId: string, jobId?: string) {
   const cached = screenshotCache().get(cacheKey);
   if (cached) return cached;
   const remoteStorage = hasObjectStorage();
-  if (process.env.NODE_ENV === "production" && !remoteStorage) {
+  if (runConfig().production && !remoteStorage) {
     return null;
   }
   if (remoteStorage) {
@@ -1008,27 +870,35 @@ async function pageSnapshot(page: Page) {
 }
 
 export async function browserNavigate(userId: string, url: string, jobId?: string) {
-  return withBrowserSession(userId, async (session) => {
-    const target = assertBrowserUrl(url);
-    await session.page.goto(target, { waitUntil: "domcontentloaded", timeout: 45_000 });
-    await screenshot(userId, jobId);
-    return {
-      url: session.page.url(),
-      title: await session.page.title(),
-      snapshot: await pageSnapshot(session.page),
-    };
-  }, jobId);
+  return withBrowserSession(
+    userId,
+    async (session) => {
+      const target = assertBrowserUrl(url);
+      await session.page.goto(target, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      await screenshot(userId, jobId);
+      return {
+        url: session.page.url(),
+        title: await session.page.title(),
+        snapshot: await pageSnapshot(session.page),
+      };
+    },
+    jobId,
+  );
 }
 
 export async function browserSnapshot(userId: string, jobId?: string) {
-  return withBrowserSession(userId, async (session) => {
-    await screenshot(userId, jobId);
-    return {
-      url: session.page.url(),
-      title: await session.page.title(),
-      snapshot: await pageSnapshot(session.page),
-    };
-  }, jobId);
+  return withBrowserSession(
+    userId,
+    async (session) => {
+      await screenshot(userId, jobId);
+      return {
+        url: session.page.url(),
+        title: await session.page.title(),
+        snapshot: await pageSnapshot(session.page),
+      };
+    },
+    jobId,
+  );
 }
 
 export async function browserClick(
@@ -1036,54 +906,74 @@ export async function browserClick(
   input: { selector?: string; x?: number; y?: number; normalized?: boolean },
   jobId?: string,
 ) {
-  return withBrowserSession(userId, async (session) => {
-    if (input.selector) {
-      await session.page.locator(input.selector).first().click({ timeout: 10_000 });
-    } else if (input.x != null && input.y != null) {
-      const viewport = session.page.viewportSize() ?? VIEWPORT;
-      const x = input.normalized ? input.x * viewport.width : input.x;
-      const y = input.normalized ? input.y * viewport.height : input.y;
-      await session.page.mouse.click(x, y);
-    } else {
-      throw new Error("A selector or x,y coordinates are required");
-    }
-    await session.page.waitForTimeout(400);
-    await screenshot(userId, jobId);
-    return {
-      url: session.page.url(),
-      title: await session.page.title(),
-      snapshot: await pageSnapshot(session.page),
-    };
-  }, jobId);
+  return withBrowserSession(
+    userId,
+    async (session) => {
+      if (input.selector) {
+        await session.page.locator(input.selector).first().click({ timeout: 10_000 });
+      } else if (input.x != null && input.y != null) {
+        const viewport = session.page.viewportSize() ?? VIEWPORT;
+        const x = input.normalized ? input.x * viewport.width : input.x;
+        const y = input.normalized ? input.y * viewport.height : input.y;
+        await session.page.mouse.click(x, y);
+      } else {
+        throw new Error("A selector or x,y coordinates are required");
+      }
+      await session.page.waitForTimeout(400);
+      await screenshot(userId, jobId);
+      return {
+        url: session.page.url(),
+        title: await session.page.title(),
+        snapshot: await pageSnapshot(session.page),
+      };
+    },
+    jobId,
+  );
 }
 
-export async function browserType(userId: string, input: { selector?: string; text: string }, jobId?: string) {
-  return withBrowserSession(userId, async (session) => {
-    if (input.selector) {
-      await session.page.locator(input.selector).first().fill(input.text);
-    } else {
-      await session.page.keyboard.type(input.text, { delay: 20 });
-    }
-    await screenshot(userId, jobId);
-    return { url: session.page.url(), title: await session.page.title() };
-  }, jobId);
+export async function browserType(
+  userId: string,
+  input: { selector?: string; text: string },
+  jobId?: string,
+) {
+  return withBrowserSession(
+    userId,
+    async (session) => {
+      if (input.selector) {
+        await session.page.locator(input.selector).first().fill(input.text);
+      } else {
+        await session.page.keyboard.type(input.text, { delay: 20 });
+      }
+      await screenshot(userId, jobId);
+      return { url: session.page.url(), title: await session.page.title() };
+    },
+    jobId,
+  );
 }
 
 export async function browserPress(userId: string, key: string, jobId?: string) {
-  return withBrowserSession(userId, async (session) => {
-    await session.page.keyboard.press(key);
-    await session.page.waitForTimeout(300);
-    await screenshot(userId, jobId);
-    return { url: session.page.url(), title: await session.page.title() };
-  }, jobId);
+  return withBrowserSession(
+    userId,
+    async (session) => {
+      await session.page.keyboard.press(key);
+      await session.page.waitForTimeout(300);
+      await screenshot(userId, jobId);
+      return { url: session.page.url(), title: await session.page.title() };
+    },
+    jobId,
+  );
 }
 
 export async function browserScroll(userId: string, dy: number, jobId?: string) {
-  return withBrowserSession(userId, async (session) => {
-    await session.page.mouse.wheel(0, dy);
-    await screenshot(userId, jobId);
-    return { url: session.page.url(), title: await session.page.title() };
-  }, jobId);
+  return withBrowserSession(
+    userId,
+    async (session) => {
+      await session.page.mouse.wheel(0, dy);
+      await screenshot(userId, jobId);
+      return { url: session.page.url(), title: await session.page.title() };
+    },
+    jobId,
+  );
 }
 
 export {

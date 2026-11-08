@@ -1,5 +1,3 @@
-import "@tanstack/react-start/server-only";
-
 import { createId } from "../data/ids";
 import { hasActiveThreadJob } from "../jobs";
 import { contextResetMessage, isContextReset } from "../chat/messages";
@@ -12,7 +10,10 @@ export type ThreadResetResult = "reset" | "unchanged" | "busy" | "missing";
  * after the last message, and later turns only send what follows it. Refused while a task is
  * running or waiting, so its reply cannot land on the wrong side of the divider.
  */
-export async function resetThreadContext(userId: string, threadId: string): Promise<ThreadResetResult> {
+export async function resetThreadContext(
+  userId: string,
+  threadId: string,
+): Promise<ThreadResetResult> {
   const store = await readStore(userId);
   if (!store.threads.some((thread) => thread.id === threadId)) return "missing";
   if (await hasActiveThreadJob(userId, threadId)) return "busy";

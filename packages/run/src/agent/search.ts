@@ -1,3 +1,4 @@
+import { runConfig } from "../runtime";
 const EXA_SEARCH_URL = "https://api.exa.ai/search";
 const DEFAULT_MAX_CHARACTERS = 1500;
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -45,11 +46,11 @@ type ExaResponse = {
 };
 
 export function hasExaApiKey(): boolean {
-  return Boolean(process.env.EXA_API_KEY?.trim());
+  return Boolean(runConfig().exaApiKey);
 }
 
 export async function webSearch(input: WebSearchInput): Promise<WebSearchOutput> {
-  const apiKey = process.env.EXA_API_KEY?.trim();
+  const apiKey = runConfig().exaApiKey;
   if (!apiKey) {
     throw new Error("EXA_API_KEY is not configured; web search is unavailable");
   }

@@ -1,19 +1,17 @@
-import "@tanstack/react-start/server-only";
-
 import { and, eq } from "drizzle-orm";
-import { db } from "@/db";
-import { agentJobs } from "@/db/schema";
+import { db, runConfig } from "@deniai/run/runtime";
+import { runJobs } from "@deniai/db";
 import { getDiscordLinkByUser, getDiscordPrefs } from "./link";
 import { discordTranslator } from "./i18n";
 import { scrubServerPaths } from "./text";
-import type { Translate } from "@/i18n/standalone";
-import { reportError } from "../report";
-import type { AgentJob, AppNotification } from "../types";
+import type { Translate } from "@deniai/run/i18n/standalone";
+import { reportError } from "./report";
+import type { AgentJob, AppNotification } from "@deniai/run/types";
 
 /**
  * Notifications DMed to the linked Discord account. This talks to Discord's REST API with
- * fetch instead of discord.js because src/lib/jobs/notifications.ts, which calls it, is also loaded by
- * the standalone worker and by every route that creates a notification.
+ * fetch instead of discord.js so it works from any process that
+ * registers the `onNotification` hook of `@deniai/run`.
  */
 
 const DISCORD_API = "https://discord.com/api/v10";
@@ -35,14 +33,19 @@ function botToken() {
   return process.env.DISCORD_BOT_TOKEN?.trim() || "";
 }
 
-/** The web app's address. src/lib/discord/ui.ts has the same helper but imports discord.js. */
+/** Run mode in the web app. ui.ts has the same helper but imports discord.js. */
 function appLink() {
-  return (process.env.BETTER_AUTH_URL || process.env.NEXT_PUBLIC_APP_URL || "").replace(/\/+$/, "");
+  return `${runConfig().appUrl.replace(/\/+$/, "")}/run`;
 }
 
 /** Bold title, body, and a link to the app, within Discord's 2,000 characters. */
-export function formatDiscordNotification(notification: Pick<AppNotification, "title" | "body">, tr: Translate, url = appLink()) {
-  const clip = (text: string, max: number) => (text.length > max ? `${text.slice(0, Math.max(0, max - 1))}…` : text);
+export function formatDiscordNotification(
+  notification: Pick<AppNotification, "title" | "body">,
+  tr: Translate,
+  url = appLink(),
+) {
+  const clip = (text: string, max: number) =>
+    text.length > max ? `${text.slice(0, Math.max(0, max - 1))}…` : text;
   const title = `**${clip(notification.title.replace(/\s+/g, " ").trim(), TITLE_LIMIT)}**`;
   const footer = url ? `\n\n${tr("Open the app: {url}", { url })}` : "";
   const room = DISCORD_MESSAGE_LIMIT - title.length - footer.length - 1;
@@ -63,7 +66,8 @@ async function dmChannelId(discordUserId: string) {
   const cached = dmChannels.get(discordUserId);
   if (cached) return cached;
   const response = await discordRequest("/users/@me/channels", { recipient_id: discordUserId });
-  if (!response.ok) throw new Error(`Discord DM channel request failed with HTTP ${response.status}`);
+  if (!response.ok)
+    throw new Error(`Discord DM channel request failed with HTTP ${response.status}`);
   const { id } = (await response.json()) as { id?: unknown };
   if (typeof id !== "string" || !id) throw new Error("Discord did not return a DM channel");
   dmChannels.set(discordUserId, id);
@@ -76,7 +80,10 @@ export async function sendDiscordDm(discordUserId: string, content: string): Pro
   try {
     const channelId = await dmChannelId(discordUserId);
     // No mentions: the text may quote model output, which must not ping anyone.
-    const response = await discordRequest(`/channels/${channelId}/messages`, { content, allowed_mentions: { parse: [] } });
+    const response = await discordRequest(`/channels/${channelId}/messages`, {
+      content,
+      allowed_mentions: { parse: [] },
+    });
     if (!response.ok) {
       dmChannels.delete(discordUserId);
       throw new Error(`Discord message request failed with HTTP ${response.status}`);
@@ -90,9 +97,9 @@ export async function sendDiscordDm(discordUserId: string, content: string): Pro
 
 async function jobKind(userId: string, jobId: string) {
   const [row] = await db
-    .select({ kind: agentJobs.kind })
-    .from(agentJobs)
-    .where(and(eq(agentJobs.userId, userId), eq(agentJobs.id, jobId)))
+    .select({ kind: runJobs.kind })
+    .from(runJobs)
+    .where(and(eq(runJobs.userId, userId), eq(runJobs.id, jobId)))
     .limit(1);
   return row?.kind ?? null;
 }
@@ -101,14 +108,20 @@ async function jobKind(userId: string, jobId: string) {
  * DM a stored notification to the user's linked Discord account when it comes from background
  * work and they have not turned notifications off. Resolves to whether a DM was sent; never throws.
  */
-export async function pushNotificationToDiscord(userId: string, notification: Pick<AppNotification, "jobId" | "title" | "body">): Promise<boolean> {
+export async function pushNotificationToDiscord(
+  userId: string,
+  notification: Pick<AppNotification, "jobId" | "title" | "body">,
+): Promise<boolean> {
   if (!botToken() || !notification.jobId) return false;
   try {
     const kind = await jobKind(userId, notification.jobId);
     if (!kind || !isBackgroundJobKind(kind)) return false;
     const link = await getDiscordLinkByUser(userId);
     if (!link || !(await getDiscordPrefs(userId)).notify) return false;
-    return await sendDiscordDm(link.discordUserId, formatDiscordNotification(notification, discordTranslator(link.locale)));
+    return await sendDiscordDm(
+      link.discordUserId,
+      formatDiscordNotification(notification, discordTranslator(link.locale)),
+    );
   } catch (error) {
     reportError(error, "discord push");
     return false;

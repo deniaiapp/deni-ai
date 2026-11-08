@@ -1,5 +1,3 @@
-import "@tanstack/react-start/server-only";
-
 import { z } from "zod";
 import { createId, nowIso } from "../data/ids";
 import { mutateStore } from "../data/store";
@@ -12,11 +10,17 @@ export const SKILL_BODY_MAX = 100_000;
 export const skillSchema = z.object({
   id: z.string().min(1).max(200).optional(),
   name: z.string().trim().min(1).max(SKILL_NAME_MAX),
-  body: z.string().min(1).max(SKILL_BODY_MAX).refine((value) => Boolean(value.trim())),
+  body: z
+    .string()
+    .min(1)
+    .max(SKILL_BODY_MAX)
+    .refine((value) => Boolean(value.trim())),
 });
 
 export type SkillInput = z.input<typeof skillSchema>;
-export type SaveSkillResult = { ok: true; skill: Skill } | { ok: false; reason: "invalid" | "duplicate" | "not_found" };
+export type SaveSkillResult =
+  | { ok: true; skill: Skill }
+  | { ok: false; reason: "invalid" | "duplicate" | "not_found" };
 
 // Thrown inside mutateStore so a rejected save writes nothing.
 class DuplicateSkillName extends Error {}
@@ -31,7 +35,12 @@ export async function saveSkill(userId: string, input: SkillInput): Promise<Save
   const data = parsed.data;
   try {
     return await mutateStore(userId, (store): SaveSkillResult => {
-      if (store.skills.some((item) => item.id !== data.id && item.name.toLowerCase() === data.name.toLowerCase())) throw new DuplicateSkillName();
+      if (
+        store.skills.some(
+          (item) => item.id !== data.id && item.name.toLowerCase() === data.name.toLowerCase(),
+        )
+      )
+        throw new DuplicateSkillName();
       if (data.id) {
         const item = store.skills.find((entry) => entry.id === data.id);
         if (!item) return { ok: false, reason: "not_found" };
@@ -40,7 +49,13 @@ export async function saveSkill(userId: string, input: SkillInput): Promise<Save
         item.updatedAt = nowIso();
         return { ok: true, skill: item };
       }
-      const created: Skill = { id: createId("skill"), name: data.name, body: data.body, createdAt: nowIso(), updatedAt: nowIso() };
+      const created: Skill = {
+        id: createId("skill"),
+        name: data.name,
+        body: data.body,
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      };
       store.skills.push(created);
       return { ok: true, skill: created };
     });
