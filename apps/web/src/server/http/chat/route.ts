@@ -80,7 +80,7 @@ import {
   GENERIC_CHAT_REQUEST_ERROR,
   isContextOverflowMessage,
 } from "@/lib/chat-request-error";
-import { authorLabels } from "@/components/models/models-author-labels";
+import { authorLabels } from "@/lib/model-author-labels";
 import { addOpenRouterCacheControl, ChatRouteError, resolveChatModelContext } from "./_lib/model";
 import { buildChatSystemPrompt } from "./_lib/prompt";
 import { ChatRequestSchema, setPendingState } from "./_lib/schema";

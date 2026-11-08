@@ -33,10 +33,10 @@ async function run(path: string, headers: Record<string, string> = {}, method = 
 
 describe("request middleware locale negotiation", () => {
   test("honors Accept-Language q-values instead of any ja entry", async () => {
-    expect(await run("/about", { "accept-language": "en-US,en;q=0.9,ja;q=0.8" })).toBe(
+    expect(await run("/faq", { "accept-language": "en-US,en;q=0.9,ja;q=0.8" })).toBe(
       PASSED_THROUGH,
     );
-    expect(await run("/about", { "accept-language": "en, ja;q=0" })).toBe(PASSED_THROUGH);
+    expect(await run("/faq", { "accept-language": "en, ja;q=0" })).toBe(PASSED_THROUGH);
     expect(await run("/chat", { ...SESSION, "accept-language": "en, ja;q=0" })).toBe(
       PASSED_THROUGH,
     );
@@ -44,7 +44,7 @@ describe("request middleware locale negotiation", () => {
 
   test("locale redirects are never cacheable by a shared cache", async () => {
     for (const response of [
-      await run("/about?x=1", { "accept-language": "ja,en;q=0.5" }),
+      await run("/faq?x=1", { "accept-language": "ja,en;q=0.5" }),
       await run("/legal/terms", { cookie: "locale=ja" }),
       await run("/home", { cookie: "locale=ja" }),
     ]) {
@@ -52,13 +52,13 @@ describe("request middleware locale negotiation", () => {
       expect(response.headers.get("cache-control")).toBe("private, no-store");
       expect(response.headers.get("vary")).toBe("Cookie, Accept-Language");
     }
-    expect((await run("/about?x=1", { "accept-language": "ja" })).headers.get("location")).toBe(
-      "https://deniai.app/ja/about?x=1",
+    expect((await run("/faq?x=1", { "accept-language": "ja" })).headers.get("location")).toBe(
+      "https://deniai.app/ja/faq?x=1",
     );
   });
 
   test("an explicit locale cookie wins over Accept-Language", async () => {
-    expect(await run("/about", { cookie: "locale=en", "accept-language": "ja" })).toBe(
+    expect(await run("/faq", { cookie: "locale=en", "accept-language": "ja" })).toBe(
       PASSED_THROUGH,
     );
   });

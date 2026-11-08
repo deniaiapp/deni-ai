@@ -37,10 +37,6 @@ export const routeRules: RouteRules = {
   "/home": marketingCache,
   "/ja": marketingCache,
   "/ja/**": marketingCache,
-  "/about": marketingCache,
-  "/use-cases": marketingCache,
-  "/guides/**": marketingCache,
-  "/models": marketingCache,
   "/flixa": marketingCache,
   "/desktop": marketingCache,
   "/legal/**": legalCache,
@@ -56,9 +52,21 @@ export const routeRules: RouteRules = {
   "/settings/developer": permanentRedirect("/settings/api-keys"),
   "/oauth/example": permanentRedirect("/"),
   "/ja/oauth/example": permanentRedirect("/ja"),
-  // The blog was removed; the AI guides cover the same topics.
-  "/blog": permanentRedirect("/guides"),
-  "/blog/**": permanentRedirect("/guides"),
-  "/ja/blog": permanentRedirect("/ja/guides"),
-  "/ja/blog/**": permanentRedirect("/ja/guides"),
+  // The blog, AI guides, use cases and about pages were removed; the homepage
+  // says what Deni AI is.
+  "/blog": permanentRedirect("/home"),
+  "/blog/**": permanentRedirect("/home"),
+  "/ja/blog": permanentRedirect("/ja"),
+  "/ja/blog/**": permanentRedirect("/ja"),
+  "/guides": permanentRedirect("/home"),
+  "/guides/**": permanentRedirect("/home"),
+  "/ja/guides": permanentRedirect("/ja"),
+  "/ja/guides/**": permanentRedirect("/ja"),
+  "/use-cases": permanentRedirect("/home"),
+  "/ja/use-cases": permanentRedirect("/ja"),
+  "/about": permanentRedirect("/home"),
+  "/ja/about": permanentRedirect("/ja"),
+  // The public model list was removed; the model picker in chat lists them.
+  "/models": permanentRedirect("/chat"),
+  "/ja/models": permanentRedirect("/chat"),
 };

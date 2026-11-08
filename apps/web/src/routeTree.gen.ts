@@ -24,15 +24,12 @@ import { Route as ApiDeviceAuthRouteImport } from './routes/api/device-auth'
 import { Route as ApiUploadAttachmentRouteImport } from './routes/api/upload-attachment'
 import { Route as NewMessageRouteImport } from './routes/new/$message'
 import { Route as Char123LocaleChar125IndexRouteImport } from './routes/{-$locale}/index'
-import { Route as Char123LocaleChar125AboutRouteImport } from './routes/{-$locale}/about'
 import { Route as Char123LocaleChar125ChangelogRouteImport } from './routes/{-$locale}/changelog'
 import { Route as Char123LocaleChar125ContactRouteImport } from './routes/{-$locale}/contact'
 import { Route as Char123LocaleChar125DesktopRouteImport } from './routes/{-$locale}/desktop'
 import { Route as Char123LocaleChar125FaqRouteImport } from './routes/{-$locale}/faq'
 import { Route as Char123LocaleChar125FlixaRouteImport } from './routes/{-$locale}/flixa'
 import { Route as Char123LocaleChar125HomeRouteImport } from './routes/{-$locale}/home'
-import { Route as Char123LocaleChar125ModelsRouteImport } from './routes/{-$locale}/models'
-import { Route as Char123LocaleChar125UseCasesRouteImport } from './routes/{-$locale}/use-cases'
 import { Route as AppAccountPathRouteImport } from './routes/_app/account/$path'
 import { Route as AppChatIndexRouteImport } from './routes/_app/chat/index'
 import { Route as AppChatIdRouteImport } from './routes/_app/chat/$id'
@@ -71,14 +68,6 @@ import { Route as ApiRunSplatRouteImport } from './routes/api/run/$'
 import { Route as ApiStatusModelsRouteImport } from './routes/api/status/models'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
-import { Route as Char123LocaleChar125GuidesIndexRouteImport } from './routes/{-$locale}/guides/index'
-import { Route as Char123LocaleChar125GuidesFreeAiChatRouteImport } from './routes/{-$locale}/guides/free-ai-chat'
-import { Route as Char123LocaleChar125GuidesModelSelectionRouteImport } from './routes/{-$locale}/guides/model-selection'
-import { Route as Char123LocaleChar125GuidesMultiModelWorkflowsRouteImport } from './routes/{-$locale}/guides/multi-model-workflows'
-import { Route as Char123LocaleChar125GuidesPrivacyWhenUsingAiRouteImport } from './routes/{-$locale}/guides/privacy-when-using-ai'
-import { Route as Char123LocaleChar125GuidesPromptPatternsRouteImport } from './routes/{-$locale}/guides/prompt-patterns'
-import { Route as Char123LocaleChar125GuidesStudyWithAiRouteImport } from './routes/{-$locale}/guides/study-with-ai'
-import { Route as Char123LocaleChar125GuidesVerifyAiAnswersRouteImport } from './routes/{-$locale}/guides/verify-ai-answers'
 import { Route as Char123LocaleChar125LegalPrivacyPolicyRouteImport } from './routes/{-$locale}/legal/privacy-policy'
 import { Route as Char123LocaleChar125LegalTermsRouteImport } from './routes/{-$locale}/legal/terms'
 import { Route as Char123LocaleChar125LegalTokushoRouteImport } from './routes/{-$locale}/legal/tokusho'
@@ -178,12 +167,6 @@ const Char123LocaleChar125IndexRoute =
     path: '/',
     getParentRoute: () => Char123LocaleChar125RouteRoute,
   } as any)
-const Char123LocaleChar125AboutRoute =
-  Char123LocaleChar125AboutRouteImport.update({
-    id: '/about',
-    path: '/about',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
 const Char123LocaleChar125ChangelogRoute =
   Char123LocaleChar125ChangelogRouteImport.update({
     id: '/changelog',
@@ -217,18 +200,6 @@ const Char123LocaleChar125HomeRoute =
   Char123LocaleChar125HomeRouteImport.update({
     id: '/home',
     path: '/home',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125ModelsRoute =
-  Char123LocaleChar125ModelsRouteImport.update({
-    id: '/models',
-    path: '/models',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125UseCasesRoute =
-  Char123LocaleChar125UseCasesRouteImport.update({
-    id: '/use-cases',
-    path: '/use-cases',
     getParentRoute: () => Char123LocaleChar125RouteRoute,
   } as any)
 const AppAccountPathRoute = AppAccountPathRouteImport.update({
@@ -421,54 +392,6 @@ const ApiTrpcSplatRoute = ApiTrpcSplatRouteImport.update({
   path: '/api/trpc/$',
   getParentRoute: () => rootRouteImport,
 } as any)
-const Char123LocaleChar125GuidesIndexRoute =
-  Char123LocaleChar125GuidesIndexRouteImport.update({
-    id: '/guides/',
-    path: '/guides/',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125GuidesFreeAiChatRoute =
-  Char123LocaleChar125GuidesFreeAiChatRouteImport.update({
-    id: '/guides/free-ai-chat',
-    path: '/guides/free-ai-chat',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125GuidesModelSelectionRoute =
-  Char123LocaleChar125GuidesModelSelectionRouteImport.update({
-    id: '/guides/model-selection',
-    path: '/guides/model-selection',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125GuidesMultiModelWorkflowsRoute =
-  Char123LocaleChar125GuidesMultiModelWorkflowsRouteImport.update({
-    id: '/guides/multi-model-workflows',
-    path: '/guides/multi-model-workflows',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125GuidesPrivacyWhenUsingAiRoute =
-  Char123LocaleChar125GuidesPrivacyWhenUsingAiRouteImport.update({
-    id: '/guides/privacy-when-using-ai',
-    path: '/guides/privacy-when-using-ai',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125GuidesPromptPatternsRoute =
-  Char123LocaleChar125GuidesPromptPatternsRouteImport.update({
-    id: '/guides/prompt-patterns',
-    path: '/guides/prompt-patterns',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125GuidesStudyWithAiRoute =
-  Char123LocaleChar125GuidesStudyWithAiRouteImport.update({
-    id: '/guides/study-with-ai',
-    path: '/guides/study-with-ai',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
-const Char123LocaleChar125GuidesVerifyAiAnswersRoute =
-  Char123LocaleChar125GuidesVerifyAiAnswersRouteImport.update({
-    id: '/guides/verify-ai-answers',
-    path: '/guides/verify-ai-answers',
-    getParentRoute: () => Char123LocaleChar125RouteRoute,
-  } as any)
 const Char123LocaleChar125LegalPrivacyPolicyRoute =
   Char123LocaleChar125LegalPrivacyPolicyRouteImport.update({
     id: '/legal/privacy-policy',
@@ -608,15 +531,12 @@ export interface FileRoutesByFullPath {
   '/api/device-auth': typeof ApiDeviceAuthRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/new/$message': typeof NewMessageRoute
-  '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
   '/{-$locale}/changelog': typeof Char123LocaleChar125ChangelogRoute
   '/{-$locale}/contact': typeof Char123LocaleChar125ContactRoute
   '/{-$locale}/desktop': typeof Char123LocaleChar125DesktopRoute
   '/{-$locale}/faq': typeof Char123LocaleChar125FaqRoute
   '/{-$locale}/flixa': typeof Char123LocaleChar125FlixaRoute
   '/{-$locale}/home': typeof Char123LocaleChar125HomeRoute
-  '/{-$locale}/models': typeof Char123LocaleChar125ModelsRoute
-  '/{-$locale}/use-cases': typeof Char123LocaleChar125UseCasesRoute
   '/{-$locale}/': typeof Char123LocaleChar125IndexRoute
   '/account/$path': typeof AppAccountPathRoute
   '/chat/$id': typeof AppChatIdRoute
@@ -650,13 +570,6 @@ export interface FileRoutesByFullPath {
   '/api/status/models': typeof ApiStatusModelsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
-  '/{-$locale}/guides/free-ai-chat': typeof Char123LocaleChar125GuidesFreeAiChatRoute
-  '/{-$locale}/guides/model-selection': typeof Char123LocaleChar125GuidesModelSelectionRoute
-  '/{-$locale}/guides/multi-model-workflows': typeof Char123LocaleChar125GuidesMultiModelWorkflowsRoute
-  '/{-$locale}/guides/privacy-when-using-ai': typeof Char123LocaleChar125GuidesPrivacyWhenUsingAiRoute
-  '/{-$locale}/guides/prompt-patterns': typeof Char123LocaleChar125GuidesPromptPatternsRoute
-  '/{-$locale}/guides/study-with-ai': typeof Char123LocaleChar125GuidesStudyWithAiRoute
-  '/{-$locale}/guides/verify-ai-answers': typeof Char123LocaleChar125GuidesVerifyAiAnswersRoute
   '/{-$locale}/legal/privacy-policy': typeof Char123LocaleChar125LegalPrivacyPolicyRoute
   '/{-$locale}/legal/terms': typeof Char123LocaleChar125LegalTermsRoute
   '/{-$locale}/legal/tokusho': typeof Char123LocaleChar125LegalTokushoRoute
@@ -666,7 +579,6 @@ export interface FileRoutesByFullPath {
   '/settings/': typeof AppSettingsIndexRoute
   '/api/ads/': typeof ApiAdsIndexRoute
   '/api/chat/': typeof ApiChatIndexRoute
-  '/{-$locale}/guides/': typeof Char123LocaleChar125GuidesIndexRoute
   '/settings/team': typeof AppSettingsTeamDashboardRouteRouteWithChildren
   '/run/groups/new': typeof AppRunGroupsNewRoute
   '/run/teammates/$id': typeof AppRunTeammatesIdRoute
@@ -699,15 +611,12 @@ export interface FileRoutesByTo {
   '/api/device-auth': typeof ApiDeviceAuthRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/new/$message': typeof NewMessageRoute
-  '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
   '/{-$locale}/changelog': typeof Char123LocaleChar125ChangelogRoute
   '/{-$locale}/contact': typeof Char123LocaleChar125ContactRoute
   '/{-$locale}/desktop': typeof Char123LocaleChar125DesktopRoute
   '/{-$locale}/faq': typeof Char123LocaleChar125FaqRoute
   '/{-$locale}/flixa': typeof Char123LocaleChar125FlixaRoute
   '/{-$locale}/home': typeof Char123LocaleChar125HomeRoute
-  '/{-$locale}/models': typeof Char123LocaleChar125ModelsRoute
-  '/{-$locale}/use-cases': typeof Char123LocaleChar125UseCasesRoute
   '/{-$locale}': typeof Char123LocaleChar125IndexRoute
   '/account/$path': typeof AppAccountPathRoute
   '/chat/$id': typeof AppChatIdRoute
@@ -741,13 +650,6 @@ export interface FileRoutesByTo {
   '/api/status/models': typeof ApiStatusModelsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
-  '/{-$locale}/guides/free-ai-chat': typeof Char123LocaleChar125GuidesFreeAiChatRoute
-  '/{-$locale}/guides/model-selection': typeof Char123LocaleChar125GuidesModelSelectionRoute
-  '/{-$locale}/guides/multi-model-workflows': typeof Char123LocaleChar125GuidesMultiModelWorkflowsRoute
-  '/{-$locale}/guides/privacy-when-using-ai': typeof Char123LocaleChar125GuidesPrivacyWhenUsingAiRoute
-  '/{-$locale}/guides/prompt-patterns': typeof Char123LocaleChar125GuidesPromptPatternsRoute
-  '/{-$locale}/guides/study-with-ai': typeof Char123LocaleChar125GuidesStudyWithAiRoute
-  '/{-$locale}/guides/verify-ai-answers': typeof Char123LocaleChar125GuidesVerifyAiAnswersRoute
   '/{-$locale}/legal/privacy-policy': typeof Char123LocaleChar125LegalPrivacyPolicyRoute
   '/{-$locale}/legal/terms': typeof Char123LocaleChar125LegalTermsRoute
   '/{-$locale}/legal/tokusho': typeof Char123LocaleChar125LegalTokushoRoute
@@ -757,7 +659,6 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsIndexRoute
   '/api/ads': typeof ApiAdsIndexRoute
   '/api/chat': typeof ApiChatIndexRoute
-  '/{-$locale}/guides': typeof Char123LocaleChar125GuidesIndexRoute
   '/run/groups/new': typeof AppRunGroupsNewRoute
   '/run/teammates/$id': typeof AppRunTeammatesIdRoute
   '/run/teammates/new': typeof AppRunTeammatesNewRoute
@@ -793,15 +694,12 @@ export interface FileRoutesById {
   '/api/device-auth': typeof ApiDeviceAuthRoute
   '/api/upload-attachment': typeof ApiUploadAttachmentRoute
   '/new/$message': typeof NewMessageRoute
-  '/{-$locale}/about': typeof Char123LocaleChar125AboutRoute
   '/{-$locale}/changelog': typeof Char123LocaleChar125ChangelogRoute
   '/{-$locale}/contact': typeof Char123LocaleChar125ContactRoute
   '/{-$locale}/desktop': typeof Char123LocaleChar125DesktopRoute
   '/{-$locale}/faq': typeof Char123LocaleChar125FaqRoute
   '/{-$locale}/flixa': typeof Char123LocaleChar125FlixaRoute
   '/{-$locale}/home': typeof Char123LocaleChar125HomeRoute
-  '/{-$locale}/models': typeof Char123LocaleChar125ModelsRoute
-  '/{-$locale}/use-cases': typeof Char123LocaleChar125UseCasesRoute
   '/{-$locale}/': typeof Char123LocaleChar125IndexRoute
   '/_app/account/$path': typeof AppAccountPathRoute
   '/_app/chat/$id': typeof AppChatIdRoute
@@ -835,13 +733,6 @@ export interface FileRoutesById {
   '/api/status/models': typeof ApiStatusModelsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
-  '/{-$locale}/guides/free-ai-chat': typeof Char123LocaleChar125GuidesFreeAiChatRoute
-  '/{-$locale}/guides/model-selection': typeof Char123LocaleChar125GuidesModelSelectionRoute
-  '/{-$locale}/guides/multi-model-workflows': typeof Char123LocaleChar125GuidesMultiModelWorkflowsRoute
-  '/{-$locale}/guides/privacy-when-using-ai': typeof Char123LocaleChar125GuidesPrivacyWhenUsingAiRoute
-  '/{-$locale}/guides/prompt-patterns': typeof Char123LocaleChar125GuidesPromptPatternsRoute
-  '/{-$locale}/guides/study-with-ai': typeof Char123LocaleChar125GuidesStudyWithAiRoute
-  '/{-$locale}/guides/verify-ai-answers': typeof Char123LocaleChar125GuidesVerifyAiAnswersRoute
   '/{-$locale}/legal/privacy-policy': typeof Char123LocaleChar125LegalPrivacyPolicyRoute
   '/{-$locale}/legal/terms': typeof Char123LocaleChar125LegalTermsRoute
   '/{-$locale}/legal/tokusho': typeof Char123LocaleChar125LegalTokushoRoute
@@ -851,7 +742,6 @@ export interface FileRoutesById {
   '/_app/settings/': typeof AppSettingsIndexRoute
   '/api/ads/': typeof ApiAdsIndexRoute
   '/api/chat/': typeof ApiChatIndexRoute
-  '/{-$locale}/guides/': typeof Char123LocaleChar125GuidesIndexRoute
   '/_app/settings/team/_dashboard': typeof AppSettingsTeamDashboardRouteRouteWithChildren
   '/_app/run/groups/new': typeof AppRunGroupsNewRoute
   '/_app/run/teammates/$id': typeof AppRunTeammatesIdRoute
@@ -888,15 +778,12 @@ export interface FileRouteTypes {
     | '/api/device-auth'
     | '/api/upload-attachment'
     | '/new/$message'
-    | '/{-$locale}/about'
     | '/{-$locale}/changelog'
     | '/{-$locale}/contact'
     | '/{-$locale}/desktop'
     | '/{-$locale}/faq'
     | '/{-$locale}/flixa'
     | '/{-$locale}/home'
-    | '/{-$locale}/models'
-    | '/{-$locale}/use-cases'
     | '/{-$locale}/'
     | '/account/$path'
     | '/chat/$id'
@@ -930,13 +817,6 @@ export interface FileRouteTypes {
     | '/api/status/models'
     | '/api/stripe/webhook'
     | '/api/trpc/$'
-    | '/{-$locale}/guides/free-ai-chat'
-    | '/{-$locale}/guides/model-selection'
-    | '/{-$locale}/guides/multi-model-workflows'
-    | '/{-$locale}/guides/privacy-when-using-ai'
-    | '/{-$locale}/guides/prompt-patterns'
-    | '/{-$locale}/guides/study-with-ai'
-    | '/{-$locale}/guides/verify-ai-answers'
     | '/{-$locale}/legal/privacy-policy'
     | '/{-$locale}/legal/terms'
     | '/{-$locale}/legal/tokusho'
@@ -946,7 +826,6 @@ export interface FileRouteTypes {
     | '/settings/'
     | '/api/ads/'
     | '/api/chat/'
-    | '/{-$locale}/guides/'
     | '/settings/team'
     | '/run/groups/new'
     | '/run/teammates/$id'
@@ -979,15 +858,12 @@ export interface FileRouteTypes {
     | '/api/device-auth'
     | '/api/upload-attachment'
     | '/new/$message'
-    | '/{-$locale}/about'
     | '/{-$locale}/changelog'
     | '/{-$locale}/contact'
     | '/{-$locale}/desktop'
     | '/{-$locale}/faq'
     | '/{-$locale}/flixa'
     | '/{-$locale}/home'
-    | '/{-$locale}/models'
-    | '/{-$locale}/use-cases'
     | '/{-$locale}'
     | '/account/$path'
     | '/chat/$id'
@@ -1021,13 +897,6 @@ export interface FileRouteTypes {
     | '/api/status/models'
     | '/api/stripe/webhook'
     | '/api/trpc/$'
-    | '/{-$locale}/guides/free-ai-chat'
-    | '/{-$locale}/guides/model-selection'
-    | '/{-$locale}/guides/multi-model-workflows'
-    | '/{-$locale}/guides/privacy-when-using-ai'
-    | '/{-$locale}/guides/prompt-patterns'
-    | '/{-$locale}/guides/study-with-ai'
-    | '/{-$locale}/guides/verify-ai-answers'
     | '/{-$locale}/legal/privacy-policy'
     | '/{-$locale}/legal/terms'
     | '/{-$locale}/legal/tokusho'
@@ -1037,7 +906,6 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/ads'
     | '/api/chat'
-    | '/{-$locale}/guides'
     | '/run/groups/new'
     | '/run/teammates/$id'
     | '/run/teammates/new'
@@ -1072,15 +940,12 @@ export interface FileRouteTypes {
     | '/api/device-auth'
     | '/api/upload-attachment'
     | '/new/$message'
-    | '/{-$locale}/about'
     | '/{-$locale}/changelog'
     | '/{-$locale}/contact'
     | '/{-$locale}/desktop'
     | '/{-$locale}/faq'
     | '/{-$locale}/flixa'
     | '/{-$locale}/home'
-    | '/{-$locale}/models'
-    | '/{-$locale}/use-cases'
     | '/{-$locale}/'
     | '/_app/account/$path'
     | '/_app/chat/$id'
@@ -1114,13 +979,6 @@ export interface FileRouteTypes {
     | '/api/status/models'
     | '/api/stripe/webhook'
     | '/api/trpc/$'
-    | '/{-$locale}/guides/free-ai-chat'
-    | '/{-$locale}/guides/model-selection'
-    | '/{-$locale}/guides/multi-model-workflows'
-    | '/{-$locale}/guides/privacy-when-using-ai'
-    | '/{-$locale}/guides/prompt-patterns'
-    | '/{-$locale}/guides/study-with-ai'
-    | '/{-$locale}/guides/verify-ai-answers'
     | '/{-$locale}/legal/privacy-policy'
     | '/{-$locale}/legal/terms'
     | '/{-$locale}/legal/tokusho'
@@ -1130,7 +988,6 @@ export interface FileRouteTypes {
     | '/_app/settings/'
     | '/api/ads/'
     | '/api/chat/'
-    | '/{-$locale}/guides/'
     | '/_app/settings/team/_dashboard'
     | '/_app/run/groups/new'
     | '/_app/run/teammates/$id'
@@ -1294,13 +1151,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char123LocaleChar125IndexRouteImport
       parentRoute: typeof Char123LocaleChar125RouteRoute
     }
-    '/{-$locale}/about': {
-      id: '/{-$locale}/about'
-      path: '/about'
-      fullPath: '/{-$locale}/about'
-      preLoaderRoute: typeof Char123LocaleChar125AboutRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
     '/{-$locale}/changelog': {
       id: '/{-$locale}/changelog'
       path: '/changelog'
@@ -1341,20 +1191,6 @@ declare module '@tanstack/react-router' {
       path: '/home'
       fullPath: '/{-$locale}/home'
       preLoaderRoute: typeof Char123LocaleChar125HomeRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/models': {
-      id: '/{-$locale}/models'
-      path: '/models'
-      fullPath: '/{-$locale}/models'
-      preLoaderRoute: typeof Char123LocaleChar125ModelsRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/use-cases': {
-      id: '/{-$locale}/use-cases'
-      path: '/use-cases'
-      fullPath: '/{-$locale}/use-cases'
-      preLoaderRoute: typeof Char123LocaleChar125UseCasesRouteImport
       parentRoute: typeof Char123LocaleChar125RouteRoute
     }
     '/_app/account/$path': {
@@ -1622,62 +1458,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/trpc/$'
       preLoaderRoute: typeof ApiTrpcSplatRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/{-$locale}/guides/': {
-      id: '/{-$locale}/guides/'
-      path: '/guides'
-      fullPath: '/{-$locale}/guides/'
-      preLoaderRoute: typeof Char123LocaleChar125GuidesIndexRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/guides/free-ai-chat': {
-      id: '/{-$locale}/guides/free-ai-chat'
-      path: '/guides/free-ai-chat'
-      fullPath: '/{-$locale}/guides/free-ai-chat'
-      preLoaderRoute: typeof Char123LocaleChar125GuidesFreeAiChatRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/guides/model-selection': {
-      id: '/{-$locale}/guides/model-selection'
-      path: '/guides/model-selection'
-      fullPath: '/{-$locale}/guides/model-selection'
-      preLoaderRoute: typeof Char123LocaleChar125GuidesModelSelectionRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/guides/multi-model-workflows': {
-      id: '/{-$locale}/guides/multi-model-workflows'
-      path: '/guides/multi-model-workflows'
-      fullPath: '/{-$locale}/guides/multi-model-workflows'
-      preLoaderRoute: typeof Char123LocaleChar125GuidesMultiModelWorkflowsRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/guides/privacy-when-using-ai': {
-      id: '/{-$locale}/guides/privacy-when-using-ai'
-      path: '/guides/privacy-when-using-ai'
-      fullPath: '/{-$locale}/guides/privacy-when-using-ai'
-      preLoaderRoute: typeof Char123LocaleChar125GuidesPrivacyWhenUsingAiRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/guides/prompt-patterns': {
-      id: '/{-$locale}/guides/prompt-patterns'
-      path: '/guides/prompt-patterns'
-      fullPath: '/{-$locale}/guides/prompt-patterns'
-      preLoaderRoute: typeof Char123LocaleChar125GuidesPromptPatternsRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/guides/study-with-ai': {
-      id: '/{-$locale}/guides/study-with-ai'
-      path: '/guides/study-with-ai'
-      fullPath: '/{-$locale}/guides/study-with-ai'
-      preLoaderRoute: typeof Char123LocaleChar125GuidesStudyWithAiRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
-    }
-    '/{-$locale}/guides/verify-ai-answers': {
-      id: '/{-$locale}/guides/verify-ai-answers'
-      path: '/guides/verify-ai-answers'
-      fullPath: '/{-$locale}/guides/verify-ai-answers'
-      preLoaderRoute: typeof Char123LocaleChar125GuidesVerifyAiAnswersRouteImport
-      parentRoute: typeof Char123LocaleChar125RouteRoute
     }
     '/{-$locale}/legal/privacy-policy': {
       id: '/{-$locale}/legal/privacy-policy'
@@ -1959,61 +1739,32 @@ const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
 )
 
 interface Char123LocaleChar125RouteRouteChildren {
-  Char123LocaleChar125AboutRoute: typeof Char123LocaleChar125AboutRoute
   Char123LocaleChar125ChangelogRoute: typeof Char123LocaleChar125ChangelogRoute
   Char123LocaleChar125ContactRoute: typeof Char123LocaleChar125ContactRoute
   Char123LocaleChar125DesktopRoute: typeof Char123LocaleChar125DesktopRoute
   Char123LocaleChar125FaqRoute: typeof Char123LocaleChar125FaqRoute
   Char123LocaleChar125FlixaRoute: typeof Char123LocaleChar125FlixaRoute
   Char123LocaleChar125HomeRoute: typeof Char123LocaleChar125HomeRoute
-  Char123LocaleChar125ModelsRoute: typeof Char123LocaleChar125ModelsRoute
-  Char123LocaleChar125UseCasesRoute: typeof Char123LocaleChar125UseCasesRoute
   Char123LocaleChar125IndexRoute: typeof Char123LocaleChar125IndexRoute
-  Char123LocaleChar125GuidesFreeAiChatRoute: typeof Char123LocaleChar125GuidesFreeAiChatRoute
-  Char123LocaleChar125GuidesModelSelectionRoute: typeof Char123LocaleChar125GuidesModelSelectionRoute
-  Char123LocaleChar125GuidesMultiModelWorkflowsRoute: typeof Char123LocaleChar125GuidesMultiModelWorkflowsRoute
-  Char123LocaleChar125GuidesPrivacyWhenUsingAiRoute: typeof Char123LocaleChar125GuidesPrivacyWhenUsingAiRoute
-  Char123LocaleChar125GuidesPromptPatternsRoute: typeof Char123LocaleChar125GuidesPromptPatternsRoute
-  Char123LocaleChar125GuidesStudyWithAiRoute: typeof Char123LocaleChar125GuidesStudyWithAiRoute
-  Char123LocaleChar125GuidesVerifyAiAnswersRoute: typeof Char123LocaleChar125GuidesVerifyAiAnswersRoute
   Char123LocaleChar125LegalPrivacyPolicyRoute: typeof Char123LocaleChar125LegalPrivacyPolicyRoute
   Char123LocaleChar125LegalTermsRoute: typeof Char123LocaleChar125LegalTermsRoute
   Char123LocaleChar125LegalTokushoRoute: typeof Char123LocaleChar125LegalTokushoRoute
-  Char123LocaleChar125GuidesIndexRoute: typeof Char123LocaleChar125GuidesIndexRoute
 }
 
 const Char123LocaleChar125RouteRouteChildren: Char123LocaleChar125RouteRouteChildren =
   {
-    Char123LocaleChar125AboutRoute: Char123LocaleChar125AboutRoute,
     Char123LocaleChar125ChangelogRoute: Char123LocaleChar125ChangelogRoute,
     Char123LocaleChar125ContactRoute: Char123LocaleChar125ContactRoute,
     Char123LocaleChar125DesktopRoute: Char123LocaleChar125DesktopRoute,
     Char123LocaleChar125FaqRoute: Char123LocaleChar125FaqRoute,
     Char123LocaleChar125FlixaRoute: Char123LocaleChar125FlixaRoute,
     Char123LocaleChar125HomeRoute: Char123LocaleChar125HomeRoute,
-    Char123LocaleChar125ModelsRoute: Char123LocaleChar125ModelsRoute,
-    Char123LocaleChar125UseCasesRoute: Char123LocaleChar125UseCasesRoute,
     Char123LocaleChar125IndexRoute: Char123LocaleChar125IndexRoute,
-    Char123LocaleChar125GuidesFreeAiChatRoute:
-      Char123LocaleChar125GuidesFreeAiChatRoute,
-    Char123LocaleChar125GuidesModelSelectionRoute:
-      Char123LocaleChar125GuidesModelSelectionRoute,
-    Char123LocaleChar125GuidesMultiModelWorkflowsRoute:
-      Char123LocaleChar125GuidesMultiModelWorkflowsRoute,
-    Char123LocaleChar125GuidesPrivacyWhenUsingAiRoute:
-      Char123LocaleChar125GuidesPrivacyWhenUsingAiRoute,
-    Char123LocaleChar125GuidesPromptPatternsRoute:
-      Char123LocaleChar125GuidesPromptPatternsRoute,
-    Char123LocaleChar125GuidesStudyWithAiRoute:
-      Char123LocaleChar125GuidesStudyWithAiRoute,
-    Char123LocaleChar125GuidesVerifyAiAnswersRoute:
-      Char123LocaleChar125GuidesVerifyAiAnswersRoute,
     Char123LocaleChar125LegalPrivacyPolicyRoute:
       Char123LocaleChar125LegalPrivacyPolicyRoute,
     Char123LocaleChar125LegalTermsRoute: Char123LocaleChar125LegalTermsRoute,
     Char123LocaleChar125LegalTokushoRoute:
       Char123LocaleChar125LegalTokushoRoute,
-    Char123LocaleChar125GuidesIndexRoute: Char123LocaleChar125GuidesIndexRoute,
   }
 
 const Char123LocaleChar125RouteRouteWithChildren =

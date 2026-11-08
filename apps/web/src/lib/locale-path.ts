@@ -8,6 +8,7 @@ const APP_PATH_PREFIXES = [
   "/chat",
   "/settings",
   "/projects",
+  "/run",
   "/compare",
   "/new",
   "/flixa/authorize",
@@ -28,10 +29,7 @@ export function isAppPath(pathname: string): boolean {
 const PUBLIC_PATHS = new Set(publicPages.map((page) => page.path).filter((path) => path !== "/"));
 
 export function isPublicLocalizablePath(pathname: string): boolean {
-  if (PUBLIC_PATHS.has(pathname)) {
-    return true;
-  }
-  return pathname.startsWith("/guides/");
+  return PUBLIC_PATHS.has(pathname);
 }
 
 export function stripJaPrefix(pathname: string): string {
