@@ -33,9 +33,15 @@ Read these when relevant rather than loading the whole project:
   `src/db/type-registry.ts` types its app-owned JSON columns. The `db:*` scripts
   here forward to `@deniai/db` and still read this app's `.env*` files. Runtime
   uses a pooled Postgres URL (`src/db/drizzle.ts`).
-- Auth: `src/lib/auth.ts` and `src/lib/auth-client.ts`.
-  Change the client baseURL only when requested.
-  `pnpm run auth:generate` overwrites `packages/db/src/schema/auth-schema.ts`.
+- Auth: the Better Auth configuration is `createAuth()` in the `@deniai/auth`
+  package (`packages/auth/src/server.ts`); `src/lib/auth.ts` calls it with this
+  app's env, database, email sender and callbacks (sign-up policy, security
+  activity, team billing). The client plugins are `createDeniAuthClient()`
+  (`packages/auth/src/client.ts`), instantiated in `src/lib/auth-client.ts`.
+  Change the client baseURL only when requested. `vite.config.ts` and
+  `vitest.config.ts` dedupe the Better Auth packages (`@deniai/auth/dedupe`) so
+  the app and the package share one instance. `pnpm run auth:generate` reads
+  `src/lib/auth.ts` and overwrites `packages/db/src/schema/auth-schema.ts`.
 - Task-specific workflows: `.agents/skills/`; load only the applicable skill and
   references.
 

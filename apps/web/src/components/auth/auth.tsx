@@ -2,7 +2,7 @@ import type { AuthView } from "@better-auth-ui/core";
 import { useAuth } from "@better-auth-ui/react";
 import { type ComponentType, useEffect } from "react";
 
-import { TWO_FACTOR_VIEW_PATH } from "@/lib/auth-paths";
+import { TWO_FACTOR_VIEW_PATH } from "@deniai/auth/paths";
 import { ForgotPassword } from "./forgot-password";
 import type { SocialLayout } from "./provider-buttons";
 import { ResetPassword } from "./reset-password";

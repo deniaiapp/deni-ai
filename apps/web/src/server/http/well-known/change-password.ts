@@ -1,4 +1,4 @@
-import { ACCOUNT_SECURITY_PATH } from "@/lib/auth-paths";
+import { ACCOUNT_SECURITY_PATH } from "@deniai/auth/paths";
 
 /**
  * WICG well-known change-password URL.

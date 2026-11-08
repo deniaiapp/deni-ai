@@ -16,7 +16,7 @@ import {
 import { Input } from "@deniai/ui/components/input";
 import { Label } from "@deniai/ui/components/label";
 import { Spinner } from "@deniai/ui/components/spinner";
-import { TWO_FACTOR_PATH } from "@/lib/auth-paths";
+import { TWO_FACTOR_PATH } from "@deniai/auth/paths";
 import { cn } from "@/lib/utils";
 import { ProviderButtons, type SocialLayout } from "./provider-buttons";
 

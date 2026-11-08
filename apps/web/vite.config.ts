@@ -6,6 +6,7 @@ import { nitro } from "nitro/vite";
 import { readFileSync } from "node:fs";
 import { parseEnv } from "node:util";
 import { defineConfig } from "vite";
+import { authDedupe } from "@deniai/auth/dedupe";
 import { extractMessages } from "@deniai/i18n/vite";
 import { routeRules } from "./vite/route-rules.ts";
 
@@ -52,7 +53,7 @@ export default defineConfig(({ mode }) => {
     // Public env keys keep their NEXT_PUBLIC_ names so existing deployment
     // configuration (Dokploy build args, Vercel env) carries over unchanged.
     envPrefix: ["VITE_", "NEXT_PUBLIC_"],
-    resolve: { tsconfigPaths: true },
+    resolve: { tsconfigPaths: true, dedupe: authDedupe },
     build: {
       rolldownOptions: {
         // Libraries ship RSC "use client" markers, which mean nothing here.

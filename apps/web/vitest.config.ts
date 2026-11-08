@@ -1,9 +1,11 @@
 import { defineConfig } from "vitest/config";
+import { authDedupe } from "@deniai/auth/dedupe";
 import { extractMessages } from "@deniai/i18n/vite";
 
 export default defineConfig({
   resolve: {
     tsconfigPaths: true,
+    dedupe: authDedupe,
   },
   plugins: [
     extractMessages({

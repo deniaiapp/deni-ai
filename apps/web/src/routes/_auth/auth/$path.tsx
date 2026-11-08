@@ -4,7 +4,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router";
 import { Auth } from "@/components/auth/auth";
 import { OAuthErrorAlert } from "@/components/auth/oauth-error-alert";
 import { GuestSignInButton } from "@/components/guest-sign-in-button";
-import { TWO_FACTOR_VIEW_PATH } from "@/lib/auth-paths";
+import { TWO_FACTOR_VIEW_PATH } from "@deniai/auth/paths";
 
 const magicLinkPaths = Object.values(magicLinkPlugin().viewPaths?.auth ?? {});
 

@@ -22,7 +22,7 @@ vi.mock("@/lib/crypto", () => ({
   encryptToB64: async (value: string) => `enc:${value}`,
   decryptFromB64: async (value: string) => value.replace(/^enc:/, ""),
 }));
-vi.mock("@/lib/api-key-utils", () => ({
+vi.mock("@deniai/auth/api-key", () => ({
   generateApiKey: () => "deni_rawkey",
   hashApiKey: async (raw: string) => `hash:${raw}`,
   getKeyPrefix: (raw: string) => raw.slice(0, 5),

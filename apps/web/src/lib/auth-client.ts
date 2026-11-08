@@ -1,39 +1,11 @@
-import { oauthProviderClient } from "@better-auth/oauth-provider/client";
-import { passkeyClient } from "@better-auth/passkey/client";
-import {
-  anonymousClient,
-  lastLoginMethodClient,
-  organizationClient,
-  twoFactorClient,
-} from "better-auth/client/plugins";
-import { createAuthClient } from "better-auth/react";
+import { createDeniAuthClient } from "@deniai/auth/client";
 
-import { TWO_FACTOR_PATH } from "@/lib/auth-paths";
-
-export { TWO_FACTOR_PATH, TWO_FACTOR_VIEW_PATH } from "@/lib/auth-paths";
+export { TWO_FACTOR_PATH, TWO_FACTOR_VIEW_PATH } from "@deniai/auth/paths";
 
 const baseURL = import.meta.env.NEXT_PUBLIC_BETTER_AUTH_URL;
 if (!baseURL) {
   throw new Error("NEXT_PUBLIC_BETTER_AUTH_URL is required");
 }
 
-export const authClient = createAuthClient({
-  baseURL,
-  plugins: [
-    anonymousClient(),
-    twoFactorClient({
-      // Prefer SPA navigation when possible; fall back is still a hard assign so
-      // users never land on /chat without a completed second factor.
-      onTwoFactorRedirect() {
-        if (typeof window === "undefined") return;
-        // Keep any explicit redirectTo attached to the challenge page.
-        window.location.assign(`${TWO_FACTOR_PATH}${window.location.search}`);
-      },
-    }),
-    lastLoginMethodClient(),
-    passkeyClient(),
-    organizationClient(),
-    // Sends the signed authorization query from /oauth/* pages with consent requests.
-    oauthProviderClient(),
-  ],
-});
+/** Browser auth client; the plugin set lives in `@deniai/auth/client`. */
+export const authClient = createDeniAuthClient({ baseURL });

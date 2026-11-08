@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db/drizzle";
 import { apiKey, deviceAuthCode } from "@/db/schema";
 import { MAX_API_KEYS, withApiKeyLock, type ApiKeyTransaction } from "@/lib/api-key-quota";
-import { generateApiKey, getKeyPrefix, hashApiKey } from "@/lib/api-key-utils";
+import { generateApiKey, getKeyPrefix, hashApiKey } from "@deniai/auth/api-key";
 import { auth } from "@/lib/auth";
 import { resolveClientIp } from "@/lib/client-ip";
 import { decryptFromB64, encryptToB64 } from "@/lib/crypto";

@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import { API_KEY_PREFIX, hashApiKeySync } from '@deniai/auth/api-key/node';
 import { getDeniPool } from './db';
 
 export type ApiKeyValidationResult =
@@ -275,17 +275,18 @@ export function redactApiKeyFromRequestHeaders(headers: Headers): string | null 
 }
 
 /**
- * Hash an API key using SHA-256
+ * SHA-256 hex digest stored in `api_key.key_hash`; the same hashing the web app
+ * uses when it issues keys (`@deniai/auth/api-key`).
  */
 export function hashApiKey(rawKey: string): string {
-  return crypto.createHash('sha256').update(rawKey).digest('hex');
+  return hashApiKeySync(rawKey);
 }
 
 /**
  * Validate a Deni API key and return the associated user ID
  */
 export async function validateDeniApiKey(rawKey: string): Promise<ApiKeyValidationResult> {
-  if (!rawKey.startsWith('deni_') || rawKey.length > MAX_API_KEY_LENGTH) {
+  if (!rawKey.startsWith(API_KEY_PREFIX) || rawKey.length > MAX_API_KEY_LENGTH) {
     return { valid: false, error: 'Invalid API key format', code: 'invalid_key' };
   }
 

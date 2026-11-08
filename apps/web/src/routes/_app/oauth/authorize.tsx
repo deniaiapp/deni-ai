@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@deniai/ui/components/card";
 import { authClient } from "@/lib/auth-client";
-import { OAUTH_LOGIN_PATH } from "@/lib/auth-paths";
+import { OAUTH_LOGIN_PATH } from "@deniai/auth/paths";
 import { signInPath } from "@/lib/sign-in-redirect";
 
 export const Route = createFileRoute("/_app/oauth/authorize")({

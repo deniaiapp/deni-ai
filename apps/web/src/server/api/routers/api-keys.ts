@@ -3,7 +3,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 
 import { apiKey } from "@/db/schema";
-import { generateApiKey, getKeyPrefix, hashApiKey } from "@/lib/api-key-utils";
+import { generateApiKey, getKeyPrefix, hashApiKey } from "@deniai/auth/api-key";
 import { MAX_API_KEYS, withApiKeyLock } from "@/lib/api-key-quota";
 
 import { protectedProcedure, router } from "../trpc";

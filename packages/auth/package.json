@@ -1,0 +1,40 @@
+{
+  "name": "@deniai/auth",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Deni AI Better Auth server factory and client, auth route paths, and API key generation and hashing shared by the web app and the agent API",
+  "type": "module",
+  "exports": {
+    "./api-key": "./src/api-key.ts",
+    "./api-key/node": "./src/api-key-node.ts",
+    "./client": "./src/client.ts",
+    "./dedupe": "./src/dedupe.ts",
+    "./paths": "./src/paths.ts",
+    "./server": "./src/server.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.7.14",
+    "@better-auth/oauth-provider": "1.7.14",
+    "@better-auth/passkey": "^1.7.14",
+    "@deniai/db": "workspace:*",
+    "@deniai/emails": "workspace:*",
+    "better-auth": "^1.7.14"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "react": "19.3.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "peerDependencies": {
+    "react": "^19.3.1"
+  }
+}
