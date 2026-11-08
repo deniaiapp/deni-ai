@@ -35,6 +35,7 @@
     "@anthropic-ai/sdk": "^0.137.0",
     "@deniai/billing": "workspace:*",
     "@deniai/db": "workspace:*",
+    "@deniai/flixa-contract": "workspace:*",
     "@hono/node-server": "^2.1.5",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.14",

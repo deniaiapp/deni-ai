@@ -1,37 +1,10 @@
 import type { UsageUnit } from './usage';
 
-export interface DeniUsageInfo {
-  tier: 'free' | 'go' | 'plus' | 'pro';
-  planId: string | null;
-  status: string | null;
-  hasVerifiedPaymentMethod: boolean;
-  cardVerifiedAt: string | null;
-  verifyUrl: string;
-  upgradeUrl: string;
-  isTeam: boolean;
-  periodEnd: string | null;
-  maxModeEnabled: boolean;
-  maxModeEligible: boolean;
-  usage: Array<{
-    category: 'basic' | 'premium';
-    unit: UsageUnit;
-    limit: number | null;
-    used: number;
-    remaining: number | null;
-    periodStart: string;
-    periodEnd: string | null;
-  }>;
-  /**
-   * The one monthly pool shared by Deni AI chat, Flixa, and Deni Run, in usage units.
-   * Usage is not split by model class; `usage` repeats it for older clients.
-   */
-  pool: {
-    limit: number;
-    used: number;
-    remaining: number;
-    periodEnd: string;
-  };
-}
+/**
+ * `GET /v1/deni/usage` response. The public shape lives in
+ * `@deniai/flixa-contract` so Flixa clients and this server share it.
+ */
+export type { DeniUsageInfo } from '@deniai/flixa-contract';
 
 export interface BillingRow {
   plan_id: string | null;

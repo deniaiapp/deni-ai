@@ -7,6 +7,14 @@ relative to `services/agent-api/`; run commands from here or with
 the monorepo root, and the Docker build context is the monorepo root
 (`docker build -f services/agent-api/Dockerfile .`).
 
+Shared code lives in workspace packages: the `flixa` (and `public`) Drizzle schema
+in `@deniai/db`, pool sizes / usage tiers / token weights / education domains in
+`@deniai/billing`, and the public response shapes (`/v1/models`, `/v1/deni/usage`,
+error envelope and codes, client headers) in `@deniai/flixa-contract`. When a
+public response or error code changes, update the contract and
+`tests/flixa-contract.test.ts` with it. Import the contract with `import type`
+only, so zod is not bundled.
+
 ## Project Structure & Module Organization
 `app.ts` builds the Hono app (middleware plus the `/v1` routers). `server.ts` is the Node.js entrypoint (`@hono/node-server`) and only wraps `app.ts`. Read config via `process.env`. Route handlers live in `routes/v1/` (`agent.ts`, `deni.ts`, `models.ts`). Shared request guards live in `middleware/`; `middleware/validateAgentAuth.ts` enforces the client access policy (Free/Go only from the listed clients, otherwise a 403 plan notice without a ban; Plus and above from any client; see the README). Domain logic is grouped under `utils/`: `utils/agent/` for model routing and upstream clients, and `utils/deni/` for auth, billing, usage, and DB access.
 

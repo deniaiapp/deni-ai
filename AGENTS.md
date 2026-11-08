@@ -6,17 +6,25 @@ the workspace layout and the rules that span apps.
 
 ## Layout
 
-| Path                                | Package                             | What it is                                                                                                                                                |
-| ----------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/web`                          | `@deniai/web`                       | Deni AI web app (TanStack Start, React Compiler, better-auth). Guide: `apps/web/AGENTS.md`                                                                |
-| `apps/support`                      | `@deniai/support`                   | Help center (support.deniai.app, Fumadocs on TanStack Start). See `apps/support/README.md`                                                                |
-| `services/agent-api`                | `@deniai/agent-api`                 | Flixa agent API (Hono, formerly flixa-backend). Guide: `services/agent-api/AGENTS.md`                                                                     |
-| `packages/disposable-email-domains` | `@deni-ai/disposable-email-domains` | Disposable email domain list                                                                                                                              |
-| `packages/db`                       | `@deniai/db`                        | Drizzle schema + migrations: `public` (web, `drizzle.config.ts`) and `flixa` (agent API, `drizzle.flixa.config.ts`, journal `flixa.__drizzle_migrations`) |
-| `packages/billing`                  | `@deniai/billing`                   | Pure billing rules shared by web and agent API: usage pool sizes, units per USD, usage tier multipliers, token weights, education domains                 |
+| Path                                | Package                             | What it is                                                                                                                                                                           |
+| ----------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `apps/web`                          | `@deniai/web`                       | Deni AI web app (TanStack Start, React Compiler, better-auth). Guide: `apps/web/AGENTS.md`                                                                                           |
+| `apps/support`                      | `@deniai/support`                   | Help center (support.deniai.app, Fumadocs on TanStack Start). See `apps/support/README.md`                                                                                           |
+| `services/agent-api`                | `@deniai/agent-api`                 | Flixa agent API (Hono, formerly flixa-backend). Guide: `services/agent-api/AGENTS.md`                                                                                                |
+| `packages/disposable-email-domains` | `@deni-ai/disposable-email-domains` | Disposable email domain list                                                                                                                                                         |
+| `packages/db`                       | `@deniai/db`                        | Drizzle schema + migrations: `public` (web, `drizzle.config.ts`) and `flixa` (agent API, `drizzle.flixa.config.ts`, journal `flixa.__drizzle_migrations`)                            |
+| `packages/billing`                  | `@deniai/billing`                   | Pure billing rules shared by web and agent API: usage pool sizes, units per USD, usage tier multipliers, token weights, education domains                                            |
+| `packages/flixa-contract`           | `@deniai/flixa-contract`            | Publishable (0.1.0, not published) zod schemas + types of the public Flixa API: device auth, API key format, error envelope and codes, client headers, models, usage, request bodies |
 
 The apps were imported with their full history (`git subtree add`), so
 `git log -- apps/web` shows the deni-ai history.
+
+Planned packages (not started): `packages/auth` (better-auth config and API key
+validation shared by web and agent API), `packages/ai` (model registry and
+provider clients), `packages/i18n` (use-intl catalogs and extraction),
+`packages/emails` (react-email templates) and `packages/ui` (shadcn/ui
+components). Reservation and settlement logic moves in a later phase; Deni Run
+(deni-ai-computer) is not imported yet.
 
 ## Workspace rules
 
@@ -33,6 +41,14 @@ The apps were imported with their full history (`git subtree add`), so
   parent directories). `apps/support` keeps its own `.oxlintrc.json` and is not
   formatted with oxfmt (it uses single quotes); `services/agent-api` is not
   oxfmt-formatted either, so it has no `format` script.
+- Values that both apps depend on belong in a package, not in hand-synced
+  copies: schema in `@deniai/db`, billing constants in `@deniai/billing`, public
+  Flixa response shapes in `@deniai/flixa-contract` (change the contract and its
+  tests with the server, and bump its version when the public shape changes).
+- `@deniai/flixa-contract` is the only publishable package: workspace consumers
+  use its TypeScript source, `pnpm --filter @deniai/flixa-contract build` emits
+  `dist/`, and `publishConfig` points the packed `exports` there. Server code
+  imports it with `import type` only, so zod stays out of the agent API bundle.
 - Dockerfiles live next to each app and are built from the repository root
   (`docker build -f apps/web/Dockerfile .`); `<Dockerfile>.dockerignore` next to
   each Dockerfile applies. When a package is added, the Dockerfiles already copy
@@ -53,7 +69,10 @@ The apps were imported with their full history (`git subtree add`), so
 | `pnpm --filter <name> <script>`           | One package, e.g. `pnpm --filter @deniai/web typecheck` |
 
 Each app reads its own env files from its directory (`apps/web/.env.local`,
-`services/agent-api/.env`, `apps/support/.env.local`); see each `.env.example`.
+`services/agent-api/.env`, `apps/support/.env.local`); see
+`apps/web/.env.example`, `apps/support/.env.example` and the agent API README.
+`@deniai/db` migration scripts read `apps/web/.env*` (public schema) and
+`services/agent-api/.env` (flixa schema).
 
 ## Verification
 

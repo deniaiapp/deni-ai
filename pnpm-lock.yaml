@@ -552,6 +552,19 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  packages/flixa-contract:
+    dependencies:
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
   services/agent-api:
     dependencies:
       '@anthropic-ai/sdk':
@@ -563,6 +576,9 @@ importers:
       '@deniai/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@deniai/flixa-contract':
+        specifier: workspace:*
+        version: link:../../packages/flixa-contract
       '@hono/node-server':
         specifier: ^2.1.5
         version: 2.1.5(hono@4.13.14)

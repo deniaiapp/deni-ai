@@ -1,3 +1,8 @@
+import type {
+  DeniUsageInfo,
+  DeniUsageResponse,
+  FlixaErrorEnvelope,
+} from '@deniai/flixa-contract';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import {
@@ -11,7 +16,7 @@ import { isAuthDisabledMode } from '../../utils/authMode';
 
 const router = new Hono();
 
-function getAuthDisabledUsageInfo() {
+function getAuthDisabledUsageInfo(): DeniUsageResponse {
   const now = new Date().toISOString();
   return {
     tier: 'pro' as const,
@@ -58,7 +63,7 @@ async function handleBillingStatus(c: Context) {
         param: null,
         code: 'missing_auth_header'
       }
-    }, 401);
+    } satisfies FlixaErrorEnvelope, 401);
   }
 
   const apiKey = authHeader.replace(/^Bearer\s+/i, '');
@@ -70,7 +75,7 @@ async function handleBillingStatus(c: Context) {
         param: null,
         code: 'missing_api_key'
       }
-    }, 401);
+    } satisfies FlixaErrorEnvelope, 401);
   }
 
   // Validate API key
@@ -90,12 +95,12 @@ async function handleBillingStatus(c: Context) {
         param: null,
         code: validationResult.code
       }
-    }, statusCode);
+    } satisfies FlixaErrorEnvelope, statusCode);
   }
 
   try {
     // Get usage info
-    const usageInfo = await getDeniUsageInfo(validationResult.userId);
+    const usageInfo: DeniUsageInfo = await getDeniUsageInfo(validationResult.userId);
     return c.json(usageInfo, 200);
   } catch (error) {
     console.error('Failed to get Deni usage info:', error);
@@ -106,7 +111,7 @@ async function handleBillingStatus(c: Context) {
         param: null,
         code: 'usage_fetch_error'
       }
-    }, 500);
+    } satisfies FlixaErrorEnvelope, 500);
   }
 }
 

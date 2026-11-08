@@ -1,3 +1,4 @@
+import type { AnthropicModelsResponse, ModelsResponse } from '@deniai/flixa-contract';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
 import { validateAgentApiKey } from '../../middleware/validateAgentAuth';
@@ -30,12 +31,12 @@ async function listModels(c: Context) {
         has_more: false,
         first_id: firstModel?.id ?? null,
         last_id: lastModel?.id ?? null,
-      },
+      } satisfies AnthropicModelsResponse,
       200,
     );
   }
 
-  return c.json(listModelDefinitions(), 200);
+  return c.json(listModelDefinitions() satisfies ModelsResponse, 200);
 }
 
 router.get('/models', validateAgentApiKey, listModels);
