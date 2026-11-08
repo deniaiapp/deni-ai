@@ -1,0 +1,1 @@
+ALTER TABLE "usage_reservation" ADD COLUMN "product" text DEFAULT 'chat' NOT NULL;

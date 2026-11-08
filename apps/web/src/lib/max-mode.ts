@@ -2,7 +2,6 @@ import { and, eq, isNotNull, isNull, like } from "drizzle-orm";
 
 import { db } from "@/db/drizzle";
 import { billing, member, teamMemberUsagePolicy, teamUsagePolicy } from "@/db/schema";
-import { getPlanTier } from "@/lib/billing";
 import {
   getMaxModeCreditSummary,
   MAX_MODE_CREDIT_MAX,
@@ -12,17 +11,18 @@ import {
   type MaxModeCreditSummary,
 } from "@/lib/max-mode-credits";
 import { canonicalTeamBillingRow } from "@/lib/team-billing-record";
+import {
+  ACTIVE_BILLING_STATUSES,
+  isMaxModeEligible,
+  MAX_MODE_USABLE_STATUSES,
+} from "@deniai/billing";
 
 type MaxModeDatabase = Pick<typeof db, "select" | "update">;
 
-/** Max Mode (prepaid credits past the plan's pool) is available on every paid plan. */
-export function isMaxModeEligible(planId: string | null | undefined): boolean {
-  return getPlanTier(planId) !== null;
-}
+// Eligibility rules are shared with the usage engine (@deniai/billing).
+export { isMaxModeEligible, MAX_MODE_USABLE_STATUSES };
 
-const ACTIVE_STATUSES = new Set(["active", "trialing", "past_due", "paid"]);
-/** Statuses whose plan can spend credits: a renewing subscription. */
-export const MAX_MODE_USABLE_STATUSES = new Set(["active"]);
+const ACTIVE_STATUSES = ACTIVE_BILLING_STATUSES;
 
 async function isTeamOwner(userId: string, organizationId: string) {
   const [memberRecord] = await db

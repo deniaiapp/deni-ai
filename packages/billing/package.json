@@ -2,10 +2,12 @@
   "name": "@deniai/billing",
   "version": "0.0.1",
   "private": true,
-  "description": "Pure usage-pool, usage-tier, token-weighting and education-domain rules shared by Deni AI chat and Flixa",
+  "description": "Billing rules shared by Deni AI chat and Flixa: pure usage-pool, plan, usage-tier, token-weighting and education-domain rules, and the server-side usage engine",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./server": "./src/server/index.ts",
+    "./testing": "./src/testing/index.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -14,8 +16,17 @@
     "format:check": "oxfmt --check",
     "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache"
   },
+  "dependencies": {
+    "@deniai/db": "workspace:*"
+  },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
+    "@types/node": "^26.6.5",
+    "drizzle-orm": "^0.45.4",
     "typescript": "^7.0.2",
     "vitest": "^5.0.5"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.45.4"
   }
 }

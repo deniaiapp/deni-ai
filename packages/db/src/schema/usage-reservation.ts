@@ -2,12 +2,20 @@ import { sql } from "drizzle-orm";
 import { bigint, boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 // Keep unsettled usage and its original payer after membership/account changes.
+// Written by the shared usage engine (@deniai/billing/server) for chat and Flixa.
 export const usageReservation = pgTable(
   "usage_reservation",
   {
     id: text("id").primaryKey(),
     userId: text("user_id").notNull(),
     category: text("category", { enum: ["basic", "premium"] }).notNull(),
+    /**
+     * The product whose `product_usage` row the settled amount is recorded in:
+     * Deni AI chat or Flixa (services/agent-api through the shared usage engine).
+     */
+    product: text("product", { enum: ["chat", "flixa"] })
+      .notNull()
+      .default("chat"),
     unit: text("unit", { enum: ["units"] }).notNull(),
     periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
     periodEnd: timestamp("period_end", { withTimezone: true }),

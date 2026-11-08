@@ -2,6 +2,7 @@ import { and, asc, eq, ne, sql } from "drizzle-orm";
 import type { db } from "@/db/drizzle";
 import { billing } from "@/db/schema";
 import { unchangedBillingSnapshot } from "@/lib/billing-snapshot";
+import { canonicalTeamBillingRow } from "@deniai/billing/server";
 
 type Database = typeof db;
 type Transaction = Parameters<Parameters<Database["transaction"]>[0]>[0];
@@ -9,10 +10,8 @@ type TeamBillingUpdates = Partial<
   Omit<typeof billing.$inferInsert, "id" | "userId" | "organizationId" | "createdAt">
 >;
 
-/** Ignore historical per-admin copies even before the next Stripe sync. */
-export function canonicalTeamBillingRow() {
-  return sql`${billing.id} = (SELECT canonical.id FROM billing AS canonical WHERE canonical.organization_id = ${billing.organizationId} ORDER BY canonical.created_at, canonical.id LIMIT 1)`;
-}
+/** Ignore historical per-admin copies even before the next Stripe sync (shared with the usage engine). */
+export { canonicalTeamBillingRow };
 
 export function withTeamBillingLock<T>(
   database: Database,

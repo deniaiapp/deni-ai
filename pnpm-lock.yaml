@@ -594,7 +594,20 @@ importers:
         version: 5.0.5(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/billing:
+    dependencies:
+      '@deniai/db':
+        specifier: workspace:*
+        version: link:../db
     devDependencies:
+      '@electric-sql/pglite':
+        specifier: ^0.5.11
+        version: 0.5.11
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.6
+      drizzle-orm:
+        specifier: ^0.45.4
+        version: 0.45.4(@cloudflare/workers-types@5.20261026.1)(@electric-sql/pglite@0.5.11)(@neondatabase/serverless@1.2.0)(@opentelemetry/api@1.10.0)(@types/pg@8.23.1)(@upstash/redis@1.40.0)(kysely@0.29.7)(pg@8.23.1)(postgres@3.4.9)
       typescript:
         specifier: ^7.0.2
         version: 7.0.2

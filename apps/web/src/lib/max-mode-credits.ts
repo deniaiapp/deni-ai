@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, isNotNull, sql } from "drizzle-orm";
 import type Stripe from "stripe";
 
 import { db } from "@/db/drizzle";
@@ -6,6 +6,14 @@ import { env } from "@/env";
 import { billing, maxModeCreditAccount, maxModeCreditLot, usageReservation } from "@/db/schema";
 import { isBillingDisabled } from "@/lib/billing-config";
 import { usageMonthStart } from "@/lib/product-usage-ledger";
+import {
+  creditOwnerFor,
+  getMaxModeCreditUnits as getCreditUnits,
+  maxModeCreditLotOwnerCondition,
+  type MaxModeCreditDatabase,
+  type MaxModeCreditOwner,
+  spendMaxModeCredits as spendCredits,
+} from "@deniai/billing/server";
 import { stripe } from "@/lib/stripe";
 import { checkoutCardPaymentMethodOptions } from "@/lib/stripe-checkout";
 import { usageUnitsToUsd, usdToUsageUnits } from "@deniai/billing";
@@ -28,39 +36,17 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 // A failing or concurrent top-up is not retried faster than this.
 const AUTO_TOP_UP_MIN_INTERVAL_MS = 60_000;
 
-type CreditDatabase = Pick<typeof db, "select" | "update">;
+type CreditDatabase = MaxModeCreditDatabase;
 
-/** Credits belong to a user (personal plans) or an organization (team plans). */
-export type MaxModeCreditOwner =
-  | { userId: string; organizationId: null }
-  | { userId: null; organizationId: string };
+// Credit owners and spending are shared with the usage engine (@deniai/billing/server).
+export { creditOwnerFor, type MaxModeCreditOwner };
 
-export function creditOwnerFor(record: {
-  userId: string | null;
-  organizationId: string | null;
-}): MaxModeCreditOwner | null {
-  if (record.organizationId) return { userId: null, organizationId: record.organizationId };
-  return record.userId ? { userId: record.userId, organizationId: null } : null;
-}
-
-function lotOwnerCondition(owner: MaxModeCreditOwner) {
-  return owner.organizationId
-    ? eq(maxModeCreditLot.organizationId, owner.organizationId)
-    : eq(maxModeCreditLot.userId, owner.userId!);
-}
+const lotOwnerCondition = maxModeCreditLotOwnerCondition;
 
 function accountOwnerCondition(owner: MaxModeCreditOwner) {
   return owner.organizationId
     ? eq(maxModeCreditAccount.organizationId, owner.organizationId)
     : eq(maxModeCreditAccount.userId, owner.userId!);
-}
-
-function spendableLots(owner: MaxModeCreditOwner, now: Date) {
-  return and(
-    lotOwnerCondition(owner),
-    gt(maxModeCreditLot.remainingUnits, 0),
-    gt(maxModeCreditLot.expiresAt, now),
-  );
 }
 
 export function isValidCreditAmount(credits: number) {
@@ -73,13 +59,9 @@ export function isValidCreditAmount(credits: number) {
 export async function getMaxModeCreditUnits(
   owner: MaxModeCreditOwner,
   now = new Date(),
-  database: Pick<typeof db, "select"> = db,
+  database: Pick<MaxModeCreditDatabase, "select"> = db,
 ) {
-  const [row] = await database
-    .select({ units: sql<string | null>`sum(${maxModeCreditLot.remainingUnits})` })
-    .from(maxModeCreditLot)
-    .where(spendableLots(owner, now));
-  return Number(row?.units ?? 0);
+  return getCreditUnits(owner, now, database);
 }
 
 /**
@@ -93,24 +75,7 @@ export async function spendMaxModeCredits(
   now: Date,
   database: CreditDatabase,
 ) {
-  if (units <= 0) return 0;
-  const lots = await database
-    .select({ id: maxModeCreditLot.id, remaining: maxModeCreditLot.remainingUnits })
-    .from(maxModeCreditLot)
-    .where(spendableLots(owner, now))
-    .orderBy(asc(maxModeCreditLot.expiresAt), asc(maxModeCreditLot.createdAt))
-    .for("update");
-  let left = units;
-  for (const lot of lots) {
-    if (left <= 0) break;
-    const take = Math.min(left, lot.remaining);
-    await database
-      .update(maxModeCreditLot)
-      .set({ remainingUnits: sql`${maxModeCreditLot.remainingUnits} - ${take}` })
-      .where(eq(maxModeCreditLot.id, lot.id));
-    left -= take;
-  }
-  return units - left;
+  return spendCredits(owner, units, now, database);
 }
 
 /** Record paid credits once per payment intent. Returns false for a repeat. */

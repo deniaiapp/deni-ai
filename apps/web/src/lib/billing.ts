@@ -1,15 +1,16 @@
 import type { FlashOfferLimit } from "@/lib/billing-offers";
 
-export type IndividualPlanId =
-  | "go_monthly"
-  | "plus_monthly"
-  | "plus_yearly"
-  | "pro_monthly"
-  | "pro_yearly";
+import {
+  type BillingPlanId,
+  getPlanTier,
+  type IndividualPlanId,
+  PLAN_FAMILY_BY_ID,
+  type TeamPlanId,
+} from "@deniai/billing";
 
-export type TeamPlanId = "pro_team_monthly" | "pro_team_yearly";
-
-export type BillingPlanId = IndividualPlanId | TeamPlanId;
+// Plan ids and their tiers are shared with the usage engine (@deniai/billing).
+export type { BillingPlanId, IndividualPlanId, TeamPlanId };
+export { getPlanTier };
 
 export type BillingPlan = {
   id: BillingPlanId;
@@ -61,15 +62,7 @@ export const billingPlans: BillingPlan[] = [
   },
 ];
 
-const planIdToTier = new Map<BillingPlanId, "go" | "plus" | "pro" | "team">([
-  ["go_monthly", "go"],
-  ["plus_monthly", "plus"],
-  ["plus_yearly", "plus"],
-  ["pro_monthly", "pro"],
-  ["pro_yearly", "pro"],
-  ["pro_team_monthly", "team"],
-  ["pro_team_yearly", "team"],
-]);
+const planIdToTier = PLAN_FAMILY_BY_ID;
 
 export function findPlanById(planId: BillingPlanId | string) {
   return billingPlans.find((plan) => plan.id === planId);
@@ -97,14 +90,4 @@ export function isIndividualPlanId(planId: string | null | undefined): planId is
 
 export function isTeamPlan(planId: string | null | undefined): boolean {
   return Boolean(planId?.startsWith("pro_team"));
-}
-
-export function getPlanTier(
-  planId: string | null | undefined,
-): "go" | "plus" | "pro" | "team" | null {
-  if (!planId) {
-    return null;
-  }
-
-  return planIdToTier.get(planId as BillingPlanId) ?? null;
 }

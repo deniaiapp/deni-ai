@@ -1,6 +1,5 @@
 import { createHmac } from "node:crypto";
 import { isIP } from "node:net";
-import { eq } from "drizzle-orm";
 import { db } from "@/db/drizzle";
 import { signupRisk } from "@/db/schema";
 import { env } from "@/env";
@@ -10,6 +9,7 @@ import {
   isRandomLookingLocalPart,
 } from "@/lib/email-domain-policy";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { isSignupFlagged as isSignupFlaggedIn } from "@deniai/billing/server";
 
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
@@ -206,15 +206,5 @@ export async function isSignupFlagged(
   userId: string,
   database: SignupRiskDatabase = db,
 ): Promise<boolean> {
-  try {
-    const [row] = await database
-      .select({ userId: signupRisk.userId })
-      .from(signupRisk)
-      .where(eq(signupRisk.userId, userId))
-      .limit(1);
-    return Boolean(row);
-  } catch (error) {
-    console.warn("[signup-risk] lookup failed; treating the account as not flagged", error);
-    return false;
-  }
+  return isSignupFlaggedIn(userId, database);
 }
