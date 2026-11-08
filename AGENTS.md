@@ -11,6 +11,7 @@ the workspace layout and the rules that span apps.
 | `apps/web`                          | `@deniai/web`                       | Deni AI web app (TanStack Start, React Compiler, better-auth). Guide: `apps/web/AGENTS.md`                                                                                           |
 | `apps/support`                      | `@deniai/support`                   | Help center (support.deniai.app, Fumadocs on TanStack Start). See `apps/support/README.md`                                                                                           |
 | `services/agent-api`                | `@deniai/agent-api`                 | Flixa agent API (Hono, formerly flixa-backend). Guide: `services/agent-api/AGENTS.md`                                                                                                |
+| `services/run-worker`               | `@deniai/run-worker`                | Deni Run worker: job scheduler (routines, stale leases, claiming) and, behind `RUN_DISCORD_ENABLED`, the Discord bot. See `services/run-worker/README.md`                            |
 | `packages/disposable-email-domains` | `@deni-ai/disposable-email-domains` | Disposable email domain list                                                                                                                                                         |
 | `packages/db`                       | `@deniai/db`                        | Drizzle schema + migrations: `public` (web, `drizzle.config.ts`) and `flixa` (agent API, `drizzle.flixa.config.ts`, journal `flixa.__drizzle_migrations`)                            |
 | `packages/billing`                  | `@deniai/billing`                   | Billing rules shared by web and agent API: pure pool sizes, plan tiers, usage tier multipliers, token weights, education domains; `/server`: the usage engine (`createUsageEngine`)  |
@@ -20,19 +21,24 @@ the workspace layout and the rules that span apps.
 | `packages/i18n`                     | `@deniai/i18n`                      | Locale list (web and support), Accept-Language negotiation, `getExtracted()`, and the `extractMessages()` Vite plugin that rewrites `apps/web/messages/*.json`                       |
 | `packages/ai`                       | `@deniai/ai`                        | Chat model catalog and plan access rules, OpenRouter provider factory, reasoning helpers, pure chat tools (questionnaire)                                                            |
 | `packages/auth`                     | `@deniai/auth`                      | Better Auth server factory `createAuth(deps)`, React client, auth route paths, API key generation and hashing (web and agent API)                                                    |
+| `packages/run`                      | `@deniai/run`                       | Deni Run (Run mode, `/run/*`): teammates, threads, agent runtime, Postgres job queue, E2B/Steel providers, MCP, routines, D1 migration. See its README                               |
 
 The apps were imported with their full history (`git subtree add`), so
 `git log -- apps/web` shows the deni-ai history.
 
-`packages/{emails,i18n,ai,auth,billing}` have READMEs listing their exports and
+`packages/{emails,i18n,ai,auth,billing,run}` have READMEs listing their exports and
 what stayed in the web app. Packages never import an app:
 values that depend on env, the database or app services are passed in (for
 example `apps/web/src/lib/auth.ts` calls `createAuth()` with its env, db, email
 sender and callbacks). Usage reservation and settlement have one
 implementation, `createUsageEngine(deps)` in `@deniai/billing/server`, used by the
 web app and the agent API (`FLIXA_USAGE_ENGINE`, see
-`packages/billing/docs/usage-engine.md`). Deni Run (deni-ai-computer) is not
-imported.
+`packages/billing/docs/usage-engine.md`). Deni Run (deni-ai-computer) was imported with its history (`git subtree`, then
+moved into `packages/run`, `services/run-worker` and `apps/web`); it runs as Run
+mode in the web app under `/run/*` with its own `run_*` tables, charges the shared
+pool through the same engine (`getRunBudget` / `recordRunCost`), and its standalone
+D1 data moves over with `pnpm --filter @deniai/run migrate:d1` (runbook:
+`docs/run-migration.md`).
 
 ## Workspace rules
 
@@ -80,6 +86,7 @@ imported.
 | ----------------------------------------- | ------------------------------------------------------------------------------ |
 | `pnpm dev`                                | Web dev server (`@deniai/web`, port 3000)                                      |
 | `pnpm dev:support` / `pnpm dev:agent-api` | Other dev servers (both also default to port 3000)                             |
+| `pnpm --filter @deniai/run-worker dev`    | Run worker (scheduler; Discord only with `RUN_DISCORD_ENABLED=true`)           |
 | `pnpm build`                              | `build` in every package that has one                                          |
 | `pnpm lint` / `pnpm format`               | oxlint / oxfmt in every package that defines the script                        |
 | `pnpm format:check`                       | `oxfmt --check` (web, ui, db, billing, flixa-contract, emails, i18n, ai, auth) |

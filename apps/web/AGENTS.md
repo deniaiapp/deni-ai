@@ -86,6 +86,31 @@ Read these when relevant rather than loading the whole project:
   configuration, deployment, or architecture.
 - Respond in the user's language; write code and identifiers in English.
 
+## Run mode (Deni Run)
+
+Run mode lives under `/run/*` and is entered from the sidebar's chat / Run switch
+(`src/lib/app-mode.ts`). Its history and data are separate from chat: the `run_*`
+tables of `@deniai/db`, read and written only through `@deniai/run`.
+
+- Pages: `src/routes/_app/run/**`; components: `src/components/run/**`
+  (`RunSidebarContent` fills the sidebar body in Run mode; the shell itself is shared).
+- API: one catch-all server route, `src/routes/api/run/$.ts`, lazily loads
+  `src/server/http/run/router.ts`, which authenticates the web session (guests are
+  refused), rate-limits chat and calls `@deniai/run` (streaming chat:
+  `handleChat` from `@deniai/run/chat/route`, used with AI SDK `useChat`). The MCP
+  OAuth callback is `/api/run/mcp/oauth/callback`.
+- Wiring: `src/lib/run/runtime.server.ts` calls `configureRun()` once with this app's
+  `db`, the usage engine's `getRunBudget` / `recordRunCost` (`src/lib/usage.ts`) and
+  `loadRunConfig(process.env)`. Optional providers (OpenRouter, Exa, E2B, Steel,
+  S3/R2, Slack MCP, Discord) are read from env (see `.env.example`); without them the
+  UI shows a disabled state instead of failing. `RUN_SCHEDULER_IN_PROCESS=true` runs
+  the job scheduler inside the web server for local development; in production it
+  runs in `services/run-worker`.
+- Usage: Run spends the shared pool through the engine (model cost as reported,
+  browser $0.10/h and computer $0.15/h by default); teammates per plan come from
+  `@deniai/run/billing/plans`.
+- Migration from the standalone Deni Run: `docs/run-migration.md` at the repository root.
+
 ## Verification
 
 Choose checks that establish the changed behavior:
