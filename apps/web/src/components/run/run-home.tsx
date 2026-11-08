@@ -78,17 +78,16 @@ export function RunHome() {
 
   const data = state.data;
   const selected = data.bots.find((bot) => bot.id === teammateId) ?? data.bots[0];
-  const recent = data.threads
-    .filter((thread) => !thread.hidden)
-    .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-    .slice(0, 8);
+  const dmFor = (botId: string) =>
+    data.threads.find((thread) => thread.kind === "dm" && thread.botIds[0] === botId);
+  const groups = data.threads
+    .filter((thread) => thread.kind === "group" && !thread.hidden)
+    .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   const start = () => {
     const text = task.trim();
     if (!text || !selected) return;
-    const dm = data.threads.find(
-      (thread) => thread.kind === "dm" && thread.botIds[0] === selected.id,
-    );
+    const dm = dmFor(selected.id);
     if (!dm) return;
     setPendingTask(dm.id, text);
     push(`/run/threads/${dm.id}`);
@@ -167,41 +166,57 @@ export function RunHome() {
           </span>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {data.bots.map((bot) => (
-            <Card key={bot.id} size="sm">
-              <CardHeader className="flex flex-row items-center gap-3">
-                <TeammateAvatar name={bot.name} icon={bot.icon} accent={bot.accent} />
-                <div className="min-w-0 flex-1">
-                  <CardTitle className="truncate">{bot.name}</CardTitle>
-                  <CardDescription className="truncate">{bot.job}</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  render={<Link href={`/run/threads/dm_${bot.id}`} />}
-                  nativeButton={false}
-                >
-                  {t("Message")}
-                </Button>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  render={<Link href={`/run/teammates/${bot.id}`} />}
-                  nativeButton={false}
-                >
-                  {t("Edit")}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+          {data.bots.map((bot) => {
+            const dm = dmFor(bot.id);
+            return (
+              <Card key={bot.id} size="sm">
+                <CardHeader className="flex flex-row items-center gap-3">
+                  <TeammateAvatar name={bot.name} icon={bot.icon} accent={bot.accent} />
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="flex items-center gap-2 truncate">
+                      {bot.name}
+                      {dm?.unread ? (
+                        <span
+                          className="size-2 shrink-0 rounded-full bg-primary"
+                          aria-label={t("Unread")}
+                        />
+                      ) : null}
+                    </CardTitle>
+                    <CardDescription className="truncate">{bot.job}</CardDescription>
+                  </div>
+                </CardHeader>
+                {dm?.lastPreview ? (
+                  <CardContent>
+                    <p className="truncate text-sm text-muted-foreground">{dm.lastPreview}</p>
+                  </CardContent>
+                ) : null}
+                <CardContent className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    render={<Link href={`/run/threads/dm_${bot.id}`} />}
+                    nativeButton={false}
+                  >
+                    {t("Message")}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    render={<Link href={`/run/teammates/${bot.id}`} />}
+                    nativeButton={false}
+                  >
+                    {t("Edit")}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </section>
 
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{t("Recent conversations")}</h2>
+          <h2 className="text-lg font-semibold">{t("Groups")}</h2>
           <Button
             size="sm"
             variant="ghost"
@@ -212,25 +227,23 @@ export function RunHome() {
             {t("New group")}
           </Button>
         </div>
-        {recent.length === 0 ? (
-          <p className="text-sm text-muted-foreground">{t("No conversations yet.")}</p>
+        {groups.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            {t("Put several teammates in one conversation to work together.")}
+          </p>
         ) : (
           <ul className="divide-y rounded-lg border">
-            {recent.map((thread) => (
-              <li key={thread.id}>
+            {groups.map((group) => (
+              <li key={group.id}>
                 <Link
-                  href={`/run/threads/${thread.id}`}
-                  className="flex items-center justify-between gap-3 px-4 py-3 hover:bg-muted/50"
+                  href={`/run/threads/${group.id}`}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
                 >
+                  <Users className="size-4 shrink-0 text-muted-foreground" />
                   <div className="min-w-0">
-                    <p className={thread.unread ? "font-semibold" : "font-medium"}>
-                      {thread.title}
-                    </p>
-                    <p className="truncate text-sm text-muted-foreground">{thread.lastPreview}</p>
+                    <p className={group.unread ? "font-semibold" : "font-medium"}>{group.title}</p>
+                    <p className="truncate text-sm text-muted-foreground">{group.lastPreview}</p>
                   </div>
-                  {thread.kind === "group" ? (
-                    <Users className="size-4 shrink-0 text-muted-foreground" />
-                  ) : null}
                 </Link>
               </li>
             ))}

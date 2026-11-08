@@ -1,4 +1,4 @@
-import { Bell, CalendarClock, Plus, Settings, Sparkles } from "lucide-react";
+import { Bell, CalendarClock, Plus, Settings, Sparkles, Users } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { Button } from "@deniai/ui/components/button";
 import {
@@ -16,19 +16,20 @@ import { useRunState } from "./run-api";
 import { TeammateAvatar } from "./teammate-avatar";
 
 /**
- * Sidebar body for Run mode. Run keeps its own history, separate from chats: its
- * teammates, recent conversations (unread ones marked) and Run's own pages.
+ * Sidebar body for Run mode. Run keeps its own history, separate from chats.
+ * Conversations are reached through who they are with: a teammate opens its DM,
+ * and group conversations (several teammates) follow the teammates. There is no
+ * separate thread list, so each conversation appears once.
  */
 export function RunSidebarContent() {
   const t = useExtracted();
   const pathname = usePathname();
   const { data, isLoading, isError } = useRunState();
-  const threads = (data?.threads ?? [])
-    .filter((thread) => !thread.hidden)
+  const groups = (data?.threads ?? [])
+    .filter((thread) => thread.kind === "group" && !thread.hidden)
     .toSorted(
       (a, b) => Number(b.pinned) - Number(a.pinned) || b.updatedAt.localeCompare(a.updatedAt),
-    )
-    .slice(0, 30);
+    );
 
   const pages = [
     { href: "/run/skills", label: t("Skills"), icon: Sparkles, badge: 0 },
@@ -99,6 +100,26 @@ export function RunSidebarContent() {
                 </SidebarMenuItem>
               );
             })}
+            {groups.map((group) => {
+              const href = `/run/threads/${group.id}`;
+              return (
+                <SidebarMenuItem key={group.id}>
+                  <SidebarMenuButton
+                    isActive={pathname === href}
+                    render={<Link href={href} />}
+                    className={group.unread ? "font-semibold" : undefined}
+                  >
+                    <Users className="size-4" aria-label={t("Group")} />
+                    <span className="truncate">{group.title}</span>
+                  </SidebarMenuButton>
+                  {group.unread ? (
+                    <SidebarMenuBadge>
+                      <span className="size-2 rounded-full bg-primary" aria-label={t("Unread")} />
+                    </SidebarMenuBadge>
+                  ) : null}
+                </SidebarMenuItem>
+              );
+            })}
             {data ? (
               <SidebarMenuItem>
                 <SidebarMenuButton render={<Link href="/run/teammates/new" />}>
@@ -107,32 +128,6 @@ export function RunSidebarContent() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ) : null}
-          </SidebarMenu>
-        </SidebarGroupContent>
-      </SidebarGroup>
-      <SidebarGroup>
-        <SidebarGroupLabel>{t("Threads")}</SidebarGroupLabel>
-        <SidebarGroupContent>
-          <SidebarMenu>
-            {data && threads.length === 0 ? (
-              <p className="px-2 py-1 text-sm text-muted-foreground">{t("No threads yet")}</p>
-            ) : null}
-            {threads.map((thread) => (
-              <SidebarMenuItem key={thread.id}>
-                <SidebarMenuButton
-                  isActive={pathname === `/run/threads/${thread.id}`}
-                  render={<Link href={`/run/threads/${thread.id}`} />}
-                  className={thread.unread ? "font-semibold" : undefined}
-                >
-                  <span className="truncate">{thread.title}</span>
-                </SidebarMenuButton>
-                {thread.unread ? (
-                  <SidebarMenuBadge>
-                    <span className="size-2 rounded-full bg-primary" aria-label={t("Unread")} />
-                  </SidebarMenuBadge>
-                ) : null}
-              </SidebarMenuItem>
-            ))}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
