@@ -141,6 +141,32 @@ tables of `@deniai/db`, read and written only through `@deniai/run`.
   `@deniai/run/billing/plans`.
 - Migration from the standalone Deni Run: `docs/run-migration.md` at the repository root.
 
+## Private beta (v8 on beta.deniai.app)
+
+v8 runs as a private beta next to v7 (deniai.app) on the same production
+database; the rollout and the coexistence rules are in `docs/v8-beta-rollout.md`
+at the repository root.
+
+- `BETA_ACCESS_REQUIRED=true` turns on the gate (default off). Access: verified
+  admins (`isVerifiedAdmin` + `ADMIN_EMAILS` / `ADMIN_EMAIL_DOMAINS`) or a
+  `beta_access` row (by user id, or by verified email, linked on first match);
+  never guests. Logic: `src/lib/beta-access.server.ts`; paths and constants:
+  `src/lib/beta-access.ts`; admin page: Settings > Beta testers
+  (`betaAccess` tRPC router).
+- Server enforcement is the `betaAccessGate` request middleware in `src/start.ts`:
+  every `/api/*` route is gated (403 `beta_access_required`) unless
+  `isBetaGatedServerPath` lists it as open, so a new endpoint is closed by
+  default; add a route there only if it must serve uninvited users. Server
+  functions are not under `/api`: one that reads or writes user data calls
+  `hasBetaAccess()` itself (see `src/routes/_app/projects/$id.tsx`). Pages:
+  the `/_app` guard sends uninvited users to `/private-beta`.
+- While v7 shares the database, schema changes are made only in
+  `packages/db` here, stay additive, and v7 must not generate migrations.
+  `CRON_ENABLED=false` and `STRIPE_WEBHOOK_ENABLED=false` keep the beta from
+  running jobs and webhooks that v7 already runs.
+- `src/lib/version.ts` holds the version, the codename placeholder and
+  `appIsBeta` (the sidebar "Beta" label).
+
 ## Verification
 
 Choose checks that establish the changed behavior:

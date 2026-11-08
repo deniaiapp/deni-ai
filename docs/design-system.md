@@ -185,7 +185,7 @@ structure and takes the new tokens, radii and type (plus targeted fixes).
 
 | Screen                                         | State in next UI                                                         |
 | ---------------------------------------------- | ------------------------------------------------------------------------ |
-| App shell, sidebar, mode switch, mobile drawer | Rebuilt: inset frame, inverted sidebar, `AppHeader`                      |
+| App shell, sidebar, mode switch, mobile drawer | Rebuilt: inset frame, inverted sidebar, `AppHeader`, "Beta" label        |
 | Chat home                                      | Rebuilt: left-aligned greeting, floating composer                        |
 | Conversation, messages, tool/approval cards    | Restyled: 15px prose, user bubble, highlight edge on open questionnaires |
 | Artifacts panel                                | Restyled (tokens)                                                        |
@@ -201,6 +201,8 @@ structure and takes the new tokens, radii and type (plus targeted fixes).
 | Billing (plans, usage, Max Mode), team pages   | Restyled: header, token accents for offers and Max Mode                  |
 | Auth pages                                     | Rebuilt: split layout with the indigo panel                              |
 | Two-factor setup (required)                    | New screen                                                               |
+| Private beta screen (`/private-beta`)          | New screen on the auth frame (v8 beta gate)                              |
+| Beta testers (Settings, admins only)           | New page on `PageSection` rows                                           |
 | Flixa device authorize                         | Restyled: the code as a dashed ticket, token status colours              |
 | Deni Run (`/run`)                              | Not edited here; inherits tokens and the inverted sidebar                |
 | Public pages (`/{-$locale}/*`)                 | Rebuilt: single-row header, short footer, one text column per page       |
