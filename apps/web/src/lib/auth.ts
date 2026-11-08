@@ -19,7 +19,7 @@ import { createElement } from "react";
 import { db } from "@/db/drizzle";
 import * as schema from "@/db/schema";
 // Email templates are imported where each email is sent: they load react-email.
-import { orgInvitationEmailSubject } from "@/emails/org-invitation-email-subject";
+import { orgInvitationEmailSubject } from "@deniai/emails/org-invitation-email-subject";
 import { env } from "@/env";
 import { OAUTH_CONSENT_PATH, OAUTH_LOGIN_PATH, TWO_FACTOR_PATH } from "@/lib/auth-paths";
 import { toSafeRedirectPath } from "@/lib/auth-redirect";
@@ -416,7 +416,7 @@ export const auth = betterAuth({
     sendResetPassword: emailEnabled
       ? async ({ user, url }) => {
           const { PasswordResetEmail, passwordResetEmailSubject } =
-            await import("@/emails/password-reset-email");
+            await import("@deniai/emails/password-reset-email");
           await sendEmail({
             to: user.email,
             subject: passwordResetEmailSubject,
@@ -438,8 +438,8 @@ export const auth = betterAuth({
             { NewEmailVerificationEmail, newEmailVerificationEmailSubject },
             { VerificationEmail, verificationEmailSubject },
           ] = await Promise.all([
-            import("@/emails/new-email-verification-email"),
-            import("@/emails/verification-email"),
+            import("@deniai/emails/new-email-verification-email"),
+            import("@deniai/emails/verification-email"),
           ]);
           await sendEmail(
             emailChange
@@ -602,7 +602,7 @@ export const auth = betterAuth({
             const invitationUrl = new URL("/settings/team", env.NEXT_PUBLIC_BETTER_AUTH_URL);
             invitationUrl.searchParams.set("invitationId", data.id);
             const url = invitationUrl.toString();
-            const { OrgInvitationEmail } = await import("@/emails/org-invitation-email");
+            const { OrgInvitationEmail } = await import("@deniai/emails/org-invitation-email");
             await sendEmail({
               to: data.email,
               subject: orgInvitationEmailSubject(data.organization.name),
@@ -621,7 +621,7 @@ export const auth = betterAuth({
           magicLink({
             sendMagicLink: async ({ email, url }) => {
               const { MagicLinkEmail, magicLinkEmailSubject } =
-                await import("@/emails/magic-link-email");
+                await import("@deniai/emails/magic-link-email");
               await sendEmail({
                 to: email,
                 subject: magicLinkEmailSubject,
@@ -677,7 +677,7 @@ export const auth = betterAuth({
       sendChangeEmailConfirmation: emailEnabled
         ? async ({ user, newEmail, url }) => {
             const { ChangeEmailConfirmationEmail, changeEmailConfirmationEmailSubject } =
-              await import("@/emails/change-email-confirmation-email");
+              await import("@deniai/emails/change-email-confirmation-email");
             await sendEmail({
               to: user.email,
               subject: changeEmailConfirmationEmailSubject,

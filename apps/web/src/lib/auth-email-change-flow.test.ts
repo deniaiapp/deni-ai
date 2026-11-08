@@ -1,7 +1,7 @@
 import { APIError } from "better-auth/api";
 import { afterEach, expect, test, vi } from "vitest";
-import { NewEmailVerificationEmail } from "@/emails/new-email-verification-email";
-import { VerificationEmail } from "@/emails/verification-email";
+import { NewEmailVerificationEmail } from "@deniai/emails/new-email-verification-email";
+import { VerificationEmail } from "@deniai/emails/verification-email";
 import { readEmailChangeToken } from "./email-change-token";
 import { securityActionForAuthResponse } from "./security-activity";
 

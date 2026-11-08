@@ -564,4 +564,4 @@ export function getEffectiveTokenMultiplier(
 }
 
 // Transactional emails are rendered with react-email components under
-// `src/emails/*` and sent from `src/lib/auth.ts`.
+// `@deniai/emails` (packages/emails) and sent from `src/lib/auth.ts`.

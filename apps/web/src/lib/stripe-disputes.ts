@@ -7,7 +7,7 @@ import {
   DisputeAlertEmail,
   disputeAlertEmailSubject,
   type DisputeAlertKind,
-} from "@/emails/dispute-alert-email";
+} from "@deniai/emails/dispute-alert-email";
 import { getAdminEmails } from "@/lib/admin-emails";
 import { isEmailConfigured, sendEmail } from "@/lib/email";
 import { formatMinorCurrency } from "@/lib/currency";

@@ -8,6 +8,7 @@
  */
 
 import type { ReactElement } from "react";
+import { renderEmail } from "@deniai/emails/render";
 import { env } from "@/env";
 import { EMAIL_FROM } from "@/lib/constants";
 import { isPlaceholderEmail } from "@/lib/placeholder-email";
@@ -71,7 +72,7 @@ function normalizeFrom(from: string | EmailAddress): EmailAddress {
 
 /**
  * Send a transactional email through Cloudflare Email Sending.
- * Prefer `react` for templates under `src/emails/*`.
+ * Prefer `react` for the `@deniai/emails` templates.
  */
 export async function sendEmail(options: SendEmailOptions): Promise<CloudflareSendResult> {
   if (!isEmailConfigured()) {
@@ -93,14 +94,9 @@ export async function sendEmail(options: SendEmailOptions): Promise<CloudflareSe
   let text = options.text;
 
   if (options.react) {
-    // Loaded on send: react-email's entry also pulls in Tailwind, Markdown and Prism.
-    const { render } = await import("react-email");
-    const [renderedHtml, renderedText] = await Promise.all([
-      render(options.react),
-      render(options.react, { plainText: true }),
-    ]);
-    html = html ?? renderedHtml;
-    text = text ?? renderedText;
+    const rendered = await renderEmail(options.react);
+    html = html ?? rendered.html;
+    text = text ?? rendered.text;
   }
 
   if (!html && !text) {

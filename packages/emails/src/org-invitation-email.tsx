@@ -11,7 +11,7 @@ import {
   Text,
 } from "react-email";
 
-import { sanitizeSubjectValue } from "@/emails/org-invitation-email-subject";
+import { sanitizeSubjectValue } from "./org-invitation-email-subject";
 
 type OrgInvitationEmailProps = {
   orgName: string;

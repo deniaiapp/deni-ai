@@ -3,7 +3,7 @@ import { afterEach, expect, test, vi } from "vitest";
 import {
   ChangeEmailConfirmationEmail,
   changeEmailConfirmationEmailSubject,
-} from "@/emails/change-email-confirmation-email";
+} from "@deniai/emails/change-email-confirmation-email";
 
 // Team domains are read from Postgres; no team has verified one in these tests.
 vi.mock("@/lib/team-domains", () => ({

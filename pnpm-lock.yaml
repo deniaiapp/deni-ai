@@ -292,6 +292,9 @@ importers:
       '@deniai/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@deniai/emails':
+        specifier: workspace:*
+        version: link:../../packages/emails
       '@deniai/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -421,9 +424,6 @@ importers:
       react-dom:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
-      react-email:
-        specifier: ^6.11.4
-        version: 6.11.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(supports-color@8.1.1)
       sonner:
         specifier: ^2.0.8
         version: 2.0.8(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -554,6 +554,25 @@ importers:
       typescript:
         specifier: ^7.0.2
         version: 7.0.2
+
+  packages/emails:
+    dependencies:
+      react-email:
+        specifier: ^6.11.4
+        version: 6.11.4(react-dom@19.3.1(react@19.3.1))(react@19.3.1)(supports-color@8.1.1)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.3.0
+        version: 19.3.0
+      react:
+        specifier: 19.3.1
+        version: 19.3.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
   packages/flixa-contract:
     dependencies:
