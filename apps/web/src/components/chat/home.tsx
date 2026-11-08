@@ -147,7 +147,7 @@ export default function ChatHome() {
   return (
     <section
       aria-labelledby="chat-home-title"
-      className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-1 py-4 [justify-content:safe_center] md:px-4"
+      className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 py-4 [justify-content:safe_center] md:px-6"
     >
       <div className="flex w-full max-w-[46rem] flex-col gap-6 py-6 md:gap-8">
         {/* The one orchestrated moment of the app: the greeting settles in once. */}

@@ -792,7 +792,7 @@ export function ModelComparison({
 
   return (
     <section className="flex min-h-0 flex-1 flex-col">
-      <header className="mx-auto w-full max-w-6xl shrink-0 space-y-3 px-1 pt-1 md:px-4">
+      <header className="mx-auto w-full max-w-6xl shrink-0 space-y-3 px-4 pt-1">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex min-w-0 flex-col gap-1">
             <h1 className="text-2xl leading-8 font-semibold legacy:text-sm legacy:leading-5">

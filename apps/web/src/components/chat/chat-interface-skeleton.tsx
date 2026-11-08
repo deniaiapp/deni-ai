@@ -7,7 +7,7 @@ import { Skeleton } from "@deniai/ui/components/skeleton";
  */
 export function ChatInterfaceSkeleton() {
   return (
-    <div className="-m-4 flex min-h-0 flex-1 overflow-hidden">
+    <div className="-m-3 flex min-h-0 flex-1 overflow-hidden md:-m-5">
       <div className="mx-auto flex h-full w-full max-w-3xl min-h-0 flex-1 flex-col overflow-hidden p-4">
         <div className="mb-3 flex min-h-7 items-center gap-2">
           <Skeleton className="h-6 w-28 rounded-full" />
