@@ -94,6 +94,17 @@ Unchanged in every mode: model access (`tier_restricted`), the client access
 policy and the 429 body's `tier` / `canVerifyForBoost` still come from the agent
 API's cached billing profile (legacy tier rules, differences 2 to 7).
 
+## Deni Run on the platform
+
+Run mode (`@deniai/run`, in the web app and `services/run-worker`) calls the engine
+directly instead of `/api/integrations/deni-run/usage` (kept only for the standalone
+Deni Run until it is shut down): `getRunBudget(userId)` returns the shared pool in
+USD (tier, limit, used, remaining, use by product) before work starts, and
+`recordRunCost({ userId, metric, costUsd })` adds model, browser or computer cost to
+`product_usage` (product `run`, micro-dollars) under the user's usage lock, so it
+serializes with chat and Flixa reservations. Run is charged after the cost is
+incurred (it may overrun the pool by one step); the next check refuses work.
+
 ## `flixa.usage_reservation` (deprecated)
 
 Only `legacy` and `shadow` write it; the schema (`@deniai/db/flixa`) marks it

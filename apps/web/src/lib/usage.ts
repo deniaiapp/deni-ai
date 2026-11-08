@@ -63,4 +63,6 @@ export const {
   hasEducationGo,
   isFreeAdViewer,
   canCompareModels,
+  getRunBudget,
+  recordRunCost,
 } = engine;

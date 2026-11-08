@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <style>.bob{animation:bob 4.4s ease-in-out infinite} .blink{transform-box:fill-box;transform-origin:center;animation:blink 5.2s infinite} @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.4px)}} @keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.12)}} @media (prefers-reduced-motion:reduce){*{animation:none!important}} .spin{transform-box:fill-box;transform-origin:center;animation:spin 6s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}</style>
+  <path d="M13 64c0-9 8-14 19-14s19 5 19 14Z" fill="#f08a2c"/>
+  <g class="bob">
+    <rect x="28.5" y="44" width="7" height="9" fill="#557494"/>
+    <rect x="12" y="16" width="40" height="31" rx="9" fill="#7f9fc0"/>
+    <rect x="16" y="20" width="32" height="23" rx="6" fill="#211c19"/>
+    <g class="blink" fill="#9fe9ff">
+    <rect x="22" y="29.5" width="8" height="4.5" rx="2.25"/>
+    <rect x="34" y="29.5" width="8" height="4.5" rx="2.25"/>
+    </g>
+    <path d="M14 19a18 14 0 0 1 36 0Z" fill="#f2b33d"/>
+    <rect x="9" y="17" width="46" height="4" rx="2" fill="#e2891f"/>
+    <g class="spin">
+    <circle cx="32" cy="11" r="3.6" fill="none" stroke="#557494" stroke-width="2.4" stroke-dasharray="1.5 1.33"/>
+    <circle cx="32" cy="11" r="2.6" fill="#557494"/>
+    <circle cx="32" cy="11" r="1" fill="#f2b33d"/>
+    </g>
+  </g>
+</svg>

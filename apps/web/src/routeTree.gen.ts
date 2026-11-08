@@ -43,6 +43,10 @@ import { Route as AppOauthAuthorizeRouteImport } from './routes/_app/oauth/autho
 import { Route as AppOauthConsentRouteImport } from './routes/_app/oauth/consent'
 import { Route as AppProjectsIdRouteImport } from './routes/_app/projects/$id'
 import { Route as AppRunIndexRouteImport } from './routes/_app/run/index'
+import { Route as AppRunNotificationsRouteImport } from './routes/_app/run/notifications'
+import { Route as AppRunRoutinesRouteImport } from './routes/_app/run/routines'
+import { Route as AppRunSettingsRouteImport } from './routes/_app/run/settings'
+import { Route as AppRunSkillsRouteImport } from './routes/_app/run/skills'
 import { Route as AppSettingsIndexRouteImport } from './routes/_app/settings/index'
 import { Route as AppSettingsAdsRouteImport } from './routes/_app/settings/ads'
 import { Route as AppSettingsApiKeysRouteImport } from './routes/_app/settings/api-keys'
@@ -63,6 +67,7 @@ import { Route as ApiCronGuestCleanupRouteImport } from './routes/api/cron/guest
 import { Route as ApiCronModelHealthRouteImport } from './routes/api/cron/model-health'
 import { Route as ApiCronStorageCleanupRouteImport } from './routes/api/cron/storage-cleanup'
 import { Route as ApiCronUsageAndMeterRouteImport } from './routes/api/cron/usage-and-meter'
+import { Route as ApiRunSplatRouteImport } from './routes/api/run/$'
 import { Route as ApiStatusModelsRouteImport } from './routes/api/status/models'
 import { Route as ApiStripeWebhookRouteImport } from './routes/api/stripe/webhook'
 import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
@@ -77,6 +82,10 @@ import { Route as Char123LocaleChar125GuidesVerifyAiAnswersRouteImport } from '.
 import { Route as Char123LocaleChar125LegalPrivacyPolicyRouteImport } from './routes/{-$locale}/legal/privacy-policy'
 import { Route as Char123LocaleChar125LegalTermsRouteImport } from './routes/{-$locale}/legal/terms'
 import { Route as Char123LocaleChar125LegalTokushoRouteImport } from './routes/{-$locale}/legal/tokusho'
+import { Route as AppRunGroupsNewRouteImport } from './routes/_app/run/groups/new'
+import { Route as AppRunTeammatesIdRouteImport } from './routes/_app/run/teammates/$id'
+import { Route as AppRunTeammatesNewRouteImport } from './routes/_app/run/teammates/new'
+import { Route as AppRunThreadsIdRouteImport } from './routes/_app/run/threads/$id'
 import { Route as AppSettingsBillingIndexRouteImport } from './routes/_app/settings/billing/index'
 import { Route as AppSettingsTeamDashboardRouteRouteImport } from './routes/_app/settings/team/_dashboard/route'
 import { Route as ApiAdsCampaignsIndexRouteImport } from './routes/api/ads/campaigns/index'
@@ -272,6 +281,26 @@ const AppRunIndexRoute = AppRunIndexRouteImport.update({
   path: '/run/',
   getParentRoute: () => AppRouteRoute,
 } as any)
+const AppRunNotificationsRoute = AppRunNotificationsRouteImport.update({
+  id: '/run/notifications',
+  path: '/run/notifications',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRunRoutinesRoute = AppRunRoutinesRouteImport.update({
+  id: '/run/routines',
+  path: '/run/routines',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRunSettingsRoute = AppRunSettingsRouteImport.update({
+  id: '/run/settings',
+  path: '/run/settings',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRunSkillsRoute = AppRunSkillsRouteImport.update({
+  id: '/run/skills',
+  path: '/run/skills',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppSettingsIndexRoute = AppSettingsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -372,6 +401,11 @@ const ApiCronUsageAndMeterRoute = ApiCronUsageAndMeterRouteImport.update({
   path: '/api/cron/usage-and-meter',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiRunSplatRoute = ApiRunSplatRouteImport.update({
+  id: '/api/run/$',
+  path: '/api/run/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiStatusModelsRoute = ApiStatusModelsRouteImport.update({
   id: '/api/status/models',
   path: '/api/status/models',
@@ -453,6 +487,26 @@ const Char123LocaleChar125LegalTokushoRoute =
     path: '/legal/tokusho',
     getParentRoute: () => Char123LocaleChar125RouteRoute,
   } as any)
+const AppRunGroupsNewRoute = AppRunGroupsNewRouteImport.update({
+  id: '/run/groups/new',
+  path: '/run/groups/new',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRunTeammatesIdRoute = AppRunTeammatesIdRouteImport.update({
+  id: '/run/teammates/$id',
+  path: '/run/teammates/$id',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRunTeammatesNewRoute = AppRunTeammatesNewRouteImport.update({
+  id: '/run/teammates/new',
+  path: '/run/teammates/new',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRunThreadsIdRoute = AppRunThreadsIdRouteImport.update({
+  id: '/run/threads/$id',
+  path: '/run/threads/$id',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppSettingsBillingIndexRoute = AppSettingsBillingIndexRouteImport.update({
   id: '/billing/',
   path: '/billing/',
@@ -571,6 +625,10 @@ export interface FileRoutesByFullPath {
   '/oauth/authorize': typeof AppOauthAuthorizeRoute
   '/oauth/consent': typeof AppOauthConsentRoute
   '/projects/$id': typeof AppProjectsIdRoute
+  '/run/notifications': typeof AppRunNotificationsRoute
+  '/run/routines': typeof AppRunRoutinesRoute
+  '/run/settings': typeof AppRunSettingsRoute
+  '/run/skills': typeof AppRunSkillsRoute
   '/settings/ads': typeof AppSettingsAdsRoute
   '/settings/api-keys': typeof AppSettingsApiKeysRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -588,6 +646,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
   '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
+  '/api/run/$': typeof ApiRunSplatRoute
   '/api/status/models': typeof ApiStatusModelsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -609,6 +668,10 @@ export interface FileRoutesByFullPath {
   '/api/chat/': typeof ApiChatIndexRoute
   '/{-$locale}/guides/': typeof Char123LocaleChar125GuidesIndexRoute
   '/settings/team': typeof AppSettingsTeamDashboardRouteRouteWithChildren
+  '/run/groups/new': typeof AppRunGroupsNewRoute
+  '/run/teammates/$id': typeof AppRunTeammatesIdRoute
+  '/run/teammates/new': typeof AppRunTeammatesNewRoute
+  '/run/threads/$id': typeof AppRunThreadsIdRoute
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
@@ -653,6 +716,10 @@ export interface FileRoutesByTo {
   '/oauth/authorize': typeof AppOauthAuthorizeRoute
   '/oauth/consent': typeof AppOauthConsentRoute
   '/projects/$id': typeof AppProjectsIdRoute
+  '/run/notifications': typeof AppRunNotificationsRoute
+  '/run/routines': typeof AppRunRoutinesRoute
+  '/run/settings': typeof AppRunSettingsRoute
+  '/run/skills': typeof AppRunSkillsRoute
   '/settings/ads': typeof AppSettingsAdsRoute
   '/settings/api-keys': typeof AppSettingsApiKeysRoute
   '/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -670,6 +737,7 @@ export interface FileRoutesByTo {
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
   '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
+  '/api/run/$': typeof ApiRunSplatRoute
   '/api/status/models': typeof ApiStatusModelsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -690,6 +758,10 @@ export interface FileRoutesByTo {
   '/api/ads': typeof ApiAdsIndexRoute
   '/api/chat': typeof ApiChatIndexRoute
   '/{-$locale}/guides': typeof Char123LocaleChar125GuidesIndexRoute
+  '/run/groups/new': typeof AppRunGroupsNewRoute
+  '/run/teammates/$id': typeof AppRunTeammatesIdRoute
+  '/run/teammates/new': typeof AppRunTeammatesNewRoute
+  '/run/threads/$id': typeof AppRunThreadsIdRoute
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
@@ -738,6 +810,10 @@ export interface FileRoutesById {
   '/_app/oauth/authorize': typeof AppOauthAuthorizeRoute
   '/_app/oauth/consent': typeof AppOauthConsentRoute
   '/_app/projects/$id': typeof AppProjectsIdRoute
+  '/_app/run/notifications': typeof AppRunNotificationsRoute
+  '/_app/run/routines': typeof AppRunRoutinesRoute
+  '/_app/run/settings': typeof AppRunSettingsRoute
+  '/_app/run/skills': typeof AppRunSkillsRoute
   '/_app/settings/ads': typeof AppSettingsAdsRoute
   '/_app/settings/api-keys': typeof AppSettingsApiKeysRoute
   '/_app/settings/appearance': typeof AppSettingsAppearanceRoute
@@ -755,6 +831,7 @@ export interface FileRoutesById {
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
   '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
+  '/api/run/$': typeof ApiRunSplatRoute
   '/api/status/models': typeof ApiStatusModelsRoute
   '/api/stripe/webhook': typeof ApiStripeWebhookRoute
   '/api/trpc/$': typeof ApiTrpcSplatRoute
@@ -776,6 +853,10 @@ export interface FileRoutesById {
   '/api/chat/': typeof ApiChatIndexRoute
   '/{-$locale}/guides/': typeof Char123LocaleChar125GuidesIndexRoute
   '/_app/settings/team/_dashboard': typeof AppSettingsTeamDashboardRouteRouteWithChildren
+  '/_app/run/groups/new': typeof AppRunGroupsNewRoute
+  '/_app/run/teammates/$id': typeof AppRunTeammatesIdRoute
+  '/_app/run/teammates/new': typeof AppRunTeammatesNewRoute
+  '/_app/run/threads/$id': typeof AppRunThreadsIdRoute
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
@@ -824,6 +905,10 @@ export interface FileRouteTypes {
     | '/oauth/authorize'
     | '/oauth/consent'
     | '/projects/$id'
+    | '/run/notifications'
+    | '/run/routines'
+    | '/run/settings'
+    | '/run/skills'
     | '/settings/ads'
     | '/settings/api-keys'
     | '/settings/appearance'
@@ -841,6 +926,7 @@ export interface FileRouteTypes {
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
     | '/api/cron/usage-and-meter'
+    | '/api/run/$'
     | '/api/status/models'
     | '/api/stripe/webhook'
     | '/api/trpc/$'
@@ -862,6 +948,10 @@ export interface FileRouteTypes {
     | '/api/chat/'
     | '/{-$locale}/guides/'
     | '/settings/team'
+    | '/run/groups/new'
+    | '/run/teammates/$id'
+    | '/run/teammates/new'
+    | '/run/threads/$id'
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
     | '/api/integrations/deni-run/usage'
@@ -906,6 +996,10 @@ export interface FileRouteTypes {
     | '/oauth/authorize'
     | '/oauth/consent'
     | '/projects/$id'
+    | '/run/notifications'
+    | '/run/routines'
+    | '/run/settings'
+    | '/run/skills'
     | '/settings/ads'
     | '/settings/api-keys'
     | '/settings/appearance'
@@ -923,6 +1017,7 @@ export interface FileRouteTypes {
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
     | '/api/cron/usage-and-meter'
+    | '/api/run/$'
     | '/api/status/models'
     | '/api/stripe/webhook'
     | '/api/trpc/$'
@@ -943,6 +1038,10 @@ export interface FileRouteTypes {
     | '/api/ads'
     | '/api/chat'
     | '/{-$locale}/guides'
+    | '/run/groups/new'
+    | '/run/teammates/$id'
+    | '/run/teammates/new'
+    | '/run/threads/$id'
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
     | '/api/integrations/deni-run/usage'
@@ -990,6 +1089,10 @@ export interface FileRouteTypes {
     | '/_app/oauth/authorize'
     | '/_app/oauth/consent'
     | '/_app/projects/$id'
+    | '/_app/run/notifications'
+    | '/_app/run/routines'
+    | '/_app/run/settings'
+    | '/_app/run/skills'
     | '/_app/settings/ads'
     | '/_app/settings/api-keys'
     | '/_app/settings/appearance'
@@ -1007,6 +1110,7 @@ export interface FileRouteTypes {
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
     | '/api/cron/usage-and-meter'
+    | '/api/run/$'
     | '/api/status/models'
     | '/api/stripe/webhook'
     | '/api/trpc/$'
@@ -1028,6 +1132,10 @@ export interface FileRouteTypes {
     | '/api/chat/'
     | '/{-$locale}/guides/'
     | '/_app/settings/team/_dashboard'
+    | '/_app/run/groups/new'
+    | '/_app/run/teammates/$id'
+    | '/_app/run/teammates/new'
+    | '/_app/run/threads/$id'
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
     | '/api/integrations/deni-run/usage'
@@ -1067,6 +1175,7 @@ export interface RootRouteChildren {
   ApiCronModelHealthRoute: typeof ApiCronModelHealthRoute
   ApiCronStorageCleanupRoute: typeof ApiCronStorageCleanupRoute
   ApiCronUsageAndMeterRoute: typeof ApiCronUsageAndMeterRoute
+  ApiRunSplatRoute: typeof ApiRunSplatRoute
   ApiStatusModelsRoute: typeof ApiStatusModelsRoute
   ApiStripeWebhookRoute: typeof ApiStripeWebhookRoute
   ApiTrpcSplatRoute: typeof ApiTrpcSplatRoute
@@ -1318,6 +1427,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRunIndexRouteImport
       parentRoute: typeof AppRouteRoute
     }
+    '/_app/run/notifications': {
+      id: '/_app/run/notifications'
+      path: '/run/notifications'
+      fullPath: '/run/notifications'
+      preLoaderRoute: typeof AppRunNotificationsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/run/routines': {
+      id: '/_app/run/routines'
+      path: '/run/routines'
+      fullPath: '/run/routines'
+      preLoaderRoute: typeof AppRunRoutinesRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/run/settings': {
+      id: '/_app/run/settings'
+      path: '/run/settings'
+      fullPath: '/run/settings'
+      preLoaderRoute: typeof AppRunSettingsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/run/skills': {
+      id: '/_app/run/skills'
+      path: '/run/skills'
+      fullPath: '/run/skills'
+      preLoaderRoute: typeof AppRunSkillsRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/_app/settings/': {
       id: '/_app/settings/'
       path: '/'
@@ -1458,6 +1595,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronUsageAndMeterRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/run/$': {
+      id: '/api/run/$'
+      path: '/api/run/$'
+      fullPath: '/api/run/$'
+      preLoaderRoute: typeof ApiRunSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/status/models': {
       id: '/api/status/models'
       path: '/api/status/models'
@@ -1555,6 +1699,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/{-$locale}/legal/tokusho'
       preLoaderRoute: typeof Char123LocaleChar125LegalTokushoRouteImport
       parentRoute: typeof Char123LocaleChar125RouteRoute
+    }
+    '/_app/run/groups/new': {
+      id: '/_app/run/groups/new'
+      path: '/run/groups/new'
+      fullPath: '/run/groups/new'
+      preLoaderRoute: typeof AppRunGroupsNewRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/run/teammates/$id': {
+      id: '/_app/run/teammates/$id'
+      path: '/run/teammates/$id'
+      fullPath: '/run/teammates/$id'
+      preLoaderRoute: typeof AppRunTeammatesIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/run/teammates/new': {
+      id: '/_app/run/teammates/new'
+      path: '/run/teammates/new'
+      fullPath: '/run/teammates/new'
+      preLoaderRoute: typeof AppRunTeammatesNewRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/run/threads/$id': {
+      id: '/_app/run/threads/$id'
+      path: '/run/threads/$id'
+      fullPath: '/run/threads/$id'
+      preLoaderRoute: typeof AppRunThreadsIdRouteImport
+      parentRoute: typeof AppRouteRoute
     }
     '/_app/settings/billing/': {
       id: '/_app/settings/billing/'
@@ -1733,9 +1905,17 @@ interface AppRouteRouteChildren {
   AppOauthAuthorizeRoute: typeof AppOauthAuthorizeRoute
   AppOauthConsentRoute: typeof AppOauthConsentRoute
   AppProjectsIdRoute: typeof AppProjectsIdRoute
+  AppRunNotificationsRoute: typeof AppRunNotificationsRoute
+  AppRunRoutinesRoute: typeof AppRunRoutinesRoute
+  AppRunSettingsRoute: typeof AppRunSettingsRoute
+  AppRunSkillsRoute: typeof AppRunSkillsRoute
   AppChatIndexRoute: typeof AppChatIndexRoute
   AppCompareIndexRoute: typeof AppCompareIndexRoute
   AppRunIndexRoute: typeof AppRunIndexRoute
+  AppRunGroupsNewRoute: typeof AppRunGroupsNewRoute
+  AppRunTeammatesIdRoute: typeof AppRunTeammatesIdRoute
+  AppRunTeammatesNewRoute: typeof AppRunTeammatesNewRoute
+  AppRunThreadsIdRoute: typeof AppRunThreadsIdRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
@@ -1747,9 +1927,17 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppOauthAuthorizeRoute: AppOauthAuthorizeRoute,
   AppOauthConsentRoute: AppOauthConsentRoute,
   AppProjectsIdRoute: AppProjectsIdRoute,
+  AppRunNotificationsRoute: AppRunNotificationsRoute,
+  AppRunRoutinesRoute: AppRunRoutinesRoute,
+  AppRunSettingsRoute: AppRunSettingsRoute,
+  AppRunSkillsRoute: AppRunSkillsRoute,
   AppChatIndexRoute: AppChatIndexRoute,
   AppCompareIndexRoute: AppCompareIndexRoute,
   AppRunIndexRoute: AppRunIndexRoute,
+  AppRunGroupsNewRoute: AppRunGroupsNewRoute,
+  AppRunTeammatesIdRoute: AppRunTeammatesIdRoute,
+  AppRunTeammatesNewRoute: AppRunTeammatesNewRoute,
+  AppRunThreadsIdRoute: AppRunThreadsIdRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
@@ -1856,6 +2044,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronModelHealthRoute: ApiCronModelHealthRoute,
   ApiCronStorageCleanupRoute: ApiCronStorageCleanupRoute,
   ApiCronUsageAndMeterRoute: ApiCronUsageAndMeterRoute,
+  ApiRunSplatRoute: ApiRunSplatRoute,
   ApiStatusModelsRoute: ApiStatusModelsRoute,
   ApiStripeWebhookRoute: ApiStripeWebhookRoute,
   ApiTrpcSplatRoute: ApiTrpcSplatRoute,

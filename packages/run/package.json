@@ -1,0 +1,45 @@
+{
+  "name": "@deniai/run",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Deni Run on the Deni AI platform: teammates, threads, the agent runtime, the Postgres job queue, computer providers (E2B, Steel), MCP, routines and the D1 migration",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./testing": "./src/testing/index.ts",
+    "./*": "./src/*.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache",
+    "migrate:d1": "tsx scripts/migrate-from-d1.ts"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.1164.0",
+    "@deniai/billing": "workspace:*",
+    "@deniai/db": "workspace:*",
+    "@openrouter/ai-sdk-provider": "^3.1.0",
+    "ai": "^7.0.155",
+    "e2b": "^2.63.0",
+    "emoji-regex": "^11.0.0",
+    "playwright-core": "^1.64.1",
+    "postgres": "^3.4.9",
+    "steel-sdk": "^0.18.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.11",
+    "@types/node": "^26.6.5",
+    "drizzle-kit": "^0.31.11",
+    "drizzle-orm": "^0.45.4",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "peerDependencies": {
+    "drizzle-orm": "^0.45.4"
+  }
+}

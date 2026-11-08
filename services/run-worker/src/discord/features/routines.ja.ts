@@ -1,0 +1,81 @@
+/** Japanese strings for src/lib/discord/features/routines.ts. Keys must match the English text exactly. */
+export const ja: Record<string, string> = {
+  "Add cron: for a custom schedule, for example 0 9 * * 1-5.":
+    "カスタムのスケジュールには cron: を指定してください(例: 0 9 * * 1-5)。",
+  "Add name: as well when the instructions are longer than 4,000 characters.":
+    "指示が 4,000 文字を超える場合は name: も指定してください。",
+  "Add name: when you attach the instructions as a file.":
+    "指示をファイルで添付する場合は name: も指定してください。",
+  "Created the routine {name}: {summary}": "ルーティン「{name}」を作成しました: {summary}",
+  "Custom: {cron}": "カスタム: {cron}",
+  "Day {day} of each month at {time}": "毎月{day}日 {time}",
+  "Delete the routine {name}? It will stop running.":
+    "ルーティン「{name}」を削除しますか?今後は実行されなくなります。",
+  "Deleted the routine {name}.": "ルーティン「{name}」を削除しました。",
+  "Edit routine": "ルーティンを編集",
+  "Every day at {time}": "毎日 {time}",
+  "Every {weekday} at {time}": "毎週{weekday} {time}",
+  "Fix the schedule with /routine edit, then resume.":
+    "/routine edit でスケジュールを直してから再開してください。",
+  "Instruction is required.": "指示は必須です。",
+  Instructions: "指示",
+  "Invalid routine.": "ルーティンが正しくありません。",
+  "Last error: {error}": "直近のエラー: {error}",
+  "Name is required.": "名前は必須です。",
+  Name: "名前",
+  "New routine for {name}": "{name} さんの新しいルーティン",
+  "New routines now use {zone}. Existing routines keep their own timezone; change one with /routine edit timezone:.":
+    "新しいルーティンは今後 {zone} を使います。既存のルーティンはそれぞれのタイムゾーンのままです。変更するには /routine edit の timezone: を使ってください。",
+  "New routines use {zone}. Change it with /routine timezone zone:.":
+    "新しいルーティンは {zone} を使います。/routine timezone の zone: で変更できます。",
+  "New routines use {zone}. Change it with /routine timezone.":
+    "新しいルーティンは {zone} を使います。/routine timezone で変更できます。",
+  "Next run {time}": "次回 {time}",
+  "No group with that name. Run /routine create again and pick one from the list.":
+    "その名前のグループはありません。/routine create をもう一度実行し、一覧から選んでください。",
+  "No routine with that name. Run /routine list to see them.":
+    "その名前のルーティンはありません。/routine list で一覧を確認できます。",
+  "No routines yet. Create one with /routine create.":
+    "ルーティンはまだありません。/routine create で作成できます。",
+  "Paused {name}. It will not run until you resume it.":
+    "「{name}」を一時停止しました。再開するまで実行されません。",
+  Paused: "一時停止中",
+  "Resumed {name}. Next run: {time}.": "「{name}」を再開しました。次回の実行: {time}",
+  "Routines ({count})": "ルーティン({count} 件)",
+  "Saved the routine {name}: {summary}": "ルーティン「{name}」を保存しました: {summary}",
+  "Schedule: {schedule}": "スケジュール: {schedule}",
+  "Teammate or conversation not found.": "チームメイトまたは会話が見つかりません。",
+  "That routine no longer exists.": "このルーティンはもう存在しません。",
+  "The instructions of {name} are longer than 4,000 characters, more than a Discord form holds. Edit the attached file and send it back with /routine edit file:.":
+    "「{name}」の指示は 4,000 文字を超えていて、Discord のフォームには収まりません。添付したファイルを編集し、/routine edit の file: で送り返してください。",
+  "These choices are too long to carry into a form. Pass name: and instructions: as options instead.":
+    "選んだ内容が長すぎてフォームに引き継げません。代わりに name: と instructions: をオプションで指定してください。",
+  "This routine has a custom schedule. Choose frequency: as well.":
+    "このルーティンはカスタムのスケジュールです。frequency: も指定してください。",
+  "Unknown timezone {zone}. Pick one from the list, for example Asia/Tokyo.":
+    "タイムゾーン {zone} が見つかりません。一覧から選んでください(例: Asia/Tokyo)。",
+  "Weekdays at {time}": "平日 {time}",
+  "When to run is required.": "実行タイミングは必須です。",
+  "With a custom schedule, put the time and days in cron:.":
+    "カスタムのスケジュールでは、時刻と曜日・日付を cron: に含めてください。",
+  "Write the time as HH:MM, for example 09:30.": "時刻は HH:MM 形式で入力してください(例: 09:30)。",
+  "Your text is attached so nothing is lost.":
+    "入力した内容が失われないよう、ファイルで添付しています。",
+  "a deleted teammate": "削除されたチームメイト",
+  "cron: only works with frequency: custom.": "cron: は frequency: がカスタムのときだけ使えます。",
+  "day: only works with frequency: monthly.": "day: は frequency: が毎月のときだけ使えます。",
+  "weekday: only works with frequency: weekly.":
+    "weekday: は frequency: が毎週のときだけ使えます。",
+  "The routine {name} is already paused.": "ルーティン「{name}」はすでに一時停止中です。",
+  "The routine {name} is already running.": "ルーティン「{name}」はすでに有効です。",
+  "{teammate} (group {group})": "{teammate}(グループ「{group}」)",
+  "{teammate} is not in the group {group}.":
+    "{teammate} さんはグループ「{group}」のメンバーではありません。",
+  Sunday: "日曜日",
+  Monday: "月曜日",
+  Tuesday: "火曜日",
+  Wednesday: "水曜日",
+  Thursday: "木曜日",
+  Friday: "金曜日",
+  Saturday: "土曜日",
+};

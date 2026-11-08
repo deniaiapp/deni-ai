@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <style>.bob{animation:bob 4.4s ease-in-out infinite} .blink{transform-box:fill-box;transform-origin:center;animation:blink 5.2s infinite} @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.4px)}} @keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.12)}} @media (prefers-reduced-motion:reduce){*{animation:none!important}} .led{animation:led 2.4s ease-in-out infinite}@keyframes led{0%,100%{opacity:1}50%{opacity:.25}}</style>
+  <path d="M13 64c0-9 8-14 19-14s19 5 19 14Z" fill="#3f4d6b"/>
+  <g class="bob">
+    <rect x="28.5" y="44" width="7" height="9" fill="#a8774a"/>
+    <rect x="12" y="16" width="40" height="31" rx="9" fill="#d9a877"/>
+    <rect x="16" y="20" width="32" height="23" rx="6" fill="#211c19"/>
+    <path d="M23 33q3-4 6 0M35 33q3-4 6 0" fill="none" stroke="#ffd38f" stroke-width="2.4" stroke-linecap="round"/>
+    <path d="M10 32a22 22 0 0 1 44 0" fill="none" stroke="#5a4130" stroke-width="3"/>
+    <rect x="6.5" y="26" width="7" height="12" rx="3.5" fill="#5a4130"/>
+    <rect x="50.5" y="26" width="7" height="12" rx="3.5" fill="#5a4130"/>
+    <path d="M10 38q1 7 9 6" fill="none" stroke="#5a4130" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="19.5" cy="44" r="2" fill="#5a4130"/>
+    <circle class="led" cx="54" cy="32" r="1.4" fill="#ffd38f"/>
+  </g>
+</svg>

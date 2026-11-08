@@ -109,6 +109,32 @@ export const env = createEnv({
       .regex(/^[1-9]\d*$/, "TRUSTED_PROXY_HOPS must be a positive integer")
       .transform(Number)
       .optional(),
+    /**
+     * Deni Run (Run mode, `/run`). All optional: without a provider the matching
+     * feature shows a disabled state. `@deniai/run` reads them through
+     * `loadRunConfig(process.env)` (see `src/lib/run/runtime.server.ts`).
+     * RUN_ENCRYPTION_KEY (32 bytes, base64) encrypts MCP credentials; unset, a key is
+     * derived from BETTER_AUTH_SECRET.
+     */
+    RUN_ENCRYPTION_KEY: z.string().min(1).optional(),
+    E2B_API_KEY: z.string().min(1).optional(),
+    STEEL_API_KEY: z.string().min(1).optional(),
+    STEEL_BASE_URL: z.url().optional(),
+    RUN_S3_ENDPOINT: z.url().optional(),
+    RUN_S3_REGION: z.string().min(1).optional(),
+    RUN_S3_ACCESS_KEY_ID: z.string().min(1).optional(),
+    RUN_S3_SECRET_ACCESS_KEY: z.string().min(1).optional(),
+    RUN_S3_BUCKET: z.string().min(1).optional(),
+    RUN_BROWSER_USD_PER_HOUR: z.string().optional(),
+    RUN_COMPUTER_USD_PER_HOUR: z.string().optional(),
+    /** `true` runs Run's job scheduler inside the web server (local development). */
+    RUN_SCHEDULER_IN_PROCESS: z.enum(["true", "false"]).optional(),
+    RUN_SCHEDULER_CONCURRENCY: z.string().optional(),
+    SLACK_MCP_CLIENT_ID: z.string().min(1).optional(),
+    SLACK_MCP_CLIENT_SECRET: z.string().min(1).optional(),
+    /** Set where the Run worker's Discord bot runs; the web app only shows the link card. */
+    DISCORD_BOT_TOKEN: z.string().min(1).optional(),
+    DISCORD_INVITE_URL: z.url().optional(),
   },
   client: {
     /**
