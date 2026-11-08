@@ -1,0 +1,3 @@
+# Keep LF everywhere so Windows checkouts (core.autocrlf=true) match the LF
+# formatter output and the repository instead of showing phantom changes.
+* text=auto eol=lf
