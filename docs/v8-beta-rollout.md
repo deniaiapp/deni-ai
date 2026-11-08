@@ -130,11 +130,12 @@ accounts may use v8. What stays as it is during the beta:
   clears a column v7 does not read.
 - To close it to testers without taking it down, remove them in Settings → Beta
   testers (or empty `beta_access`); admins still get in.
-- **Abandoning v8 later** (after a backup): drop the new objects. Find the trigger and
-  function names in `packages/db/migrations/0079_*.sql`.
+- **Abandoning v8 later** (after a backup): drop the new objects. The 0079 trigger and function are
+  defined in `packages/db/migrations/0079_chats_message_count_trigger.sql`.
 
   ```sql
-  DROP TRIGGER IF EXISTS <0079 trigger> ON chats;  -- then DROP FUNCTION <0079 function>;
+  DROP TRIGGER IF EXISTS "chats_reset_message_count" ON chats;
+  DROP FUNCTION IF EXISTS "chats_reset_message_count_for_unsynced_writes"();
   DROP TABLE beta_access;
   DROP TABLE run_artifacts, run_browser_workspaces, run_discord_link_codes, run_discord_links,
     run_job_events, run_jobs, run_mcp_connections, run_mcp_explanations, run_messages,
