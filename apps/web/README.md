@@ -81,15 +81,15 @@ src/
   routes/        # TanStack file routes (marketing, chat, settings, API endpoints)
   server/http/   # HTTP handler logic behind the API routes
   components/    # UI, chat, auth, billing, team
-  db/schema/     # Drizzle schemas
+  db/            # Drizzle client; schema re-export of @deniai/db
   lib/           # Auth, billing, chat, tools, providers
   server/api/    # tRPC routers
 messages/        # en.json, ja.json
-migrations/      # Drizzle SQL migrations
 ```
 
-Shared workspace packages (for example `disposable-email-domains`) live in the
-monorepo root `packages/` directory.
+Shared workspace packages live in the monorepo root `packages/` directory: the
+Drizzle schema and SQL migrations in `packages/db` (`@deniai/db`) and, for
+example, `disposable-email-domains`.
 
 ## Contributing
 

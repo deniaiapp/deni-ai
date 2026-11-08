@@ -27,11 +27,15 @@ Read these when relevant rather than loading the whole project:
   `tsconfig.base.json` and oxlint/oxfmt configs live at the monorepo root.
 - Environment validation: `src/env.ts`; setup: `.env.example` and `SETUP.md`.
   Optional empty strings are treated as unset. Never hardcode secrets.
-- Database: `src/db/schema/`, `src/db/schema/index.ts`, `drizzle.config.ts`;
-  generated SQL: `migrations/`. Runtime uses a pooled Postgres URL.
+- Database: the Drizzle schema lives in the `@deniai/db` package
+  (`packages/db/src/schema/`, `packages/db/drizzle.config.ts`; generated SQL:
+  `packages/db/migrations/`). `src/db/schema.ts` re-exports it as `@/db/schema`;
+  `src/db/type-registry.ts` types its app-owned JSON columns. The `db:*` scripts
+  here forward to `@deniai/db` and still read this app's `.env*` files. Runtime
+  uses a pooled Postgres URL (`src/db/drizzle.ts`).
 - Auth: `src/lib/auth.ts` and `src/lib/auth-client.ts`.
   Change the client baseURL only when requested.
-  `pnpm run auth:generate` overwrites `src/db/schema/auth-schema.ts`.
+  `pnpm run auth:generate` overwrites `packages/db/src/schema/auth-schema.ts`.
 - Task-specific workflows: `.agents/skills/`; load only the applicable skill and
   references.
 

@@ -1,4 +1,4 @@
-import { fileURLToPath } from "node:url";
+import { flixaMigrationsFolder } from "@deniai/db/paths";
 import { PGlite } from "@electric-sql/pglite";
 import { drizzle } from "drizzle-orm/pglite";
 import { migrate } from "drizzle-orm/pglite/migrator";
@@ -18,7 +18,7 @@ export async function createFlixaTestDb(): Promise<{ pglite: PGlite; db: DeniDb 
 
 export async function migrateFlixa(pglite: PGlite): Promise<void> {
   await migrate(drizzle({ client: pglite }), {
-    migrationsFolder: fileURLToPath(new URL("../../migrations", import.meta.url)),
+    migrationsFolder: flixaMigrationsFolder,
     migrationsSchema: "flixa",
     migrationsTable: "__drizzle_migrations",
   });

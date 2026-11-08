@@ -429,7 +429,7 @@ export interface UsageReservation {
 }
 
 /** Reserve estimated usage units (weighted tokens), including concurrent first requests.
- * The quota update and receipt (flixa.usage_reservation, see schema/flixa.ts) are one
+ * The quota update and receipt (flixa.usage_reservation, see @deniai/db/flixa) are one
  * atomic PostgreSQL statement.
  */
 export async function reserveUsageQuota(

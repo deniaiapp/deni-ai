@@ -235,7 +235,7 @@ pnpm run db:migrate:dev
 pnpm run db:push
 ```
 
-Regenerate better-auth tables into `src/db/schema/auth-schema.ts` (overwrites that file):
+Regenerate better-auth tables into `packages/db/src/schema/auth-schema.ts` (overwrites that file):
 
 ```bash
 pnpm run auth:generate
@@ -420,7 +420,7 @@ accounts are refused). To connect a Deni Run deployment:
 
 ## Database schema
 
-Schemas live under `src/db/schema/`. Main domains:
+Schemas live in the `@deniai/db` package under `packages/db/src/schema/` (imported here as `@/db/schema`). Main domains:
 
 | Area                  | Purpose                                       |
 | --------------------- | --------------------------------------------- |
@@ -439,14 +439,15 @@ Schemas live under `src/db/schema/`. Main domains:
 
 Schema change workflow:
 
-1. Edit files in `src/db/schema/`
+1. Edit files in `packages/db/src/schema/`
 2. `pnpm run db:generate`
 3. `pnpm run db:migrate` or `pnpm run db:migrate:dev` (or `db:push` in dev)
 
-These cover the `public` schema only (`schemaFilter` in `drizzle.config.ts`). The
-`flixa` schema in the same database (Flixa bans, silent-ban rules and hits, usage
-reservation receipts) belongs to flixa-backend, which migrates it with its own
-drizzle-kit setup. Its tables reference `public."user"` with `ON DELETE CASCADE`, so
+These cover the `public` schema only (`schemaFilter` in `packages/db/drizzle.config.ts`;
+migrations in `packages/db/migrations/`). The `flixa` schema in the same database
+(Flixa bans, silent-ban rules and hits, usage reservation receipts) belongs to the
+agent API (`services/agent-api`), which migrates it with
+`packages/db/drizzle.flixa.config.ts`. Its tables reference `public."user"` with `ON DELETE CASCADE`, so
 deleting an account removes its Flixa rows too.
 
 ## Deployment
@@ -473,13 +474,13 @@ A multi-stage `Dockerfile` is included for self-hosting (e.g. Dokploy):
 
 Dokploy application settings (typical):
 
-| Setting         | Value        |
-| --------------- | ------------ |
-| Build type      | Dockerfile   |
+| Setting         | Value                 |
+| --------------- | --------------------- |
+| Build type      | Dockerfile            |
 | Dockerfile path | `apps/web/Dockerfile` |
 | Context         | `.` (monorepo root)   |
-| Port            | `3000`       |
-| Build cache     | enabled      |
+| Port            | `3000`                |
+| Build cache     | enabled               |
 
 Put the same keys as production `.env` in the service **Environment** tab. Pass only the public `NEXT_PUBLIC_*` values (and optionally `SENTRY_ORG` / `SENTRY_PROJECT`) as **build-time** arguments: the build reads no server secrets, and build arguments stay in the build cache and image history. To upload Sentry source maps, provide `SENTRY_AUTH_TOKEN` as a build secret (`docker build --secret id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN`); without it the upload is skipped. See comments at the top of `apps/web/Dockerfile`.
 

@@ -1,6 +1,7 @@
 /**
  * Tables Flixa owns, in the `flixa` Postgres schema of the Deni AI database.
- * Migrations: `pnpm run db:generate` / `pnpm run db:migrate` (drizzle.config.ts).
+ * Migrations: `pnpm run db:generate:flixa` / `pnpm run db:migrate:flixa` in
+ * packages/db (drizzle.flixa.config.ts).
  * Deni AI's drizzle-kit only manages `public`, so it never touches these.
  */
 
@@ -18,7 +19,7 @@ import {
   timestamp,
   uuid,
 } from "drizzle-orm/pg-core";
-import { user } from "./deni";
+import { user } from "../schema/auth-schema";
 
 export const flixa = pgSchema("flixa");
 

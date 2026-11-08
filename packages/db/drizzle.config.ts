@@ -15,11 +15,11 @@ function migrationUrl(value: string | undefined) {
 }
 
 export default defineConfig({
-  schema: "./src/db/schema/index.ts",
+  schema: "./src/schema/index.ts",
   out: "./migrations",
   dialect: "postgresql",
-  // The `flixa` schema in the same database belongs to flixa-backend, which
-  // migrates it itself; keep `db:push` from proposing to drop its tables.
+  // The `flixa` schema in the same database is migrated separately with
+  // drizzle.flixa.config.ts; keep `db:push` from proposing to drop its tables.
   schemaFilter: ["public"],
   dbCredentials: {
     url: migrationUrl(process.env.DATABASE_URL),

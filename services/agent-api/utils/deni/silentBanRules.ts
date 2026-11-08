@@ -14,7 +14,7 @@ import { and, asc, count, desc, eq, sql, type SQL } from "drizzle-orm";
 import { getDeniDb } from "./db";
 import { banUserFromFlixa } from "./ban";
 import { summarizeClientHeaders } from "./clientSignal";
-import { silentBanHit, silentBanRule } from "./schema/flixa";
+import { silentBanHit, silentBanRule } from "@deniai/db/flixa";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

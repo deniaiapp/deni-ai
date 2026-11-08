@@ -1,5 +1,4 @@
-import type { UIMessage } from "ai";
-import type { ComparisonSettings } from "@/lib/comparison-settings";
+import type { ComparisonSettingsJson, UIMessageJson } from "../type-registry";
 import { sql } from "drizzle-orm";
 import { index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
@@ -19,15 +18,15 @@ export const modelComparisons = pgTable(
     leftName: text("left_name").notNull(),
     rightName: text("right_name").notNull(),
     leftSettings: jsonb("left_settings")
-      .$type<ComparisonSettings>()
+      .$type<ComparisonSettingsJson>()
       .default(sql`'{}'::jsonb`)
       .notNull(),
     rightSettings: jsonb("right_settings")
-      .$type<ComparisonSettings>()
+      .$type<ComparisonSettingsJson>()
       .default(sql`'{}'::jsonb`)
       .notNull(),
-    leftMessages: jsonb("left_messages").$type<UIMessage[]>().notNull(),
-    rightMessages: jsonb("right_messages").$type<UIMessage[]>().notNull(),
+    leftMessages: jsonb("left_messages").$type<UIMessageJson[]>().notNull(),
+    rightMessages: jsonb("right_messages").$type<UIMessageJson[]>().notNull(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at").defaultNow().notNull(),
   },

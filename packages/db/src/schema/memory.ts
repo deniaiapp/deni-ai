@@ -1,5 +1,5 @@
 import { boolean, index, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { user } from "@/db/schema";
+import { user } from "./auth-schema";
 
 export const userMemory = pgTable("user_memory", {
   userId: text("user_id")

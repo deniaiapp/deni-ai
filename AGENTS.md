@@ -6,12 +6,13 @@ the workspace layout and the rules that span apps.
 
 ## Layout
 
-| Path                                 | Package                              | What it is                                                                                    |
-| ------------------------------------ | ------------------------------------ | --------------------------------------------------------------------------------------------- |
-| `apps/web`                           | `@deniai/web`                        | Deni AI web app (TanStack Start, React Compiler, better-auth). Guide: `apps/web/AGENTS.md`     |
-| `apps/support`                       | `@deniai/support`                    | Help center (support.deniai.app, Fumadocs on TanStack Start). See `apps/support/README.md`     |
-| `services/agent-api`                 | `@deniai/agent-api`                  | Flixa agent API (Hono, formerly flixa-backend). Guide: `services/agent-api/AGENTS.md`          |
-| `packages/disposable-email-domains`  | `@deni-ai/disposable-email-domains`  | Disposable email domain list                                                                   |
+| Path                                | Package                             | What it is                                                                                                                                                |
+| ----------------------------------- | ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/web`                          | `@deniai/web`                       | Deni AI web app (TanStack Start, React Compiler, better-auth). Guide: `apps/web/AGENTS.md`                                                                |
+| `apps/support`                      | `@deniai/support`                   | Help center (support.deniai.app, Fumadocs on TanStack Start). See `apps/support/README.md`                                                                |
+| `services/agent-api`                | `@deniai/agent-api`                 | Flixa agent API (Hono, formerly flixa-backend). Guide: `services/agent-api/AGENTS.md`                                                                     |
+| `packages/disposable-email-domains` | `@deni-ai/disposable-email-domains` | Disposable email domain list                                                                                                                              |
+| `packages/db`                       | `@deniai/db`                        | Drizzle schema + migrations: `public` (web, `drizzle.config.ts`) and `flixa` (agent API, `drizzle.flixa.config.ts`, journal `flixa.__drizzle_migrations`) |
 
 The apps were imported with their full history (`git subtree add`), so
 `git log -- apps/web` shows the deni-ai history.
@@ -40,15 +41,15 @@ The apps were imported with their full history (`git subtree add`), so
 
 ## Commands (from the root)
 
-| Command                                  | Effect                                                    |
-| ---------------------------------------- | --------------------------------------------------------- |
-| `pnpm dev`                               | Web dev server (`@deniai/web`, port 3000)                 |
-| `pnpm dev:support` / `pnpm dev:agent-api` | Other dev servers (both also default to port 3000)        |
-| `pnpm build`                             | `build` in every package that has one                     |
-| `pnpm lint` / `pnpm format`              | oxlint / oxfmt in every package that defines the script   |
-| `pnpm typecheck`                         | `tsc --noEmit` everywhere                                 |
-| `pnpm test`                              | vitest (web, packages) and `node --test` (agent-api)      |
-| `pnpm --filter <name> <script>`          | One package, e.g. `pnpm --filter @deniai/web typecheck`   |
+| Command                                   | Effect                                                  |
+| ----------------------------------------- | ------------------------------------------------------- |
+| `pnpm dev`                                | Web dev server (`@deniai/web`, port 3000)               |
+| `pnpm dev:support` / `pnpm dev:agent-api` | Other dev servers (both also default to port 3000)      |
+| `pnpm build`                              | `build` in every package that has one                   |
+| `pnpm lint` / `pnpm format`               | oxlint / oxfmt in every package that defines the script |
+| `pnpm typecheck`                          | `tsc --noEmit` everywhere                               |
+| `pnpm test`                               | vitest (web, packages) and `node --test` (agent-api)    |
+| `pnpm --filter <name> <script>`           | One package, e.g. `pnpm --filter @deniai/web typecheck` |
 
 Each app reads its own env files from its directory (`apps/web/.env.local`,
 `services/agent-api/.env`, `apps/support/.env.local`); see each `.env.example`.

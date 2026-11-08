@@ -135,15 +135,16 @@ for settlement. The estimated usage remains reserved until settlement completes.
 ### Database
 
 Flixa uses the Deni AI Postgres database (`DENI_DATABASE_URL`). Its own tables live
-in the `flixa` schema and are defined with Drizzle in `utils/deni/schema/flixa.ts`:
+in the `flixa` schema and are defined with Drizzle in the monorepo package
+`@deniai/db` (`packages/db/src/flixa/schema.ts`, imported as `@deniai/db/flixa`):
 `ban`, `silent_ban_rule`, `silent_ban_hit`, and `usage_reservation`. Deni AI's tables
-in `public` are owned and migrated by deni-ai; `utils/deni/schema/deni.ts` declares
-only the columns Flixa queries, so keep it in sync with deni-ai's schema by hand.
+in `public` are owned and migrated by apps/web; Flixa imports their definitions
+(`user`, `api_key`) from `@deniai/db`.
 Query with `getDeniDb()` (Drizzle) or `getDeniPool()` (raw SQL) from `utils/deni/db.ts`.
 
 ```bash
-pnpm run db:generate   # after editing utils/deni/schema/flixa.ts
-pnpm run db:migrate    # applies migrations/ to DENI_DATABASE_URL (.env)
+pnpm run db:generate   # after editing packages/db/src/flixa/schema.ts
+pnpm run db:migrate    # applies packages/db/flixa-migrations/ to DENI_DATABASE_URL (.env)
 ```
 
 Drizzle-kit only manages the `flixa` schema (its journal is

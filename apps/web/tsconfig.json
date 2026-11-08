@@ -21,7 +21,6 @@
     "vite.config.ts",
     "vitest.config.ts",
     "vite/**/*.ts",
-    "drizzle.config.ts",
     "doctor.config.ts",
     "src/**/*.ts",
     "src/**/*.tsx"

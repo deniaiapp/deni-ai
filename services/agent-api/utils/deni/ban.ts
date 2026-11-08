@@ -1,8 +1,8 @@
 import { eq, sql } from "drizzle-orm";
 import { getDeniDb } from "./db";
 import { invalidateUserAuthCache } from "./auth";
-import { apiKey, user } from "./schema/deni";
-import { ban } from "./schema/flixa";
+import { apiKey, user } from "@deniai/db";
+import { ban } from "@deniai/db/flixa";
 
 export type BanReason = "missing_client_signal" | "manual" | string;
 

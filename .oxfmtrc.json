@@ -1,4 +1,8 @@
 {
   "$schema": "./node_modules/oxfmt/configuration_schema.json",
-  "ignorePatterns": ["**/routeTree.gen.ts"]
+  "ignorePatterns": [
+    "**/routeTree.gen.ts",
+    "packages/db/migrations/meta/**",
+    "packages/db/flixa-migrations/meta/**"
+  ]
 }

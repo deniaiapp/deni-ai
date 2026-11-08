@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { boolean, index, jsonb, pgTable, text, timestamp } from "drizzle-orm/pg-core";
-import { user } from "@/db/schema";
+import { user } from "./auth-schema";
 import { projects } from "./project";
 
 export const chats = pgTable(

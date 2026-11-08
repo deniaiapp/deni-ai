@@ -41,8 +41,8 @@ export function getDeniPool(): Pool {
 }
 
 /**
- * Drizzle over the same pool. Tables: `./schema/flixa` (Flixa's own) and
- * `./schema/deni` (Deni AI's, declared with only the columns Flixa uses).
+ * Drizzle over the same pool. Tables: `@deniai/db/flixa` (Flixa's own) and
+ * `@deniai/db` (Deni AI's `public` schema).
  */
 export function getDeniDb(): DeniDb {
   const client = getDeniPool();
