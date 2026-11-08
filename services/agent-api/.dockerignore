@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-*
+build
+coverage
+.git
+.gitignore
+.env
+.env.*
+*.log
+*.exe
+tests
+README.md

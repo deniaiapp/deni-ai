@@ -1,0 +1,78 @@
+import { getModelDefinition } from '../agent/models';
+
+export type ModelCategory = "basic" | "premium";
+
+// Models that require a minimum tier to access
+// Each entry maps a pattern to the minimum tier required
+const TIER_RESTRICTED_MODELS: Array<{
+  pattern: RegExp;
+  minTier: "plus" | "pro";
+}> = [
+  // claude-sonnet-4-5 requires plus or higher
+  { pattern: /claude-sonnet-4[.-]5/i, minTier: "plus" },
+  { pattern: /anthropic\/claude-sonnet-4[.-]5/i, minTier: "plus" },
+  { pattern: /claude-opus-4[.-]6/i, minTier: "plus" },
+  { pattern: /anthropic\/claude-opus-4[.-]6/i, minTier: "plus" },
+];
+
+/**
+ * Usage is no longer split by model class: every request spends the one pool shared
+ * with Deni AI chat and Deni Run, recorded on the "basic" quota row (the model's usage
+ * tier scales the amount). "premium" remains for rows written before the change.
+ */
+export function getModelCategory(_model: string): ModelCategory {
+  return "basic";
+}
+
+/**
+ * Check if user's tier allows access to a specific model.
+ * Returns null if no restriction, or the minimum tier required if restricted.
+ */
+export function getRequiredTierForModel(model: string): "plus" | "pro" | null {
+  const definition = getModelDefinition(model);
+  if (definition && definition.tier !== 'free') {
+    return definition.tier;
+  }
+
+  for (const { pattern, minTier } of TIER_RESTRICTED_MODELS) {
+    if (pattern.test(model)) {
+      return minTier;
+    }
+  }
+  // Unlisted models are never free: only registered free-tier models skip this check.
+  return definition ? null : "plus";
+}
+
+/**
+ * Check if a user's tier meets the minimum required tier for a model
+ */
+// Go unlocks the same models as Free (Deni AI's verified-free catalog), never Plus models.
+const TIER_LEVELS: Record<string, number> = { free: 0, go: 1, plus: 2, pro: 3 };
+
+export function isTierSufficient(
+  userTier: "free" | "go" | "plus" | "pro",
+  requiredTier: "plus" | "pro",
+): boolean {
+  return (TIER_LEVELS[userTier] ?? 0) >= (TIER_LEVELS[requiredTier] ?? 0);
+}
+
+/**
+ * Check if user has enough quota for the model category
+ */
+export function hasQuotaForModel(
+  usage: Array<{ category: "basic" | "premium"; remaining: number | null }>,
+  modelCategory: ModelCategory,
+): { allowed: boolean; remaining: number | null } {
+  const categoryUsage = usage.find((u) => u.category === modelCategory);
+
+  if (!categoryUsage) {
+    return { allowed: true, remaining: null };
+  }
+
+  const remaining = categoryUsage.remaining;
+  if (remaining === null) {
+    return { allowed: true, remaining: null };
+  }
+
+  return { allowed: remaining > 0, remaining };
+}
