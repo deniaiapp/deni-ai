@@ -42,6 +42,13 @@ Read these when relevant rather than loading the whole project:
   `vitest.config.ts` dedupe the Better Auth packages (`@deniai/auth/dedupe`) so
   the app and the package share one instance. `pnpm run auth:generate` reads
   `src/lib/auth.ts` and overwrites `packages/db/src/schema/auth-schema.ts`.
+- Shared code this app imports from workspace packages (read their READMEs):
+  model catalog, plan access and token multipliers `@deniai/ai/models`
+  (`packages/ai`); email templates `@deniai/emails/<template>`
+  (`packages/emails`; sending stays in `src/lib/email.ts`); locales and
+  message extraction `@deniai/i18n` (`packages/i18n`; catalogs stay in
+  `messages/`); UI components `@deniai/ui`; schema `@deniai/db`; billing rules
+  `@deniai/billing`.
 - Task-specific workflows: `.agents/skills/`; load only the applicable skill and
   references.
 
