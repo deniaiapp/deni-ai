@@ -547,6 +547,13 @@
       "when": 1794138241265,
       "tag": "0077_run_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1794140285696,
+      "tag": "0078_beta_access",
+      "breakpoints": true
     }
   ]
 }
