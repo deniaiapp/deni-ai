@@ -35,7 +35,7 @@ import {
   type MaxModeCreditOwner,
   spendMaxModeCredits as defaultSpendMaxModeCredits,
 } from "./max-mode-credits";
-import { recordProductUsage } from "./product-usage-ledger";
+import { type ProductUsageDatabase, recordProductUsage } from "./product-usage-ledger";
 import { isSignupFlagged as defaultIsSignupFlagged } from "./signup-risk";
 import { canonicalTeamBillingRow } from "./team-billing";
 
@@ -58,6 +58,21 @@ export type UsageUnit = "units";
 export type UsageReservationProduct = "chat" | "flixa";
 type UsageRecord = typeof usageQuota.$inferSelect;
 type UsageDatabase = UsageQueryDatabase;
+
+/** Deni Run's ledger metrics (`product_usage.metric` for product `run`). */
+export type RunCostMetric = "model" | "browser" | "computer";
+
+export const RUN_COST_METRICS: readonly RunCostMetric[] = ["model", "browser", "computer"];
+
+/** The shared pool in USD, as Deni Run checks it before and while it works. */
+export type RunBudget = {
+  tier: SubscriptionTier;
+  limitUsd: number;
+  usedUsd: number;
+  remainingUsd: number;
+  periodEnd: Date;
+  poolUsd: { chat: number; flixa: number; run: number };
+};
 
 /** An unsettled reservation silent this long is recovered by the usage and meter job. */
 export const USAGE_RESERVATION_STALE_MS = 15 * 60_000;
@@ -1246,6 +1261,59 @@ export function createUsageEngine(deps: UsageEngineDeps) {
     };
   }
 
+  /**
+   * The shared pool as Deni Run sees it, in USD: Deni AI chat, Flixa and Deni Run all
+   * spend it. Run checks it before starting work and stops once `remainingUsd` is 0.
+   */
+  async function getRunBudget(userId: string, now = clock()): Promise<RunBudget> {
+    const summary = await getUsageSummary({ userId, now });
+    const pool = summary.pool;
+    const limitUnits = pool?.limit ?? 0;
+    const used = pool?.used ?? { chat: 0, flixa: 0, run: 0 };
+    const usedUnits = used.chat + used.flixa + used.run;
+    return {
+      tier: summary.tier,
+      periodEnd: pool?.periodEnd ?? resolvePeriodEnd(now),
+      limitUsd: usageUnitsToUsd(limitUnits),
+      usedUsd: usageUnitsToUsd(usedUnits),
+      remainingUsd: usageUnitsToUsd(Math.max(limitUnits - usedUnits, 0)),
+      poolUsd: {
+        chat: usageUnitsToUsd(used.chat),
+        flixa: usageUnitsToUsd(used.flixa),
+        run: usageUnitsToUsd(used.run),
+      },
+    };
+  }
+
+  /**
+   * Record Deni Run's incurred provider cost (model calls at the reported cost, browser
+   * and computer time at their hourly rate) in the product ledger, under the user's
+   * usage lock so it serializes with chat and Flixa reservations. Run is charged after
+   * the fact, so the pool may overrun by one step; the next budget check refuses work.
+   */
+  async function recordRunCost({
+    userId,
+    metric,
+    costUsd,
+    at = clock(),
+  }: {
+    userId: string;
+    metric: RunCostMetric;
+    costUsd: number;
+    at?: Date;
+  }): Promise<void> {
+    if (!Number.isFinite(costUsd) || costUsd < 0)
+      throw new Error("Cost must be a nonnegative number.");
+    const amount = Math.round(costUsd * 1_000_000);
+    if (amount === 0) return;
+    await withUsageLock(userId, (database) =>
+      recordProductUsage(
+        { userId, product: "run", metric, unit: "usd_micros", amount, at },
+        database as ProductUsageDatabase,
+      ),
+    );
+  }
+
   /** The plan tier a (non-guest) user's limits follow, including team plans. */
   async function getSubscriptionTier(userId: string, now = clock()): Promise<SubscriptionTier> {
     return (await loadTierInfo(userId, now, db)).tier;
@@ -1272,6 +1340,8 @@ export function createUsageEngine(deps: UsageEngineDeps) {
     recoverUsageReservations,
     getUsageSummary,
     getUsageSummaryDetails,
+    getRunBudget,
+    recordRunCost,
     getSubscriptionTier,
     hasEducationGo,
     isFreeAdViewer,
