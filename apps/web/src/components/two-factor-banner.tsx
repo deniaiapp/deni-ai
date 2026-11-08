@@ -1,11 +1,13 @@
-import { ArrowRight, Code2, ShieldCheck, ScrollText, X } from "lucide-react";
+import { ArrowRight, Code2, ShieldAlert, ShieldCheck, ScrollText, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { AnimatePresence, LazyMotion, domAnimation, m, useReducedMotion } from "motion/react";
 import { Link, usePathname } from "@/lib/navigation";
-import { useExtracted } from "use-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { startTransition, useEffect, useState, useSyncExternalStore } from "react";
 import { authClient } from "@/lib/auth-client";
+import { formatAppDate } from "@/lib/format-date";
 import { isCheckoutSettingsRoute } from "@/lib/settings-routes";
+import { TWO_FACTOR_SETUP_PATH, type TwoFactorPolicy } from "@/lib/two-factor-policy";
 import { cn } from "@/lib/utils";
 import { AppHeader } from "@deniai/ui/components/app-header";
 import { Button } from "@deniai/ui/components/button";
@@ -50,9 +52,15 @@ function dismissTwoFactorBanner() {
   window.dispatchEvent(new Event(DISMISSED_EVENT));
 }
 
-/** The header bar of the app sheet: sidebar trigger plus one dismissable announcement. */
-export function TwoFactorBanner() {
+/**
+ * The header bar of the app sheet: sidebar trigger plus one announcement.
+ * Accounts in the two-factor grace period with a deadline see a pinned
+ * reminder with the date (it cannot be dismissed); everyone else sees the
+ * rotating announcements, which can be dismissed.
+ */
+export function TwoFactorBanner({ twoFactor }: { twoFactor?: TwoFactorPolicy }) {
   const t = useExtracted();
+  const locale = useLocale();
   const pathname = usePathname();
   const session = authClient.useSession();
   const dismissed = useSyncExternalStore(
@@ -63,41 +71,60 @@ export function TwoFactorBanner() {
   const shouldReduceMotion = useReducedMotion();
   const [announcementIndex, setAnnouncementIndex] = useState(0);
   const twoFactorEnabled = Boolean(session.data?.user?.twoFactorEnabled);
-  const visible = !dismissed;
+  const graceDeadline =
+    twoFactor?.status === "grace" && twoFactor.deadline && !twoFactorEnabled
+      ? formatAppDate(twoFactor.deadline, locale)
+      : null;
+  const pinned = graceDeadline !== null;
+  const visible = pinned || !dismissed;
 
-  const announcements: Announcement[] = [
-    {
-      id: "flixa",
-      message: t("Flixa - A low-cost, high-performance coding agent"),
-      linkLabel: t("Download"),
-      href: "/flixa",
-      external: false,
-      icon: Code2,
-      iconClassName: "text-primary",
-    },
-    {
-      id: "changelog",
-      message: t("Updates - Check out the latest changes"),
-      linkLabel: t("Read"),
-      href: "/changelog",
-      external: true,
-      icon: ScrollText,
-      iconClassName: "text-primary",
-    },
-    ...(!twoFactorEnabled
-      ? [
-          {
-            id: "two-factor",
-            message: t("2FA - Enhance your security with two-factor authentication"),
-            linkLabel: t("Setup"),
-            href: "/account/security",
-            external: false,
-            icon: ShieldCheck,
-            iconClassName: "text-success",
-          },
-        ]
-      : []),
-  ];
+  const announcements: Announcement[] = pinned
+    ? [
+        {
+          id: "two-factor-required",
+          message: t("Two-factor authentication is required for your account from {date}", {
+            date: graceDeadline,
+          }),
+          linkLabel: t("Set up now"),
+          href: TWO_FACTOR_SETUP_PATH,
+          external: false,
+          icon: ShieldAlert,
+          iconClassName: "text-foreground",
+        },
+      ]
+    : [
+        {
+          id: "flixa",
+          message: t("Flixa - A low-cost, high-performance coding agent"),
+          linkLabel: t("Download"),
+          href: "/flixa",
+          external: false,
+          icon: Code2,
+          iconClassName: "text-primary",
+        },
+        {
+          id: "changelog",
+          message: t("Updates - Check out the latest changes"),
+          linkLabel: t("Read"),
+          href: "/changelog",
+          external: true,
+          icon: ScrollText,
+          iconClassName: "text-primary",
+        },
+        ...(!twoFactorEnabled
+          ? [
+              {
+                id: "two-factor",
+                message: t("2FA - Enhance your security with two-factor authentication"),
+                linkLabel: t("Setup"),
+                href: "/account/security",
+                external: false,
+                icon: ShieldCheck,
+                iconClassName: "text-success",
+              },
+            ]
+          : []),
+      ];
 
   useEffect(() => {
     if (!visible || announcements.length <= 1) return;
@@ -133,7 +160,12 @@ export function TwoFactorBanner() {
   const AnnouncementIcon = announcement.icon;
 
   return (
-    <AppHeader className="text-sm">
+    <AppHeader
+      className={cn(
+        "text-sm",
+        pinned && "border-highlight/60 bg-highlight/25 legacy:bg-secondary/50 dark:bg-highlight/10",
+      )}
+    >
       <SidebarTrigger className="-ml-1" />
       <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
         <div className="relative h-6 min-w-0 flex-1" aria-live="polite" aria-atomic="true">
@@ -151,7 +183,12 @@ export function TwoFactorBanner() {
                   aria-hidden="true"
                   className={cn("size-4 shrink-0", announcement.iconClassName)}
                 />
-                <span className="min-w-0 truncate text-muted-foreground">
+                <span
+                  className={cn(
+                    "min-w-0 truncate",
+                    pinned ? "font-medium text-foreground" : "text-muted-foreground",
+                  )}
+                >
                   {announcement.message}
                 </span>
                 <Link
@@ -167,15 +204,17 @@ export function TwoFactorBanner() {
             </AnimatePresence>
           </LazyMotion>
         </div>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          className="shrink-0"
-          onClick={dismissTwoFactorBanner}
-          aria-label={t("Dismiss")}
-        >
-          <X />
-        </Button>
+        {pinned ? null : (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="shrink-0"
+            onClick={dismissTwoFactorBanner}
+            aria-label={t("Dismiss")}
+          >
+            <X />
+          </Button>
+        )}
       </div>
     </AppHeader>
   );

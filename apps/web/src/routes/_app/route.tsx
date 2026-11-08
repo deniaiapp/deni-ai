@@ -4,6 +4,7 @@ import { RuntimeAppProviders } from "@/components/runtime-app-providers";
 import { Spinner } from "@deniai/ui/components/spinner";
 import { getAuthState } from "@/lib/session-functions";
 import { signInPath } from "@/lib/sign-in-redirect";
+import { isAllowedWhileTwoFactorRequired, TWO_FACTOR_SETUP_PATH } from "@/lib/two-factor-policy";
 
 /** Content-area only — AppShell (sidebar) stays visible while a page loads. */
 function AppContentFallback() {
@@ -25,6 +26,16 @@ export const Route = createFileRoute("/_app")({
     if (!authState.signedIn) {
       // Return to the requested page (e.g. a Flixa device code), not always /chat.
       throw redirect({ href: signInPath(location.href) });
+    }
+    // Password accounts past PASSWORD_2FA_REQUIRED_FROM without 2FA: only the
+    // setup screen and security settings stay open (sign-out lives on both).
+    if (
+      authState.twoFactor.status === "required" &&
+      !isAllowedWhileTwoFactorRequired(location.pathname)
+    ) {
+      throw redirect({
+        href: `${TWO_FACTOR_SETUP_PATH}?redirectTo=${encodeURIComponent(location.href)}`,
+      });
     }
     return { authState };
   },

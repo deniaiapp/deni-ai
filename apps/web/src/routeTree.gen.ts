@@ -51,6 +51,7 @@ import { Route as AppSettingsImportRouteImport } from './routes/_app/settings/im
 import { Route as AppSettingsMemoryRouteImport } from './routes/_app/settings/memory'
 import { Route as AppSettingsProjectsRouteImport } from './routes/_app/settings/projects'
 import { Route as AuthAuthPathRouteImport } from './routes/_auth/auth/$path'
+import { Route as AuthTwoFactorSetupRouteImport } from './routes/_auth/two-factor/setup'
 import { Route as ApiAdsIndexRouteImport } from './routes/api/ads/index'
 import { Route as ApiAdsClickRouteImport } from './routes/api/ads/click'
 import { Route as ApiAdsViewRouteImport } from './routes/api/ads/view'
@@ -309,6 +310,11 @@ const AppSettingsProjectsRoute = AppSettingsProjectsRouteImport.update({
 const AuthAuthPathRoute = AuthAuthPathRouteImport.update({
   id: '/auth/$path',
   path: '/auth/$path',
+  getParentRoute: () => AuthRouteRoute,
+} as any)
+const AuthTwoFactorSetupRoute = AuthTwoFactorSetupRouteImport.update({
+  id: '/two-factor/setup',
+  path: '/two-factor/setup',
   getParentRoute: () => AuthRouteRoute,
 } as any)
 const ApiAdsIndexRoute = ApiAdsIndexRouteImport.update({
@@ -572,6 +578,7 @@ export interface FileRoutesByFullPath {
   '/settings/memory': typeof AppSettingsMemoryRoute
   '/settings/projects': typeof AppSettingsProjectsRoute
   '/auth/$path': typeof AuthAuthPathRoute
+  '/two-factor/setup': typeof AuthTwoFactorSetupRoute
   '/api/ads/click': typeof ApiAdsClickRoute
   '/api/ads/view': typeof ApiAdsViewRoute
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
@@ -653,6 +660,7 @@ export interface FileRoutesByTo {
   '/settings/memory': typeof AppSettingsMemoryRoute
   '/settings/projects': typeof AppSettingsProjectsRoute
   '/auth/$path': typeof AuthAuthPathRoute
+  '/two-factor/setup': typeof AuthTwoFactorSetupRoute
   '/api/ads/click': typeof ApiAdsClickRoute
   '/api/ads/view': typeof ApiAdsViewRoute
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
@@ -737,6 +745,7 @@ export interface FileRoutesById {
   '/_app/settings/memory': typeof AppSettingsMemoryRoute
   '/_app/settings/projects': typeof AppSettingsProjectsRoute
   '/_auth/auth/$path': typeof AuthAuthPathRoute
+  '/_auth/two-factor/setup': typeof AuthTwoFactorSetupRoute
   '/api/ads/click': typeof ApiAdsClickRoute
   '/api/ads/view': typeof ApiAdsViewRoute
   '/api/attachments/$id': typeof ApiAttachmentsIdRoute
@@ -822,6 +831,7 @@ export interface FileRouteTypes {
     | '/settings/memory'
     | '/settings/projects'
     | '/auth/$path'
+    | '/two-factor/setup'
     | '/api/ads/click'
     | '/api/ads/view'
     | '/api/attachments/$id'
@@ -903,6 +913,7 @@ export interface FileRouteTypes {
     | '/settings/memory'
     | '/settings/projects'
     | '/auth/$path'
+    | '/two-factor/setup'
     | '/api/ads/click'
     | '/api/ads/view'
     | '/api/attachments/$id'
@@ -986,6 +997,7 @@ export interface FileRouteTypes {
     | '/_app/settings/memory'
     | '/_app/settings/projects'
     | '/_auth/auth/$path'
+    | '/_auth/two-factor/setup'
     | '/api/ads/click'
     | '/api/ads/view'
     | '/api/attachments/$id'
@@ -1360,6 +1372,13 @@ declare module '@tanstack/react-router' {
       path: '/auth/$path'
       fullPath: '/auth/$path'
       preLoaderRoute: typeof AuthAuthPathRouteImport
+      parentRoute: typeof AuthRouteRoute
+    }
+    '/_auth/two-factor/setup': {
+      id: '/_auth/two-factor/setup'
+      path: '/two-factor/setup'
+      fullPath: '/two-factor/setup'
+      preLoaderRoute: typeof AuthTwoFactorSetupRouteImport
       parentRoute: typeof AuthRouteRoute
     }
     '/api/ads/': {
@@ -1739,10 +1758,12 @@ const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(
 
 interface AuthRouteRouteChildren {
   AuthAuthPathRoute: typeof AuthAuthPathRoute
+  AuthTwoFactorSetupRoute: typeof AuthTwoFactorSetupRoute
 }
 
 const AuthRouteRouteChildren: AuthRouteRouteChildren = {
   AuthAuthPathRoute: AuthAuthPathRoute,
+  AuthTwoFactorSetupRoute: AuthTwoFactorSetupRoute,
 }
 
 const AuthRouteRouteWithChildren = AuthRouteRoute._addFileChildren(
