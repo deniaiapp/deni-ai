@@ -49,7 +49,6 @@ services/*/*
 !packages/**/README.md
 apps/web/LICENSE
 apps/web/doctor.config.ts
-apps/web/renovate.json
 apps/web/skills-lock.json
 apps/web/components.json
 

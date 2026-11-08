@@ -35,7 +35,8 @@
 # ---------------------------------------------------------------------------
 FROM node:26-slim AS builder
 WORKDIR /app
-RUN npm install --global pnpm@latest
+# Matches `packageManager` in the root package.json (lockfile format and settings).
+RUN npm install --global pnpm@12.18.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/web/package.json ./apps/web/
 COPY apps/support/package.json ./apps/support/

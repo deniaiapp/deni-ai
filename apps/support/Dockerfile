@@ -16,7 +16,8 @@
 
 FROM node:26-slim AS base
 WORKDIR /app
-RUN npm install --global pnpm@latest
+# Matches `packageManager` in the root package.json (lockfile format and settings).
+RUN npm install --global pnpm@12.18.0
 # Every workspace manifest is copied so the frozen lockfile matches; only the
 # help center is installed.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
