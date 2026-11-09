@@ -90,8 +90,10 @@ export function BillingPlansSection({
 
   return (
     <>
-      <div id={BILLING_PLANS_SECTION_ID} className="scroll-mt-6 space-y-4">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {/* Plan cards follow this section's width, not the viewport's: beside the app
+          sidebar and the settings nav it stays under ~52rem even on wide screens. */}
+      <div id={BILLING_PLANS_SECTION_ID} className="@container/plans scroll-mt-6 space-y-4">
+        <div className="grid gap-4">
           {goMonthly && (
             <PlanCard
               plan={goMonthly}

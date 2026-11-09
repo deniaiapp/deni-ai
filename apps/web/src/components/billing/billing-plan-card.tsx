@@ -102,16 +102,19 @@ export function PlanCard({
   const showTrustCopy = !status.isOnTeamPlan && !activePlanId;
 
   return (
+    // Narrow: a column (name, price, highlights, button). From `@xl/plans`: a wide
+    // row with name, price and button on the left and the highlights on the right,
+    // so the plans stack instead of squeezing three ~14rem columns side by side.
     <Card
       className={cn(
-        "flex flex-col",
+        "flex flex-col @xl/plans:grid @xl/plans:grid-cols-2 @xl/plans:grid-rows-[auto_auto_1fr] @xl/plans:gap-x-8 @xl/plans:px-(--card-spacing)",
         interval === "yearly" && "border-foreground/20 bg-muted/20",
         offer &&
           "border-amber-500/50 ring-2 ring-amber-500/25 dark:ring-amber-500/25 next:border-highlight next:ring-highlight/40",
         status.isCurrent && "border-foreground ring-1 ring-foreground/10",
       )}
     >
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-4 @xl/plans:col-start-1 @xl/plans:row-start-1 @xl/plans:px-0 @xl/plans:pb-0">
         <div className="space-y-3">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -156,9 +159,9 @@ export function PlanCard({
           )}
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col pt-0">
-        <div className="flex-1">
-          <div className="space-y-3">
+      <CardContent className="flex flex-1 flex-col pt-0 @xl/plans:contents">
+        <div className="flex-1 @xl/plans:contents">
+          <div className="space-y-3 @xl/plans:col-start-1 @xl/plans:row-start-2">
             {priceParts ? (
               <div className="space-y-1">
                 <div className="flex items-start gap-2">
@@ -216,10 +219,13 @@ export function PlanCard({
               </div>
             )}
           </div>
-          <PlanHighlights items={planCopy.highlights} className="mt-5" />
+          <PlanHighlights
+            items={planCopy.highlights}
+            className="mt-5 @xl/plans:col-start-2 @xl/plans:row-span-3 @xl/plans:row-start-1 @xl/plans:mt-0 @xl/plans:border-l @xl/plans:pl-8"
+          />
         </div>
         <Button
-          className="mt-6 h-auto min-h-12 w-full flex-col gap-1 py-3 font-medium"
+          className="mt-6 h-auto min-h-12 w-full flex-col gap-1 py-3 font-medium @xl/plans:col-start-1 @xl/plans:row-start-3 @xl/plans:mt-0 @xl/plans:self-end"
           variant={status.isCurrent ? "secondary" : "default"}
           disabled={
             status.isCurrent ||
