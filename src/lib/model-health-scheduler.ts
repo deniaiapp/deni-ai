@@ -1,5 +1,5 @@
 import * as Sentry from "@sentry/tanstackstart-react";
-import { checkModelHealth } from "@/lib/model-health";
+import { checkModelHealth, type ModelHealthResult } from "@/lib/model-health";
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const FIRST_CHECK_DELAY_MS = 10_000;
@@ -8,9 +8,34 @@ const globalForScheduler = globalThis as typeof globalThis & {
   modelHealthSchedulerStarted?: boolean;
 };
 
+const lastErrors = new Map<string, string | null>();
+
+/**
+ * Reports a probe failure to the server log and Sentry when it first appears or
+ * its error changes, so the reason a model shows as unavailable can be read
+ * without calling the cron route. A model that recovers is logged once too.
+ */
+export function reportModelHealthChanges(results: ModelHealthResult[]) {
+  for (const result of results) {
+    const previous = lastErrors.get(result.model);
+    lastErrors.set(result.model, result.error);
+    if (result.error === (previous ?? null)) continue;
+    if (result.error) {
+      console.warn(`[model-health] ${result.model} (${result.provider}) failed: ${result.error}`);
+      Sentry.captureMessage(`Model health probe failed: ${result.model}`, {
+        level: "warning",
+        tags: { model: result.model, provider: result.provider },
+        extra: { error: result.error },
+      });
+    } else if (previous) {
+      console.info(`[model-health] ${result.model} (${result.provider}) recovered`);
+    }
+  }
+}
+
 async function runCheck() {
   try {
-    await checkModelHealth();
+    reportModelHealthChanges(await checkModelHealth());
   } catch (error) {
     Sentry.captureException(error);
   }
