@@ -38,6 +38,9 @@ export function useModelDescriptionCopy() {
     "Anthropic's flagship for agentic coding, computer use, and knowledge work.": t(
       "Anthropic's flagship for agentic coding, computer use, and knowledge work.",
     ),
+    "Anthropic's most capable model for demanding reasoning and long-horizon agentic work.": t(
+      "Anthropic's most capable model for demanding reasoning and long-horizon agentic work.",
+    ),
     "Successor to Claude Fable 5 for long-running agentic coding, knowledge work, and research.": t(
       "Successor to Claude Fable 5 for long-running agentic coding, knowledge work, and research.",
     ),

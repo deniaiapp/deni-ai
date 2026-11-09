@@ -287,6 +287,18 @@ const catalogModels: readonly ModelDefinition[] = [
     contextWindow: 1_000_000,
   },
   {
+    name: "Claude Fable 5.2",
+    value: "claude-fable-5.2",
+    usageTier: 6,
+    author: "anthropic",
+    description:
+      "Anthropic's most capable model for demanding reasoning and long-horizon agentic work.",
+    paidOnly: true,
+    featured: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
+    contextWindow: 1_000_000,
+  },
+  {
     name: "Claude Fable 5.1",
     value: "claude-fable-5.1",
     usageTier: 7,
@@ -294,7 +306,6 @@ const catalogModels: readonly ModelDefinition[] = [
     description:
       "Successor to Claude Fable 5 for long-running agentic coding, knowledge work, and research.",
     paidOnly: true,
-    featured: true,
     efforts: ["low", "medium", "high", "max"],
     contextWindow: 1_000_000,
   },
