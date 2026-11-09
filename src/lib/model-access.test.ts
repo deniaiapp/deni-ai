@@ -48,14 +48,20 @@ describe("model access", () => {
     );
   });
 
-  test("pro-only models require Pro", () => {
-    for (const value of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]) {
-      assert.equal(isModelAllowedForAccount(value, "free", true), false);
-      assert.equal(isModelAllowedForAccount(value, "go"), false);
-      assert.equal(isModelAllowedForAccount(value, "plus"), false);
-      assert.equal(isModelAllowedForAccount(value, "pro"), true);
+  test("pro unlocks the whole catalog", () => {
+    for (const model of models) {
+      assert.equal(isModelAllowedForAccount(model.value, "pro"), true);
     }
     assert.deepEqual(getModelsForPlanTier("pro"), models);
+  });
+
+  test("retired GPT-5.6 models are no longer in the catalog", () => {
+    for (const value of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]) {
+      assert.equal(
+        models.some((model) => model.value === value),
+        false,
+      );
+    }
   });
 
   test("pro mode requires Plus or higher", () => {
