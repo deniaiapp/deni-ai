@@ -156,10 +156,7 @@ function MemorySettingsPage() {
 
   if (!features.memory) {
     return (
-      <SettingsPageShell
-        title={t("Personalize")}
-        description={t("Control how Deni responds and what it remembers about you.")}
-      >
+      <SettingsPageShell title={t("Personalize")}>
         <Card>
           <CardHeader>
             <CardTitle>{t("Personalization unavailable")}</CardTitle>
@@ -173,10 +170,7 @@ function MemorySettingsPage() {
   }
 
   return (
-    <SettingsPageShell
-      title={t("Personalize")}
-      description={t("Control how Deni responds and what it remembers about you.")}
-    >
+    <SettingsPageShell title={t("Personalize")}>
       <MemoryResponseStyleCard
         status={memoryQuery.isLoading ? "loading" : hasMemoryLoadError ? "error" : "ready"}
         profile={profile}

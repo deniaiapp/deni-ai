@@ -119,6 +119,7 @@ export { default as Languages } from "lucide-react/dist/esm/icons/languages.mjs"
 export { default as Laptop } from "lucide-react/dist/esm/icons/laptop.mjs";
 export { default as Layers } from "lucide-react/dist/esm/icons/layers.mjs";
 export { default as Layers3 } from "lucide-react/dist/esm/icons/layers.mjs";
+export { default as LayoutGrid } from "lucide-react/dist/esm/icons/layout-grid.mjs";
 export { default as Lightbulb } from "lucide-react/dist/esm/icons/lightbulb.mjs";
 export { default as Link2 } from "lucide-react/dist/esm/icons/link-2.mjs";
 export { default as Link2Off } from "lucide-react/dist/esm/icons/link-2-off.mjs";
@@ -183,6 +184,7 @@ export { default as Scale } from "lucide-react/dist/esm/icons/scale.mjs";
 export { default as ScrollText } from "lucide-react/dist/esm/icons/scroll-text.mjs";
 export { default as Search } from "lucide-react/dist/esm/icons/search.mjs";
 export { default as SearchIcon } from "lucide-react/dist/esm/icons/search.mjs";
+export { default as SearchX } from "lucide-react/dist/esm/icons/search-x.mjs";
 export { default as Send } from "lucide-react/dist/esm/icons/send.mjs";
 export { default as Settings } from "lucide-react/dist/esm/icons/settings.mjs";
 export { default as Share2 } from "lucide-react/dist/esm/icons/share-2.mjs";

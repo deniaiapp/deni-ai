@@ -152,7 +152,7 @@ function AppearancePage() {
   };
 
   return (
-    <SettingsPageShell title={t("Appearance")} description={t("Customize your visual experience")}>
+    <SettingsPageShell title={t("Appearance")}>
       <div>
         <PageSection>
           <PageSectionHeader>
@@ -187,9 +187,6 @@ function AppearancePage() {
         <PageSection>
           <PageSectionHeader>
             <PageSectionTitle>{t("Mode")}</PageSectionTitle>
-            <PageSectionDescription>
-              {t("Select light, dark, or system preference")}
-            </PageSectionDescription>
           </PageSectionHeader>
           <PageSectionContent>
             <ChoiceGroup
@@ -209,9 +206,6 @@ function AppearancePage() {
         <PageSection>
           <PageSectionHeader>
             <PageSectionTitle>{t("Language")}</PageSectionTitle>
-            <PageSectionDescription>
-              {t("Choose your preferred language for the interface")}
-            </PageSectionDescription>
           </PageSectionHeader>
           <PageSectionContent>
             <LocaleSwitcher />
@@ -254,9 +248,6 @@ function AppearancePage() {
           <PageSection>
             <PageSectionHeader>
               <PageSectionTitle>{t("Color Theme")}</PageSectionTitle>
-              <PageSectionDescription>
-                {t("Choose a color palette that suits your style")}
-              </PageSectionDescription>
             </PageSectionHeader>
             <PageSectionContent>
               <ChoiceGroup

@@ -4,7 +4,7 @@ import { Link, useRouter } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
-import { ArrowUpRight, Save } from "lucide-react";
+import { ArrowUpRight, Save, Sparkles } from "lucide-react";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/server/api/root";
 import {
@@ -34,6 +34,7 @@ import { saveComparisonSession } from "@/lib/comparison-session-save";
 import { createModelComparisonTransport } from "@/lib/model-comparison-transport";
 import { isBodyTooLargeError } from "@/lib/trpc/limits";
 import { trpc } from "@/lib/trpc/react";
+import { cn } from "@/lib/utils";
 
 function Answer({
   messages,
@@ -98,6 +99,22 @@ export function SavedModelComparison({ id }: { id: string }) {
   return <ModelComparison key={id} initialComparison={saved.data} />;
 }
 
+/** A faux answer column for the paywall preview: a model label over text lines. */
+function ComparisonPreviewColumn({ label, widths }: { label: string; widths: string[] }) {
+  return (
+    <div className="flex flex-col gap-2.5 rounded-xl border bg-background/60 p-4 text-left">
+      <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-muted px-2 py-0.5 text-xs font-medium">
+        <Sparkles className="size-3" />
+        {label}
+      </span>
+      {widths.map((width, index) => (
+        // Fixed decorative lines; the index is a stable key.
+        <span key={index} className={cn("h-2 rounded-full bg-muted", width)} />
+      ))}
+    </div>
+  );
+}
+
 function ComparisonAccessNotice({
   isAnonymous,
   billingEnabled,
@@ -110,21 +127,60 @@ function ComparisonAccessNotice({
   hasComparison: boolean;
 }) {
   const t = useExtracted();
+  const signedOut = isAnonymous && !hasComparison;
 
-  if (isAnonymous && !hasComparison) {
+  if (!signedOut && usage.isPending) {
     return (
-      <div className="space-y-3 rounded-card border bg-card p-6">
-        <p>{t("Log in and upgrade to Pro (Team plans also available) to compare models.")}</p>
-        <div className="flex flex-wrap gap-2">
-          {billingEnabled && (
-            <Button
-              render={<Link href="/auth/sign-in?redirectTo=/settings/billing" />}
-              nativeButton={false}
-            >
-              {t("Upgrade plan")}
-              <ArrowUpRight className="size-3.5" />
-            </Button>
-          )}
+      <div className="flex justify-center py-10">
+        <Spinner />
+      </div>
+    );
+  }
+  if (!signedOut && usage.isError) {
+    return <p role="alert">{t("Unable to load your plan. Please try again.")}</p>;
+  }
+
+  return (
+    <div className="mx-auto flex w-full max-w-xl flex-col items-center gap-6 py-8 text-center">
+      {/* What comparing looks like: two answers to the same question, side by side. */}
+      <div aria-hidden className="relative grid w-full grid-cols-2 gap-3">
+        <ComparisonPreviewColumn
+          label={t("First model")}
+          widths={["w-full", "w-11/12", "w-4/5", "w-2/3"]}
+        />
+        <ComparisonPreviewColumn
+          label={t("Second model")}
+          widths={["w-full", "w-3/4", "w-full", "w-1/2"]}
+        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-background to-transparent" />
+      </div>
+      <div className="flex flex-col items-center gap-2">
+        <h2 className="text-xl font-semibold tracking-tight">
+          {t("Compare answers side by side with Pro")}
+        </h2>
+        <p className="max-w-md text-sm text-pretty text-muted-foreground">
+          {signedOut
+            ? t("Sign in and upgrade to Pro or a team plan to compare models.")
+            : t("Model comparison is available on Pro, including team plans.")}
+        </p>
+      </div>
+      <div className="flex flex-wrap justify-center gap-2">
+        {billingEnabled && (
+          <Button
+            render={
+              <Link
+                href={
+                  signedOut ? "/auth/sign-in?redirectTo=/settings/billing" : "/settings/billing"
+                }
+              />
+            }
+            nativeButton={false}
+          >
+            {t("Upgrade plan")}
+            <ArrowUpRight className="size-3.5" />
+          </Button>
+        )}
+        {signedOut && (
           <Button
             variant="outline"
             render={<Link href="/auth/sign-in?redirectTo=/compare" />}
@@ -132,21 +188,8 @@ function ComparisonAccessNotice({
           >
             {t("Log in")}
           </Button>
-        </div>
+        )}
       </div>
-    );
-  }
-  if (usage.isPending) return <p>{t("Loading…")}</p>;
-  if (usage.isError) return <p role="alert">{t("Unable to load your plan. Please try again.")}</p>;
-  return (
-    <div className="space-y-3 rounded-card border bg-card p-6">
-      <p>{t("Model comparison is available on Pro, including team plans.")}</p>
-      {billingEnabled && (
-        <Button render={<Link href="/settings/billing" />} nativeButton={false}>
-          {t("Upgrade plan")}
-          <ArrowUpRight className="size-3.5" />
-        </Button>
-      )}
     </div>
   );
 }

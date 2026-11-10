@@ -15,21 +15,14 @@ import {
 } from "./billing-utils";
 import { Badge } from "@deniai/ui/components/badge";
 import { Button } from "@deniai/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@deniai/ui/components/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@deniai/ui/components/card";
 import { Spinner } from "@deniai/ui/components/spinner";
-import { Tabs, TabsList, TabsTrigger } from "@deniai/ui/components/tabs";
 
 export function PlanCard({
   plan,
   monthlyPlan,
   interval,
-  onIntervalChange,
+  monthlyOnly = false,
   status,
   cancelDate,
   activePlanId,
@@ -41,7 +34,8 @@ export function PlanCard({
   plan: ClientPlan;
   monthlyPlan?: ClientPlan;
   interval?: "monthly" | "yearly";
-  onIntervalChange?: (interval: "monthly" | "yearly") => void;
+  /** Shown while the list is set to yearly, on a plan only sold monthly (Go). */
+  monthlyOnly?: boolean;
   status: {
     isCurrent: boolean;
     hasActiveSubscription: boolean;
@@ -102,153 +96,133 @@ export function PlanCard({
   const showTrustCopy = !status.isOnTeamPlan && !activePlanId;
 
   return (
-    // Narrow: a column (name, price, highlights, button). From `@xl/plans`: a wide
-    // row with name, price and button on the left and the highlights on the right,
-    // so the plans stack instead of squeezing three ~14rem columns side by side.
+    // Three layouts, by the plans section's width (see BillingPlansSection):
+    // - narrow: one column (name, price, button, highlights);
+    // - `@xl` to `@3xl`: a wide row, with name, price and button on the left and the
+    //   highlights on the right, since three columns would be too narrow there;
+    // - from `@3xl`: three columns whose rows line up across cards (subgrid), so
+    //   prices, buttons and highlights start at the same height on every plan.
     <Card
       className={cn(
-        "flex flex-col @xl/plans:grid @xl/plans:grid-cols-2 @xl/plans:grid-rows-[auto_auto_1fr] @xl/plans:gap-x-8 @xl/plans:px-(--card-spacing)",
+        "px-(--card-spacing) @xl/plans:@max-3xl/plans:grid @xl/plans:@max-3xl/plans:grid-cols-2 @xl/plans:@max-3xl/plans:grid-rows-[auto_auto_1fr] @xl/plans:@max-3xl/plans:gap-x-8 @3xl/plans:row-span-4 @3xl/plans:grid @3xl/plans:grid-rows-subgrid",
         interval === "yearly" && "border-foreground/20 bg-muted/20",
         offer &&
           "border-amber-500/50 ring-2 ring-amber-500/25 dark:ring-amber-500/25 next:border-highlight next:ring-highlight/40",
         status.isCurrent && "border-foreground ring-1 ring-foreground/10",
       )}
     >
-      <CardHeader className="pb-4 @xl/plans:col-start-1 @xl/plans:row-start-1 @xl/plans:px-0 @xl/plans:pb-0">
-        <div className="space-y-3">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="font-semibold">{tierName}</CardTitle>
-              {offer ? (
-                <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300 next:border-transparent next:bg-highlight next:text-highlight-foreground">
-                  {t("{percent}% off", { percent: offerPercentOff.toString() })}
-                </Badge>
-              ) : interval === "yearly" && savingsPercent > 0 ? (
-                <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 next:border-transparent next:bg-success/15 next:text-success">
-                  {t("Save {percent}%", { percent: savingsPercent.toString() })}
-                </Badge>
-              ) : planCopy.badge ? (
-                <Badge variant="secondary" className="text-xs">
-                  {planCopy.badge}
-                </Badge>
-              ) : null}
-            </div>
-            <CardDescription className="text-sm leading-relaxed">
-              {planCopy.tagline}
-            </CardDescription>
+      <CardHeader className="px-0 @xl/plans:@max-3xl/plans:col-start-1 @xl/plans:@max-3xl/plans:row-start-1">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <CardTitle className="font-semibold">{tierName}</CardTitle>
+            {offer ? (
+              <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-300 next:border-transparent next:bg-highlight next:text-highlight-foreground">
+                {t("{percent}% off", { percent: offerPercentOff.toString() })}
+              </Badge>
+            ) : interval === "yearly" && savingsPercent > 0 ? (
+              <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 next:border-transparent next:bg-success/15 next:text-success">
+                {t("Save {percent}%", { percent: savingsPercent.toString() })}
+              </Badge>
+            ) : planCopy.badge ? (
+              <Badge variant="secondary" className="text-xs">
+                {planCopy.badge}
+              </Badge>
+            ) : monthlyOnly ? (
+              <Badge variant="secondary" className="text-xs">
+                {t("Monthly only")}
+              </Badge>
+            ) : null}
           </div>
-          {/* A plan sold monthly only (Go) has no interval to switch. */}
-          {onIntervalChange ? (
-            <Tabs
-              value={interval}
-              onValueChange={(v) => onIntervalChange?.(v as "monthly" | "yearly")}
-            >
-              <TabsList className="h-8 rounded-xl">
-                <TabsTrigger value="monthly" className="h-6 px-3 text-xs rounded-md">
-                  {t("Monthly")}
-                </TabsTrigger>
-                <TabsTrigger value="yearly" className="h-6 px-3 text-xs rounded-md">
-                  {t("Yearly")}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          ) : (
-            <Badge variant="secondary" className="text-xs">
-              {t("Monthly")}
-            </Badge>
-          )}
+          <CardDescription className="text-sm leading-relaxed">{planCopy.tagline}</CardDescription>
         </div>
       </CardHeader>
-      <CardContent className="flex flex-1 flex-col pt-0 @xl/plans:contents">
-        <div className="flex-1 @xl/plans:contents">
-          <div className="space-y-3 @xl/plans:col-start-1 @xl/plans:row-start-2">
-            {priceParts ? (
-              <div className="space-y-1">
-                <div className="flex items-start gap-2">
-                  <span className="pt-2 text-[11px] font-semibold text-muted-foreground uppercase">
-                    {priceParts.currency}
-                  </span>
-                  <span className="text-4xl font-semibold tracking-tight">{priceParts.amount}</span>
-                  {plan.interval && (
-                    <span className="pt-3 text-sm text-muted-foreground">
-                      /
-                      {plan.interval === "month"
-                        ? t("month")
-                        : plan.interval === "year"
-                          ? t("year")
-                          : plan.interval}
-                    </span>
-                  )}
-                </div>
-                {plan.originalAmount && plan.currency && (
-                  <p className="text-sm text-muted-foreground line-through">
-                    {formatMinorCurrency(
-                      plan.originalAmount,
-                      plan.currency,
-                      {
-                        currencyDisplay: "code",
-                        maximumFractionDigits: 0,
-                      },
-                      locale,
-                    )}
-                  </p>
+      <div className="space-y-3 @xl/plans:@max-3xl/plans:col-start-1 @xl/plans:@max-3xl/plans:row-start-2">
+        {priceParts ? (
+          <div className="space-y-1">
+            <div className="flex items-start gap-2">
+              <span className="pt-2 text-[11px] font-semibold text-muted-foreground uppercase">
+                {priceParts.currency}
+              </span>
+              <span className="text-4xl font-semibold tracking-tight">{priceParts.amount}</span>
+              {plan.interval && (
+                <span className="pt-3 text-sm text-muted-foreground">
+                  /
+                  {plan.interval === "month"
+                    ? t("month")
+                    : plan.interval === "year"
+                      ? t("year")
+                      : plan.interval}
+                </span>
+              )}
+            </div>
+            {plan.originalAmount && plan.currency && (
+              <p className="text-sm text-muted-foreground line-through">
+                {formatMinorCurrency(
+                  plan.originalAmount,
+                  plan.currency,
+                  {
+                    currencyDisplay: "code",
+                    maximumFractionDigits: 0,
+                  },
+                  locale,
                 )}
-              </div>
-            ) : (
-              <div className="text-2xl font-semibold tracking-tight">{formatPriceLabel(plan)}</div>
-            )}
-            {interval === "yearly" && monthlyEquivalent && (
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-foreground">
-                  {t("{amount}/month when billed yearly", {
-                    amount: monthlyEquivalent,
-                  })}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {t("One yearly payment of {price}", {
-                    price: formatPriceLabel(plan),
-                  })}
-                </p>
-              </div>
-            )}
-            {offer?.kind === "timer" && (
-              <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 next:text-foreground">
-                <Clock className="size-4" />
-                <span>{t("Offer ends in")}</span>
-                <OfferCountdown endsAt={offer.endsAt} className="font-mono font-semibold" />
-              </div>
+              </p>
             )}
           </div>
-          <PlanHighlights
-            items={planCopy.highlights}
-            className="mt-5 @xl/plans:col-start-2 @xl/plans:row-span-3 @xl/plans:row-start-1 @xl/plans:mt-0 @xl/plans:border-l @xl/plans:pl-8"
-          />
-        </div>
-        <Button
-          className="mt-6 h-auto min-h-12 w-full flex-col gap-1 py-3 font-medium @xl/plans:col-start-1 @xl/plans:row-start-3 @xl/plans:mt-0 @xl/plans:self-end"
-          variant={status.isCurrent ? "secondary" : "default"}
-          disabled={
-            status.isCurrent ||
-            processing ||
-            isBlockedByCancel ||
-            isLoadingThisPlan ||
-            status.isOnTeamPlan
+        ) : (
+          <div className="text-2xl font-semibold tracking-tight">{formatPriceLabel(plan)}</div>
+        )}
+        {interval === "yearly" && monthlyEquivalent && (
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              {t("{amount}/month when billed yearly", {
+                amount: monthlyEquivalent,
+              })}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("One yearly payment of {price}", {
+                price: formatPriceLabel(plan),
+              })}
+            </p>
+          </div>
+        )}
+        {planCopy.note && <p className="text-xs text-muted-foreground">{planCopy.note}</p>}
+        {offer?.kind === "timer" && (
+          <div className="flex items-center gap-1.5 text-sm font-medium text-amber-700 dark:text-amber-300 next:text-foreground">
+            <Clock className="size-4" />
+            <span>{t("Offer ends in")}</span>
+            <OfferCountdown endsAt={offer.endsAt} className="font-mono font-semibold" />
+          </div>
+        )}
+      </div>
+      <Button
+        className="h-auto min-h-12 w-full flex-col gap-1 py-3 font-medium @xl/plans:@max-3xl/plans:col-start-1 @xl/plans:@max-3xl/plans:row-start-3 @xl/plans:@max-3xl/plans:self-end"
+        variant={status.isCurrent ? "secondary" : "default"}
+        disabled={
+          status.isCurrent ||
+          processing ||
+          isBlockedByCancel ||
+          isLoadingThisPlan ||
+          status.isOnTeamPlan
+        }
+        onClick={() => {
+          if (canChange) {
+            onChangePlanClick(plan);
+          } else {
+            onCheckout(plan.id as IndividualPlanId);
           }
-          onClick={() => {
-            if (canChange) {
-              onChangePlanClick(plan);
-            } else {
-              onCheckout(plan.id as IndividualPlanId);
-            }
-          }}
-        >
-          {(processing || isLoadingThisPlan) && <Spinner className="size-4" />}
-          <span>{primaryActionLabel}</span>
-          {showTrustCopy && (
-            <span className="text-[11px] font-normal text-current/80">{t("Cancel anytime")}</span>
-          )}
-        </Button>
-      </CardContent>
+        }}
+      >
+        {(processing || isLoadingThisPlan) && <Spinner className="size-4" />}
+        <span>{primaryActionLabel}</span>
+        {showTrustCopy && (
+          <span className="text-[11px] font-normal text-current/80">{t("Cancel anytime")}</span>
+        )}
+      </Button>
+      <PlanHighlights
+        items={planCopy.highlights}
+        className="border-t pt-6 @xl/plans:@max-3xl/plans:col-start-2 @xl/plans:@max-3xl/plans:row-span-3 @xl/plans:@max-3xl/plans:row-start-1 @xl/plans:@max-3xl/plans:border-t-0 @xl/plans:@max-3xl/plans:border-l @xl/plans:@max-3xl/plans:pt-0 @xl/plans:@max-3xl/plans:pl-8"
+      />
     </Card>
   );
 }

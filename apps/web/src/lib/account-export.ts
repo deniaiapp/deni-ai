@@ -8,6 +8,7 @@ import {
   modelComparisons,
   projectFiles,
   projects,
+  resetCredit,
   resetCreditBalance,
   securityActivity,
   usageQuota,
@@ -76,6 +77,7 @@ export async function buildAccountExport(userId: string) {
     usageRows,
     billingRow,
     resetCreditRow,
+    resetCreditRows,
     activityRows,
   ] = await Promise.all([
     db
@@ -179,6 +181,15 @@ export async function buildAccountExport(userId: string) {
       .then((rows) => rows[0] ?? null),
     db
       .select({
+        createdAt: resetCredit.createdAt,
+        expiresAt: resetCredit.expiresAt,
+        usedAt: resetCredit.usedAt,
+      })
+      .from(resetCredit)
+      .where(eq(resetCredit.userId, userId))
+      .orderBy(resetCredit.createdAt),
+    db
+      .select({
         action: securityActivity.action,
         ipAddress: securityActivity.ipAddress,
         userAgent: securityActivity.userAgent,
@@ -252,7 +263,9 @@ export async function buildAccountExport(userId: string) {
       periodEnd: row.periodEnd,
     })),
     billing: billingRow,
+    // The undated v7 count; v8 moves it into `resetCreditGrants` when it reads it.
     resetCredits: resetCreditRow,
+    resetCreditGrants: resetCreditRows,
     securityActivity: activityRows,
   };
 }

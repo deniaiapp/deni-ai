@@ -12,13 +12,7 @@ import { toast } from "sonner";
 import { useExtracted } from "use-intl";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@deniai/ui/components/alert";
 import { Button } from "@deniai/ui/components/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-} from "@deniai/ui/components/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@deniai/ui/components/sheet";
 import { Textarea } from "@deniai/ui/components/textarea";
 import {
   Conversation,
@@ -308,9 +302,6 @@ function ThreadFrame({
         <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
           <SheetHeader>
             <SheetTitle>{t("Workspace")}</SheetTitle>
-            <SheetDescription>
-              {t("Tasks, deliverables and the shared computer of this conversation.")}
-            </SheetDescription>
           </SheetHeader>
           <div className="px-4 pb-4">
             <RunWorkspacePanel threadId={thread.id} />

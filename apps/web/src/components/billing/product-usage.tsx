@@ -124,6 +124,7 @@ export function CombinedUsageMeter({
   const labels = useSegmentLabels();
   const { shares, usedPercent } = poolShares(pool);
   const remainingPercent = Math.max(100 - usedPercent, 0);
+  const usedSegments = SEGMENTS.filter((segment) => pool.used[segment] > 0);
   const periodEndLabel = formatAppDate(pool.periodEnd, locale, { month: "short", day: "numeric" });
 
   return (
@@ -135,15 +136,21 @@ export function CombinedUsageMeter({
         </span>
       </div>
       <StackedUsageBar pool={pool} />
-      <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-        {SEGMENTS.map((segment) => (
-          <li key={segment} className="inline-flex items-center gap-1.5">
-            <span className={cn("size-2 rounded-full", SEGMENT_COLORS[segment])} aria-hidden />
-            {labels[segment]}
-            <span className="tabular-nums">{formatPercent(shares[segment])}%</span>
-          </li>
-        ))}
-      </ul>
+      {/* Only the products used this month; none used, no legend. */}
+      {usedSegments.length > 0 && (
+        <ul className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+          {usedSegments.map((segment) => (
+            <li key={segment} className="inline-flex items-center gap-1.5">
+              <span className={cn("size-2 rounded-full", SEGMENT_COLORS[segment])} aria-hidden />
+              {labels[segment]}
+              <span className="tabular-nums">
+                {/* Used, but less than rounds to 0.1%: never "0.0%" for a used product. */}
+                {shares[segment] < 0.05 ? "<0.1" : formatPercent(shares[segment])}%
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         {maxModeEnabled ? (
           <span className="flex items-center gap-1">

@@ -392,7 +392,10 @@ The pool is counted in usage units, 1M units = $0.50:
   `run` (`metric` = `model` / `browser` / `computer`, in micro-dollars = 2 units each).
 
 The pool resets at the start of each UTC month; reset credits clear the chat/Flixa rows,
-not Deni Run's spend. **Settings → Billing**, the settings sidebar, and the account
+not Deni Run's spend. Each reset credit (`reset_credit`) is valid for one calendar month
+from when it is granted. v7's undated counts (`reset_credit_balance`, still granted and
+spent by v7 on the shared database) are moved into dated credits, valid for a month from
+the move, the first time v8 reads them, and set to 0 so they cannot be spent twice. **Settings → Billing**, the settings sidebar, and the account
 menu show the pool as one bar colored by product (Deni AI Chat, Flixa, Deni Run), in
 percentages only.
 
@@ -437,7 +440,7 @@ Schemas live in the `@deniai/db` package under `packages/db/src/schema/` (import
 | **usage**             | Platform usage and limits                                |
 | **product-usage**     | Monthly usage per product (Chat, Flixa, Run)             |
 | **oauth-provider**    | OAuth provider clients, tokens, consents                 |
-| **reset-credit**      | Usage reset credit balances                              |
+| **reset-credit**      | Usage reset credits (one row each, valid for a month)    |
 | **team-usage-policy** | Team usage policies                                      |
 | **device-auth**       | Device / desktop auth                                    |
 

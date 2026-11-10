@@ -1,13 +1,7 @@
 import { Save } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { Button } from "@deniai/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@deniai/ui/components/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
 import { Spinner } from "@deniai/ui/components/spinner";
 import { Switch } from "@deniai/ui/components/switch";
 import { Textarea } from "@deniai/ui/components/textarea";
@@ -114,9 +108,6 @@ export function MemoryResponseStyleCard({
     <Card>
       <CardHeader>
         <CardTitle>{t("Response Style")}</CardTitle>
-        <CardDescription>
-          {t("Shape the assistant's tone, warmth, friendliness, and emoji usage.")}
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         {status === "loading" ? (

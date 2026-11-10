@@ -73,6 +73,8 @@ import { Route as ApiTrpcSplatRouteImport } from './routes/api/trpc/$'
 import { Route as Char123LocaleChar125LegalPrivacyPolicyRouteImport } from './routes/{-$locale}/legal/privacy-policy'
 import { Route as Char123LocaleChar125LegalTermsRouteImport } from './routes/{-$locale}/legal/terms'
 import { Route as Char123LocaleChar125LegalTokushoRouteImport } from './routes/{-$locale}/legal/tokusho'
+import { Route as AppRunConnectorsIndexRouteImport } from './routes/_app/run/connectors/index'
+import { Route as AppRunConnectorsIdRouteImport } from './routes/_app/run/connectors/$id'
 import { Route as AppRunGroupsNewRouteImport } from './routes/_app/run/groups/new'
 import { Route as AppRunTeammatesIdRouteImport } from './routes/_app/run/teammates/$id'
 import { Route as AppRunTeammatesNewRouteImport } from './routes/_app/run/teammates/new'
@@ -422,6 +424,16 @@ const Char123LocaleChar125LegalTokushoRoute =
     path: '/legal/tokusho',
     getParentRoute: () => Char123LocaleChar125RouteRoute,
   } as any)
+const AppRunConnectorsIndexRoute = AppRunConnectorsIndexRouteImport.update({
+  id: '/run/connectors/',
+  path: '/run/connectors/',
+  getParentRoute: () => AppRouteRoute,
+} as any)
+const AppRunConnectorsIdRoute = AppRunConnectorsIdRouteImport.update({
+  id: '/run/connectors/$id',
+  path: '/run/connectors/$id',
+  getParentRoute: () => AppRouteRoute,
+} as any)
 const AppRunGroupsNewRoute = AppRunGroupsNewRouteImport.update({
   id: '/run/groups/new',
   path: '/run/groups/new',
@@ -594,6 +606,7 @@ export interface FileRoutesByFullPath {
   '/api/ads/': typeof ApiAdsIndexRoute
   '/api/chat/': typeof ApiChatIndexRoute
   '/settings/team': typeof AppSettingsTeamDashboardRouteRouteWithChildren
+  '/run/connectors/$id': typeof AppRunConnectorsIdRoute
   '/run/groups/new': typeof AppRunGroupsNewRoute
   '/run/teammates/$id': typeof AppRunTeammatesIdRoute
   '/run/teammates/new': typeof AppRunTeammatesNewRoute
@@ -601,6 +614,7 @@ export interface FileRoutesByFullPath {
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
+  '/run/connectors/': typeof AppRunConnectorsIndexRoute
   '/settings/billing/': typeof AppSettingsBillingIndexRoute
   '/api/ads/campaigns/': typeof ApiAdsCampaignsIndexRoute
   '/settings/billing/checkout/$sessionId': typeof AppSettingsBillingCheckoutSessionIdRoute
@@ -675,6 +689,7 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsIndexRoute
   '/api/ads': typeof ApiAdsIndexRoute
   '/api/chat': typeof ApiChatIndexRoute
+  '/run/connectors/$id': typeof AppRunConnectorsIdRoute
   '/run/groups/new': typeof AppRunGroupsNewRoute
   '/run/teammates/$id': typeof AppRunTeammatesIdRoute
   '/run/teammates/new': typeof AppRunTeammatesNewRoute
@@ -682,6 +697,7 @@ export interface FileRoutesByTo {
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
+  '/run/connectors': typeof AppRunConnectorsIndexRoute
   '/settings/billing': typeof AppSettingsBillingIndexRoute
   '/api/ads/campaigns': typeof ApiAdsCampaignsIndexRoute
   '/settings/billing/checkout/$sessionId': typeof AppSettingsBillingCheckoutSessionIdRoute
@@ -761,6 +777,7 @@ export interface FileRoutesById {
   '/api/ads/': typeof ApiAdsIndexRoute
   '/api/chat/': typeof ApiChatIndexRoute
   '/_app/settings/team/_dashboard': typeof AppSettingsTeamDashboardRouteRouteWithChildren
+  '/_app/run/connectors/$id': typeof AppRunConnectorsIdRoute
   '/_app/run/groups/new': typeof AppRunGroupsNewRoute
   '/_app/run/teammates/$id': typeof AppRunTeammatesIdRoute
   '/_app/run/teammates/new': typeof AppRunTeammatesNewRoute
@@ -768,6 +785,7 @@ export interface FileRoutesById {
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
+  '/_app/run/connectors/': typeof AppRunConnectorsIndexRoute
   '/_app/settings/billing/': typeof AppSettingsBillingIndexRoute
   '/api/ads/campaigns/': typeof ApiAdsCampaignsIndexRoute
   '/_app/settings/billing/checkout/$sessionId': typeof AppSettingsBillingCheckoutSessionIdRoute
@@ -847,6 +865,7 @@ export interface FileRouteTypes {
     | '/api/ads/'
     | '/api/chat/'
     | '/settings/team'
+    | '/run/connectors/$id'
     | '/run/groups/new'
     | '/run/teammates/$id'
     | '/run/teammates/new'
@@ -854,6 +873,7 @@ export interface FileRouteTypes {
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
     | '/api/integrations/deni-run/usage'
+    | '/run/connectors/'
     | '/settings/billing/'
     | '/api/ads/campaigns/'
     | '/settings/billing/checkout/$sessionId'
@@ -928,6 +948,7 @@ export interface FileRouteTypes {
     | '/settings'
     | '/api/ads'
     | '/api/chat'
+    | '/run/connectors/$id'
     | '/run/groups/new'
     | '/run/teammates/$id'
     | '/run/teammates/new'
@@ -935,6 +956,7 @@ export interface FileRouteTypes {
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
     | '/api/integrations/deni-run/usage'
+    | '/run/connectors'
     | '/settings/billing'
     | '/api/ads/campaigns'
     | '/settings/billing/checkout/$sessionId'
@@ -1013,6 +1035,7 @@ export interface FileRouteTypes {
     | '/api/ads/'
     | '/api/chat/'
     | '/_app/settings/team/_dashboard'
+    | '/_app/run/connectors/$id'
     | '/_app/run/groups/new'
     | '/_app/run/teammates/$id'
     | '/_app/run/teammates/new'
@@ -1020,6 +1043,7 @@ export interface FileRouteTypes {
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
     | '/api/integrations/deni-run/usage'
+    | '/_app/run/connectors/'
     | '/_app/settings/billing/'
     | '/api/ads/campaigns/'
     | '/_app/settings/billing/checkout/$sessionId'
@@ -1518,6 +1542,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char123LocaleChar125LegalTokushoRouteImport
       parentRoute: typeof Char123LocaleChar125RouteRoute
     }
+    '/_app/run/connectors/': {
+      id: '/_app/run/connectors/'
+      path: '/run/connectors'
+      fullPath: '/run/connectors/'
+      preLoaderRoute: typeof AppRunConnectorsIndexRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
+    '/_app/run/connectors/$id': {
+      id: '/_app/run/connectors/$id'
+      path: '/run/connectors/$id'
+      fullPath: '/run/connectors/$id'
+      preLoaderRoute: typeof AppRunConnectorsIdRouteImport
+      parentRoute: typeof AppRouteRoute
+    }
     '/_app/run/groups/new': {
       id: '/_app/run/groups/new'
       path: '/run/groups/new'
@@ -1732,10 +1770,12 @@ interface AppRouteRouteChildren {
   AppChatIndexRoute: typeof AppChatIndexRoute
   AppCompareIndexRoute: typeof AppCompareIndexRoute
   AppRunIndexRoute: typeof AppRunIndexRoute
+  AppRunConnectorsIdRoute: typeof AppRunConnectorsIdRoute
   AppRunGroupsNewRoute: typeof AppRunGroupsNewRoute
   AppRunTeammatesIdRoute: typeof AppRunTeammatesIdRoute
   AppRunTeammatesNewRoute: typeof AppRunTeammatesNewRoute
   AppRunThreadsIdRoute: typeof AppRunThreadsIdRoute
+  AppRunConnectorsIndexRoute: typeof AppRunConnectorsIndexRoute
 }
 
 const AppRouteRouteChildren: AppRouteRouteChildren = {
@@ -1754,10 +1794,12 @@ const AppRouteRouteChildren: AppRouteRouteChildren = {
   AppChatIndexRoute: AppChatIndexRoute,
   AppCompareIndexRoute: AppCompareIndexRoute,
   AppRunIndexRoute: AppRunIndexRoute,
+  AppRunConnectorsIdRoute: AppRunConnectorsIdRoute,
   AppRunGroupsNewRoute: AppRunGroupsNewRoute,
   AppRunTeammatesIdRoute: AppRunTeammatesIdRoute,
   AppRunTeammatesNewRoute: AppRunTeammatesNewRoute,
   AppRunThreadsIdRoute: AppRunThreadsIdRoute,
+  AppRunConnectorsIndexRoute: AppRunConnectorsIndexRoute,
 }
 
 const AppRouteRouteWithChildren = AppRouteRoute._addFileChildren(

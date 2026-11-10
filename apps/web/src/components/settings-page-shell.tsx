@@ -14,6 +14,8 @@ type SettingsPageShellProps = {
   actions?: ReactNode;
   children: ReactNode;
   className?: string;
+  /** `wide` lifts the settings column's reading-width cap (for side-by-side cards). */
+  width?: "default" | "wide";
 };
 
 /** A settings page: `PageHeader` plus the page body (usually `PageSection`s). */
@@ -23,9 +25,10 @@ export function SettingsPageShell({
   actions,
   children,
   className,
+  width = "default",
 }: SettingsPageShellProps) {
   return (
-    <div className={cn("flex w-full flex-col", className)}>
+    <div data-settings-width={width} className={cn("flex w-full flex-col", className)}>
       <PageHeader>
         <PageHeaderHeading>
           <PageHeaderTitle>{title}</PageHeaderTitle>

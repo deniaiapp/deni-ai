@@ -2,14 +2,6 @@ import { Zap } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import { formatAppDate } from "@/lib/format-date";
 import { formatCompactUsageValue } from "@/lib/utils";
-import { Badge } from "@deniai/ui/components/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@deniai/ui/components/card";
 import { Progress } from "@deniai/ui/components/progress";
 import { Spinner } from "@deniai/ui/components/spinner";
 import { AttachmentStorageUsage } from "./attachment-storage-usage";
@@ -92,15 +84,17 @@ function UsageRow({
   );
 }
 
-export function BillingUsageSection({
-  usageTierLabel,
+/**
+ * This month's usage for the billing overview card: the shared pool (or the single
+ * usage row) beside attachment storage, or across the full width when storage is off.
+ */
+export function BillingUsageSummary({
   isLoading,
   errorMessage,
   usageItem,
   maxModeEnabled,
   pool,
 }: {
-  usageTierLabel: string;
   isLoading: boolean;
   errorMessage?: string | null;
   usageItem: UsageItem | undefined;
@@ -110,35 +104,24 @@ export function BillingUsageSection({
 }) {
   const t = useExtracted();
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-4">
+        <Spinner />
+      </div>
+    );
+  }
+  if (errorMessage) {
+    return <p className="text-sm text-destructive">{errorMessage}</p>;
+  }
   return (
-    <Card>
-      <CardHeader className="gap-0!">
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="text-sm font-medium">{t("Usage")}</CardTitle>
-            <CardDescription>{t("Tier: {tier}", { tier: usageTierLabel })}</CardDescription>
-          </div>
-          <Badge variant="secondary">{usageTierLabel}</Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-5">
-        {isLoading ? (
-          <div className="flex justify-center py-4">
-            <Spinner />
-          </div>
-        ) : errorMessage ? (
-          <p className="text-sm text-destructive">{errorMessage}</p>
-        ) : (
-          <div className="grid gap-6 sm:grid-cols-2">
-            {pool ? (
-              <CombinedUsageMeter pool={pool} maxModeEnabled={maxModeEnabled} />
-            ) : (
-              <UsageRow label={t("Usage")} item={usageItem} maxModeEnabled={maxModeEnabled} />
-            )}
-            <AttachmentStorageUsage />
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-6 sm:flex-row sm:*:min-w-0 sm:*:flex-1">
+      {pool ? (
+        <CombinedUsageMeter pool={pool} maxModeEnabled={maxModeEnabled} />
+      ) : (
+        <UsageRow label={t("Usage")} item={usageItem} maxModeEnabled={maxModeEnabled} />
+      )}
+      <AttachmentStorageUsage />
+    </div>
   );
 }

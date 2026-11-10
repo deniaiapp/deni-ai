@@ -5,14 +5,7 @@ import { SettingsPageShell } from "@/components/settings-page-shell";
 import { Alert, AlertDescription } from "@deniai/ui/components/alert";
 import { Badge } from "@deniai/ui/components/badge";
 import { Button } from "@deniai/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@deniai/ui/components/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@deniai/ui/components/card";
 import { Empty, EmptyHeader, EmptyMedia, EmptyTitle } from "@deniai/ui/components/empty";
 import { Checkbox } from "@deniai/ui/components/checkbox";
 import {
@@ -387,17 +380,11 @@ export function AdsSettings() {
   ];
 
   return (
-    <SettingsPageShell
-      title={t("Deni AI Ads")}
-      description={t(
-        "Submit a text ad for AI review. Only approved ads can be purchased and displayed in chat.",
-      )}
-    >
+    <SettingsPageShell title={t("Deni AI Ads")}>
       <Card>
         <form onSubmit={submit} className="flex flex-col gap-6">
           <CardHeader>
             <CardTitle>{t("Create an ad")}</CardTitle>
-            <CardDescription>{t("Choose a plan and submit your ad for review.")}</CardDescription>
           </CardHeader>
           <CardContent>
             <FieldGroup className="gap-4">
@@ -433,9 +420,7 @@ export function AdsSettings() {
                 />
               </Field>
               <FieldDescription>
-                {t(
-                  "Optionally add a version in the other language. Both versions are reviewed before publishing.",
-                )}
+                {t("Optionally add a version in the other language.")}
               </FieldDescription>
               <VariantFields
                 key={`new-${defaultLanguage}-${campaigns?.length ?? 0}`}
@@ -497,7 +482,7 @@ export function AdsSettings() {
               </div>
               <FieldDescription>
                 {t(
-                  "Views are billed in groups of five (¥1). Guest views and clicks count as 0.5 each for billing. Repeated views within 10 minutes and clicks within one day from the same account are not billed. Ads stop when the prepaid budget is used. Fixed slots are subject to availability.",
+                  "Views are billed in groups of five. Ads are shown only after they pass AI review. Ads stop when the prepaid budget is used. Fixed slots are subject to availability.",
                 )}
               </FieldDescription>
             </FieldGroup>

@@ -758,9 +758,6 @@ export function AppSidebarChatList({
             {chats.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-4 py-8 text-center">
                 <p className="text-sm text-muted-foreground">{t("No chats yet")}</p>
-                <p className="mt-1 text-xs text-muted-foreground/70">
-                  {t("Start a conversation to see it here")}
-                </p>
               </div>
             ) : null}
 

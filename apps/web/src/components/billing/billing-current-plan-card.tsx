@@ -1,13 +1,19 @@
 import { Link } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { BillingPlanId, ClientPlan } from "@/lib/billing";
 import type { CancellationFeedback } from "@/lib/cancellation-feedback";
 import { formatAppDate } from "@/lib/format-date";
 import { usePlanIntervalLabel, useTierLabel } from "./billing-utils";
 import { SubscriptionCancelDialog } from "./subscription-cancel-dialog";
 import { Button } from "@deniai/ui/components/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@deniai/ui/components/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@deniai/ui/components/card";
 import { Spinner } from "@deniai/ui/components/spinner";
 
 export function BillingCurrentPlanCard({
@@ -26,6 +32,7 @@ export function BillingCurrentPlanCard({
   onPortal,
   onCancel,
   onResume,
+  children,
 }: {
   isEducation: boolean;
   isOnTeamPlan: boolean;
@@ -42,6 +49,8 @@ export function BillingCurrentPlanCard({
   onPortal: () => void;
   onCancel: (feedback: CancellationFeedback) => void;
   onResume: () => void;
+  /** This month's usage, shown under the plan. */
+  children?: ReactNode;
 }) {
   const t = useExtracted();
   const locale = useLocale();
@@ -51,10 +60,10 @@ export function BillingCurrentPlanCard({
 
   return (
     <Card>
-      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="space-y-1">
-          <CardTitle className="text-sm font-medium">{t("Current Plan")}</CardTitle>
-          <CardDescription>
+      <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <p className="text-xs text-muted-foreground">{t("Current plan")}</p>
+          <CardTitle className="text-xl font-semibold tracking-tight">
             {isOnTeamPlan
               ? t("Pro for Teams {name}", {
                   name: rawPlanId ? getPlanIntervalLabel(rawPlanId) : "",
@@ -66,30 +75,29 @@ export function BillingCurrentPlanCard({
                   })
                 : isEducation
                   ? t("Go (free for education)")
-                  : t("Free")}{" "}
-            {cancelDate && (
-              <span className="text-destructive">
-                {t("(Cancels {date})", {
-                  date: formatAppDate(cancelDate * 1000, locale, {
-                    month: "short",
-                    day: "numeric",
-                  }),
-                })}
-              </span>
-            )}
-          </CardDescription>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {currentPeriodEnd && !cancelDate && (
-            <span className="text-xs text-muted-foreground px-3 py-1 rounded-full bg-muted">
+                  : t("Free")}
+          </CardTitle>
+          {cancelDate ? (
+            <CardDescription className="text-destructive">
+              {t("Cancels {date}", {
+                date: formatAppDate(cancelDate * 1000, locale, {
+                  month: "short",
+                  day: "numeric",
+                }),
+              })}
+            </CardDescription>
+          ) : currentPeriodEnd ? (
+            <CardDescription>
               {t("Renews {date}", {
                 date: formatAppDate(currentPeriodEnd, locale, {
                   month: "short",
                   day: "numeric",
                 }),
               })}
-            </span>
-          )}
+            </CardDescription>
+          ) : null}
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
           {isOnTeamPlan ? (
             <Button
               variant="outline"
@@ -129,6 +137,9 @@ export function BillingCurrentPlanCard({
           )}
         </div>
       </CardHeader>
+      {children && (
+        <CardContent className="border-t border-border pt-(--card-spacing)">{children}</CardContent>
+      )}
       <SubscriptionCancelDialog
         open={isCancelConfirmOpen}
         onOpenChange={setIsCancelConfirmOpen}

@@ -17,8 +17,8 @@ export function useBillingPage() {
   const { push } = useRouter();
   const [changeTarget, setChangeTarget] = useState<ClientPlan | null>(null);
   // null follows the default: yearly while a limited-time offer is running, else monthly.
-  const [plusIntervalChoice, setPlusInterval] = useState<"monthly" | "yearly" | null>(null);
-  const [proIntervalChoice, setProInterval] = useState<"monthly" | "yearly" | null>(null);
+  // One billing interval for every plan in the list (the plans section's toggle).
+  const [intervalChoice, setPlanInterval] = useState<"monthly" | "yearly" | null>(null);
   const [hasAgreed, setHasAgreed] = useState(false);
   const [pendingPlanId, setPendingPlanId] = useState<IndividualPlanId | null>(null);
 
@@ -259,15 +259,11 @@ export function useBillingPage() {
   }, [flashOfferEndsAt, utils]);
 
   const defaultInterval = flashOffer ? "yearly" : "monthly";
-  const plusInterval = plusIntervalChoice ?? defaultInterval;
-  const proInterval = proIntervalChoice ?? defaultInterval;
-  const showYearlyPlans = () => {
-    setPlusInterval("yearly");
-    setProInterval("yearly");
-  };
+  const planInterval = intervalChoice ?? defaultInterval;
+  const showYearlyPlans = () => setPlanInterval("yearly");
 
-  const selectedPlusPlan = plusInterval === "monthly" ? plusMonthly : plusYearly;
-  const selectedProPlan = proInterval === "monthly" ? proMonthly : proYearly;
+  const selectedPlusPlan = planInterval === "monthly" ? plusMonthly : plusYearly;
+  const selectedProPlan = planInterval === "monthly" ? proMonthly : proYearly;
   // One shared pool: the summary has a single usage entry.
   const usageItem = usage[0];
   const cancelReceipt = {
@@ -317,18 +313,16 @@ export function useBillingPage() {
     buyMaxModeCredits,
     updateMaxModeAutoTopUp,
     pendingPlanId,
-    plusInterval,
+    planInterval,
     plusMonthly,
     portal,
-    proInterval,
     proMonthly,
     rawPlanId,
     resume,
     selectedPlusPlan,
     selectedProPlan,
     setHasAgreed,
-    setPlusInterval,
-    setProInterval,
+    setPlanInterval,
     setShredOpen,
     showYearlyPlans,
     shredOpen,

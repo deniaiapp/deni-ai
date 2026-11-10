@@ -12,13 +12,7 @@ import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { Badge } from "@deniai/ui/components/badge";
 import { Button } from "@deniai/ui/components/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@deniai/ui/components/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -65,7 +59,6 @@ export function TeamMembersList({
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle className="text-base">{t("Members")}</CardTitle>
-          <CardDescription>{t("People in your team.")}</CardDescription>
         </div>
         <div className="flex items-center gap-2">
           <Button

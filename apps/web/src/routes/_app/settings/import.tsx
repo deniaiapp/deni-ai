@@ -124,9 +124,7 @@ function ImportSettingsPage() {
   return (
     <SettingsPageShell
       title={t("Import")}
-      description={t(
-        "Bring conversations in from ChatGPT, Claude, or another Deni AI export. Imported chats are added to your account, not merged with existing ones.",
-      )}
+      description={t("Import conversations from other AI apps or a Deni AI export.")}
     >
       <Card>
         <CardHeader>

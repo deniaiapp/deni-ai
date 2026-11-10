@@ -3,7 +3,7 @@ import { z } from "zod";
 import { isAdminEmail } from "@/lib/admin-emails";
 import {
   consumeResetCredit,
-  getResetCreditBalance,
+  getAvailableResetCredits,
   grantResetCredits,
   RESET_CREDIT_PLAN_TIERS,
 } from "@/lib/reset-credits";
@@ -29,22 +29,29 @@ function getAdminEmail(ctx: { session: { user?: AdminUser } | null }) {
 }
 
 export const resetCreditsRouter = router({
-  status: protectedProcedure.query(async ({ ctx }) => ({
-    resetCredits: await getResetCreditBalance(ctx.userId),
-    isAdmin: isVerifiedAdmin(ctx.session?.user, isAdminEmail),
-  })),
-
-  consume: protectedProcedure.mutation(async ({ ctx }) => {
-    const remaining = await consumeResetCredit(ctx.userId);
-    if (remaining === null) {
-      throw new TRPCError({
-        code: "PRECONDITION_FAILED",
-        message: "No rate-limit reset credits are available.",
-      });
-    }
-
-    return { remaining };
+  status: protectedProcedure.query(async ({ ctx }) => {
+    const credits = await getAvailableResetCredits(ctx.userId);
+    return {
+      /** Unspent, unexpired credits, soonest to expire first. */
+      credits,
+      resetCredits: credits.length,
+      isAdmin: isVerifiedAdmin(ctx.session?.user, isAdminEmail),
+    };
   }),
+
+  consume: protectedProcedure
+    .input(z.object({ creditId: z.string().min(1).max(64).optional() }).optional())
+    .mutation(async ({ ctx, input }) => {
+      const remaining = await consumeResetCredit(ctx.userId, input?.creditId);
+      if (remaining === null) {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "No rate-limit reset credits are available.",
+        });
+      }
+
+      return { remaining };
+    }),
 
   adminGrant: protectedProcedure
     .input(

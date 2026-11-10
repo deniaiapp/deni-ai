@@ -252,7 +252,7 @@ export function ProjectsSettingsPage() {
           </div>
         ) : activeProjects.length === 0 ? (
           <div className="rounded-xl border border-dashed p-6 text-center text-sm text-muted-foreground">
-            {t("No projects yet. Create one to organize chats with custom context.")}
+            {t("No projects yet.")}
           </div>
         ) : (
           <>

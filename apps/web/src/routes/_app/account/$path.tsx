@@ -72,14 +72,7 @@ function AccountPage() {
       {/* Inside the app shell with the other settings; the account/security tabs
           became entries of the settings nav. */}
       <SettingsWrapper hideNav={isGuest}>
-        <SettingsPageShell
-          title={isSecurity ? t("Security") : t("Account")}
-          description={
-            isSecurity
-              ? t("Password, two-factor authentication, passkeys and sessions")
-              : t("Your profile, email and connected data")
-          }
-        >
+        <SettingsPageShell title={isSecurity ? t("Security") : t("Account")}>
           <Settings path={path} hideNav />
         </SettingsPageShell>
       </SettingsWrapper>

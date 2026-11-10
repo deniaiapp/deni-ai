@@ -11,8 +11,7 @@ import { stripeJsPromise } from "@/lib/stripe-js";
 import { trpc } from "@/lib/trpc/react";
 
 import { runWithLoading } from "@/lib/run-with-loading";
-import { usdToUsageUnits, VERIFIED_FREE_POOL_USD } from "@deniai/billing";
-import { formatCompactUsageValue } from "@/lib/utils";
+import { USAGE_POOL_USD, VERIFIED_FREE_POOL_USD } from "@deniai/billing";
 import { Badge } from "@deniai/ui/components/badge";
 import { Button } from "@deniai/ui/components/button";
 import {
@@ -46,7 +45,10 @@ export function CardVerificationCard({
 }: Props) {
   const t = useExtracted();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const verifiedUnits = formatCompactUsageValue(usdToUsageUnits(VERIFIED_FREE_POOL_USD));
+  // How much a verified card raises the Free pool, as a ratio rather than units.
+  const verifiedMultiplier = String(
+    Math.round((VERIFIED_FREE_POOL_USD / USAGE_POOL_USD.free) * 10) / 10,
+  );
 
   // Only show this card for free-tier users; paid users manage cards via the
   // Stripe portal.
@@ -72,19 +74,17 @@ export function CardVerificationCard({
               )}
             </div>
             <CardDescription>
-              {hasVerifiedPaymentMethod ? (
-                t(
-                  "More models are unlocked and your monthly usage is {units} units. We will not charge this card.",
-                  { units: verifiedUnits },
-                )
-              ) : (
-                <span className="whitespace-pre-line">
-                  {t(
-                    "Add a card to unlock more models and raise your monthly usage to {units} units.\n We place a $1 hold that is released immediately — no actual charge.",
-                    { units: verifiedUnits },
+              {hasVerifiedPaymentMethod
+                ? t(
+                    "More models are unlocked and your monthly usage is {multiplier}× the standard Free allowance. We will not charge this card.",
+                    { multiplier: verifiedMultiplier },
+                  )
+                : t(
+                    "Verify a card to unlock more models and get {multiplier}× the monthly usage.",
+                    {
+                      multiplier: verifiedMultiplier,
+                    },
                   )}
-                </span>
-              )}
               {signupLimited && !hasVerifiedPaymentMethod && (
                 <span className="mt-2 block font-medium text-foreground">
                   {t("Your free allowance is currently limited. Adding a card lifts the limit.")}

@@ -12,11 +12,7 @@ export const Route = createFileRoute("/_app/settings/billing/")({
 function BillingLoading() {
   const t = useExtracted();
   return (
-    <SettingsPageShell
-      title={t("Billing")}
-      description={t("Manage your subscription and usage")}
-      className="max-w-6xl"
-    >
+    <SettingsPageShell title={t("Billing")} width="wide">
       <div className="flex justify-center py-8">
         <Spinner />
       </div>

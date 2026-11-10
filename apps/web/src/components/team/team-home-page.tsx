@@ -132,7 +132,6 @@ export function TeamHomePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">{t("Team overview")}</CardTitle>
-          <CardDescription>{t("A quick summary of your team.")}</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-2">

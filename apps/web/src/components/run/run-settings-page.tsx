@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Plug, Trash2 } from "lucide-react";
+import { LayoutGrid, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useExtracted } from "use-intl";
 import { Badge } from "@deniai/ui/components/badge";
@@ -15,22 +15,17 @@ import {
 import { Field, FieldGroup, FieldLabel } from "@deniai/ui/components/field";
 import { Input } from "@deniai/ui/components/input";
 import { Switch } from "@deniai/ui/components/switch";
-import { useRouter, useSearchParams } from "@/lib/navigation";
-import { runFetch, runKeys, type McpConnection } from "./run-api";
+import { Link, useRouter, useSearchParams } from "@/lib/navigation";
+import { ConnectorLogoTile } from "./connectors/connector-logos";
+import { useMcpState } from "./connectors/use-connectors";
+import { runFetch, runKeys } from "./run-api";
 import { useRunErrorText } from "./run-error-text";
 import { RunLoading, RunPage } from "./run-page";
-
-type CatalogEntry = { id: string; name: string; url: string; docsUrl: string; category: string };
-type McpState = {
-  connections: McpConnection[];
-  alwaysAllow: Record<string, Record<string, boolean>>;
-  catalog: CatalogEntry[];
-};
 
 function McpSection() {
   const t = useExtracted();
   const errorText = useRunErrorText();
-  const mcp = useQuery({ queryKey: runKeys.mcp, queryFn: () => runFetch<McpState>("mcp") });
+  const mcp = useMcpState();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [secret, setSecret] = useState("");
@@ -57,16 +52,21 @@ function McpSection() {
   });
   if (mcp.isLoading) return <RunLoading />;
   const data = mcp.data;
-  const added = new Set(data?.connections.map((connection) => connection.catalogId));
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>{t("Connectors (MCP)")}</CardTitle>
-        <CardDescription>
-          {t(
-            "Connect remote MCP servers. Teammates ask for approval before using a tool unless you always allow it.",
-          )}
-        </CardDescription>
+      <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1.5">
+          <CardTitle>{t("Connectors (MCP)")}</CardTitle>
+          <CardDescription>
+            {t(
+              "Connect remote MCP servers. Teammates ask for approval before using a tool unless you always allow it.",
+            )}
+          </CardDescription>
+        </div>
+        <Button className="shrink-0" render={<Link href="/run/connectors" />} nativeButton={false}>
+          <LayoutGrid className="size-4" />
+          {t("Browse connectors")}
+        </Button>
       </CardHeader>
       <CardContent className="flex flex-col gap-6">
         {data?.connections.length ? (
@@ -76,19 +76,26 @@ function McpSection() {
                 key={connection.id}
                 className="flex flex-wrap items-center justify-between gap-3 px-3 py-2"
               >
-                <div className="min-w-0">
-                  <p className="flex items-center gap-2 text-sm font-medium">
-                    {connection.name}
-                    {connection.oauth === "signed-out" ? (
-                      <Badge variant="outline">{t("Signed out")}</Badge>
-                    ) : null}
-                    {connection.lastError ? (
-                      <Badge variant="destructive">{t("Error")}</Badge>
-                    ) : null}
-                  </p>
-                  <p className="truncate font-mono text-xs text-muted-foreground">
-                    {connection.url}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  {connection.catalogId ? (
+                    <Link href={`/run/connectors/${connection.catalogId}`} className="shrink-0">
+                      <ConnectorLogoTile id={connection.catalogId} />
+                    </Link>
+                  ) : null}
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-2 text-sm font-medium">
+                      {connection.name}
+                      {connection.oauth === "signed-out" ? (
+                        <Badge variant="outline">{t("Signed out")}</Badge>
+                      ) : null}
+                      {connection.lastError ? (
+                        <Badge variant="destructive">{t("Error")}</Badge>
+                      ) : null}
+                    </p>
+                    <p className="truncate font-mono text-xs text-muted-foreground">
+                      {connection.url}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Switch
@@ -133,24 +140,6 @@ function McpSection() {
         ) : (
           <p className="text-sm text-muted-foreground">{t("No connectors yet.")}</p>
         )}
-
-        <div className="flex flex-col gap-2">
-          <h3 className="text-sm font-medium">{t("Add from the catalog")}</h3>
-          <div className="flex flex-wrap gap-2">
-            {data?.catalog.map((entry) => (
-              <Button
-                key={entry.id}
-                size="sm"
-                variant="outline"
-                disabled={added.has(entry.id) || action.isPending}
-                onClick={() => action.mutate({ action: "connect", catalogId: entry.id })}
-              >
-                <Plug className="size-3" />
-                {entry.name}
-              </Button>
-            ))}
-          </div>
-        </div>
 
         <form
           className="flex flex-col gap-3"

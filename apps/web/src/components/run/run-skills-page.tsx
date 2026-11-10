@@ -102,7 +102,6 @@ export function RunSkillsPage() {
   return (
     <RunPage
       title={t("Skills")}
-      description={t("Reusable procedures your teammates can follow.")}
       actions={
         <Button onClick={() => setEditing("new")} disabled={editing === "new"}>
           <Plus className="size-4" />

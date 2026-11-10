@@ -118,7 +118,6 @@ export function RunHome() {
       <Card>
         <CardHeader>
           <CardTitle>{t("New task")}</CardTitle>
-          <CardDescription>{t("Choose a teammate and describe the work.")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t("Teammate")}>
@@ -158,8 +157,11 @@ export function RunHome() {
       <section className="flex flex-col gap-3">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">{t("Teammates")}</h2>
-          <span className="text-sm text-muted-foreground">
-            {t("{used} of {limit} on your plan", {
+          <span
+            className="text-sm tabular-nums text-muted-foreground"
+            title={t("Teammates on your plan")}
+          >
+            {t("{used} / {limit}", {
               used: String(data.bots.length),
               limit: String(data.teammateLimit.limit),
             })}

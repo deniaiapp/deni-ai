@@ -138,11 +138,14 @@ function TeammateFormBody({
     <RunPage
       title={existing ? t("Edit {name}", { name: existing.name }) : t("Add teammate")}
       description={
-        limit !== null
-          ? t("{used} of {limit} teammates on your plan", {
-              used: String(count),
-              limit: String(limit),
-            })
+        // Only while adding, and only with room left; at the limit the form says so below.
+        !existing && limit !== null && count < limit
+          ? t(
+              "{remaining, plural, one {You can add # more teammate on your plan.} other {You can add # more teammates on your plan.}}",
+              {
+                remaining: limit - count,
+              },
+            )
           : undefined
       }
     >

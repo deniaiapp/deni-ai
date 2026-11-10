@@ -561,6 +561,13 @@
       "when": 1794141932659,
       "tag": "0079_chats_message_count_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1794231292195,
+      "tag": "0080_reset_credit_expiry",
+      "breakpoints": true
     }
   ]
 }

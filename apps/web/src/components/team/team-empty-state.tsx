@@ -26,10 +26,7 @@ export function TeamEmptyState({
   const t = useExtracted();
 
   return (
-    <SettingsPageShell
-      title={t("Team")}
-      description={t("Create a team to share Pro access with your members.")}
-    >
+    <SettingsPageShell title={t("Team")}>
       {topSlot}
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">

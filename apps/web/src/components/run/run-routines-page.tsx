@@ -160,12 +160,6 @@ export function RunRoutinesPage() {
   return (
     <RunPage
       title={t("Routines")}
-      description={t(
-        "Recurring work a teammate does on a schedule, in your time zone ({timezone}).",
-        {
-          timezone: data.timezone,
-        },
-      )}
       actions={
         <Button onClick={() => setCreating(true)} disabled={creating}>
           <Plus className="size-4" />

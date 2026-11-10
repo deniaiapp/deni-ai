@@ -9,10 +9,17 @@ import { BillingFlashOfferBanner } from "./billing-flash-offer-banner";
 import { BillingMaxModeCard } from "./billing-max-mode-card";
 import { BillingPlansSection } from "./billing-plans-section";
 import { BillingResetCard } from "./billing-reset-card";
-import { BillingUsageSection } from "./billing-usage-section";
+import { BillingUsageSummary } from "./billing-usage-section";
 import { SubscriptionShredder } from "./subscription-shredder";
 import { useBillingPage } from "./use-billing-page";
 import { Card, CardDescription, CardHeader, CardTitle } from "@deniai/ui/components/card";
+import {
+  PageSection,
+  PageSectionContent,
+  PageSectionDescription,
+  PageSectionHeader,
+  PageSectionTitle,
+} from "@deniai/ui/components/page-section";
 import { Spinner } from "@deniai/ui/components/spinner";
 
 function BillingDisabled() {
@@ -72,33 +79,29 @@ function BillingPageContent() {
     buyMaxModeCredits,
     updateMaxModeAutoTopUp,
     pendingPlanId,
-    plusInterval,
+    planInterval,
     plusMonthly,
     portal,
-    proInterval,
     proMonthly,
     rawPlanId,
     resume,
     selectedPlusPlan,
     selectedProPlan,
     setHasAgreed,
-    setPlusInterval,
-    setProInterval,
+    setPlanInterval,
     setShredOpen,
     showYearlyPlans,
     shredOpen,
     statusQuery,
     usageQuery,
     usageTier,
-    usageTierLabel,
   } = useBillingPage();
 
   const title = t("Billing");
-  const description = t("Manage your subscription and usage");
 
   if (loading) {
     return (
-      <SettingsPageShell title={title} description={description} className="max-w-6xl">
+      <SettingsPageShell title={title} width="wide">
         <div className="flex justify-center py-8">
           <Spinner />
         </div>
@@ -107,7 +110,7 @@ function BillingPageContent() {
   }
 
   return (
-    <SettingsPageShell title={title} description={description} className="max-w-6xl">
+    <SettingsPageShell title={title} width="wide">
       {flashOffer && (
         <BillingFlashOfferBanner
           limit={flashOffer.limit}
@@ -117,52 +120,70 @@ function BillingPageContent() {
         />
       )}
 
-      <BillingCurrentPlanCard
-        isEducation={isEducation}
-        isOnTeamPlan={isOnTeamPlan}
-        rawPlanId={rawPlanId}
-        currentPlan={currentPlan}
-        activePlanId={activePlanId}
-        cancelDate={cancelDate}
-        currentPeriodEnd={statusQuery.data?.currentPeriodEnd}
-        stripeCustomerId={statusQuery.data?.stripeCustomerId}
-        hasActiveSubscription={hasActiveSubscription}
-        portalPending={portal.isPending}
-        cancelPending={cancel.isPending || shredOpen}
-        resumePending={resume.isPending}
-        onPortal={() => portal.mutate()}
-        onCancel={handleCancelClick}
-        onResume={() => resume.mutate()}
-      />
+      <PageSection layout="stacked">
+        <PageSectionHeader>
+          <PageSectionTitle>{t("Overview")}</PageSectionTitle>
+        </PageSectionHeader>
+        <PageSectionContent>
+          <BillingCurrentPlanCard
+            isEducation={isEducation}
+            isOnTeamPlan={isOnTeamPlan}
+            rawPlanId={rawPlanId}
+            currentPlan={currentPlan}
+            activePlanId={activePlanId}
+            cancelDate={cancelDate}
+            currentPeriodEnd={statusQuery.data?.currentPeriodEnd}
+            stripeCustomerId={statusQuery.data?.stripeCustomerId}
+            hasActiveSubscription={hasActiveSubscription}
+            portalPending={portal.isPending}
+            cancelPending={cancel.isPending || shredOpen}
+            resumePending={resume.isPending}
+            onPortal={() => portal.mutate()}
+            onCancel={handleCancelClick}
+            onResume={() => resume.mutate()}
+          >
+            <BillingUsageSummary
+              isLoading={usageQuery.isLoading}
+              errorMessage={usageQuery.error ? localizeError(usageQuery.error) : undefined}
+              usageItem={usageItem}
+              maxModeEnabled={maxModeQuery.data?.enabled}
+              pool={usageQuery.data?.pool}
+            />
+          </BillingCurrentPlanCard>
+          {/* Free plan only: a verified card raises the Free allowance. */}
+          <CardVerificationCard
+            isFreeTier={usageTier === "free"}
+            hasVerifiedPaymentMethod={usageQuery.data?.hasVerifiedPaymentMethod ?? false}
+            signupLimited={usageQuery.data?.signupLimited ?? false}
+          />
+        </PageSectionContent>
+      </PageSection>
 
-      <BillingUsageSection
-        usageTierLabel={usageTierLabel}
-        isLoading={usageQuery.isLoading}
-        errorMessage={usageQuery.error ? localizeError(usageQuery.error) : undefined}
-        usageItem={usageItem}
-        maxModeEnabled={maxModeQuery.data?.enabled}
-        pool={usageQuery.data?.pool}
-      />
-
-      <CardVerificationCard
-        isFreeTier={usageTier === "free"}
-        hasVerifiedPaymentMethod={usageQuery.data?.hasVerifiedPaymentMethod ?? false}
-        signupLimited={usageQuery.data?.signupLimited ?? false}
-      />
-
-      <BillingResetCard />
-
-      {maxModeQuery.data?.eligible && (
-        <BillingMaxModeCard
-          data={maxModeQuery.data}
-          onToggle={handleMaxModeToggle}
-          isToggling={enableMaxMode.isPending || disableMaxMode.isPending}
-          onBuy={(credits, saveCard) => buyMaxModeCredits.mutate({ credits, saveCard })}
-          buyPending={buyMaxModeCredits.isPending || buyMaxModeCredits.isSuccess}
-          onSaveAutoTopUp={(settings) => updateMaxModeAutoTopUp.mutate(settings)}
-          autoTopUpPending={updateMaxModeAutoTopUp.isPending}
-        />
-      )}
+      <PageSection layout="stacked">
+        <PageSectionHeader>
+          <PageSectionTitle>{t("Extra usage")}</PageSectionTitle>
+          <PageSectionDescription>
+            {t("Ways to keep going when this month's usage runs low.")}
+          </PageSectionDescription>
+        </PageSectionHeader>
+        {/* Two columns once the section is wide enough; a last card on its own spans both. */}
+        <PageSectionContent className="@container/extras">
+          <div className="grid items-start gap-4 @3xl/extras:grid-cols-2 @3xl/extras:[&>*:last-child:nth-child(odd)]:col-span-2">
+            <BillingResetCard />
+            {maxModeQuery.data?.eligible && (
+              <BillingMaxModeCard
+                data={maxModeQuery.data}
+                onToggle={handleMaxModeToggle}
+                isToggling={enableMaxMode.isPending || disableMaxMode.isPending}
+                onBuy={(credits, saveCard) => buyMaxModeCredits.mutate({ credits, saveCard })}
+                buyPending={buyMaxModeCredits.isPending || buyMaxModeCredits.isSuccess}
+                onSaveAutoTopUp={(settings) => updateMaxModeAutoTopUp.mutate(settings)}
+                autoTopUpPending={updateMaxModeAutoTopUp.isPending}
+              />
+            )}
+          </div>
+        </PageSectionContent>
+      </PageSection>
 
       <BillingPlansSection
         erroredMessage={errored?.message}
@@ -170,12 +191,10 @@ function BillingPageContent() {
         goMonthly={goMonthly}
         selectedPlusPlan={selectedPlusPlan}
         plusMonthly={plusMonthly}
-        plusInterval={plusInterval}
-        onPlusIntervalChange={setPlusInterval}
         selectedProPlan={selectedProPlan}
         proMonthly={proMonthly}
-        proInterval={proInterval}
-        onProIntervalChange={setProInterval}
+        interval={planInterval}
+        onIntervalChange={setPlanInterval}
         isOnTeamPlan={isOnTeamPlan}
         isEducation={isEducation}
         planActions={{

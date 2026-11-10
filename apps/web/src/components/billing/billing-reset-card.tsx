@@ -1,12 +1,19 @@
-import { Gift, RotateCcw } from "lucide-react";
-import { useExtracted } from "use-intl";
+import { ChevronDown, Gift, RotateCcw } from "lucide-react";
+import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState, type FormEvent } from "react";
 import { toast } from "sonner";
+import { formatAppDate } from "@/lib/format-date";
 import type { ResetCreditPlanTier } from "@/lib/reset-credits";
 import { trpc } from "@/lib/trpc/react";
+import { cn } from "@/lib/utils";
 import { Badge } from "@deniai/ui/components/badge";
 import { Button } from "@deniai/ui/components/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@deniai/ui/components/collapsible";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@deniai/ui/components/field";
 import { Input } from "@deniai/ui/components/input";
 import {
@@ -34,12 +41,14 @@ const planTiers = ["free", "go", "plus", "pro"] as const satisfies readonly Rese
 
 export function BillingResetCard() {
   const t = useExtracted();
+  const locale = useLocale();
   const localizeError = useLocalizeError();
   const utils = trpc.useUtils();
   const [targetType, setTargetType] = useState<ResetTargetType>("all");
   const [planTier, setPlanTier] = useState<ResetCreditPlanTier>("plus");
   const [userIdentifier, setUserIdentifier] = useState("");
   const [quantity, setQuantity] = useState("1");
+  const [open, setOpen] = useState(true);
 
   const statusQuery = trpc.resetCredits.status.useQuery(undefined, {
     staleTime: 30_000,
@@ -141,161 +150,198 @@ export function BillingResetCard() {
 
   return (
     <Card>
-      <CardHeader className="gap-0!">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-sm font-medium">
-              <RotateCcw className="size-4" />
-              {t("Usage reset credits")}
-            </CardTitle>
-            <CardDescription className="mt-1">
-              {t("Reset credits can clear your Deni AI chat and Flixa usage immediately.")}
-            </CardDescription>
-          </div>
-          <Badge variant="secondary" className="shrink-0 tabular-nums">
-            {status.resetCredits}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <div className="flex flex-col gap-3 rounded-xl border border-border/70 bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="font-medium">
-              {t("{count} reset credits available", { count: String(status.resetCredits) })}
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("Use one credit to reset your current usage limits.")}
-            </p>
-          </div>
-          <Button
-            disabled={status.resetCredits < 1 || isBusy}
-            onClick={() => consumeResetCredit.mutate()}
-          >
-            {consumeResetCredit.isPending ? (
-              <Spinner data-icon="inline-start" />
-            ) : (
-              <RotateCcw data-icon="inline-start" />
-            )}
-            {t("Reset limits now")}
-          </Button>
-        </div>
-
-        {status.isAdmin && (
-          <>
-            <Separator />
-            <div className="space-y-4">
-              <div>
-                <h3 className="flex items-center gap-2 text-sm font-medium">
-                  <Gift className="size-4" />
-                  {t("Admin reset credits")}
-                </h3>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t("Grant reset credits to all users, a plan, or one specific user.")}
-                </p>
-              </div>
-
-              <form onSubmit={handleGrant}>
-                <FieldGroup className="gap-4">
-                  <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_9rem]">
-                    <Field>
-                      <FieldLabel htmlFor="reset-target-type">{t("Recipients")}</FieldLabel>
-                      <Select
-                        value={targetType}
-                        onValueChange={(value) => setTargetType(value as ResetTargetType)}
-                      >
-                        <SelectTrigger id="reset-target-type" className="w-full">
-                          <SelectValue>{targetTypeLabels[targetType]}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {resetTargetTypes.map((type) => (
-                              <SelectItem key={type} value={type}>
-                                {targetTypeLabels[type]}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                    </Field>
-                    <Field>
-                      <FieldLabel htmlFor="reset-credit-quantity">
-                        {t("Credits per user")}
-                      </FieldLabel>
-                      <Input
-                        id="reset-credit-quantity"
-                        type="number"
-                        min={1}
-                        max={100}
-                        value={quantity}
-                        onChange={(event) => setQuantity(event.target.value)}
-                      />
-                    </Field>
-                  </div>
-
-                  {targetType === "plan" && (
-                    <Field>
-                      <FieldLabel htmlFor="reset-plan-tier">{t("Plan")}</FieldLabel>
-                      <Select
-                        value={planTier}
-                        onValueChange={(value) => setPlanTier(value as ResetCreditPlanTier)}
-                      >
-                        <SelectTrigger id="reset-plan-tier" className="w-full">
-                          <SelectValue>{planTierLabels[planTier]}</SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            {planTiers.map((tier) => (
-                              <SelectItem key={tier} value={tier}>
-                                {planTierLabels[tier]}
-                              </SelectItem>
-                            ))}
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
-                      <FieldDescription>
-                        {t(
-                          "Paid plans include active subscriptions and their current grace period.",
-                        )}
-                      </FieldDescription>
-                    </Field>
-                  )}
-
-                  {targetType === "user" && (
-                    <Field>
-                      <FieldLabel htmlFor="reset-user-identifier">
-                        {t("User email or ID")}
-                      </FieldLabel>
-                      <Input
-                        id="reset-user-identifier"
-                        value={userIdentifier}
-                        onChange={(event) => setUserIdentifier(event.target.value)}
-                        placeholder={t("name@example.com or user ID")}
-                        autoComplete="off"
-                      />
-                    </Field>
-                  )}
-
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-xs text-muted-foreground">
-                      {t(
-                        "The selected users receive credits; their usage is not reset until a credit is used.",
-                      )}
-                    </p>
-                    <Button type="submit" disabled={isBusy}>
-                      {grantResetCredits.isPending ? (
-                        <Spinner data-icon="inline-start" />
-                      ) : (
-                        <Gift data-icon="inline-start" />
-                      )}
-                      {t("Grant reset credits")}
-                    </Button>
-                  </div>
-                </FieldGroup>
-              </form>
+      <Collapsible
+        open={open}
+        onOpenChange={setOpen}
+        className="flex flex-col gap-(--card-spacing)"
+      >
+        <CardHeader className="gap-0!">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <RotateCcw className="size-4" />
+                {t("Usage reset credits")}
+              </CardTitle>
             </div>
-          </>
-        )}
-      </CardContent>
+            <div className="flex shrink-0 items-center gap-2">
+              {status.credits.length > 0 && (
+                <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 tabular-nums dark:text-emerald-300 next:border-transparent next:bg-success/15 next:text-success">
+                  {t("{count} available", { count: String(status.credits.length) })}
+                </Badge>
+              )}
+              <CollapsibleTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={open ? t("Hide reset credits") : t("Show reset credits")}
+                  />
+                }
+              >
+                <ChevronDown
+                  className={cn("transition-transform duration-200", open && "rotate-180")}
+                />
+              </CollapsibleTrigger>
+            </div>
+          </div>
+        </CardHeader>
+        <CollapsibleContent>
+          <CardContent className="space-y-6">
+            {status.credits.length > 0 ? (
+              <ul className="space-y-2">
+                {status.credits.map((credit) => {
+                  const using =
+                    consumeResetCredit.isPending &&
+                    consumeResetCredit.variables?.creditId === credit.id;
+                  return (
+                    <li
+                      key={credit.id}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-muted/30 px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="font-medium">{t("Full reset")}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t("Expires {date}", {
+                            date: formatAppDate(credit.expiresAt, locale, {
+                              month: "numeric",
+                              day: "numeric",
+                            }),
+                          })}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="shrink-0"
+                        disabled={isBusy}
+                        onClick={() => consumeResetCredit.mutate({ creditId: credit.id })}
+                      >
+                        {using && <Spinner data-icon="inline-start" />}
+                        {t("Use reset")}
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="rounded-xl border border-dashed border-border/70 px-4 py-6 text-center text-sm text-muted-foreground">
+                {t("No resets available.")}
+              </p>
+            )}
+
+            {status.isAdmin && (
+              <>
+                <Separator />
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="flex items-center gap-2 text-sm font-medium">
+                      <Gift className="size-4" />
+                      {t("Admin reset credits")}
+                    </h3>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {t("Grant reset credits to all users, a plan, or one specific user.")}
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleGrant}>
+                    <FieldGroup className="gap-4">
+                      {/* The count column grows to fit its label on one line ("1ユーザーあたりの回数"). */}
+                      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(9rem,auto)]">
+                        <Field>
+                          <FieldLabel htmlFor="reset-target-type">{t("Recipients")}</FieldLabel>
+                          <Select
+                            value={targetType}
+                            onValueChange={(value) => setTargetType(value as ResetTargetType)}
+                          >
+                            <SelectTrigger id="reset-target-type" className="w-full">
+                              <SelectValue>{targetTypeLabels[targetType]}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {resetTargetTypes.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {targetTypeLabels[type]}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                        </Field>
+                        <Field>
+                          <FieldLabel htmlFor="reset-credit-quantity" className="whitespace-nowrap">
+                            {t("Credits per user")}
+                          </FieldLabel>
+                          <Input
+                            id="reset-credit-quantity"
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={quantity}
+                            onChange={(event) => setQuantity(event.target.value)}
+                          />
+                        </Field>
+                      </div>
+
+                      {targetType === "plan" && (
+                        <Field>
+                          <FieldLabel htmlFor="reset-plan-tier">{t("Plan")}</FieldLabel>
+                          <Select
+                            value={planTier}
+                            onValueChange={(value) => setPlanTier(value as ResetCreditPlanTier)}
+                          >
+                            <SelectTrigger id="reset-plan-tier" className="w-full">
+                              <SelectValue>{planTierLabels[planTier]}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectGroup>
+                                {planTiers.map((tier) => (
+                                  <SelectItem key={tier} value={tier}>
+                                    {planTierLabels[tier]}
+                                  </SelectItem>
+                                ))}
+                              </SelectGroup>
+                            </SelectContent>
+                          </Select>
+                          <FieldDescription>
+                            {t(
+                              "Paid plans include active subscriptions and their current grace period.",
+                            )}
+                          </FieldDescription>
+                        </Field>
+                      )}
+
+                      {targetType === "user" && (
+                        <Field>
+                          <FieldLabel htmlFor="reset-user-identifier">
+                            {t("User email or ID")}
+                          </FieldLabel>
+                          <Input
+                            id="reset-user-identifier"
+                            value={userIdentifier}
+                            onChange={(event) => setUserIdentifier(event.target.value)}
+                            placeholder={t("name@example.com or user ID")}
+                            autoComplete="off"
+                          />
+                        </Field>
+                      )}
+
+                      <div className="flex justify-end">
+                        <Button type="submit" disabled={isBusy}>
+                          {grantResetCredits.isPending ? (
+                            <Spinner data-icon="inline-start" />
+                          ) : (
+                            <Gift data-icon="inline-start" />
+                          )}
+                          {t("Grant reset credits")}
+                        </Button>
+                      </div>
+                    </FieldGroup>
+                  </form>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }

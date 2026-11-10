@@ -98,11 +98,18 @@ function SettingsNavFooter({ className, ...props }: React.ComponentProps<"div">)
   );
 }
 
+/**
+ * The page column, capped for comfortable reading. A page that lays out side-by-side
+ * cards opts out by rendering an element with `data-settings-width="wide"`.
+ */
 function SettingsContent({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="settings-content"
-      className={cn("flex w-full max-w-[52rem] min-w-0 flex-1 flex-col", className)}
+      className={cn(
+        "flex w-full max-w-[52rem] min-w-0 flex-1 flex-col has-data-[settings-width=wide]:max-w-none",
+        className,
+      )}
       {...props}
     />
   );

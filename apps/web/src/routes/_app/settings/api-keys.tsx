@@ -17,13 +17,7 @@ import {
 } from "@deniai/ui/components/alert-dialog";
 import { Button } from "@deniai/ui/components/button";
 import { SettingsPageShell } from "@/components/settings-page-shell";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@deniai/ui/components/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@deniai/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -103,7 +97,6 @@ function ApiKeysSettingsPage() {
   return (
     <SettingsPageShell
       title={t("API Keys")}
-      description={t("Generate API keys for the Flixa extension and other integrations.")}
       actions={
         <Button
           size="sm"
@@ -120,7 +113,6 @@ function ApiKeysSettingsPage() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-sm font-medium">{t("Your API Keys")}</CardTitle>
-            <CardDescription>{t("Keys you've created for external integrations.")}</CardDescription>
           </div>
           <Button
             size="sm"
@@ -152,7 +144,6 @@ function ApiKeysSettingsPage() {
                 <Key className="size-5 text-muted-foreground" />
               </div>
               <p className="font-medium text-sm">{t("No API keys yet.")}</p>
-              <p className="text-xs mt-1">{t("Create a key to connect the Flixa extension.")}</p>
             </div>
           ) : (
             <div className="space-y-2">
