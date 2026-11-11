@@ -27,6 +27,7 @@ export const Route = createFileRoute("/_auth/private-beta")({
     if (authState.betaAccess) {
       throw redirect({ href: "/chat" });
     }
+    return { paidPlans: authState.betaPaidPlans };
   },
   head: () => ({ meta: [{ title: "Deni AI" }] }),
   component: PrivateBetaPage,
@@ -37,6 +38,7 @@ function PrivateBetaPage() {
   const { push } = useRouter();
   const localizeError = useLocalizeError();
   const { data: session } = authClient.useSession();
+  const { paidPlans } = Route.useRouteContext();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const user = session?.user;
   const account = user?.isAnonymous ? t("a guest account") : (user?.email ?? "—");
@@ -65,9 +67,13 @@ function PrivateBetaPage() {
           </span>
           <h1 className="text-2xl leading-8 font-semibold">{t("Deni AI v8 is in private beta")}</h1>
           <p className="text-sm text-muted-foreground">
-            {t(
-              "The new Deni AI is open to invited testers only for now. Your account has not been invited, so keep using Deni AI v7: your chats, projects and plan are the same there.",
-            )}
+            {paidPlans
+              ? t(
+                  "The new Deni AI is open to subscribers and invited testers for now. Subscribe to a paid plan to try it, or keep using Deni AI v7: your chats, projects and plan are the same there.",
+                )
+              : t(
+                  "The new Deni AI is open to invited testers only for now. Your account has not been invited, so keep using Deni AI v7: your chats, projects and plan are the same there.",
+                )}
           </p>
         </div>
 

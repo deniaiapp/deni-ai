@@ -143,6 +143,12 @@ export const env = createEnv({
      */
     BETA_ACCESS_REQUIRED: z.stringbool().default(false),
     /**
+     * With the gate on, `true` also lets in every account on a paid plan (Go, Plus,
+     * Pro, or a team plan; not Go through education), so new subscribers get in
+     * without an invitation. Default off.
+     */
+    BETA_ACCESS_PAID_PLANS: z.stringbool().default(false),
+    /**
      * `false` turns `/api/cron/*` into no-ops and keeps the in-process jobs that
      * write the shared database (usage recovery, storage and guest cleanup) from
      * starting. For a deployment that shares its database with one that already

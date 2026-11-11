@@ -13,6 +13,8 @@ export type AuthState = {
   isAdmin: boolean;
   /** Run mode is on for this deployment (`RUN_ENABLED`). */
   runEnabled: boolean;
+  /** The beta gate also lets in paying accounts (`BETA_ACCESS_PAID_PLANS`). */
+  betaPaidPlans: boolean;
 };
 
 // better-auth pulls in the database, mail templates and Stripe; load it on the
@@ -34,6 +36,7 @@ const getAuthStateFn = createServerFn({ method: "GET" }).handler(async (): Promi
     betaAccess: user ? await hasBetaAccess(user) : false,
     isAdmin: isBetaAdmin(user),
     runEnabled: env.RUN_ENABLED,
+    betaPaidPlans: env.BETA_ACCESS_PAID_PLANS,
   };
 });
 

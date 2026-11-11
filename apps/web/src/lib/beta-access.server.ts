@@ -22,6 +22,17 @@ export function isBetaAccessRequired() {
   return env.BETA_ACCESS_REQUIRED;
 }
 
+/**
+ * Whether the account pays for a plan: Go, Plus, Pro, or a team plan it belongs to
+ * (a canceled plan counts until its period ends). Go through education is free, so
+ * it does not count.
+ */
+export async function isOnPaidPlan(userId: string) {
+  const { getSubscriptionTier, hasEducationGo } = await import("@/lib/usage");
+  if ((await getSubscriptionTier(userId)) === "free") return false;
+  return !(await hasEducationGo(userId));
+}
+
 /** Operators (`ADMIN_EMAILS` / `ADMIN_EMAIL_DOMAINS`, verified) always have access and manage testers. */
 export function isBetaAdmin(user: Omit<BetaAccessUser, "id"> | null | undefined) {
   return isVerifiedAdmin(user, isAdminEmail);
@@ -48,7 +59,9 @@ async function loadStore(): Promise<BetaAccessStore> {
  * Whether a signed-in user may use this deployment. Always true without the
  * gate. With it: never for guests; always for admins; otherwise a grant linked
  * to the user, or one for their verified email (linked to them on this first
- * match, so it follows the account if the email later changes).
+ * match, so it follows the account if the email later changes), or, with
+ * `BETA_ACCESS_PAID_PLANS`, a paid plan (checked last, so invited testers cost
+ * no billing query).
  */
 export async function hasBetaAccess(
   user: BetaAccessUser,
@@ -56,7 +69,16 @@ export async function hasBetaAccess(
     required = isBetaAccessRequired(),
     store,
     now = Date.now(),
-  }: { required?: boolean; store?: BetaAccessStore; now?: number } = {},
+    paidPlans = env.BETA_ACCESS_PAID_PLANS,
+    isPaying = isOnPaidPlan,
+  }: {
+    required?: boolean;
+    store?: BetaAccessStore;
+    now?: number;
+    /** `BETA_ACCESS_PAID_PLANS`: paying accounts get in without an invitation. */
+    paidPlans?: boolean;
+    isPaying?: (userId: string) => Promise<boolean>;
+  } = {},
 ): Promise<boolean> {
   if (!required) return true;
   if (user.isAnonymous) return false;
@@ -70,7 +92,8 @@ export async function hasBetaAccess(
       user.emailVerified === true &&
       user.email &&
       (await grants.claimEmailGrant(normalizeBetaEmail(user.email), user.id)),
-    );
+    ) ||
+    (paidPlans === true && (await isPaying(user.id)));
   if (granted) grantedUntil.set(user.id, now + GRANT_CACHE_TTL_MS);
   else grantedUntil.delete(user.id);
   return granted;

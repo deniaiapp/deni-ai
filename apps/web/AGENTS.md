@@ -153,6 +153,7 @@ at the repository root.
 - `BETA_ACCESS_REQUIRED=true` turns on the gate (default off). Access: verified
   admins (`isVerifiedAdmin` + `ADMIN_EMAILS` / `ADMIN_EMAIL_DOMAINS`) or a
   `beta_access` row (by user id, or by verified email, linked on first match);
+  with `BETA_ACCESS_PAID_PLANS=true`, also any paid plan (`isOnPaidPlan`);
   never guests. Logic: `src/lib/beta-access.server.ts`; paths and constants:
   `src/lib/beta-access.ts`; admin page: Settings > Beta testers
   (`betaAccess` tRPC router).

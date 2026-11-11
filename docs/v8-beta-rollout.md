@@ -25,6 +25,11 @@ accounts may use v8. What stays as it is during the beta:
   email in **Settings → Beta testers**, before or after the person signs up; the row
   is linked to the account (`user_id`) the first time a signed-in user with that
   **verified** email is checked, and then follows the account. Guests never have access.
+- Paying accounts (`BETA_ACCESS_PAID_PLANS=true`, default off): every account on Go,
+  Plus, Pro or a team plan it belongs to also gets in without an invitation, so new
+  subscribers join on their own. A canceled plan counts until its period ends; Go
+  through education (free) does not count. Checked after invitations, so invited
+  testers cost no billing query; a refused user is checked again on each request.
 - Pages: the `/_app` route guard sends everyone else to `/private-beta`, which shows the
   account they are signed in with, **Go to Deni AI (v7)** (`NEXT_PUBLIC_V7_URL`) and
   sign-out.

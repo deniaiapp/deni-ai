@@ -5,8 +5,14 @@ vi.mock("@/env", () => ({
   env: { ADMIN_EMAILS: "ops@example.com", BETA_ACCESS_REQUIRED: true },
 }));
 
+const plan = vi.hoisted(() => ({ tier: "free", education: false }));
+vi.mock("@/lib/usage", () => ({
+  getSubscriptionTier: async () => plan.tier,
+  hasEducationGo: async () => plan.education,
+}));
+
 const { isBetaGatedServerPath, isGuestSignInPath } = await import("@/lib/beta-access");
-const { createBetaAccessGate, forgetBetaAccess, hasBetaAccess } =
+const { createBetaAccessGate, forgetBetaAccess, hasBetaAccess, isOnPaidPlan } =
   await import("@/lib/beta-access.server");
 
 type Grant = { id: string; email: string; userId: string | null };
@@ -31,6 +37,8 @@ beforeEach(() => {
   vi.mocked(store.hasUserGrant).mockClear();
   vi.mocked(store.claimEmailGrant).mockClear();
   for (const id of ["u1", "u2", "ops", "guest"]) forgetBetaAccess(id);
+  plan.tier = "free";
+  plan.education = false;
 });
 
 const tester = { id: "u1", email: "Tester@Example.com", emailVerified: true, isAnonymous: false };
@@ -172,4 +180,42 @@ test("guest sign-in is refused while the gate is on", async () => {
     new Request("http://localhost/api/auth/sign-in/anonymous", { method: "POST" });
   expect((await gate().run(request()))?.status).toBe(403);
   expect(await gate({ required: false }).run(request())).toBeNull();
+});
+
+test("with BETA_ACCESS_PAID_PLANS, a paying account gets in without an invitation", async () => {
+  const isPaying = vi.fn(async (userId: string) => userId === "u2");
+  const subscriber = { id: "u2", email: "payer@example.com", emailVerified: true };
+  expect(
+    await hasBetaAccess(subscriber, { required: true, store, paidPlans: true, isPaying }),
+  ).toBe(true);
+  forgetBetaAccess("u2");
+  // Off by default: the same account needs an invitation.
+  expect(
+    await hasBetaAccess(subscriber, { required: true, store, paidPlans: false, isPaying }),
+  ).toBe(false);
+  expect(isPaying).toHaveBeenCalledTimes(1);
+});
+
+test("invited testers and guests never trigger the billing check", async () => {
+  const isPaying = vi.fn(async () => true);
+  grants.push({ id: "g1", email: "tester@example.com", userId: "u1" });
+  expect(await hasBetaAccess(tester, { required: true, store, paidPlans: true, isPaying })).toBe(
+    true,
+  );
+  const guest = { id: "guest", isAnonymous: true };
+  expect(await hasBetaAccess(guest, { required: true, store, paidPlans: true, isPaying })).toBe(
+    false,
+  );
+  expect(isPaying).not.toHaveBeenCalled();
+});
+
+test("a paid plan is any tier above Free except Go through education", async () => {
+  expect(await isOnPaidPlan("u1")).toBe(false);
+  plan.tier = "go";
+  plan.education = true;
+  expect(await isOnPaidPlan("u1")).toBe(false);
+  plan.education = false;
+  expect(await isOnPaidPlan("u1")).toBe(true);
+  plan.tier = "pro";
+  expect(await isOnPaidPlan("u1")).toBe(true);
 });
