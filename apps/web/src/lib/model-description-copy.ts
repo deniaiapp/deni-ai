@@ -21,12 +21,6 @@ export function useModelDescriptionCopy() {
     "Fast, cost-efficient GPT-6 model for high-volume tasks.": t(
       "Fast, cost-efficient GPT-6 model for high-volume tasks.",
     ),
-    "Balanced GPT-5.6 model for everyday work at half the cost of Sol.": t(
-      "Balanced GPT-5.6 model for everyday work at half the cost of Sol.",
-    ),
-    "Fastest, most affordable GPT-5.6 model for high-volume tasks.": t(
-      "Fastest, most affordable GPT-5.6 model for high-volume tasks.",
-    ),
     "For complex coding tasks": t("For complex coding tasks"),
     "A version of GPT-5.1-Codex optimized for long-running tasks.": t(
       "A version of GPT-5.1-Codex optimized for long-running tasks.",
@@ -37,6 +31,9 @@ export function useModelDescriptionCopy() {
     "Best for high volume tasks": t("Best for high volume tasks"),
     "Anthropic's flagship for agentic coding, computer use, and knowledge work.": t(
       "Anthropic's flagship for agentic coding, computer use, and knowledge work.",
+    ),
+    "Anthropic's most capable model for demanding reasoning and long-horizon agentic work.": t(
+      "Anthropic's most capable model for demanding reasoning and long-horizon agentic work.",
     ),
     "Successor to Claude Fable 5 for long-running agentic coding, knowledge work, and research.": t(
       "Successor to Claude Fable 5 for long-running agentic coding, knowledge work, and research.",

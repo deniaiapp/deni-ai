@@ -10,7 +10,7 @@ vi.mock("@/hooks/use-available-models", () => ({
 }));
 vi.mock("@/hooks/use-model-health", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/hooks/use-model-health")>()),
-  useModelHealth: () => ({ byModel: {}, byProvider: {} }),
+  useModelHealth: () => ({ byModel: {}, byFamily: {}, byProvider: {} }),
 }));
 vi.mock("@/lib/model-description-copy", () => ({
   useModelDescriptionCopy: () => ({}),

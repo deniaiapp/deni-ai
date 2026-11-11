@@ -107,7 +107,7 @@ export type ModelDefinition = {
   usageTier?: UsageTier;
   /**
    * When true, the model supports OpenAI Pro reasoning mode
-   * (`reasoning.mode: "pro"`), available on GPT-5.6 and GPT-6. Enabling Pro
+   * (`reasoning.mode: "pro"`), available on GPT-6. Enabling Pro
    * multiplies usage by {@link OPENAI_PRO_MODE_MULTIPLIER} on top of the base
    * token multiplier.
    */
@@ -206,43 +206,6 @@ const catalogModels: readonly ModelDefinition[] = [
     contextWindow: 1_050_000,
   },
   {
-    name: "GPT-5.6 Sol",
-    value: "gpt-5.6-sol",
-    usageTier: 4,
-    author: "openai",
-    proOnly: true,
-    description: "OpenAI flagship for complex reasoning, coding, and agentic work.",
-    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
-    supportsProMode: true,
-    supportsFastMode: true,
-    contextWindow: 1_050_000,
-  },
-  {
-    name: "GPT-5.6 Terra",
-    value: "gpt-5.6-terra",
-    usageTier: 2,
-    author: "openai",
-    proOnly: true,
-    description: "Balanced GPT-5.6 model for everyday work at half the cost of Sol.",
-    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
-    supportsProMode: true,
-    supportsFastMode: true,
-    contextWindow: 1_050_000,
-  },
-  {
-    name: "GPT-5.6 Luna",
-    value: "gpt-5.6-luna",
-    usageTier: 1,
-    author: "openai",
-    proOnly: true,
-    description: "Fastest, most affordable GPT-5.6 model for high-volume tasks.",
-    default: true,
-    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
-    supportsProMode: true,
-    supportsFastMode: true,
-    contextWindow: 1_050_000,
-  },
-  {
     name: "Gemini 3.8 Flash",
     value: "gemini-3.8-flash",
     usageTier: 1,
@@ -272,6 +235,18 @@ const catalogModels: readonly ModelDefinition[] = [
     contextWindow: 1_000_000,
   },
   {
+    name: "Claude Fable 5.2",
+    value: "claude-fable-5.2",
+    usageTier: 6,
+    author: "anthropic",
+    description:
+      "Anthropic's most capable model for demanding reasoning and long-horizon agentic work.",
+    paidOnly: true,
+    featured: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
+    contextWindow: 1_000_000,
+  },
+  {
     name: "Claude Fable 5.1",
     value: "claude-fable-5.1",
     usageTier: 7,
@@ -279,7 +254,6 @@ const catalogModels: readonly ModelDefinition[] = [
     description:
       "Successor to Claude Fable 5 for long-running agentic coding, knowledge work, and research.",
     paidOnly: true,
-    featured: true,
     efforts: ["low", "medium", "high", "max"],
     contextWindow: 1_000_000,
   },
@@ -489,7 +463,7 @@ export const OPENAI_LONG_CONTEXT_MULTIPLIER = 2;
 const OPENAI_LONG_CONTEXT_MIN_WINDOW = 1_000_000;
 
 /**
- * GPT-5.6 and GPT-6 Pro reasoning modes multiply billed usage by this factor
+ * GPT-6 Pro reasoning modes multiply billed usage by this factor
  * on top of the model's base token multiplier (product policy: base × 3).
  */
 export const OPENAI_PRO_MODE_MULTIPLIER = 3;

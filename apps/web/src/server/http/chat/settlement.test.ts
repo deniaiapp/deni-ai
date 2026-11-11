@@ -256,7 +256,7 @@ const { clearChatGeneration, isCurrentChatGeneration, recordPromptUsage } =
 beforeEach(() => {
   vi.clearAllMocks();
   // Forget the provider usage an earlier test reported for the shared chat and model.
-  recordPromptUsage("user:chat:gpt-5.6-luna", { cacheReadTokens: 0 }, 0);
+  recordPromptUsage("user:chat:gpt-6-luna", { cacheReadTokens: 0 }, 0);
   state.activeGenerationId = null;
   state.stopRequestedAt = null;
   state.mode = "stopped";
@@ -285,7 +285,7 @@ function messagesRequest(messages: UIMessage[], body: Record<string, unknown> = 
   return new Request("http://localhost/api/chat", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ id: "chat", model: "gpt-5.6-luna", messages, ...body }),
+    body: JSON.stringify({ id: "chat", model: "gpt-6-luna", messages, ...body }),
   });
 }
 
@@ -817,7 +817,7 @@ test.each([false, true])(
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           id: "chat",
-          model: "gpt-5.6-luna",
+          model: "gpt-6-luna",
           trigger: "regenerate-message",
           messageId: "answer",
           messages: [question],

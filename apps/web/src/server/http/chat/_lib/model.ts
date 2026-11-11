@@ -233,7 +233,7 @@ export async function resolveChatModelContext({
     throw new ChatRouteError(500, { error: "Unable to check usage" });
   }
 
-  // OpenRouter exposes GPT-5.6 and GPT-6 Pro as `*-pro`.
+  // OpenRouter exposes GPT-6 Pro as `*-pro`.
   const resolvedModelId =
     useProMode && usesOpenRouter ? `${selectedModel.value}-pro` : selectedModel.value;
 

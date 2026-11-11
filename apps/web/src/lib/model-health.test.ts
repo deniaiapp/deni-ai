@@ -19,12 +19,12 @@ const result = (model: string, available = true) => ({
 test("keeps the latest result per probed model in probe order", () => {
   const first = new Date("2026-01-01T00:00:00Z");
   const second = new Date("2026-01-01T00:05:00Z");
-  recordModelHealth(result("gpt-5.6-luna"), first);
+  recordModelHealth(result("gemini-3.8-flash"), first);
   recordModelHealth(result("gpt-6-luna"), first);
   recordModelHealth(result("gpt-6-luna", false), second);
   expect(getModelHealth()).toEqual([
     { ...result("gpt-6-luna", false), checkedAt: second },
-    { ...result("gpt-5.6-luna"), checkedAt: first },
+    { ...result("gemini-3.8-flash"), checkedAt: first },
   ]);
 });
 
