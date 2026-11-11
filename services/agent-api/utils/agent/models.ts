@@ -282,10 +282,49 @@ export function isPremiumModelDefinition(model: ModelDefinition | undefined): bo
   return isPremiumUsageTier(model?.usageTier);
 }
 
+/** End of the v8 launch promotions: the last day they apply is 2026-12-01 (JST). */
+const V8_LAUNCH_ENDS_AT = new Date('2026-12-02T00:00:00+09:00');
+
+/**
+ * Limited-time usage discounts on top of a model's tier, mirroring Deni AI v8's
+ * `USAGE_PROMOTIONS` (packages/ai): through 2026-12-01 (JST), Claude Opus 5.5 counts
+ * half (50% off) and Claude Fable 5.2 three quarters (25% off) toward the pool.
+ */
+export const USAGE_PROMOTIONS: ReadonlyArray<{
+  id: string;
+  models: readonly string[];
+  /** Weight of the models' tokens while it runs: 0.5 counts them at half. */
+  factor: number;
+  /** First moment the promotion no longer applies. */
+  endsAt: Date;
+}> = [
+  {
+    id: 'v8-launch-claude-opus',
+    models: ['anthropic/claude-opus-5.5'],
+    factor: 0.5,
+    endsAt: V8_LAUNCH_ENDS_AT,
+  },
+  {
+    id: 'v8-launch-claude-fable',
+    models: ['anthropic/claude-fable-5.2'],
+    factor: 0.75,
+    endsAt: V8_LAUNCH_ENDS_AT,
+  },
+];
+
+/** The usage weight of a running promotion for a model (aliases resolved), else 1. */
+export function getUsagePromotionFactor(modelId: string, now: Date = new Date()): number {
+  const resolvedModelId = resolveAvailableModelId(modelId);
+  const promotion = USAGE_PROMOTIONS.find(
+    (entry) => entry.models.includes(resolvedModelId) && now < entry.endsAt,
+  );
+  return promotion?.factor ?? 1;
+}
+
 /**
  * Model definitions as exposed to clients; flags the default model. `premium`
- * and `tokenUsageMultiplier` are derived from the usage tier and kept for
- * clients that predate usage tiers.
+ * and `tokenUsageMultiplier` are derived from the usage tier (with any running
+ * usage promotion) and kept for clients that predate usage tiers.
  */
 export function listModelDefinitions(): Array<
   ModelDefinition & { default: boolean; premium: boolean; tokenUsageMultiplier: number }
@@ -293,7 +332,8 @@ export function listModelDefinitions(): Array<
   return MODEL_DEFINITIONS.map((model) => ({
     ...model,
     premium: isPremiumModelDefinition(model),
-    tokenUsageMultiplier: getUsageTierMultiplier(model.usageTier),
+    tokenUsageMultiplier:
+      getUsageTierMultiplier(model.usageTier) * getUsagePromotionFactor(model.id),
     default: model.id === DEFAULT_MODEL,
   }));
 }
@@ -527,18 +567,20 @@ function getPromptTokenCount(usage: unknown): number | null {
 }
 
 /**
- * Base per-model usage multiplier (ignores long-context surcharge).
+ * Base per-model usage multiplier, with any running usage promotion (ignores
+ * long-context surcharge).
  */
 export function getModelTokenUsageMultiplier(
   modelId: string,
   tier?: PlanTier,
+  now: Date = new Date(),
 ): number {
   const definition = getModelDefinition(modelId);
   const usageTier =
     (tier === "free" ? definition?.freeTierUsageTier : undefined) ??
     definition?.usageTier ??
     DEFAULT_USAGE_TIER;
-  return getUsageTierMultiplier(usageTier);
+  return getUsageTierMultiplier(usageTier) * getUsagePromotionFactor(modelId, now);
 }
 
 /**

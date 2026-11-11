@@ -38,7 +38,7 @@ import { Input } from "@deniai/ui/components/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@deniai/ui/components/popover";
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@deniai/ui/components/sheet";
 import type { ModelOption } from "./chat-composer";
-import { UsageTierBadge } from "./usage-tier-badge";
+import { UsagePromotionBadge, UsageTierBadge } from "./usage-tier-badge";
 
 type ModelDescriptionLabels = {
   xaiMostIntelligentModel: string;
@@ -346,6 +346,7 @@ function ModelPickerItem({
           </Badge>
         )}
         <UsageTierBadge tier={"usageTier" in model ? model.usageTier : undefined} />
+        <UsagePromotionBadge model={model.value} />
       </span>
 
       {description && (
@@ -424,6 +425,7 @@ function ModelPickerTriggerLabel({
         </Badge>
       )}
       <UsageTierBadge tier={usageTier} compact className="px-1" />
+      <UsagePromotionBadge model={selectedModel?.value} compact className="px-1" />
       <ChevronDownIcon className="size-3 opacity-50 shrink-0" aria-hidden="true" />
     </>
   );

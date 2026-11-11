@@ -7,11 +7,13 @@ import {
   getModelContextWindow,
   getModelDefinition,
   getModelTokenUsageMultiplier,
+  getUsagePromotionFactor,
   isPremiumModelDefinition,
   DEFAULT_MODEL,
   listModelDefinitions,
   MODEL_DEFINITIONS,
   resolveAvailableModelId,
+  USAGE_PROMOTIONS,
 } from "../utils/agent/models";
 
 describe("Claude Sonnet 5.5 model support", () => {
@@ -196,10 +198,42 @@ describe("Codex long-context model support", () => {
       ),
       true,
     );
-    assert.equal(getModelTokenUsageMultiplier("openai/gpt-6-sol"), 3);
-    assert.equal(getModelTokenUsageMultiplier("anthropic/claude-opus-5.5"), 8);
-    assert.equal(getModelTokenUsageMultiplier("anthropic/claude-fable-5.1"), 12);
-    assert.equal(getModelTokenUsageMultiplier("google/gemini-3.8-flash"), 2);
+    // Base tiers, outside any usage promotion.
+    const afterPromotions = new Date("2027-01-01T00:00:00Z");
+    assert.equal(getModelTokenUsageMultiplier("openai/gpt-6-sol", undefined, afterPromotions), 3);
+    assert.equal(
+      getModelTokenUsageMultiplier("anthropic/claude-opus-5.5", undefined, afterPromotions),
+      8,
+    );
+    assert.equal(
+      getModelTokenUsageMultiplier("anthropic/claude-fable-5.1", undefined, afterPromotions),
+      12,
+    );
+    assert.equal(
+      getModelTokenUsageMultiplier("google/gemini-3.8-flash", undefined, afterPromotions),
+      2,
+    );
+  });
+
+  test("v8 launch: Claude Opus 5.5 counts half through 2026-12-01 (JST)", () => {
+    const during = new Date("2026-11-20T12:00:00+09:00");
+    const lastMoment = new Date("2026-12-01T23:59:59+09:00");
+    const after = new Date("2026-12-02T00:00:00+09:00");
+    for (const id of ["anthropic/claude-opus-5.5", "claude-opus-5-5"]) {
+      assert.equal(getUsagePromotionFactor(id, during), 0.5);
+      assert.equal(getUsagePromotionFactor(id, lastMoment), 0.5);
+      assert.equal(getUsagePromotionFactor(id, after), 1);
+    }
+    assert.equal(getModelTokenUsageMultiplier("anthropic/claude-opus-5.5", undefined, during), 4);
+    assert.equal(getModelTokenUsageMultiplier("anthropic/claude-opus-5.5", undefined, after), 8);
+    // Fable 5.2 is listed (25% off) for when Flixa adds it; other models are unaffected.
+    assert.equal(
+      USAGE_PROMOTIONS.find((entry) => entry.models.includes("anthropic/claude-fable-5.2"))
+        ?.factor,
+      0.75,
+    );
+    assert.equal(getUsagePromotionFactor("anthropic/claude-fable-5.1", during), 1);
+    assert.equal(getUsagePromotionFactor("openai/gpt-6-sol", during), 1);
   });
 
   test("exposes provider-supported efforts and excludes Voids models", () => {

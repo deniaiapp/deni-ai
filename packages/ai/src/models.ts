@@ -507,12 +507,55 @@ export function getOpenAILongContextMultiplier(modelId: string, inputTokens: num
 export type EffectiveTokenMultiplierOptions = {
   proMode?: boolean;
   fastMode?: boolean;
+  /** When the usage happens; picks the usage promotions in effect. Defaults to now. */
+  now?: Date;
 };
+
+export type UsagePromotion = {
+  id: string;
+  models: readonly string[];
+  /** Weight of the models' tokens while it runs: 0.5 counts them at half. */
+  factor: number;
+  /** First moment the promotion no longer applies. */
+  endsAt: Date;
+};
+
+/** End of the v8 launch promotions: the last day they apply is 2026-12-01 (JST). */
+const V8_LAUNCH_ENDS_AT = new Date("2026-12-02T00:00:00+09:00");
+
+/**
+ * Limited-time usage discounts on top of a model's tier. v8 launch, through
+ * 2026-12-01 (JST): Claude Opus 5.5 counts half (50% off) and Claude Fable 5.2
+ * three quarters (25% off) toward the monthly usage. Flixa applies the same list.
+ */
+export const USAGE_PROMOTIONS: readonly UsagePromotion[] = [
+  {
+    id: "v8-launch-claude-opus",
+    models: ["claude-opus-5.5"],
+    factor: 0.5,
+    endsAt: V8_LAUNCH_ENDS_AT,
+  },
+  {
+    id: "v8-launch-claude-fable",
+    models: ["claude-fable-5.2"],
+    factor: 0.75,
+    endsAt: V8_LAUNCH_ENDS_AT,
+  },
+];
+
+/** The usage promotion running for a model at `now`, if any. */
+export function getUsagePromotion(modelId: string, now: Date = new Date()): UsagePromotion | null {
+  return (
+    USAGE_PROMOTIONS.find(
+      (promotion) => promotion.models.includes(modelId) && now < promotion.endsAt,
+    ) ?? null
+  );
+}
 
 /**
  * Combines the static model token multiplier with optional Pro-mode 3×,
- * Fast-mode 2×, and OpenAI long-context 2× pricing when `inputTokens` is
- * provided and exceeds the threshold.
+ * Fast-mode 2×, a running usage promotion (`USAGE_PROMOTIONS`), and OpenAI
+ * long-context 2× pricing when `inputTokens` is provided and exceeds the threshold.
  */
 export function getEffectiveTokenMultiplier(
   modelId: string,
@@ -524,7 +567,8 @@ export function getEffectiveTokenMultiplier(
     options?.proMode && supportsModelProMode(modelId) ? OPENAI_PRO_MODE_MULTIPLIER : 1;
   const fastMultiplier =
     options?.fastMode && supportsModelFastMode(modelId) ? OPENAI_FAST_MODE_MULTIPLIER : 1;
-  const withModes = base * proMultiplier * fastMultiplier;
+  const promotionFactor = getUsagePromotion(modelId, options?.now)?.factor ?? 1;
+  const withModes = base * proMultiplier * fastMultiplier * promotionFactor;
   if (typeof inputTokens !== "number") {
     return withModes;
   }

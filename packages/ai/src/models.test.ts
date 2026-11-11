@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, test } from "vitest";
 import {
+  getEffectiveTokenMultiplier,
+  getModelTokenMultiplier,
   getModelsForGuest,
+  getUsagePromotion,
   getModelsForPlanTier,
   isFreePlanModel,
   isModelAllowedForAccount,
@@ -77,5 +80,38 @@ describe("model access", () => {
       getModelsForGuest().map((model) => model.value),
       ["gpt-6-luna"],
     );
+  });
+});
+
+describe("usage promotions", () => {
+  const during = new Date("2026-11-20T12:00:00+09:00");
+  const lastMoment = new Date("2026-12-01T23:59:59+09:00");
+  const after = new Date("2026-12-02T00:00:00+09:00");
+
+  test("v8 launch: Opus 5.5 counts half and Fable 5.2 three quarters through Dec 1 (JST)", () => {
+    for (const [model, factor] of [
+      ["claude-opus-5.5", 0.5],
+      ["claude-fable-5.2", 0.75],
+    ] as const) {
+      assert.equal(getUsagePromotion(model, during)?.factor, factor);
+      assert.equal(getUsagePromotion(model, lastMoment)?.factor, factor);
+      assert.equal(
+        getEffectiveTokenMultiplier(model, undefined, { now: during }),
+        getModelTokenMultiplier(model) * factor,
+      );
+    }
+  });
+
+  test("after the end, and for other models, usage counts in full", () => {
+    for (const model of ["claude-fable-5.2", "claude-opus-5.5"]) {
+      assert.equal(getUsagePromotion(model, after), null);
+      assert.equal(
+        getEffectiveTokenMultiplier(model, undefined, { now: after }),
+        getModelTokenMultiplier(model),
+      );
+    }
+    for (const model of ["claude-fable-5.1", "claude-sonnet-5.5", "gpt-6-luna"]) {
+      assert.equal(getUsagePromotion(model, during), null);
+    }
   });
 });
