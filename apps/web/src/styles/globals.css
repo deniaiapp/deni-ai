@@ -373,7 +373,16 @@
 
   * {
     scrollbar-width: thin;
+    /* Theme-colored thumb on a transparent track, instead of the browser's own
+       gray scrollbar. Set per element so areas with scoped tokens (the sidebar)
+       get their own shade. */
+    scrollbar-color: color-mix(in oklab, var(--muted-foreground) 35%, transparent) transparent;
     @apply border-border outline-ring/50;
+  }
+
+  /* In the sidebar the thumb shows only while the pointer is over the scrolling list. */
+  [data-slot="sidebar"] *:not(:hover) {
+    scrollbar-color: transparent transparent;
   }
 
   body {

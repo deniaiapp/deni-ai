@@ -271,8 +271,8 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
 
   return (
     <Sidebar variant="inset">
-      <SidebarContent className="gap-0 px-2 pt-3 pb-2">
-        <SidebarGroup className="gap-3 pb-2">
+      <SidebarContent className="gap-0 px-1 pt-3 pb-2">
+        <SidebarGroup className="gap-3 px-1 pb-2">
           <Link
             href="/chat"
             className="flex h-8 items-center gap-2 self-start rounded-md px-1.5 focus-visible:outline-2 focus-visible:outline-sidebar-ring"
@@ -348,7 +348,7 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
           />
         )}
 
-        <SidebarGroup className="mt-auto w-full border-t border-sidebar-border pt-2">
+        <SidebarGroup className="mt-auto w-full border-t border-sidebar-border px-1 pt-2">
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>

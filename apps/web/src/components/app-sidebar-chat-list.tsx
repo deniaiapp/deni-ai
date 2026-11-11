@@ -337,7 +337,7 @@ function ChatItem({ item }: { item: ChatListItem }) {
             }
           }}
         >
-          <DropdownMenuTrigger render={<SidebarMenuAction className="right-2" />}>
+          <DropdownMenuTrigger render={<SidebarMenuAction showOnHover className="right-2" />}>
             <MoreHorizontal className="size-4" />
             <span className="sr-only">{t("More")}</span>
           </DropdownMenuTrigger>
@@ -752,8 +752,8 @@ export function AppSidebarChatList({
       onDragStart={handleDragStart}
       sensors={sensors}
     >
-      <SidebarGroup className="flex-1 overflow-hidden">
-        <SidebarGroupContent className="h-full overflow-y-auto pr-2">
+      <SidebarGroup className="flex-1 overflow-hidden px-1">
+        <SidebarGroupContent className="h-full overflow-y-auto pr-1">
           <SidebarMenu>
             {chats.length === 0 ? (
               <div className="flex flex-col items-center justify-center px-4 py-8 text-center">

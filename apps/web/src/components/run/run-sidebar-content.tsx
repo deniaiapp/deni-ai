@@ -45,7 +45,7 @@ export function RunSidebarContent() {
 
   return (
     <>
-      <SidebarGroup>
+      <SidebarGroup className="px-1">
         <SidebarGroupContent>
           <SidebarMenu>
             <SidebarMenuItem>
@@ -73,7 +73,7 @@ export function RunSidebarContent() {
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>
-      <SidebarGroup>
+      <SidebarGroup className="px-1">
         <SidebarGroupLabel>{t("Teammates")}</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>
