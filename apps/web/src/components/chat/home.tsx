@@ -1,4 +1,4 @@
-import { useRouter } from "@/lib/navigation";
+import { useRouter, useSearchParams } from "@/lib/navigation";
 import { useExtracted } from "use-intl";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -53,7 +53,14 @@ export default function ChatHome() {
   const [proMode, setProMode] = useState(false);
   const [fastMode, setFastMode] = useState(false);
   const [deepResearch, setDeepResearch] = useState(false);
-  const [projectId, setProjectId] = useState<string | null>(null);
+  // "New chat" from a project opens /chat?projectId=…; follow the link when it changes.
+  const projectParam = useSearchParams().get("projectId");
+  const [projectId, setProjectId] = useState<string | null>(projectParam);
+  const [linkedProject, setLinkedProject] = useState(projectParam);
+  if (projectParam !== linkedProject) {
+    setLinkedProject(projectParam);
+    setProjectId(projectParam);
+  }
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const projectsQuery = trpc.projects.list.useQuery();

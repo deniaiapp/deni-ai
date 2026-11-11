@@ -16,7 +16,7 @@ import { useInitialMessage } from "@/hooks/use-initial-message";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { useChatBranches } from "@/hooks/use-chat-branches";
 import { useMemorySaveNotice } from "@/hooks/use-memory-save-notice";
-import { useNewChat } from "@/hooks/use-new-chat";
+import { useGoToNewChat } from "@/hooks/use-new-chat";
 import { setPreferredModel, usePreferredModel } from "@/hooks/use-preferred-model";
 import { useUsageStatus } from "@/hooks/use-usage-status";
 import { getVisualLayout } from "@/hooks/use-visual-layout";
@@ -462,7 +462,7 @@ export function ChatInterface({
     return indexMap;
   }, [messages]);
 
-  const startNewChat = useNewChat();
+  const startNewChat = useGoToNewChat();
   const handleNewChat = useCallback(() => startNewChat(), [startNewChat]);
   const handleModelChange = useCallback(
     (value: string) => {

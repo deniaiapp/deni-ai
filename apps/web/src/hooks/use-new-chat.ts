@@ -10,7 +10,21 @@ type NewChatOptions = {
 };
 
 /**
- * Start a new chat by generating a client-side id and navigating immediately.
+ * "New chat" buttons and shortcuts: open the home composer (with the project
+ * preselected). Nothing is created until the first message is sent from there,
+ * so pressing it repeatedly cannot pile up empty chats.
+ */
+export function useGoToNewChat() {
+  const router = useRouter();
+  return (options?: NewChatOptions) => {
+    const projectId = options?.projectId ?? null;
+    router.push(projectId ? `/chat?projectId=${encodeURIComponent(projectId)}` : "/chat");
+  };
+}
+
+/**
+ * Create a chat for a first message (the home composer): generate a client-side
+ * id and navigate immediately.
  * Seeds the SPA ChatRouteHost cache and sidebar list so the empty pane paints
  * with no loading flash; ensureChat persists the DB row in the background.
  */

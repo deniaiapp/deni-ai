@@ -46,7 +46,7 @@ import DeniAIIcon from "@/components/deni-ai-icon";
 import { isCheckoutSettingsRoute } from "@/lib/settings-routes";
 import { trpc } from "@/lib/trpc/react";
 import { appIsBeta } from "@/lib/version";
-import { useNewChat } from "@/hooks/use-new-chat";
+import { useGoToNewChat } from "@/hooks/use-new-chat";
 
 const AppSidebarChatList = dynamic(
   () => import("@/components/app-sidebar-chat-list").then((mod) => mod.AppSidebarChatList),
@@ -156,7 +156,7 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
   const isCheckoutRoute = isCheckoutSettingsRoute(pathname);
   const isRunMode = getAppMode(pathname) === "run";
   const utils = trpc.useUtils();
-  const startNewChat = useNewChat();
+  const startNewChat = useGoToNewChat();
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");

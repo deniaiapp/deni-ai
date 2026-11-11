@@ -19,7 +19,7 @@ import { Textarea } from "@deniai/ui/components/textarea";
 import { useAvailableModels } from "@/hooks/use-available-models";
 import { INTENT_PREFETCH_DELAY_MS } from "@/hooks/use-intent-prefetch";
 import { useLocalizeError } from "@/hooks/use-localize-error";
-import { useNewChat } from "@/hooks/use-new-chat";
+import { useGoToNewChat } from "@/hooks/use-new-chat";
 import { trpc } from "@/lib/trpc/react";
 
 interface ProjectPageProps {
@@ -149,7 +149,7 @@ export function ProjectPage({ projectId, initialProjectName }: ProjectPageProps)
   const canShare = project?.canShare ?? false;
   const organizations = orgsQuery.data ?? [];
 
-  const startNewChat = useNewChat();
+  const startNewChat = useGoToNewChat();
   const [isStartingChat, setIsStartingChat] = useState(false);
   const handleNewProjectChat = () => {
     if (isStartingChat) return;

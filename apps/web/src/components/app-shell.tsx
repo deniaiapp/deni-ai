@@ -8,7 +8,7 @@ import { AppHeader } from "@deniai/ui/components/app-header";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@deniai/ui/components/sidebar";
 import { cn } from "@/lib/utils";
 import { isSettingsAreaRoute } from "@/lib/settings-routes";
-import { useNewChat } from "@/hooks/use-new-chat";
+import { useGoToNewChat } from "@/hooks/use-new-chat";
 import { SIDEBAR_WIDTH_CSS_VAR, SIDEBAR_WIDTH_DEFAULT } from "@/lib/sidebar-width";
 
 const ChatSearch = dynamic(
@@ -38,7 +38,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [chatSearchPath, setChatSearchPath] = useState<string | null>(null);
   const isChatSearchOpen = chatSearchPath === pathname;
-  const startNewChat = useNewChat();
+  const startNewChat = useGoToNewChat();
   const twoFactor = useRouteContext({
     from: "/_app",
     select: (context) => context.authState.twoFactor,
