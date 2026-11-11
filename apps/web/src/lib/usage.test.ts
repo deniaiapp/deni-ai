@@ -94,7 +94,8 @@ function database() {
       }),
     }),
     transaction: async (run: (tx: unknown) => Promise<unknown>, options: unknown) => {
-      expect(options).toEqual({ isolationLevel: "read committed" });
+      // PostgreSQL's default READ COMMITTED; naming it would cost a statement per call.
+      expect(options).toBeUndefined();
       let release!: () => void;
       let snapshot: ReturnType<typeof structuredClone> | undefined;
       const assertLocked = () => expect(snapshot).toBeDefined();

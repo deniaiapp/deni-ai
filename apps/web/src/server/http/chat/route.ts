@@ -462,7 +462,11 @@ export async function POST(req: Request) {
     if (!usageConsumed) return;
     const amount = resolveUsageAmount();
     try {
-      await recordObservedUsage({ userId, reservationId: modelReservationId, amount });
+      // Untraced like the partial-message writes: one identical locked update per
+      // model step and every 30s would otherwise trip Sentry's N+1 query detector.
+      await suppressTracing(() =>
+        recordObservedUsage({ userId, reservationId: modelReservationId, amount }),
+      );
     } catch (error) {
       console.error("Failed to persist observed chat usage", error);
     }

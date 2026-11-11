@@ -135,6 +135,8 @@ export function getSentryOptions(): SentryOptions {
       // Transient network failures and blocked third-party scripts.
       /^TypeError: Load failed$/,
       /^Load failed$/,
+      // Firefox's wording for the same dropped connection.
+      /^(TypeError: )?NetworkError when attempting to fetch resource\.?$/,
       /Failed to load Stripe\.js/,
       // Service worker fetch failures (offline, deploy in progress, bots).
       /Failed to update a ServiceWorker/,

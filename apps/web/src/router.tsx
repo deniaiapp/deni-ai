@@ -2,6 +2,7 @@ import { createRouter } from "@tanstack/react-router";
 import { Spinner } from "@deniai/ui/components/spinner";
 import { getSentryOptions, loadSentry, sentryIntegrations } from "@/lib/sentry-options";
 import { routeTree } from "./routeTree.gen";
+import { installStaleDeploymentReload } from "@/lib/stale-deployment";
 
 /**
  * Search params stay plain strings, as with URLSearchParams: no JSON coercion of
@@ -55,6 +56,7 @@ export function getRouter() {
 
   if (!router.isServer && !sentryInitialized) {
     sentryInitialized = true;
+    installStaleDeploymentReload();
     // Loaded only when enabled, after the page has loaded so the SDK never
     // competes with the first render (errors before that are not reported).
     afterPageLoad(() => {

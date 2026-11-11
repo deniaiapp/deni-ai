@@ -37,3 +37,14 @@ export function reloadForStaleDeployment(): boolean {
   window.location.reload();
   return true;
 }
+
+/**
+ * Vite fires `vite:preloadError` when a lazily loaded route chunk (or its CSS) can no
+ * longer be fetched, typically because a redeploy removed it. Reload once instead of
+ * letting the import throw into an error page and an error report.
+ */
+export function installStaleDeploymentReload() {
+  window.addEventListener("vite:preloadError", (event) => {
+    if (reloadForStaleDeployment()) event.preventDefault();
+  });
+}

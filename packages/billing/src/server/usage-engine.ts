@@ -426,8 +426,10 @@ export function createUsageEngine(deps: UsageEngineDeps) {
       : defaultSpendMaxModeCredits(owner, units, now, database);
 
   /**
-   * Run `run` in a read-committed transaction holding the user's row lock. With
-   * `rollback`, the transaction is always rolled back and `run`'s result returned.
+   * Run `run` in a transaction holding the user's row lock. With `rollback`, the
+   * transaction is always rolled back and `run`'s result returned. It runs at
+   * PostgreSQL's default READ COMMITTED: naming the level would add a
+   * `SET TRANSACTION` round trip to every call, and chat requests make many.
    */
   async function withUsageLock<T>(
     userId: string,
@@ -435,25 +437,19 @@ export function createUsageEngine(deps: UsageEngineDeps) {
     { rollback = false }: { rollback?: boolean } = {},
   ): Promise<T> {
     if (!rollback) {
-      return db.transaction(
-        async (transaction) => {
-          // Also protects the empty-quota case and serializes consume/refund across instances.
-          await transaction.execute(sql`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`);
-          return run(transaction);
-        },
-        { isolationLevel: "read committed" },
-      );
+      return db.transaction(async (transaction) => {
+        // Also protects the empty-quota case and serializes consume/refund across instances.
+        await transaction.execute(sql`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`);
+        return run(transaction);
+      });
     }
     let result: { value: T } | undefined;
     try {
-      await db.transaction(
-        async (transaction) => {
-          await transaction.execute(sql`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`);
-          result = { value: await run(transaction) };
-          throw new DryRunRollback();
-        },
-        { isolationLevel: "read committed" },
-      );
+      await db.transaction(async (transaction) => {
+        await transaction.execute(sql`SELECT id FROM "user" WHERE id = ${userId} FOR UPDATE`);
+        result = { value: await run(transaction) };
+        throw new DryRunRollback();
+      });
     } catch (error) {
       if (!(error instanceof DryRunRollback) || !result) throw error;
     }

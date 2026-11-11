@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { isStaleDeploymentError } from "./stale-deployment";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { installStaleDeploymentReload, isStaleDeploymentError } from "./stale-deployment";
 
 describe("isStaleDeploymentError", () => {
   it.each([
@@ -16,5 +16,38 @@ describe("isStaleDeploymentError", () => {
       false,
     );
     expect(isStaleDeploymentError("Importing a module script failed.")).toBe(false);
+  });
+});
+
+describe("installStaleDeploymentReload", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function setup() {
+    const reload = vi.fn();
+    const target = Object.assign(new EventTarget(), { location: { reload } });
+    const storage = new Map<string, string>();
+    vi.stubGlobal("window", target);
+    vi.stubGlobal("sessionStorage", {
+      getItem: (key: string) => storage.get(key) ?? null,
+      setItem: (key: string, value: string) => storage.set(key, value),
+    });
+    installStaleDeploymentReload();
+    const fire = () => {
+      const event = new Event("vite:preloadError", { cancelable: true });
+      target.dispatchEvent(event);
+      return event;
+    };
+    return { reload, fire };
+  }
+
+  it("reloads once on a failed chunk preload and keeps the error from being thrown", () => {
+    const { reload, fire } = setup();
+    expect(fire().defaultPrevented).toBe(true);
+    expect(reload).toHaveBeenCalledTimes(1);
+    // A second failure right after the reload is a real error: let it through.
+    expect(fire().defaultPrevented).toBe(false);
+    expect(reload).toHaveBeenCalledTimes(1);
   });
 });
