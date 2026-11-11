@@ -9,6 +9,7 @@ import { Input } from "@deniai/ui/components/input";
 import { Label } from "@deniai/ui/components/label";
 import { Spinner } from "@deniai/ui/components/spinner";
 import { cn } from "@/lib/utils";
+import { isCaptchaPending } from "@/lib/auth/captcha-pending";
 
 export type ForgotPasswordProps = {
   className?: string;
@@ -98,7 +99,10 @@ export function ForgotPassword({ className }: ForgotPasswordProps) {
             {Captcha && <div className="flex justify-center">{Captcha}</div>}
 
             <div className="flex flex-col gap-3">
-              <Button type="submit" disabled={isPending}>
+              <Button
+                type="submit"
+                disabled={isPending || isCaptchaPending(Boolean(Captcha), fetchOptions)}
+              >
                 {isPending && <Spinner />}
 
                 {localization.auth.sendResetLink}

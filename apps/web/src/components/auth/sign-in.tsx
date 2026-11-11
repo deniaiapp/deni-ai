@@ -19,6 +19,7 @@ import { Spinner } from "@deniai/ui/components/spinner";
 import { TWO_FACTOR_PATH } from "@deniai/auth/paths";
 import { cn } from "@/lib/utils";
 import { ProviderButtons, type SocialLayout } from "./provider-buttons";
+import { isCaptchaPending } from "@/lib/auth/captcha-pending";
 
 export type SignInProps = {
   className?: string;
@@ -233,7 +234,10 @@ export function SignIn({ className, socialLayout, socialPosition = "bottom" }: S
                 {Captcha && <div className="flex justify-center">{Captcha}</div>}
 
                 <div className="flex flex-col gap-3">
-                  <Button type="submit" disabled={isPending}>
+                  <Button
+                    type="submit"
+                    disabled={isPending || isCaptchaPending(Boolean(Captcha), fetchOptions)}
+                  >
                     {signInEmailPending && <Spinner />}
 
                     {localization.auth.signIn}

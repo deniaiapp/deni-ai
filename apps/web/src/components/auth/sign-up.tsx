@@ -11,6 +11,7 @@ import { checkSignupEmail, signupEmailDenialMessage } from "@/lib/email-domain-p
 import { cn } from "@/lib/utils";
 import { ProviderButtons, type SocialLayout } from "./provider-buttons";
 import { SignUpFormFields } from "./sign-up-form-fields";
+import { isCaptchaPending } from "@/lib/auth/captcha-pending";
 
 export type SignUpProps = {
   className?: string;
@@ -220,7 +221,10 @@ export function SignUp({ className, socialLayout, socialPosition = "bottom" }: S
                 {Captcha && <div className="flex justify-center">{Captcha}</div>}
 
                 <div className="flex flex-col gap-3">
-                  <Button type="submit" disabled={isPending}>
+                  <Button
+                    type="submit"
+                    disabled={isPending || isCaptchaPending(Boolean(Captcha), fetchOptions)}
+                  >
                     {signUpEmailPending && <Spinner />}
 
                     {localization.auth.signUp}
