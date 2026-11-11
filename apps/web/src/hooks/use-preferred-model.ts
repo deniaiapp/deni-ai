@@ -1,4 +1,6 @@
-import { useSyncExternalStore } from "react";
+import { useEffect, useSyncExternalStore } from "react";
+import { makeTRPCClient } from "@/lib/trpc/client";
+import { trpc } from "@/lib/trpc/react";
 
 const STORAGE_KEY = "deni-preferred-model";
 const PREFERRED_MODEL_EVENT = "deni:preferred-model";
@@ -31,7 +33,7 @@ function getServerPreferredModelSnapshot(): string | null {
   return null;
 }
 
-export function setPreferredModel(value: string) {
+function storePreferredModel(value: string) {
   unpersistedModel = value;
   try {
     window.localStorage.setItem(STORAGE_KEY, value);
@@ -39,6 +41,41 @@ export function setPreferredModel(value: string) {
     // Keep the in-memory choice when it cannot be persisted.
   }
   window.dispatchEvent(new Event(PREFERRED_MODEL_EVENT));
+}
+
+/** Saves a model to the account (`user_preference`); a failure keeps the local pick. */
+function savePreferredModel(value: string) {
+  makeTRPCClient()
+    .preferences.setPreferredModel.mutate({ model: value })
+    .catch((error: unknown) => console.warn("Failed to save the preferred model", error));
+}
+
+/**
+ * Remember the model picked in the composer: in this browser right away, and on
+ * the account so other browsers and devices start new chats with it too.
+ */
+export function setPreferredModel(value: string) {
+  storePreferredModel(value);
+  savePreferredModel(value);
+}
+
+/**
+ * Keeps this browser's cached pick in line with the account: the account's model
+ * wins when it differs, and a pick made before it was saved to the account (this
+ * browser only) is uploaded once. Mount once in the signed-in app shell.
+ */
+export function usePreferredModelSync() {
+  const { data } = trpc.preferences.get.useQuery(undefined, { staleTime: Infinity });
+  const saved = data?.preferredModel;
+  useEffect(() => {
+    if (data === undefined) return;
+    const local = getPreferredModelSnapshot();
+    if (saved) {
+      if (saved !== local) storePreferredModel(saved);
+    } else if (local) {
+      savePreferredModel(local);
+    }
+  }, [data, saved]);
 }
 
 /**

@@ -9,6 +9,7 @@ import { SidebarInset, SidebarProvider, SidebarTrigger } from "@deniai/ui/compon
 import { cn } from "@/lib/utils";
 import { isSettingsAreaRoute } from "@/lib/settings-routes";
 import { useGoToNewChat } from "@/hooks/use-new-chat";
+import { usePreferredModelSync } from "@/hooks/use-preferred-model";
 import { SIDEBAR_WIDTH_CSS_VAR, SIDEBAR_WIDTH_DEFAULT } from "@/lib/sidebar-width";
 
 const ChatSearch = dynamic(
@@ -39,6 +40,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [chatSearchPath, setChatSearchPath] = useState<string | null>(null);
   const isChatSearchOpen = chatSearchPath === pathname;
   const startNewChat = useGoToNewChat();
+  // The composer's default model follows the account across devices.
+  usePreferredModelSync();
   const twoFactor = useRouteContext({
     from: "/_app",
     select: (context) => context.authState.twoFactor,

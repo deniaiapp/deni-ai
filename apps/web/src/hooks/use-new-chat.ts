@@ -61,6 +61,7 @@ export function useNewChat() {
         projectId,
         projectName: null,
         projectDefaultModel: null,
+        model: null,
         messages: [],
         oldestIndex: 0,
         hasMore: false,

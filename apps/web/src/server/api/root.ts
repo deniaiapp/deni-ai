@@ -7,6 +7,7 @@ import { chatRouter } from "./routers/chat";
 import { memoryRouter } from "./routers/memory";
 import { migrationRouter } from "./routers/migration";
 import { organizationRouter } from "./routers/organization";
+import { preferencesRouter } from "./routers/preferences";
 import { projectsRouter } from "./routers/projects";
 import { resetCreditsRouter } from "./routers/reset-credits";
 import { teamDomainsRouter } from "./routers/team-domains";
@@ -22,6 +23,7 @@ export const appRouter = router({
   billing: billingRouter,
   migration: migrationRouter,
   organization: organizationRouter,
+  preferences: preferencesRouter,
   projects: projectsRouter,
   resetCredits: resetCreditsRouter,
   teamDomains: teamDomainsRouter,

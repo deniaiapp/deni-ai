@@ -23,6 +23,7 @@ import { models } from "@deniai/ai/models";
 import { comparisonSettingsSchema, normalizeComparisonSettings } from "@/lib/comparison-settings";
 import { toJsonbSafe, toPostgresText } from "@/lib/jsonb";
 import { protectedProcedure, rateLimited, router, TRPC_RATE_LIMITS } from "../trpc";
+import { knownModelSchema } from "./preferences";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -39,6 +40,8 @@ export type ChatPagePayload = {
   projectId: string | null;
   projectName: string | null;
   projectDefaultModel: string | null;
+  /** The model this conversation last used or picked (null before the first pick). */
+  model: string | null;
   messages: UIMessage[];
   oldestIndex: number;
   hasMore: boolean;
@@ -89,6 +92,7 @@ async function loadChatPage(
       projectId: chats.projectId,
       projectName: projects.name,
       projectDefaultModel: projects.defaultModel,
+      model: chats.model,
     })
     .from(chats)
     .leftJoin(projects, eq(projects.id, chats.projectId))
@@ -122,6 +126,7 @@ async function loadChatPage(
     projectId: row.projectId,
     projectName,
     projectDefaultModel,
+    model: row.model ?? null,
     messages: window.messages,
     oldestIndex: window.oldestIndex,
     hasMore: window.hasMore,
@@ -444,6 +449,22 @@ export const chatRouter = router({
         });
       }
       return row;
+    }),
+  /**
+   * Remember the model picked in an open conversation, so it comes back when the
+   * conversation is reopened. Leaves `updated_at` alone: picking a model does not
+   * move the chat up the sidebar.
+   */
+  setChatModel: protectedProcedure
+    .input(z.object({ id: z.string().min(1), model: knownModelSchema }))
+    .mutation(async ({ ctx, input }) => {
+      const [row] = await ctx.db
+        .update(chats)
+        .set({ model: input.model })
+        .where(and(eq(chats.id, input.id), eq(chats.uid, ctx.userId)))
+        .returning({ id: chats.id });
+      if (!row) throw new TRPCError({ code: "NOT_FOUND", message: "Chat not found" });
+      return row.id;
     }),
   updateChat: protectedProcedure
     .input(

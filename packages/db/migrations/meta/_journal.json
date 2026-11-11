@@ -568,6 +568,13 @@
       "when": 1794231292195,
       "tag": "0080_reset_credit_expiry",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1794381209951,
+      "tag": "0081_chat_model_and_user_preference",
+      "breakpoints": true
     }
   ]
 }

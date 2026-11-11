@@ -25,6 +25,10 @@ export const chats = pgTable(
     // it stops itself when it registers its generation on any instance.
     stopRequestedAt: timestamp("stop_requested_at"),
     title: text("title"),
+    // The model the conversation last used or picked, restored when it is reopened
+    // (v8; v7 leaves it NULL). Not validated: the client falls back when the
+    // model is no longer available on the user's plan.
+    model: text("model"),
     messages: jsonb("messages").default(sql`'[]'`),
     // Number of `chat_messages` rows when they hold the whole transcript; NULL
     // for chats not backfilled yet (reads fall back to `messages`). Written by

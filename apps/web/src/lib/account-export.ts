@@ -14,6 +14,7 @@ import {
   usageQuota,
   user,
   userMemory,
+  userPreference,
 } from "@/db/schema";
 import { appVersion } from "@/lib/version";
 import { currentProjectAccessWhere } from "@/lib/project-access";
@@ -69,6 +70,7 @@ export async function buildAccountExport(userId: string) {
   const [
     profileRow,
     memoryProfile,
+    preferenceRow,
     memories,
     projectRows,
     fileRows,
@@ -99,6 +101,15 @@ export async function buildAccountExport(userId: string) {
       .select()
       .from(userMemory)
       .where(eq(userMemory.userId, userId))
+      .limit(1)
+      .then((rows) => rows[0] ?? null),
+    db
+      .select({
+        preferredModel: userPreference.preferredModel,
+        updatedAt: userPreference.updatedAt,
+      })
+      .from(userPreference)
+      .where(eq(userPreference.userId, userId))
       .limit(1)
       .then((rows) => rows[0] ?? null),
     db.select().from(memoryItem).where(eq(memoryItem.userId, userId)),
@@ -266,6 +277,7 @@ export async function buildAccountExport(userId: string) {
     // The undated v7 count; v8 moves it into `resetCreditGrants` when it reads it.
     resetCredits: resetCreditRow,
     resetCreditGrants: resetCreditRows,
+    preferences: preferenceRow,
     securityActivity: activityRows,
   };
 }

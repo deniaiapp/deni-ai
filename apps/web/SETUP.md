@@ -441,6 +441,7 @@ Schemas live in the `@deniai/db` package under `packages/db/src/schema/` (import
 | **product-usage**     | Monthly usage per product (Chat, Flixa, Run)             |
 | **oauth-provider**    | OAuth provider clients, tokens, consents                 |
 | **reset-credit**      | Usage reset credits (one row each, valid for a month)    |
+| **user-preference**   | Account settings: the preferred composer model           |
 | **team-usage-policy** | Team usage policies                                      |
 | **device-auth**       | Device / desktop auth                                    |
 

@@ -22,3 +22,4 @@ export * from "./team-domain";
 export * from "./team-usage-policy";
 export * from "./usage";
 export * from "./usage-reservation";
+export * from "./user-preference";

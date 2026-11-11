@@ -42,6 +42,8 @@ interface ChatInterfaceProps {
   initialProjectId?: string | null;
   initialProjectName?: string | null;
   initialProjectDefaultModel?: string | null;
+  /** The model this conversation last used or picked (`chats.model`). */
+  initialModel?: string | null;
   isActive?: boolean;
 }
 
@@ -158,6 +160,7 @@ export function ChatInterface({
   initialProjectId = null,
   initialProjectName = null,
   initialProjectDefaultModel = null,
+  initialModel = null,
   isActive = true,
 }: ChatInterfaceProps) {
   const session = authClient.useSession();
@@ -260,6 +263,11 @@ export function ChatInterface({
     }
   }, [id, setMessages, utils.chat.getOlderMessages]);
 
+  // A conversation reopens with its own model while the plan still offers it.
+  const chatModel =
+    initialModel && availableModels.some((entry) => entry.value === initialModel)
+      ? initialModel
+      : null;
   const projectDefaultModel =
     initialProjectDefaultModel &&
     availableModels.some((entry) => entry.value === initialProjectDefaultModel)
@@ -281,7 +289,7 @@ export function ChatInterface({
   const seed = useInitialMessage({
     id,
     initialMessagesLength: initialMessages.length,
-    model: modelOverride ?? projectDefaultModel ?? fallbackModel,
+    model: modelOverride ?? chatModel ?? projectDefaultModel ?? fallbackModel,
     availableModelValues,
     sendMessage,
     onMessageSent: () => {
@@ -290,7 +298,7 @@ export function ChatInterface({
     onDraft: setInput,
   });
 
-  const model = modelOverride ?? seed?.model ?? projectDefaultModel ?? fallbackModel;
+  const model = modelOverride ?? seed?.model ?? chatModel ?? projectDefaultModel ?? fallbackModel;
   const webSearch = features.webSearch && (webSearchOverride ?? seed?.webSearch ?? false);
   const reasoningEffort =
     reasoningEffortOverride ??
@@ -462,12 +470,16 @@ export function ChatInterface({
     return indexMap;
   }, [messages]);
 
+  const { mutate: saveChatModel } = trpc.chat.setChatModel.useMutation();
   const startNewChat = useGoToNewChat();
   const handleNewChat = useCallback(() => startNewChat(), [startNewChat]);
   const handleModelChange = useCallback(
     (value: string) => {
       setModel(value);
       setPreferredModel(value);
+      // Remember it for this conversation; a send saves it again, so a failed
+      // write here only loses the pick if nothing is sent.
+      saveChatModel({ id, model: value });
       const nextModel = availableModels.find((entry) => entry.value === value);
       const nextEfforts = nextModel?.efforts;
       if (!nextModel?.supportsProMode) {
@@ -485,7 +497,7 @@ export function ChatInterface({
           : getPreferredReasoningEffort(nextEfforts),
       );
     },
-    [availableModels],
+    [availableModels, id, saveChatModel],
   );
   const handleWebSearchChange = useCallback(
     (enabled: boolean) => setWebSearch(enabled && features.webSearch),

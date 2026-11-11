@@ -584,6 +584,8 @@ export async function POST(req: Request) {
     } else {
       const { stopRequestedAt } = await updateChat(id, userId, pendingMessages, undefined, {
         nextGenerationId: generationId,
+        // Reopening the conversation picks this model again.
+        model: baseModel,
       });
       // The saved messages now hold their uploads: deleting this chat deletes them.
       await linkChatAttachments(id, userId, messages);

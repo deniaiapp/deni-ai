@@ -93,6 +93,8 @@ export async function getChatGenerationContextById(id: string, userId: string) {
 type ChatUpdateOptions = {
   expectedGenerationId?: string | null;
   nextGenerationId?: string | null;
+  /** The model this send uses, remembered for the conversation. */
+  model?: string;
 };
 
 function chatRowWhere(id: string, userId: string, expectedGenerationId?: string | null) {
@@ -134,6 +136,10 @@ export async function updateChat(
 
   if (options?.nextGenerationId !== undefined) {
     updates.activeGenerationId = options.nextGenerationId;
+  }
+
+  if (options?.model) {
+    updates.model = options.model;
   }
 
   const updatedChat = await db.transaction(async (tx) => {
