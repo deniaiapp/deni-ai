@@ -27,6 +27,8 @@ export async function sendSupportEmail(options: {
   subject: string;
   text: string;
   replyTo?: string;
+  /** Defaults to the support team (SUPPORT_EMAIL_TO). */
+  to?: string;
 }): Promise<void> {
   if (!isEmailConfigured()) {
     throw new Error(
@@ -36,7 +38,7 @@ export async function sendSupportEmail(options: {
 
   const body: Record<string, unknown> = {
     from: toAddress(serverEnv.supportEmailFrom),
-    to: [serverEnv.supportEmailTo],
+    to: [options.to ?? serverEnv.supportEmailTo],
     // Headers can't carry line breaks.
     subject: options.subject.replace(/[\r\n]+/g, ' ').slice(0, 200),
     text: options.text,

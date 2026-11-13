@@ -1,5 +1,5 @@
 import type { Language } from './i18n';
-import type { SupportErrorBody, SupportErrorCode } from './support-protocol';
+import type { SupportErrorBody, SupportErrorCode, SupportSentBody } from './support-protocol';
 
 const errorMessages = {
   en: {
@@ -40,14 +40,17 @@ export async function readSupportError(response: Response): Promise<SupportError
 export async function postSupport(
   url: string,
   body: unknown,
-): Promise<{ ok: true } | { ok: false; error: SupportErrorCode }> {
+): Promise<{ ok: true; body: SupportSentBody } | { ok: false; error: SupportErrorCode }> {
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
-    if (response.ok) return { ok: true };
+    if (response.ok) {
+      const sent = (await response.json().catch(() => undefined)) as SupportSentBody | undefined;
+      return { ok: true, body: sent ?? { ok: true } };
+    }
     return { ok: false, error: await readSupportError(response) };
   } catch {
     return { ok: false, error: 'failed' };

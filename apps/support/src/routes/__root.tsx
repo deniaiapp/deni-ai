@@ -1,4 +1,11 @@
-import { createRootRoute, HeadContent, Outlet, Scripts, useParams } from '@tanstack/react-router';
+import {
+  createRootRoute,
+  HeadContent,
+  Outlet,
+  Scripts,
+  useLocation,
+  useParams,
+} from '@tanstack/react-router';
 import * as React from 'react';
 import appCss from '@/styles/app.css?url';
 import { RootProvider } from 'fumadocs-ui/provider/tanstack';
@@ -35,6 +42,8 @@ export const Route = createRootRoute({
 function RootComponent() {
   const lang = resolveLanguage(useParams({ strict: false }).lang);
   const supportConfig = Route.useLoaderData();
+  // The admin inbox is for the team, not visitors.
+  const isAdmin = useLocation({ select: (location) => location.pathname.startsWith('/admin') });
 
   return (
     <html lang={lang} suppressHydrationWarning>
@@ -45,7 +54,7 @@ function RootComponent() {
         <RootProvider i18n={i18nProvider(translations, lang)}>
           <SupportConfigProvider value={supportConfig}>
             <Outlet />
-            <SupportWidget lang={lang} />
+            {!isAdmin && <SupportWidget lang={lang} />}
           </SupportConfigProvider>
         </RootProvider>
         <Scripts />

@@ -1,11 +1,18 @@
 import Anthropic from '@anthropic-ai/sdk';
 import {
+  supportConversationHeader,
   supportLimits,
   supportSessionHeader,
   type ChatEvent,
   type ChatTurn,
   type SupportErrorCode,
 } from '@/lib/support-protocol';
+import {
+  appendMessages,
+  credentialFor,
+  isConversationStoreEnabled,
+  resolveConversation,
+} from '../conversations';
 import { clientIp, rateLimit } from '../rate-limit';
 import { isSupportAgentEnabled, runSupportAgent } from '../support-agent';
 import { issueSupportSession, verifySupportSession } from '../support-session';
@@ -66,10 +73,24 @@ export async function POST(request: Request): Promise<Response> {
   }
   const session = isTurnstileEnabled() ? issueSupportSession() : undefined;
 
+  // Saving is best effort: the chat still answers when the database is down.
+  let conversationId: string | undefined;
+  if (isConversationStoreEnabled()) {
+    try {
+      conversationId = await resolveConversation(body.conversation, { lang, pagePath });
+    } catch (error) {
+      console.error('[support-chat] Could not open the conversation', error);
+    }
+  }
+  let answer = '';
+  const sources: { title: string; url: string }[] = [];
+
   const encoder = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({
     async start(controller) {
       const emit = (event: ChatEvent) => {
+        if (event.type === 'text') answer += event.text;
+        if (event.type === 'source') sources.push({ title: event.title, url: event.url });
         if (request.signal.aborted) return;
         controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
       };
@@ -88,6 +109,14 @@ export async function POST(request: Request): Promise<Response> {
         } catch {
           // Already closed by a disconnected client.
         }
+        if (conversationId) {
+          await appendMessages(conversationId, [
+            { role: 'user', content: turns.at(-1)!.content },
+            ...(answer.trim() ? [{ role: 'assistant' as const, content: answer, sources }] : []),
+          ]).catch((error: unknown) =>
+            console.error('[support-chat] Could not save the exchange', error),
+          );
+        }
       }
     },
   });
@@ -98,6 +127,7 @@ export async function POST(request: Request): Promise<Response> {
       'Cache-Control': 'no-store',
       'X-Accel-Buffering': 'no',
       ...(session ? { [supportSessionHeader]: session } : {}),
+      ...(conversationId ? { [supportConversationHeader]: credentialFor(conversationId) } : {}),
     },
   });
 }

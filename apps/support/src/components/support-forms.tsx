@@ -1,6 +1,6 @@
 import { useLocation } from '@tanstack/react-router';
 import { buttonVariants } from 'fumadocs-ui/components/ui/button';
-import { CheckCircle2, Loader2, ThumbsDown, ThumbsUp } from 'lucide-react';
+import { CheckCircle2, Loader2, MessagesSquare, ThumbsDown, ThumbsUp } from 'lucide-react';
 import { useId, useRef, useState, type FormEvent, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import type { Language } from '@/lib/i18n';
@@ -8,17 +8,18 @@ import { postSupport, supportErrorMessage } from '@/lib/support-client';
 import {
   contactCategories,
   supportLimits,
+  type ChatTurn,
   type ContactCategory,
   type ContactRequest,
   type FeedbackRequest,
   type SupportErrorCode,
+  type SupportSentBody,
 } from '@/lib/support-protocol';
 import { useSupportConfig } from './support-config';
 import { Turnstile, type TurnstileHandle } from './turnstile';
 
 const labels = {
   en: {
-    name: 'Name',
     optional: '(optional)',
     email: 'Email',
     emailHint:
@@ -41,7 +42,10 @@ const labels = {
       'Describe what you expected, what happened, and any error message. Never include passwords or card numbers.',
     educationMessageHint:
       'Include your school’s name, its email domain (for example, example.ac.jp), and its official website. We add domains that only the school can issue addresses on.',
+    transcriptNote:
+      'Your conversation with the AI assistant is sent along with this message, so you don’t need to repeat it.',
     sendMessage: 'Send message',
+    emailUs: 'You can also email',
     contactSent: 'Message sent',
     contactSentBody: 'Thanks. We’ll reply by email, usually within a few business days.',
     feedback: 'Your feedback',
@@ -59,7 +63,6 @@ const labels = {
     submit: 'Submit',
   },
   ja: {
-    name: 'お名前',
     optional: '（任意）',
     email: 'メールアドレス',
     emailHint:
@@ -82,7 +85,10 @@ const labels = {
       '期待した動作、実際に起きたこと、表示されたエラーを書いてください。パスワードやカード番号は書かないでください。',
     educationMessageHint:
       '学校名、メールアドレスのドメイン（例: example.ac.jp）、学校の公式サイトの URL を書いてください。学校だけがアドレスを発行できるドメインを追加します。',
+    transcriptNote:
+      'AI アシスタントとの会話も一緒に送信されます。同じ内容をもう一度書く必要はありません。',
     sendMessage: '送信する',
+    emailUs: 'メールでのお問い合わせ：',
     contactSent: '送信しました',
     contactSentBody: 'お問い合わせありがとうございます。通常、数営業日以内にメールで返信します。',
     feedback: 'フィードバック',
@@ -102,11 +108,24 @@ const labels = {
   },
 } satisfies Record<Language, unknown>;
 
+// 16px text on phones: iOS zooms into inputs with smaller text on focus.
+export function contactCategoryLabel(lang: Language, category: ContactCategory): string {
+  return labels[lang].categories[category];
+}
+
 const inputClass =
-  'w-full rounded-lg border bg-fd-card px-3 py-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-fd-ring';
+  'w-full rounded-lg border bg-fd-card px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-fd-ring sm:text-sm';
+
+/**
+ * Proves the sender is human, resolving `undefined` when that fails. The support
+ * widget passes its own, which reuses the chat's session pass and Turnstile.
+ */
+export type SupportVerifier = () => Promise<
+  { session?: string; turnstileToken?: string } | undefined
+>;
 
 /** Shared submit state: Turnstile token, pending flag, and the last error. */
-function useSubmission() {
+function useSubmission(verify?: SupportVerifier, onSent?: (body: SupportSentBody) => void) {
   const { email, turnstileSiteKey } = useSupportConfig();
   const [token, setToken] = useState<string>();
   const [pending, setPending] = useState(false);
@@ -117,22 +136,29 @@ function useSubmission() {
   async function submit(url: string, body: ContactRequest | FeedbackRequest) {
     setPending(true);
     setError(undefined);
-    const result = await postSupport(url, { ...body, turnstileToken: token });
+    const verification = verify ? await verify() : { turnstileToken: token };
+    const result = verification
+      ? await postSupport(url, { ...body, ...verification })
+      : ({ ok: false, error: 'verification_failed' } as const);
     turnstileRef.current?.reset();
     setPending(false);
-    if (result.ok) setSent(true);
-    else setError(result.error);
+    if (result.ok) {
+      setSent(true);
+      onSent?.(result.body);
+    } else {
+      setError(result.error);
+    }
   }
 
   return {
     enabled: email,
-    ready: email && !pending && (!turnstileSiteKey || Boolean(token)),
+    ready: email && !pending && (Boolean(verify) || !turnstileSiteKey || Boolean(token)),
     pending,
     error,
     sent,
     submit,
     turnstile: (lang: Language) =>
-      turnstileSiteKey ? (
+      turnstileSiteKey && !verify ? (
         <Turnstile ref={turnstileRef} siteKey={turnstileSiteKey} lang={lang} onToken={setToken} />
       ) : null,
   };
@@ -231,17 +257,48 @@ function readForm(form: HTMLFormElement) {
   };
 }
 
+/** Context from the AI support chat, where the contact and feedback forms live. */
+export type ChatContext = {
+  /** The conversation so far, sent along with the message when it isn't empty. */
+  transcript: ChatTurn[];
+  /** Page the chat was opened on. */
+  pagePath?: string;
+  verify: SupportVerifier;
+  /** Saved conversation the message joins, so the team's reply lands in the chat. */
+  conversation?: string;
+  /** Called once the message is sent, with the conversation it was saved to. */
+  onSent?: (body: SupportSentBody) => void;
+};
+
+function TranscriptNote({ lang }: { lang: Language }) {
+  return (
+    <p className="flex items-start gap-2 rounded-lg border bg-fd-card px-3 py-2 text-xs text-fd-muted-foreground">
+      <MessagesSquare className="mt-px size-3.5 shrink-0" />
+      {labels[lang].transcriptNote}
+    </p>
+  );
+}
+
 export function ContactForm({
   lang,
+  chat,
   defaultCategory = 'account',
+  defaultSubject,
+  defaultMessage,
+  defaultEmail,
 }: {
   lang: Language;
+  chat: ChatContext;
   /** Preselected topic, for example from a help article's `?category=` link. */
   defaultCategory?: ContactCategory;
+  defaultSubject?: string;
+  defaultMessage?: string;
+  defaultEmail?: string;
 }) {
   const t = labels[lang];
-  const submission = useSubmission();
+  const submission = useSubmission(chat.verify, chat.onSent);
   const [category, setCategory] = useState<ContactCategory>(defaultCategory);
+  const hasTranscript = chat.transcript.length > 0;
 
   if (!submission.enabled) return <FormError lang={lang} error="unavailable" />;
   if (submission.sent) return <Sent title={t.contactSent} body={t.contactSentBody} />;
@@ -250,48 +307,37 @@ export function ContactForm({
     event.preventDefault();
     const get = readForm(event.currentTarget);
     void submission.submit('/api/contact', {
-      name: get('name') || undefined,
       email: get('email'),
       category: get('category') as ContactCategory,
       subject: get('subject'),
       message: get('message'),
       lang,
+      pagePath: chat.pagePath,
+      transcript: hasTranscript ? chat.transcript : undefined,
+      conversation: chat.conversation,
       website: get('website') || undefined,
     });
   }
 
   return (
-    <form onSubmit={onSubmit} className="not-prose relative flex flex-col gap-5">
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label={t.name} optional={t.optional}>
-          {(id) => (
-            <input
-              id={id}
-              name="name"
-              autoComplete="name"
-              maxLength={supportLimits.nameLength}
-              className={inputClass}
-            />
-          )}
-        </Field>
-        <Field label={t.category}>
-          {(id) => (
-            <select
-              id={id}
-              name="category"
-              value={category}
-              onChange={(event) => setCategory(event.currentTarget.value as ContactCategory)}
-              className={inputClass}
-            >
-              {contactCategories.map((category) => (
-                <option key={category} value={category}>
-                  {t.categories[category]}
-                </option>
-              ))}
-            </select>
-          )}
-        </Field>
-      </div>
+    <form onSubmit={onSubmit} className="not-prose relative flex flex-col gap-4">
+      <Field label={t.category}>
+        {(id) => (
+          <select
+            id={id}
+            name="category"
+            value={category}
+            onChange={(event) => setCategory(event.currentTarget.value as ContactCategory)}
+            className={inputClass}
+          >
+            {contactCategories.map((category) => (
+              <option key={category} value={category}>
+                {t.categories[category]}
+              </option>
+            ))}
+          </select>
+        )}
+      </Field>
       <Field label={t.email} hint={t.emailHint}>
         {(id, hintId) => (
           <input
@@ -300,6 +346,7 @@ export function ContactForm({
             type="email"
             required
             autoComplete="email"
+            defaultValue={defaultEmail}
             maxLength={supportLimits.emailLength}
             aria-describedby={hintId}
             className={inputClass}
@@ -312,6 +359,7 @@ export function ContactForm({
             id={id}
             name="subject"
             required
+            defaultValue={defaultSubject}
             maxLength={supportLimits.subjectLength}
             className={inputClass}
           />
@@ -326,26 +374,41 @@ export function ContactForm({
             id={id}
             name="message"
             required
-            rows={8}
+            rows={5}
+            defaultValue={defaultMessage}
             maxLength={supportLimits.messageLength}
             aria-describedby={hintId}
             className={cn(inputClass, 'resize-y')}
           />
         )}
       </Field>
+      {hasTranscript && <TranscriptNote lang={lang} />}
       <Honeypot />
-      {submission.turnstile(lang)}
       <FormError lang={lang} error={submission.error} />
       <SubmitButton ready={submission.ready} pending={submission.pending}>
         {t.sendMessage}
       </SubmitButton>
+      <p className="text-xs text-fd-muted-foreground">
+        {t.emailUs} <a href="mailto:contact@deniai.app">contact@deniai.app</a>
+      </p>
     </form>
   );
 }
 
-export function FeedbackForm({ lang }: { lang: Language }) {
+export function FeedbackForm({
+  lang,
+  chat,
+  defaultMessage,
+  defaultEmail,
+}: {
+  lang: Language;
+  chat: ChatContext;
+  defaultMessage?: string;
+  defaultEmail?: string;
+}) {
   const t = labels[lang];
-  const submission = useSubmission();
+  const submission = useSubmission(chat.verify, chat.onSent);
+  const hasTranscript = chat.transcript.length > 0;
 
   if (!submission.enabled) return <FormError lang={lang} error="unavailable" />;
   if (submission.sent) return <Sent title={t.feedbackSent} body={t.feedbackSentBody} />;
@@ -358,19 +421,23 @@ export function FeedbackForm({ lang }: { lang: Language }) {
       message: get('message'),
       email: get('email') || undefined,
       lang,
+      pagePath: chat.pagePath,
+      transcript: hasTranscript ? chat.transcript : undefined,
+      conversation: chat.conversation,
       website: get('website') || undefined,
     });
   }
 
   return (
-    <form onSubmit={onSubmit} className="not-prose relative flex flex-col gap-5">
+    <form onSubmit={onSubmit} className="not-prose relative flex flex-col gap-4">
       <Field label={t.feedback} hint={t.feedbackHint}>
         {(id, hintId) => (
           <textarea
             id={id}
             name="message"
             required
-            rows={8}
+            rows={6}
+            defaultValue={defaultMessage}
             maxLength={supportLimits.messageLength}
             aria-describedby={hintId}
             className={cn(inputClass, 'resize-y')}
@@ -384,14 +451,15 @@ export function FeedbackForm({ lang }: { lang: Language }) {
             name="email"
             type="email"
             autoComplete="email"
+            defaultValue={defaultEmail}
             maxLength={supportLimits.emailLength}
             aria-describedby={hintId}
             className={inputClass}
           />
         )}
       </Field>
+      {hasTranscript && <TranscriptNote lang={lang} />}
       <Honeypot />
-      {submission.turnstile(lang)}
       <FormError lang={lang} error={submission.error} />
       <SubmitButton ready={submission.ready} pending={submission.pending}>
         {t.sendFeedback}

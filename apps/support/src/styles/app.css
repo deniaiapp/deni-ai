@@ -6,6 +6,15 @@ html {
   scrollbar-gutter: stable;
 }
 
+/* The support chat covers the whole screen on phones; keep the page behind it still. */
+@media (max-width: 639px) {
+  html[data-support-chat-open],
+  html[data-support-chat-open] > body {
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
 html > body[data-scroll-locked] {
   margin-right: 0px !important;
   --removed-body-scroll-bar-size: 0px !important;

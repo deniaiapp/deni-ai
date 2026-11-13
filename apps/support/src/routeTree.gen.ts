@@ -16,11 +16,15 @@ import { Route as LangSplatRouteImport } from './routes/$lang/$'
 import { Route as LangContactRouteImport } from './routes/$lang/contact'
 import { Route as LangFeedbackRouteImport } from './routes/$lang/feedback'
 import { Route as LangChar123Char125DotmdRouteImport } from './routes/$lang/{$}[.]md'
+import { Route as AdminIndexRouteImport } from './routes/admin/index'
+import { Route as AdminLoginRouteImport } from './routes/admin/login'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as ApiContactRouteImport } from './routes/api/contact'
+import { Route as ApiConversationRouteImport } from './routes/api/conversation'
 import { Route as ApiFeedbackRouteImport } from './routes/api/feedback'
 import { Route as ApiSearchRouteImport } from './routes/api/search'
 import { Route as LangOgSplatRouteImport } from './routes/$lang/og/$'
+import { Route as AdminCIdRouteImport } from './routes/admin/c/$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -57,6 +61,16 @@ const LangChar123Char125DotmdRoute = LangChar123Char125DotmdRouteImport.update({
   path: '/$lang/{$}.md',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminIndexRoute = AdminIndexRouteImport.update({
+  id: '/admin/',
+  path: '/admin/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminLoginRoute = AdminLoginRouteImport.update({
+  id: '/admin/login',
+  path: '/admin/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -65,6 +79,11 @@ const ApiChatRoute = ApiChatRouteImport.update({
 const ApiContactRoute = ApiContactRouteImport.update({
   id: '/api/contact',
   path: '/api/contact',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiConversationRoute = ApiConversationRouteImport.update({
+  id: '/api/conversation',
+  path: '/api/conversation',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiFeedbackRoute = ApiFeedbackRouteImport.update({
@@ -82,6 +101,11 @@ const LangOgSplatRoute = LangOgSplatRouteImport.update({
   path: '/$lang/og/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminCIdRoute = AdminCIdRouteImport.update({
+  id: '/admin/c/$id',
+  path: '/admin/c/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -91,11 +115,15 @@ export interface FileRoutesByFullPath {
   '/$lang/contact': typeof LangContactRoute
   '/$lang/feedback': typeof LangFeedbackRoute
   '/$lang/{$}.md': typeof LangChar123Char125DotmdRoute
+  '/admin/login': typeof AdminLoginRoute
   '/api/chat': typeof ApiChatRoute
   '/api/contact': typeof ApiContactRoute
+  '/api/conversation': typeof ApiConversationRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/api/search': typeof ApiSearchRoute
+  '/admin/': typeof AdminIndexRoute
   '/$lang/og/$': typeof LangOgSplatRoute
+  '/admin/c/$id': typeof AdminCIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -105,11 +133,15 @@ export interface FileRoutesByTo {
   '/$lang/contact': typeof LangContactRoute
   '/$lang/feedback': typeof LangFeedbackRoute
   '/$lang/{$}.md': typeof LangChar123Char125DotmdRoute
+  '/admin/login': typeof AdminLoginRoute
   '/api/chat': typeof ApiChatRoute
   '/api/contact': typeof ApiContactRoute
+  '/api/conversation': typeof ApiConversationRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/api/search': typeof ApiSearchRoute
+  '/admin': typeof AdminIndexRoute
   '/$lang/og/$': typeof LangOgSplatRoute
+  '/admin/c/$id': typeof AdminCIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -120,11 +152,15 @@ export interface FileRoutesById {
   '/$lang/contact': typeof LangContactRoute
   '/$lang/feedback': typeof LangFeedbackRoute
   '/$lang/{$}.md': typeof LangChar123Char125DotmdRoute
+  '/admin/login': typeof AdminLoginRoute
   '/api/chat': typeof ApiChatRoute
   '/api/contact': typeof ApiContactRoute
+  '/api/conversation': typeof ApiConversationRoute
   '/api/feedback': typeof ApiFeedbackRoute
   '/api/search': typeof ApiSearchRoute
+  '/admin/': typeof AdminIndexRoute
   '/$lang/og/$': typeof LangOgSplatRoute
+  '/admin/c/$id': typeof AdminCIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -136,11 +172,15 @@ export interface FileRouteTypes {
     | '/$lang/contact'
     | '/$lang/feedback'
     | '/$lang/{$}.md'
+    | '/admin/login'
     | '/api/chat'
     | '/api/contact'
+    | '/api/conversation'
     | '/api/feedback'
     | '/api/search'
+    | '/admin/'
     | '/$lang/og/$'
+    | '/admin/c/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -150,11 +190,15 @@ export interface FileRouteTypes {
     | '/$lang/contact'
     | '/$lang/feedback'
     | '/$lang/{$}.md'
+    | '/admin/login'
     | '/api/chat'
     | '/api/contact'
+    | '/api/conversation'
     | '/api/feedback'
     | '/api/search'
+    | '/admin'
     | '/$lang/og/$'
+    | '/admin/c/$id'
   id:
     | '__root__'
     | '/'
@@ -164,11 +208,15 @@ export interface FileRouteTypes {
     | '/$lang/contact'
     | '/$lang/feedback'
     | '/$lang/{$}.md'
+    | '/admin/login'
     | '/api/chat'
     | '/api/contact'
+    | '/api/conversation'
     | '/api/feedback'
     | '/api/search'
+    | '/admin/'
     | '/$lang/og/$'
+    | '/admin/c/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -179,11 +227,15 @@ export interface RootRouteChildren {
   LangContactRoute: typeof LangContactRoute
   LangFeedbackRoute: typeof LangFeedbackRoute
   LangChar123Char125DotmdRoute: typeof LangChar123Char125DotmdRoute
+  AdminLoginRoute: typeof AdminLoginRoute
   ApiChatRoute: typeof ApiChatRoute
   ApiContactRoute: typeof ApiContactRoute
+  ApiConversationRoute: typeof ApiConversationRoute
   ApiFeedbackRoute: typeof ApiFeedbackRoute
   ApiSearchRoute: typeof ApiSearchRoute
+  AdminIndexRoute: typeof AdminIndexRoute
   LangOgSplatRoute: typeof LangOgSplatRoute
+  AdminCIdRoute: typeof AdminCIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -237,6 +289,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LangChar123Char125DotmdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/': {
+      id: '/admin/'
+      path: '/admin'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AdminIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/login': {
+      id: '/admin/login'
+      path: '/admin/login'
+      fullPath: '/admin/login'
+      preLoaderRoute: typeof AdminLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -249,6 +315,13 @@ declare module '@tanstack/react-router' {
       path: '/api/contact'
       fullPath: '/api/contact'
       preLoaderRoute: typeof ApiContactRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/conversation': {
+      id: '/api/conversation'
+      path: '/api/conversation'
+      fullPath: '/api/conversation'
+      preLoaderRoute: typeof ApiConversationRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/feedback': {
@@ -272,6 +345,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LangOgSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/c/$id': {
+      id: '/admin/c/$id'
+      path: '/admin/c/$id'
+      fullPath: '/admin/c/$id'
+      preLoaderRoute: typeof AdminCIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -283,11 +363,15 @@ const rootRouteChildren: RootRouteChildren = {
   LangContactRoute: LangContactRoute,
   LangFeedbackRoute: LangFeedbackRoute,
   LangChar123Char125DotmdRoute: LangChar123Char125DotmdRoute,
+  AdminLoginRoute: AdminLoginRoute,
   ApiChatRoute: ApiChatRoute,
   ApiContactRoute: ApiContactRoute,
+  ApiConversationRoute: ApiConversationRoute,
   ApiFeedbackRoute: ApiFeedbackRoute,
   ApiSearchRoute: ApiSearchRoute,
+  AdminIndexRoute: AdminIndexRoute,
   LangOgSplatRoute: LangOgSplatRoute,
+  AdminCIdRoute: AdminCIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

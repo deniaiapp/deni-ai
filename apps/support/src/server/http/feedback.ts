@@ -1,21 +1,24 @@
 import { siteUrl } from '@/lib/shared';
 import { supportLimits } from '@/lib/support-protocol';
 import { isEmailConfigured, sendSupportEmail } from '../email';
+import { adminLink, openRequestConversation, saveRequest } from '../conversations';
 import { clientIp, rateLimit } from '../rate-limit';
-import { verifyTurnstile } from '../turnstile';
 import {
   errorResponse,
+  formatTranscript,
   isEmail,
   optionalString,
   readJsonBody,
   readLanguage,
   readPagePath,
+  readTranscript,
+  verifyHuman,
 } from './shared';
 
 export async function POST(request: Request): Promise<Response> {
   if (!isEmailConfigured()) return errorResponse('unavailable');
 
-  const body = await readJsonBody(request, 32 * 1024);
+  const body = await readJsonBody(request, 128 * 1024);
   if (!body) return errorResponse('invalid');
 
   const lang = readLanguage(body.lang);
@@ -24,7 +27,9 @@ export async function POST(request: Request): Promise<Response> {
   const message = optionalString(body.message, supportLimits.messageLength);
   const email = optionalString(body.email, supportLimits.emailLength);
   const pagePath = readPagePath(body.pagePath);
+  const transcript = readTranscript(body.transcript);
   if (
+    transcript === null ||
     !lang ||
     (kind !== 'page' && kind !== 'general') ||
     message === null ||
@@ -43,13 +48,18 @@ export async function POST(request: Request): Promise<Response> {
   const retryAfter = rateLimit(`feedback:${ip}`, 10, 3_600_000);
   if (retryAfter) return errorResponse('rate_limited', retryAfter);
 
-  if (!(await verifyTurnstile(body.turnstileToken, ip))) {
-    return errorResponse('verification_failed');
-  }
+  if (!(await verifyHuman(body, ip))) return errorResponse('verification_failed');
 
   if (typeof body.website === 'string' && body.website.length > 0) {
     return Response.json({ ok: true });
   }
+
+  // General feedback comes from the widget, where the team can reply in the chat;
+  // page ratings are anonymous.
+  const conversationId =
+    kind === 'general'
+      ? await openRequestConversation(body.conversation, { lang, pagePath })
+      : undefined;
 
   const verdict = kind === 'page' ? (helpful ? 'Helpful' : 'Not helpful') : 'General';
   const text = [
@@ -58,13 +68,17 @@ export async function POST(request: Request): Promise<Response> {
     `Language: ${lang}`,
     ...(email ? [`From: ${email}`] : []),
     `User agent: ${request.headers.get('user-agent') ?? 'unknown'}`,
+    ...(transcript ? ['Sent from: AI support chat'] : []),
+    ...(conversationId ? [`Reply in the chat: ${adminLink(siteUrl, conversationId)}`] : []),
     '',
     message ?? '(no comment)',
+    ...(transcript ? ['', '--- AI support chat ---', '', formatTranscript(transcript)] : []),
   ].join('\n');
 
+  const tag = transcript ? '[Feedback via chat]' : '[Feedback]';
   try {
     await sendSupportEmail({
-      subject: `[Feedback] ${verdict}${pagePath ? `: ${pagePath}` : ''}`,
+      subject: `${tag} ${verdict}${pagePath ? `: ${pagePath}` : ''}`,
       text,
       replyTo: email,
     });
@@ -73,5 +87,6 @@ export async function POST(request: Request): Promise<Response> {
     return errorResponse('failed');
   }
 
-  return Response.json({ ok: true });
+  if (!message) return Response.json({ ok: true });
+  return Response.json(await saveRequest(conversationId, message, { kind: 'feedback', email }));
 }

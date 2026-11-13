@@ -1,5 +1,12 @@
 import { isLanguage, type Language } from '@/lib/i18n';
-import type { SupportErrorBody, SupportErrorCode } from '@/lib/support-protocol';
+import {
+  supportLimits,
+  type ChatTurn,
+  type SupportErrorBody,
+  type SupportErrorCode,
+} from '@/lib/support-protocol';
+import { verifySupportSession } from '../support-session';
+import { isTurnstileEnabled, verifyTurnstile } from '../turnstile';
 
 const statusByError: Record<SupportErrorCode, number> = {
   invalid: 400,
@@ -82,4 +89,42 @@ const emailPattern = /^[^\s@<>()",;]+@[^\s@<>()",;]+\.[^\s@<>()",;]+$/;
 
 export function isEmail(value: string): boolean {
   return emailPattern.test(value);
+}
+
+/**
+ * Checks a form submission's Turnstile token. From the support widget, the chat
+ * session pass stands in for a fresh token.
+ */
+export async function verifyHuman(body: Record<string, unknown>, ip: string): Promise<boolean> {
+  if (isTurnstileEnabled() && verifySupportSession(body.session)) return true;
+  return verifyTurnstile(body.turnstileToken, ip);
+}
+
+/** The optional AI chat conversation sent from the widget, within the chat limits. */
+export function readTranscript(value: unknown): ChatTurn[] | undefined | null {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value) || value.length > supportLimits.chatMessages) return null;
+
+  let total = 0;
+  const turns: ChatTurn[] = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') return null;
+    const { role, content } = item as Record<string, unknown>;
+    if (role !== 'user' && role !== 'assistant') return null;
+    if (typeof content !== 'string') return null;
+    const text = content.trim();
+    if (text.length > supportLimits.chatMessageLength) return null;
+    if (!text) continue;
+    total += text.length;
+    turns.push({ role, content: text });
+  }
+
+  if (total > supportLimits.chatTotalLength) return null;
+  return turns.length > 0 ? turns : undefined;
+}
+
+export function formatTranscript(turns: ChatTurn[]): string {
+  return turns
+    .map((turn) => `${turn.role === 'user' ? 'User' : 'Assistant'}:\n${turn.content}`)
+    .join('\n\n');
 }

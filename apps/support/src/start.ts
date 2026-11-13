@@ -23,7 +23,7 @@ const llmMiddleware = createMiddleware().server(({ next, request }) => {
 
   if (
     isLanguage(lang) &&
-    // The OG images and support forms have no Markdown version.
+    // The OG images and the support form redirects have no Markdown version.
     !['og', 'contact', 'feedback'].includes(rest[0] ?? '') &&
     !url.pathname.endsWith('.md') &&
     isMarkdownPreferred(request)

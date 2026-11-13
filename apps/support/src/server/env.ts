@@ -33,4 +33,16 @@ export const serverEnv = {
   get turnstileSecretKey() {
     return read('TURNSTILE_SECRET_KEY');
   },
+  /** Postgres (the Deni AI database); conversations live in its `support` schema. */
+  get databaseUrl() {
+    return read('DATABASE_URL');
+  },
+  /** Signs conversation links and admin sessions. Long and random. */
+  get supportSecret() {
+    return read('SUPPORT_SECRET');
+  },
+  /** Password for the admin inbox at /admin. */
+  get adminToken() {
+    return read('SUPPORT_ADMIN_TOKEN');
+  },
 };
