@@ -414,6 +414,28 @@ export function AccountMenu() {
             <CircleHelp className="size-4" />
             <span className="flex-1">{t("Help Center")}</span>
           </DropdownMenuItem>
+          {(privateBeta || rolloutSwitch) && (
+            <DropdownMenuItem
+              className="gap-2 text-sm"
+              disabled={isMenuPending}
+              render={
+                <a
+                  // Not a bare number: the help center's router JSON-parses search
+                  // values, which would turn "8.0" into 8.
+                  href={betaFeedbackUrl({
+                    locale,
+                    version: `${versions.version} (${versions.date})`,
+                  })}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex w-full"
+                />
+              }
+            >
+              <MessageSquareText className="size-4" />
+              <span className="flex-1">{t("Send feedback")}</span>
+            </DropdownMenuItem>
+          )}
           {rolloutSwitch && (
             <DropdownMenuItem
               className="gap-2 text-sm"
@@ -425,34 +447,14 @@ export function AccountMenu() {
             </DropdownMenuItem>
           )}
           {privateBeta && (
-            <>
-              <DropdownMenuItem
-                className="gap-2 text-sm"
-                disabled={isMenuPending}
-                render={
-                  <a
-                    href={betaFeedbackUrl({
-                      locale,
-                      version: `${versions.version} (${versions.codename})`,
-                    })}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex w-full"
-                  />
-                }
-              >
-                <MessageSquareText className="size-4" />
-                <span className="flex-1">{t("Send feedback")}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="gap-2 text-sm"
-                disabled={isMenuPending}
-                render={<a href={clientEnv.NEXT_PUBLIC_V7_URL} className="flex w-full" />}
-              >
-                <ArrowUpRight className="size-4" />
-                <span className="flex-1">{t("Go to Deni AI v7")}</span>
-              </DropdownMenuItem>
-            </>
+            <DropdownMenuItem
+              className="gap-2 text-sm"
+              disabled={isMenuPending}
+              render={<a href={clientEnv.NEXT_PUBLIC_V7_URL} className="flex w-full" />}
+            >
+              <ArrowUpRight className="size-4" />
+              <span className="flex-1">{t("Go to Deni AI v7")}</span>
+            </DropdownMenuItem>
           )}
           <DropdownMenuSeparator />
           <DropdownMenuItem

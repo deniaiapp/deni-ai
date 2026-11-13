@@ -115,7 +115,8 @@ git), for example 5 → 20 → 50 → 100, a few days each. Watch at every step:
   where updated_at > now() - interval '7 days' and message_count is null;
   ```
 
-- **Feedback**: the help center form.
+- **Feedback**: v8's account menu has "Send feedback", which opens the help center
+  form with `from=v8`; those messages start with `[Deni AI v8 · 8.0 (<release date>)]`.
 
 **Going back**: deploy the Worker with `V8_PERCENT: "0"`. Everyone is on v7 within
 seconds; nothing in the database needs undoing (every v8 migration is additive and

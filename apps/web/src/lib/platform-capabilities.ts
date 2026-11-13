@@ -18,12 +18,13 @@ export type PlatformCapabilities = {
   };
   /**
    * This deployment runs the private beta gate (`BETA_ACCESS_REQUIRED`): shows the
-   * beta-only UI (sidebar "Beta" label, beta feedback and "Go to Deni AI v7" links).
+   * beta-only UI (sidebar "Beta" label, "Go to Deni AI v7" link) and "Send feedback".
    */
   privateBeta: boolean;
   /**
    * deniai.app is split between v7 and v8 by the rollout Worker
-   * (`ROLLOUT_SWITCH_ENABLED`): the account menu offers going back to v7.
+   * (`ROLLOUT_SWITCH_ENABLED`): the account menu offers going back to v7 and
+   * "Send feedback" (the help center's v8 form).
    */
   rolloutSwitch: boolean;
 };
