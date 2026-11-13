@@ -99,6 +99,13 @@ export const env = createEnv({
       .regex(/^[1-9]\d*$/, "TRUSTED_PROXY_HOPS must be a positive integer")
       .transform(Number)
       .optional(),
+    /**
+     * `true` while deniai.app is split between v7 and v8 by the rollout Worker
+     * (deni-ai-new: services/rollout-router, docs/v8-rollout.md): the account menu
+     * offers "Try the new Deni AI", which goes to the Worker's `/__rollout/v8`.
+     * Off without the Worker in front, where that path is a 404.
+     */
+    ROLLOUT_SWITCH_ENABLED: z.stringbool().default(false),
   },
   client: {
     /**

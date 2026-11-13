@@ -14,6 +14,11 @@ export type PlatformCapabilities = {
     /** Email sending is configured: verification, password reset and magic links work. */
     email: boolean;
   };
+  /**
+   * deniai.app is split between v7 and v8 by the rollout Worker
+   * (`ROLLOUT_SWITCH_ENABLED`): the account menu offers trying v8.
+   */
+  rolloutSwitch: boolean;
 };
 
 export function isModelProviderAvailable(
