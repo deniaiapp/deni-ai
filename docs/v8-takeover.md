@@ -1,15 +1,25 @@
 # Deni AI v8 takeover of deniai.app
 
 How v8 (this monorepo, `apps/web`) replaces v7 (the `deni-ai` repository) at
-`deniai.app` after the private beta (`docs/v8-beta-rollout.md`). Both apps already
+`deniai.app`. Usually this is the last step of the percentage rollout
+(`docs/v8-rollout.md`), once v8 serves everyone without trouble; it also works
+straight after the private beta (`docs/v8-beta-rollout.md`). Both apps already
 share the production Postgres database, the R2 bucket and `BETTER_AUTH_SECRET`, so
 the takeover moves **traffic and background work**, not data.
 
+Both apps run on minidock (see the minidock repository's `docs/server.md`):
+`deni-ai` (v7, branch `master`, `Dockerfile`) serves `deniai.app`, and
+`deni-ai-beta` (v8, branch `beta/v8`, `apps/web/Dockerfile`) serves
+`beta.deniai.app`. Caddy routes by host name only, and moving a host name from one
+app to another leaves a few seconds of 404, so the takeover **switches the
+`deni-ai` app itself to v8** and deploys it; the health check guards the switch.
+
 After the takeover:
 
-- `deniai.app` serves v8, which runs the scheduled jobs and the Stripe webhook.
-- `beta.deniai.app` redirects to `deniai.app`.
-- v7 is stopped but kept deployable (image, env) for the rollback window.
+- `deniai.app` (the `deni-ai` app) serves v8, which runs the scheduled jobs and the
+  Stripe webhook.
+- `beta.deniai.app` redirects to `deniai.app`, and the rollout Worker is removed.
+- v7's last image stays in the `deni-ai` app's deployments for the rollback window.
 
 ## What changes and what does not
 
@@ -23,7 +33,7 @@ After the takeover:
 | Scheduled jobs              | `usage-and-meter`, `storage-cleanup`, `guest-cleanup` and `model-health` move to v8 (`CRON_ENABLED` unset). They are safe to run concurrently, so a short overlap with v7 while switching is harmless; a long one is not needed.                                                     |
 | Deni AI as OAuth provider   | Standalone Deni Run (run.deniai.app) keeps `deniai.app` as issuer and redirect target. The OAuth clients, consents and JWKS are rows in the shared database, so they keep working; v8 needs `DENI_RUN_OAUTH_CLIENT_ID` and `DENI_RUN_SERVICE_SECRET` with v7's values.                 |
 | Flixa                       | Unchanged: the production API stays on the old flixa-backend. `services/agent-api` stays undeployed (or `FLIXA_USAGE_ENGINE=shadow`).                                                                                                                                               |
-| Run mode (`/run`)           | Opens to everyone. Needs `services/run-worker` (or `RUN_SCHEDULER_IN_PROCESS=true` on a single instance), or set `RUN_ENABLED=false` to keep it off until the worker is ready. The D1 import is a separate step (`docs/run-migration.md`).                                            |
+| Run mode (`/run`)           | The beta runs with `RUN_ENABLED=false`. Turning it on opens Run to everyone and needs `services/run-worker` (or `RUN_SCHEDULER_IN_PROCESS=true` on a single instance); keep it off until the worker is ready. The D1 import is a separate step (`docs/run-migration.md`).          |
 | Beta-only UI                | The sidebar "Beta" label and the account menu's "Send feedback" (beta form) and "Go to Deni AI v7" items follow `BETA_ACCESS_REQUIRED` (`platformCapabilities.privateBeta`), so they disappear with the gate. `/private-beta` stays as a route but nothing sends users there.          |
 | Retired pages               | guides, use cases, about and models answer 308 permanent redirects (`apps/web/vite/route-rules.ts`). Canonical URLs already use `https://deniai.app`.                                                                                                                                                   |
 | Google sign-in, Turnstile   | No change: `deniai.app` is already registered.                                                                                                                                                                                                                                      |
@@ -57,10 +67,14 @@ After the takeover:
    `packages/db/migrations/` (`0081` at the time of writing). Apply missing ones from
    this repository first (`pnpm --filter @deniai/db db:migrate` with the production
    `DATABASE_URL`).
-3. **Build v8 for `deniai.app`**: `docker build -f apps/web/Dockerfile --build-arg
-   NEXT_PUBLIC_BETTER_AUTH_URL=https://deniai.app ...` (the other `NEXT_PUBLIC_*`
-   build arguments as for v7).
-4. **Configure v8** with v7's production values except:
+3. **Save v7's configuration**: copy the `deni-ai` app's Environment, Build-time
+   Arguments, branch and Dockerfile path somewhere safe. A minidock rollback starts
+   the old image with the **current** Environment, so going back to v7 needs them.
+4. **Switch the `deni-ai` app to v8** in the minidock panel: branch `beta/v8` (or
+   `master` once v8 is promoted there), Dockerfile `apps/web/Dockerfile`, the
+   Build-time Arguments of `deni-ai-beta` with
+   `NEXT_PUBLIC_BETTER_AUTH_URL=https://deniai.app` (and the other `NEXT_PUBLIC_*`
+   values as for v7), and v7's production Environment except:
 
    | Variable                                              | Value at takeover                                                         |
    | ----------------------------------------------------- | ------------------------------------------------------------------------- |
@@ -72,13 +86,18 @@ After the takeover:
    | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`            | v7's GitHub OAuth App                                                     |
    | `DENI_RUN_OAUTH_CLIENT_ID`, `DENI_RUN_SERVICE_SECRET` | v7's values                                                               |
    | `PASSKEY_RP_ID`                                       | `deniai.app` or unset (the auth URL's host)                               |
-   | `RUN_SCHEDULER_IN_PROCESS`, `RUN_ENABLED`             | Unset with a run worker; otherwise see "Run mode" above                   |
+   | `RUN_SCHEDULER_IN_PROCESS`, `RUN_ENABLED`             | `RUN_ENABLED=false` until a run worker runs; see "Run mode" above        |
+   | `ROLLOUT_SWITCH_ENABLED`                              | Unset (no Worker after the takeover)                                      |
    | `BETTER_AUTH_SECRET`, `DATABASE_URL`, `R2_*`          | Unchanged (already v7's)                                                  |
 
-5. **Switch traffic**: point `deniai.app` at the v8 deployment, and make
-   `beta.deniai.app` answer `301` to the same path on `deniai.app`.
-6. **Stop v7** (or set `DISABLE_BACKGROUND_JOBS=1` on it if it must keep running) so
-   only v8 runs the jobs. Keep its image and env.
+   Then press **Deploy**. Once the health check passes, `deniai.app` serves v8 and the
+   v7 container is gone, so only v8 runs the jobs and receives the webhook.
+5. **Remove the rollout Worker** if it runs: set `V8_PERCENT=0` (everything then
+   reaches the `deni-ai` app, now v8), then delete the Worker's `deniai.app/*` route.
+   Visitors' `deni_variant` cookies are ignored from then on.
+6. **Retire the beta host**: stop the `deni-ai-beta` app and add a Cloudflare
+   redirect rule from `beta.deniai.app/*` to the same path on `deniai.app` (Caddy
+   cannot redirect).
 7. **Smoke test** on `deniai.app`:
    - An existing v7 session is still signed in; email, Google, GitHub and passkey
      sign-in work; a guest can start a chat.
@@ -100,11 +119,15 @@ After the takeover:
 Every v8 migration is additive and v8 keeps writing `chats.messages`, so v7 still works
 against the database:
 
-1. Point `deniai.app` back at v7 and remove `DISABLE_BACKGROUND_JOBS` from it.
-2. Stop v8, or put it back on `beta.deniai.app` with the beta env
+1. Restore v7's saved configuration on the `deni-ai` app (Environment, Build-time
+   Arguments, branch `master`, Dockerfile `Dockerfile`), then either **Rollback** to
+   the last v7 deployment (its image is kept while it is among the last three
+   successful ones) or **Deploy** to build v7 again. Restore the Environment first: a
+   rollback runs the old image with the current Environment.
+2. If v8 should stay reachable, start `deni-ai-beta` again with the beta env
    (`BETA_ACCESS_REQUIRED=true`, `CRON_ENABLED=false`, `STRIPE_WEBHOOK_ENABLED=false`,
    `NOINDEX=1`, the beta GitHub OAuth App, `NEXT_PUBLIC_BETTER_AUTH_URL` rebuilt for
-   beta).
+   beta) and remove the beta redirect rule.
 
 What v7 cannot show: Run mode data, per-account preferred models and the per-chat
 model (`0081`). Accounts that turned on two-factor authentication on v8 keep it on v7.

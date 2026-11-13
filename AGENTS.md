@@ -12,6 +12,7 @@ the workspace layout and the rules that span apps.
 | `apps/support`                      | `@deniai/support`                   | Help center (support.deniai.app, Fumadocs on TanStack Start). See `apps/support/README.md`                                                                                           |
 | `services/agent-api`                | `@deniai/agent-api`                 | Flixa agent API (Hono, formerly flixa-backend). Guide: `services/agent-api/AGENTS.md`                                                                                                |
 | `services/run-worker`               | `@deniai/run-worker`                | Deni Run worker: job scheduler (routines, stale leases, claiming) and, behind `RUN_DISCORD_ENABLED`, the Discord bot. See `services/run-worker/README.md`                            |
+| `services/rollout-router`           | `@deniai/rollout-router`            | Cloudflare Worker on deniai.app that splits visitors between v7 and v8 (`V8_PERCENT`, `deni_variant` cookie). Runbook: `docs/v8-rollout.md`                                         |
 | `packages/disposable-email-domains` | `@deni-ai/disposable-email-domains` | Disposable email domain list                                                                                                                                                         |
 | `packages/db`                       | `@deniai/db`                        | Drizzle schema + migrations: `public` (web, `drizzle.config.ts`) and `flixa` (agent API, `drizzle.flixa.config.ts`, journal `flixa.__drizzle_migrations`)                            |
 | `packages/billing`                  | `@deniai/billing`                   | Billing rules shared by web and agent API: pure pool sizes, plan tiers, usage tier multipliers, token weights, education domains; `/server`: the usage engine (`createUsageEngine`)  |
@@ -87,8 +88,9 @@ D1 data moves over with `pnpm --filter @deniai/run migrate:d1` (runbook:
 - During the v8 private beta the web app shares the production database with v7
   (the `deni-ai` repository): schema changes are made only in `packages/db`
   here and stay additive, and v7 does not generate migrations. Rollout, the
-  beta gate and the coexistence switches: `docs/v8-beta-rollout.md`; the move
-  to deniai.app: `docs/v8-takeover.md`.
+  beta gate and the coexistence switches: `docs/v8-beta-rollout.md`; the
+  percentage rollout on deniai.app: `docs/v8-rollout.md`; the final move to
+  deniai.app: `docs/v8-takeover.md`.
 
 ## Commands (from the root)
 
