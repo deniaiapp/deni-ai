@@ -46,6 +46,7 @@ COPY apps/web/package.json ./apps/web/
 COPY apps/support/package.json ./apps/support/
 COPY services/agent-api/package.json ./services/agent-api/
 COPY services/run-worker/package.json ./services/run-worker/
+COPY services/rollout-router/package.json ./services/rollout-router/
 COPY --parents packages/*/package.json ./
 # Install before NODE_ENV=production so devDependencies (Vite, Tailwind, the
 # React Compiler) are present for the build.

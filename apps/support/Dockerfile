@@ -1,7 +1,6 @@
 # syntax=docker/dockerfile:1
 #
-# Dokploy (Dockerfile build)
-#   Build Type:      Dockerfile
+# minidock app `support` (built from git)
 #   Dockerfile path: apps/support/Dockerfile
 #   Docker context:  . (the monorepo root; apps/support/Dockerfile.dockerignore applies)
 #   Port:            3000
@@ -25,6 +24,7 @@ COPY apps/web/package.json ./apps/web/
 COPY apps/support/package.json ./apps/support/
 COPY services/agent-api/package.json ./services/agent-api/
 COPY services/run-worker/package.json ./services/run-worker/
+COPY services/rollout-router/package.json ./services/rollout-router/
 # Package sources follow the install, so editing them keeps the install cached.
 COPY --parents packages/*/package.json ./
 
