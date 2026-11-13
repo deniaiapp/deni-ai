@@ -46,6 +46,7 @@ export function getPlatformCapabilities(): PlatformCapabilities {
       captcha: hasValue(env.TURNSTILE_SECRET_KEY) && hasValue(env.NEXT_PUBLIC_TURNSTILE_SITE_KEY),
       email: isEmailConfigured(),
     },
+    rolloutSwitch: env.ROLLOUT_SWITCH_ENABLED,
   };
 }
 

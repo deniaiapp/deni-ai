@@ -19,6 +19,7 @@ const defaultCapabilities: PlatformCapabilities = {
     captcha: true,
     email: true,
   },
+  rolloutSwitch: false,
 };
 
 const PlatformCapabilitiesContext = createContext<PlatformCapabilities>(defaultCapabilities);

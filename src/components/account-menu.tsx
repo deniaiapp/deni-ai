@@ -1,5 +1,14 @@
-import { CircleHelp, LogOut, Settings, UserIcon, UserPlus, Users, Zap } from "lucide-react";
-import { Link, useRouter } from "@/lib/navigation";
+import {
+  CircleHelp,
+  LogOut,
+  Settings,
+  Sparkles,
+  UserIcon,
+  UserPlus,
+  Users,
+  Zap,
+} from "lucide-react";
+import { Link, usePathname, useRouter } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
@@ -32,6 +41,7 @@ import { liveUsageQueryOptions } from "@/lib/usage-query-options";
 import { cn } from "@/lib/utils";
 import { supportUrl } from "@/lib/support-url";
 import { versions } from "@/lib/version";
+import { rolloutSwitchUrl } from "@/lib/rollout";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "./ui/tooltip";
 
 type UsageCategoryItem = {
@@ -100,7 +110,8 @@ export function AccountMenu() {
   const utils = trpc.useUtils();
   const session = authClient.useSession();
   const isAnonymous = Boolean(session.data?.user?.isAnonymous);
-  const { features } = usePlatformCapabilities();
+  const { features, rolloutSwitch } = usePlatformCapabilities();
+  const pathname = usePathname();
   const billingDisabled = !features.billing;
   const hasSession = Boolean(session.data?.user);
   // A guest's stored name ("Anonymous") and placeholder address are not theirs to see.
@@ -393,6 +404,16 @@ export function AccountMenu() {
             <CircleHelp className="size-4" />
             <span className="flex-1">{t("Help Center")}</span>
           </DropdownMenuItem>
+          {rolloutSwitch && (
+            <DropdownMenuItem
+              className="gap-2 text-sm"
+              disabled={isMenuPending}
+              render={<a href={rolloutSwitchUrl("v8", pathname)} className="flex w-full" />}
+            >
+              <Sparkles className="size-4" />
+              <span className="flex-1">{t("Try the new Deni AI")}</span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="gap-2 text-sm"
