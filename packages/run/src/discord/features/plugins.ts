@@ -8,7 +8,7 @@ import {
   setPluginAlwaysAllow,
   type PluginKind,
   type WriteAction,
-} from "@deniai/run/mcp/builtin-plugins";
+} from "../../mcp/builtin-plugins";
 import {
   choices,
   confirmRow,

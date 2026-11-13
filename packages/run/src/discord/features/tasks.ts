@@ -25,12 +25,12 @@ import {
   truncate,
   updateMessage,
 } from "../ui";
-import { cancelAndReleaseJob, retryAndRunJob } from "@deniai/run/jobs/actions";
-import { getJob, listJobOverview, listJobs } from "@deniai/run/jobs/index";
-import { isActiveJob } from "@deniai/run/jobs/view";
+import { cancelAndReleaseJob, retryAndRunJob } from "../../jobs/actions";
+import { getJob, listJobOverview, listJobs } from "../../jobs/index";
+import { isActiveJob } from "../../jobs/view";
 import { reportError } from "../report";
-import { readStore } from "@deniai/run/data/store";
-import type { AgentJob, JobStatus, Store, Thread } from "@deniai/run/types";
+import { readStore } from "../../data/store";
+import type { AgentJob, JobStatus, Store, Thread } from "../../types";
 
 /** The web app's task list: what is running, what recently ended, and Stop and Retry for them. */
 

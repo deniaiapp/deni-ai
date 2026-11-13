@@ -6,14 +6,14 @@ import {
   toUIMessageStream,
   type UIMessage,
 } from "ai";
-import { buildInstructions, createDeniTools, deniToolApproval } from "@deniai/run/agent/index";
-import { getApiKey } from "@deniai/run/data/config";
-import { releaseBrowserTakeover } from "@deniai/run/computer/browser-workspaces";
-import { setComputer } from "@deniai/run/computer/index";
-import { hasOpenApproval, hasPendingWorkflowWait } from "@deniai/run/chat/run-state";
-import { releaseStaleApproval } from "@deniai/run/jobs/actions";
+import { buildInstructions, createDeniTools, deniToolApproval } from "../agent/index";
+import { getApiKey } from "../data/config";
+import { releaseBrowserTakeover } from "../computer/browser-workspaces";
+import { setComputer } from "../computer/index";
+import { hasOpenApproval, hasPendingWorkflowWait } from "../chat/run-state";
+import { releaseStaleApproval } from "../jobs/actions";
 import { discordErrorText, discordTranslator as translatorFor } from "./i18n";
-import { translateError } from "@deniai/run/i18n/standalone";
+import { translateError } from "../i18n/standalone";
 import {
   checkpointJob,
   claimJob,
@@ -24,22 +24,22 @@ import {
   heartbeatJob,
   listJobs,
   transitionJob,
-} from "@deniai/run/jobs/index";
-import { getDeniModel } from "@deniai/run/agent/llm";
-import { groupContext, groupRecipients } from "@deniai/run/chat/group-chat";
-import { discordTargetGroup, groupMembers } from "@deniai/run/chat/groups";
-import { messagesForModel, mergeThreadMessages } from "@deniai/run/chat/messages";
-import { compactThread } from "@deniai/run/agent/compaction";
-import { messagesWithReplyContext } from "@deniai/run/chat/message-actions";
-import { parseRunMode } from "@deniai/run/agent/model";
-import { createNotification } from "@deniai/run/jobs/notifications";
+} from "../jobs/index";
+import { getDeniModel } from "../agent/llm";
+import { groupContext, groupRecipients } from "../chat/group-chat";
+import { discordTargetGroup, groupMembers } from "../chat/groups";
+import { messagesForModel, mergeThreadMessages } from "../chat/messages";
+import { compactThread } from "../agent/compaction";
+import { messagesWithReplyContext } from "../chat/message-actions";
+import { parseRunMode } from "../agent/model";
+import { createNotification } from "../jobs/notifications";
 import { assertRateLimit, RateLimitError } from "./rate-limit";
 import { reportError } from "./report";
-import { loadMessages, readStore, saveMessages } from "@deniai/run/data/store";
-import { resetThreadContext } from "@deniai/run/agent/thread-context";
-import type { AgentJob, Bot, Store, Thread } from "@deniai/run/types";
-import { assertCanUseTokens, recordModelUsage } from "@deniai/run/billing/usage";
-import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "@deniai/run/chat/message-bubbles";
+import { loadMessages, readStore, saveMessages } from "../data/store";
+import { resetThreadContext } from "../agent/thread-context";
+import type { AgentJob, Bot, Store, Thread } from "../types";
+import { assertCanUseTokens, recordModelUsage } from "../billing/usage";
+import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "../chat/message-bubbles";
 
 /** What the Discord layer should show after a turn. It never needs to know about jobs or UI messages. */
 export type PendingApproval = { tool: string; summary: string; truncated: boolean };

@@ -16,9 +16,9 @@ import {
   type StringSelectMenuInteraction,
 } from "discord.js";
 import type { DiscordLink } from "./link";
-import type { Translate } from "@deniai/run/i18n/standalone";
-import { runConfig } from "@deniai/run/runtime";
-import { splitBubbleBreaks } from "@deniai/run/chat/message-bubbles";
+import type { Translate } from "../i18n/standalone";
+import { runConfig } from "../runtime";
+import { splitBubbleBreaks } from "../chat/message-bubbles";
 
 export type { Translate };
 

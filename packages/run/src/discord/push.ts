@@ -1,12 +1,12 @@
 import { and, eq } from "drizzle-orm";
-import { db, runConfig } from "@deniai/run/runtime";
+import { db, runConfig } from "../runtime";
 import { runJobs } from "@deniai/db";
 import { getDiscordLinkByUser, getDiscordPrefs } from "./link";
 import { discordTranslator } from "./i18n";
 import { scrubServerPaths } from "./text";
-import type { Translate } from "@deniai/run/i18n/standalone";
+import type { Translate } from "../i18n/standalone";
 import { reportError } from "./report";
-import type { AgentJob, AppNotification } from "@deniai/run/types";
+import type { AgentJob, AppNotification } from "../types";
 
 /**
  * Notifications DMed to the linked Discord account. This talks to Discord's REST API with

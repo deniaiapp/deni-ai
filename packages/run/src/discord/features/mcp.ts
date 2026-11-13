@@ -29,7 +29,7 @@ import {
   truncate,
   updateMessage,
 } from "../ui";
-import { translateMessage } from "@deniai/run/i18n/standalone";
+import { translateMessage } from "../../i18n/standalone";
 import {
   deleteMcpConnection,
   listMcpConnections,
@@ -37,10 +37,10 @@ import {
   setMcpConnectionEnabled,
   startMcpSignIn,
   testMcpConnection,
-} from "@deniai/run/mcp/index";
-import { mcpCatalog, mcpCatalogEntry, type McpCatalogEntry } from "@deniai/run/mcp/catalog";
+} from "../../mcp/index";
+import { mcpCatalog, mcpCatalogEntry, type McpCatalogEntry } from "../../mcp/catalog";
 import { oauthBaseUrl } from "../site";
-import type { McpConnection } from "@deniai/run/types";
+import type { McpConnection } from "../../types";
 
 /**
  * MCP servers: one-click connectors that sign in with OAuth, and custom servers to list, add,

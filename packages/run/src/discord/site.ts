@@ -1,4 +1,4 @@
-import { runConfig } from "@deniai/run/runtime";
+import { runConfig } from "../runtime";
 
 /**
  * Origin MCP servers send OAuth callbacks to: the web app (the callback route lives in

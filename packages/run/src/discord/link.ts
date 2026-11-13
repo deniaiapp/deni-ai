@@ -7,15 +7,15 @@ import {
   normalizeLinkCode,
 } from "./link-code";
 import { and, eq, gt, lt, ne } from "drizzle-orm";
-import { db } from "@deniai/run/runtime";
+import { db } from "../runtime";
 import {
   runDiscordLinkCodes as discordLinkCodes,
   runDiscordLinks as discordLinks,
   user,
 } from "@deniai/db";
-import { resolveServerLocale } from "@deniai/run/i18n/standalone";
-import { mutateStore, readStore } from "@deniai/run/data/store";
-import type { DiscordPrefs } from "@deniai/run/types";
+import { resolveServerLocale } from "../i18n/standalone";
+import { mutateStore, readStore } from "../data/store";
+import type { DiscordPrefs } from "../types";
 
 export {
   LINK_CODE_TTL_MS,

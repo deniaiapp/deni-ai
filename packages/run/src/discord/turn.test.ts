@@ -6,13 +6,13 @@ import {
   resetRunTables,
   seedTestUser,
   type RunTestDb,
-} from "@deniai/run/testing";
+} from "../testing";
 
 // The model, tools and computer are mocked: no OpenRouter, E2B or Steel. The store, the job
 // queue, notifications and usage run for real on PGlite.
 const calls = vi.hoisted(() => ({ prompts: [] as unknown[], tools: [] as string[] }));
 
-vi.mock("@deniai/run/agent/llm", () => ({
+vi.mock("../agent/llm", () => ({
   getDeniModel: async () => ({
     model: new MockLanguageModelV4({
       doStream: async (options) => {
@@ -42,7 +42,7 @@ vi.mock("@deniai/run/agent/llm", () => ({
     throw new Error("no summaries in this test");
   },
 }));
-vi.mock("@deniai/run/agent/index", () => ({
+vi.mock("../agent/index", () => ({
   buildInstructions: (bot: { id: string }) => {
     calls.tools.push(bot.id);
     return `You are ${bot.id}.`;
@@ -50,18 +50,18 @@ vi.mock("@deniai/run/agent/index", () => ({
   createDeniTools: () => ({}),
   deniToolApproval: () => undefined,
 }));
-vi.mock("@deniai/run/agent/compaction", () => ({
+vi.mock("../agent/compaction", () => ({
   compactThread: async ({ messages }: { messages: unknown[] }) => messages,
 }));
-vi.mock("@deniai/run/computer/index", () => ({ setComputer: async () => undefined }));
-vi.mock("@deniai/run/computer/browser-workspaces", () => ({
+vi.mock("../computer/index", () => ({ setComputer: async () => undefined }));
+vi.mock("../computer/browser-workspaces", () => ({
   releaseBrowserTakeover: async () => undefined,
 }));
-vi.mock("@deniai/run/jobs/actions", () => ({ releaseStaleApproval: async () => false }));
+vi.mock("../jobs/actions", () => ({ releaseStaleApproval: async () => false }));
 
 const { runDiscordMessage } = await import("./turn");
-const { listJobs } = await import("@deniai/run/jobs/index");
-const { loadMessages, mutateStore, readStore } = await import("@deniai/run/data/store");
+const { listJobs } = await import("../jobs/index");
+const { loadMessages, mutateStore, readStore } = await import("../data/store");
 const { resetRateLimitsForTests } = await import("./rate-limit");
 
 let testDb: RunTestDb;

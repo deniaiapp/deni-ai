@@ -3,12 +3,18 @@
 The Deni Run worker: a Node process that runs Run mode's background work outside the web
 app. It is the platform successor of the standalone Deni Run's `pnpm worker`.
 
+With a single web instance, the web app can run the same work itself instead
+(`RUN_SCHEDULER_IN_PROCESS=true`, plus `RUN_DISCORD_ENABLED=true` for the bot; see
+`apps/web/AGENTS.md`), which saves this process (about 90 MB at rest). Run this worker
+when the web app has more than one instance, or to keep jobs apart from web requests.
+Never run both for the Discord bot.
+
 - **Scheduler** (`@deniai/run/jobs/scheduler`): every tick it marks jobs whose lease
   expired as `uncertain` (they may have had external side effects, so they wait for a
   reviewed retry), enqueues due routines, and claims queued jobs up to
   `RUN_SCHEDULER_CONCURRENCY` with `FOR UPDATE SKIP LOCKED`. A claimed job holds a lease
   that heartbeats and checkpoints renew.
-- **Discord bot** (`src/discord`, only with `RUN_DISCORD_ENABLED=true` and
+- **Discord bot** (`@deniai/run/discord/*`, only with `RUN_DISCORD_ENABLED=true` and
   `DISCORD_BOT_TOKEN`): teammates in Discord direct messages, slash commands, Approve /
   Deny buttons for gated actions, and DMs for background results (routines, retries,
   handoffs) while the person's `/notify` is on.
@@ -44,8 +50,7 @@ pnpm --filter @deniai/run-worker dev
 ```
 
 Without a separate process, the web app can run the scheduler in-process with
-`RUN_SCHEDULER_IN_PROCESS=true` in `apps/web/.env.local` (never on more than one web
-replica in production; use this worker instead).
+`RUN_SCHEDULER_IN_PROCESS=true` in `apps/web/.env.local` (see above for production).
 
 `pnpm --filter @deniai/run-worker test` runs the tests on PGlite with the model, tools and
 computer mocked; nothing connects to Discord, OpenRouter, E2B or Steel.
@@ -66,10 +71,12 @@ native modules (`zlib-sync`, `bufferutil`, `utf-8-validate`) are not installed.
 Several workers can run the scheduler at once: claims use `FOR UPDATE SKIP LOCKED` and
 leases, so a job runs on one worker, and a worker that dies leaves its job to the lease
 recovery. The Discord bot must run on **exactly one** instance (one gateway connection;
-its rate limits are in memory): set `RUN_DISCORD_ENABLED=true` on one worker only.
+its rate limits are in memory): set `RUN_DISCORD_ENABLED=true` on one worker, or on the
+web app with the in-process scheduler, never on both.
 
-SIGINT/SIGTERM stop claiming, wait up to `RUN_SHUTDOWN_TIMEOUT_MS` for running jobs,
-disconnect Discord and end the database pool.
+SIGINT/SIGTERM stop claiming, wait up to `RUN_SHUTDOWN_TIMEOUT_MS` (default 60 s) for
+running jobs, disconnect Discord and end the database pool. minidock stops an old
+container with a 10 s grace period, so on minidock set it below 10000.
 
 ## Discord link codes
 

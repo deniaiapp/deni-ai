@@ -133,12 +133,19 @@ tables of `@deniai/db`, read and written only through `@deniai/run`.
   `db`, the usage engine's `getRunBudget` / `recordRunCost` (`src/lib/usage.ts`) and
   `loadRunConfig(process.env)`. Optional providers (OpenRouter, Exa, E2B, Steel,
   S3/R2, Slack MCP, Discord) are read from env (see `.env.example`); without them the
-  UI shows a disabled state instead of failing. `RUN_SCHEDULER_IN_PROCESS=true` runs
-  the job scheduler inside the web server for local development; in production it
-  runs in `services/run-worker`.
+  UI shows a disabled state instead of failing.
+- Background work: `RUN_SCHEDULER_IN_PROCESS=true` runs the job scheduler inside the
+  web server (`src/lib/run/in-process.server.ts`), with `RUN_DISCORD_ENABLED=true` also
+  the Discord bot (`@deniai/run/discord/*`, discord.js stays a traced dependency). Only
+  for one web instance; otherwise `services/run-worker` runs them. The Nitro plugins in
+  `src/server/nitro/` start the app at boot (`startup.ts`: one internal request loads
+  `src/server.ts`, which awaits `register()`) and run `src/lib/shutdown.server.ts`
+  handlers on SIGTERM (`shutdown.ts`): the scheduler stops claiming and waits up to
+  `RUN_SHUTDOWN_TIMEOUT_MS` (default 8 s) for running jobs, then the bot disconnects.
 - Off switch: `RUN_ENABLED=false` hides the sidebar's mode switch (`authState.runEnabled`),
   redirects `/run/*` to `/chat` in the `/_app` guard and answers `/api/run/*` with
-  404 `run_disabled`. The data stays; stop `services/run-worker` separately.
+  404 `run_disabled`, and the in-process scheduler does not start. The data stays; stop
+  `services/run-worker` separately if one runs.
 - Usage: Run spends the shared pool through the engine (model cost as reported,
   browser $0.10/h and computer $0.15/h by default); teammates per plan come from
   `@deniai/run/billing/plans`.

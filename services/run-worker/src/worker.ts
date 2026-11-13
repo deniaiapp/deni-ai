@@ -30,8 +30,8 @@ async function main() {
       logger.warn("[run worker] usage recovery requested", { at: new Date(at).toISOString() }),
   });
   const runConfig = loadRunConfig(process.env);
-  const discord = config.discord ? await import("./discord/bot") : null;
-  const push = config.discord ? await import("./discord/push") : null;
+  const discord = config.discord ? await import("@deniai/run/discord/bot") : null;
+  const push = config.discord ? await import("@deniai/run/discord/push") : null;
   configureRun({
     db,
     usage: runUsageBinding(engine),

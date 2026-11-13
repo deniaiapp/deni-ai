@@ -41,8 +41,9 @@ it later makes stored MCP credentials unreadable.
 2. Configure the platform: `RUN_ENCRYPTION_KEY`, `OPENROUTER_API_KEY`, `EXA_API_KEY`,
    `E2B_API_KEY`, `STEEL_API_KEY`, `RUN_S3_*` (Run's bucket), `SLACK_MCP_CLIENT_ID` /
    `SLACK_MCP_CLIENT_SECRET` (add `<web origin>/api/run/mcp/oauth/callback` as a Slack
-   redirect URL), and on exactly one worker `RUN_DISCORD_ENABLED=true` with
-   `DISCORD_BOT_TOKEN` (the same bot).
+   redirect URL), and on exactly one process `RUN_DISCORD_ENABLED=true` with
+   `DISCORD_BOT_TOKEN` (the same bot): the run worker, or the web app when it runs
+   Run in-process (`RUN_SCHEDULER_IN_PROCESS=true`, one instance).
 3. **Link deadline.** Announce in Run (banner + email) that every account must be
    linked to a Deni AI account by a date (for example two weeks ahead); unlinked
    accounts are not migrated. Track progress with a dry run against a fresh D1

@@ -127,12 +127,22 @@ export const env = createEnv({
     RUN_S3_BUCKET: z.string().min(1).optional(),
     RUN_BROWSER_USD_PER_HOUR: z.string().optional(),
     RUN_COMPUTER_USD_PER_HOUR: z.string().optional(),
-    /** `true` runs Run's job scheduler inside the web server (local development). */
+    /**
+     * `true` runs Run's job scheduler inside the web server, started at boot, instead of
+     * the `@deniai/run-worker` service (one web instance only; src/lib/run/in-process.server.ts).
+     */
     RUN_SCHEDULER_IN_PROCESS: z.enum(["true", "false"]).optional(),
+    /** With the in-process scheduler, `true` also runs the Discord bot here (needs DISCORD_BOT_TOKEN). */
+    RUN_DISCORD_ENABLED: z.stringbool().default(false),
+    /** How long a shutdown waits for running Run jobs, in ms (default 8000). */
+    RUN_SHUTDOWN_TIMEOUT_MS: z.string().regex(/^\d+$/).optional(),
     RUN_SCHEDULER_CONCURRENCY: z.string().optional(),
     SLACK_MCP_CLIENT_ID: z.string().min(1).optional(),
     SLACK_MCP_CLIENT_SECRET: z.string().min(1).optional(),
-    /** Set where the Run worker's Discord bot runs; the web app only shows the link card. */
+    /**
+     * The Run Discord bot's token: the web app runs the bot with RUN_SCHEDULER_IN_PROCESS and
+     * RUN_DISCORD_ENABLED; otherwise only the worker that runs it needs this.
+     */
     DISCORD_BOT_TOKEN: z.string().min(1).optional(),
     DISCORD_INVITE_URL: z.url().optional(),
     /**

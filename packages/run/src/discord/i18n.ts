@@ -5,8 +5,8 @@ import {
   translateMessage,
   translatorFor,
   type Translate,
-} from "@deniai/run/i18n/standalone";
-import { ja as base } from "@deniai/run/i18n/standalone-ja";
+} from "../i18n/standalone";
+import { ja as base } from "../i18n/standalone-ja";
 import { ja as computer } from "./features/computer.ja";
 import { ja as core } from "./features/core.ja";
 import { ja as files } from "./features/files.ja";

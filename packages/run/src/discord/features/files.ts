@@ -9,7 +9,7 @@ import {
   StringSelectMenuBuilder,
   time,
 } from "discord.js";
-import { getArtifact, listArtifacts } from "@deniai/run/agent/artifacts";
+import { getArtifact, listArtifacts } from "../../agent/artifacts";
 import {
   bulletList,
   choices,
@@ -27,8 +27,8 @@ import {
   truncate,
   updateMessage,
 } from "../ui";
-import { readStore } from "@deniai/run/data/store";
-import type { WorkspaceNode } from "@deniai/run/types";
+import { readStore } from "../../data/store";
+import type { WorkspaceNode } from "../../types";
 import {
   deleteWorkspacePath,
   findWorkspaceEntry,
@@ -37,7 +37,7 @@ import {
   normalizeWorkspacePath,
   readWorkspaceBytes,
   zipWorkspaceFiles,
-} from "@deniai/run/computer/workspace";
+} from "../../computer/workspace";
 
 const PREFIX = "fl";
 /** Discord's upload cap for a bot is 10 MiB; stay a little under it. */

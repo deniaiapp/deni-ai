@@ -4,7 +4,9 @@ Deni Run on the Deni AI platform: AI teammates, DM and group threads, the agent
 runtime, the Postgres job queue, the account computer (E2B sandbox, Steel browser),
 MCP connectors with approval gates, skills, routines and notifications. Server-only;
 consumed as TypeScript source by `apps/web` (Run mode, `/run/*`) and
-`services/run-worker` (scheduler and Discord bot).
+`services/run-worker` (scheduler and Discord bot), or by the web app alone with
+`RUN_SCHEDULER_IN_PROCESS=true`. The Discord bot is `src/discord` (`@deniai/run/discord/bot`,
+`@deniai/run/discord/push`).
 
 The code was moved here from the standalone Deni Run (`deni-ai-computer`,
 `src/lib/*`) with `git mv`, so `git log --follow` reaches its history.

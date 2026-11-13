@@ -45,18 +45,12 @@ import {
   updateMessage,
 } from "./ui";
 import { discordErrorText, discordTranslator as translatorFor } from "./i18n";
-import type { Translate } from "@deniai/run/i18n/standalone";
+import type { Translate } from "../i18n/standalone";
 import { assertRateLimit, RateLimitError } from "./rate-limit";
 import { reportError } from "./report";
-import { runLogger } from "@deniai/run/runtime";
-import {
-  joinRunMode,
-  parseRunMode,
-  RUN_MODES,
-  splitRunMode,
-  type RunLevel,
-} from "@deniai/run/agent/model";
-import { mutateStore, readStore } from "@deniai/run/data/store";
+import { runLogger } from "../runtime";
+import { joinRunMode, parseRunMode, RUN_MODES, splitRunMode, type RunLevel } from "../agent/model";
+import { mutateStore, readStore } from "../data/store";
 
 export { splitForDiscord } from "./ui";
 

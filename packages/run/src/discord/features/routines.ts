@@ -11,7 +11,7 @@ import {
   TextInputBuilder,
   TextInputStyle,
 } from "discord.js";
-import { nextCron } from "@deniai/run/jobs/cron";
+import { nextCron } from "../../jobs/cron";
 import {
   bulletList,
   choices,
@@ -33,7 +33,7 @@ import {
   type RoutineFrequency,
   routineCron,
   WEEKDAYS,
-} from "@deniai/run/jobs/routine-schedule";
+} from "../../jobs/routine-schedule";
 import {
   createRoutine,
   type CreateRoutineInput,
@@ -46,9 +46,9 @@ import {
   setDefaultTimezone,
   updateRoutine,
   type UpdateRoutineInput,
-} from "@deniai/run/jobs/routines";
-import { readStore } from "@deniai/run/data/store";
-import type { Routine, Store, Thread } from "@deniai/run/types";
+} from "../../jobs/routines";
+import { readStore } from "../../data/store";
+import type { Routine, Store, Thread } from "../../types";
 import { MODAL_TEXT_MAX, readTextAttachment, textAttachment, textFileProblem } from "./skills";
 
 const PREFIX = "rt";

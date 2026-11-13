@@ -1,4 +1,4 @@
-import { writeWorkspaceBytes } from "@deniai/run/computer/workspace";
+import { writeWorkspaceBytes } from "../computer/workspace";
 
 /** Discord lets bots receive files up to this size; the workspace accepts the same. */
 export const ATTACHMENT_LIMIT = 10_000_000;

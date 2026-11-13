@@ -5,9 +5,9 @@ import {
   resetRunTables,
   seedTestUser,
   type RunTestDb,
-} from "@deniai/run/testing";
-import { createJob } from "@deniai/run/jobs/index";
-import { readStore } from "@deniai/run/data/store";
+} from "../testing";
+import { createJob } from "../jobs/index";
+import { readStore } from "../data/store";
 import { createDiscordLinkCode, redeemDiscordLinkCode, setDiscordPrefs } from "./link";
 import {
   formatDiscordNotification,

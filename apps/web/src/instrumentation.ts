@@ -23,5 +23,12 @@ export async function register() {
       const { startBackgroundJobScheduler } = await import("@/lib/background-job-scheduler");
       startBackgroundJobScheduler();
     }
+    // RUN_SCHEDULER_IN_PROCESS=true: Run's scheduler (and Discord bot) instead of the worker.
+    try {
+      const { startInProcessRun } = await import("@/lib/run/in-process.server");
+      await startInProcessRun();
+    } catch (error) {
+      console.error("[run] in-process worker failed to start", error);
+    }
   }
 }

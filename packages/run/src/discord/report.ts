@@ -1,4 +1,4 @@
-import { runLogger } from "@deniai/run/runtime";
+import { runLogger } from "../runtime";
 
 /** Log an unexpected error with its context; the worker's logs are the error sink. */
 export function reportError(error: unknown, context?: string) {

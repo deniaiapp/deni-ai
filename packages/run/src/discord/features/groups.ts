@@ -36,9 +36,9 @@ import {
   groupMembers,
   listGroups,
   updateGroup,
-} from "@deniai/run/chat/groups";
-import { deleteGroupThread, readStore } from "@deniai/run/data/store";
-import type { Bot, Store, Thread } from "@deniai/run/types";
+} from "../../chat/groups";
+import { deleteGroupThread, readStore } from "../../data/store";
+import type { Bot, Store, Thread } from "../../types";
 
 const PREFIX = "gp";
 const MENU_MAX = 25;

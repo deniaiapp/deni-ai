@@ -19,8 +19,8 @@ import {
   truncate,
   updateMessage,
 } from "../ui";
-import { listNotifications, markAllNotificationsRead } from "@deniai/run/jobs/notifications";
-import type { AppNotification } from "@deniai/run/types";
+import { listNotifications, markAllNotificationsRead } from "../../jobs/notifications";
+import type { AppNotification } from "../../types";
 
 /** Whether background work is DMed here (src/lib/discord/push.ts sends it), and the app's inbox. */
 

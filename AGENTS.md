@@ -98,7 +98,7 @@ D1 data moves over with `pnpm --filter @deniai/run migrate:d1` (runbook:
 | ----------------------------------------- | ------------------------------------------------------------------------------ |
 | `pnpm dev`                                | Web dev server (`@deniai/web`, port 3000)                                      |
 | `pnpm dev:support` / `pnpm dev:agent-api` | Other dev servers (both also default to port 3000)                             |
-| `pnpm --filter @deniai/run-worker dev`    | Run worker (scheduler; Discord only with `RUN_DISCORD_ENABLED=true`)           |
+| `pnpm --filter @deniai/run-worker dev`    | Run worker (scheduler; Discord only with `RUN_DISCORD_ENABLED=true`); the web app can run both instead (`RUN_SCHEDULER_IN_PROCESS`) |
 | `pnpm build`                              | `build` in every package that has one                                          |
 | `pnpm lint` / `pnpm format`               | oxlint / oxfmt in every package that defines the script                        |
 | `pnpm format:check`                       | `oxfmt --check` (web, ui, db, billing, flixa-contract, client-contract, emails, i18n, ai, auth) |

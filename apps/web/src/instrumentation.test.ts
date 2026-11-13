@@ -4,6 +4,7 @@ import { register } from "./instrumentation";
 const mocks = vi.hoisted(() => ({
   startModelHealthScheduler: vi.fn(),
   startBackgroundJobScheduler: vi.fn(),
+  startInProcessRun: vi.fn(),
 }));
 vi.mock("@/lib/sentry-options", () => ({
   getSentryOptions: () => ({}),
@@ -18,10 +19,14 @@ vi.mock("@/lib/model-health-scheduler", () => ({
 vi.mock("@/lib/background-job-scheduler", () => ({
   startBackgroundJobScheduler: mocks.startBackgroundJobScheduler,
 }));
+vi.mock("@/lib/run/in-process.server", () => ({
+  startInProcessRun: mocks.startInProcessRun,
+}));
 
 beforeEach(() => {
   mocks.startModelHealthScheduler.mockReset();
   mocks.startBackgroundJobScheduler.mockReset();
+  mocks.startInProcessRun.mockReset();
   vi.stubEnv("NODE_ENV", "production");
   vi.stubEnv("VERCEL", undefined);
   vi.stubEnv("DISABLE_BACKGROUND_JOBS", undefined);
@@ -35,6 +40,16 @@ test("a production server starts the model health and background job schedulers"
   await register();
   expect(mocks.startModelHealthScheduler).toHaveBeenCalledOnce();
   expect(mocks.startBackgroundJobScheduler).toHaveBeenCalledOnce();
+  // It decides from RUN_SCHEDULER_IN_PROCESS itself whether anything runs.
+  expect(mocks.startInProcessRun).toHaveBeenCalledOnce();
+});
+
+test("a failing in-process Run start does not stop the server from starting", async () => {
+  mocks.startInProcessRun.mockRejectedValueOnce(new Error("boom"));
+  const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  await expect(register()).resolves.toBeUndefined();
+  expect(error).toHaveBeenCalledWith("[run] in-process worker failed to start", expect.any(Error));
+  error.mockRestore();
 });
 
 test("Vercel functions do not start the background jobs, which use the cron routes there", async () => {
@@ -58,6 +73,7 @@ test.each(["1", "true", "TRUE"])(
     await register();
     expect(mocks.startModelHealthScheduler).not.toHaveBeenCalled();
     expect(mocks.startBackgroundJobScheduler).not.toHaveBeenCalled();
+    expect(mocks.startInProcessRun).not.toHaveBeenCalled();
   },
 );
 

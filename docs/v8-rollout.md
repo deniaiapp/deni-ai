@@ -72,7 +72,7 @@ A redirect v8 builds from its own host name is rewritten back to `deniai.app`.
    | `DENI_RUN_OAUTH_CLIENT_ID`, `DENI_RUN_SERVICE_SECRET`       | v7's values (Deni Run's consent screen can be served by v8)              |
    | `CLIENT_IP_HEADER`                                          | `cf-connecting-ip`                                                       |
    | `CRON_ENABLED`, `STRIPE_WEBHOOK_ENABLED`                    | `false` (unchanged: v7 keeps both)                                       |
-   | `RUN_ENABLED`                                               | `false` (unchanged) until `services/run-worker` runs                     |
+   | `RUN_ENABLED`                                               | `false` (unchanged) until Run's background work runs (in-process or worker) |
    | `NOINDEX`                                                   | `1` (unchanged: crawlers only ever get v7, and it keeps `v8-origin` out) |
    | `PASSKEY_RP_ID`                                             | `deniai.app` (unchanged)                                                 |
 

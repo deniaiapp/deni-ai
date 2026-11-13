@@ -13,7 +13,7 @@ import {
   screenshot,
   stopSandbox,
   withBrowserLive,
-} from "@deniai/run/computer/index";
+} from "../../computer/index";
 import {
   type ComponentInteraction,
   confirmRow,
@@ -26,9 +26,9 @@ import {
   truncate,
   updateMessage,
 } from "../ui";
-import { billLiveSandbox } from "@deniai/run/computer/sandbox";
-import { readStore } from "@deniai/run/data/store";
-import type { ComputerState, Store } from "@deniai/run/types";
+import { billLiveSandbox } from "../../computer/sandbox";
+import { readStore } from "../../data/store";
+import type { ComputerState, Store } from "../../types";
 
 /**
  * The account-level computer, as the web panel shows it when no task is selected. Discord has no

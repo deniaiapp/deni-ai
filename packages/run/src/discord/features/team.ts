@@ -29,17 +29,17 @@ import {
   truncate,
   updateMessage,
 } from "../ui";
-import { discordTargetGroup } from "@deniai/run/chat/groups";
+import { discordTargetGroup } from "../../chat/groups";
 
-import { readStore } from "@deniai/run/data/store";
+import { readStore } from "../../data/store";
 import {
   createTeammate,
   deleteTeammate,
   forgetTeammateMemory,
   isDefaultTeammate,
   updateTeammate,
-} from "@deniai/run/teammates/index";
-import type { Bot, Store } from "@deniai/run/types";
+} from "../../teammates/index";
+import type { Bot, Store } from "../../types";
 
 const PREFIX = "tm";
 // Discord caps a modal text input at 4,000 characters and a select menu at 25 options.

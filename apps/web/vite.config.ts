@@ -57,7 +57,8 @@ export default defineConfig(({ mode }) => {
     envPrefix: ["VITE_", "NEXT_PUBLIC_"],
     resolve: { tsconfigPaths: true, dedupe: authDedupe },
     // Deni Run's browser provider imports playwright-core lazily at runtime (see traceDeps).
-    ssr: { external: ["playwright-core"] },
+    // The in-process Run Discord bot loads discord.js lazily; it stays a traced dependency.
+    ssr: { external: ["playwright-core", "discord.js"] },
     build: {
       rolldownOptions: {
         // Libraries ship RSC "use client" markers, which mean nothing here.
@@ -87,7 +88,10 @@ export default defineConfig(({ mode }) => {
         // The AI SDK loads `undici` through createRequire(), which tracing cannot see.
         // Deni Run's browser provider loads playwright-core at runtime; it reads its own
         // files, so it stays an external traced dependency instead of being bundled.
-        traceDeps: ["undici", "playwright-core"],
+        traceDeps: ["undici", "playwright-core", "discord.js"],
+        // startup: loads the server entry at boot so in-process schedulers start then.
+        // shutdown: runs src/lib/shutdown.server.ts handlers (the in-process Run worker).
+        plugins: ["./src/server/nitro/startup.ts", "./src/server/nitro/shutdown.ts"],
       }),
       viteReact({ compiler: true }),
       // Uploads source maps only when SENTRY_AUTH_TOKEN is set (SENTRY_ORG and

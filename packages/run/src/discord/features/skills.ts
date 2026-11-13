@@ -32,9 +32,9 @@ import {
   SKILL_BODY_MAX,
   SKILL_NAME_MAX,
   type SaveSkillResult,
-} from "@deniai/run/agent/skills";
-import { readStore } from "@deniai/run/data/store";
-import type { Skill } from "@deniai/run/types";
+} from "../../agent/skills";
+import { readStore } from "../../data/store";
+import type { Skill } from "../../types";
 
 const PREFIX = "sk";
 /** Discord caps a modal text input at this many characters; longer text goes through a file. */

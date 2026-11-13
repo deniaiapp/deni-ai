@@ -5,7 +5,7 @@ import {
   resetRunTables,
   seedTestUser,
   type RunTestDb,
-} from "@deniai/run/testing";
+} from "../testing";
 import {
   createDiscordLinkCode,
   describeLinkedAccount,

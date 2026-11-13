@@ -33,7 +33,7 @@ After the takeover:
 | Scheduled jobs              | `usage-and-meter`, `storage-cleanup`, `guest-cleanup` and `model-health` move to v8 (`CRON_ENABLED` unset). They are safe to run concurrently, so a short overlap with v7 while switching is harmless; a long one is not needed.                                                     |
 | Deni AI as OAuth provider   | Standalone Deni Run (run.deniai.app) keeps `deniai.app` as issuer and redirect target. The OAuth clients, consents and JWKS are rows in the shared database, so they keep working; v8 needs `DENI_RUN_OAUTH_CLIENT_ID` and `DENI_RUN_SERVICE_SECRET` with v7's values.                 |
 | Flixa                       | Unchanged: the production API stays on the old flixa-backend. `services/agent-api` stays undeployed (or `FLIXA_USAGE_ENGINE=shadow`).                                                                                                                                               |
-| Run mode (`/run`)           | The beta runs with `RUN_ENABLED=false`. Turning it on opens Run to everyone and needs `services/run-worker` (or `RUN_SCHEDULER_IN_PROCESS=true` on a single instance); keep it off until the worker is ready. The D1 import is a separate step (`docs/run-migration.md`).          |
+| Run mode (`/run`)           | The beta runs with `RUN_ENABLED=false`. Turning it on opens Run to everyone and needs its background work: `RUN_SCHEDULER_IN_PROCESS=true` on the single web instance (plus `RUN_DISCORD_ENABLED=true` for the bot), or `services/run-worker`. The D1 import is a separate step (`docs/run-migration.md`).          |
 | Beta-only UI                | The sidebar "Beta" label and the account menu's "Go to Deni AI v7" item follow `BETA_ACCESS_REQUIRED` (`platformCapabilities.privateBeta`), and "Send feedback" (the help center's v8 form) also `ROLLOUT_SWITCH_ENABLED`, so they disappear with the gate and the Worker. `/private-beta` stays as a route but nothing sends users there.          |
 | Retired pages               | guides, use cases, about and models answer 308 permanent redirects (`apps/web/vite/route-rules.ts`). Canonical URLs already use `https://deniai.app`.                                                                                                                                                   |
 | Google sign-in, Turnstile   | No change: `deniai.app` is already registered.                                                                                                                                                                                                                                      |
@@ -51,8 +51,9 @@ After the takeover:
 2. **Beta health**: no open Sentry issue on v8 that v7 does not have; testers' usage
    pool and Max Mode numbers agree between v7 and v8; no `run_jobs` stuck in
    `running`.
-3. **Run worker**: deploy `services/run-worker` against the production database with
-   the Run env (`services/run-worker/README.md`), or decide on `RUN_ENABLED=false`.
+3. **Run background work**: on the single v8 instance set `RUN_SCHEDULER_IN_PROCESS=true`
+   (and `RUN_DISCORD_ENABLED=true` with `DISCORD_BOT_TOKEN` for the bot), or deploy
+   `services/run-worker` (`services/run-worker/README.md`), or keep `RUN_ENABLED=false`.
 4. **Announce**: the new design, Run mode, the two-factor requirement for
    password-only accounts, and that beta testers sign in again on `deniai.app`.
 5. **Rehearse** the env below on the beta deployment where it does not change the
@@ -86,7 +87,7 @@ After the takeover:
    | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`            | v7's GitHub OAuth App                                                     |
    | `DENI_RUN_OAUTH_CLIENT_ID`, `DENI_RUN_SERVICE_SECRET` | v7's values                                                               |
    | `PASSKEY_RP_ID`                                       | `deniai.app` or unset (the auth URL's host)                               |
-   | `RUN_SCHEDULER_IN_PROCESS`, `RUN_ENABLED`             | `RUN_ENABLED=false` until a run worker runs; see "Run mode" above        |
+   | `RUN_SCHEDULER_IN_PROCESS`, `RUN_ENABLED`             | `true` / unset once Run should run; until then `RUN_ENABLED=false`        |
    | `ROLLOUT_SWITCH_ENABLED`                              | Unset (no Worker after the takeover)                                      |
    | `BETTER_AUTH_SECRET`, `DATABASE_URL`, `R2_*`          | Unchanged (already v7's)                                                  |
 

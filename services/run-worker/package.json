@@ -19,7 +19,6 @@
     "@deniai/db": "workspace:*",
     "@deniai/run": "workspace:*",
     "ai": "^7.0.155",
-    "discord.js": "^14.28.1",
     "postgres": "^3.4.9"
   },
   "devDependencies": {
