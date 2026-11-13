@@ -1,0 +1,15 @@
+{
+  // Deploy: `pnpm --filter @deniai/rollout-router deploy` (runbook: docs/v8-rollout.md).
+  "$schema": "https://unpkg.com/wrangler/config-schema.json",
+  "name": "deni-ai-rollout",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-01",
+  "routes": [{ "pattern": "deniai.app/*", "zone_name": "deniai.app" }],
+  "vars": {
+    // The v8 app (minidock `deni-ai-beta`) on its own host name, proxied in this zone.
+    "V8_ORIGIN": "https://v8-origin.deniai.app",
+    // Share of new browsers sent to v8 (0-100). 0 sends everyone to v7.
+    "V8_PERCENT": "0",
+  },
+  "observability": { "enabled": true },
+}

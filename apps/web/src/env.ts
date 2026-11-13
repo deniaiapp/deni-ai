@@ -149,6 +149,13 @@ export const env = createEnv({
      */
     BETA_ACCESS_PAID_PLANS: z.stringbool().default(false),
     /**
+     * `true` while deniai.app is split between v7 and v8 by the rollout Worker
+     * (services/rollout-router, docs/v8-rollout.md): the account menu offers
+     * "Switch to the previous version", which goes to the Worker's
+     * `/__rollout/v7`. Off without the Worker in front, where that path is a 404.
+     */
+    ROLLOUT_SWITCH_ENABLED: z.stringbool().default(false),
+    /**
      * `false` turns `/api/cron/*` into no-ops and keeps the in-process jobs that
      * write the shared database (usage recovery, storage and guest cleanup) from
      * starting. For a deployment that shares its database with one that already

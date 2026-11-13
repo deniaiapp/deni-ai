@@ -1,0 +1,20 @@
+{
+  "name": "@deniai/rollout-router",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Cloudflare Worker that sends a percentage of deniai.app visitors to Deni AI v8 and the rest to v7",
+  "type": "module",
+  "scripts": {
+    "deploy": "pnpm dlx wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

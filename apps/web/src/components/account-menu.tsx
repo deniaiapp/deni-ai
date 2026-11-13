@@ -1,6 +1,7 @@
 import {
   ArrowUpRight,
   CircleHelp,
+  History,
   LogOut,
   MessageSquareText,
   Settings,
@@ -9,7 +10,7 @@ import {
   Users,
   Zap,
 } from "lucide-react";
-import { Link, useRouter } from "@/lib/navigation";
+import { Link, usePathname, useRouter } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
@@ -43,6 +44,7 @@ import { cn } from "@/lib/utils";
 import { supportUrl } from "@/lib/support-url";
 import { betaFeedbackUrl } from "@/lib/beta-feedback";
 import { versions } from "@/lib/version";
+import { rolloutSwitchUrl } from "@/lib/rollout";
 import { clientEnv } from "@/public-env";
 import {
   Tooltip,
@@ -118,7 +120,8 @@ export function AccountMenu() {
   const utils = trpc.useUtils();
   const session = authClient.useSession();
   const isAnonymous = Boolean(session.data?.user?.isAnonymous);
-  const { features, privateBeta } = usePlatformCapabilities();
+  const { features, privateBeta, rolloutSwitch } = usePlatformCapabilities();
+  const pathname = usePathname();
   const billingDisabled = !features.billing;
   const hasSession = Boolean(session.data?.user);
   // A guest's stored name ("Anonymous") and placeholder address are not theirs to see.
@@ -411,6 +414,16 @@ export function AccountMenu() {
             <CircleHelp className="size-4" />
             <span className="flex-1">{t("Help Center")}</span>
           </DropdownMenuItem>
+          {rolloutSwitch && (
+            <DropdownMenuItem
+              className="gap-2 text-sm"
+              disabled={isMenuPending}
+              render={<a href={rolloutSwitchUrl("v7", pathname)} className="flex w-full" />}
+            >
+              <History className="size-4" />
+              <span className="flex-1">{t("Switch to the previous version")}</span>
+            </DropdownMenuItem>
+          )}
           {privateBeta && (
             <>
               <DropdownMenuItem

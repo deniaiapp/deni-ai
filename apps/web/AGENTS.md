@@ -173,6 +173,11 @@ at the repository root.
   AI v7" items) follows `platformCapabilities.privateBeta`, which is
   `BETA_ACCESS_REQUIRED`, so turning the gate off at takeover also hides it
   (`docs/v8-takeover.md`).
+- While the rollout Worker splits deniai.app between v7 and v8
+  (`docs/v8-rollout.md`), `ROLLOUT_SWITCH_ENABLED=true` adds "Switch to the
+  previous version" to the account menu (`platformCapabilities.rolloutSwitch`,
+  `src/lib/rollout.ts`). v8's service worker uses its own cache names so the two
+  versions do not serve each other's cached pages.
 
 ## Native client API (Deni AI Desktop)
 

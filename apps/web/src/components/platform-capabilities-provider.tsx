@@ -21,6 +21,7 @@ const defaultCapabilities: PlatformCapabilities = {
     guests: true,
   },
   privateBeta: false,
+  rolloutSwitch: false,
 };
 
 const PlatformCapabilitiesContext = createContext<PlatformCapabilities>(defaultCapabilities);

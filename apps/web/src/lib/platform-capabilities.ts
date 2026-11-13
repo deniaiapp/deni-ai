@@ -21,6 +21,11 @@ export type PlatformCapabilities = {
    * beta-only UI (sidebar "Beta" label, beta feedback and "Go to Deni AI v7" links).
    */
   privateBeta: boolean;
+  /**
+   * deniai.app is split between v7 and v8 by the rollout Worker
+   * (`ROLLOUT_SWITCH_ENABLED`): the account menu offers going back to v7.
+   */
+  rolloutSwitch: boolean;
 };
 
 export function isModelProviderAvailable(

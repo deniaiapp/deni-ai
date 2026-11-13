@@ -49,6 +49,7 @@ export function getPlatformCapabilities(): PlatformCapabilities {
       guests: !env.BETA_ACCESS_REQUIRED,
     },
     privateBeta: env.BETA_ACCESS_REQUIRED,
+    rolloutSwitch: env.ROLLOUT_SWITCH_ENABLED,
   };
 }
 
