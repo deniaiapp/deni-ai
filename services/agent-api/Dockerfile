@@ -33,7 +33,10 @@ RUN node_modules/.bin/esbuild server.ts --bundle --platform=node --format=esm --
   --outdir=./dist --external:pg-native --minify \
   --banner:js="import { createRequire as __flixaCreateRequire } from 'node:module'; const require = __flixaCreateRequire(import.meta.url);"
 
-FROM node:26-alpine AS app
+# Distroless: Node.js and its runtime libraries only (no shell, package manager,
+# or npm). The `nonroot` tag runs as uid 65532 and its entrypoint is `node`.
+# For an interactive shell while debugging, swap in the `debug-nonroot` tag.
+FROM gcr.io/distroless/nodejs26-debian13:nonroot AS app
 
 WORKDIR /app
 
@@ -45,4 +48,5 @@ COPY --from=build /app/services/agent-api/dist/server.js ./server.mjs
 
 EXPOSE 3000
 
-CMD ["node", "server.mjs"]
+# The image's entrypoint is already `node`, so CMD carries only the script.
+CMD ["server.mjs"]

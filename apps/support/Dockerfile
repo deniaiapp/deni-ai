@@ -14,7 +14,7 @@
 #   docker build -f apps/support/Dockerfile -t deni-ai-support .
 #   docker run --rm -p 3000:3000 deni-ai-support
 
-FROM node:26-slim AS base
+FROM node:26-alpine AS base
 WORKDIR /app
 # Matches `packageManager` in the root package.json (lockfile format and settings).
 RUN npm install --global pnpm@12.18.0
@@ -41,18 +41,23 @@ RUN pnpm run build
 # node_modules instead of relying on Nitro's dependency tracing. pnpm links
 # apps/support/node_modules into the root node_modules/.pnpm store, so both
 # directories are kept with the same layout.
+# The install runs on Alpine (musl) but the runner is glibc, so `--libc=glibc`
+# picks the glibc builds of native packages such as takumi-js.
 FROM base AS deps
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
-  pnpm install --prod --frozen-lockfile --filter "@deniai/support..." --store-dir=/pnpm/store
+  pnpm install --prod --frozen-lockfile --libc=glibc --filter "@deniai/support..." --store-dir=/pnpm/store
 
-FROM node:26-slim AS runner
+# Distroless: Node.js and its runtime libraries only (no shell, package manager,
+# or npm). The `nonroot` tag runs as uid 65532 and its entrypoint is `node`.
+# For an interactive shell while debugging, swap in the `debug-nonroot` tag.
+FROM gcr.io/distroless/nodejs26-debian13:nonroot AS runner
 WORKDIR /app/apps/support
 ENV NODE_ENV=production \
   HOST=0.0.0.0 \
   PORT=3000
-COPY --from=deps --chown=node:node /app/node_modules /app/node_modules
-COPY --from=deps --chown=node:node /app/apps/support/node_modules ./node_modules
-COPY --from=builder --chown=node:node /app/apps/support/.output ./.output
-USER node
+COPY --from=deps --chown=nonroot:nonroot /app/node_modules /app/node_modules
+COPY --from=deps --chown=nonroot:nonroot /app/apps/support/node_modules ./node_modules
+COPY --from=builder --chown=nonroot:nonroot /app/apps/support/.output ./.output
 EXPOSE 3000
-CMD ["node", ".output/server/index.mjs"]
+# The image's entrypoint is already `node`, so CMD carries only the script.
+CMD [".output/server/index.mjs"]

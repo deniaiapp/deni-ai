@@ -34,7 +34,10 @@ RUN pnpm run build \
   && cp dist/worker.mjs /out/worker.mjs \
   && cp -rL "$(node -p "require('node:path').dirname(require.resolve('playwright-core/package.json', { paths: ['/app/packages/run'] }))")" /out/node_modules/playwright-core
 
-FROM node:26-alpine AS app
+# Distroless: Node.js and its runtime libraries only (no shell, package manager,
+# or npm). The `nonroot` tag runs as uid 65532 and its entrypoint is `node`.
+# For an interactive shell while debugging, swap in the `debug-nonroot` tag.
+FROM gcr.io/distroless/nodejs26-debian13:nonroot AS app
 
 WORKDIR /app
 
@@ -44,4 +47,5 @@ COPY --from=build /out ./
 
 # Several workers may run (jobs are claimed with FOR UPDATE SKIP LOCKED); run the
 # Discord bot (RUN_DISCORD_ENABLED=true) on exactly one of them.
-CMD ["node", "worker.mjs"]
+# The image's entrypoint is already `node`, so CMD carries only the script.
+CMD ["worker.mjs"]
