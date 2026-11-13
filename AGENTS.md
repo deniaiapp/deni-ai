@@ -102,6 +102,7 @@ D1 data moves over with `pnpm --filter @deniai/run migrate:d1` (runbook:
 | `pnpm format:check`                       | `oxfmt --check` (web, ui, db, billing, flixa-contract, client-contract, emails, i18n, ai, auth) |
 | `pnpm typecheck`                          | `tsc --noEmit` everywhere                                                      |
 | `pnpm test`                               | vitest (web, packages) and `node --test` (agent-api)                           |
+| `pnpm test:e2e`                           | Playwright end-to-end tests of apps/web (needs `E2E_DATABASE_URL`; `apps/web/e2e/README.md`) |
 | `pnpm --filter <name> <script>`           | One package, e.g. `pnpm --filter @deniai/web typecheck`                        |
 
 Each app reads its own env files from its directory (`apps/web/.env.local`,
@@ -115,7 +116,8 @@ Each app reads its own env files from its directory (`apps/web/.env.local`,
 `.github/workflows/ci.yml` runs on pushes to `canary` and on pull requests:
 `pnpm install --frozen-lockfile`, then `pnpm typecheck`, `pnpm lint`,
 `pnpm format:check`, `pnpm test` and `pnpm build` (which must leave no diff,
-e.g. an uncommitted `apps/web/messages/en.json` change), plus a job that runs
+e.g. an uncommitted `apps/web/messages/en.json` change), the Playwright
+end-to-end tests of `apps/web` against a `postgres:18` service, and a job that runs
 `drizzle-kit generate` for both `@deniai/db` configs offline and fails on
 pending migrations. `react-doctor.yml` scans `apps/web` when the web app or a
 package changes; `claude.yaml` answers `@claude` mentions. Renovate reads the

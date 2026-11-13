@@ -1,5 +1,5 @@
 # Workspace checks for every package (apps/web, apps/support, services/agent-api
-# and packages/*). Each job installs the whole workspace once from the root
+# and packages/*), plus the apps/web end-to-end tests against Postgres. Each job installs the whole workspace once from the root
 # lockfile and runs the root `pnpm -r` scripts, which skip packages that do not
 # define the script.
 
@@ -66,6 +66,50 @@ jobs:
       # diff means a catalog change was not committed.
       - name: Check that the build left no uncommitted changes
         run: git diff --exit-code
+
+  e2e:
+    name: End-to-end (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      # Throwaway database: global setup migrates it, the tests create their own accounts.
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: deni_ai_e2e
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      E2E_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/deni_ai_e2e
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 26
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Install Chromium for Playwright
+        run: pnpm --filter @deniai/web exec playwright install --with-deps chromium
+      # Builds apps/web with the e2e env, starts it and a mock Deni AI API
+      # (apps/web/playwright.config.ts); no provider keys or secrets are used.
+      - run: pnpm --filter @deniai/web test:e2e
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            apps/web/playwright-report/
+            apps/web/test-results/
+          retention-days: 7
 
   db-schema:
     name: Drizzle schema is migrated

@@ -208,6 +208,9 @@ Choose checks that establish the changed behavior:
   Review formatter changes for unrelated edits.
 - Runtime/UI changes: use an existing dev server or `pnpm dev` and exercise the
   affected route. Use `pnpm run build` for build/prerender/configuration changes.
+- Changes to sign-in, chat sending/streaming, public pages or redirects:
+  `pnpm test:e2e` (Playwright; needs `E2E_DATABASE_URL`, see `e2e/README.md`).
+  Add or update a spec in `e2e/` when such a flow changes.
 - Schema changes: `pnpm run db:generate`, then inspect the generated SQL.
   Apply migrations only when requested for the target environment:
   `db:migrate:dev` loads `.env.local`; `db:migrate` loads `.env` (production).

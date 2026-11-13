@@ -12,7 +12,8 @@
     "format": "pnpm -r run format",
     "format:check": "pnpm -r run format:check",
     "typecheck": "pnpm -r run typecheck",
-    "test": "pnpm -r run test"
+    "test": "pnpm -r run test",
+    "test:e2e": "pnpm --filter @deniai/web test:e2e"
   },
   "devDependencies": {
     "oxfmt": "^0.75.0",

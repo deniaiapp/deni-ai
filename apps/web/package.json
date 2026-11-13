@@ -25,6 +25,7 @@
     "tools:register-oauth-client": "tsx --env-file-if-exists=.env.local ./tools/register-oauth-client.ts",
     "disposable:refresh": "pnpm --filter @deni-ai/disposable-email-domains refresh",
     "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache",
+    "test:e2e": "playwright test",
     "doctor": "react-doctor"
   },
   "dependencies": {
@@ -102,6 +103,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.64.1",
     "@swc/core": "^1.16.20",
     "@tailwindcss/vite": "^4.3.3",
     "@types/node": "^26.6.5",

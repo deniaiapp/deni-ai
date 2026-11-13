@@ -14,6 +14,10 @@ package-lock.json
 
 # testing
 /coverage
+# Playwright end-to-end output (pnpm test:e2e)
+/test-results/
+/playwright-report/
+/blob-report/
 
 # vite / tanstack start / nitro (/.next is left over from the Next.js build)
 /.next/
