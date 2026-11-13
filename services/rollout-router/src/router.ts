@@ -237,8 +237,22 @@ export async function route(
     response = await fetcher(request);
   }
 
+  response = uncachedPermanentRedirect(response);
   if (decision.assignBucket === undefined) return response;
   const withCookie = new Response(response.body, response);
   withCookie.headers.append("Set-Cookie", variantCookie(`b${decision.assignBucket}`));
   return withCookie;
+}
+
+/**
+ * Browsers keep 301 and 308 redirects, so one version's permanent redirect
+ * (v8 retired /about, v7 still serves it) would follow a visitor who switches
+ * to the other version. While deniai.app is split, permanent redirects are
+ * not stored.
+ */
+export function uncachedPermanentRedirect(response: Response): Response {
+  if (response.status !== 301 && response.status !== 308) return response;
+  const uncached = new Response(response.body, response);
+  uncached.headers.set("Cache-Control", "no-store");
+  return uncached;
 }

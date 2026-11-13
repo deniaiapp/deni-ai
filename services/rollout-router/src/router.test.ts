@@ -154,6 +154,20 @@ describe("route", () => {
     expect(kept.headers.get("location")).toBe("/home");
   });
 
+  test("permanent redirects of either version are not kept by the browser", async () => {
+    const redirect = (status: number) => async () =>
+      new Response(null, {
+        status,
+        headers: { location: "/home", "cache-control": "public, max-age=3600" },
+      });
+    const v8 = await route(withCookie("v8", "/about"), env("10"), redirect(308));
+    expect(v8.headers.get("cache-control")).toBe("no-store");
+    const v7 = await route(withCookie("v7", "/old"), env("10"), redirect(301));
+    expect(v7.headers.get("cache-control")).toBe("no-store");
+    const temporary = await route(withCookie("v8", "/"), env("10"), redirect(307));
+    expect(temporary.headers.get("cache-control")).toBe("public, max-age=3600");
+  });
+
   test("a first page view stores its bucket", async () => {
     const { seen, fetcher } = upstream();
     const response = await route(page("/home"), env("20"), fetcher, () => 0.05);
