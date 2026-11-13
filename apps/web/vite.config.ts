@@ -94,8 +94,10 @@ export default defineConfig(({ mode }) => {
         project: process.env.SENTRY_PROJECT,
         silent: !process.env.CI,
         telemetry: false,
+        // Name the dot directories: `**` does not descend into `.output`, so
+        // "**/*.map" matched nothing and the maps shipped in /assets.
         sourcemaps: process.env.SENTRY_AUTH_TOKEN
-          ? { filesToDeleteAfterUpload: ["**/*.map"] }
+          ? { filesToDeleteAfterUpload: [".output/**/*.map", "node_modules/.nitro/**/*.map"] }
           : { disable: true },
         autoInstrumentMiddleware: true,
       }),
