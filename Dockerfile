@@ -29,8 +29,11 @@
 # Dependencies are installed in the build stage itself: `node_modules` is an
 # ordinary layer (cached while the lockfile is unchanged), with no COPY of
 # thousands of files and no bind mount.
+# The builder runs on Alpine (musl): the lockfile carries the musl bindings of
+# the native build tools (rolldown, oxc, Tailwind oxide, SWC). The runner stays
+# on glibc, which is safe only while `.output` traces no native `.node` addons.
 # ---------------------------------------------------------------------------
-FROM node:26-slim AS builder
+FROM node:26-alpine AS builder
 WORKDIR /app
 RUN npm install --global pnpm@latest
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
@@ -79,7 +82,10 @@ RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN,env=SENTRY_AUTH_TOKEN \
 # ---------------------------------------------------------------------------
 # Runtime (Nitro Node.js server output in .output)
 # ---------------------------------------------------------------------------
-FROM node:26-slim AS runner
+# Distroless: Node.js and its runtime libraries only (no shell, package manager,
+# or npm). The `nonroot` tag runs as uid 65532 and its entrypoint is `node`.
+# For an interactive shell while debugging, swap in the `debug-nonroot` tag.
+FROM gcr.io/distroless/nodejs26-debian13:nonroot AS runner
 WORKDIR /app
 
 # NODE_OPTIONS caps the V8 heap at 75% of the container memory limit so GC runs before
@@ -93,11 +99,10 @@ ENV PORT=3000 \
   NODE_ENV=production \
   NODE_OPTIONS=--max-old-space-size-percentage=75
 
-# Official Node.js images include a non-root `node` user/group.
 # `.output` holds the server bundle, its traced node_modules and public assets.
-COPY --from=builder --chown=node:node /app/.output ./.output
+COPY --from=builder --chown=nonroot:nonroot /app/.output ./.output
 
-USER node
 EXPOSE 3000
 
-CMD ["node", ".output/server/index.mjs"]
+# The image's entrypoint is already `node`, so CMD carries only the script.
+CMD [".output/server/index.mjs"]
