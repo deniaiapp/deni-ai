@@ -118,7 +118,7 @@ export function AccountMenu() {
   const utils = trpc.useUtils();
   const session = authClient.useSession();
   const isAnonymous = Boolean(session.data?.user?.isAnonymous);
-  const { features } = usePlatformCapabilities();
+  const { features, privateBeta } = usePlatformCapabilities();
   const billingDisabled = !features.billing;
   const hasSession = Boolean(session.data?.user);
   // A guest's stored name ("Anonymous") and placeholder address are not theirs to see.
@@ -411,32 +411,36 @@ export function AccountMenu() {
             <CircleHelp className="size-4" />
             <span className="flex-1">{t("Help Center")}</span>
           </DropdownMenuItem>
-          <DropdownMenuItem
-            className="gap-2 text-sm"
-            disabled={isMenuPending}
-            render={
-              <a
-                href={betaFeedbackUrl({
-                  locale,
-                  version: `${versions.version} (${versions.codename})`,
-                })}
-                target="_blank"
-                rel="noreferrer"
-                className="flex w-full"
-              />
-            }
-          >
-            <MessageSquareText className="size-4" />
-            <span className="flex-1">{t("Send feedback")}</span>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="gap-2 text-sm"
-            disabled={isMenuPending}
-            render={<a href={clientEnv.NEXT_PUBLIC_V7_URL} className="flex w-full" />}
-          >
-            <ArrowUpRight className="size-4" />
-            <span className="flex-1">{t("Go to Deni AI v7")}</span>
-          </DropdownMenuItem>
+          {privateBeta && (
+            <>
+              <DropdownMenuItem
+                className="gap-2 text-sm"
+                disabled={isMenuPending}
+                render={
+                  <a
+                    href={betaFeedbackUrl({
+                      locale,
+                      version: `${versions.version} (${versions.codename})`,
+                    })}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="flex w-full"
+                  />
+                }
+              >
+                <MessageSquareText className="size-4" />
+                <span className="flex-1">{t("Send feedback")}</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="gap-2 text-sm"
+                disabled={isMenuPending}
+                render={<a href={clientEnv.NEXT_PUBLIC_V7_URL} className="flex w-full" />}
+              >
+                <ArrowUpRight className="size-4" />
+                <span className="flex-1">{t("Go to Deni AI v7")}</span>
+              </DropdownMenuItem>
+            </>
+          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="gap-2 text-sm"

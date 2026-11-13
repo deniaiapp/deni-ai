@@ -5,8 +5,6 @@ export const appVersion = "8.0";
  */
 export const appCodename = "Private Beta";
 export const appDate = "2026-11-08";
-/** Shows the "Beta" label next to the app name in the sidebar; turn off at general release. */
-export const appIsBeta = true;
 
 const appHashPayload = [appVersion, appDate].join(":");
 export const appHash = globalThis.btoa(appHashPayload);

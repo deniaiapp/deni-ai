@@ -20,6 +20,7 @@ const defaultCapabilities: PlatformCapabilities = {
     email: true,
     guests: true,
   },
+  privateBeta: false,
 };
 
 const PlatformCapabilitiesContext = createContext<PlatformCapabilities>(defaultCapabilities);

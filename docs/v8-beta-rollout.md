@@ -163,3 +163,4 @@ accounts may use v8. What stays as it is during the beta:
   `STRIPE_WEBHOOK_ENABLED=false` until it takes over deniai.app.
 - Deni AI Ads placements stay as they are in both apps.
 - The codename of 8.0 is a placeholder (`appCodename` in `apps/web/src/lib/version.ts`).
+- Moving v8 to deniai.app afterwards: `docs/v8-takeover.md`.

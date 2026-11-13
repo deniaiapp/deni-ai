@@ -45,7 +45,7 @@ import { normalizeTags } from "@/components/app-sidebar-utils";
 import DeniAIIcon from "@/components/deni-ai-icon";
 import { isCheckoutSettingsRoute } from "@/lib/settings-routes";
 import { trpc } from "@/lib/trpc/react";
-import { appIsBeta } from "@/lib/version";
+import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { useGoToNewChat } from "@/hooks/use-new-chat";
 
 const AppSidebarChatList = dynamic(
@@ -150,6 +150,7 @@ function updateCustomFolders(updater: (current: string[]) => string[]) {
 
 export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void }) {
   const t = useExtracted();
+  const { privateBeta } = usePlatformCapabilities();
   const localizeError = useLocalizeError();
   const { push } = useRouter();
   const pathname = usePathname();
@@ -281,7 +282,7 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
             <span className="text-[15px] font-semibold tracking-[-0.02em] text-sidebar-foreground">
               {t("Deni AI")}
             </span>
-            {appIsBeta ? (
+            {privateBeta ? (
               <span className="rounded-badge border border-border px-1.5 text-xs leading-5 font-medium text-muted-foreground">
                 {t("Beta")}
               </span>

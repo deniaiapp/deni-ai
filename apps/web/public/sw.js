@@ -12,15 +12,7 @@ const PRECACHE_URLS = [
   "/icon-512x512",
   "/og.png",
 ];
-const PUBLIC_PAGE_PREFIXES = [
-  "/home",
-  "/about",
-  "/models",
-  "/flixa",
-  "/legal",
-  "/migration",
-  "/shared",
-];
+const PUBLIC_PAGE_PREFIXES = ["/home", "/flixa", "/legal"];
 const STATIC_DESTINATIONS = new Set(["font", "image", "manifest", "script", "style", "worker"]);
 
 self.addEventListener("install", (event) => {

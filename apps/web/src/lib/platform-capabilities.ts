@@ -16,6 +16,11 @@ export type PlatformCapabilities = {
     /** Guest sign-in is offered (off behind the private beta gate). */
     guests: boolean;
   };
+  /**
+   * This deployment runs the private beta gate (`BETA_ACCESS_REQUIRED`): shows the
+   * beta-only UI (sidebar "Beta" label, beta feedback and "Go to Deni AI v7" links).
+   */
+  privateBeta: boolean;
 };
 
 export function isModelProviderAvailable(

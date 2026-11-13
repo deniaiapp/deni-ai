@@ -87,7 +87,8 @@ D1 data moves over with `pnpm --filter @deniai/run migrate:d1` (runbook:
 - During the v8 private beta the web app shares the production database with v7
   (the `deni-ai` repository): schema changes are made only in `packages/db`
   here and stay additive, and v7 does not generate migrations. Rollout, the
-  beta gate and the coexistence switches: `docs/v8-beta-rollout.md`.
+  beta gate and the coexistence switches: `docs/v8-beta-rollout.md`; the move
+  to deniai.app: `docs/v8-takeover.md`.
 
 ## Commands (from the root)
 

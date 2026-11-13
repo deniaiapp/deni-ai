@@ -48,6 +48,7 @@ export function getPlatformCapabilities(): PlatformCapabilities {
       // The private beta refuses guests (src/lib/beta-access.server.ts).
       guests: !env.BETA_ACCESS_REQUIRED,
     },
+    privateBeta: env.BETA_ACCESS_REQUIRED,
   };
 }
 
