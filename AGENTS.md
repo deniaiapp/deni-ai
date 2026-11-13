@@ -77,9 +77,10 @@ D1 data moves over with `pnpm --filter @deniai/run migrate:d1` (runbook:
   (`docker build -f apps/web/Dockerfile .`); `<Dockerfile>.dockerignore` next to
   each Dockerfile applies. Each image installs pnpm 12.18.0 (the root
   `packageManager`; bump them together) and runs a frozen install filtered to
-  its app (`--filter "@deniai/<app>..."`). When a package is added, the
-  Dockerfiles already copy `packages/`; add its manifest only if it lives
-  elsewhere.
+  its app (`--filter "@deniai/<app>..."`). They copy `packages/*/package.json`
+  before the install and the package sources after it, so source edits keep the
+  install layer cached. When a package is added under `packages/`, nothing
+  changes; add its manifest only if it lives elsewhere.
 - Never run `db:migrate`, `db:push` or `auth:generate` without an explicit
   request for the target environment.
 - During the v8 private beta the web app shares the production database with v7

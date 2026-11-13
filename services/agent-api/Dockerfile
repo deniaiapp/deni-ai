@@ -15,12 +15,15 @@ COPY apps/web/package.json ./apps/web/
 COPY apps/support/package.json ./apps/support/
 COPY services/agent-api/package.json ./services/agent-api/
 COPY services/run-worker/package.json ./services/run-worker/
-COPY packages ./packages
+# Package sources follow the install, so editing them keeps the install cached.
+COPY --parents packages/*/package.json ./
 # Dev dependencies are needed for the esbuild step. Install scripts are skipped:
 # the bundle only needs sources. The pnpm store is a BuildKit cache mount shared
 # with the other projects (id=pnpm-store).
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile --ignore-scripts --filter "@deniai/agent-api..." --store-dir=/pnpm/store
+
+COPY packages ./packages
 
 WORKDIR /app/services/agent-api
 

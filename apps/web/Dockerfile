@@ -30,8 +30,9 @@
 # Every workspace manifest is copied so the frozen lockfile matches; only
 # apps/web and the workspace packages it depends on are installed.
 # Dependencies are installed in the build stage itself: `node_modules` is an
-# ordinary layer (cached while the lockfile is unchanged), with no COPY of
-# thousands of files and no bind mount.
+# ordinary layer (cached while the manifests and lockfile are unchanged), with
+# no COPY of thousands of files and no bind mount. Workspace package sources are
+# copied after the install so editing them does not invalidate that layer.
 # The builder runs on Alpine (musl): the lockfile carries the musl bindings of
 # the native build tools (rolldown, oxc, Tailwind oxide, SWC). The runner is
 # glibc, which is safe only while `.output` traces no native `.node` addons.
@@ -45,7 +46,7 @@ COPY apps/web/package.json ./apps/web/
 COPY apps/support/package.json ./apps/support/
 COPY services/agent-api/package.json ./services/agent-api/
 COPY services/run-worker/package.json ./services/run-worker/
-COPY packages ./packages
+COPY --parents packages/*/package.json ./
 # Install before NODE_ENV=production so devDependencies (Vite, Tailwind, the
 # React Compiler) are present for the build.
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
@@ -53,6 +54,7 @@ RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
 
 ENV NODE_ENV=production
 
+COPY packages ./packages
 COPY apps/web ./apps/web
 WORKDIR /app/apps/web
 

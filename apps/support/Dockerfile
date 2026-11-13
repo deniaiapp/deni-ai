@@ -25,12 +25,14 @@ COPY apps/web/package.json ./apps/web/
 COPY apps/support/package.json ./apps/support/
 COPY services/agent-api/package.json ./services/agent-api/
 COPY services/run-worker/package.json ./services/run-worker/
-COPY packages ./packages
+# Package sources follow the install, so editing them keeps the install cached.
+COPY --parents packages/*/package.json ./
 
 FROM base AS builder
 RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
   pnpm install --frozen-lockfile --filter "@deniai/support..." --store-dir=/pnpm/store
 ENV NODE_ENV=production
+COPY packages ./packages
 COPY apps/support ./apps/support
 WORKDIR /app/apps/support
 RUN pnpm run build
