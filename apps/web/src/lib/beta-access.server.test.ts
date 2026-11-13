@@ -157,6 +157,16 @@ test("a signed-in user without access gets 403 beta_access_required from gated A
   }
 });
 
+test("a native client's bearer token is gated like a session cookie", async () => {
+  const withToken = (path: string) =>
+    new Request(`http://localhost${path}`, { headers: { authorization: "Bearer desktop-token" } });
+  const denied = gate();
+  const response = await denied.run(withToken("/api/client/v1/bootstrap"));
+  expect(response?.status).toBe(403);
+  expect(denied.getSession).toHaveBeenCalledTimes(1);
+  expect(await gate({ access: true }).run(withToken("/api/client/v1/chats"))).toBeNull();
+});
+
 test("a /new navigation without access goes to the private beta screen", async () => {
   const response = await gate().run(withSession("/new/hello"));
   expect(response?.status).toBe(307);

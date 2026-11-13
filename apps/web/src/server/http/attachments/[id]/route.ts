@@ -1,6 +1,7 @@
+import { CHAT_SCOPE } from "@deniai/auth/oauth";
 import { isAttachmentId } from "@/lib/attachment-url";
 import { findReadyAttachmentKey } from "@/lib/attachments";
-import { auth } from "@/lib/auth";
+import { getRequestSession } from "@/lib/request-session.server";
 import { ATTACHMENT_VIEW_URL_TTL_SECONDS, signAttachmentUrl } from "@/lib/upload";
 
 // The signed URL in the redirect is a bearer credential: never cache it in a
@@ -19,7 +20,7 @@ function emptyResponse(status: number) {
  * other id, including someone else's, answers 404 so existence is not revealed.
  */
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getRequestSession(request.headers, { bearerScope: CHAT_SCOPE });
   if (!session?.session) return emptyResponse(401);
 
   const { id } = params;

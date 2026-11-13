@@ -298,6 +298,9 @@ importers:
       '@deniai/billing':
         specifier: workspace:*
         version: link:../../packages/billing
+      '@deniai/client-contract':
+        specifier: workspace:*
+        version: link:../../packages/client-contract
       '@deniai/db':
         specifier: workspace:*
         version: link:../../packages/db
@@ -621,6 +624,25 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
 
+  packages/client-contract:
+    dependencies:
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
+    devDependencies:
+      '@types/node':
+        specifier: ^26.6.5
+        version: 26.6.6
+      tsx:
+        specifier: ^4.23.15
+        version: 4.23.15
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+      vitest:
+        specifier: ^5.0.5
+        version: 5.0.5(@opentelemetry/api@1.10.0)(@types/node@26.6.6)(vite@8.3.5(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
+
   packages/db:
     devDependencies:
       '@types/node':
@@ -845,7 +867,7 @@ importers:
         version: 4.13.14
       openai:
         specifier: ^7.43.0
-        version: 7.43.0(undici@8.12.3)(ws@8.21.3)(zod@4.6.7)
+        version: 7.43.0(@aws-sdk/credential-provider-node@3.972.94)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.21.3)(zod@4.6.7)
       pg:
         specifier: ^8.23.1
         version: 8.23.1
@@ -15106,8 +15128,10 @@ snapshots:
       is-docker: 2.2.1
       is-wsl: 2.2.0
 
-  openai@7.43.0(undici@8.12.3)(ws@8.21.3)(zod@4.6.7):
+  openai@7.43.0(@aws-sdk/credential-provider-node@3.972.94)(@smithy/signature-v4@5.7.5)(undici@8.12.3)(ws@8.21.3)(zod@4.6.7):
     optionalDependencies:
+      '@aws-sdk/credential-provider-node': 3.972.94
+      '@smithy/signature-v4': 5.7.5
       undici: 8.12.3
       ws: 8.21.3
       zod: 4.6.7

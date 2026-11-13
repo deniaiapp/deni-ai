@@ -3,6 +3,7 @@
   "ignorePatterns": [
     "**/routeTree.gen.ts",
     "packages/db/migrations/meta/**",
-    "packages/db/flixa-migrations/meta/**"
+    "packages/db/flixa-migrations/meta/**",
+    "packages/client-contract/schema/**"
   ]
 }

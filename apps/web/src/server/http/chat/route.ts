@@ -1,3 +1,4 @@
+import { CHAT_SCOPE } from "@deniai/auth/oauth";
 import { suppressTracing } from "@sentry/tanstackstart-react";
 import {
   consumeStream,
@@ -15,7 +16,7 @@ import {
   type SystemModelMessage,
   type UIMessage,
 } from "ai";
-import { auth } from "@/lib/auth";
+import { getRequestSession } from "@/lib/request-session.server";
 import { runAfterResponse } from "@/lib/run-after-response";
 import {
   clearChatGenerationState,
@@ -134,7 +135,7 @@ export async function POST(req: Request) {
   const rejected = guardMutationRequest(req, "application/json");
   if (rejected) return rejected;
   const headersList = req.headers;
-  const session = await auth.api.getSession({ headers: headersList });
+  const session = await getRequestSession(headersList, { bearerScope: CHAT_SCOPE });
   const userId = session?.session?.userId;
   const isAnonymous = Boolean(session?.user?.isAnonymous);
   if (!userId) return Response.json({ error: "Unauthorized" }, { status: 401 });

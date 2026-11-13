@@ -16,6 +16,7 @@ the workspace layout and the rules that span apps.
 | `packages/db`                       | `@deniai/db`                        | Drizzle schema + migrations: `public` (web, `drizzle.config.ts`) and `flixa` (agent API, `drizzle.flixa.config.ts`, journal `flixa.__drizzle_migrations`)                            |
 | `packages/billing`                  | `@deniai/billing`                   | Billing rules shared by web and agent API: pure pool sizes, plan tiers, usage tier multipliers, token weights, education domains; `/server`: the usage engine (`createUsageEngine`)  |
 | `packages/flixa-contract`           | `@deniai/flixa-contract`            | Publishable (0.1.0, not published) zod schemas + types of the public Flixa API: device auth, API key format, error envelope and codes, client headers, models, usage, request bodies |
+| `packages/client-contract`          | `@deniai/client-contract`           | Zod schemas, types and JSON Schema (`schema/client-api-v1.json`) of the native client API `/api/client/v1` used by Deni AI Desktop |
 | `packages/ui`                       | `@deniai/ui`                        | shadcn/ui components on Base UI and layout primitives (PageHeader, PageSection, SettingsLayout, AppHeader) of the design system in `docs/design-system.md`                           |
 | `packages/emails`                   | `@deniai/emails`                    | react-email transactional templates and `renderEmail()` (HTML + plain text)                                                                                                          |
 | `packages/i18n`                     | `@deniai/i18n`                      | Locale list (web and support), Accept-Language negotiation, `getExtracted()`, and the `extractMessages()` Vite plugin that rewrites `apps/web/messages/*.json`                       |
@@ -97,7 +98,7 @@ D1 data moves over with `pnpm --filter @deniai/run migrate:d1` (runbook:
 | `pnpm --filter @deniai/run-worker dev`    | Run worker (scheduler; Discord only with `RUN_DISCORD_ENABLED=true`)           |
 | `pnpm build`                              | `build` in every package that has one                                          |
 | `pnpm lint` / `pnpm format`               | oxlint / oxfmt in every package that defines the script                        |
-| `pnpm format:check`                       | `oxfmt --check` (web, ui, db, billing, flixa-contract, emails, i18n, ai, auth) |
+| `pnpm format:check`                       | `oxfmt --check` (web, ui, db, billing, flixa-contract, client-contract, emails, i18n, ai, auth) |
 | `pnpm typecheck`                          | `tsc --noEmit` everywhere                                                      |
 | `pnpm test`                               | vitest (web, packages) and `node --test` (agent-api)                           |
 | `pnpm --filter <name> <script>`           | One package, e.g. `pnpm --filter @deniai/web typecheck`                        |

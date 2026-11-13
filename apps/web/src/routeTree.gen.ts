@@ -84,6 +84,7 @@ import { Route as AppSettingsTeamDashboardRouteRouteImport } from './routes/_app
 import { Route as ApiAdsCampaignsIndexRouteImport } from './routes/api/ads/campaigns/index'
 import { Route as ApiAdsCampaignsIdRouteImport } from './routes/api/ads/campaigns/$id'
 import { Route as ApiAdsCampaignsCheckoutRouteImport } from './routes/api/ads/campaigns/checkout'
+import { Route as ApiClientV1SplatRouteImport } from './routes/api/client/v1/$'
 import { Route as ApiIntegrationsDeniRunUsageRouteImport } from './routes/api/integrations/deni-run/usage'
 import { Route as AppSettingsBillingCheckoutIndexRouteImport } from './routes/_app/settings/billing/checkout/index'
 import { Route as AppSettingsBillingCheckoutSessionIdRouteImport } from './routes/_app/settings/billing/checkout/$sessionId'
@@ -480,6 +481,11 @@ const ApiAdsCampaignsCheckoutRoute = ApiAdsCampaignsCheckoutRouteImport.update({
   path: '/api/ads/campaigns/checkout',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiClientV1SplatRoute = ApiClientV1SplatRouteImport.update({
+  id: '/api/client/v1/$',
+  path: '/api/client/v1/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiIntegrationsDeniRunUsageRoute =
   ApiIntegrationsDeniRunUsageRouteImport.update({
     id: '/api/integrations/deni-run/usage',
@@ -613,6 +619,7 @@ export interface FileRoutesByFullPath {
   '/run/threads/$id': typeof AppRunThreadsIdRoute
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
+  '/api/client/v1/$': typeof ApiClientV1SplatRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
   '/run/connectors/': typeof AppRunConnectorsIndexRoute
   '/settings/billing/': typeof AppSettingsBillingIndexRoute
@@ -696,6 +703,7 @@ export interface FileRoutesByTo {
   '/run/threads/$id': typeof AppRunThreadsIdRoute
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
+  '/api/client/v1/$': typeof ApiClientV1SplatRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
   '/run/connectors': typeof AppRunConnectorsIndexRoute
   '/settings/billing': typeof AppSettingsBillingIndexRoute
@@ -784,6 +792,7 @@ export interface FileRoutesById {
   '/_app/run/threads/$id': typeof AppRunThreadsIdRoute
   '/api/ads/campaigns/$id': typeof ApiAdsCampaignsIdRoute
   '/api/ads/campaigns/checkout': typeof ApiAdsCampaignsCheckoutRoute
+  '/api/client/v1/$': typeof ApiClientV1SplatRoute
   '/api/integrations/deni-run/usage': typeof ApiIntegrationsDeniRunUsageRoute
   '/_app/run/connectors/': typeof AppRunConnectorsIndexRoute
   '/_app/settings/billing/': typeof AppSettingsBillingIndexRoute
@@ -872,6 +881,7 @@ export interface FileRouteTypes {
     | '/run/threads/$id'
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
+    | '/api/client/v1/$'
     | '/api/integrations/deni-run/usage'
     | '/run/connectors/'
     | '/settings/billing/'
@@ -955,6 +965,7 @@ export interface FileRouteTypes {
     | '/run/threads/$id'
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
+    | '/api/client/v1/$'
     | '/api/integrations/deni-run/usage'
     | '/run/connectors'
     | '/settings/billing'
@@ -1042,6 +1053,7 @@ export interface FileRouteTypes {
     | '/_app/run/threads/$id'
     | '/api/ads/campaigns/$id'
     | '/api/ads/campaigns/checkout'
+    | '/api/client/v1/$'
     | '/api/integrations/deni-run/usage'
     | '/_app/run/connectors/'
     | '/_app/settings/billing/'
@@ -1088,6 +1100,7 @@ export interface RootRouteChildren {
   ApiChatIndexRoute: typeof ApiChatIndexRoute
   ApiAdsCampaignsIdRoute: typeof ApiAdsCampaignsIdRoute
   ApiAdsCampaignsCheckoutRoute: typeof ApiAdsCampaignsCheckoutRoute
+  ApiClientV1SplatRoute: typeof ApiClientV1SplatRoute
   ApiIntegrationsDeniRunUsageRoute: typeof ApiIntegrationsDeniRunUsageRoute
   ApiAdsCampaignsIndexRoute: typeof ApiAdsCampaignsIndexRoute
 }
@@ -1619,6 +1632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAdsCampaignsCheckoutRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/client/v1/$': {
+      id: '/api/client/v1/$'
+      path: '/api/client/v1/$'
+      fullPath: '/api/client/v1/$'
+      preLoaderRoute: typeof ApiClientV1SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/integrations/deni-run/usage': {
       id: '/api/integrations/deni-run/usage'
       path: '/api/integrations/deni-run/usage'
@@ -1887,6 +1907,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiChatIndexRoute: ApiChatIndexRoute,
   ApiAdsCampaignsIdRoute: ApiAdsCampaignsIdRoute,
   ApiAdsCampaignsCheckoutRoute: ApiAdsCampaignsCheckoutRoute,
+  ApiClientV1SplatRoute: ApiClientV1SplatRoute,
   ApiIntegrationsDeniRunUsageRoute: ApiIntegrationsDeniRunUsageRoute,
   ApiAdsCampaignsIndexRoute: ApiAdsCampaignsIndexRoute,
 }

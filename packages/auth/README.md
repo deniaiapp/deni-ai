@@ -3,14 +3,15 @@
 Better Auth for Deni AI: the server configuration as a factory, the React
 client, the auth route paths, and API key generation and hashing.
 
-| Export                      | What it is                                                                                                                                                     |
-| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@deniai/auth/server`       | `createAuth(deps)` → the Better Auth instance (`Auth`). `deps` carries the database, public URL, email sender, OAuth/Turnstile settings and the app callbacks. |
-| `@deniai/auth/client`       | `createDeniAuthClient({ baseURL })`: React client with the matching plugins (anonymous, 2FA, passkey, organization, OAuth provider, last login method).        |
-| `@deniai/auth/paths`        | Auth route paths shared by the server config and the UI (`/auth/two-factor`, `/oauth/authorize`, `/oauth/consent`, `/account/security`).                       |
-| `@deniai/auth/api-key`      | `generateApiKey()`, `hashApiKey()` (WebCrypto SHA-256 hex), `getKeyPrefix()`, `API_KEY_PREFIX`.                                                                |
-| `@deniai/auth/api-key/node` | `hashApiKeySync()` (node:crypto, same digest) for the agent API's per-request key validation.                                                                  |
-| `@deniai/auth/dedupe`       | Package names apps put in Vite `resolve.dedupe` (see below).                                                                                                   |
+| Export                      | What it is                                                                                                                                                                 |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@deniai/auth/server`       | `createAuth(deps)` → the Better Auth instance (`Auth`). `deps` carries the database, public URL, email sender, OAuth/Turnstile settings and the app callbacks.             |
+| `@deniai/auth/client`       | `createDeniAuthClient({ baseURL })`: React client with the matching plugins (anonymous, 2FA, passkey, organization, OAuth provider, last login method).                    |
+| `@deniai/auth/paths`        | Auth route paths shared by the server config and the UI (`/auth/two-factor`, `/oauth/authorize`, `/oauth/consent`, `/account/security`).                                   |
+| `@deniai/auth/api-key`      | `generateApiKey()`, `hashApiKey()` (WebCrypto SHA-256 hex), `getKeyPrefix()`, `API_KEY_PREFIX`.                                                                            |
+| `@deniai/auth/api-key/node` | `hashApiKeySync()` (node:crypto, same digest) for the agent API's per-request key validation.                                                                              |
+| `@deniai/auth/oauth`        | OAuth provider rules shared with the web app: `OAUTH_SCOPES` (plugin defaults plus `CHAT_SCOPE`), `hashOAuthToken()` (how issued tokens are stored), `parseBearerToken()`. |
+| `@deniai/auth/dedupe`       | Package names apps put in Vite `resolve.dedupe` (see below).                                                                                                               |
 
 The package never imports an app. The web app's `src/lib/auth.ts` is the
 composition root: it reads env, passes its Drizzle `db`, `sendEmail` (only when

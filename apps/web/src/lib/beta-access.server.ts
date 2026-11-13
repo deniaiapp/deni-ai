@@ -1,3 +1,4 @@
+import { CHAT_SCOPE, hasBearerAuthorization } from "@deniai/auth/oauth";
 import { env } from "@/env";
 import { isAdminEmail } from "@/lib/admin-emails";
 import {
@@ -132,7 +133,8 @@ function hasSessionCookie(request: Request) {
  * gated server route (`isBetaGatedServerPath`: tRPC, chat, Run, attachments,
  * uploads, ads campaigns, device auth, …), or a redirect to the private beta
  * screen from `/new/*` navigations. Requests without a session pass through
- * to the route, which answers them as before.
+ * to the route, which answers them as before. A request with an OAuth bearer
+ * token (Deni AI Desktop) is judged by the token's user the same way.
  */
 export function createBetaAccessGate(deps: BetaAccessGateDeps) {
   return async (request: Request): Promise<Response | null> => {
@@ -141,7 +143,8 @@ export function createBetaAccessGate(deps: BetaAccessGateDeps) {
     if (isGuestSignInPath(pathname)) {
       return request.method === "POST" ? betaAccessDeniedResponse() : null;
     }
-    if (!isBetaGatedServerPath(pathname) || !hasSessionCookie(request)) return null;
+    if (!isBetaGatedServerPath(pathname)) return null;
+    if (!hasSessionCookie(request) && !hasBearerAuthorization(request.headers)) return null;
 
     const session = await deps.getSession(request.headers);
     if (!session?.user || (await deps.hasAccess(session.user))) return null;
@@ -163,8 +166,8 @@ export function betaAccessGateResponse(request: Request) {
   return createBetaAccessGate({
     required: isBetaAccessRequired(),
     getSession: async (headers) => {
-      const { auth } = await import("@/lib/auth");
-      return auth.api.getSession({ headers });
+      const { getRequestSession } = await import("@/lib/request-session.server");
+      return getRequestSession(headers, { bearerScope: CHAT_SCOPE });
     },
     hasAccess: (user) => hasBetaAccess(user, { required: true }),
   })(request);

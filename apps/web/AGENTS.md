@@ -171,6 +171,30 @@ at the repository root.
 - `src/lib/version.ts` holds the version, the codename placeholder and
   `appIsBeta` (the sidebar "Beta" label).
 
+## Native client API (Deni AI Desktop)
+
+The native desktop app (repository `deni-ai-desktop`) talks to this app over
+HTTP, without a WebView.
+
+- Sign-in: the OAuth provider (`@deniai/auth/server`). The desktop app is a
+  public native client (PKCE, loopback redirect) registered with
+  `pnpm run tools:register-oauth-client --native`; it receives an access token
+  with the `chat` scope (`@deniai/auth/oauth`).
+- Credentials: `getRequestSession(request, { bearerScope: CHAT_SCOPE })` in
+  `src/lib/request-session.server.ts` accepts that token as
+  `Authorization: Bearer` and returns the usual `{ session, user }` (session id
+  `oauth:<token id>`, no active organization), or else the browser session. Only
+  tokens with the `chat` scope from a client registered with `chat` count. Use it
+  only in endpoints native clients call: `/api/client/v1/*`, `/api/chat`,
+  `/api/chat/stop`, `/api/upload-attachment`, `/api/attachments/:id`. tRPC and
+  everything else stay cookie-only, so a token never reaches billing, API keys or
+  account settings. The beta gate checks bearer requests too.
+- REST layer: `/api/client/v1/*` (`src/routes/api/client/v1/$.ts` →
+  `src/server/http/client-v1/router.ts`) adapts the tRPC routers through
+  `createCaller`; shapes are `@deniai/client-contract` (change them there first
+  and regenerate its JSON Schema). `DESKTOP_MIN_CLIENT_VERSION` retires old
+  clients with 426 `client_update_required`.
+
 ## Verification
 
 Choose checks that establish the changed behavior:

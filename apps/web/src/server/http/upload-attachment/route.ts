@@ -1,3 +1,4 @@
+import { CHAT_SCOPE } from "@deniai/auth/oauth";
 import {
   decodeTextAttachment,
   MAX_TEXT_ATTACHMENT_BYTES,
@@ -13,7 +14,7 @@ import {
   reserveAttachmentStorage,
   type StorageReservation,
 } from "@/lib/attachments";
-import { auth } from "@/lib/auth";
+import { getRequestSession } from "@/lib/request-session.server";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { attachmentStorageKey } from "@/lib/stored-files";
 import { deleteStoredFiles, isStorageConfigured, uploadPrivateFile } from "@/lib/upload";
@@ -70,7 +71,7 @@ async function readBodyWithinLimit(request: Request): Promise<Uint8Array<ArrayBu
 export async function POST(request: Request) {
   const rejected = guardMutationRequest(request, "multipart/form-data");
   if (rejected) return rejected;
-  const session = await auth.api.getSession({ headers: request.headers });
+  const session = await getRequestSession(request.headers, { bearerScope: CHAT_SCOPE });
   if (!session?.session) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }

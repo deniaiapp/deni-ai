@@ -9,12 +9,21 @@
  * skips the consent screen; pass `--consent` to show it. Set the printed client
  * id as DENI_RUN_OAUTH_CLIENT_ID here and both values in the client app.
  *
+ * `--native` registers a public native client instead (Deni AI Desktop): no
+ * secret, PKCE required, loopback redirects whose port may vary (RFC 8252), and
+ * the scopes `profile email offline_access chat`. Register one per
+ * channel and build the client id into that channel:
+ *
+ *   pnpm run tools:register-oauth-client --native --name="Deni AI Desktop" \
+ *     --redirect-uri=http://127.0.0.1/callback
+ *
  * Uses a minimal Better Auth instance with the same secret and plugin options
  * as src/lib/auth.ts, so the stored (encrypted) secret matches the app's.
  */
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { oauthProvider } from "@better-auth/oauth-provider";
 import { betterAuth } from "better-auth";
+import { CHAT_SCOPE, OAUTH_SCOPES } from "@deniai/auth/oauth";
 import { drizzle } from "drizzle-orm/postgres-js";
 
 import * as schema from "../src/db/schema";
@@ -32,9 +41,10 @@ const valuesOf = (name: string) =>
   args.filter((arg) => arg.startsWith(`--${name}=`)).map((arg) => arg.slice(name.length + 3));
 const name = valuesOf("name")[0];
 const redirectUris = valuesOf("redirect-uri");
+const native = args.includes("--native");
 if (!name || redirectUris.length === 0) {
   console.error(
-    'Usage: --name="Deni Run" --redirect-uri=<callback url> [--redirect-uri=...] [--consent]',
+    'Usage: --name="Deni Run" --redirect-uri=<callback url> [--redirect-uri=...] [--consent] [--native]',
   );
   process.exit(1);
 }
@@ -50,6 +60,7 @@ const auth = betterAuth({
       consentPage: "/oauth/consent",
       disableJwtPlugin: true,
       allowDynamicClientRegistration: false,
+      scopes: [...OAUTH_SCOPES],
       // Own the client by a reference, not by the synthetic operator below.
       clientReference: () => OPERATOR_REFERENCE,
     }),
@@ -85,18 +96,35 @@ Object.assign(context, {
 
 const client = await auth.api.adminCreateOAuthClient({
   headers: new Headers(),
-  body: {
-    client_name: name,
-    redirect_uris: redirectUris,
-    token_endpoint_auth_method: "client_secret_post",
-    grant_types: ["authorization_code", "refresh_token"],
-    response_types: ["code"],
-    skip_consent: !args.includes("--consent"),
-  },
+  body: native
+    ? {
+        client_name: name,
+        redirect_uris: redirectUris,
+        application_type: "native",
+        token_endpoint_auth_method: "none",
+        require_pkce: true,
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+        // The access tokens of a client registered with `chat` reach the client
+        // API (apps/web src/lib/request-session.server.ts).
+        // No `openid`: id tokens are HS256-signed with the client secret, which a
+        // public client lacks, so none would be issued. The client reads the user
+        // from `/api/client/v1/bootstrap`.
+        scope: ["profile", "email", "offline_access", CHAT_SCOPE].join(" "),
+        skip_consent: !args.includes("--consent"),
+      }
+    : {
+        client_name: name,
+        redirect_uris: redirectUris,
+        token_endpoint_auth_method: "client_secret_post",
+        grant_types: ["authorization_code", "refresh_token"],
+        response_types: ["code"],
+        skip_consent: !args.includes("--consent"),
+      },
 });
 
 console.info(`Registered OAuth client "${name}"`);
 console.info(`client_id:     ${client.client_id}`);
 console.info(`client_secret: ${client.client_secret ?? "(none)"}`);
-console.info("Store the secret now: it cannot be shown again.");
+if (client.client_secret) console.info("Store the secret now: it cannot be shown again.");
 process.exit(0);

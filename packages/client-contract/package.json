@@ -1,0 +1,28 @@
+{
+  "name": "@deniai/client-contract",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Zod schemas, types and JSON Schema of the native client API (/api/client/v1) used by Deni AI Desktop",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "schema": "tsx scripts/emit-json-schema.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
+    "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache"
+  },
+  "dependencies": {
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.5",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  }
+}

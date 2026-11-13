@@ -19,6 +19,7 @@ import {
 } from "better-auth/plugins";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { createElement, type ReactElement } from "react";
+import { hashOAuthToken, OAUTH_SCOPES } from "./oauth";
 import { OAUTH_CONSENT_PATH, OAUTH_LOGIN_PATH, TWO_FACTOR_PATH } from "./paths";
 
 /** A rendered-on-send transactional email (`@deniai/emails` template element). */
@@ -593,6 +594,10 @@ export function createAuth(deps: CreateAuthDeps) {
         // Clients are created by operators only; no dynamic registration.
         allowDynamicClientRegistration: false,
         cachedTrustedClients: new Set(deps.trustedOAuthClientIds ?? []),
+        // The defaults plus `chat`, which Deni AI Desktop asks for (src/oauth.ts).
+        scopes: [...OAUTH_SCOPES],
+        // The plugin default, spelled out so the web app can look up access tokens.
+        storeTokens: { hash: hashOAuthToken },
       }),
       organization({
         // Guests have placeholder emails and must not own teams (or their billing).

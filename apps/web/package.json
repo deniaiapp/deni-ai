@@ -41,6 +41,7 @@
     "@deniai/ai": "workspace:*",
     "@deniai/auth": "workspace:*",
     "@deniai/billing": "workspace:*",
+    "@deniai/client-contract": "workspace:*",
     "@deniai/db": "workspace:*",
     "@deniai/emails": "workspace:*",
     "@deniai/i18n": "workspace:*",

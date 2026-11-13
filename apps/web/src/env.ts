@@ -167,6 +167,16 @@ export const env = createEnv({
      */
     RUN_ENABLED: z.stringbool().default(true),
     /**
+     * Oldest Deni AI Desktop version the native client API (`/api/client/v1`)
+     * accepts, as a semantic version. Older clients get 426
+     * `client_update_required` (bootstrap still answers, with
+     * `client.updateRequired: true`). Unset: every version is accepted.
+     */
+    DESKTOP_MIN_CLIENT_VERSION: z
+      .string()
+      .regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/)
+      .optional(),
+    /**
      * WebAuthn relying party ID for passkeys. Unset: the host of the auth URL
      * (deniai.app in production). beta.deniai.app sets `deniai.app` so passkeys
      * registered on deniai.app keep working there.

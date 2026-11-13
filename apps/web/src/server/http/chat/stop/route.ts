@@ -1,5 +1,6 @@
+import { CHAT_SCOPE } from "@deniai/auth/oauth";
 import { z } from "zod";
-import { auth } from "@/lib/auth";
+import { getRequestSession } from "@/lib/request-session.server";
 import {
   getChatGenerationContextById,
   recordChatStopRequestedAt,
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
   const rejected = guardMutationRequest(req, "application/json");
   if (rejected) return rejected;
   const headersList = req.headers;
-  const session = await auth.api.getSession({ headers: headersList });
+  const session = await getRequestSession(headersList, { bearerScope: CHAT_SCOPE });
   const userId = session?.session?.userId;
 
   if (!userId) {
