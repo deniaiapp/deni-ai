@@ -21,19 +21,19 @@
     "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache"
   },
   "dependencies": {
-    "@better-auth/drizzle-adapter": "^1.7.14",
-    "@better-auth/oauth-provider": "1.7.14",
-    "@better-auth/passkey": "^1.7.14",
+    "@better-auth/drizzle-adapter": "^1.7.23",
+    "@better-auth/oauth-provider": "1.7.23",
+    "@better-auth/passkey": "^1.7.23",
     "@deniai/db": "workspace:*",
     "@deniai/emails": "workspace:*",
-    "better-auth": "^1.7.14"
+    "better-auth": "^1.7.23"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "react": "19.3.1",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "peerDependencies": {
     "react": "^19.3.1"

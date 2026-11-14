@@ -1582,13 +1582,13 @@ async function createAnthropicChatFailoverResponse(
   body: AgentRequest,
   hasToolResult: boolean,
 ): Promise<Response> {
+  // Anthropic API version 2026-10-21 (SDK 1.x) no longer accepts temperature or top_p, so the
+  // failover request drops the client's sampling settings.
   const {
     messages,
     model,
     stream,
-    temperature,
     max_tokens,
-    top_p,
     tools,
     tool_choice,
   } = body;
@@ -1609,8 +1609,6 @@ async function createAnthropicChatFailoverResponse(
     messages: anthropicMessages,
     stream: stream ?? false,
     max_tokens: max_tokens ?? 4096,
-    temperature: temperature ?? undefined,
-    top_p: top_p ?? undefined,
     system,
     tools: anthropicTools,
     tool_choice: normalizedToolChoice,

@@ -24,7 +24,7 @@
     "db:migrate:flixa": "node --env-file-if-exists=../../services/agent-api/.env ./node_modules/drizzle-kit/bin.cjs migrate --config drizzle.flixa.config.ts"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "drizzle-kit": "^0.31.11",
     "drizzle-orm": "^0.45.4",
     "typescript": "^7.0.2"

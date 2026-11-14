@@ -152,7 +152,7 @@ test("signing in from a guest session moves the guest's data, then deletes the g
 
 test("a password sign-in awaiting 2FA does not move the guest's data", async () => {
   const userId = await createAccount({ twoFactorEnabled: true });
-  const { guest } = await guestBrowser();
+  const { guest, guestId } = await guestBrowser();
 
   const signIn = await guest.request("/sign-in/email", {
     body: { email: EMAIL, password: PASSWORD },
@@ -161,7 +161,9 @@ test("a password sign-in awaiting 2FA does not move the guest's data", async () 
   expect(signIn.status).toBe(200);
   await expect(signIn.json()).resolves.toMatchObject({ twoFactorRedirect: true });
   expect(mocks.transferGuestData).not.toHaveBeenCalled();
-  expect(userIds()).toEqual([userId]);
+  // The guest is kept until the second factor completes the sign-in (better-auth 1.7.16+
+  // no longer links, and so deletes, the guest on a sign-in still waiting for 2FA).
+  expect(userIds()).toEqual([userId, guestId]);
 }, 30_000);
 
 test("a guest whose data could not be moved is kept", async () => {

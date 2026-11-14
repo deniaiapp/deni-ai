@@ -18,15 +18,15 @@
     "@deniai/billing": "workspace:*",
     "@deniai/db": "workspace:*",
     "@deniai/run": "workspace:*",
-    "ai": "^7.0.155",
+    "ai": "^7.0.172",
     "postgres": "^3.4.9"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
+    "@types/node": "^26.6.6",
     "drizzle-orm": "^0.45.4",
     "esbuild": "^0.28.2",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   }
 }

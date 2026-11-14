@@ -18,15 +18,15 @@
     "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache"
   },
   "devDependencies": {
-    "@swc/core": "^1.16.20",
-    "@types/node": "^26.6.5",
+    "@swc/core": "^1.16.22",
+    "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
-    "next-intl-swc-plugin-extractor": "^4.14.9",
+    "next-intl-swc-plugin-extractor": "^4.15.1",
     "react": "19.3.1",
     "typescript": "^7.0.2",
-    "use-intl": "^4.14.9",
-    "vite": "^8.3.5",
-    "vitest": "^5.0.5"
+    "use-intl": "^4.15.1",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
   },
   "peerDependencies": {
     "@swc/core": "^1.16.20",

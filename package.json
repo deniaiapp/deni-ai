@@ -16,8 +16,8 @@
     "test:e2e": "pnpm --filter @deniai/web test:e2e"
   },
   "devDependencies": {
-    "oxfmt": "^0.75.0",
-    "oxlint": "^1.90.0",
+    "oxfmt": "^0.78.0",
+    "oxlint": "^1.93.0",
     "typescript": "^7.0.2"
   },
   "engines": {

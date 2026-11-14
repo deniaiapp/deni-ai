@@ -6,7 +6,7 @@ packages:
 # Merged from apps/web (deni-ai). pnpm applies overrides workspace-wide.
 overrides:
   "katex": ^0.18.2
-  "@tanstack/query-core": 5.105.0
+  "@tanstack/query-core": 5.107.1
   "@esbuild-kit/core-utils>esbuild": ^0.25.0
 
 # Union of the build-script allowlists of apps/web, apps/support and services/agent-api.

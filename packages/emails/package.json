@@ -18,13 +18,13 @@
     "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache"
   },
   "dependencies": {
-    "react-email": "^6.11.4"
+    "react-email": "^6.11.12"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
     "react": "19.3.1",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "peerDependencies": {
     "react": "^19.3.1"

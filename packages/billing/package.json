@@ -20,11 +20,11 @@
     "@deniai/db": "workspace:*"
   },
   "devDependencies": {
-    "@electric-sql/pglite": "^0.5.11",
-    "@types/node": "^26.6.5",
+    "@electric-sql/pglite": "^0.5.16",
+    "@types/node": "^26.6.6",
     "drizzle-orm": "^0.45.4",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.5"
+    "vitest": "^5.1.0"
   },
   "peerDependencies": {
     "drizzle-orm": "^0.45.4"

@@ -598,7 +598,10 @@ test("a chat that cannot be created keeps the home page prompt, its attachments 
   expect(harness.pageInvalidate).not.toHaveBeenCalled();
 
   // Retrying creates the row first, then sends the kept prompt.
+  // regenerate() clears the AI SDK's send queue before it submits (ai 7.0.168+), so the
+  // status leaves "error" a few microtasks later; render it while it is "submitted".
   void chat.regenerate();
+  for (let tick = 0; tick < 20 && chat.status === "error"; tick++) await Promise.resolve();
   expect(chat.status).toBe("submitted");
   rerender();
   await vi.waitFor(() => expect(chat.status).toBe("ready"));
