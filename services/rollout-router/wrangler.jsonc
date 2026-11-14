@@ -9,7 +9,7 @@
     // The v8 app (minidock `deni-ai-beta`) on its own host name, proxied in this zone.
     "V8_ORIGIN": "https://v8-origin.deniai.app",
     // Share of new browsers sent to v8 (0-100). 0 sends everyone to v7.
-    "V8_PERCENT": "20",
+    "V8_PERCENT": "50",
   },
   "observability": { "enabled": true },
 }
