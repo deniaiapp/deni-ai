@@ -14,6 +14,13 @@ const RELOAD_GUARD_KEY = "deni-ai:stale-deployment-reload";
 /** Skip auto-reload if one already happened recently, so a real bug cannot loop. */
 const RELOAD_GUARD_MS = 60_000;
 
+let reloadStarted = false;
+
+/** True once this page has started a stale-deployment reload. */
+export function isStaleDeploymentReloadStarted(): boolean {
+  return reloadStarted;
+}
+
 export function isStaleDeploymentError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false;
@@ -34,6 +41,7 @@ export function reloadForStaleDeployment(): boolean {
     // Storage unavailable (private mode, blocked): reloading without a guard could loop.
     return false;
   }
+  reloadStarted = true;
   window.location.reload();
   return true;
 }

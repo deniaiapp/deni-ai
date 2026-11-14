@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { installStaleDeploymentReload, isStaleDeploymentError } from "./stale-deployment";
+import {
+  installStaleDeploymentReload,
+  isStaleDeploymentError,
+  isStaleDeploymentReloadStarted,
+} from "./stale-deployment";
 
 describe("isStaleDeploymentError", () => {
   it.each([
@@ -44,8 +48,11 @@ describe("installStaleDeploymentReload", () => {
 
   it("reloads once on a failed chunk preload and keeps the error from being thrown", () => {
     const { reload, fire } = setup();
+    expect(isStaleDeploymentReloadStarted()).toBe(false);
     expect(fire().defaultPrevented).toBe(true);
     expect(reload).toHaveBeenCalledTimes(1);
+    // dynamic() reads this to wait for the reload instead of crashing on the empty import.
+    expect(isStaleDeploymentReloadStarted()).toBe(true);
     // A second failure right after the reload is a real error: let it through.
     expect(fire().defaultPrevented).toBe(false);
     expect(reload).toHaveBeenCalledTimes(1);
