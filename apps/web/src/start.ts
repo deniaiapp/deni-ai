@@ -147,8 +147,11 @@ const compression = createMiddleware().server(async ({ request, next }) => {
 const noindex = createMiddleware().server(async ({ next }) => {
   const result = await next();
   if (!indexingDisabled()) return result;
-  // Copy: redirect responses carry immutable headers.
-  const response = new Response(result.response.body, result.response);
+  // Copy: redirect responses carry immutable headers. Pass status and headers
+  // explicitly: Nitro 3 RC responses used as a ResponseInit lose their status,
+  // which turned redirects into empty 200s.
+  const { body, status, statusText, headers } = result.response;
+  const response = new Response(body, { status, statusText, headers: new Headers(headers) });
   response.headers.set("X-Robots-Tag", "noindex, nofollow");
   return { ...result, response };
 });
