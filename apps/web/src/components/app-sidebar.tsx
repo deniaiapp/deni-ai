@@ -34,12 +34,14 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@deniai/ui/components/sidebar";
 import { Spinner } from "@deniai/ui/components/spinner";
 import { AccountMenu } from "@/components/account-menu";
 import { AppModeSwitch } from "@/components/app-mode-switch";
 import { RunSidebarContent } from "@/components/run/run-sidebar-content";
 import { getAppMode } from "@/lib/app-mode";
+import { closesMobileSidebar } from "@/lib/mobile-sidebar";
 import type { ChatListItem } from "@/components/app-sidebar-chat-list";
 import { normalizeTags } from "@/components/app-sidebar-utils";
 import DeniAIIcon from "@/components/deni-ai-icon";
@@ -158,6 +160,7 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
   const isRunMode = getAppMode(pathname) === "run";
   const utils = trpc.useUtils();
   const startNewChat = useGoToNewChat();
+  const { isMobile, setOpenMobile } = useSidebar();
   const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
   const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -184,6 +187,7 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
 
   // Sidebar "new chat" button — navigate immediately; chat page upserts the row.
   const handleNewChat = () => {
+    if (isMobile) setOpenMobile(false);
     startNewChat();
   };
 
@@ -272,7 +276,14 @@ export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void 
 
   return (
     <Sidebar variant="inset">
-      <SidebarContent className="gap-0 px-1 pt-3 pb-2">
+      <SidebarContent
+        className="gap-0 px-1 pt-3 pb-2"
+        // Mobile: choosing a conversation, settings or any other link closes the
+        // sheet (see closesMobileSidebar; account menu items bubble up here too).
+        onClick={(event) => {
+          if (isMobile && closesMobileSidebar(event)) setOpenMobile(false);
+        }}
+      >
         <SidebarGroup className="gap-3 px-1 pb-2">
           <Link
             href="/chat"

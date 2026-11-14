@@ -25,6 +25,9 @@ export function AppModeSwitch() {
   return (
     <nav
       aria-label={t("App mode")}
+      // Switching modes swaps the sidebar's content, so the mobile sheet stays
+      // open (SIDEBAR_KEEP_OPEN_ATTRIBUTE in @/lib/mobile-sidebar).
+      data-sidebar-keep-open=""
       className="flex gap-1 rounded-lg bg-black/15 p-1 ring-1 ring-sidebar-border ring-inset legacy:bg-sidebar-accent legacy:ring-0 dark:bg-white/5"
     >
       {(
