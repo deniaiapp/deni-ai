@@ -7,6 +7,8 @@ export type ModelHealthEntry = {
   provider: string;
   available: boolean;
   checkedAt: string;
+  /** Older servers omit it; then {@link STALE_AFTER_MS} applies. */
+  staleAt?: string;
 };
 
 export type ModelHealth = {
@@ -25,8 +27,16 @@ type ModelHealthResponse = {
   models: ModelHealthEntry[];
 };
 
-/** Probes run every 5 minutes; older results mean the scheduler stopped, so show nothing. */
+/**
+ * Most probes run every 5 minutes; older results mean the scheduler stopped, so show
+ * nothing. The server sends `staleAt` per model, since some are probed less often.
+ */
 const STALE_AFTER_MS = 20 * 60 * 1000;
+
+function isStale(entry: ModelHealthEntry, now: number) {
+  if (entry.staleAt) return now > new Date(entry.staleAt).getTime();
+  return now - new Date(entry.checkedAt).getTime() > STALE_AFTER_MS;
+}
 
 const EMPTY_MODEL_HEALTH: ModelHealth = { byModel: {}, byFamily: {}, byProvider: {} };
 
@@ -56,7 +66,7 @@ function combineWorst(
 export function summarizeModelHealth(entries: ModelHealthEntry[], now = Date.now()): ModelHealth {
   const health: ModelHealth = { byModel: {}, byFamily: {}, byProvider: {} };
   for (const entry of entries) {
-    if (now - new Date(entry.checkedAt).getTime() > STALE_AFTER_MS) continue;
+    if (isStale(entry, now)) continue;
     const status: ModelHealthStatus = entry.available ? "available" : "unavailable";
     health.byModel[entry.model] = status;
     combineWorst(health.byFamily, getModelFamilyKey(entry.model, entry.provider), status);

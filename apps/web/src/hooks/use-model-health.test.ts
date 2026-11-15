@@ -66,3 +66,17 @@ test("stale probes are ignored", () => {
 
   expect(getModelHealthStatus(health, "gpt-6-luna", "deni")).toBeUndefined();
 });
+
+test("a model probed less often stays shown until the staleAt its server sends", () => {
+  const entry = {
+    model: "gemini-3.5-flash-lite",
+    provider: "google",
+    available: false,
+    checkedAt: "2026-01-01T00:00:00.000Z",
+    staleAt: "2026-01-01T00:45:00.000Z",
+  };
+  const health = summarizeModelHealth([entry], Date.parse("2026-01-01T00:40:00.000Z"));
+  // Gemini 3.8 Flash is not probed itself and shows its generation's result.
+  expect(getModelHealthStatus(health, "gemini-3.8-flash", "google")).toBe("unavailable");
+  expect(summarizeModelHealth([entry], Date.parse("2026-01-01T00:46:00.000Z")).byModel).toEqual({});
+});

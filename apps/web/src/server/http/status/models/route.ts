@@ -10,6 +10,7 @@ export function GET() {
         available: row.available,
         latencyMs: row.latencyMs,
         checkedAt: row.checkedAt,
+        staleAt: row.staleAt,
       })),
     },
     { headers: { "Cache-Control": "no-store" } },
