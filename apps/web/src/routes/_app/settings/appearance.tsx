@@ -1,4 +1,4 @@
-import { createFileRoute, useRouteContext, useRouter } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { AlignLeft, Check, Monitor, Moon, Sparkles, Sun } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useExtracted } from "use-intl";
@@ -16,7 +16,6 @@ import {
 import { useThemePreset } from "@/hooks/use-theme-preset";
 import { setVisualLayout, useVisualLayout } from "@/hooks/use-visual-layout";
 import { type ThemeName, themePresets } from "@/lib/theme-presets";
-import { storeUiPreference, type UiPreference } from "@/lib/ui-preference";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/_app/settings/appearance")({
@@ -40,7 +39,7 @@ type ChoiceOption<T extends string> = {
   preview?: string[];
 };
 
-/** A radio group of bordered choices; the selected one gets a check and an indigo edge. */
+/** A radio group of bordered choices; the selected one gets a check and a dark edge. */
 function ChoiceGroup<T extends string>({
   label,
   options,
@@ -72,9 +71,7 @@ function ChoiceGroup<T extends string>({
             className={cn(
               "flex items-start gap-3 rounded-card border p-3 text-left transition-colors duration-(--duration-fast)",
               "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-              selected
-                ? "border-primary bg-secondary/60 ring-1 ring-primary legacy:border-foreground legacy:bg-accent legacy:ring-0"
-                : "border-border hover:bg-accent/60",
+              selected ? "border-foreground bg-accent" : "border-border hover:bg-accent/60",
             )}
           >
             {Icon ? <Icon aria-hidden="true" className="mt-0.5 size-4 shrink-0" /> : null}
@@ -95,9 +92,7 @@ function ChoiceGroup<T extends string>({
               aria-hidden="true"
               className={cn(
                 "inline-flex size-5 shrink-0 items-center justify-center rounded-full",
-                selected
-                  ? "bg-primary text-primary-foreground legacy:bg-foreground legacy:text-background"
-                  : "border border-input",
+                selected ? "bg-foreground text-background" : "border border-input",
               )}
             >
               {selected ? <Check className="size-3" /> : null}
@@ -111,20 +106,12 @@ function ChoiceGroup<T extends string>({
 
 function AppearancePage() {
   const t = useExtracted();
-  const router = useRouter();
   const hasMounted = useHasMounted();
   const { theme, setTheme } = useTheme();
   const { preset, setPreset } = useThemePreset();
   const visualLayout = useVisualLayout();
-  const ui = useRouteContext({ from: "__root__", select: (context) => context.ui });
   // Avoid hydration mismatch: server always sees theme as undefined.
   const activeMode = hasMounted ? theme : undefined;
-
-  const changeUi = async (value: UiPreference) => {
-    storeUiPreference(value);
-    // Re-run the root route so React renders <html data-ui> with the new value.
-    await router.invalidate();
-  };
 
   const getPresetCopy = (key: ThemeName) => {
     switch (key) {
@@ -154,36 +141,6 @@ function AppearancePage() {
   return (
     <SettingsPageShell title={t("Appearance")}>
       <div>
-        <PageSection>
-          <PageSectionHeader>
-            <PageSectionTitle>{t("Interface")}</PageSectionTitle>
-            <PageSectionDescription>
-              {t("Switch between the new design and the previous one on this browser")}
-            </PageSectionDescription>
-          </PageSectionHeader>
-          <PageSectionContent>
-            <ChoiceGroup
-              label={t("Interface")}
-              value={ui}
-              onChange={(value) => void changeUi(value)}
-              options={[
-                {
-                  value: "next",
-                  title: t("New design"),
-                  description: t("Indigo frame, calmer type and roomier settings"),
-                  preview: ["bg-[#182052]", "bg-[#33419d]", "bg-[#f2b036]", "bg-[#f5f7fb]"],
-                },
-                {
-                  value: "legacy",
-                  title: t("Previous design"),
-                  description: t("Neutral gray tones and the color themes below"),
-                  preview: ["bg-[#171717]", "bg-[#737373]", "bg-[#f5f5f5]"],
-                },
-              ]}
-            />
-          </PageSectionContent>
-        </PageSection>
-
         <PageSection>
           <PageSectionHeader>
             <PageSectionTitle>{t("Mode")}</PageSectionTitle>
@@ -244,25 +201,23 @@ function AppearancePage() {
           </PageSectionContent>
         </PageSection>
 
-        {ui === "legacy" ? (
-          <PageSection>
-            <PageSectionHeader>
-              <PageSectionTitle>{t("Color Theme")}</PageSectionTitle>
-            </PageSectionHeader>
-            <PageSectionContent>
-              <ChoiceGroup
-                label={t("Color Theme")}
-                value={preset}
-                onChange={setPreset}
-                options={themePresets.map((presetItem) => ({
-                  value: presetItem.key,
-                  ...getPresetCopy(presetItem.key),
-                  preview: presetItem.preview,
-                }))}
-              />
-            </PageSectionContent>
-          </PageSection>
-        ) : null}
+        <PageSection>
+          <PageSectionHeader>
+            <PageSectionTitle>{t("Color Theme")}</PageSectionTitle>
+          </PageSectionHeader>
+          <PageSectionContent>
+            <ChoiceGroup
+              label={t("Color Theme")}
+              value={preset}
+              onChange={setPreset}
+              options={themePresets.map((presetItem) => ({
+                value: presetItem.key,
+                ...getPresetCopy(presetItem.key),
+                preview: presetItem.preview,
+              }))}
+            />
+          </PageSectionContent>
+        </PageSection>
       </div>
     </SettingsPageShell>
   );

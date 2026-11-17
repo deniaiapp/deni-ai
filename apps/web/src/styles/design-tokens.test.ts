@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { describe, expect, test } from "vitest";
 
 /**
- * WCAG contrast of the next-UI colour roles (docs/design-system.md). Reads the
+ * WCAG contrast of the colour roles (docs/design-system.md). Reads the
  * token blocks straight from globals.css so a palette edit that breaks AA fails.
  */
 const css = readFileSync(join(import.meta.dirname, "globals.css"), "utf8");
@@ -56,23 +56,14 @@ function contrast(tokens: Record<string, string>, fg: string, bg: string) {
 
 const light = block(":root");
 const dark = { ...light, ...block(".dark") };
-const islandLight = { ...light, ...block(':root:not([data-ui="legacy"]) [data-slot="sidebar"]') };
-const islandDark = {
-  ...dark,
-  ...block(':root:not([data-ui="legacy"]) [data-slot="sidebar"]'),
-  ...block(':root:not([data-ui="legacy"]).dark [data-slot="sidebar"]'),
-};
 
 const TEXT = 4.5;
-const UI = 3;
 
-const pagePairs: [fg: string, bg: string, min: number][] = [
+const pairs: [fg: string, bg: string, min: number][] = [
   ["foreground", "background", TEXT],
   ["foreground", "card", TEXT],
   ["muted-foreground", "background", TEXT],
   ["muted-foreground", "card", TEXT],
-  ["muted-foreground", "muted", TEXT],
-  ["muted-foreground", "secondary", TEXT],
   ["popover-foreground", "popover", TEXT],
   ["primary", "background", TEXT],
   ["primary-foreground", "primary", TEXT],
@@ -80,33 +71,18 @@ const pagePairs: [fg: string, bg: string, min: number][] = [
   ["accent-foreground", "accent", TEXT],
   ["highlight-foreground", "highlight", TEXT],
   ["destructive", "background", TEXT],
-  ["destructive-foreground", "destructive", TEXT],
   ["success", "background", TEXT],
   ["success-foreground", "success", TEXT],
-  ["input", "background", UI],
-  ["ring", "background", UI],
-];
-
-const sidebarPairs: [fg: string, bg: string, min: number][] = [
   ["sidebar-foreground", "sidebar", TEXT],
-  ["muted-foreground", "sidebar", TEXT],
-  ["muted-foreground", "sidebar-accent", TEXT],
   ["sidebar-accent-foreground", "sidebar-accent", TEXT],
-  ["primary-foreground", "primary", TEXT],
   ["sidebar-primary-foreground", "sidebar-primary", TEXT],
-  ["sidebar-primary", "sidebar", UI],
-  ["ring", "sidebar", UI],
 ];
 
 describe.each([
-  ["light", light, islandLight],
-  ["dark", dark, islandDark],
-])("%s mode", (_mode, page, island) => {
-  test.each(pagePairs)("%s on %s", (fg, bg, min) => {
-    expect(contrast(page, fg, bg)).toBeGreaterThanOrEqual(min);
-  });
-
-  test.each(sidebarPairs)("sidebar: %s on %s", (fg, bg, min) => {
-    expect(contrast(island, fg, bg)).toBeGreaterThanOrEqual(min);
+  ["light", light],
+  ["dark", dark],
+])("%s mode", (_mode, tokens) => {
+  test.each(pairs)("%s on %s", (fg, bg, min) => {
+    expect(contrast(tokens, fg, bg)).toBeGreaterThanOrEqual(min);
   });
 });

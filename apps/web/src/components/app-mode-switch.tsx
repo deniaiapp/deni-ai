@@ -28,7 +28,7 @@ export function AppModeSwitch() {
       // Switching modes swaps the sidebar's content, so the mobile sheet stays
       // open (SIDEBAR_KEEP_OPEN_ATTRIBUTE in @/lib/mobile-sidebar).
       data-sidebar-keep-open=""
-      className="flex gap-1 rounded-lg bg-black/15 p-1 ring-1 ring-sidebar-border ring-inset legacy:bg-sidebar-accent legacy:ring-0 dark:bg-white/5"
+      className="flex gap-1 rounded-lg bg-sidebar-accent p-1 dark:bg-white/5"
     >
       {(
         [
@@ -43,8 +43,8 @@ export function AppModeSwitch() {
           className={cn(
             itemClassName,
             mode === value
-              ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-xs legacy:bg-background legacy:text-foreground"
-              : "text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-foreground legacy:hover:bg-transparent",
+              ? "shadow-xs bg-background text-foreground"
+              : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-transparent",
           )}
         >
           <Icon className="size-4" />

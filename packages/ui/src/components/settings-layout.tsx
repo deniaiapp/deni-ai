@@ -75,8 +75,6 @@ function SettingsNavItem({
           "hover:bg-accent hover:text-accent-foreground",
           "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
           "aria-[current=page]:bg-secondary aria-[current=page]:font-medium aria-[current=page]:text-secondary-foreground",
-          // A leading bar marks the current page without relying on colour alone.
-          "next:aria-[current=page]:before:absolute next:aria-[current=page]:before:inset-y-2 next:aria-[current=page]:before:left-0 next:aria-[current=page]:before:w-[3px] next:aria-[current=page]:before:rounded-full next:aria-[current=page]:before:bg-primary",
           "[&_svg]:size-4 [&_svg]:shrink-0",
           className,
         ),

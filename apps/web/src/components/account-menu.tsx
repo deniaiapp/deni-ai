@@ -92,8 +92,7 @@ function AccountUsageRow({
         <span
           className={cn(
             "tabular-nums text-foreground/80",
-            maxModeEnabled &&
-              "text-amber-600 dark:text-amber-400 next:font-semibold next:text-foreground",
+            maxModeEnabled && "text-amber-600 dark:text-amber-400",
           )}
         >
           {valueLabel}
@@ -320,7 +319,7 @@ export function AccountMenu() {
                   {disableMaxMode.isPending ? (
                     <Spinner className="size-4" />
                   ) : (
-                    <Zap className="size-4 text-amber-500 next:fill-highlight next:text-highlight-foreground" />
+                    <Zap className="size-4 text-amber-500" />
                   )}
                   <span className="flex-1">
                     {disableMaxMode.isPending ? t("Disabling…") : t("Disable Max Mode")}
@@ -329,7 +328,7 @@ export function AccountMenu() {
               )}
               {!maxModeEnabled && (maxModeEligible || enableMaxMode.isPending) && (
                 <DropdownMenuItem
-                  className="gap-2 text-sm text-amber-600 next:text-foreground"
+                  className="gap-2 text-sm text-amber-600"
                   closeOnClick={false}
                   disabled={isMenuPending}
                   aria-busy={enableMaxMode.isPending}

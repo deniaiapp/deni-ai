@@ -25,8 +25,7 @@ the workspace layout and the rules that span apps.
 | `packages/auth`                     | `@deniai/auth`                      | Better Auth server factory `createAuth(deps)`, React client, auth route paths, API key generation and hashing (web and agent API)                                                    |
 | `packages/run`                      | `@deniai/run`                       | Deni Run (Run mode, `/run/*`): teammates, threads, agent runtime, Postgres job queue, E2B/Steel providers, MCP, routines, D1 migration. See its README                               |
 
-`docs/design-system.md` is the design brief of the web app (tokens, type, layout, screen
-inventory, the `next`/`legacy` UI switch).
+`docs/design-system.md` is the design brief of the web app (tokens, type, layout, theme presets).
 
 The apps were imported with their full history (`git subtree add`), so
 `git log -- apps/web` shows the deni-ai history.

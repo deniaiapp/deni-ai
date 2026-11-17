@@ -16,9 +16,9 @@ const SEGMENTS: Segment[] = ["chat", "flixa", "run"];
 
 /** One color per part of the pool, shared by the bar and its legend. */
 const SEGMENT_COLORS: Record<Segment, string> = {
-  chat: "bg-chart-1",
-  flixa: "bg-chart-2",
-  run: "bg-chart-3",
+  chat: "bg-usage-chat",
+  flixa: "bg-usage-flixa",
+  run: "bg-usage-run",
 };
 
 function percentOf(value: number, limit: number) {
@@ -54,7 +54,7 @@ function StackedUsageBar({ pool, className }: { pool: UsagePoolView; className?:
   const scale = usedPercent > 100 ? 100 / usedPercent : 1;
   return (
     <div
-      className={cn("flex h-2 w-full overflow-hidden rounded-full bg-muted", className)}
+      className={cn("flex h-2 w-full overflow-hidden rounded-full bg-usage-track", className)}
       role="meter"
       aria-label={t("Monthly usage")}
       aria-valuemin={0}
@@ -92,8 +92,7 @@ export function CombinedUsageBar({
         <span
           className={cn(
             "tabular-nums text-foreground/80",
-            maxModeEnabled &&
-              "text-amber-600 dark:text-amber-400 next:font-semibold next:text-foreground",
+            maxModeEnabled && "text-amber-600 dark:text-amber-400",
           )}
         >
           {maxModeEnabled
@@ -154,7 +153,7 @@ export function CombinedUsageMeter({
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         {maxModeEnabled ? (
           <span className="flex items-center gap-1">
-            <Zap className="size-3 text-blue-500 next:text-primary" />
+            <Zap className="size-3 text-blue-500" />
             {t("Max Mode active")}
           </span>
         ) : (

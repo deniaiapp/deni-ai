@@ -163,7 +163,7 @@ export function TwoFactorBanner({ twoFactor }: { twoFactor?: TwoFactorPolicy }) 
     <AppHeader
       className={cn(
         "text-sm",
-        pinned && "border-highlight/60 bg-highlight/25 legacy:bg-secondary/50 dark:bg-highlight/10",
+        pinned && "border-highlight/60 bg-secondary/50 dark:bg-highlight/10",
       )}
     >
       <SidebarTrigger className="-ml-1" />

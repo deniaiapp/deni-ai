@@ -487,7 +487,7 @@ function QuestionnaireCard({
         <Card
           className={
             part.state === "input-available" && isInteractive
-              ? "w-full gap-0 py-0 next:border-l-4 next:border-l-highlight"
+              ? "w-full gap-0 py-0"
               : "w-full gap-0 py-0"
           }
         >

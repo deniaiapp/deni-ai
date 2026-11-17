@@ -165,7 +165,7 @@ export function BillingResetCard() {
             </div>
             <div className="flex shrink-0 items-center gap-2">
               {status.credits.length > 0 && (
-                <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 tabular-nums dark:text-emerald-300 next:border-transparent next:bg-success/15 next:text-success">
+                <Badge className="border-emerald-500/20 bg-emerald-500/10 text-emerald-700 tabular-nums dark:text-emerald-300">
                   {t("{count} available", { count: String(status.credits.length) })}
                 </Badge>
               )}

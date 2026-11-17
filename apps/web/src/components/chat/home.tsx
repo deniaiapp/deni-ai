@@ -160,7 +160,7 @@ export default function ChatHome() {
         {/* The one orchestrated moment of the app: the greeting settles in once. */}
         <h1
           id="chat-home-title"
-          className="animate-fade-in-up text-3xl leading-[1.1] font-semibold tracking-[-0.035em] text-balance md:text-4xl legacy:text-center legacy:text-2xl legacy:md:text-3xl"
+          className="animate-fade-in-up text-center text-2xl leading-[1.1] font-semibold tracking-[-0.035em] text-balance md:text-3xl"
         >
           {firstName
             ? t("What's on your mind, {name}?", { name: firstName })

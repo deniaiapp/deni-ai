@@ -93,28 +93,21 @@ Read these when relevant rather than loading the whole project:
   configuration, deployment, or architecture.
 - Respond in the user's language; write code and identifiers in English.
 
-## Design system and the UI switch
+## Design system
 
-- The signed-in app uses the "Aizome" design system described in the root
-  `docs/design-system.md` (colour roles, type scale, radii, layout, screen
-  inventory). Read it before restyling a screen.
-- Tokens live in `src/styles/globals.css`: the next UI on `:root` / `.dark`,
-  the previous UI under `:root[data-ui="legacy"]`; theme presets
-  (`src/styles/themes.css`) apply only under legacy. Use semantic classes
-  (`bg-background`, `text-muted-foreground`, `bg-highlight`, `rounded-card`,
-  `rounded-field`…) instead of palette colours; for a difference between the
-  two UIs use the `next:` / `legacy:` variants. Token changes must keep
+- The signed-in app uses the design system described in the root
+  `docs/design-system.md` (colour roles, type, radii, layout). Read it before
+  restyling a screen.
+- Tokens live in `src/styles/globals.css` (`:root` / `.dark`); theme presets
+  (`src/styles/themes.css`) redefine them on a `body` class. Use semantic
+  classes (`bg-background`, `text-muted-foreground`, `rounded-card`,
+  `rounded-field`…). There is one UI: no `next:` / `legacy:` variants and no
+  `data-ui` attribute. Token changes must keep
   `src/styles/design-tokens.test.ts` (WCAG contrast) green.
-- The sidebar is an inverted token island (`[data-slot="sidebar"]`): semantic
-  classes inside it already resolve to on-indigo values.
 - Page structure comes from `@deniai/ui` primitives: `PageHeader`,
   `PageSection` (settings rows), `SettingsLayout` (`src/components/settings-wrapper.tsx`
   wires the nav) and `AppHeader`. Settings pages render through
   `SettingsPageShell`; `/account/*` renders inside the app shell too.
-- `ui` preference: the `deni-ui` cookie (`next` | `legacy`, default `next`) read
-  by `src/lib/ui-preference.ts` in the root route, rendered as `<html data-ui>`
-  and switched in Appearance settings. Layout changes exist only in their new
-  form; legacy restores colours, type and radii.
 
 ## Run mode (Deni Run)
 
