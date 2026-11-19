@@ -1,0 +1,1 @@
+DROP TABLE "beta_access" CASCADE;

@@ -18,7 +18,6 @@ const APP_PATH_PREFIXES = [
   "/account",
   "/getting-started",
   "/two-factor",
-  "/private-beta",
 ] as const;
 
 export function isAppPath(pathname: string): boolean {

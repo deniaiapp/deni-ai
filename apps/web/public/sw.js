@@ -1,6 +1,5 @@
-// v8's own names: while deniai.app is split between v7 and v8 (docs/v8-rollout.md),
-// each version's worker deletes the other's caches on activation instead of
-// serving its pages.
+// v8's own names: activation deletes every other cache, so browsers that ran v7
+// stop serving its cached pages.
 const STATIC_CACHE = "deni-ai-v8-static-v1";
 const PAGE_CACHE = "deni-ai-v8-pages-v1";
 const PRECACHE_URLS = [

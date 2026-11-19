@@ -115,9 +115,9 @@ This directory is the help center's only source. It replaced the standalone
 `deniaiapp/support` repository (imported with `git subtree` at `2c772d4`; its
 later changes up to `392a20f` were ported here). To move the minidock `support`
 app over, change only its source in the panel and press **Deploy**: repository
-`deniaiapp/deni-ai`, branch `beta/v8` (`master` once v8 is promoted there),
-build path `.`, Dockerfile `apps/support/Dockerfile`. The Environment, port 3000
-and the domain stay as they are, and the database needs no migration (the
+`deniaiapp/deni-ai`, branch `master`, build path `.`, Dockerfile
+`apps/support/Dockerfile`. The Environment, port 3000 and the domain stay as
+they are, and the database needs no migration (the
 `support` schema is already at `0000`).
 
 `pnpm run build` produces a Node server in `.output/`. It still imports a few

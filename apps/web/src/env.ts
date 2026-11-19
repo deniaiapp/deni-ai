@@ -138,26 +138,6 @@ export const env = createEnv({
     DISCORD_BOT_TOKEN: z.string().min(1).optional(),
     DISCORD_INVITE_URL: z.url().optional(),
     /**
-     * Private beta gate (`true` on beta.deniai.app). Signed-in users need a
-     * `beta_access` row (or an admin email) to use the app or any signed-in
-     * API, and guest sign-in is refused. Default off, so local development and
-     * tests are unaffected (src/lib/beta-access.server.ts, docs/v8-beta-rollout.md).
-     */
-    BETA_ACCESS_REQUIRED: z.stringbool().default(false),
-    /**
-     * With the gate on, `true` also lets in every account on a paid plan (Go, Plus,
-     * Pro, or a team plan; not Go through education), so new subscribers get in
-     * without an invitation. Default off.
-     */
-    BETA_ACCESS_PAID_PLANS: z.stringbool().default(false),
-    /**
-     * `true` while deniai.app is split between v7 and v8 by the rollout Worker
-     * (services/rollout-router, docs/v8-rollout.md): the account menu offers
-     * "Switch to the previous version", which goes to the Worker's
-     * `/__rollout/v7`. Off without the Worker in front, where that path is a 404.
-     */
-    ROLLOUT_SWITCH_ENABLED: z.stringbool().default(false),
-    /**
      * `false` turns `/api/cron/*` into no-ops and keeps the in-process jobs that
      * write the shared database (usage recovery, storage and guest cleanup) from
      * starting. For a deployment that shares its database with one that already
@@ -215,8 +195,6 @@ export const env = createEnv({
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1).optional(),
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1).optional(),
     NEXT_PUBLIC_SENTRY_DSN: z.string().min(1).optional(),
-    /** The previous Deni AI (v7), linked from the account menu and the private beta screen. */
-    NEXT_PUBLIC_V7_URL: z.url().default("https://deniai.app"),
   },
   clientPrefix: "NEXT_PUBLIC_",
   runtimeEnv: process.env,

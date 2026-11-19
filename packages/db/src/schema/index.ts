@@ -3,7 +3,6 @@ export * from "./api-keys";
 export * from "./ads";
 export * from "./attachment";
 export * from "./auth-schema";
-export * from "./beta-access";
 export * from "./billing";
 export * from "./cancellation-feedback";
 export * from "./chat";

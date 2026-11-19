@@ -575,6 +575,13 @@
       "when": 1794381209951,
       "tag": "0081_chat_model_and_user_preference",
       "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1795079973195,
+      "tag": "0082_drop_beta_access",
+      "breakpoints": true
     }
   ]
 }
