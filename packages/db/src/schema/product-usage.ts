@@ -1,0 +1,49 @@
+import { sql } from "drizzle-orm";
+import { bigint, pgTable, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+
+import { user } from "./auth-schema";
+
+/**
+ * Per-product monthly usage totals behind the combined usage view.
+ *
+ * - `chat` / `flixa`: `metric` is the shared quota category ("basic" | "premium"),
+ *   `unit` is "units" (rows before 2026-11: "tokens", or "requests" for guests). The quota itself stays in
+ *   `usage_quota`; these rows only say which product spent it.
+ * - `run` (Deni Run): `metric` is "model" | "browser" | "computer", `unit` is
+ *   "usd_micros". These rows are the Deni Run budget ledger itself.
+ *
+ * `period_start` is the key of the owner's usage period (`usagePeriodAt` in
+ * `@deniai/billing`): one month before the period's end, which is the first of the UTC
+ * month without a paid plan and follows the billing cycle with one.
+ * Chat and Flixa rows are written when the shared usage engine
+ * (`@deniai/billing/server`) settles a reservation; the agent API's legacy path
+ * (`FLIXA_USAGE_ENGINE=legacy`/`shadow`) still writes `flixa` rows with raw SQL,
+ * so keep the shape stable.
+ */
+export const productUsage = pgTable(
+  "product_usage",
+  {
+    id: text("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    product: text("product", { enum: ["chat", "flixa", "run"] }).notNull(),
+    metric: text("metric").notNull(),
+    unit: text("unit").notNull(),
+    periodStart: timestamp("period_start", { withTimezone: true }).notNull(),
+    used: bigint("used", { mode: "number" }).notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("product_usage_user_period_idx").on(
+      table.userId,
+      table.product,
+      table.metric,
+      table.unit,
+      table.periodStart,
+    ),
+  ],
+);

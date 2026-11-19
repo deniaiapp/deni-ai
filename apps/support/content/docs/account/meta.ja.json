@@ -1,0 +1,5 @@
+{
+  "title": "アカウント",
+  "icon": "User",
+  "pages": ["sign-in-trouble", "guest-accounts", "data-and-privacy"]
+}

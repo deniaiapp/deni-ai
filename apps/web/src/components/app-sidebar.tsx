@@ -1,0 +1,438 @@
+import { FolderClosed, GitCompareArrows, MessageSquare, Plus } from "lucide-react";
+import { Link, usePathname, useRouter } from "@/lib/navigation";
+import { dynamic } from "@/lib/dynamic";
+import { useExtracted } from "use-intl";
+import { useLocalizeError } from "@/hooks/use-localize-error";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { toast } from "sonner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@deniai/ui/components/alert-dialog";
+import { SidebarResizeHandle } from "@/components/sidebar-resize-handle";
+import { Button } from "@deniai/ui/components/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@deniai/ui/components/dialog";
+import { Input } from "@deniai/ui/components/input";
+import { Kbd } from "@deniai/ui/components/kbd";
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  useSidebar,
+} from "@deniai/ui/components/sidebar";
+import { Spinner } from "@deniai/ui/components/spinner";
+import { AccountMenu } from "@/components/account-menu";
+import { AppModeSwitch } from "@/components/app-mode-switch";
+import { RunSidebarContent } from "@/components/run/run-sidebar-content";
+import { getAppMode } from "@/lib/app-mode";
+import { closesMobileSidebar } from "@/lib/mobile-sidebar";
+import type { ChatListItem } from "@/components/app-sidebar-chat-list";
+import { normalizeTags } from "@/components/app-sidebar-utils";
+import DeniAIIcon from "@/components/deni-ai-icon";
+import { isCheckoutSettingsRoute } from "@/lib/settings-routes";
+import { trpc } from "@/lib/trpc/react";
+import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
+import { useGoToNewChat } from "@/hooks/use-new-chat";
+
+const AppSidebarChatList = dynamic(
+  () => import("@/components/app-sidebar-chat-list").then((mod) => mod.AppSidebarChatList),
+  {
+    loading: () => (
+      <div className="flex items-center justify-center py-8">
+        <Spinner className="size-5 text-muted-foreground" />
+      </div>
+    ),
+  },
+);
+
+const KONAMI_SEQUENCE = [
+  "arrowup",
+  "arrowup",
+  "arrowdown",
+  "arrowdown",
+  "arrowleft",
+  "arrowright",
+  "arrowleft",
+  "arrowright",
+  "b",
+  "a",
+] as const;
+
+const SIDEBAR_CUSTOM_FOLDERS_KEY = "deni-ai.sidebar.custom-folders";
+const CUSTOM_FOLDERS_EVENT = "deni-ai:custom-folders";
+const EMPTY_CUSTOM_FOLDERS: string[] = [];
+
+let cachedCustomFoldersRaw: string | null | undefined;
+let cachedCustomFolders: string[] = EMPTY_CUSTOM_FOLDERS;
+
+function parseStoredCustomFolders(raw: string | null): string[] {
+  if (!raw) {
+    return EMPTY_CUSTOM_FOLDERS;
+  }
+
+  const parsed = JSON.parse(raw);
+  if (!Array.isArray(parsed)) {
+    return EMPTY_CUSTOM_FOLDERS;
+  }
+
+  const folders = parsed.flatMap((value) => {
+    if (typeof value !== "string") {
+      return [];
+    }
+    const folder = value.trim();
+    return folder ? [folder] : [];
+  });
+
+  return folders.length > 0 ? folders : EMPTY_CUSTOM_FOLDERS;
+}
+
+function getCustomFoldersSnapshot(): string[] {
+  try {
+    const raw = window.localStorage.getItem(SIDEBAR_CUSTOM_FOLDERS_KEY);
+    if (raw === cachedCustomFoldersRaw) {
+      return cachedCustomFolders;
+    }
+    cachedCustomFoldersRaw = raw;
+    cachedCustomFolders = parseStoredCustomFolders(raw);
+    return cachedCustomFolders;
+  } catch {
+    window.localStorage.removeItem(SIDEBAR_CUSTOM_FOLDERS_KEY);
+    cachedCustomFoldersRaw = null;
+    cachedCustomFolders = EMPTY_CUSTOM_FOLDERS;
+    return EMPTY_CUSTOM_FOLDERS;
+  }
+}
+
+function getServerCustomFoldersSnapshot(): string[] {
+  return EMPTY_CUSTOM_FOLDERS;
+}
+
+function subscribeCustomFolders(onStoreChange: () => void) {
+  const handleChange = () => onStoreChange();
+  window.addEventListener("storage", handleChange);
+  window.addEventListener(CUSTOM_FOLDERS_EVENT, handleChange);
+  return () => {
+    window.removeEventListener("storage", handleChange);
+    window.removeEventListener(CUSTOM_FOLDERS_EVENT, handleChange);
+  };
+}
+
+function writeStoredCustomFolders(folders: string[]) {
+  const raw = JSON.stringify(folders);
+  window.localStorage.setItem(SIDEBAR_CUSTOM_FOLDERS_KEY, raw);
+  cachedCustomFoldersRaw = raw;
+  cachedCustomFolders = folders;
+  window.dispatchEvent(new Event(CUSTOM_FOLDERS_EVENT));
+}
+
+function updateCustomFolders(updater: (current: string[]) => string[]) {
+  const current = getCustomFoldersSnapshot();
+  const nextFolders = updater(current);
+  if (nextFolders === current) {
+    return;
+  }
+  writeStoredCustomFolders(nextFolders);
+}
+
+export function AppSidebar({ onOpenChatSearch }: { onOpenChatSearch: () => void }) {
+  const t = useExtracted();
+  const { privateBeta } = usePlatformCapabilities();
+  const localizeError = useLocalizeError();
+  const { push } = useRouter();
+  const pathname = usePathname();
+  const isCheckoutRoute = isCheckoutSettingsRoute(pathname);
+  const isRunMode = getAppMode(pathname) === "run";
+  const utils = trpc.useUtils();
+  const startNewChat = useGoToNewChat();
+  const { isMobile, setOpenMobile } = useSidebar();
+  const [isDeleteAllDialogOpen, setIsDeleteAllDialogOpen] = useState(false);
+  const [isCreateFolderOpen, setIsCreateFolderOpen] = useState(false);
+  const [newFolderName, setNewFolderName] = useState("");
+  const customFolders = useSyncExternalStore(
+    subscribeCustomFolders,
+    getCustomFoldersSnapshot,
+    getServerCustomFoldersSnapshot,
+  );
+  const konamiIndexRef = useRef(0);
+  const { isLoading, error, data } = trpc.chat.getChats.useQuery(undefined, {
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
+  });
+
+  const chats: ChatListItem[] = (data ?? []).map((item) => ({
+    ...item,
+    pinned: Boolean(item.pinned),
+    folder: item.folder?.trim() || null,
+    tags: normalizeTags(item.tags),
+  }));
+
+  const activeChatId = pathname?.startsWith("/chat/") ? pathname.slice("/chat/".length) : null;
+
+  // Sidebar "new chat" button — navigate immediately; chat page upserts the row.
+  const handleNewChat = () => {
+    if (isMobile) setOpenMobile(false);
+    startNewChat();
+  };
+
+  const deleteAllChats = trpc.chat.deleteAllChats.useMutation({
+    onSuccess: async () => {
+      await Promise.all([utils.chat.getChats.invalidate(), utils.chat.getComparisons.invalidate()]);
+      setIsDeleteAllDialogOpen(false);
+      if (pathname?.startsWith("/chat/")) {
+        push("/chat");
+      }
+      toast.success(t("All conversations have been deleted."));
+    },
+    onError: (mutationError) => {
+      console.error("Failed to delete all chats", mutationError);
+      toast.error(t("Failed to delete conversations. Please try again."));
+    },
+  });
+
+  useEffect(() => {
+    if (isCheckoutRoute) {
+      konamiIndexRef.current = 0;
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Autofill and some extensions dispatch a plain `keydown` Event with no `key`.
+      if (isDeleteAllDialogOpen || typeof event.key !== "string") {
+        return;
+      }
+
+      const key = event.key.toLowerCase();
+      const expectedKey = KONAMI_SEQUENCE[konamiIndexRef.current];
+
+      if (key === expectedKey) {
+        konamiIndexRef.current += 1;
+        if (konamiIndexRef.current === KONAMI_SEQUENCE.length) {
+          konamiIndexRef.current = 0;
+          setIsDeleteAllDialogOpen(true);
+        }
+        return;
+      }
+
+      konamiIndexRef.current = key === KONAMI_SEQUENCE[0] ? 1 : 0;
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCheckoutRoute, isDeleteAllDialogOpen]);
+
+  if (isCheckoutRoute) {
+    return null;
+  }
+
+  const handleDeleteAllChats = () => {
+    if (deleteAllChats.isPending) {
+      return;
+    }
+
+    deleteAllChats.mutate();
+  };
+
+  const handleCreateFolder = () => {
+    const normalizedFolder = newFolderName.trim();
+    if (!normalizedFolder) {
+      return;
+    }
+
+    const existingFolders = new Set(
+      [...customFolders, ...chats.flatMap((item) => (item.folder ? [item.folder] : []))].map(
+        (folder) => folder.toLowerCase(),
+      ),
+    );
+
+    updateCustomFolders((current) => {
+      if (existingFolders.has(normalizedFolder.toLowerCase())) {
+        return current;
+      }
+
+      return [...current, normalizedFolder];
+    });
+    setNewFolderName("");
+    setIsCreateFolderOpen(false);
+  };
+
+  return (
+    <Sidebar variant="inset">
+      <SidebarContent
+        className="gap-0 px-1 pt-3 pb-2"
+        // Mobile: choosing a conversation, settings or any other link closes the
+        // sheet (see closesMobileSidebar; account menu items bubble up here too).
+        onClick={(event) => {
+          if (isMobile && closesMobileSidebar(event)) setOpenMobile(false);
+        }}
+      >
+        <SidebarGroup className="gap-3 px-1 pb-2">
+          <Link
+            href="/chat"
+            className="flex h-8 items-center gap-2 self-start rounded-md px-1.5 focus-visible:outline-2 focus-visible:outline-sidebar-ring"
+          >
+            <DeniAIIcon className="size-6 text-sidebar-foreground" />
+            <span className="text-[15px] font-semibold tracking-[-0.02em] text-sidebar-foreground">
+              {t("Deni AI")}
+            </span>
+            {privateBeta ? (
+              <span className="rounded-badge border border-border px-1.5 text-xs leading-5 font-medium text-muted-foreground">
+                {t("Beta")}
+              </span>
+            ) : null}
+          </Link>
+          <AppModeSwitch />
+          {isRunMode ? null : (
+            <SidebarGroupContent className="flex flex-col gap-1">
+              <Button
+                className="group/newchat h-9 w-full justify-start gap-2 font-medium"
+                onClick={handleNewChat}
+              >
+                <Plus className="size-4" />
+                {t("New Chat")}
+                <Kbd className="ml-auto bg-transparent text-current opacity-0 transition-opacity duration-150 group-hover/newchat:opacity-70 group-focus-visible/newchat:opacity-70">
+                  Ctrl+N
+                </Kbd>
+              </Button>
+              <SidebarMenu className="mt-1">
+                <SidebarMenuItem>
+                  <SidebarMenuButton className="group/search" onClick={onOpenChatSearch}>
+                    <MessageSquare />
+                    <span>{t("Chat Search")}</span>
+                    <Kbd className="ml-auto bg-transparent text-muted-foreground opacity-0 transition-opacity duration-150 group-hover/search:opacity-100">
+                      Ctrl+K
+                    </Kbd>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={pathname?.startsWith("/compare")}
+                    render={<Link href="/compare" />}
+                  >
+                    <GitCompareArrows />
+                    <span>{t("Compare models")}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={
+                      pathname === "/settings/projects" || pathname?.startsWith("/projects/")
+                    }
+                    render={<Link href="/settings/projects" />}
+                  >
+                    <FolderClosed />
+                    <span>{t("Projects")}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </SidebarGroupContent>
+          )}
+        </SidebarGroup>
+
+        {isRunMode ? (
+          <RunSidebarContent />
+        ) : (
+          <AppSidebarChatList
+            isLoading={isLoading}
+            errorMessage={error ? localizeError(error) : null}
+            chats={chats}
+            customFolders={customFolders}
+            activeChatId={activeChatId}
+            onRequestCreateFolder={() => setIsCreateFolderOpen(true)}
+          />
+        )}
+
+        <SidebarGroup className="mt-auto w-full border-t border-sidebar-border px-1 pt-2">
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <AccountMenu />
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <AlertDialog
+        open={isDeleteAllDialogOpen}
+        onOpenChange={(open) => {
+          if (deleteAllChats.isPending) return;
+          setIsDeleteAllDialogOpen(open);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("Delete all conversations with Deni AI?")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t(
+                "This will permanently remove every chat in your history. This action cannot be undone.",
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteAllChats.isPending}>{t("Cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={deleteAllChats.isPending}
+              onClick={handleDeleteAllChats}
+            >
+              {deleteAllChats.isPending ? <Spinner /> : null}
+              {t("Delete all chats")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <Dialog open={isCreateFolderOpen} onOpenChange={setIsCreateFolderOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("New Folder")}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-2">
+            <div className="text-sm font-medium">{t("Folder name")}</div>
+            <Input
+              aria-label={t("Folder name")}
+              autoComplete="off"
+              name="new-folder-name"
+              placeholder={t("e.g. Work")}
+              value={newFolderName}
+              onChange={(event) => setNewFolderName(event.target.value)}
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter" &&
+                  !event.nativeEvent.isComposing &&
+                  event.keyCode !== 229
+                ) {
+                  handleCreateFolder();
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateFolderOpen(false)}>
+              {t("Cancel")}
+            </Button>
+            <Button onClick={handleCreateFolder}>{t("Create")}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <SidebarResizeHandle />
+    </Sidebar>
+  );
+}

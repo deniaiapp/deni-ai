@@ -1,0 +1,23 @@
+# Used by `docker build -f services/agent-api/Dockerfile .` (BuildKit reads
+# <Dockerfile>.dockerignore). Paths are relative to the monorepo root.
+
+# Other workspace members: only their manifests are needed for the frozen install
+apps/*/*
+!apps/*/package.json
+
+**/node_modules
+**/dist
+**/dist-*
+**/build
+**/coverage
+**/.output
+**/.tanstack
+.git
+**/.gitignore
+**/.env
+**/.env.*
+**/*.log
+**/*.exe
+services/agent-api/tests
+**/*.md
+!packages/**/README.md

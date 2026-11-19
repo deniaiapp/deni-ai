@@ -1,0 +1,119 @@
+import { useExtracted, useLocale } from "use-intl";
+import { formatAppDate } from "@/lib/format-date";
+import { useFormatCurrencyMinor, usePlanIntervalLabel } from "@/components/billing/billing-utils";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@deniai/ui/components/alert-dialog";
+import { Checkbox } from "@deniai/ui/components/checkbox";
+import { Label } from "@deniai/ui/components/label";
+import { Spinner } from "@deniai/ui/components/spinner";
+import type { TeamPlanId } from "@/lib/billing";
+
+export function TeamChangePlanDialog({
+  open,
+  onOpenChange,
+  planId,
+  seatCount,
+  estimate,
+  hasAgreed,
+  onHasAgreedChange,
+  isPending,
+  onConfirm,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  planId: TeamPlanId | null;
+  seatCount: number;
+  estimate: {
+    error: { message: string } | null;
+    data?: {
+      /** An upgrade applies today; a downgrade waits for the end of the paid period. */
+      kind?: "upgrade" | "downgrade" | "none";
+      amountDue: number;
+      currency: string | null;
+      effectiveAt?: Date | string | null;
+    } | null;
+  };
+  hasAgreed: boolean;
+  onHasAgreedChange: (value: boolean) => void;
+  isPending: boolean;
+  onConfirm: () => void;
+}) {
+  const t = useExtracted();
+  const getPlanIntervalLabel = usePlanIntervalLabel();
+  const formatCurrencyMinor = useFormatCurrencyMinor();
+  const intervalLabel = planId ? getPlanIntervalLabel(planId) : "";
+  const planLabel = t("Pro for Teams {name}", { name: intervalLabel });
+  const locale = useLocale();
+  const isDowngrade = estimate.data?.kind === "downgrade";
+  const effectiveDate = estimate.data?.effectiveAt
+    ? formatAppDate(estimate.data.effectiveAt, locale, { month: "short", day: "numeric" })
+    : "";
+
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{t("Change team plan?")}</AlertDialogTitle>
+          <AlertDialogDescription render={<div />}>
+            <p>
+              {isDowngrade
+                ? t(
+                    "The team will switch to {plan} on {date}, when the current billing period ends. Until then the current plan stays. Nothing is charged today.",
+                    { plan: planLabel, date: effectiveDate },
+                  )
+                : t(
+                    "The team will switch to {plan} for {count, plural, one {# seat} other {# seats}} today. A new billing period starts now: the full price is charged to the team's payment method, less a credit for the unused time on the current plan, and every member's usage starts over.",
+                    { plan: planLabel, count: seatCount },
+                  )}
+            </p>
+            {estimate.error ? (
+              <span className="block mt-2">{t("Unable to fetch estimate.")}</span>
+            ) : isDowngrade ? null : (
+              <span className="block mt-2 font-medium text-foreground">
+                {t("Estimated charge: {amount}", {
+                  amount: formatCurrencyMinor(
+                    estimate.data?.amountDue ?? 0,
+                    estimate.data?.currency,
+                  ),
+                })}
+              </span>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="flex items-start gap-x-2 py-4">
+          <Checkbox
+            id="agree-team-plan-change"
+            checked={hasAgreed}
+            onCheckedChange={(checked) => onHasAgreedChange(checked === true)}
+            disabled={estimate.error != null || !estimate.data}
+          />
+          <Label htmlFor="agree-team-plan-change" className="text-sm leading-tight cursor-pointer">
+            {isDowngrade
+              ? t("I agree to the plan change.")
+              : t("I have reviewed the estimated charge and agree to the plan change.")}
+          </Label>
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={isPending}>{t("Cancel")}</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={
+              isPending || !planId || estimate.error != null || !estimate.data || !hasAgreed
+            }
+            onClick={onConfirm}
+          >
+            {isPending && <Spinner />}
+            {t("Confirm")}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}

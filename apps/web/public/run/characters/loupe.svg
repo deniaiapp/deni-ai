@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <style>.bob{animation:bob 4.4s ease-in-out infinite} .blink{transform-box:fill-box;transform-origin:center;animation:blink 5.2s infinite} @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.4px)}} @keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.12)}} @media (prefers-reduced-motion:reduce){*{animation:none!important}} .look{animation:look 6s ease-in-out infinite}@keyframes look{0%,20%,100%{transform:translateX(0)}30%,45%{transform:translateX(-2.5px)}55%,70%{transform:translateX(2.5px)}}.sway{transform-origin:42px 17px;animation:sway 3.6s ease-in-out infinite}@keyframes sway{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}</style>
+  <path d="M13 64c0-9 8-14 19-14s19 5 19 14Z" fill="#f3f0e8"/>
+  <g class="bob">
+    <g class="sway">
+    <path d="M42 17l4-7" stroke="#5f7d57" stroke-width="2.5" stroke-linecap="round"/>
+    <circle cx="48" cy="7" r="4.5" fill="#d8eef6" stroke="#5f7d57" stroke-width="2"/>
+    </g>
+    <rect x="28.5" y="44" width="7" height="9" fill="#5f7d57"/>
+    <rect x="12" y="16" width="40" height="31" rx="9" fill="#8fad86"/>
+    <rect x="16" y="20" width="32" height="23" rx="6" fill="#211c19"/>
+    <g class="look">
+    <g class="blink" fill="#b6ffd8">
+    <rect x="23.5" y="27" width="5" height="9" rx="2.5"/>
+    <rect x="35.5" y="27" width="5" height="9" rx="2.5"/>
+    </g>
+    </g>
+  </g>
+</svg>

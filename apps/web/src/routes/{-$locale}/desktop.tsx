@@ -1,0 +1,184 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { createServerFn } from "@tanstack/react-start";
+import { useExtracted } from "use-intl";
+import { DesktopDownloadPicker } from "@/components/desktop/desktop-download-picker";
+import type {
+  DesktopDownloads,
+  DesktopRelease,
+  DesktopReleaseAsset,
+} from "@/components/desktop/types";
+import { getExtracted } from "@deniai/i18n/extracted";
+import { pageHead } from "@/lib/seo";
+
+type GitHubRelease = {
+  assets: DesktopReleaseAsset[];
+  draft: boolean;
+  html_url: string;
+  prerelease: boolean;
+  tag_name: string;
+};
+
+const FALLBACK_RELEASE_URL = "https://github.com/deniaiapp/desktop/releases";
+
+function toDesktopRelease(release: GitHubRelease): DesktopRelease {
+  return {
+    version: release.tag_name.replace(/^v/, ""),
+    releaseUrl: release.html_url,
+    assets: release.assets,
+  };
+}
+
+function createFallbackRelease(): DesktopRelease {
+  return {
+    version: null,
+    releaseUrl: FALLBACK_RELEASE_URL,
+    assets: [],
+  };
+}
+
+/** GitHub release lookups are rate limited; reuse one answer per server instance. */
+const DOWNLOADS_CACHE_TTL_MS = 360 * 1000;
+const DOWNLOADS_FAILURE_CACHE_TTL_MS = 30 * 1000;
+let downloadsCache: { expiresAt: number; value: Promise<DesktopDownloads> } | null = null;
+
+async function getDesktopDownloads(): Promise<{ ok: boolean; downloads: DesktopDownloads }> {
+  try {
+    const response = await fetch("https://api.github.com/repos/deniaiapp/desktop/releases", {
+      headers: {
+        Accept: "application/vnd.github+json",
+      },
+      signal: AbortSignal.timeout(5_000),
+    });
+
+    if (!response.ok) {
+      return {
+        ok: false,
+        downloads: {
+          latestRelease: createFallbackRelease(),
+          prerelease: null,
+          releasesUrl: FALLBACK_RELEASE_URL,
+        },
+      };
+    }
+
+    const releases = (await response.json()) as GitHubRelease[];
+    const latestRelease = releases.find((release) => !release.draft && !release.prerelease);
+    const prerelease = releases.find((release) => !release.draft && release.prerelease);
+
+    return {
+      ok: true,
+      downloads: {
+        latestRelease: latestRelease ? toDesktopRelease(latestRelease) : createFallbackRelease(),
+        prerelease: prerelease ? toDesktopRelease(prerelease) : null,
+        releasesUrl: FALLBACK_RELEASE_URL,
+      },
+    };
+  } catch {
+    return {
+      ok: false,
+      downloads: {
+        latestRelease: createFallbackRelease(),
+        prerelease: null,
+        releasesUrl: FALLBACK_RELEASE_URL,
+      },
+    };
+  }
+}
+
+const getDesktopDownloadsFn = createServerFn({ method: "GET" }).handler(() => {
+  const now = Date.now();
+  if (!downloadsCache || downloadsCache.expiresAt <= now) {
+    const entry: { expiresAt: number; value: Promise<DesktopDownloads> } = {
+      expiresAt: now + DOWNLOADS_CACHE_TTL_MS,
+      value: getDesktopDownloads().then((result) => {
+        if (!result.ok && downloadsCache === entry) {
+          entry.expiresAt = Date.now() + DOWNLOADS_FAILURE_CACHE_TTL_MS;
+        }
+        return result.downloads;
+      }),
+    };
+    downloadsCache = entry;
+  }
+  return downloadsCache.value;
+});
+
+export const Route = createFileRoute("/{-$locale}/desktop")({
+  loader: () => getDesktopDownloadsFn(),
+  head: ({ match }) => {
+    const { intl } = match.context;
+    const t = getExtracted(intl);
+    const title = t("Deni Chat desktop app for Windows and macOS");
+    const description = t(
+      "Download the official Deni AI desktop app for Windows and macOS: tray access and reply notifications. On phones, use Deni AI in the browser — there is no Android APK.",
+    );
+
+    return pageHead({
+      title,
+      description,
+      alternates: { path: "/desktop", locale: intl.locale },
+      openGraph: {
+        title: `${title} — Deni AI`,
+        description,
+      },
+      twitter: {
+        title: `${title} — Deni AI`,
+        description,
+      },
+    });
+  },
+  component: DesktopPage,
+});
+
+function DesktopPage() {
+  const t = useExtracted();
+  const downloads = Route.useLoaderData();
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    name: "Deni AI Desktop",
+    alternateName: ["Deni Chat desktop", "Deni Chat app"],
+    applicationCategory: "UtilitiesApplication",
+    operatingSystem: "Windows, macOS",
+    url: "https://deniai.app/desktop",
+    downloadUrl: "https://deniai.app/desktop",
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+    },
+    description: "Official Deni Chat desktop app for Windows and macOS. Not an Android APK.",
+  };
+
+  const requirements = [
+    t("Windows, macOS or Linux. Choose the build that matches your processor."),
+    t("An internet connection."),
+  ];
+
+  return (
+    <main id="main-content" className="mx-auto w-full max-w-3xl px-4 py-12 sm:px-6 md:py-16">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
+      />
+      <h1 className="text-3xl font-semibold text-balance">{t("Deni AI Desktop")}</h1>
+      <p className="mt-4 max-w-[60ch] text-base text-muted-foreground">
+        {t(
+          "The official Deni AI desktop app for Windows and macOS. It stays in the system tray and shows notifications for replies. On phones, use Deni AI in the browser; there is no Android app.",
+        )}
+      </p>
+
+      <DesktopDownloadPicker downloads={downloads} />
+
+      <section aria-labelledby="desktop-requirements" className="mt-12">
+        <h2 id="desktop-requirements" className="text-lg font-semibold">
+          {t("Requirements")}
+        </h2>
+        <ul className="mt-4 list-disc space-y-1.5 pl-5 text-sm">
+          {requirements.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </section>
+    </main>
+  );
+}

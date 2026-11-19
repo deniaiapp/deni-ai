@@ -1,0 +1,5 @@
+{
+  "title": "プランとお支払い",
+  "icon": "CreditCard",
+  "pages": ["plans-and-usage", "payments"]
+}

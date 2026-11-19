@@ -1,0 +1,610 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Deni AI client API v1",
+  "$defs": {
+    "BootstrapResponse": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "email": {
+              "type": "string"
+            },
+            "image": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "email",
+            "image"
+          ]
+        },
+        "plan": {
+          "type": "object",
+          "properties": {
+            "tier": {
+              "type": "string",
+              "enum": [
+                "free",
+                "go",
+                "plus",
+                "pro"
+              ]
+            },
+            "hasVerifiedPaymentMethod": {
+              "type": "boolean"
+            },
+            "pool": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "limit": {
+                      "type": "number"
+                    },
+                    "used": {
+                      "type": "object",
+                      "properties": {
+                        "chat": {
+                          "type": "number"
+                        },
+                        "flixa": {
+                          "type": "number"
+                        },
+                        "run": {
+                          "type": "number"
+                        }
+                      },
+                      "required": [
+                        "chat",
+                        "flixa",
+                        "run"
+                      ]
+                    },
+                    "periodEnd": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "limit",
+                    "used",
+                    "periodEnd"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "tier",
+            "hasVerifiedPaymentMethod",
+            "pool"
+          ]
+        },
+        "features": {
+          "type": "object",
+          "properties": {
+            "webSearch": {
+              "type": "boolean"
+            },
+            "memory": {
+              "type": "boolean"
+            },
+            "billing": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "webSearch",
+            "memory",
+            "billing"
+          ]
+        },
+        "preferences": {
+          "type": "object",
+          "properties": {
+            "preferredModel": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          },
+          "required": [
+            "preferredModel"
+          ]
+        },
+        "client": {
+          "type": "object",
+          "properties": {
+            "minVersion": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "updateRequired": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "minVersion",
+            "updateRequired"
+          ]
+        },
+        "links": {
+          "type": "object",
+          "properties": {
+            "web": {
+              "type": "string"
+            },
+            "settings": {
+              "type": "string"
+            },
+            "billing": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "web",
+            "settings",
+            "billing"
+          ]
+        }
+      },
+      "required": [
+        "user",
+        "plan",
+        "features",
+        "preferences",
+        "client",
+        "links"
+      ]
+    },
+    "ModelsResponse": {
+      "type": "object",
+      "properties": {
+        "defaultModel": {
+          "type": "string"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "author": {
+                "type": "string"
+              },
+              "description": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "featured": {
+                "type": "boolean"
+              },
+              "efforts": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "none",
+                    "minimal",
+                    "low",
+                    "medium",
+                    "high",
+                    "xhigh",
+                    "max"
+                  ]
+                }
+              },
+              "contextWindow": {
+                "anyOf": [
+                  {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "usageTier": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              },
+              "supportsProMode": {
+                "type": "boolean"
+              },
+              "supportsFastMode": {
+                "type": "boolean"
+              },
+              "retiresOn": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "name",
+              "author",
+              "description",
+              "featured",
+              "efforts",
+              "contextWindow",
+              "usageTier",
+              "supportsProMode",
+              "supportsFastMode",
+              "retiresOn"
+            ]
+          }
+        }
+      },
+      "required": [
+        "defaultModel",
+        "models"
+      ]
+    },
+    "ChatListResponse": {
+      "type": "object",
+      "properties": {
+        "chats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "title": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "projectId": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "pinned": {
+                "type": "boolean"
+              },
+              "folder": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "tags": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "createdAt": {
+                "type": "string",
+                "description": "ISO 8601 timestamp"
+              },
+              "updatedAt": {
+                "type": "string",
+                "description": "ISO 8601 timestamp"
+              }
+            },
+            "required": [
+              "id",
+              "title",
+              "projectId",
+              "pinned",
+              "folder",
+              "tags",
+              "createdAt",
+              "updatedAt"
+            ]
+          }
+        },
+        "nextCursor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "chats",
+        "nextCursor"
+      ]
+    },
+    "ChatDetail": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "system",
+                  "user",
+                  "assistant"
+                ]
+              },
+              "parts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ],
+                  "additionalProperties": {}
+                }
+              },
+              "metadata": {}
+            },
+            "required": [
+              "id",
+              "role",
+              "parts"
+            ]
+          }
+        },
+        "oldestIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "hasMore": {
+          "type": "boolean"
+        },
+        "id": {
+          "type": "string"
+        },
+        "title": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "projectId": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "projectName": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "model": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "messages",
+        "oldestIndex",
+        "hasMore",
+        "id",
+        "title",
+        "projectId",
+        "projectName",
+        "model"
+      ]
+    },
+    "MessageWindow": {
+      "type": "object",
+      "properties": {
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "role": {
+                "type": "string",
+                "enum": [
+                  "system",
+                  "user",
+                  "assistant"
+                ]
+              },
+              "parts": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "type"
+                  ],
+                  "additionalProperties": {}
+                }
+              },
+              "metadata": {}
+            },
+            "required": [
+              "id",
+              "role",
+              "parts"
+            ]
+          }
+        },
+        "oldestIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+        },
+        "hasMore": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "messages",
+        "oldestIndex",
+        "hasMore"
+      ]
+    },
+    "ChatStatus": {
+      "type": "object",
+      "properties": {
+        "generating": {
+          "type": "boolean"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO 8601 timestamp"
+        }
+      },
+      "required": [
+        "generating",
+        "updatedAt"
+      ]
+    },
+    "CreateChatBody": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "format": "uuid",
+          "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+        },
+        "projectId": {
+          "anyOf": [
+            {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "id"
+      ]
+    },
+    "UpdateChatBody": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 500
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pinned": {
+          "type": "boolean"
+        },
+        "folder": {
+          "anyOf": [
+            {
+              "type": "string",
+              "maxLength": 80
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "tags": {
+          "maxItems": 12,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 32
+          }
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      }
+    },
+    "PreferredModelBody": {
+      "type": "object",
+      "properties": {
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        }
+      },
+      "required": [
+        "model"
+      ]
+    },
+    "ClientError": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "error",
+        "code",
+        "message"
+      ]
+    }
+  }
+}

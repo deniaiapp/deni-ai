@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64">
+  <style>.bob{animation:bob 4.4s ease-in-out infinite} .blink{transform-box:fill-box;transform-origin:center;animation:blink 5.2s infinite} @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-1.4px)}} @keyframes blink{0%,90%,100%{transform:scaleY(1)}94%{transform:scaleY(.12)}} @media (prefers-reduced-motion:reduce){*{animation:none!important}} .leaves{transform-origin:32px 10px;animation:leaves 3s ease-in-out infinite}@keyframes leaves{0%,100%{transform:rotate(-7deg)}50%{transform:rotate(7deg)}}</style>
+  <path d="M13 64c0-9 8-14 19-14s19 5 19 14Z" fill="#7fae6a"/>
+  <g class="bob">
+    <path d="M32 16V9" stroke="#4e8a36" stroke-width="2.5" stroke-linecap="round"/>
+    <path class="leaves" d="M32 10c-7 0-11-4-11-9 7 0 11 4 11 9ZM32 10c7 0 11-4 11-9-7 0-11 4-11 9Z" fill="#6aa84f"/>
+    <rect x="28.5" y="44" width="7" height="9" fill="#a05656"/>
+    <rect x="12" y="16" width="40" height="31" rx="9" fill="#d68585"/>
+    <rect x="16" y="20" width="32" height="23" rx="6" fill="#211c19"/>
+    <path d="M23 33q3-4 6 0M35 33q3-4 6 0" fill="none" stroke="#ffc3d8" stroke-width="2.4" stroke-linecap="round"/>
+    <ellipse cx="21.5" cy="37" rx="2.4" ry="1.5" fill="#ff8fb3" opacity=".6"/>
+    <ellipse cx="42.5" cy="37" rx="2.4" ry="1.5" fill="#ff8fb3" opacity=".6"/>
+  </g>
+</svg>

@@ -1,0 +1,60 @@
+{
+  "name": "@deniai/agent-api",
+  "version": "1.0.0",
+  "description": "OpenAI API style backend with /v1/agent router",
+  "type": "module",
+  "main": "server.ts",
+  "scripts": {
+    "start": "tsx --env-file-if-exists=.env server.ts",
+    "start:dist": "node --env-file-if-exists=.env dist/server.js",
+    "start:supervised": "tsx --env-file-if-exists=.env tools/supervise-server.ts",
+    "dev": "tsx watch --env-file-if-exists=.env server.ts",
+    "dev:prod-env": "tsx watch --env-file=.env.production server.ts",
+    "build": "esbuild server.ts --bundle --platform=node --format=esm --target=node26 --outdir=dist --external:pg-native --banner:js=\"import { createRequire as __flixaCreateRequire } from 'node:module'; const require = __flixaCreateRequire(import.meta.url);\"",
+    "typecheck": "tsc --noEmit",
+    "lint": "oxlint",
+    "test": "tsx --test --experimental-test-module-mocks \"tests/**/*.test.ts\"",
+    "db:generate": "pnpm --filter @deniai/db db:generate:flixa",
+    "db:migrate": "pnpm --filter @deniai/db db:migrate:flixa",
+    "performance:benchmark": "tsx tools/performance-benchmark.ts",
+    "tools:revoke-anonymous-api-keys": "tsx --env-file-if-exists=.env tools/revoke-anonymous-api-keys.ts",
+    "tools:ban-flixa-user": "tsx --env-file-if-exists=.env tools/ban-flixa-user.ts",
+    "tools:unban-flixa-user": "tsx --env-file-if-exists=.env tools/unban-flixa-user.ts"
+  },
+  "keywords": [
+    "openai",
+    "api",
+    "agent",
+    "router",
+    "hono",
+    "node"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
+    "@deniai/auth": "workspace:*",
+    "@deniai/billing": "workspace:*",
+    "@deniai/db": "workspace:*",
+    "@deniai/flixa-contract": "workspace:*",
+    "@hono/node-server": "^2.1.8",
+    "drizzle-orm": "^0.45.4",
+    "hono": "^4.13.18",
+    "openai": "^7.56.0",
+    "pg": "^8.23.1"
+  },
+  "engines": {
+    "node": ">=26"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "@types/node": "^26.6.6",
+    "@types/pg": "^8.23.1",
+    "esbuild": "^0.28.2",
+    "oxfmt": "^0.78.0",
+    "oxlint": "^1.93.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "private": true
+}

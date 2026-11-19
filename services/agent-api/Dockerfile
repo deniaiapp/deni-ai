@@ -1,0 +1,56 @@
+# syntax=docker/dockerfile:1
+#
+# Build from the monorepo root (services/agent-api/Dockerfile.dockerignore applies):
+#   docker build -f services/agent-api/Dockerfile -t deni-agent-api .
+FROM node:26-alpine AS build
+
+WORKDIR /app
+
+RUN npm install -g pnpm@12.18.0
+
+# Every workspace manifest is copied so the frozen lockfile matches; only the
+# agent API and the workspace packages it depends on are installed.
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
+COPY apps/web/package.json ./apps/web/
+COPY apps/support/package.json ./apps/support/
+COPY services/agent-api/package.json ./services/agent-api/
+COPY services/run-worker/package.json ./services/run-worker/
+COPY services/rollout-router/package.json ./services/rollout-router/
+# Package sources follow the install, so editing them keeps the install cached.
+COPY --parents packages/*/package.json ./
+# Dev dependencies are needed for the esbuild step. Install scripts are skipped:
+# the bundle only needs sources. The pnpm store is a BuildKit cache mount shared
+# with the other projects (id=pnpm-store).
+RUN --mount=type=cache,id=pnpm-store,target=/pnpm/store \
+  pnpm install --frozen-lockfile --ignore-scripts --filter "@deniai/agent-api..." --store-dir=/pnpm/store
+
+COPY packages ./packages
+
+WORKDIR /app/services/agent-api
+
+COPY services/agent-api/server.ts services/agent-api/app.ts services/agent-api/tsconfig.json ./
+COPY services/agent-api/middleware ./middleware
+COPY services/agent-api/routes ./routes
+COPY services/agent-api/utils ./utils
+
+RUN node_modules/.bin/esbuild server.ts --bundle --platform=node --format=esm --target=node26 \
+  --outdir=./dist --external:pg-native --minify \
+  --banner:js="import { createRequire as __flixaCreateRequire } from 'node:module'; const require = __flixaCreateRequire(import.meta.url);"
+
+# Distroless: Node.js and its runtime libraries only (no shell, package manager,
+# or npm). The `nonroot` tag runs as uid 65532 and its entrypoint is `node`.
+# For an interactive shell while debugging, swap in the `debug-nonroot` tag.
+FROM gcr.io/distroless/nodejs26-debian13:nonroot AS app
+
+WORKDIR /app
+
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Self-contained ESM bundle; .mjs so Node does not need a package.json "type".
+COPY --from=build /app/services/agent-api/dist/server.js ./server.mjs
+
+EXPOSE 3000
+
+# The image's entrypoint is already `node`, so CMD carries only the script.
+CMD ["server.mjs"]

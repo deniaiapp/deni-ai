@@ -1,0 +1,275 @@
+---
+title: Use the Flixa CLI
+description: Install the Flixa CLI, sign in, and work with the coding agent from your terminal.
+---
+
+The Flixa CLI runs the Flixa coding agent in your terminal. It reads your project, edits files, and runs commands, asking for your OK first.
+You can use it with your Deni AI account or with your own API key from another provider (BYOK).
+
+To point Claude Code or Codex at Flixa instead, see [Use Flixa with external coding tools](/en/flixa/external-tools).
+
+## Install
+
+```bash
+npm install -g @deniai/flixa
+```
+
+With pnpm:
+
+```bash
+pnpm install -g @deniai/flixa
+```
+
+## Sign in
+
+```bash
+flixa login
+```
+
+Pick a provider from the list. The provider you sign in to becomes your default.
+
+### With your Deni AI account
+
+Choose **Flixa**. Then choose how to open the authorization page:
+
+- **Open browser automatically**: your browser opens the page.
+- **Show URL (open manually)**: for SSH sessions and other machines without a browser.
+
+The terminal shows a code and a URL. Open the URL, check that the code matches, and click **Approve**.
+The CLI saves the key for you. Guest accounts can't approve; sign in with a permanent account first.
+
+### With your own API key (BYOK)
+
+Built-in providers are `flixa`, `openai`, `anthropic`, `google`, `openrouter`, and `custom-openai`. More providers come from a bundled catalog.
+
+```bash
+flixa login --provider anthropic
+```
+
+Enter the provider's API key when asked. Requests then go to that provider with your key.
+For your own OpenAI-compatible endpoint, pass its base URL:
+
+```bash
+flixa login --provider custom-openai --base-url http://localhost:1234/v1
+```
+
+To see every provider and which ones are set up:
+
+```bash
+flixa providers list
+```
+
+To switch the default provider later:
+
+```bash
+flixa providers set-default anthropic
+```
+
+To pick a default model for the current provider:
+
+```bash
+flixa model
+```
+
+## Chat with the agent
+
+Run this in your project folder:
+
+```bash
+flixa chat
+```
+
+Type what you want and press Enter. Flixa asks before it edits files or runs shell commands. Use ←→ and Enter to approve, or Esc to deny.
+
+To pick up where you left off:
+
+| Command | What it does |
+| --- | --- |
+| `flixa chat -c` | Continue the latest conversation in this folder |
+| `flixa resume` | Pick a saved conversation to resume |
+
+### Modes
+
+Press Shift+Tab to cycle through the modes. You can also start in one with `--accept-edits`, `--plan`, `--auto`, or `--yolo-mode`.
+
+| Mode | What Flixa asks you about |
+| --- | --- |
+| default | File edits, shell commands, and web fetches |
+| accept edits | Shell commands and web fetches. File edits go ahead |
+| plan | Web fetches only. Flixa doesn't edit files or run commands |
+| auto | Nothing. An AI safety review checks actions instead |
+| yolo | Nothing. Actions run without approval or a safety review |
+
+An `ask` permission rule (see below) still asks in accept edits and auto modes.
+
+### In-chat features
+
+| Type | What it does |
+| --- | --- |
+| `/` | Shows the commands. Tab completes the selected one |
+| `@path/to/file` | Attaches a file, or a folder's listing, to your message. Tab completes paths. Only files inside the workspace |
+| `# note` | Saves a note to your project's `AGENTS.md` (or `CLAUDE.md` if that's the file you have) |
+| `/memory user <note>` | Saves a personal note to `~/.flixa/AGENTS.md` |
+| `/init` | Creates or improves `AGENTS.md` for this repository |
+| `/rewind [turns\|list]` | Undoes the agent's file edits for the last turns. The conversation stays |
+| `/compact [focus]` | Summarizes the conversation to free up context |
+| `/diff` | Shows a summary of the current git diff |
+| `/export [path]` | Saves the conversation as Markdown |
+| `/model [id]` | Switches the model |
+| `/usage` | Shows your plan and usage |
+| `/clear` or `/new` | Starts a fresh conversation |
+| `/exit` | Quits. Ctrl+C also quits when Flixa is idle |
+
+Long conversations are also compacted automatically once they pass about 240,000 characters. Set `FLIXA_AUTO_COMPACT_CHARS` to change the limit, or `0` to turn it off.
+
+Flixa reads `CLAUDE.md`, `AGENTS.md`, and `.claude/CLAUDE.md` from your project as instructions.
+
+### What the agent can do on its own
+
+- Run long commands in the background and check their output later.
+- Hand work to sub-agents. `general-purpose` and a read-only `explore` agent are built in.
+- Load skills when a task needs them.
+- Keep a task list, and read public web pages (it asks first and can't reach private or local addresses).
+
+`/agents`, `/skills`, `/permissions`, and `/hooks` show what's set up.
+
+## Add your own commands, sub-agents, and skills
+
+Flixa looks in `.flixa/` and `.claude/` folders, in your project and in your home folder.
+
+| What | Where | Notes |
+| --- | --- | --- |
+| Slash commands | `commands/<name>.md` | `review.md` becomes `/review`; `frontend/lint.md` becomes `/frontend:lint`. Use `$ARGUMENTS` or `$1`–`$9` for arguments |
+| Sub-agents | `agents/<name>.md` | Needs a `description:` in the frontmatter; `tools:` and `model:` are optional. The body is the sub-agent's instructions |
+| Skills | `skills/<name>/SKILL.md` | Needs a `description:`. Flixa loads the full text only when it needs it |
+
+Your own commands never replace built-in ones. Sub-agents can't start other sub-agents.
+
+## Set permission rules and hooks
+
+Put rules and hooks in a `settings.json` file:
+
+- Your settings: `~/.flixa/settings.json` or `~/.claude/settings.json`
+- Project settings: `.flixa/settings.json` or `.claude/settings.json`, plus `settings.local.json` in the same folders
+
+```json
+{
+  "permissions": {
+    "allow": ["Bash(pnpm test:*)", "Read(src/**)", "WebFetch(domain:docs.example.com)"],
+    "ask": ["Write(docs/**)"],
+    "deny": ["Read(.env)", "Bash(git push:*)"]
+  },
+  "hooks": {
+    "PostToolUse": [
+      { "matcher": "Edit|Write", "hooks": [{ "type": "command", "command": "pnpm run format" }] }
+    ]
+  }
+}
+```
+
+- `deny` wins over `ask`, and `ask` wins over `allow`.
+- A combined command such as `pnpm test && curl ...` is allowed only if every part is allowed.
+- Rules for `Read`, `Write`, `Edit`, `Grep`, and `Glob` apply only to those tools. They don't stop a shell command from reading the same file.
+- Hooks run on `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, and `Stop`. They get a JSON payload on stdin. Exit code 2 blocks the action and sends stderr back to Flixa.
+
+<Callout title="Project settings aren't fully trusted">
+  So that a cloned repository can't run code or pre-approve commands just by being opened:
+
+  - Hooks load only from your own settings. Set `FLIXA_TRUST_PROJECT_HOOKS=1` to also load project hooks.
+  - Project `deny` and `ask` rules always apply. Project `allow` rules are ignored unless you set `FLIXA_TRUST_PROJECT_SETTINGS=1`.
+</Callout>
+
+## Use Flixa in scripts
+
+`--print` runs one prompt without the interactive screen.
+Only the final answer goes to stdout, and progress goes to stderr, so you can pipe the output.
+
+```bash
+flixa --print "Summarize the last commit"
+```
+
+```bash
+git diff | flixa --print "Review this diff"
+```
+
+Your custom commands work here too:
+
+```bash
+flixa --print "/review src/index.ts"
+```
+
+Actions that need approval are denied unless you add `--accept-edits`, `--auto`, or `--yolo`.
+
+## Ship a task in one run
+
+`flixa ship` takes one task and runs it start to finish: it inspects the repository, makes the change, and verifies it.
+
+```bash
+flixa ship "Add a retry budget to the API client"
+```
+
+By default it runs in guarded auto mode: edits and commands get a safety review, and clearly destructive commands are blocked.
+
+| Option | What it does |
+| --- | --- |
+| `--plan` | Inspects and proposes a plan without editing |
+| `--verify "<command>"` | Runs this command to verify the change |
+| `--interactive` | Asks you before each edit and command |
+| `--yolo` | Skips approvals and safety review |
+| `--share [path]` | Creates a redacted Markdown summary card, or writes it to a file |
+| `--share-url` | Publishes the card as an unlisted Flixa Share link |
+
+You can pass a GitHub Issue URL as the task. Flixa reads the issue's title, body, and labels, and treats them as untrusted context.
+
+```bash
+flixa ship https://github.com/org/repo/issues/123
+```
+
+When a card is created, its Markdown is copied to your clipboard.
+A card published with `--share-url` contains the changed-file list, diff stat, verification result, model, and final summary. It doesn't publish your source code.
+To make a card from your latest session later, run `flixa share`.
+
+## Check your usage
+
+```bash
+flixa usage
+```
+
+This shows your Flixa plan and usage limits. It needs a Flixa sign-in.
+Flixa works on every signed-in plan, Free included. BYOK providers use your own key, not your Deni AI plan.
+
+## Check your setup
+
+```bash
+flixa doctor
+```
+
+This checks your Node.js, Git, ripgrep, shell, saved credentials, instruction files, and network connection. Add `--offline` to skip the network check.
+
+## Sign out
+
+```bash
+flixa logout
+```
+
+This removes the saved Flixa key. For another provider, add `--provider`:
+
+```bash
+flixa logout --provider anthropic
+```
+
+Signing out doesn't change Claude Code or Codex settings made with `flixa claude-code` or `flixa codex`.
+
+## Troubleshooting
+
+**"Already logged in"**
+
+Run `flixa logout`, then `flixa login` again. For other providers, add `--provider <provider>` to both commands.
+
+**"Not logged in"**
+
+Run `flixa login`. If you use a BYOK provider, run `flixa login --provider <provider>`.
+
+**Where are my keys stored?**
+
+In the Keychain on macOS, a DPAPI-encrypted file on Windows, or `secret-tool` on Linux. Without `secret-tool`, Linux falls back to a file in `~/.flixa/` and shows a warning.

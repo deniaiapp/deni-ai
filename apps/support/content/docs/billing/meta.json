@@ -1,0 +1,5 @@
+{
+  "title": "Plans and billing",
+  "icon": "CreditCard",
+  "pages": ["plans-and-usage", "payments"]
+}

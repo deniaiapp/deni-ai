@@ -1,0 +1,264 @@
+---
+title: Use Flixa with external coding tools
+description: Set up Flixa in Claude Code, Codex, Zed, opencode, and other tools.
+---
+
+You can use Flixa from tools such as Claude Code, Codex, Zed, and opencode.
+Point the tool at Flixa, and it runs on the usage included in your Deni AI plan.
+
+- Claude Code / Codex: one Flixa CLI command sets everything up.
+- Zed / opencode: add Flixa to the tool's settings file.
+
+<Callout title="Which tools you can use depends on your plan">
+  On the Free and Go plans, you can use Claude Code, Codex, Zed, opencode, and Flixa (the VS Code extension and CLI).
+  Other tools need Plus or higher. See [Other tools](#other-tools).
+</Callout>
+
+## Before you start
+
+### API key
+
+Flixa needs a Deni AI API key (a string that starts with `deni_`).
+
+- **With the Flixa CLI** (Claude Code / Codex): run `flixa login` and sign in in your browser. The key is saved for you.
+- **Manual setup** (Zed, opencode, and others): create a key in [Settings › API Keys](https://deniai.app/settings/api-keys). The key is shown only once, so copy it right away.
+
+Guest accounts can't create API keys. Sign in first.
+
+### Endpoints
+
+| Purpose | URL |
+| --- | --- |
+| Base URL | `https://flixa-api.deniai.app/v1/agent` |
+| OpenAI Chat Completions | `https://flixa-api.deniai.app/v1/agent/chat/completions` |
+| OpenAI Responses | `https://flixa-api.deniai.app/v1/agent/responses` |
+| Anthropic Messages | `https://flixa-api.deniai.app/v1/agent/v1/messages` |
+| Model list | `https://flixa-api.deniai.app/v1/agent/models` |
+
+Authenticate with an `Authorization: Bearer deni_...` or `x-api-key: deni_...` header.
+
+### Models
+
+Model IDs look like `openai/gpt-6-sol` or `anthropic/claude-sonnet-5.5` (`provider/model`).
+The model list API returns the current models. A model whose `tier` is `free` works on the free plan; `plus` and `pro` models need that plan or higher.
+`curl` counts as another tool, so this command needs Plus or higher.
+
+```bash
+curl https://flixa-api.deniai.app/v1/agent/models -H "Authorization: Bearer $FLIXA_API_KEY"
+```
+
+## Install the Flixa CLI
+
+Claude Code and Codex are set up with the Flixa CLI.
+
+```bash
+npm install -g @deniai/flixa
+```
+
+```bash
+flixa login
+```
+
+## Claude Code
+
+```bash
+flixa claude-code
+```
+
+```bash
+claude
+```
+
+`flixa claude-code` changes two files. The originals are kept next to them as `*.bak`.
+
+- `~/.claude.json`: `hasCompletedOnboarding`, `primaryApiKey`
+- `~/.claude/settings.json`: `env.ANTHROPIC_BASE_URL`, `env.ANTHROPIC_API_KEY`
+
+To preview the changes without writing anything, add `--dry-run`.
+
+```bash
+flixa claude-code --dry-run
+```
+
+### Manual setup
+
+Without the CLI, add this to `~/.claude/settings.json`:
+
+```json
+{
+  "env": {
+    "ANTHROPIC_BASE_URL": "https://flixa-api.deniai.app/v1/agent",
+    "ANTHROPIC_API_KEY": "deni_..."
+  }
+}
+```
+
+### Undo
+
+```bash
+flixa claude-code unset
+```
+
+`flixa logout` only removes the key saved in the Flixa CLI. It doesn't undo the Claude Code settings.
+
+## Codex
+
+```bash
+flixa codex
+```
+
+This adds a Flixa provider to `~/.codex/config.toml` (`%USERPROFILE%\.codex\config.toml` on Windows) and sets `model_provider = "flixa"`.
+
+### Manual setup
+
+Add this to `config.toml`. Put `model_provider` at the top of the file, before any section that starts with `[`.
+
+```toml
+model_provider = "flixa"
+model = "openai/gpt-6-sol"
+
+[model_providers.flixa]
+name = "flixa"
+base_url = "https://flixa-api.deniai.app/v1/agent"
+wire_api = "responses"
+requires_openai_auth = false
+env_key = "FLIXA_API_KEY"
+```
+
+With `env_key`, set `FLIXA_API_KEY` in the environment Codex starts from.
+To write the key into the file instead, replace `env_key` with:
+
+```toml
+[model_providers.flixa.http_headers]
+Authorization = "Bearer deni_..."
+```
+
+### Undo
+
+```bash
+flixa codex unset
+```
+
+This removes `model_provider = "flixa"` from `config.toml`. The `[model_providers.flixa]` section stays; delete it by hand if you don't need it.
+
+## Zed
+
+Add Flixa to Zed as an OpenAI-compatible provider.
+
+1. Run `zed: open settings` from the command palette and add this to `settings.json`:
+
+   ```json
+   {
+     "language_models": {
+       "openai_compatible": {
+         "Flixa": {
+           "api_url": "https://flixa-api.deniai.app/v1/agent",
+           "available_models": [
+             {
+               "name": "anthropic/claude-sonnet-5.5",
+               "display_name": "Claude Sonnet 5.5 (Flixa)",
+               "max_tokens": 1000000,
+               "max_output_tokens": 128000
+             },
+             {
+               "name": "google/gemini-3.8-flash",
+               "display_name": "Gemini 3.8 Flash (Flixa)",
+               "max_tokens": 1048576,
+               "max_output_tokens": 65536
+             }
+           ]
+         }
+       }
+     }
+   }
+   ```
+
+2. Add your API key in one of these ways:
+   - Run `agent: open settings`, pick Flixa under LLM Providers, and enter the key (it's stored in your system keychain).
+   - Set the `FLIXA_API_KEY` environment variable.
+
+3. Pick a Flixa model in the Agent panel's model selector.
+
+Don't put the API key in `settings.json`.
+
+## opencode
+
+1. Add this to your project's `opencode.json` (or `~/.config/opencode/opencode.json` to use it everywhere):
+
+   ```json
+   {
+     "$schema": "https://opencode.ai/config.json",
+     "provider": {
+       "flixa": {
+         "npm": "@ai-sdk/openai-compatible",
+         "name": "Flixa",
+         "options": {
+           "baseURL": "https://flixa-api.deniai.app/v1/agent",
+           "apiKey": "{env:FLIXA_API_KEY}"
+         },
+         "models": {
+           "anthropic/claude-sonnet-5.5": {
+             "name": "Claude Sonnet 5.5",
+             "limit": { "context": 1000000, "output": 128000 }
+           },
+           "google/gemini-3.8-flash": {
+             "name": "Gemini 3.8 Flash",
+             "limit": { "context": 1048576, "output": 65536 }
+           }
+         }
+       }
+     }
+   }
+   ```
+
+2. Add your API key in one of these ways:
+   - Set the `FLIXA_API_KEY` environment variable.
+   - Run `/connect` in opencode, choose **Other**, enter `flixa` as the provider ID, then enter the key. You can then remove the `options.apiKey` line.
+
+3. Pick a Flixa model with `/models`.
+
+## Other tools
+
+**Requires Plus or higher.**
+
+On Plus or higher, any tool that supports the OpenAI API (Chat Completions or Responses) or the Anthropic Messages API works the same way.
+This includes your own scripts and direct calls from tools like `curl`.
+
+- Base URL: `https://flixa-api.deniai.app/v1/agent`
+- API key: `deni_...`
+- Model: a Flixa model ID such as `openai/gpt-6-sol`
+
+| Plan | Tools you can use |
+| --- | --- |
+| Free / Go | Claude Code, Codex, Zed, opencode, Flixa (VS Code extension and CLI) |
+| Plus / Pro | All of the above, plus any compatible tool |
+
+On the Free and Go plans, other tools get the error "This app is not available on your plan".
+
+## Troubleshooting
+
+**"Authentication required"**
+
+The tool isn't sending your API key.
+
+- If you pass the key through an environment variable, check that it's set for the terminal or process that starts the tool.
+- On Windows, Codex started from the Start menu or a shortcut can't see a `$env:` variable set in another PowerShell window. Set it as a system environment variable, or put the key in `http_headers`.
+- Restart the tool after changing its settings.
+
+**Guest account error**
+
+Guest accounts can't use Flixa. Sign in and create a new API key.
+
+**"This app is not available on your plan"**
+
+The Free and Go plans don't support this tool. Use Claude Code, Codex, Zed, opencode, or Flixa, or upgrade to Plus or higher.
+
+**A model doesn't work**
+
+Some models need a paid plan. Check the model's `tier` to see whether your plan includes it.
+
+**Check your usage**
+
+```bash
+flixa usage
+```
