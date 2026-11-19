@@ -190,6 +190,7 @@ async function cancelSubscriptionIfNeeded(
     }
 
     if (reason === "fraudulent" || isMaxModeOnlySubscription(subscription)) {
+      await releasePlanChangeSchedule(subscription);
       await stripe.subscriptions.cancel(subscriptionId);
       return `Canceled subscription ${subscriptionId} immediately.`;
     }

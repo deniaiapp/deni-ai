@@ -33,13 +33,11 @@ export const SWITCH_PATH_PREFIX = "/__rollout/";
 /**
  * Paths that one app must handle whatever the visitor's version: inbound
  * webhooks and cron (v7 runs them; v8 has CRON_ENABLED=false and
- * STRIPE_WEBHOOK_ENABLED=false), the Deni Run usage integration (v7 has its
- * secrets), and the native client API that only v8 has.
+ * STRIPE_WEBHOOK_ENABLED=false), and the native client API that only v8 has.
  */
 const PINNED_PREFIXES: ReadonlyArray<readonly [string, Variant]> = [
   ["/api/stripe/", "v7"],
   ["/api/cron/", "v7"],
-  ["/api/integrations/", "v7"],
   ["/api/client/v1/", "v8"],
 ];
 

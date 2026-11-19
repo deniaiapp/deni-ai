@@ -684,7 +684,12 @@ function match(path: string[]) {
 /** Entry point of `/api/run/<splat>`. */
 export async function handleRunApi(request: Request, splat: string): Promise<Response> {
   if (!env.RUN_ENABLED) return runError(404, "run_disabled");
-  const path = splat.split("/").filter(Boolean).map(decodeURIComponent);
+  let path: string[];
+  try {
+    path = splat.split("/").filter(Boolean).map(decodeURIComponent);
+  } catch {
+    return runError(400, "invalid_path");
+  }
   if (path.join("/") === "mcp/oauth/callback" && request.method === "GET") {
     const { handleMcpOAuthCallback } = await import("./mcp-oauth-callback");
     return handleMcpOAuthCallback(request);

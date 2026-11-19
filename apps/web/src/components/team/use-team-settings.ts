@@ -143,6 +143,14 @@ export function useTeamSettings() {
     trpc.organization.updateTeamMaxModeDefaultPolicy.useMutation();
   const updateMemberMaxModePolicy = trpc.organization.updateTeamMemberMaxModePolicy.useMutation();
   const buyTeamMaxModeCredits = trpc.organization.createTeamMaxModeCreditCheckout.useMutation();
+  const resetBuyTeamMaxModeCredits = buyTeamMaxModeCredits.reset;
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) resetBuyTeamMaxModeCredits();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [resetBuyTeamMaxModeCredits]);
   const updateTeamMaxModeAutoTopUp = trpc.organization.updateTeamMaxModeAutoTopUp.useMutation();
   const utils = trpc.useUtils();
   const members = (orgDetailsData?.members ?? []).filter(isMember);

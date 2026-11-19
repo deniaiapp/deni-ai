@@ -20,14 +20,6 @@ export const env = createEnv({
     STRIPE_SECRET_KEY: z.string().min(1).optional(),
     STRIPE_WEBHOOK_SECRET: z.string().min(1).optional(),
     CRON_SECRET: z.string().min(32).optional(),
-    /**
-     * Deni Run integration. The service secret authenticates Deni Run's server
-     * calls to `/api/integrations/deni-run/usage`; the OAuth client id is the
-     * client registered with `pnpm run tools:register-oauth-client` and is
-     * cached as a trusted first-party client.
-     */
-    DENI_RUN_SERVICE_SECRET: z.string().min(32).optional(),
-    DENI_RUN_OAUTH_CLIENT_ID: z.string().min(1).optional(),
     STRIPE_FLASH_OFFER_COUPON_ID: z.string().min(1).optional(),
     /**
      * Customer Portal configuration (`bpc_...`) used for billing portal sessions.
@@ -223,8 +215,6 @@ export const env = createEnv({
     NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: z.string().min(1).optional(),
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: z.string().min(1).optional(),
     NEXT_PUBLIC_SENTRY_DSN: z.string().min(1).optional(),
-    /** Public Deni Run origin linked from the usage view. */
-    NEXT_PUBLIC_DENI_RUN_URL: z.url().default("https://run.deniai.app"),
     /** The previous Deni AI (v7), linked from the account menu and the private beta screen. */
     NEXT_PUBLIC_V7_URL: z.url().default("https://deniai.app"),
   },

@@ -1,6 +1,7 @@
 import { changelogEntries } from "@/lib/changelog";
 import { absoluteUrl, hreflangLanguages } from "@/lib/locale-path";
 import { PUBLIC_SITE_ORIGIN, type PublicPage, publicPages } from "@/lib/public-pages";
+import { appDate } from "@/lib/version";
 
 export type SitemapEntry = {
   url: string;
@@ -29,11 +30,11 @@ function sitemapEntry(
 }
 
 export function sitemapEntries(): SitemapEntry[] {
-  const lastModified = new Date("2026-08-16");
+  const lastModified = new Date(appDate);
   const changelogModified = new Date(changelogEntries[0]?.date ?? lastModified);
 
   const publicEntries = publicPages.flatMap((page) => {
-    if (page.path === "/") {
+    if (page.path === "/" || page.noindex) {
       return [];
     }
     const modified = page.path === "/changelog" ? changelogModified : lastModified;

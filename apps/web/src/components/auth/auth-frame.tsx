@@ -5,7 +5,7 @@ import { Link } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 
 /**
- * Layout of the auth screens (sign-in, sign-up, two-factor setup): the indigo
+ * Layout of the auth screens (sign-in, sign-up, two-factor setup): the sidebar
  * brand panel on the left from `lg`, the form centred on the paper sheet.
  * On small screens the panel collapses to a brand row above the form.
  */

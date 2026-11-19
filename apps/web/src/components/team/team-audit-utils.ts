@@ -59,6 +59,8 @@ export function useAuditActionMeta() {
         return { label: t("Subscription purchased"), icon: CreditCard };
       case "plan_changed":
         return { label: t("Plan changed"), icon: RefreshCw };
+      case "plan_change_canceled":
+        return { label: t("Scheduled plan change canceled"), icon: RotateCcw };
       case "subscription_canceled":
         return { label: t("Subscription canceled"), icon: XCircle };
       case "subscription_resumed":
@@ -159,6 +161,8 @@ export function useAuditActionSentence() {
           to: planLabel(next?.planId),
         });
       }
+      case "plan_change_canceled":
+        return t("canceled the scheduled plan change");
       case "subscription_canceled":
         return t("canceled the team subscription");
       case "subscription_resumed":

@@ -2,6 +2,7 @@ export type PublicPage = {
   path: string;
   changeFrequency: "always" | "hourly" | "daily" | "weekly" | "monthly" | "yearly" | "never";
   priority: number;
+  noindex?: boolean;
 };
 
 export const PUBLIC_SITE_ORIGIN = "https://deniai.app";
@@ -17,5 +18,5 @@ export const publicPages: PublicPage[] = [
   { path: "/changelog", changeFrequency: "weekly", priority: 0.8 },
   { path: "/legal/terms", changeFrequency: "yearly", priority: 0.3 },
   { path: "/legal/privacy-policy", changeFrequency: "yearly", priority: 0.3 },
-  { path: "/legal/tokusho", changeFrequency: "yearly", priority: 0.3 },
+  { path: "/legal/tokusho", changeFrequency: "yearly", priority: 0.3, noindex: true },
 ];

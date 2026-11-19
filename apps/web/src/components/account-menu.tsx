@@ -493,7 +493,7 @@ export function AccountMenu() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={isSigningOut}>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
               disabled={isSigningOut}
               onClick={async () => {
                 await handleSignOut();

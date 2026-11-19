@@ -23,6 +23,7 @@ import type { z } from "zod";
 import { env } from "@/env";
 import { guardMutationRequest } from "@/lib/mutation-request";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { readRequestJson, RequestBodyTooLargeError } from "@/lib/request-body";
 import { getRequestSession, type RequestSession } from "@/lib/request-session.server";
 
 /**
@@ -79,19 +80,13 @@ class ClientRequestError extends Error {
 }
 
 async function readBody<S extends z.ZodType>(request: Request, schema: S): Promise<z.output<S>> {
-  const length = Number(request.headers.get("content-length") ?? 0);
-  if (length > BODY_LIMIT_BYTES) {
-    throw new ClientRequestError(413, "invalid_request", "Request body is too large");
-  }
   let raw: unknown;
   try {
-    const text = await request.text();
-    if (text.length > BODY_LIMIT_BYTES) {
+    raw = await readRequestJson(request, BODY_LIMIT_BYTES);
+  } catch (error) {
+    if (error instanceof RequestBodyTooLargeError) {
       throw new ClientRequestError(413, "invalid_request", "Request body is too large");
     }
-    raw = JSON.parse(text);
-  } catch (error) {
-    if (error instanceof ClientRequestError) throw error;
     throw new ClientRequestError(400, "invalid_request", "Invalid JSON body");
   }
   const parsed = schema.safeParse(raw);
@@ -376,8 +371,14 @@ export function matchClientRoute(segments: string[]) {
     const matches = route.pattern.every((part, index) => {
       const segment = segments[index]!;
       if (part.startsWith(":")) {
-        params.push(decodeURIComponent(segment));
-        return segment.length > 0 && segment.length <= 200;
+        let decoded: string;
+        try {
+          decoded = decodeURIComponent(segment);
+        } catch {
+          return false;
+        }
+        params.push(decoded);
+        return decoded.length > 0 && decoded.length <= 200;
       }
       return part === segment;
     });

@@ -21,22 +21,32 @@ const SECURE_SESSION_COOKIE = `__Secure-${SESSION_COOKIE}`;
 // codes, team invites) through sign-in; route guards still validate sessions.
 const AUTH_REQUIRED_PREFIXES = [
   "/chat",
+  "/run",
   "/settings",
   "/projects",
   "/compare",
   "/new",
   "/flixa/authorize",
   "/oauth",
+  "/account",
   "/two-factor",
   "/private-beta",
 ] as const;
+
+function decodeCookieValue(raw: string) {
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
 
 function readCookies(request: Request) {
   const cookies = new Map<string, string>();
   for (const part of request.headers.get("cookie")?.split(";") ?? []) {
     const index = part.indexOf("=");
     if (index > 0) {
-      cookies.set(part.slice(0, index).trim(), decodeURIComponent(part.slice(index + 1).trim()));
+      cookies.set(part.slice(0, index).trim(), decodeCookieValue(part.slice(index + 1).trim()));
     }
   }
   return cookies;

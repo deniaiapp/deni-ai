@@ -1,4 +1,4 @@
-import { useExtracted } from "use-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { useState } from "react";
 import { usePlanIntervalLabel } from "@/components/billing/billing-utils";
 import { PlanHighlights } from "@/components/billing/plan-highlights";
@@ -17,7 +17,8 @@ import { Tabs, TabsList, TabsTrigger } from "@deniai/ui/components/tabs";
 import { type BillingPlanId, type TeamPlanId, isTeamPlanId } from "@/lib/billing";
 import { useBillingPlanCopy } from "@/lib/billing-plan-copy";
 import type { CancellationFeedback } from "@/lib/cancellation-feedback";
-import { formatCurrency, monthDayFormatter, monthDayYearFormatter } from "./team-utils";
+import { formatAppDate } from "@/lib/format-date";
+import { formatCurrency } from "./team-utils";
 
 type TeamPlan = {
   id: string;
@@ -135,7 +136,7 @@ function TeamPlanOfferCard({
         </div>
       </CardHeader>
       <CardContent className="flex flex-1 flex-col pt-0">
-        <p className="text-2xl font-bold">
+        <p className="text-2xl font-bold tabular-nums">
           {formatCurrency(plan.amount, plan.currency)}
           <span className="text-sm font-normal text-muted-foreground">
             /{t("seat")}/{intervalLabel}
@@ -194,6 +195,7 @@ export function TeamBillingCard({
   onResume: () => void;
 }) {
   const t = useExtracted();
+  const locale = useLocale();
   const getPlanIntervalLabel = usePlanIntervalLabel();
   const pendingPlanChange = billingStatus?.pendingPlanChange ?? null;
   const hasActivePlan =
@@ -220,17 +222,23 @@ export function TeamBillingCard({
           <Spinner />
         ) : hasActivePlan || isCanceled ? (
           <div className="space-y-3">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm font-medium mb-1.5">
                   {currentTitle}
                   {isCanceled && (
-                    <Badge variant="secondary">
+                    <Badge variant="secondary" className="ml-1.5">
                       {t("Cancels")}{" "}
                       {billingStatus?.cancelAt
-                        ? monthDayFormatter.format(new Date(billingStatus.cancelAt * 1000))
+                        ? formatAppDate(billingStatus.cancelAt * 1000, locale, {
+                            month: "short",
+                            day: "numeric",
+                          })
                         : billingStatus?.currentPeriodEnd
-                          ? monthDayFormatter.format(new Date(billingStatus.currentPeriodEnd))
+                          ? formatAppDate(billingStatus.currentPeriodEnd, locale, {
+                              month: "short",
+                              day: "numeric",
+                            })
                           : ""}
                     </Badge>
                   )}
@@ -238,8 +246,13 @@ export function TeamBillingCard({
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {billingStatus?.memberCount ?? 0} {t("seats")}
-                  {billingStatus?.currentPeriodEnd &&
-                    ` · ${t("Renews")} ${monthDayYearFormatter.format(new Date(billingStatus.currentPeriodEnd))}`}
+                  {!isCanceled &&
+                    billingStatus?.currentPeriodEnd &&
+                    ` · ${t("Renews")} ${formatAppDate(billingStatus.currentPeriodEnd, locale, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}`}
                 </p>
                 {pendingPlanChange && !isCanceled && (
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -247,12 +260,15 @@ export function TeamBillingCard({
                       plan: t("Pro for Teams {name}", {
                         name: getPlanIntervalLabel(pendingPlanChange.planId),
                       }),
-                      date: monthDayFormatter.format(new Date(pendingPlanChange.effectiveAt)),
+                      date: formatAppDate(pendingPlanChange.effectiveAt, locale, {
+                        month: "short",
+                        day: "numeric",
+                      }),
                     })}
                   </p>
                 )}
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {isOwner && pendingPlanChange && !isCanceled && onKeepPlan && (
                   <Button
                     variant="outline"

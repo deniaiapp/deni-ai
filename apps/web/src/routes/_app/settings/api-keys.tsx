@@ -262,7 +262,7 @@ function ApiKeysSettingsPage() {
             <AlertDialogAction
               onClick={() => revokeTarget && revokeMutation.mutate({ id: revokeTarget })}
               disabled={revokeMutation.isPending}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
             >
               {revokeMutation.isPending && <Spinner />}
               {t("Revoke")}

@@ -585,8 +585,7 @@ export const billingRouter = router({
         intervalCount: price.recurring?.interval_count ?? 1,
         isTeamPlan: false,
         // Only advertise the offer when the coupon actually lowers this price.
-        limitedTimeOffer:
-          flashOffer && discountedAmount !== price.unit_amount ? flashOffer.limit : null,
+        limitedTimeOffer: flashOffer && discountedAmount !== amount ? flashOffer.limit : null,
       };
     });
 
@@ -933,15 +932,16 @@ export const billingRouter = router({
       };
       const kind = getPlanChangeKind(currentPlanIdOf(subscription, item), plan.id);
 
+      if (subscription.cancel_at_period_end || subscription.cancel_at) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Resume your subscription before changing its plan.",
+        });
+      }
+
       // A downgrade waits for the end of the paid period: nothing is charged or
       // credited now, and the plan (and its usage pool) stays until then.
       if (kind === "downgrade") {
-        if (subscription.cancel_at_period_end || subscription.cancel_at) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Resume your subscription before changing its plan.",
-          });
-        }
         const pendingPlanChange = await schedulePlanChangeAtPeriodEnd({
           subscription,
           item,
@@ -1067,6 +1067,7 @@ export const billingRouter = router({
 
       const updates: Partial<BillingRecord> = {
         status: canceled.cancel_at_period_end ? "canceled" : canceled.status,
+        cancelAt: canceled.cancel_at ?? null,
         currentPeriodEnd:
           getSubscriptionPeriodEndDate(canceled) ?? subscriptionState.currentPeriodEnd,
       };
@@ -1121,6 +1122,7 @@ export const billingRouter = router({
 
       const updates: Partial<BillingRecord> = {
         status: resumed.status,
+        cancelAt: resumed.cancel_at ?? null,
         currentPeriodEnd: getSubscriptionPeriodEndDate(resumed),
         stripeSubscriptionId: resumed.id,
         priceId: price?.id ?? subscriptionState.priceId,

@@ -118,7 +118,6 @@ test.each([
   ["/api/stripe/webhook", false],
   ["/api/cron/guest-cleanup", false],
   ["/api/status/models", false],
-  ["/api/integrations/deni-run/usage", false],
   ["/api/ads", false],
   ["/api/ads/view", false],
   ["/api/ads/click", false],

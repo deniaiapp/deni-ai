@@ -35,9 +35,10 @@ it later makes stored MCP credentials unreadable.
 
 ## Before the day
 
-1. Deploy the web app, the run worker and migration `0076` (the `run_*` tables) to
-   production with Run mode enabled, but keep the Run home link pointing to
-   run.deniai.app.
+1. Deploy the web app, the run worker and migration `0077` (`0077_run_mode.sql`, the `run_*` tables) to
+   production (`RUN_ENABLED=false` while preparing, then enable Run mode once migrated).
+   Note that v8 has already retired the standalone `/api/integrations/deni-run/usage`
+   endpoint along with `DENI_RUN_SERVICE_SECRET`, `DENI_RUN_OAUTH_CLIENT_ID`, and `NEXT_PUBLIC_DENI_RUN_URL`.
 2. Configure the platform: `RUN_ENCRYPTION_KEY`, `OPENROUTER_API_KEY`, `EXA_API_KEY`,
    `E2B_API_KEY`, `STEEL_API_KEY`, `RUN_S3_*` (Run's bucket), `SLACK_MCP_CLIENT_ID` /
    `SLACK_MCP_CLIENT_SECRET` (add `<web origin>/api/run/mcp/oauth/callback` as a Slack
@@ -76,17 +77,28 @@ it later makes stored MCP credentials unreadable.
    Review: unlinked users, links to Deni AI users that do not exist, skipped jobs,
    messages of deleted conversations. Do not use the rehearsal options
    (`--create-placeholder-users`, `--rehearsal-link-unlinked`, `--map`); they are
-   refused for non-local hosts.
+   refused for non-local hosts. To also migrate unlinked verified-email Run users who
+   match an existing verified Deni AI user with the same email, add
+   `--match-verified-email` (and pass it to `--verify` as well).
+
+   For remaining unlinked users who still have Run activity, preview and email a
+   secret-scrubbed JSON export (`deni-run-export.json`):
+
+   ```bash
+   pnpm exec tsx --env-file=<platform env file> scripts/email-unlinked-exports.ts \
+     --source run-export.sql --match-verified-email --out-dir ./unlinked-exports
+   # Re-run with --send (requires CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN) after review.
+   ```
 5. **Migrate**: the same command without `--dry-run` (`--report run.json`). Each user
    is migrated in its own transaction; re-running is safe (rows already present are
    skipped, a second run reports 0 new rows).
 6. **Verify**: the same command with `--verify` (exit code 0 means counts match per
    user and table and spot checks pass: message content, teammate instructions, job
    status, artifact object keys, storage key, MCP secrets decrypting with the new key).
-7. **Redirect run.deniai.app** to `<web origin>/run` (301 for every path; keep
-   `/api/*` answering 410 so old clients fail clearly). Point the Run home link and
-   `NEXT_PUBLIC_DENI_RUN_URL` users at Run mode. Turn on the platform worker's
-   scheduler and Discord.
+7. **Redirect run.deniai.app** and enable Run mode on `<web origin>/run`. Turn on the
+   platform worker's scheduler and Discord. Cloudflare rules for `run.deniai.app`:
+   - `run.deniai.app/api/*` → return `410 Gone` so old clients fail clearly.
+   - `run.deniai.app/*` (all other paths) → `301` redirect to `https://deniai.app/run`.
 8. Post a notice that Run moved; Discord links keep working because the bot and the
    link rows moved.
 
@@ -95,9 +107,10 @@ it later makes stored MCP credentials unreadable.
 1. Keep D1 read-only for a fixed period (for example 30 days) for support lookups
    and a possible re-run for a late-linking user (`--source` the same export; only
    their rows are new).
-2. Remove the standalone integration from the web app:
-   `/api/integrations/deni-run/usage`, `DENI_RUN_SERVICE_SECRET`,
-   `DENI_RUN_OAUTH_CLIENT_ID` and the Deni Run OAuth client.
+2. Remove any leftover legacy Deni Run integration secrets from production env configs
+   (v8 has already removed `/api/integrations/deni-run/usage`, `DENI_RUN_SERVICE_SECRET`,
+   `DENI_RUN_OAUTH_CLIENT_ID`, and `NEXT_PUBLIC_DENI_RUN_URL`) and revoke/delete the
+   legacy Deni Run OAuth client record in the `oauth_application` table if still present.
 3. **Shut down D1**: delete the d1-proxy Worker and the D1 database, revoke
    `D1_PROXY_TOKEN`, Run's Google/GitHub OAuth clients and its Resend sender, and
    archive the deni-ai-computer repository.

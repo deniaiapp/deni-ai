@@ -2,6 +2,7 @@ import { Link } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { AdSlot } from "@/components/ad-slot";
 import { GuestSignInButton } from "@/components/guest-sign-in-button";
+import { usePlatformCapabilities } from "@/components/platform-capabilities-provider";
 import { authClient } from "@/lib/auth-client";
 import { localizedPath } from "@/lib/locale-path";
 import { HOME_ALTERNATE_NAMES } from "@/lib/seo";
@@ -37,6 +38,7 @@ export function HomePage() {
   const t = useExtracted();
   const locale = useLocale();
   const session = authClient.useSession();
+  const { features } = usePlatformCapabilities();
   const description = t(
     "Deni AI is a chat app where you can use GPT, Claude, Gemini and other AI models in one place, in the browser or in the desktop app.",
   );
@@ -52,13 +54,17 @@ export function HomePage() {
       title: t("Desktop app"),
       body: t("Deni AI for Windows and macOS."),
     },
-    {
-      href: "/run",
-      title: "Deni Run",
-      body: t(
-        "AI teammates that work on tasks with their own browser and computer. Sign in to use it.",
-      ),
-    },
+    ...(features.run
+      ? [
+          {
+            href: "/run",
+            title: "Deni Run",
+            body: t(
+              "AI teammates that work on tasks with their own browser and computer. Sign in to use it.",
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (

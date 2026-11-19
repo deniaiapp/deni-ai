@@ -13,6 +13,7 @@ const defaultCapabilities: PlatformCapabilities = {
     webSearch: true,
     memory: true,
     billing: true,
+    run: true,
   },
   auth: {
     socialProviders: ["google", "github"],

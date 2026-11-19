@@ -192,6 +192,12 @@ test("unknown paths and methods", async () => {
   expect((await request("state", { method: "DELETE" })).status).toBe(405);
 });
 
+test("malformed percent-encoded path answers 400 invalid_path", async () => {
+  const response = await request("teammates/%ZZ");
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ error: "invalid_path" });
+});
+
 test("the MCP OAuth callback finishes the sign-in and returns to Run settings", async () => {
   mocks.finishMcpSignIn.mockResolvedValue({ id: "mcp_1" });
   const response = await request("mcp/oauth/callback?state=s&code=c&iss=https%3A%2F%2Fi");

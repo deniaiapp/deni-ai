@@ -17,7 +17,14 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
-import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type FormEvent,
+  type KeyboardEvent,
+} from 'react';
 import { cn } from '@/lib/cn';
 import { feedbackTemplate, feedbackTemplateParams } from '@/lib/feedback-templates';
 import type { Language } from '@/lib/i18n';
@@ -268,6 +275,38 @@ function writeStorage(key: string, value: string | undefined) {
   }
 }
 
+const conversationListeners = new Set<() => void>();
+let fallbackConversation: string | undefined;
+
+function subscribeConversation(listener: () => void) {
+  conversationListeners.add(listener);
+  window.addEventListener('storage', listener);
+  return () => {
+    conversationListeners.delete(listener);
+    window.removeEventListener('storage', listener);
+  };
+}
+
+function getConversationSnapshot(): string | undefined {
+  return readStorage(conversationStorageKey) ?? fallbackConversation;
+}
+
+function getServerConversationSnapshot(): string | undefined {
+  return undefined;
+}
+
+function writeConversationStore(value: string | undefined) {
+  try {
+    if (value) localStorage.setItem(conversationStorageKey, value);
+    else localStorage.removeItem(conversationStorageKey);
+    fallbackConversation = undefined;
+  } catch {
+    // Storage can be blocked; the conversation then lasts for this page only.
+    fallbackConversation = value;
+  }
+  for (const listener of conversationListeners) listener();
+}
+
 /** Newest team reply time among the messages, as an ISO string. */
 function latestReplyAt(messages: { role: string; createdAt?: string }[]): string | undefined {
   let latest: string | undefined;
@@ -307,11 +346,85 @@ export function SupportWidget({ lang }: { lang: Language }) {
   const formKeyRef = useRef(0);
   /** Saved conversation credential; the server returns one with each chat answer. */
   const conversationRef = useRef<string | undefined>(undefined);
+  const conversation = useSyncExternalStore(
+    subscribeConversation,
+    getConversationSnapshot,
+    getServerConversationSnapshot,
+  );
   /** A team reply the visitor hasn't seen yet. */
   const [unread, setUnread] = useState(false);
   const initialLoadRef = useRef<Promise<unknown> | undefined>(undefined);
 
   const canSend = config.chat && !busy && input.trim().length > 0;
+
+  function setConversation(credential: string | undefined) {
+    conversationRef.current = credential;
+    writeConversationStore(credential);
+  }
+
+  function fromSaved(saved: ConversationMessage): UiMessage {
+    return {
+      id: nextId.current++,
+      role: saved.role,
+      content: saved.content,
+      createdAt: saved.createdAt,
+      request: saved.request,
+      sources: saved.sources,
+    };
+  }
+
+  /**
+   * Fetches the saved conversation. `replace` restores it into an empty chat;
+   * `replies` only appends team replies newer than the ones shown. Resolves with
+   * the newest reply time.
+   */
+  async function loadConversation(mode: 'replace' | 'replies'): Promise<string | undefined> {
+    const credential = conversationRef.current;
+    if (!credential) return undefined;
+
+    let body: ConversationBody;
+    try {
+      const response = await fetch('/api/conversation', {
+        headers: { Authorization: `Bearer ${credential}` },
+        cache: 'no-store',
+      });
+      // No longer valid (for example, the server secret changed): start afresh.
+      if (response.status === 400) {
+        if (conversationRef.current === credential) setConversation(undefined);
+        return undefined;
+      }
+      if (!response.ok) return undefined;
+      body = (await response.json()) as ConversationBody;
+    } catch {
+      return undefined;
+    }
+    if (conversationRef.current !== credential) return undefined;
+
+    setMessages((current) => {
+      if (mode === 'replace') return current.length === 0 ? body.messages.map(fromSaved) : current;
+      const shown = latestReplyAt(current);
+      const fresh = body.messages.filter(
+        (m) => m.role === 'staff' && (!shown || m.createdAt > shown),
+      );
+      return fresh.length > 0 ? [...current, ...fresh.map(fromSaved)] : current;
+    });
+
+    const latest = latestReplyAt(body.messages);
+    const seen = readStorage(replySeenStorageKey);
+    setUnread(Boolean(latest && (!seen || latest > seen)));
+    return latest;
+  }
+
+  function openPanel() {
+    setMounted(true);
+    setOpen(true);
+  }
+
+  function openForm(next: Omit<PanelForm, 'key'>) {
+    openPanel();
+    formKeyRef.current += 1;
+    setForm({ ...next, key: formKeyRef.current });
+  }
 
   useEffect(() => {
     const pass = readStoredPass();
@@ -386,12 +499,16 @@ export function SupportWidget({ lang }: { lang: Language }) {
     const linked = new URLSearchParams(window.location.hash.slice(1)).get(conversationHashKey);
     if (linked) {
       setConversation(linked);
-      router.history.replace(`${window.location.pathname}${window.location.search}`);
-      openPanel();
     } else {
-      conversationRef.current = readStorage(conversationStorageKey);
+      conversationRef.current = getConversationSnapshot();
     }
     initialLoadRef.current = loadConversation('replace');
+    if (!linked) return;
+    const timer = window.setTimeout(() => {
+      openPanel();
+      router.history.replace(`${window.location.pathname}${window.location.search}`);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [router]);
 
   // Check for new team replies whenever the panel opens, and mark them seen.
@@ -412,23 +529,28 @@ export function SupportWidget({ lang }: { lang: Language }) {
 
   // `/{lang}/contact` and `/{lang}/feedback` redirect to `?support=…`, opening a form.
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const kind = params.get('support');
-    if (kind !== 'contact' && kind !== 'feedback') return;
-    const category = params.get('category');
-    openForm({
-      kind,
-      category: isContactCategory(category) ? category : undefined,
-      message: kind === 'feedback' ? feedbackTemplate(lang, params) : undefined,
-    });
+    const initialKind = new URLSearchParams(window.location.search).get('support');
+    if (initialKind !== 'contact' && initialKind !== 'feedback') return;
+    const timer = window.setTimeout(() => {
+      const params = new URLSearchParams(window.location.search);
+      const kind = params.get('support');
+      if (kind !== 'contact' && kind !== 'feedback') return;
+      const category = params.get('category');
+      openForm({
+        kind,
+        category: isContactCategory(category) ? category : undefined,
+        message: kind === 'feedback' ? feedbackTemplate(lang, params) : undefined,
+      });
 
-    params.delete('support');
-    params.delete('category');
-    for (const key of feedbackTemplateParams) params.delete(key);
-    const search = params.toString();
-    router.history.replace(
-      `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`,
-    );
+      params.delete('support');
+      params.delete('category');
+      for (const key of feedbackTemplateParams) params.delete(key);
+      const search = params.toString();
+      router.history.replace(
+        `${window.location.pathname}${search ? `?${search}` : ''}${window.location.hash}`,
+      );
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [router, lang]);
 
   function updateAnswer(id: number, update: (message: UiMessage) => UiMessage) {
@@ -613,80 +735,11 @@ export function SupportWidget({ lang }: { lang: Language }) {
     if (config.chat && config.turnstileSiteKey) loadTurnstile().catch(() => {});
   }
 
-  function setConversation(credential: string | undefined) {
-    conversationRef.current = credential;
-    writeStorage(conversationStorageKey, credential);
-  }
-
-  function fromSaved(saved: ConversationMessage): UiMessage {
-    return {
-      id: nextId.current++,
-      role: saved.role,
-      content: saved.content,
-      createdAt: saved.createdAt,
-      request: saved.request,
-      sources: saved.sources,
-    };
-  }
-
-  /**
-   * Fetches the saved conversation. `replace` restores it into an empty chat;
-   * `replies` only appends team replies newer than the ones shown. Resolves with
-   * the newest reply time.
-   */
-  async function loadConversation(mode: 'replace' | 'replies'): Promise<string | undefined> {
-    const credential = conversationRef.current;
-    if (!credential) return undefined;
-
-    let body: ConversationBody;
-    try {
-      const response = await fetch('/api/conversation', {
-        headers: { Authorization: `Bearer ${credential}` },
-        cache: 'no-store',
-      });
-      // No longer valid (for example, the server secret changed): start afresh.
-      if (response.status === 400) {
-        if (conversationRef.current === credential) setConversation(undefined);
-        return undefined;
-      }
-      if (!response.ok) return undefined;
-      body = (await response.json()) as ConversationBody;
-    } catch {
-      return undefined;
-    }
-    if (conversationRef.current !== credential) return undefined;
-
-    setMessages((current) => {
-      if (mode === 'replace') return current.length === 0 ? body.messages.map(fromSaved) : current;
-      const shown = latestReplyAt(current);
-      const fresh = body.messages.filter(
-        (m) => m.role === 'staff' && (!shown || m.createdAt > shown),
-      );
-      return fresh.length > 0 ? [...current, ...fresh.map(fromSaved)] : current;
-    });
-
-    const latest = latestReplyAt(body.messages);
-    const seen = readStorage(replySeenStorageKey);
-    setUnread(Boolean(latest && (!seen || latest > seen)));
-    return latest;
-  }
-
   /** Keeps the conversation a contact or feedback message was saved to, and shows it. */
   function addSentRequest(body: SupportSentBody) {
     if (body.conversation) setConversation(body.conversation);
     const saved = body.message;
     if (saved) setMessages((current) => [...current, fromSaved(saved)]);
-  }
-
-  function openPanel() {
-    setMounted(true);
-    setOpen(true);
-  }
-
-  function openForm(next: Omit<PanelForm, 'key'>) {
-    openPanel();
-    formKeyRef.current += 1;
-    setForm({ ...next, key: formKeyRef.current });
   }
 
   function updateDraft(id: number, update: Partial<UiDraft>) {
@@ -787,7 +840,7 @@ export function SupportWidget({ lang }: { lang: Language }) {
     transcript: toTranscript(messages),
     pagePath: pathname,
     verify,
-    conversation: conversationRef.current,
+    conversation,
     onSent: (body) => {
       if (formDraftId !== undefined) updateDraft(formDraftId, { state: 'sent', error: undefined });
       addSentRequest(body);

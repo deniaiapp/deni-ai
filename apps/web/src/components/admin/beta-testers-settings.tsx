@@ -220,7 +220,7 @@ export function BetaTestersSettings() {
           <AlertDialogFooter>
             <AlertDialogCancel disabled={revoke.isPending}>{t("Cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              variant="destructive"
               disabled={revoke.isPending}
               onClick={() => {
                 if (pendingRemoval) revoke.mutate({ id: pendingRemoval.id });

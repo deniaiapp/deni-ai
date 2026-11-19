@@ -5,6 +5,7 @@ import { db } from "@/db/drizzle";
 import { billing, member, usageReservation } from "@/db/schema";
 import { env } from "@/env";
 import { stripe } from "@/lib/stripe";
+import { releasePlanChangeSchedule } from "@/lib/stripe-plan-change";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
 import {
   classifyDeletionSubscriptions,
@@ -269,6 +270,7 @@ export async function deletePersonalStripeCustomers(userId: string) {
     // Immediate deletion forfeits remaining access, with no proration or refund.
     for (const sub of subscriptions) {
       if (sub.status === "canceled" || sub.status === "incomplete_expired") continue;
+      await releasePlanChangeSchedule(sub);
       await stripe.subscriptions.cancel(sub.id, { prorate: false, invoice_now: false });
     }
   }

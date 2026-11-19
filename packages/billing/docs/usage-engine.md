@@ -125,9 +125,8 @@ API's cached billing profile (legacy tier rules, differences 2 to 7).
 ## Deni Run on the platform
 
 Run mode (`@deniai/run`, in the web app and `services/run-worker`) calls the engine
-directly instead of `/api/integrations/deni-run/usage` (kept only for the standalone
-Deni Run until it is shut down): `getRunBudget(userId)` returns the shared pool in
-USD (tier, limit, used, remaining, use by product) before work starts, and
+directly (the legacy standalone `/api/integrations/deni-run/usage` endpoint has been
+retired): `getRunBudget(userId)` returns the shared pool in USD (`tier`, `limit`, `used`, `remaining`, use by product) before work starts, and
 `recordRunCost({ userId, metric, costUsd })` adds model, browser or computer cost to
 `product_usage` (product `run`, micro-dollars) under the user's usage lock, so it
 serializes with chat and Flixa reservations. Run is charged after the cost is

@@ -12,17 +12,10 @@ export const BETA_ACCESS_REQUIRED_CODE = "beta_access_required";
 
 /**
  * Server routes that stay open to signed-in users without access: sign-in and
- * sign-out (Better Auth), status, Stripe and cron (no user session), server to
- * server integrations, and ad delivery, which also serves signed-out visitors
- * on the public home page.
+ * sign-out (Better Auth), status, Stripe and cron (no user session), and ad
+ * delivery, which also serves signed-out visitors on the public home page.
  */
-const UNGATED_API_PREFIXES = [
-  "/api/auth/",
-  "/api/cron/",
-  "/api/integrations/",
-  "/api/status/",
-  "/api/stripe/",
-] as const;
+const UNGATED_API_PREFIXES = ["/api/auth/", "/api/cron/", "/api/status/", "/api/stripe/"] as const;
 const UNGATED_API_PATHS = new Set(["/api/ads", "/api/ads/click", "/api/ads/view"]);
 
 /** Signed-in server routes outside `/api` (each GET creates a chat). */

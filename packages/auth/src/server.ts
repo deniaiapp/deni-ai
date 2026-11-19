@@ -124,6 +124,7 @@ export interface AuthAppHooks {
   reassignTeamProjectsOnAccountDeletion(userId: string): Promise<unknown>;
   accountDeletionSeatHooks: AccountDeletionHooks;
   accountDeletionAttachmentHooks: AccountDeletionHooks;
+  accountDeletionRunHooks?: AccountDeletionHooks;
 }
 
 export type CreateAuthDeps = {
@@ -870,10 +871,12 @@ export function createAuth(deps: CreateAuthDeps) {
             await hooks.accountDeletionSeatHooks.before(user);
             // After the billing step, which can still block the deletion.
             await hooks.accountDeletionAttachmentHooks.before(user);
+            await hooks.accountDeletionRunHooks?.before(user);
           },
           after: async (user) => {
             // Never throws, so it runs whatever the seat updates do.
             await hooks.accountDeletionAttachmentHooks.after(user);
+            await hooks.accountDeletionRunHooks?.after(user);
             await hooks.accountDeletionSeatHooks.after(user);
           },
         },

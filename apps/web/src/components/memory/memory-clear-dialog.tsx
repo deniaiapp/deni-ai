@@ -43,11 +43,7 @@ export function MemoryClearDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>{t("Cancel")}</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={isPending}
-            onClick={onConfirm}
-          >
+          <AlertDialogAction variant="destructive" disabled={isPending} onClick={onConfirm}>
             {isPending ? <Spinner /> : null}
             {t("Clear all memories")}
           </AlertDialogAction>

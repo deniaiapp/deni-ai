@@ -65,7 +65,7 @@ export function BillingResetCard() {
 
   const consumeResetCredit = trpc.resetCredits.consume.useMutation({
     onSuccess: async ({ remaining }) => {
-      toast.success(t("Rate limits reset."));
+      toast.success(t("Usage reset."));
       await invalidateResetData();
       if (remaining === 0) {
         toast.info(t("You have used your last reset credit."));

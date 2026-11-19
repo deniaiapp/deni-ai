@@ -88,7 +88,7 @@ export function MaxModeCreditsPanel({
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-xl border border-border p-4">
           <div className="text-sm text-muted-foreground">{t("Credit balance")}</div>
-          <div className="mt-1 text-2xl font-semibold">
+          <div className="mt-1 text-2xl font-semibold tabular-nums">
             {formatCredits(credits?.balanceCredits ?? 0)}
           </div>
           {credits?.nextExpiry && (
@@ -103,7 +103,7 @@ export function MaxModeCreditsPanel({
         </div>
         <div className="rounded-xl border border-border p-4">
           <div className="text-sm text-muted-foreground">{t("Used this month")}</div>
-          <div className="mt-1 text-2xl font-semibold">
+          <div className="mt-1 text-2xl font-semibold tabular-nums">
             {formatCredits(credits?.usedCreditsThisMonth ?? 0)}
           </div>
           <p className="mt-1 text-xs text-muted-foreground">

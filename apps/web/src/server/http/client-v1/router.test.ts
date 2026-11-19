@@ -180,6 +180,12 @@ describe("handleClientApi", () => {
     expect(response.status).toBe(429);
     expect(response.headers.get("retry-after")).toBe("12");
   });
+
+  it("returns 404 on malformed percent-encoded route segments", async () => {
+    const response = await call("chats/%ZZ");
+    expect(response.status).toBe(404);
+    expect(callerApi.chat.getChatPage).not.toHaveBeenCalled();
+  });
 });
 
 describe("isClientUpdateRequired", () => {

@@ -22,6 +22,7 @@ import {
   securityActionForAuthResponse,
 } from "@/lib/security-activity";
 import { checkSignupLimits, recordSignupRisk } from "@/lib/signup-risk";
+import { accountDeletionRunHooks } from "@/lib/run/account-deletion.server";
 import {
   cancelPersonalSubscription,
   cancelTeamSubscriptionForDeletion,
@@ -52,7 +53,6 @@ const githubClientId = env.GITHUB_CLIENT_ID?.trim();
 const githubClientSecret = env.GITHUB_CLIENT_SECRET?.trim();
 const turnstileSecretKey = env.TURNSTILE_SECRET_KEY?.trim();
 const turnstileSiteKey = env.NEXT_PUBLIC_TURNSTILE_SITE_KEY?.trim();
-const deniRunOAuthClientId = env.DENI_RUN_OAUTH_CLIENT_ID?.trim();
 
 export const auth = createAuth({
   db,
@@ -68,7 +68,6 @@ export const auth = createAuth({
   },
   // The widget needs the site key; without both keys sign-up runs without CAPTCHA.
   turnstileSecretKey: turnstileSecretKey && turnstileSiteKey ? turnstileSecretKey : undefined,
-  trustedOAuthClientIds: deniRunOAuthClientId ? [deniRunOAuthClientId] : [],
   clientIpHeader: env.CLIENT_IP_HEADER,
   passkeyRpID: env.PASSKEY_RP_ID,
   hooks: {
@@ -101,5 +100,6 @@ export const auth = createAuth({
       reassignTeamProjectsOnAccountDeletion(db, userId),
     accountDeletionSeatHooks,
     accountDeletionAttachmentHooks,
+    accountDeletionRunHooks,
   },
 });

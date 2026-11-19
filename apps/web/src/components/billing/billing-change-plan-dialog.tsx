@@ -96,7 +96,7 @@ export function BillingChangePlanDialog({
             id="agree-plan-change"
             checked={hasAgreed}
             onCheckedChange={(checked) => onHasAgreedChange(checked === true)}
-            disabled={estimate.error != null}
+            disabled={estimate.error != null || !estimate.data}
           />
           <Label htmlFor="agree-plan-change" className="text-sm leading-tight cursor-pointer">
             {isDowngrade
@@ -107,7 +107,9 @@ export function BillingChangePlanDialog({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>{t("Cancel")}</AlertDialogCancel>
           <AlertDialogAction
-            disabled={isPending || !changeTarget || estimate.error != null || !hasAgreed}
+            disabled={
+              isPending || !changeTarget || estimate.error != null || !estimate.data || !hasAgreed
+            }
             onClick={() => {
               if (!changeTarget) return;
               onConfirm(changeTarget.id as IndividualPlanId);

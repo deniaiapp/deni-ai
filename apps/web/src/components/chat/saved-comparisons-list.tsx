@@ -79,7 +79,7 @@ export function DeleteComparisonDialog({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={deleteComparison.isPending}>{t("Cancel")}</AlertDialogCancel>
           <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
             disabled={!comparison || deleteComparison.isPending}
             onClick={() => {
               if (!comparison || deleteComparison.isPending) return;

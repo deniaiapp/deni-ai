@@ -30,11 +30,11 @@ export const changelogEntries: ChangelogEntry[] = [
     highlights: [
       {
         title: "New design",
-        body: "Deni AI has a new look built around a deep indigo frame and a quiet paper-white sheet for your conversations, with clearer type, a rebuilt sidebar, chat home and settings, and a split sign-in screen. You can switch back to the previous colours in Settings > Appearance.",
+        body: "Deni AI has a rebuilt neutral workspace with clearer typography, a redesigned sidebar, chat home and settings layout, a coloured usage bar, and a split sign-in screen. You can choose colour theme presets in Settings > Appearance.",
       },
       {
         title: "Deni Run built in",
-        body: "Deni Run now lives inside Deni AI: switch between Chat and Run in the sidebar to work with your teammates, routines and skills without a separate site. Run starts empty here, and spends the same usage pool as chat.",
+        body: "Deni Run now lives inside Deni AI: switch between Chat and Run in the sidebar to work with your teammates, routines and skills without a separate site. Your Run workspace uses your Deni AI account and spends the same monthly usage pool as chat.",
       },
       {
         title: "Usage follows your billing period",
@@ -63,11 +63,11 @@ export const changelogEntries: ChangelogEntry[] = [
       highlights: [
         {
           title: "新しいデザイン",
-          body: "深い藍色のフレームと、会話のための落ち着いた紙のような白いシートを軸にデザインを一新しました。文字を読みやすくし、サイドバー、チャットのホーム、設定を作り直し、サインイン画面を 2 分割にしました。以前の配色には 設定 > 外観 で戻せます。",
+          body: "ニュートラルな配色をベースにデザインを刷新しました。文字を読みやすくし、サイドバー、チャットのホーム、設定レイアウト、色分けされた使用量バー、2 分割のサインイン画面を作り直しました。設定 > 外観 からカラーテーマのプリセットを選べます。",
         },
         {
           title: "Deni Run を統合",
-          body: "Deni Run が Deni AI の中で使えるようになりました。サイドバーでチャットと Run を切り替え、別のサイトに移らずにチームメイト、ルーティン、スキルを使えます。ここでの Run は空の状態から始まり、チャットと同じ使用量プールを消費します。",
+          body: "Deni Run が Deni AI の中で使えるようになりました。サイドバーでチャットと Run を切り替え、別のサイトに移らずにチームメイト、ルーティン、スキルを使えます。Deni AI アカウントのまま利用でき、チャットと同じ毎月の利用枠を共有します。",
         },
         {
           title: "使用量プールが請求期間に連動",

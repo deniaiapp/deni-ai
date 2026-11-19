@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Bot, ExternalLink, Plus, Send, Users } from "lucide-react";
+import { Bot, Plus, Send, Users } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { Alert, AlertDescription, AlertTitle } from "@deniai/ui/components/alert";
 import { Button } from "@deniai/ui/components/button";
@@ -21,7 +21,6 @@ import {
 import { Textarea } from "@deniai/ui/components/textarea";
 import { DocumentTitle } from "@/components/document-title";
 import { Link, useRouter } from "@/lib/navigation";
-import { clientEnv } from "@/public-env";
 import { useRunState, useRunStatus } from "./run-api";
 import { RunLoading, RunPage, setPendingTask } from "./run-page";
 import { TeammateAvatar } from "./teammate-avatar";
@@ -38,22 +37,16 @@ function RunUnavailable() {
             <EmptyMedia variant="icon">
               <Bot />
             </EmptyMedia>
-            <EmptyTitle>{t("Deni Run is coming to this app")}</EmptyTitle>
+            <EmptyTitle>{t("Deni Run is not configured on this server")}</EmptyTitle>
             <EmptyDescription>
               {t(
-                "Hand work to AI teammates that finish it on their own computer. Until Run is ready here, keep using the standalone app.",
+                "Hand work to AI teammates that finish it on their own computer. Ask an administrator to configure Run on this server.",
               )}
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Button
-              render={
-                <a href={clientEnv.NEXT_PUBLIC_DENI_RUN_URL} target="_blank" rel="noreferrer" />
-              }
-              nativeButton={false}
-            >
-              {t("Open Deni Run")}
-              <ExternalLink className="size-4" />
+            <Button variant="outline" render={<Link href="/chat" />} nativeButton={false}>
+              {t("Back to Chat")}
             </Button>
           </EmptyContent>
         </Empty>

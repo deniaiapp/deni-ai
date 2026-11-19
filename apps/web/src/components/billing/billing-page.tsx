@@ -207,7 +207,7 @@ function BillingPageContent() {
           hasActiveSubscription,
           isOnTeamPlan,
           pendingPlanId,
-          isEstimateLoading: estimateQuery.isLoading,
+          isEstimateLoading: estimateQuery.isFetching,
           cancelDate,
           changePlan,
           checkout: createCheckout,

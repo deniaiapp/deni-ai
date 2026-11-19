@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { env } from "@/env";
 import { signInPath } from "@/lib/sign-in-redirect";
 import { ensureRunConfigured } from "@/lib/run/runtime.server";
 
@@ -9,11 +10,12 @@ import { ensureRunConfigured } from "@/lib/run/runtime.server";
  */
 export async function handleMcpOAuthCallback(request: Request): Promise<Response> {
   const url = new URL(request.url);
-  const back = new URL("/run/settings", url.origin);
+  const origin = new URL(env.NEXT_PUBLIC_BETTER_AUTH_URL || url.origin).origin;
+  const back = new URL("/run/settings", origin);
   const session = await auth.api.getSession({ headers: request.headers });
   const userId = session?.session?.userId;
   if (!userId || session?.user?.isAnonymous) {
-    return Response.redirect(new URL(signInPath("/run/settings"), url.origin).toString(), 302);
+    return Response.redirect(new URL(signInPath("/run/settings"), origin).toString(), 302);
   }
   const state = url.searchParams.get("state");
   const code = url.searchParams.get("code");

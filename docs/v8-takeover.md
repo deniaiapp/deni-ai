@@ -31,9 +31,9 @@ After the takeover:
 | Guests                      | Allowed again once `BETA_ACCESS_REQUIRED` is off; the guest cleanup job then runs on v8.                                                                                                                                                                                            |
 | Stripe webhook              | The endpoint stays `https://deniai.app/api/stripe/webhook`, so nothing changes in Stripe. v8 needs v7's `STRIPE_WEBHOOK_SECRET` and `STRIPE_WEBHOOK_ENABLED` unset (default `true`).                                                                                                  |
 | Scheduled jobs              | `usage-and-meter`, `storage-cleanup`, `guest-cleanup` and `model-health` move to v8 (`CRON_ENABLED` unset). They are safe to run concurrently, so a short overlap with v7 while switching is harmless; a long one is not needed.                                                     |
-| Deni AI as OAuth provider   | Standalone Deni Run (run.deniai.app) keeps `deniai.app` as issuer and redirect target. The OAuth clients, consents and JWKS are rows in the shared database, so they keep working; v8 needs `DENI_RUN_OAUTH_CLIENT_ID` and `DENI_RUN_SERVICE_SECRET` with v7's values.                 |
+| Deni AI as OAuth provider   | Flixa and Deni AI Desktop keep `deniai.app` as issuer and redirect target. The OAuth clients, consents and JWKS are rows in the shared database, so they keep working. Standalone Deni Run (`run.deniai.app`) is retired and replaced by built-in Run mode (`docs/run-migration.md`).                 |
 | Flixa                       | The production API stays the Flixa backend (`deniaiapp/flixa`, `apps/backend`), but it must run a build with the billing-cycle usage period (see Usage period and plan changes below) from the moment v8 serves everyone. `services/agent-api` stays undeployed (or `FLIXA_USAGE_ENGINE=shadow`). |
-| Run mode (`/run`)           | The beta runs with `RUN_ENABLED=false`. Turning it on opens Run to everyone and needs its background work: `RUN_SCHEDULER_IN_PROCESS=true` on the single web instance (plus `RUN_DISCORD_ENABLED=true` for the bot), or `services/run-worker`. The D1 import is a separate step (`docs/run-migration.md`).          |
+| Run mode (`/run`)           | The beta runs with `RUN_ENABLED=false`. Turning it on opens Run to everyone and needs its background work: `RUN_SCHEDULER_IN_PROCESS=true` on the single web instance (plus `RUN_DISCORD_ENABLED=true` for the bot), or `services/run-worker`. Cut over legacy D1 data and redirect `run.deniai.app` per `docs/run-migration.md`. |
 | Beta-only UI                | The sidebar "Beta" label and the account menu's "Go to Deni AI v7" item follow `BETA_ACCESS_REQUIRED` (`platformCapabilities.privateBeta`), and "Send feedback" (the help center's v8 form) also `ROLLOUT_SWITCH_ENABLED`, so they disappear with the gate and the Worker. `/private-beta` stays as a route but nothing sends users there.          |
 | Retired pages               | guides, use cases, about and models answer 308 permanent redirects (`apps/web/vite/route-rules.ts`). Canonical URLs already use `https://deniai.app`.                                                                                                                                                   |
 | Google sign-in, Turnstile   | No change: `deniai.app` is already registered.                                                                                                                                                                                                                                      |
@@ -69,8 +69,7 @@ rows, so they only agree once v7 is gone:
      (Crimson Blade, 2026-11-19; the changelog entry reads both). Change `appDate` if
      the takeover happens on another day.
    - The 8.0 entry in `apps/web/src/lib/changelog.ts` (English and `ja`) is written as
-     a release. Its Run highlight still says "Run starts empty here": drop that
-     sentence if the D1 import has run by then.
+     a release describing unified Deni Run built into Deni AI.
    - Finish or leave out unfinished work; release from a clean, verified `canary`.
 2. **Beta health**: no open Sentry issue on v8 that v7 does not have; Free testers'
    usage pool and everyone's Max Mode numbers agree between v7 and v8 (a paid plan's
@@ -113,7 +112,6 @@ rows, so they only agree once v7 is gone:
    | `STRIPE_WEBHOOK_SECRET`                               | v7's value                                                                |
    | `NOINDEX`                                             | Unset                                                                     |
    | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`            | v7's GitHub OAuth App                                                     |
-   | `DENI_RUN_OAUTH_CLIENT_ID`, `DENI_RUN_SERVICE_SECRET` | v7's values                                                               |
    | `PASSKEY_RP_ID`                                       | `deniai.app` or unset (the auth URL's host)                               |
    | `RUN_SCHEDULER_IN_PROCESS`, `RUN_ENABLED`             | `true` / unset once Run should run; until then `RUN_ENABLED=false`        |
    | `ROLLOUT_SWITCH_ENABLED`                              | Unset (no Worker after the takeover)                                      |
@@ -140,9 +138,8 @@ rows, so they only agree once v7 is gone:
      and check it answers 2xx from v8.
    - Logs show the in-process jobs starting (`usage-and-meter`, `storage-cleanup`,
      `guest-cleanup`, `model-health`); `/api/status/models` returns results.
-   - run.deniai.app sign-in with Deni AI and its usage reporting
-     (`/api/integrations/deni-run/usage`) work; Flixa sign-in works.
-   - `/run` creates a job and the worker picks it up (unless Run is off).
+   - Flixa sign-in and `/run` built-in Run mode work (unless Run is off until the D1
+     migration and `run.deniai.app` cutover in `docs/run-migration.md` complete).
    - The sidebar has no "Beta" label and the account menu no "Go to Deni AI v7".
 9. **Watch** for the first days: Sentry, Stripe webhook delivery failures, the
    background job warnings (`Background job ... reported failures` / `is stuck`), and

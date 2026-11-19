@@ -46,11 +46,7 @@ export function TeamLeaveDialog({
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isLeaving}>{t("Cancel")}</AlertDialogCancel>
-          <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            disabled={isLeaving}
-            onClick={onConfirm}
-          >
+          <AlertDialogAction variant="destructive" disabled={isLeaving} onClick={onConfirm}>
             {isLeaving && <Spinner className="size-3.5" />}
             {t("Leave team")}
           </AlertDialogAction>

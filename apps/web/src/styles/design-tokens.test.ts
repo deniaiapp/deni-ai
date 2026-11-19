@@ -64,6 +64,8 @@ const pairs: [fg: string, bg: string, min: number][] = [
   ["foreground", "card", TEXT],
   ["muted-foreground", "background", TEXT],
   ["muted-foreground", "card", TEXT],
+  ["muted-foreground", "muted", TEXT],
+  ["muted-foreground", "secondary", TEXT],
   ["popover-foreground", "popover", TEXT],
   ["primary", "background", TEXT],
   ["primary-foreground", "primary", TEXT],

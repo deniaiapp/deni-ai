@@ -53,6 +53,7 @@ type SubscriptionPayload = BillingOwner & {
   lookupKey: string | null | undefined;
   priceId: string | null | undefined;
   status: string | null;
+  cancelAt: number | null;
   currentPeriodEnd: number | null;
 };
 
@@ -96,6 +97,7 @@ async function saveSubscription(payload: SubscriptionPayload) {
     priceId: payload.priceId ?? null,
     planId: plan?.id ?? null,
     status: payload.status ?? null,
+    cancelAt: payload.cancelAt,
     mode: "subscription" as const,
     currentPeriodEnd: payload.currentPeriodEnd ? new Date(payload.currentPeriodEnd * 1000) : null,
     organizationId,
@@ -413,6 +415,7 @@ export async function POST(req: Request) {
           lookupKey,
           priceId,
           status: computedStatus,
+          cancelAt: subscription.cancel_at ?? null,
           currentPeriodEnd: getSubscriptionPeriodEnd(subscription),
         });
 
@@ -484,7 +487,10 @@ export async function POST(req: Request) {
             const computedStatus = resolveSubscriptionStatus(subscription);
 
             const price =
-              subscription.items.data.at(0)?.price ?? session.line_items?.data.at(0)?.price ?? null;
+              getLicensedPrice(subscription) ??
+              subscription.items.data.at(0)?.price ??
+              session.line_items?.data.at(0)?.price ??
+              null;
             await saveSubscription({
               ...owner,
               customerId: session.customer as string,
@@ -492,6 +498,7 @@ export async function POST(req: Request) {
               lookupKey: price?.lookup_key ?? null,
               priceId: price?.id ?? null,
               status: computedStatus,
+              cancelAt: subscription.cancel_at ?? null,
               currentPeriodEnd: getSubscriptionPeriodEnd(subscription),
             });
 

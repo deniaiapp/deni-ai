@@ -7,6 +7,7 @@ export type PlatformCapabilities = {
     webSearch: boolean;
     memory: boolean;
     billing: boolean;
+    run: boolean;
   };
   auth: {
     socialProviders: SocialProviderId[];

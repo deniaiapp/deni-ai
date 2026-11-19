@@ -44,7 +44,7 @@ function getServerLocaleSnapshot(): keyof typeof COPY {
   return "en";
 }
 
-export function ErrorPage({ error }: ErrorComponentProps) {
+export function ErrorPage({ error, reset }: ErrorComponentProps) {
   const router = useRouter();
   const pathname = usePathname();
   // Read during render rather than in an effect: setState-in-effect costs an extra
@@ -88,7 +88,14 @@ export function ErrorPage({ error }: ErrorComponentProps) {
           </h1>
           <p className="max-w-xl text-muted-foreground">{t.description}</p>
           <div className="flex flex-wrap items-center justify-center gap-3">
-            <Button onClick={() => void router.invalidate()}>{t.tryAgain}</Button>
+            <Button
+              onClick={() => {
+                reset();
+                void router.invalidate();
+              }}
+            >
+              {t.tryAgain}
+            </Button>
             <Button variant="secondary" render={<Link href="/" />} nativeButton={false}>
               {t.backHome}
             </Button>

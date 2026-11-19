@@ -32,7 +32,7 @@ import {
   schedulePlanChangeAtPeriodEnd,
 } from "@/lib/stripe-plan-change";
 import { createBillingPortalSession } from "@/lib/stripe-portal";
-import { getPlanChangeKind } from "@deniai/billing";
+import { getPlanChangeKind, usagePeriodAt } from "@deniai/billing";
 import {
   checkoutCardPaymentMethodOptions,
   customCheckoutRequestOptions,
@@ -344,6 +344,32 @@ function teamPlanIdOf(subscription: Stripe.Subscription, item: Stripe.Subscripti
   );
 }
 
+/** Schedule `pending` again on a team subscription whose schedule was released for a failed upgrade. */
+async function restoreTeamPendingPlanChange(
+  subscriptionId: string,
+  pending: PendingPlanChange,
+  userId: string,
+  organizationId: string,
+  quantity: number,
+) {
+  const plan = findPlanById(pending.planId);
+  if (!plan) return;
+  const [subscription, price] = await Promise.all([
+    stripe.subscriptions.retrieve(subscriptionId, { expand: ["items"] }),
+    getPriceForPlan(plan),
+  ]);
+  const item = getLicensedSubscriptionItem(subscription) ?? subscription.items.data.at(0);
+  if (!item?.id || isMeteredMaxModePrice(item.price)) return;
+  await schedulePlanChangeAtPeriodEnd({
+    subscription,
+    item,
+    price,
+    plan,
+    quantity,
+    metadata: { userId, planId: plan.id, organizationId },
+  });
+}
+
 /**
  * Bring the team billing row in line with Stripe. `details`, when given, receives the
  * plan change scheduled for the end of the paid period (null when there is none).
@@ -609,6 +635,8 @@ export const organizationRouter = router({
         getMaxModeCreditSummary({ userId: null, organizationId: input.organizationId }),
       ]);
 
+      const now = new Date();
+      const period = usagePeriodAt(subscription.currentPeriodEnd, now);
       const memberIds = members.map((m) => m.userId);
       const usageRows =
         memberIds.length > 0
@@ -616,7 +644,9 @@ export const organizationRouter = router({
               .select({
                 userId: usageQuota.userId,
                 category: usageQuota.category,
+                unit: usageQuota.unit,
                 used: usageQuota.used,
+                periodEnd: usageQuota.periodEnd,
               })
               .from(usageQuota)
               .where(inArray(usageQuota.userId, memberIds))
@@ -625,6 +655,14 @@ export const organizationRouter = router({
       const poolIncluded = getUsagePoolUnits("pro");
 
       for (const row of usageRows) {
+        if (
+          row.unit !== "units" ||
+          row.periodEnd == null ||
+          row.periodEnd <= now ||
+          row.periodEnd.getTime() !== period.end.getTime()
+        ) {
+          continue;
+        }
         const current = usageByMember.get(row.userId) ?? { basic: 0, premium: 0 };
         if (row.category === "basic") current.basic = row.used;
         if (row.category === "premium") current.premium = row.used;
@@ -960,6 +998,28 @@ export const organizationRouter = router({
       await syncTeamSubscription(ctx, ctx.userId, input.organizationId);
       const billingRecord = await ensureTeamBillingRecord(ctx, ctx.userId, input.organizationId);
 
+      // Guards run before any reuse: a stored open session must not outlive them.
+      // Ended subscriptions keep `cancel_at_period_end`, so they are skipped.
+      const planSubscriptions = (
+        await listCustomerSubscriptions(billingRecord.stripeCustomerId)
+      ).filter(
+        (sub) =>
+          !isMaxModeOnlySubscription(sub) &&
+          sub.status !== "canceled" &&
+          sub.status !== "incomplete_expired",
+      );
+
+      const activeSub = planSubscriptions.find(
+        (sub) => ACTIVE_SUB_STATUSES.has(sub.status) || sub.cancel_at_period_end === true,
+      );
+
+      if (activeSub) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "This team already has an active subscription. Use Change plan or cancel first.",
+        });
+      }
+
       const [price, reusableSession] = await Promise.all([
         getPriceForPlan(plan),
         reuseOpenTeamCheckoutSession({
@@ -975,26 +1035,6 @@ export const organizationRouter = router({
           sessionId: reusableSession.id,
           clientSecret: reusableSession.client_secret,
         };
-      }
-
-      // Check for existing active subscription
-      const existingSubs = await stripe.subscriptions.list({
-        customer: billingRecord.stripeCustomerId,
-        status: "all",
-        limit: 10,
-      });
-
-      const activeSub = existingSubs.data.find(
-        (sub) =>
-          !isMaxModeOnlySubscription(sub) &&
-          (ACTIVE_SUB_STATUSES.has(sub.status) || sub.cancel_at_period_end === true),
-      );
-
-      if (activeSub) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "This team already has an active subscription. Use Change plan or cancel first.",
-        });
       }
 
       const memberCount = await getOrgMemberCount(input.organizationId);
@@ -1033,12 +1073,11 @@ export const organizationRouter = router({
         customCheckoutRequestOptions,
       );
 
+      // Only remember the session for reuse. The plan changes once Stripe confirms
+      // payment; marking the row "pending" here would revoke current access as soon
+      // as the user merely opened checkout.
       await saveTeamBillingRecord(ctx.db, ctx.userId, input.organizationId, {
         stripeCustomerId: billingRecord.stripeCustomerId,
-        planId: plan.id,
-        priceId: price.id,
-        status: "pending",
-        mode: "subscription",
         checkoutSessionId: session.id,
       });
 
@@ -1209,7 +1248,7 @@ export const organizationRouter = router({
 
       const subscription = await stripe.subscriptions.retrieve(
         subscriptionState.stripeSubscriptionId,
-        { expand: ["items"] },
+        { expand: ["items", "schedule"] },
       );
 
       const item = getLicensedSubscriptionItem(subscription) ?? subscription.items.data.at(0);
@@ -1227,16 +1266,17 @@ export const organizationRouter = router({
       };
       const kind = getPlanChangeKind(teamPlanIdOf(subscription, item), plan.id);
 
+      if (subscription.cancel_at_period_end || subscription.cancel_at) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Resume your subscription before changing its plan.",
+        });
+      }
+
       // Yearly to monthly waits for the end of the paid period: applied at once it would
       // credit the unused time and restart the billing cycle, and with it every
       // member's usage pool.
       if (kind === "downgrade") {
-        if (subscription.cancel_at_period_end || subscription.cancel_at) {
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: "Resume your subscription before changing its plan.",
-          });
-        }
         const pendingPlanChange = await withTeamBillingLock(
           ctx.db,
           input.organizationId,
@@ -1267,16 +1307,36 @@ export const organizationRouter = router({
         };
       }
 
+      const replaced = getPendingPlanChange(subscription);
       const updated = await withTeamBillingLock(ctx.db, input.organizationId, async (tx) => {
         const memberCount = await getOrgMemberCount(input.organizationId, tx);
         // Staying on, or moving up from, the current plan replaces a pending change.
         await releasePlanChangeSchedule(subscription);
-        return stripe.subscriptions.update(subscription.id, {
-          items: [{ id: item.id, price: price.id, quantity: memberCount }],
-          metadata,
-          ...(kind === "upgrade" ? NEW_BILLING_CYCLE : { proration_behavior: "always_invoice" }),
-          payment_behavior: "error_if_incomplete",
-        });
+        try {
+          return await stripe.subscriptions.update(subscription.id, {
+            items: [{ id: item.id, price: price.id, quantity: memberCount }],
+            metadata,
+            ...(kind === "upgrade" ? NEW_BILLING_CYCLE : { proration_behavior: "always_invoice" }),
+            payment_behavior: "error_if_incomplete",
+          });
+        } catch (error) {
+          // The upgrade was not paid for: put the downgrade it replaced back.
+          if (replaced) {
+            await restoreTeamPendingPlanChange(
+              subscription.id,
+              replaced,
+              ctx.userId,
+              input.organizationId,
+              memberCount,
+            ).catch((restoreError: unknown) => {
+              console.error("[billing] Failed to restore a pending team plan change", {
+                subscriptionId: subscription.id,
+                error: restoreError,
+              });
+            });
+          }
+          throw error;
+        }
       });
 
       const updates: Partial<BillingRecord> = {
@@ -1328,8 +1388,22 @@ export const organizationRouter = router({
       }
       const subscription = await stripe.subscriptions.retrieve(
         subscriptionState.stripeSubscriptionId,
+        { expand: ["schedule"] },
       );
-      return { released: await releasePlanChangeSchedule(subscription) };
+      const pending = getPendingPlanChange(subscription);
+      const released = await releasePlanChangeSchedule(subscription);
+      if (released) {
+        await recordTeamUsageAuditLog({
+          ctx,
+          organizationId: input.organizationId,
+          action: "plan_change_canceled",
+          metadata: {
+            previous: { planId: pending?.planId ?? null },
+            next: { planId: subscriptionState.planId },
+          },
+        });
+      }
+      return { released };
     }),
 
   cancelTeamSubscription: billingEnabledProcedure
@@ -1423,6 +1497,7 @@ export const organizationRouter = router({
 
       const updates: Partial<BillingRecord> = {
         status: resumed.status,
+        cancelAt: resumed.cancel_at ?? null,
         currentPeriodEnd: getSubscriptionPeriodEndDate(resumed),
         stripeSubscriptionId: resumed.id,
         priceId: price?.id ?? subscriptionState.priceId,

@@ -1,13 +1,12 @@
 /**
- * Register a first-party OAuth client (e.g. Deni Run) with the Deni AI OAuth
- * provider and print its client id and secret once.
+ * Register a first-party OAuth client with the Deni AI OAuth provider and print
+ * its client id and secret once.
  *
- *   pnpm run tools:register-oauth-client --name="Deni Run" \
- *     --redirect-uri=https://run.deniai.app/api/auth/callback/deni-ai
+ *   pnpm run tools:register-oauth-client --name="Flixa" \
+ *     --redirect-uri=https://flixa.example/api/auth/callback/deni-ai
  *
  * `--redirect-uri` may be repeated (e.g. add the local dev callback). The client
- * skips the consent screen; pass `--consent` to show it. Set the printed client
- * id as DENI_RUN_OAUTH_CLIENT_ID here and both values in the client app.
+ * skips the consent screen; pass `--consent` to show it.
  *
  * `--native` registers a public native client instead (Deni AI Desktop): no
  * secret, PKCE required, loopback redirects whose port may vary (RFC 8252), and

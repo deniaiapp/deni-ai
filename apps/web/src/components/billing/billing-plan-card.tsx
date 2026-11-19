@@ -142,7 +142,9 @@ export function PlanCard({
               <span className="pt-2 text-[11px] font-semibold text-muted-foreground uppercase">
                 {priceParts.currency}
               </span>
-              <span className="text-4xl font-semibold tracking-tight">{priceParts.amount}</span>
+              <span className="text-4xl font-semibold tracking-tight tabular-nums">
+                {priceParts.amount}
+              </span>
               {plan.interval && (
                 <span className="pt-3 text-sm text-muted-foreground">
                   /

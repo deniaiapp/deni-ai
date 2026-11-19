@@ -179,6 +179,15 @@ export function useBillingPage() {
     onError: (error) => toast.error(localizeError(error)),
   });
 
+  const resetBuyMaxModeCredits = buyMaxModeCredits.reset;
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (event.persisted) resetBuyMaxModeCredits();
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
+  }, [resetBuyMaxModeCredits]);
+
   const updateMaxModeAutoTopUp = trpc.billing.updateMaxModeAutoTopUp.useMutation({
     onSuccess: async () => {
       toast.success(t("Auto top-up settings saved."));
@@ -243,7 +252,12 @@ export function useBillingPage() {
   const isSubscription = statusQuery.data?.mode === "subscription";
   const hasActiveSubscription = isSubscribed && isSubscription;
   const cancelAt = statusQuery.data?.cancelAt;
-  const cancelDate = typeof cancelAt === "number" && isSubscription ? cancelAt : null;
+  const cancelDate =
+    typeof cancelAt === "number" && isSubscription
+      ? cancelAt
+      : statusLabel === "canceled" && isSubscribed && isSubscription && currentPeriodEnd
+        ? Math.floor(new Date(currentPeriodEnd).getTime() / 1000)
+        : null;
 
   const loading = statusQuery.isLoading || plansQuery.isLoading;
   const errored = statusQuery.error ?? plansQuery.error;

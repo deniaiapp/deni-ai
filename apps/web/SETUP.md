@@ -184,7 +184,7 @@ Notes:
 - Optional voids.top mode: set `VOIDS_MODE=true` (or `1`) and provide **`VOIDS_API_KEY`** to send OpenAI and Anthropic traffic through the OpenAI-compatible voids.top gateway. Without the key, normal provider routing is used. Optional `VOIDS_BASE_URL` (default `https://capi.voids.top/v2`). When `VOIDS_MODE` is off, OpenAI uses OpenRouter and Anthropic uses its native key when present, otherwise OpenRouter.
 - Optional Deni AI API: set **`DENI_API_KEY`** (and optionally **`DENI_API_BASE_URL`**, default `https://api.deniai.app/v1`, an OpenAI-compatible Chat Completions endpoint) to expose OpenAI models, including GPT-6 Luna. OpenAI models on this route are sent as `openai/<id>` (e.g. `openai/gpt-6-sol`) and do not offer Pro or Fast mode. A missing key hides those models.
 - Operator administration: set `ADMIN_EMAILS` to a comma-separated list of account emails that can grant usage reset credits from **Settings → Billing** and receive dispute alerts. The address is read only on the server.
-- Private beta: `BETA_ACCESS_REQUIRED=true` limits the deployment to invited accounts. Verified admins (`ADMIN_EMAILS` / `ADMIN_EMAIL_DOMAINS`) always have access and manage invitations in **Settings → Beta testers** (`beta_access` table: one row per email, granted before or after sign-up; the row is linked to the account the first time a signed-in user with that verified email is checked). Everyone else signed in, guests included, sees `/private-beta` (the account they are signed in with, a link to `NEXT_PUBLIC_V7_URL` and sign-out), and every signed-in server route answers `403 {"code":"beta_access_required"}`: the request middleware in `src/start.ts` checks every `/api/*` route except `/api/auth`, `/api/stripe`, `/api/cron`, `/api/status`, `/api/integrations` and ad delivery (`/api/ads`, `/view`, `/click`), plus `/new/*`; guest sign-in (`/api/auth/sign-in/anonymous`) is refused and the guest button hidden. Grants are cached for a minute per server process (a removal applies at once on the instance that removed it). `BETA_ACCESS_PAID_PLANS=true` also lets in every account on a paid plan (Go, Plus, Pro, or a team plan it belongs to; a canceled plan until its period ends; not Go through education) without an invitation. Default `false`: local development and tests are unaffected. Rollout of the v8 beta next to v7: `docs/v8-beta-rollout.md` at the repository root; the takeover of deniai.app: `docs/v8-takeover.md`. While the gate is on, the sidebar shows a "Beta" label and the account menu the v8 feedback form and a link to v7; the feedback form also shows while `ROLLOUT_SWITCH_ENABLED` is on.
+- Private beta: `BETA_ACCESS_REQUIRED=true` limits the deployment to invited accounts. Verified admins (`ADMIN_EMAILS` / `ADMIN_EMAIL_DOMAINS`) always have access and manage invitations in **Settings → Beta testers** (`beta_access` table: one row per email, granted before or after sign-up; the row is linked to the account the first time a signed-in user with that verified email is checked). Everyone else signed in, guests included, sees `/private-beta` (the account they are signed in with, a link to `NEXT_PUBLIC_V7_URL` and sign-out), and every signed-in server route answers `403 {"code":"beta_access_required"}`: the request middleware in `src/start.ts` checks every `/api/*` route except `/api/auth`, `/api/stripe`, `/api/cron`, `/api/status` and ad delivery (`/api/ads`, `/view`, `/click`), plus `/new/*`; guest sign-in (`/api/auth/sign-in/anonymous`) is refused and the guest button hidden. Grants are cached for a minute per server process (a removal applies at once on the instance that removed it). `BETA_ACCESS_PAID_PLANS=true` also lets in every account on a paid plan (Go, Plus, Pro, or a team plan it belongs to; a canceled plan until its period ends; not Go through education) without an invitation. Default `false`: local development and tests are unaffected. Rollout of the v8 beta next to v7: `docs/v8-beta-rollout.md` at the repository root; the takeover of deniai.app: `docs/v8-takeover.md`. While the gate is on, the sidebar shows a "Beta" label and the account menu the v8 feedback form and a link to v7; the feedback form also shows while `ROLLOUT_SWITCH_ENABLED` is on.
 - Shared-database deployments: `CRON_ENABLED=false` makes the `/api/cron/*` routes answer `200 {"skipped":true}` without running and keeps the in-process usage recovery, storage cleanup and guest cleanup jobs from starting (model health probes, which keep per-process results, still run); `STRIPE_WEBHOOK_ENABLED=false` answers `/api/stripe/webhook` with 503 without reading the event. Use both on a deployment whose database another deployment maintains (the v8 beta next to v7).
 - Passkeys: the relying party ID defaults to the host of the auth URL. `PASSKEY_RP_ID` overrides it, e.g. `deniai.app` on `beta.deniai.app`, so passkeys registered on the parent domain work on the subdomain (the browser still checks the page origin).
 - Operator email domains: set `ADMIN_EMAIL_DOMAINS` to a comma-separated list of domains (for example `deniai.app`). Addresses on these domains may sign up even though the domain is not on the sign-up allowlist, and accounts with a verified email there can grant reset credits, in addition to `ADMIN_EMAILS`. Dispute alerts still go only to the listed emails.
@@ -258,28 +258,28 @@ Open [http://localhost:3000](http://localhost:3000).
 
 ## Available scripts
 
-| Command                                | Description                          |
-| -------------------------------------- | ------------------------------------ |
-| `pnpm dev`                             | Start the Vite dev server            |
-| `pnpm run build`                       | Production build (`.output/`)        |
-| `pnpm start`                           | Start production server              |
-| `pnpm run lint`                        | oxlint                               |
-| `pnpm run lint:fix`                    | oxlint with auto-fix                 |
-| `pnpm run format`                      | Format with oxfmt                    |
-| `pnpm run typecheck`                   | TypeScript check (`tsc --noEmit`)    |
-| `pnpm run db:generate`                 | Generate Drizzle migrations          |
-| `pnpm run db:migrate`                  | Migrate using `.env`                 |
-| `pnpm run db:migrate:dev`              | Migrate using `.env.local`           |
-| `pnpm run db:migrate:canary`           | Migrate using `.env.canary`          |
-| `pnpm run db:push`                     | Push schema (dev)                    |
-| `pnpm run auth:generate`               | Regenerate better-auth schema        |
-| `pnpm run disposable:refresh`          | Refresh disposable-email domain list |
-| `pnpm run tools:codename`              | Generate version codenames           |
-| `pnpm run tools:update-types`          | Add missing Lucide type exports      |
-| `pnpm run tools:commit`                | AI-assisted conventional commits     |
-| `pnpm run tools:register-oauth-client` | Register an OAuth client (Deni Run)  |
-| `pnpm run doctor`                      | Run react-doctor diagnostics         |
-| `pnpm test`                            | Run local regression tests (Vitest)  |
+| Command                                | Description                                                |
+| -------------------------------------- | ---------------------------------------------------------- |
+| `pnpm dev`                             | Start the Vite dev server                                  |
+| `pnpm run build`                       | Production build (`.output/`)                              |
+| `pnpm start`                           | Start production server                                    |
+| `pnpm run lint`                        | oxlint                                                     |
+| `pnpm run lint:fix`                    | oxlint with auto-fix                                       |
+| `pnpm run format`                      | Format with oxfmt                                          |
+| `pnpm run typecheck`                   | TypeScript check (`tsc --noEmit`)                          |
+| `pnpm run db:generate`                 | Generate Drizzle migrations                                |
+| `pnpm run db:migrate`                  | Migrate using `.env`                                       |
+| `pnpm run db:migrate:dev`              | Migrate using `.env.local`                                 |
+| `pnpm run db:migrate:canary`           | Migrate using `.env.canary`                                |
+| `pnpm run db:push`                     | Push schema (dev)                                          |
+| `pnpm run auth:generate`               | Regenerate better-auth schema                              |
+| `pnpm run disposable:refresh`          | Refresh disposable-email domain list                       |
+| `pnpm run tools:codename`              | Generate version codenames                                 |
+| `pnpm run tools:update-types`          | Add missing Lucide type exports                            |
+| `pnpm run tools:commit`                | AI-assisted conventional commits                           |
+| `pnpm run tools:register-oauth-client` | Register a first-party OAuth client (e.g. Deni AI Desktop) |
+| `pnpm run doctor`                      | Run react-doctor diagnostics                               |
+| `pnpm test`                            | Run local regression tests (Vitest)                        |
 
 TypeScript scripts run through `tsx`. Unlike Bun, Node.js does not automatically load
 root environment files: the package scripts explicitly load `.env.local` when appropriate,
@@ -424,21 +424,7 @@ counts as empty and is reset on its next write. Switching an existing deployment
    their old unit as history.
 2. Deploy Deni AI and flixa-backend together right after it.
 
-Deni Run signs users in with Deni AI through the better-auth OAuth provider plugin
-(`/api/auth/oauth2/*`; login page `/oauth/authorize`, consent page `/oauth/consent`; guest
-accounts are refused). To connect a Deni Run deployment:
-
-1. Apply the migration (OAuth provider and `product_usage` tables).
-2. Register the client: `pnpm run tools:register-oauth-client --name="Deni Run"
-   --redirect-uri=https://run.deniai.app/api/auth/callback/deni-ai` (load the target
-   environment, e.g. `pnpm exec tsx --env-file=.env tools/register-oauth-client.ts ...` for
-   production). It skips the consent screen and prints the client id and secret once.
-3. Set `DENI_RUN_OAUTH_CLIENT_ID` here, and `DENI_AI_CLIENT_ID` / `DENI_AI_CLIENT_SECRET` in
-   Deni Run.
-4. Set the same random `DENI_RUN_SERVICE_SECRET` in both apps. Deni Run then calls
-   `GET /api/integrations/deni-run/usage?userId=<Deni AI user id>` before work and
-   `POST /api/integrations/deni-run/usage` with `{ userId, metric, costUsd }` after it
-   (`Authorization: Bearer <DENI_RUN_SERVICE_SECRET>`).
+Deni Run runs directly inside this web app (`/run/*`, `@deniai/run`) and charges the shared usage pool through the usage engine with no separate HTTP integration; see `docs/run-migration.md` for migrating legacy D1 data. For registering first-party OAuth clients such as Deni AI Desktop (`--native`), use `pnpm run tools:register-oauth-client`.
 
 ## Database schema
 

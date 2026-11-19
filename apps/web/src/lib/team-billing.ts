@@ -5,7 +5,7 @@ import { billing, member, teamUsageAuditLog } from "@/db/schema";
 import { isBillingDisabled } from "@/lib/billing-config";
 import { isTeamPlan } from "@/lib/billing";
 import { stripe } from "@/lib/stripe";
-import { syncScheduledSeatCount } from "@/lib/stripe-plan-change";
+import { releasePlanChangeSchedule, syncScheduledSeatCount } from "@/lib/stripe-plan-change";
 import { getLicensedSubscriptionItem } from "@/lib/stripe-subscriptions";
 import { findTeamBillingRecord, withTeamBillingLock } from "@/lib/team-billing-record";
 
@@ -55,7 +55,12 @@ export async function updateTeamSeatCount(organizationId: string) {
         expand: ["items"],
       });
       const item = getLicensedSubscriptionItem(subscription) ?? subscription.items.data[0];
-      if (!item || item.quantity === memberCount) return;
+      if (!item) return;
+      if (item.quantity === memberCount) {
+        // Retry schedule sync in case an earlier seat update wrote the subscription but failed on the schedule.
+        await syncScheduledSeatCount(subscription, memberCount);
+        return;
+      }
 
       await stripe.subscriptions.update(subscription.id, {
         items: [{ id: item.id, quantity: memberCount }],
@@ -105,6 +110,8 @@ export async function cancelPersonalSubscription(userId: string, organizationId:
 
     const subscription = await stripe.subscriptions.retrieve(record.stripeSubscriptionId);
     if (!ACTIVE_SUB_STATUSES.has(subscription.status)) return;
+
+    await releasePlanChangeSchedule(subscription);
 
     // A monthly plan hosts the Max Mode meters itself: without a final invoice
     // the overage accrued this period would be dropped with the subscription.
@@ -169,6 +176,7 @@ export async function cancelTeamSubscriptionForDeletion(organizationId: string) 
     // unpaid, paused and incomplete subscriptions can still resume or complete
     // and charge a team that no longer exists; only ended ones are safe to drop.
     if (!TERMINAL_SUB_STATUSES.has(subscription.status)) {
+      await releasePlanChangeSchedule(subscription);
       // Invoice the prorated period instead of dropping it.
       await stripe.subscriptions.cancel(subscriptionId, { prorate: true, invoice_now: true });
     }

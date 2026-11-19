@@ -40,6 +40,7 @@ export function getPlatformCapabilities(): PlatformCapabilities {
       webSearch: hasValue(env.EXA_API_KEY),
       memory: hasDeniApi,
       billing: hasStripeSecret && hasStripePublishableKey && !billingExplicitlyDisabled,
+      run: env.RUN_ENABLED !== false,
     },
     auth: {
       socialProviders,

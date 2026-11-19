@@ -18,10 +18,10 @@ neutral so the content and the few coloured signals stand out.
 
 All values are OKLCH, with no hue in the neutrals.
 `src/styles/design-tokens.test.ts` checks the text pairs that reach 4.5:1 in
-both modes. The palette does not reach it everywhere: `muted-foreground` on
-`muted` / `secondary` in light mode (4.3:1) and `destructive-foreground` on
-`destructive` in dark mode are below, and `input` / `ring` are not 3:1 against
-the page.
+both modes. The palette does not reach it everywhere: `destructive-foreground` on
+`destructive` in dark mode is below (buttons use `buttonVariants`'s
+`destructive` variant, which uses white text on `destructive/60` in dark mode),
+and `input` / `ring` are not 3:1 against the page.
 
 | Role                 | Light                | Dark                  | Use                              |
 | -------------------- | -------------------- | --------------------- | -------------------------------- |
@@ -30,7 +30,7 @@ the page.
 | `card` / `popover`   | `1 0 0`              | `0.205 0 0`           | Grouped content, menus, dialogs  |
 | `primary`            | `0.205 0 0`          | `0.922 0 0`           | Primary actions                  |
 | `secondary`          | `0.97 0 0`           | `0.269 0 0`           | Secondary buttons, user bubble   |
-| `muted` / `muted-fg` | `0.97` / `0.556`     | `0.269` / `0.708`     | Quiet fills, secondary text      |
+| `muted` / `muted-fg` | `0.97` / `0.52`      | `0.269` / `0.708`     | Quiet fills, secondary text      |
 | `accent`             | `0.97 0 0`           | `0.269 0 0`           | Hover and pressed fills          |
 | `highlight`          | `0.97 0 0`           | `0.269 0 0`           | Same as `accent`                 |
 | `destructive`        | `0.577 0.245 27.325` | `0.704 0.191 22.216`  | Destructive actions and errors   |

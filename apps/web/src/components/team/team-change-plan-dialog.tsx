@@ -93,7 +93,7 @@ export function TeamChangePlanDialog({
             id="agree-team-plan-change"
             checked={hasAgreed}
             onCheckedChange={(checked) => onHasAgreedChange(checked === true)}
-            disabled={estimate.error != null}
+            disabled={estimate.error != null || !estimate.data}
           />
           <Label htmlFor="agree-team-plan-change" className="text-sm leading-tight cursor-pointer">
             {isDowngrade
@@ -104,7 +104,9 @@ export function TeamChangePlanDialog({
         <AlertDialogFooter>
           <AlertDialogCancel disabled={isPending}>{t("Cancel")}</AlertDialogCancel>
           <AlertDialogAction
-            disabled={isPending || !planId || estimate.error != null || !hasAgreed}
+            disabled={
+              isPending || !planId || estimate.error != null || !estimate.data || !hasAgreed
+            }
             onClick={onConfirm}
           >
             {isPending && <Spinner />}

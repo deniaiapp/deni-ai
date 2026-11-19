@@ -10,7 +10,7 @@ const securityHeaders = {
   "Permissions-Policy": "camera=(), microphone=(self), geolocation=()",
   // srcDoc artifact previews inherit this CSP and import React from esm.sh.
   "Content-Security-Policy":
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://www.googletagmanager.com https://js.stripe.com https://*.js.stripe.com https://pagead2.googlesyndication.com https://static.cloudflareinsights.com https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss: https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net; frame-src https://challenges.cloudflare.com https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com; object-src 'none'; base-uri 'self'",
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://www.googletagmanager.com https://js.stripe.com https://*.js.stripe.com https://pagead2.googlesyndication.com https://static.cloudflareinsights.com https://esm.sh; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss: https://pagead2.googlesyndication.com https://googleads.g.doubleclick.net; frame-src https://challenges.cloudflare.com https://js.stripe.com https://*.js.stripe.com https://hooks.stripe.com https://googleads.g.doubleclick.net https://tpc.googlesyndication.com https://*.steel.dev; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
 };
 
 // Locale lives in the URL (/ja/*), so these pages need no locale Vary. The

@@ -117,7 +117,7 @@ export function SubscriptionCancelDialog({
         <AlertDialogFooter>
           <AlertDialogCancel>{t("Keep subscription")}</AlertDialogCancel>
           <AlertDialogAction
-            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            variant="destructive"
             onClick={() => {
               const feedback: CancellationFeedback = {
                 ...(reason ? { reason } : {}),

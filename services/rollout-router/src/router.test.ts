@@ -87,10 +87,9 @@ describe("decide", () => {
     expect(decide(post, 100)).toEqual({ variant: "v7" });
   });
 
-  test("webhooks, cron and integrations stay on v7; the client API goes to v8", () => {
+  test("webhooks and cron stay on v7; the client API goes to v8", () => {
     expect(decide(withCookie("v8", "/api/stripe/webhook"), 100).variant).toBe("v7");
     expect(decide(withCookie("v8", "/api/cron/usage-and-meter"), 100).variant).toBe("v7");
-    expect(decide(withCookie("b0", "/api/integrations/deni-run/usage"), 100).variant).toBe("v7");
     expect(decide(withCookie("v7", "/api/client/v1/bootstrap"), 0).variant).toBe("v8");
   });
 });

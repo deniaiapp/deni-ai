@@ -38,21 +38,26 @@ function createFallbackRelease(): DesktopRelease {
 
 /** GitHub release lookups are rate limited; reuse one answer per server instance. */
 const DOWNLOADS_CACHE_TTL_MS = 360 * 1000;
+const DOWNLOADS_FAILURE_CACHE_TTL_MS = 30 * 1000;
 let downloadsCache: { expiresAt: number; value: Promise<DesktopDownloads> } | null = null;
 
-async function getDesktopDownloads(): Promise<DesktopDownloads> {
+async function getDesktopDownloads(): Promise<{ ok: boolean; downloads: DesktopDownloads }> {
   try {
     const response = await fetch("https://api.github.com/repos/deniaiapp/desktop/releases", {
       headers: {
         Accept: "application/vnd.github+json",
       },
+      signal: AbortSignal.timeout(5_000),
     });
 
     if (!response.ok) {
       return {
-        latestRelease: createFallbackRelease(),
-        prerelease: null,
-        releasesUrl: FALLBACK_RELEASE_URL,
+        ok: false,
+        downloads: {
+          latestRelease: createFallbackRelease(),
+          prerelease: null,
+          releasesUrl: FALLBACK_RELEASE_URL,
+        },
       };
     }
 
@@ -61,15 +66,21 @@ async function getDesktopDownloads(): Promise<DesktopDownloads> {
     const prerelease = releases.find((release) => !release.draft && release.prerelease);
 
     return {
-      latestRelease: latestRelease ? toDesktopRelease(latestRelease) : createFallbackRelease(),
-      prerelease: prerelease ? toDesktopRelease(prerelease) : null,
-      releasesUrl: FALLBACK_RELEASE_URL,
+      ok: true,
+      downloads: {
+        latestRelease: latestRelease ? toDesktopRelease(latestRelease) : createFallbackRelease(),
+        prerelease: prerelease ? toDesktopRelease(prerelease) : null,
+        releasesUrl: FALLBACK_RELEASE_URL,
+      },
     };
   } catch {
     return {
-      latestRelease: createFallbackRelease(),
-      prerelease: null,
-      releasesUrl: FALLBACK_RELEASE_URL,
+      ok: false,
+      downloads: {
+        latestRelease: createFallbackRelease(),
+        prerelease: null,
+        releasesUrl: FALLBACK_RELEASE_URL,
+      },
     };
   }
 }
@@ -77,7 +88,16 @@ async function getDesktopDownloads(): Promise<DesktopDownloads> {
 const getDesktopDownloadsFn = createServerFn({ method: "GET" }).handler(() => {
   const now = Date.now();
   if (!downloadsCache || downloadsCache.expiresAt <= now) {
-    downloadsCache = { expiresAt: now + DOWNLOADS_CACHE_TTL_MS, value: getDesktopDownloads() };
+    const entry: { expiresAt: number; value: Promise<DesktopDownloads> } = {
+      expiresAt: now + DOWNLOADS_CACHE_TTL_MS,
+      value: getDesktopDownloads().then((result) => {
+        if (!result.ok && downloadsCache === entry) {
+          entry.expiresAt = Date.now() + DOWNLOADS_FAILURE_CACHE_TTL_MS;
+        }
+        return result.downloads;
+      }),
+    };
+    downloadsCache = entry;
   }
   return downloadsCache.value;
 });

@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   pendingUsage: false,
   unpaid: false,
   canceled: false,
+  schedule: null as string | null,
   frozen: false,
   race: false,
   teamOwner: false,
@@ -111,6 +112,7 @@ vi.mock("./stripe", () => ({
             status: state.canceled ? "canceled" : "active",
             cancel_at_period_end: true,
             cancel_at: null,
+            schedule: state.schedule,
             items: {
               data: [
                 {
@@ -128,6 +130,9 @@ vi.mock("./stripe", () => ({
         return {};
       }),
     },
+    subscriptionSchedules: {
+      release: vi.fn(async () => ({})),
+    },
     invoices: {
       list: () => ({
         async *[Symbol.asyncIterator]() {
@@ -144,6 +149,7 @@ beforeEach(() => {
     pendingUsage: false,
     unpaid: false,
     canceled: false,
+    schedule: null,
     frozen: false,
     race: false,
     teamOwner: false,
@@ -267,4 +273,17 @@ test("account deletion removes the personal billing row explicitly, never a team
   const query = new PgDialect().sqlToQuery(state.deleted[0]?.condition as SQL);
   expect(query.sql).toBe('("billing"."user_id" = $1 and "billing"."organization_id" is null)');
   expect(query.params).toEqual(["user"]);
+});
+
+test("account deletion releases an attached schedule before cancelling a pending-cancel subscription", async () => {
+  state.schedule = "sched_1";
+  await deletePersonalStripeCustomers("user");
+  expect(stripe.subscriptionSchedules.release).toHaveBeenCalledWith("sched_1");
+  expect(stripe.subscriptions.cancel).toHaveBeenCalledWith("subscription", {
+    prorate: false,
+    invoice_now: false,
+  });
+  const releaseOrder = vi.mocked(stripe.subscriptionSchedules.release).mock.invocationCallOrder[0]!;
+  const cancelOrder = vi.mocked(stripe.subscriptions.cancel).mock.invocationCallOrder[0]!;
+  expect(releaseOrder).toBeLessThan(cancelOrder);
 });
