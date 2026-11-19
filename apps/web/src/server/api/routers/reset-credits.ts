@@ -5,6 +5,7 @@ import {
   consumeResetCredit,
   getAvailableResetCredits,
   grantResetCredits,
+  hasResettableUsage,
   RESET_CREDIT_PLAN_TIERS,
 } from "@/lib/reset-credits";
 import { isVerifiedAdmin, type AdminUser } from "@/lib/verified-admin";
@@ -30,11 +31,16 @@ function getAdminEmail(ctx: { session: { user?: AdminUser } | null }) {
 
 export const resetCreditsRouter = router({
   status: protectedProcedure.query(async ({ ctx }) => {
-    const credits = await getAvailableResetCredits(ctx.userId);
+    const [credits, hasUsage] = await Promise.all([
+      getAvailableResetCredits(ctx.userId),
+      hasResettableUsage(ctx.userId),
+    ]);
     return {
       /** Unspent, unexpired credits, soonest to expire first. */
       credits,
       resetCredits: credits.length,
+      /** False when there is nothing to reset, so no credit should be spent. */
+      hasUsage,
       isAdmin: isVerifiedAdmin(ctx.session?.user, isAdminEmail),
     };
   }),
@@ -42,15 +48,21 @@ export const resetCreditsRouter = router({
   consume: protectedProcedure
     .input(z.object({ creditId: z.string().min(1).max(64).optional() }).optional())
     .mutation(async ({ ctx, input }) => {
-      const remaining = await consumeResetCredit(ctx.userId, input?.creditId);
-      if (remaining === null) {
+      const result = await consumeResetCredit(ctx.userId, input?.creditId);
+      if (result.status === "no_credits") {
         throw new TRPCError({
           code: "PRECONDITION_FAILED",
           message: "No rate-limit reset credits are available.",
         });
       }
+      if (result.status === "no_usage") {
+        throw new TRPCError({
+          code: "PRECONDITION_FAILED",
+          message: "There is no usage to reset.",
+        });
+      }
 
-      return { remaining };
+      return { remaining: result.remaining };
     }),
 
   adminGrant: protectedProcedure

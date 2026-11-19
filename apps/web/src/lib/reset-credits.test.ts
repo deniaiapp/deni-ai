@@ -15,6 +15,7 @@ const state = vi.hoisted(() => ({
   legacy: 0,
   credits: [] as { id: string; expiresAt: Date; usedAt: Date | null }[],
   used: 100,
+  runUsed: 0,
   failQuota: false,
   locked: false,
   nextId: 1,
@@ -33,6 +34,7 @@ vi.mock("@/db/drizzle", () => ({
         legacy: state.legacy,
         credits: state.credits,
         used: state.used,
+        runUsed: state.runUsed,
       });
       const tx = {
         execute: async () => {
@@ -43,6 +45,10 @@ vi.mock("@/db/drizzle", () => ({
             where: (condition: SQL | undefined) => {
               expect(state.locked).toBe(true);
               const name = getTableName(table);
+              if (name === "usage_quota" || name === "product_usage") {
+                const used = name === "usage_quota" ? state.used : state.runUsed;
+                return { limit: async () => (used > 0 ? [{ userId: "user" }] : []) };
+              }
               if (name === "reset_credit_balance") {
                 return { for: async () => (state.legacy > 0 ? [{ credits: state.legacy }] : []) };
               }
@@ -72,6 +78,8 @@ vi.mock("@/db/drizzle", () => ({
               if (name === "usage_quota") {
                 if (state.failQuota) throw new Error("Quota write failed");
                 state.used = 0;
+              } else if (name === "product_usage") {
+                state.runUsed = 0;
               } else if (name === "reset_credit_balance") {
                 state.legacy = 0;
               } else {
@@ -120,6 +128,7 @@ beforeEach(() => {
   state.legacy = 0;
   state.credits = [];
   state.used = 100;
+  state.runUsed = 0;
   state.failQuota = false;
   state.locked = false;
   state.nextId = 1;
@@ -140,7 +149,7 @@ test("a credit lasts one calendar month, clamped to the end of a shorter month",
 test("a reset spends the credit that expires first and clears the user's usage", async () => {
   const later = addCredit(20);
   const sooner = addCredit(3);
-  expect(await consumeResetCredit("user")).toBe(1);
+  expect(await consumeResetCredit("user")).toEqual({ status: "reset", remaining: 1 });
   expect(sooner.usedAt).not.toBeNull();
   expect(later.usedAt).toBeNull();
   expect(state.used).toBe(0);
@@ -149,7 +158,7 @@ test("a reset spends the credit that expires first and clears the user's usage",
 test("a reset can spend a chosen credit", async () => {
   addCredit(3);
   const chosen = addCredit(20);
-  expect(await consumeResetCredit("user", chosen.id)).toBe(1);
+  expect(await consumeResetCredit("user", chosen.id)).toEqual({ status: "reset", remaining: 1 });
   expect(chosen.usedAt).not.toBeNull();
 });
 
@@ -164,17 +173,40 @@ test("a failed reset returns the credit and keeps the original quota", async () 
 test("expired or spent credits cannot be used", async () => {
   addCredit(-1);
   addCredit(10, new Date());
-  expect(await consumeResetCredit("user")).toBeNull();
+  expect(await consumeResetCredit("user")).toEqual({ status: "no_credits" });
   expect(state.used).toBe(100);
 });
 
 test("a v7 credit count becomes credits valid for a month, and cannot be spent twice", async () => {
   state.legacy = 3;
-  expect(await consumeResetCredit("user")).toBe(2);
+  expect(await consumeResetCredit("user")).toEqual({ status: "reset", remaining: 2 });
   expect(state.legacy).toBe(0);
   expect(state.credits).toHaveLength(3);
   const expected = resetCreditExpiry(new Date()).getTime();
   for (const credit of state.credits) {
     expect(Math.abs(credit.expiresAt.getTime() - expected)).toBeLessThan(60_000);
   }
+});
+
+test("a reset clears Deni Run spend with the quota", async () => {
+  addCredit(3);
+  state.runUsed = 5_000_000;
+  expect(await consumeResetCredit("user")).toEqual({ status: "reset", remaining: 0 });
+  expect(state.used).toBe(0);
+  expect(state.runUsed).toBe(0);
+});
+
+test("Deni Run spend alone can be reset", async () => {
+  addCredit(3);
+  state.used = 0;
+  state.runUsed = 1;
+  expect(await consumeResetCredit("user")).toEqual({ status: "reset", remaining: 0 });
+  expect(state.runUsed).toBe(0);
+});
+
+test("no usage keeps the credit", async () => {
+  addCredit(3);
+  state.used = 0;
+  expect(await consumeResetCredit("user")).toEqual({ status: "no_usage" });
+  expect(usable()).toHaveLength(1);
 });

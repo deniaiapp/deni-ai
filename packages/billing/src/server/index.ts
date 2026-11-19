@@ -19,6 +19,7 @@ export {
   type UsageProduct,
 } from "./product-usage-ledger";
 export { isSignupFlagged } from "./signup-risk";
+export { hasResettableUsage, resetUserUsage, type UsageResetDatabase } from "./usage-reset";
 export { canonicalTeamBillingRow } from "./team-billing";
 export {
   createUsageEngine,

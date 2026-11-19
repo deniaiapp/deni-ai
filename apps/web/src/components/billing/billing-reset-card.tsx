@@ -187,6 +187,11 @@ export function BillingResetCard() {
         </CardHeader>
         <CollapsibleContent>
           <CardContent className="space-y-6">
+            {status.credits.length > 0 && !status.hasUsage && (
+              <p className="text-sm text-muted-foreground">
+                {t("You have no usage to reset right now.")}
+              </p>
+            )}
             {status.credits.length > 0 ? (
               <ul className="space-y-2">
                 {status.credits.map((credit) => {
@@ -212,7 +217,7 @@ export function BillingResetCard() {
                       <Button
                         size="sm"
                         className="shrink-0"
-                        disabled={isBusy}
+                        disabled={isBusy || !status.hasUsage}
                         onClick={() => consumeResetCredit.mutate({ creditId: credit.id })}
                       >
                         {using && <Spinner data-icon="inline-start" />}

@@ -371,6 +371,7 @@ export function useLocalizeError() {
           t("No rate-limit reset credits are available."),
           "No rate-limit reset credits are available.",
         ),
+        ...mapKeys(t("There is no usage to reset."), "There is no usage to reset."),
         ...mapKeys(t("No subscription to resume."), "No subscription to resume."),
         ...mapKeys(t("No team subscription to resume."), "No team subscription to resume."),
         ...mapKeys(

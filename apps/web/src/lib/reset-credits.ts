@@ -1,6 +1,7 @@
 import { and, asc, count, eq, gt, inArray, isNotNull, isNull, like, or, sql } from "drizzle-orm";
 import { db } from "@/db/drizzle";
-import { billing, member, resetCredit, resetCreditBalance, usageQuota, user } from "@/db/schema";
+import { billing, member, resetCredit, resetCreditBalance, user } from "@/db/schema";
+import { hasResettableUsage as hasResettableUsageIn, resetUserUsage } from "@deniai/billing/server";
 
 export const RESET_CREDIT_PLAN_TIERS = ["free", "go", "plus", "pro"] as const;
 export type ResetCreditPlanTier = (typeof RESET_CREDIT_PLAN_TIERS)[number];
@@ -240,17 +241,36 @@ export async function grantResetCredits({
   return { matchedUsers: userIds.length, grantedUsers, quantity };
 }
 
+/** Whether the user has any usage a reset would clear (chat, Flixa, or Deni Run). */
+export async function hasResettableUsage(userId: string) {
+  return hasResettableUsageIn(userId, new Date(), db);
+}
+
+export type ConsumeResetCreditResult =
+  | { status: "reset"; remaining: number }
+  | { status: "no_credits" }
+  | { status: "no_usage" };
+
 /**
- * Spends one reset credit and clears the user's usage. `creditId` picks the credit
- * (the billing page lists them); without it the soonest to expire is spent.
- * Returns the number of credits left, or null when none could be spent.
+ * Spends one reset credit and clears the user's usage, Deni Run's included.
+ * `creditId` picks the credit (the billing page lists them); without it the soonest
+ * to expire is spent. Nothing is spent when there is no usage to clear.
  */
-export async function consumeResetCredit(userId: string, creditId?: string) {
+export async function consumeResetCredit(
+  userId: string,
+  creditId?: string,
+): Promise<ConsumeResetCreditResult> {
   const now = new Date();
   return db.transaction(
     async (tx) => {
       await lockUser(tx, userId);
       await moveLegacyResetCredits(tx, userId, now);
+
+      // Usage writes do not take the user lock, so this is a best-effort guard
+      // against spending a credit on a reset that changes nothing.
+      if (!(await hasResettableUsageIn(userId, now, tx))) {
+        return { status: "no_usage" };
+      }
 
       const usable = and(
         eq(resetCredit.userId, userId),
@@ -264,19 +284,15 @@ export async function consumeResetCredit(userId: string, creditId?: string) {
         .orderBy(asc(resetCredit.expiresAt), asc(resetCredit.createdAt))
         .limit(1);
       if (!credit) {
-        return null;
+        return { status: "no_credits" };
       }
 
       await tx.update(resetCredit).set({ usedAt: now }).where(eq(resetCredit.id, credit.id));
 
-      await tx
-        .update(usageQuota)
-        .set({ used: 0, periodStart: now, updatedAt: now })
-        .where(eq(usageQuota.userId, userId));
+      await resetUserUsage(userId, now, tx);
 
-      // A quota reward does not erase incurred charges or a whole team's ledger.
       const [remaining] = await tx.select({ count: count() }).from(resetCredit).where(usable);
-      return remaining?.count ?? 0;
+      return { status: "reset", remaining: remaining?.count ?? 0 };
     },
     { isolationLevel: "read committed" },
   );
