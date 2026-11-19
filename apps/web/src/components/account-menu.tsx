@@ -1,16 +1,5 @@
-import {
-  ArrowUpRight,
-  CircleHelp,
-  History,
-  LogOut,
-  MessageSquareText,
-  Settings,
-  UserIcon,
-  UserPlus,
-  Users,
-  Zap,
-} from "lucide-react";
-import { Link, usePathname, useRouter } from "@/lib/navigation";
+import { CircleHelp, LogOut, Settings, UserIcon, UserPlus, Users, Zap } from "lucide-react";
+import { Link, useRouter } from "@/lib/navigation";
 import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
@@ -42,10 +31,7 @@ import { trpc } from "@/lib/trpc/react";
 import { liveUsageQueryOptions } from "@/lib/usage-query-options";
 import { cn } from "@/lib/utils";
 import { supportUrl } from "@/lib/support-url";
-import { betaFeedbackUrl } from "@/lib/beta-feedback";
 import { versions } from "@/lib/version";
-import { rolloutSwitchUrl } from "@/lib/rollout";
-import { clientEnv } from "@/public-env";
 import {
   Tooltip,
   TooltipContent,
@@ -119,8 +105,7 @@ export function AccountMenu() {
   const utils = trpc.useUtils();
   const session = authClient.useSession();
   const isAnonymous = Boolean(session.data?.user?.isAnonymous);
-  const { features, privateBeta, rolloutSwitch } = usePlatformCapabilities();
-  const pathname = usePathname();
+  const { features } = usePlatformCapabilities();
   const billingDisabled = !features.billing;
   const hasSession = Boolean(session.data?.user);
   // A guest's stored name ("Anonymous") and placeholder address are not theirs to see.
@@ -413,48 +398,6 @@ export function AccountMenu() {
             <CircleHelp className="size-4" />
             <span className="flex-1">{t("Help Center")}</span>
           </DropdownMenuItem>
-          {(privateBeta || rolloutSwitch) && (
-            <DropdownMenuItem
-              className="gap-2 text-sm"
-              disabled={isMenuPending}
-              render={
-                <a
-                  // Not a bare number: the help center's router JSON-parses search
-                  // values, which would turn "8.0" into 8.
-                  href={betaFeedbackUrl({
-                    locale,
-                    version: `${versions.version} (${versions.date})`,
-                  })}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex w-full"
-                />
-              }
-            >
-              <MessageSquareText className="size-4" />
-              <span className="flex-1">{t("Send feedback")}</span>
-            </DropdownMenuItem>
-          )}
-          {rolloutSwitch && (
-            <DropdownMenuItem
-              className="gap-2 text-sm"
-              disabled={isMenuPending}
-              render={<a href={rolloutSwitchUrl("v7", pathname)} className="flex w-full" />}
-            >
-              <History className="size-4" />
-              <span className="flex-1">{t("Switch to the previous version")}</span>
-            </DropdownMenuItem>
-          )}
-          {privateBeta && (
-            <DropdownMenuItem
-              className="gap-2 text-sm"
-              disabled={isMenuPending}
-              render={<a href={clientEnv.NEXT_PUBLIC_V7_URL} className="flex w-full" />}
-            >
-              <ArrowUpRight className="size-4" />
-              <span className="flex-1">{t("Go to Deni AI v7")}</span>
-            </DropdownMenuItem>
-          )}
           <DropdownMenuSeparator />
           <DropdownMenuItem
             className="gap-2 text-sm"

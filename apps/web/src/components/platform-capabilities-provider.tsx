@@ -19,10 +19,7 @@ const defaultCapabilities: PlatformCapabilities = {
     socialProviders: ["google", "github"],
     captcha: true,
     email: true,
-    guests: true,
   },
-  privateBeta: false,
-  rolloutSwitch: false,
 };
 
 const PlatformCapabilitiesContext = createContext<PlatformCapabilities>(defaultCapabilities);

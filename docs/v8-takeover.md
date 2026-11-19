@@ -1,9 +1,10 @@
 # Deni AI v8 takeover of deniai.app
 
 How v8 (this monorepo, `apps/web`) replaces v7 (the `deni-ai` repository) at
-`deniai.app`. Usually this is the last step of the percentage rollout
-(`docs/v8-rollout.md`), once v8 serves everyone without trouble; it also works
-straight after the private beta (`docs/v8-beta-rollout.md`). Both apps already
+`deniai.app`. The takeover is done: v8 serves `deniai.app`, and the percentage
+rollout Worker (`services/rollout-router`) and the private beta gate
+(`BETA_ACCESS_REQUIRED`, the `beta_access` table, `/private-beta`) have been removed
+from the code. The steps below that mention them are kept as a record. Both apps already
 share the production Postgres database, the R2 bucket and `BETTER_AUTH_SECRET`, so
 the takeover moves **traffic and background work**, not data.
 
@@ -34,7 +35,7 @@ After the takeover:
 | Deni AI as OAuth provider   | Flixa and Deni AI Desktop keep `deniai.app` as issuer and redirect target. The OAuth clients, consents and JWKS are rows in the shared database, so they keep working. Standalone Deni Run (`run.deniai.app`) is retired and replaced by built-in Run mode (`docs/run-migration.md`).                 |
 | Flixa                       | The production API stays the Flixa backend (`deniaiapp/flixa`, `apps/backend`), but it must run a build with the billing-cycle usage period (see Usage period and plan changes below) from the moment v8 serves everyone. `services/agent-api` stays undeployed (or `FLIXA_USAGE_ENGINE=shadow`). |
 | Run mode (`/run`)           | The beta runs with `RUN_ENABLED=false`. Turning it on opens Run to everyone and needs its background work: `RUN_SCHEDULER_IN_PROCESS=true` on the single web instance (plus `RUN_DISCORD_ENABLED=true` for the bot), or `services/run-worker`. Cut over legacy D1 data and redirect `run.deniai.app` per `docs/run-migration.md`. |
-| Beta-only UI                | The sidebar "Beta" label and the account menu's "Go to Deni AI v7" item follow `BETA_ACCESS_REQUIRED` (`platformCapabilities.privateBeta`), and "Send feedback" (the help center's v8 form) also `ROLLOUT_SWITCH_ENABLED`, so they disappear with the gate and the Worker. `/private-beta` stays as a route but nothing sends users there.          |
+| Beta-only UI                | Removed: the sidebar "Beta" label, the account menu's "Go to Deni AI v7", "Switch to the previous version" and "Send feedback" items, `/private-beta` and Settings → Beta testers. |
 | Retired pages               | guides, use cases, about and models answer 308 permanent redirects (`apps/web/vite/route-rules.ts`). Canonical URLs already use `https://deniai.app`.                                                                                                                                                   |
 | Google sign-in, Turnstile   | No change: `deniai.app` is already registered.                                                                                                                                                                                                                                      |
 | GitHub sign-in              | Switch back to v7's GitHub OAuth App (callback on `deniai.app`). Accounts are matched by GitHub user id, so links made on beta keep working.                                                                                                                                        |
@@ -107,14 +108,14 @@ rows, so they only agree once v7 is gone:
    | Variable                                              | Value at takeover                                                         |
    | ----------------------------------------------------- | ------------------------------------------------------------------------- |
    | `BETTER_AUTH_URL`                                     | `https://deniai.app`                                                      |
-   | `BETA_ACCESS_REQUIRED`, `BETA_ACCESS_PAID_PLANS`      | Unset                                                                     |
+   | `BETA_ACCESS_REQUIRED`, `BETA_ACCESS_PAID_PLANS`      | Unset (no longer read)                                                    |
    | `CRON_ENABLED`, `STRIPE_WEBHOOK_ENABLED`              | Unset (default `true`)                                                    |
    | `STRIPE_WEBHOOK_SECRET`                               | v7's value                                                                |
    | `NOINDEX`                                             | Unset                                                                     |
    | `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET`            | v7's GitHub OAuth App                                                     |
    | `PASSKEY_RP_ID`                                       | `deniai.app` or unset (the auth URL's host)                               |
    | `RUN_SCHEDULER_IN_PROCESS`, `RUN_ENABLED`             | `true` / unset once Run should run; until then `RUN_ENABLED=false`        |
-   | `ROLLOUT_SWITCH_ENABLED`                              | Unset (no Worker after the takeover)                                      |
+   | `ROLLOUT_SWITCH_ENABLED`, `NEXT_PUBLIC_V7_URL`        | Unset (no longer read)                                                    |
    | `BETTER_AUTH_SECRET`, `DATABASE_URL`, `R2_*`          | Unchanged (already v7's)                                                  |
 
    Then press **Deploy**. Once the health check passes, `deniai.app` serves v8 and the
@@ -156,9 +157,10 @@ against the database:
    successful ones) or **Deploy** to build v7 again. Restore the Environment first: a
    rollback runs the old image with the current Environment.
 2. If v8 should stay reachable, start `deni-ai-beta` again with the beta env
-   (`BETA_ACCESS_REQUIRED=true`, `CRON_ENABLED=false`, `STRIPE_WEBHOOK_ENABLED=false`,
-   `NOINDEX=1`, the beta GitHub OAuth App, `NEXT_PUBLIC_BETTER_AUTH_URL` rebuilt for
-   beta) and remove the beta redirect rule.
+   (`CRON_ENABLED=false`, `STRIPE_WEBHOOK_ENABLED=false`, `NOINDEX=1`, the beta GitHub
+   OAuth App, `NEXT_PUBLIC_BETTER_AUTH_URL` rebuilt for beta) and remove the beta
+   redirect rule. The private beta gate no longer exists, so that deployment is open
+   to every account.
 
 What v7 cannot show: Run mode data, per-account preferred models and the per-chat
 model (`0081`). Accounts that turned on two-factor authentication on v8 keep it on v7.
@@ -176,7 +178,6 @@ asks.
 
 - Retire the beta deployment and the beta GitHub OAuth App once the redirect has
   served for a while.
-- The rules in `docs/v8-beta-rollout.md` ("Rules during the beta") end with the
-  rollback window: until then keep schema changes additive so v7 can still take
-  traffic back.
+- Until the rollback window ends, keep schema changes v7 depends on additive so v7
+  can still take traffic back (dropping v8-only tables such as `beta_access` is fine).
 - v7's repository stops receiving feature work; model updates land here only.

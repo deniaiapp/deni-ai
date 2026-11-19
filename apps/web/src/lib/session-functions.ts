@@ -7,14 +7,8 @@ export type AuthState = {
   isAnonymous: boolean;
   /** The password-account two-factor rule for this user (src/lib/two-factor-policy.ts). */
   twoFactor: TwoFactorPolicy;
-  /** May use this deployment: always true unless the private beta gate is on (src/lib/beta-access.server.ts). */
-  betaAccess: boolean;
-  /** Verified operator (ADMIN_EMAILS / ADMIN_EMAIL_DOMAINS): sees the admin settings. */
-  isAdmin: boolean;
   /** Run mode is on for this deployment (`RUN_ENABLED`). */
   runEnabled: boolean;
-  /** The beta gate also lets in paying accounts (`BETA_ACCESS_PAID_PLANS`). */
-  betaPaidPlans: boolean;
 };
 
 // better-auth pulls in the database, mail templates and Stripe; load it on the
@@ -22,21 +16,15 @@ export type AuthState = {
 const getAuthStateFn = createServerFn({ method: "GET" }).handler(async (): Promise<AuthState> => {
   const { auth } = await import("@/lib/auth");
   const session = await auth.api.getSession({ headers: getRequestHeaders() });
-  const [{ getTwoFactorPolicyForUser }, { hasBetaAccess, isBetaAdmin }, { env }] =
-    await Promise.all([
-      import("@/lib/two-factor-policy.server"),
-      import("@/lib/beta-access.server"),
-      import("@/env"),
-    ]);
-  const user = session?.session ? session.user : null;
+  const [{ getTwoFactorPolicyForUser }, { env }] = await Promise.all([
+    import("@/lib/two-factor-policy.server"),
+    import("@/env"),
+  ]);
   return {
     signedIn: Boolean(session?.session),
     isAnonymous: Boolean(session?.user?.isAnonymous),
     twoFactor: await getTwoFactorPolicyForUser(session?.user ?? null),
-    betaAccess: user ? await hasBetaAccess(user) : false,
-    isAdmin: isBetaAdmin(user),
     runEnabled: env.RUN_ENABLED,
-    betaPaidPlans: env.BETA_ACCESS_PAID_PLANS,
   };
 });
 
