@@ -20,6 +20,7 @@ import type {
 } from "@deniai/db";
 import { normalizeMessageIds } from "../chat/messages";
 import { decryptSecretWith, encryptSecretWith, isEncryptedSecret } from "../data/secrets";
+import { memoryRowId } from "../data/store";
 import type { ComputerState, Store } from "../types";
 import type { SourceUserData } from "./source";
 
@@ -228,15 +229,15 @@ export function planUser(
         instructions: bot.instructions ?? "",
         accent: bot.accent || "#7f9bb8",
         icon: bot.icon ?? null,
-        tools: null,
-        computerAccess: true,
+        tools: Array.isArray(bot.tools) ? bot.tools : null,
+        computerAccess: bot.computerAccess ?? true,
         position,
         createdAt: dateOr(bot.createdAt, now),
         updatedAt: dateOr(bot.updatedAt, now),
       });
       for (const memory of bot.memory ?? [])
         rows.memories.push({
-          id: `${bot.id}:${memory.id}`,
+          id: memoryRowId(userId, bot.id, memory.id),
           userId,
           teammateId: bot.id,
           text: memory.text,
@@ -313,6 +314,33 @@ export function planUser(
     }
   } else {
     skipped.push({ table: "user_stores", id: source.user.id, reason: "no Run data document" });
+    if (
+      source.artifacts.length ||
+      source.jobs.length ||
+      source.mcpConnections.length ||
+      source.mcpExplanations.length ||
+      source.notifications.length ||
+      source.discordLink ||
+      source.discordLinkCodes.length
+    ) {
+      rows.settings.push({
+        userId,
+        timezone: "UTC",
+        model: null,
+        runMode: null,
+        openrouterApiKey: null,
+        computer: null,
+        shells: [],
+        handoffs: [],
+        pluginAlwaysAllow: {},
+        mcpAlwaysAllow: {},
+        discordThreadId: null,
+        discordNotify: true,
+        storageKey: legacyStorageKey(source.user.id),
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
   }
 
   for (const thread of source.threadMessages) {
@@ -475,7 +503,10 @@ export function planUser(
       userId,
       discordUserId: source.discordLink.discordUserId,
       discordUsername: source.discordLink.discordUsername,
-      teammateId: source.discordLink.botId,
+      teammateId:
+        source.discordLink.botId && (!store || teammateIds.has(source.discordLink.botId))
+          ? source.discordLink.botId
+          : null,
       locale: source.discordLink.locale,
       createdAt: source.discordLink.createdAt,
     });

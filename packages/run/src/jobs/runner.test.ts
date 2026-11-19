@@ -7,10 +7,10 @@ import {
   seedTestUser,
   type RunTestDb,
 } from "../testing";
-import { loadMessages, readStore } from "../data/store";
+import { loadMessages, mutateStore, readStore } from "../data/store";
 import { cancelJob, createJob, getJob, listJobEvents } from "./index";
 import { listNotifications } from "./notifications";
-import { tick, waitForRunningJobs } from "./scheduler";
+import { enqueueRoutine, tick, waitForRunningJobs } from "./scheduler";
 import { runBackgroundJob } from "./runner";
 
 let testDb: RunTestDb;
@@ -130,5 +130,37 @@ describe("background job runner", () => {
     expect(result?.status).toBe("failed");
     const notifications = await listNotifications(USER);
     expect(notifications[0]).toMatchObject({ kind: "failed", title: "Task needs setup" });
+  });
+
+  it("advances a past-due routine past now instead of replaying every missed cron slot", async () => {
+    const staleScheduledFor = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    const routineId = "rtn-past-due";
+    await mutateStore(USER, (store) => {
+      store.routines.push({
+        id: routineId,
+        botId: "research",
+        threadId: "dm_research",
+        name: "Digest",
+        instructions: "Summarize updates",
+        cron: "*/5 * * * *",
+        timezone: "UTC",
+        enabled: true,
+        revision: 0,
+        lastRunAt: null,
+        nextRunAt: staleScheduledFor,
+        lastError: null,
+        createdAt: staleScheduledFor,
+        locale: "en",
+      });
+    });
+
+    const job = await enqueueRoutine(USER, routineId);
+    expect(job).not.toBeNull();
+    expect(job?.kind).toBe("routine");
+
+    const updated = (await readStore(USER)).routines.find((item) => item.id === routineId);
+    expect(updated?.nextRunAt).toBeTruthy();
+    expect(new Date(updated!.nextRunAt!).getTime()).toBeGreaterThan(Date.now());
+    expect(await enqueueRoutine(USER, routineId)).toBeNull();
   });
 });

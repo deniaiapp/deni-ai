@@ -9,7 +9,7 @@ import type { Store } from "../types";
  * The source is only ever opened read-only (a dump is copied into memory first).
  */
 
-export type SourceUser = { id: string; name: string; email: string };
+export type SourceUser = { id: string; name: string; email: string; emailVerified: boolean };
 
 export type SourceJob = {
   id: string;
@@ -149,11 +149,22 @@ export type SourceData = {
 
 type Row = Record<string, unknown>;
 
+const SQLITE_SEQUENCE_STATEMENT =
+  /^\s*(?:CREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?|DELETE\s+FROM\s+|INSERT\s+INTO\s+)["'`]?sqlite_sequence["'`]?\b.*;\s*$/i;
+
 /** Open the source: a SQLite file read-only, or a `.sql` dump loaded into memory. */
 export function openSource(path: string): DatabaseSync {
   if (/\.sql$/i.test(path)) {
     const database = new DatabaseSync(":memory:");
-    database.exec(readFileSync(path, "utf8"));
+    // Node's built-in SQLite enables foreign keys by default, while `wrangler d1 export`
+    // dumps tables in schema order (child tables like `account`/`two_factor` before `user`)
+    // relying only on `PRAGMA defer_foreign_keys=TRUE`.
+    database.exec("PRAGMA foreign_keys = OFF;");
+    const sqlText = readFileSync(path, "utf8")
+      .split(/\r?\n/)
+      .filter((line) => !SQLITE_SEQUENCE_STATEMENT.test(line))
+      .join("\n");
+    database.exec(sqlText);
     return database;
   }
   return new DatabaseSync(path, { readOnly: true });
@@ -218,6 +229,7 @@ export function readSource(database: DatabaseSync): SourceData {
     id: String(row.id),
     name: String(row.name ?? ""),
     email: String(row.email ?? ""),
+    emailVerified: row.email_verified === true || Number(row.email_verified ?? 0) === 1,
   }));
   const links = new Map<string, string>();
   for (const row of rows(database, "account", `WHERE provider_id = 'deni-ai'`))
@@ -225,7 +237,8 @@ export function readSource(database: DatabaseSync): SourceData {
   // Stores and messages of users who are missing from `user` (should not happen) are still read.
   const storeUserIds = rows(database, "user_stores").map((row) => String(row.user_id));
   for (const id of storeUserIds)
-    if (!users.some((user) => user.id === id)) users.push({ id, name: id, email: "" });
+    if (!users.some((user) => user.id === id))
+      users.push({ id, name: id, email: "", emailVerified: false });
 
   const mcpColumns = columns(database, "mcp_connections");
   const data: SourceUserData[] = users.map((user) => {

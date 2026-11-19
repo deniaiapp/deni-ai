@@ -81,8 +81,7 @@ shared engine (`getRunBudget`) before work and records incurred cost with
 `recordRunCost` (product `run`, metrics `model`, `browser`, `computer`, micro-dollars)
 under the user's usage lock. Model calls are charged at the cost OpenRouter reports;
 browser and computer time at the hourly rates above. There is no HTTP integration inside
-the platform (`/api/integrations/deni-run/usage` stays only for the standalone app until
-it is shut down).
+the platform (the legacy `/api/integrations/deni-run/usage` endpoint has been retired).
 
 ## Left in the hosts or dropped
 

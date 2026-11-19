@@ -187,7 +187,7 @@ export async function enqueueRoutine(userId: string, routineId: string) {
     item.nextRunAt = nextCron(
       item.cron,
       item.timezone || next.config.timezone,
-      new Date(scheduledFor),
+      new Date(Math.max(Date.now(), new Date(scheduledFor).getTime())),
     );
   });
   return job;

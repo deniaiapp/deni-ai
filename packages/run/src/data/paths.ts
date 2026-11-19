@@ -31,6 +31,10 @@ export async function primeStorageKey(userId: string) {
   if (row?.storageKey) storageKeys.set(userId, row.storageKey);
 }
 
+export function forgetStorageKey(userId: string) {
+  storageKeys.delete(userId);
+}
+
 export function userDataDir(userId: string) {
   return path.join(dataDir(), "users", userStorageKey(userId));
 }

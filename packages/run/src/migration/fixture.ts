@@ -40,7 +40,15 @@ export const FIXTURE = {
 
 const T0 = Date.UTC(2026, 9, 1, 9, 0, 0);
 
-function bot(id: string, name: string, memory: { id: string; text: string }[] = []) {
+function bot(
+  id: string,
+  name: string,
+  options: {
+    memory?: { id: string; text: string }[];
+    tools?: string[] | null;
+    computerAccess?: boolean;
+  } = {},
+) {
   const at = new Date(T0).toISOString();
   return {
     id,
@@ -49,9 +57,11 @@ function bot(id: string, name: string, memory: { id: string; text: string }[] = 
     instructions: `You are ${name}.`,
     accent: "#7f9bb8",
     icon: null,
+    ...(options.tools !== undefined ? { tools: options.tools } : {}),
+    ...(options.computerAccess !== undefined ? { computerAccess: options.computerAccess } : {}),
     createdAt: at,
     updatedAt: at,
-    memory: memory.map((entry) => ({ ...entry, createdAt: at })),
+    memory: (options.memory ?? []).map((entry) => ({ ...entry, createdAt: at })),
   };
 }
 
@@ -71,8 +81,8 @@ function store(userId: string, apiKey: string) {
       runMode: "default",
     },
     bots: [
-      bot("chief", "Chief", [{ id: "m1", text: "Prefers short answers" }]),
-      bot("research", "Research"),
+      bot("chief", "Chief", { memory: [{ id: "m1", text: "Prefers short answers" }] }),
+      bot("research", "Research", { tools: ["web", "files"], computerAccess: false }),
     ],
     threads: [
       thread("dm_chief", "dm", ["chief"]),
@@ -405,6 +415,15 @@ export function writeRunFixture(dir: string, sourceKey: Buffer, now = Date.now()
   database.exec(statements.join("\n"));
   database.close();
   const exportPath = join(dir, "run-export.sql");
-  writeFileSync(exportPath, ["PRAGMA defer_foreign_keys=TRUE;", DDL, ...statements].join("\n"));
+  const d1Boilerplate = [
+    "PRAGMA defer_foreign_keys=TRUE;",
+    "CREATE TABLE d1_migrations(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT);",
+    "CREATE TABLE _cf_KV(key TEXT PRIMARY KEY, value BLOB);",
+  ];
+  const d1Sequence = [
+    "DELETE FROM sqlite_sequence;",
+    "INSERT INTO \"sqlite_sequence\" VALUES('d1_migrations',1);",
+  ];
+  writeFileSync(exportPath, [...d1Boilerplate, DDL, ...statements, ...d1Sequence].join("\n"));
   return { sqlitePath, exportPath };
 }

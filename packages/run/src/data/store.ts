@@ -3,7 +3,11 @@ import type { UIMessage } from "ai";
 import {
   runArtifacts,
   runBrowserWorkspaces,
+  runDiscordLinkCodes,
+  runDiscordLinks,
   runJobs,
+  runMcpConnections,
+  runMcpExplanations,
   runMessages,
   runNotifications,
   runRoutines,
@@ -116,9 +120,13 @@ function teammateRow(userId: string, bot: Bot, position: number) {
   };
 }
 
+export function memoryRowId(userId: string, teammateId: string, entryId: string) {
+  return `${userId}:${teammateId}:${entryId}`;
+}
+
 function memoryRow(userId: string, teammateId: string, entry: Bot["memory"][number]) {
   return {
-    id: `${teammateId}:${entry.id}`,
+    id: memoryRowId(userId, teammateId, entry.id),
     userId,
     teammateId,
     text: entry.text,
@@ -246,11 +254,19 @@ async function loadStore(database: Queryable, userId: string, lock: boolean): Pr
       updatedAt: row.updatedAt.toISOString(),
       memory: memories
         .filter((memory) => memory.teammateId === row.id)
-        .map((memory) => ({
-          id: memory.id.startsWith(`${row.id}:`) ? memory.id.slice(row.id.length + 1) : memory.id,
-          text: memory.text,
-          createdAt: memory.createdAt.toISOString(),
-        })),
+        .map((memory) => {
+          const scopedPrefix = `${userId}:${row.id}:`;
+          const legacyPrefix = `${row.id}:`;
+          return {
+            id: memory.id.startsWith(scopedPrefix)
+              ? memory.id.slice(scopedPrefix.length)
+              : memory.id.startsWith(legacyPrefix)
+                ? memory.id.slice(legacyPrefix.length)
+                : memory.id,
+            text: memory.text,
+            createdAt: memory.createdAt.toISOString(),
+          };
+        }),
     })),
     threads: threads.map((row) => ({
       id: row.id,
@@ -426,7 +442,7 @@ async function writeChanges(database: Queryable, userId: string, before: Store, 
     const afterMemory = byId(bot.memory);
     const gone = [...beforeMemory.keys()]
       .filter((id) => !afterMemory.has(id))
-      .map((id) => `${bot.id}:${id}`);
+      .flatMap((id) => [memoryRowId(userId, bot.id, id), `${bot.id}:${id}`]);
     if (gone.length)
       await database
         .delete(runTeammateMemories)
@@ -445,7 +461,10 @@ async function writeChanges(database: Queryable, userId: string, before: Store, 
           .where(
             and(
               eq(runTeammateMemories.userId, userId),
-              eq(runTeammateMemories.id, `${bot.id}:${entry.id}`),
+              inArray(runTeammateMemories.id, [
+                memoryRowId(userId, bot.id, entry.id),
+                `${bot.id}:${entry.id}`,
+              ]),
             ),
           );
     }
@@ -745,6 +764,10 @@ export async function deleteUserRecords(userId: string) {
     await tx.delete(runNotifications).where(eq(runNotifications.userId, userId));
     await tx.delete(runArtifacts).where(eq(runArtifacts.userId, userId));
     await tx.delete(runBrowserWorkspaces).where(eq(runBrowserWorkspaces.userId, userId));
+    await tx.delete(runMcpConnections).where(eq(runMcpConnections.userId, userId));
+    await tx.delete(runMcpExplanations).where(eq(runMcpExplanations.userId, userId));
+    await tx.delete(runDiscordLinks).where(eq(runDiscordLinks.userId, userId));
+    await tx.delete(runDiscordLinkCodes).where(eq(runDiscordLinkCodes.userId, userId));
   });
 }
 

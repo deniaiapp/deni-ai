@@ -5,7 +5,7 @@ import { mutateStore, readStore } from "../data/store";
 import { db, runConfig, runLogger } from "../runtime";
 import { runBrowserWorkspaces } from "@deniai/db";
 import { emitComputer, lastComputer, listShells, pushShell } from "./events";
-import { userScreenPath } from "../data/paths";
+import { primeStorageKey, userScreenPath } from "../data/paths";
 import { getUserObject, hasObjectStorage, putUserObject } from "../data/storage";
 import {
   browserProvider,
@@ -180,6 +180,7 @@ function persistScreenshot(userId: string, image: Buffer, remoteStorage: boolean
         );
         return;
       }
+      await primeStorageKey(userId);
       const target = userScreenPath(userId, jobId);
       await mkdir(path.dirname(target), { recursive: true });
       await writeFile(target, image);
@@ -843,6 +844,7 @@ export async function getScreenshot(userId: string, jobId?: string) {
     }
   }
   try {
+    await primeStorageKey(userId);
     const image = await readFile(userScreenPath(userId, jobId));
     screenshotCache().set(cacheKey, image);
     return image;

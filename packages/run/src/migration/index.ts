@@ -1,4 +1,4 @@
-import { eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { user } from "@deniai/db";
 import type { RunDatabase } from "../runtime";
 import { decryptSecretWith, isEncryptedSecret } from "../data/secrets";
@@ -14,6 +14,12 @@ import type { SourceData, SourceUserData } from "./source";
 import { columnsOf, rowKey, TABLE_SPECS, type TableSpec } from "./tables";
 
 export {
+  buildSanitizedUserExport,
+  buildUnlinkedExportEmail,
+  summarizeUserActivity,
+  type UserActivitySummary,
+} from "./export";
+export {
   FINISHED_JOB_STATUSES,
   legacyStorageKey,
   legacyWorkspaceObjectKey,
@@ -21,7 +27,7 @@ export {
   rehearsalUserId,
   type MigrationKeys,
 } from "./map";
-export { openSource, readSource, type SourceData } from "./source";
+export { openSource, readSource, type SourceData, type SourceUserData } from "./source";
 
 /**
  * Migration of the standalone Deni Run (Cloudflare D1 / local SQLite) into the
@@ -80,8 +86,9 @@ export type TableCounts = Partial<
 
 export type UserReport = {
   runUserId: string;
+  email?: string;
   deniUserId: string | null;
-  link: "deni-ai" | "map" | "rehearsal" | "none";
+  link: "deni-ai" | "verified-email" | "map" | "rehearsal" | "none";
   status:
     | "migrated"
     | "planned"
@@ -116,17 +123,84 @@ export type MigrationOptions = GuardOptions & {
   /** The target URL (for the guard and the report). Tests pass a localhost URL. */
   targetUrl: string;
   keys: MigrationKeys;
+  matchVerifiedEmail?: boolean;
   dryRun?: boolean;
   now?: Date;
 };
 
-type Resolved = { data: SourceUserData; deniUserId: string | null; link: UserReport["link"] };
+export type ResolvedMigrationTarget = {
+  data: SourceUserData;
+  deniUserId: string | null;
+  link: UserReport["link"];
+};
 
-function resolveUsers(options: MigrationOptions): Resolved[] {
+async function findVerifiedUsersByEmail(
+  db: RunDatabase,
+  emails: string[],
+): Promise<Map<string, string>> {
+  const uniqueEmails = [
+    ...new Set(emails.map((email) => email.trim().toLowerCase()).filter(Boolean)),
+  ];
+  if (!uniqueEmails.length) return new Map();
+
+  const rows = await db
+    .select({ id: user.id, email: user.email })
+    .from(user)
+    .where(
+      and(
+        eq(user.emailVerified, true),
+        or(eq(user.isAnonymous, false), isNull(user.isAnonymous)),
+        inArray(sql`lower(trim(${user.email}))`, uniqueEmails),
+      ),
+    );
+
+  const grouped = new Map<string, string[]>();
+  for (const row of rows) {
+    const key = row.email.trim().toLowerCase();
+    const list = grouped.get(key) ?? [];
+    list.push(row.id);
+    grouped.set(key, list);
+  }
+
+  const uniqueMatches = new Map<string, string>();
+  for (const [key, ids] of grouped) {
+    if (ids.length === 1) uniqueMatches.set(key, ids[0]!);
+  }
+  return uniqueMatches;
+}
+
+/** Resolve the Deni AI target user for each Run user (with optional verified-email matching). */
+export async function resolveMigrationTargets(options: {
+  source: SourceData;
+  db: RunDatabase;
+  map?: Record<string, string>;
+  rehearsalLinkUnlinked?: boolean;
+  matchVerifiedEmail?: boolean;
+}): Promise<ResolvedMigrationTarget[]> {
+  const candidateEmails = options.matchVerifiedEmail
+    ? options.source.users
+        .filter(
+          (item) =>
+            !options.map?.[item.user.id] &&
+            !item.deniUserId &&
+            item.user.emailVerified &&
+            item.user.email.trim().length > 0,
+        )
+        .map((item) => item.user.email)
+    : [];
+  const verifiedByEmail = candidateEmails.length
+    ? await findVerifiedUsersByEmail(options.db, candidateEmails)
+    : new Map<string, string>();
+
   return options.source.users.map((data) => {
     const mapped = options.map?.[data.user.id];
     if (mapped) return { data, deniUserId: mapped, link: "map" };
     if (data.deniUserId) return { data, deniUserId: data.deniUserId, link: "deni-ai" };
+    if (options.matchVerifiedEmail && data.user.emailVerified) {
+      const normalizedEmail = data.user.email.trim().toLowerCase();
+      const matched = normalizedEmail ? verifiedByEmail.get(normalizedEmail) : undefined;
+      if (matched) return { data, deniUserId: matched, link: "verified-email" };
+    }
     if (options.rehearsalLinkUnlinked)
       return { data, deniUserId: rehearsalUserId(data.user.id), link: "rehearsal" };
     return { data, deniUserId: null, link: "none" };
@@ -215,15 +289,24 @@ function plannedCounts(plan: UserPlan): TableCounts {
   );
 }
 
+function collectExplicitTargets(resolved: ResolvedMigrationTarget[]) {
+  return new Set(
+    resolved
+      .filter((item) => (item.link === "map" || item.link === "deni-ai") && item.deniUserId)
+      .map((item) => item.deniUserId!),
+  );
+}
+
 /** Migrate every linked Run user. Each user is written in one transaction. */
 export async function migrateRun(options: MigrationOptions): Promise<MigrationReport> {
   assertTargetAllowed(options.targetUrl, options);
   const now = options.now ?? new Date();
-  const resolved = resolveUsers(options);
+  const resolved = await resolveMigrationTargets(options);
   const present = await existingUsers(
     options.db,
     resolved.flatMap((item) => (item.deniUserId ? [item.deniUserId] : [])),
   );
+  const explicitTargets = collectExplicitTargets(resolved);
   const claimed = new Set<string>();
   const reports: UserReport[] = [];
   const placeholderUsers: string[] = [];
@@ -231,6 +314,7 @@ export async function migrateRun(options: MigrationOptions): Promise<MigrationRe
   for (const { data, deniUserId, link } of resolved) {
     const base: UserReport = {
       runUserId: data.user.id,
+      ...(data.user.email ? { email: data.user.email } : {}),
       deniUserId,
       link,
       status: "unlinked",
@@ -244,7 +328,10 @@ export async function migrateRun(options: MigrationOptions): Promise<MigrationRe
       reports.push(base);
       continue;
     }
-    if (claimed.has(deniUserId)) {
+    if (
+      claimed.has(deniUserId) ||
+      (link !== "map" && link !== "deni-ai" && explicitTargets.has(deniUserId))
+    ) {
       reports.push({
         ...base,
         status: "duplicate-target",
@@ -367,18 +454,26 @@ export async function verifyMigration(
   const now = options.now ?? new Date();
   const mismatches: string[] = [];
   const users: VerifyReport["users"] = [];
-  const resolved = resolveUsers(options);
+  const resolved = await resolveMigrationTargets(options);
   const present = await existingUsers(
     options.db,
     resolved.flatMap((item) => (item.deniUserId ? [item.deniUserId] : [])),
   );
+  const explicitTargets = collectExplicitTargets(resolved);
+  const claimed = new Set<string>();
   const notMigrated: string[] = [];
-  for (const { data, deniUserId } of resolved) {
-    // Unlinked users and links to missing accounts were reported, not migrated.
-    if (!deniUserId || !present.has(deniUserId)) {
+  for (const { data, deniUserId, link } of resolved) {
+    // Unlinked users, duplicate targets and missing accounts were not migrated.
+    if (
+      !deniUserId ||
+      !present.has(deniUserId) ||
+      claimed.has(deniUserId) ||
+      (link !== "map" && link !== "deni-ai" && explicitTargets.has(deniUserId))
+    ) {
       notMigrated.push(data.user.id);
       continue;
     }
+    claimed.add(deniUserId);
     const plan = planUser(data, deniUserId, options.keys, now);
     const counts: VerifyReport["users"][number]["counts"] = {};
     const found: Partial<Record<TargetTable, Map<string, Record<string, unknown>>>> = {};
@@ -424,7 +519,10 @@ export async function verifyMigration(
       if (target)
         check(
           `teammate ${teammate.id}`,
-          target.name === teammate.name && target.instructions === teammate.instructions,
+          target.name === teammate.name &&
+            target.instructions === teammate.instructions &&
+            stableJson(target.tools ?? null) === stableJson(teammate.tools ?? null) &&
+            target.computerAccess === teammate.computerAccess,
         );
     }
     for (const thread of plan.rows.threads) {
@@ -441,7 +539,31 @@ export async function verifyMigration(
     }
     for (const settings of plan.rows.settings) {
       const target = get("settings", settings);
-      if (target) check("storage key", target.storageKey === settings.storageKey);
+      if (target) {
+        check("storage key", target.storageKey === settings.storageKey);
+        const plainApiKey = decryptOrPlain(options.keys.source, data.store?.config?.apiKey);
+        if (plainApiKey !== undefined) {
+          let roundTrip: string | null = null;
+          try {
+            roundTrip = target.openrouterApiKey
+              ? decryptSecretWith(options.keys.target, String(target.openrouterApiKey))
+              : null;
+          } catch {
+            roundTrip = "<undecryptable>";
+          }
+          check("openrouter api key", roundTrip === plainApiKey);
+        }
+      }
+    }
+    for (const link of plan.rows.discordLinks) {
+      const target = get("discordLinks", link);
+      if (target)
+        check(
+          "discord link",
+          target.discordUserId === link.discordUserId &&
+            target.teammateId === (link.teammateId ?? null) &&
+            target.locale === (link.locale ?? "en"),
+        );
     }
     for (const connection of data.mcpConnections) {
       const target = found.mcpConnections?.get(
@@ -461,6 +583,20 @@ export async function verifyMigration(
           roundTrip = "<undecryptable>";
         }
         check(`MCP ${connection.id} ${label}`, roundTrip === plain);
+      }
+      const targetHeaders = (target.headers as Record<string, string> | undefined) ?? {};
+      for (const [headerName, headerValue] of Object.entries(connection.headers)) {
+        const plain = decryptOrPlain(options.keys.source, headerValue);
+        if (plain === undefined) continue;
+        let roundTrip: string | null = null;
+        try {
+          roundTrip = targetHeaders[headerName]
+            ? decryptSecretWith(options.keys.target, String(targetHeaders[headerName]))
+            : null;
+        } catch {
+          roundTrip = "<undecryptable>";
+        }
+        check(`MCP ${connection.id} header ${headerName}`, roundTrip === plain);
       }
     }
     users.push({ runUserId: data.user.id, deniUserId, counts, spotChecks });

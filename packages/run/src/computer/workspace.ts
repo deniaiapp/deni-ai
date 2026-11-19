@@ -48,6 +48,7 @@ function normalizePath(relativePath: string) {
 }
 
 async function ensureLocalWorkspace(userId: string) {
+  await primeStorageKey(userId);
   const root = userWorkspaceDir(userId);
   await mkdir(path.join(root, "inbox"), { recursive: true });
   await mkdir(path.join(root, "projects"), { recursive: true });

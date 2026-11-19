@@ -15,6 +15,7 @@
  *   --create-placeholder-users      (localhost only) create missing linked Deni AI users
  *   --rehearsal-link-unlinked       (localhost only) map unlinked Run users to run-rehearsal-* users
  *   --map <runUserId>=<deniUserId>  (localhost only, repeatable) explicit user mapping
+ *   --match-verified-email          link unlinked verified-email Run users to verified Deni AI users
  *   --i-know-this-is-production     allow a non-localhost target
  *
  * The target Run key is RUN_ENCRYPTION_KEY or the key derived from BETTER_AUTH_SECRET,
@@ -121,6 +122,7 @@ async function main() {
       "create-placeholder-users": { type: "boolean", default: false },
       "rehearsal-link-unlinked": { type: "boolean", default: false },
       map: { type: "string", multiple: true },
+      "match-verified-email": { type: "boolean", default: false },
       "i-know-this-is-production": { type: "boolean", default: false },
     },
     allowPositionals: false,
@@ -138,13 +140,21 @@ async function main() {
     targetUrl,
     production: values["i-know-this-is-production"],
     rehearsalLinkUnlinked: values["rehearsal-link-unlinked"],
+    matchVerifiedEmail: values["match-verified-email"],
     map,
     keys: {
       source: sourceKey(values["source-key-env-file"]),
       target: runEncryptionKey(process.env),
     },
   };
-  const source = readSource(openSource(values.source));
+  const sourceDb = openSource(values.source);
+  const source = (() => {
+    try {
+      return readSource(sourceDb);
+    } finally {
+      sourceDb.close();
+    }
+  })();
   const client = postgres(targetUrl, { max: 2, onnotice: () => undefined, prepare: false });
   const db = drizzle({ client }) as unknown as RunDatabase;
   console.info(
@@ -178,5 +188,11 @@ async function main() {
 
 main().catch((error: unknown) => {
   console.error(error instanceof Error ? `${error.name}: ${error.message}` : error);
+  if (error instanceof Error && error.cause) {
+    console.error(
+      "Cause:",
+      error.cause instanceof Error ? `${error.cause.name}: ${error.cause.message}` : error.cause,
+    );
+  }
   process.exitCode = error instanceof MigrationGuardError ? 2 : 1;
 });

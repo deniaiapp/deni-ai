@@ -1,9 +1,9 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createRunTestDb, resetRunTables, seedTestUser, type RunTestDb } from "../testing";
-import { decryptSecretWith } from "../data/secrets";
+import { decryptSecretWith, encryptSecretWith } from "../data/secrets";
 import type { RunDatabase } from "../runtime";
 import { FIXTURE, writeRunFixture } from "./fixture";
 import {
@@ -29,12 +29,21 @@ let dir: string;
 let paths: { sqlitePath: string; exportPath: string };
 let source: SourceData;
 
+function loadSource(filePath: string) {
+  const sourceDb = openSource(filePath);
+  try {
+    return readSource(sourceDb);
+  } finally {
+    sourceDb.close();
+  }
+}
+
 beforeAll(async () => {
   testDb = await createRunTestDb();
   db = testDb.db as unknown as RunDatabase;
   dir = mkdtempSync(join(tmpdir(), "run-migration-"));
   paths = writeRunFixture(dir, sourceKey);
-  source = readSource(openSource(paths.sqlitePath));
+  source = loadSource(paths.sqlitePath);
 }, 60_000);
 
 afterAll(async () => {
@@ -84,6 +93,19 @@ describe("Deni Run D1 migration", () => {
     expect(await count("run_browser_workspaces")).toBe(1);
     expect(await count("run_discord_link_codes")).toBe(1);
     expect(await count("run_teammates", FIXTURE.linkedMissing.deniUserId)).toBe(0);
+
+    const teammates = await testDb.pglite.query<{
+      id: string;
+      tools: string[] | null;
+      computer_access: boolean;
+    }>(
+      `SELECT id, tools, computer_access FROM run_teammates WHERE user_id = $1 ORDER BY position`,
+      [FIXTURE.linked.deniUserId],
+    );
+    expect(teammates.rows).toEqual([
+      { id: "chief", tools: null, computer_access: true },
+      { id: "research", tools: ["web", "files"], computer_access: false },
+    ]);
 
     const messages = await testDb.pglite.query<{ id: string; role: string; parts: unknown }>(
       `SELECT id, role, parts FROM run_messages WHERE user_id = $1 AND thread_id = 'dm_chief' ORDER BY seq`,
@@ -218,6 +240,19 @@ describe("Deni Run D1 migration", () => {
     expect(report.unlinkedUsers).toEqual([]);
     expect(await count("run_teammates", rehearsalId)).toBe(2);
     expect(await count("run_teammates", FIXTURE.linkedMissing.deniUserId)).toBe(2);
+    expect(await count("run_teammate_memories", FIXTURE.linked.deniUserId)).toBe(1);
+    expect(await count("run_teammate_memories", FIXTURE.linkedMissing.deniUserId)).toBe(1);
+    expect(await count("run_teammate_memories", rehearsalId)).toBe(1);
+
+    const verify = await verifyMigration({
+      source,
+      db,
+      targetUrl: TARGET,
+      keys,
+      rehearsalLinkUnlinked: true,
+    });
+    expect(verify.ok).toBe(true);
+    expect(verify.mismatches).toEqual([]);
   });
 
   it("maps a Run user explicitly to a chosen account", async () => {
@@ -255,7 +290,7 @@ describe("Deni Run D1 migration", () => {
   });
 
   it("reads a wrangler d1 export (.sql) the same as the SQLite file", async () => {
-    const fromExport = readSource(openSource(paths.exportPath));
+    const fromExport = loadSource(paths.exportPath);
     expect(fromExport.users.map((item) => item.user.id)).toEqual(
       source.users.map((item) => item.user.id),
     );
@@ -263,5 +298,192 @@ describe("Deni Run D1 migration", () => {
     expect(report.ok).toBe(true);
     expect(await count("run_messages")).toBe(3);
     expect((await verifyMigration({ source, db, targetUrl: TARGET, keys })).ok).toBe(true);
+  });
+
+  it("detects tampered BYOK keys and encrypted MCP header secrets during verification", async () => {
+    await migrateRun({ source, db, targetUrl: TARGET, keys });
+    const badByok = encryptSecretWith(targetKey, "wrong-byok-key");
+    const badHeader = encryptSecretWith(targetKey, "wrong-header-secret");
+    await testDb.pglite.query(
+      `UPDATE run_settings SET openrouter_api_key = $1 WHERE user_id = $2`,
+      [badByok, FIXTURE.linked.deniUserId],
+    );
+    await testDb.pglite.query(
+      `UPDATE run_mcp_connections SET headers = $1::jsonb WHERE id = 'mcp_1'`,
+      [JSON.stringify({ "X-Api-Key": badHeader })],
+    );
+
+    const verify = await verifyMigration({ source, db, targetUrl: TARGET, keys });
+    expect(verify.ok).toBe(false);
+    expect(verify.mismatches).toEqual(
+      expect.arrayContaining([
+        `${FIXTURE.linked.runUserId}: openrouter api key differs`,
+        `${FIXTURE.linked.runUserId}: MCP mcp_1 header X-Api-Key differs`,
+      ]),
+    );
+  });
+
+  it("creates a minimal run_settings row preserving storage_key when a user has artifacts but no user_stores row", async () => {
+    await seedTestUser(testDb.pglite, "deni-no-store");
+    const minimalSource: SourceData = {
+      users: [
+        {
+          user: {
+            id: "run-no-store",
+            name: "No Store",
+            email: "nostore@example.com",
+            emailVerified: true,
+          },
+          deniUserId: "deni-no-store",
+          store: null,
+          threadMessages: [],
+          jobs: [],
+          jobEvents: [],
+          artifacts: [
+            {
+              id: "art_only",
+              userId: "run-no-store",
+              jobId: null,
+              threadId: "dm_chief",
+              botId: "chief",
+              path: "outbox/notes.txt",
+              title: "Notes",
+              mimeType: "text/plain",
+              description: null,
+              createdAt: new Date("2026-10-01T00:00:00.000Z"),
+              updatedAt: new Date("2026-10-01T00:00:00.000Z"),
+            },
+          ],
+          browserWorkspaces: [],
+          mcpConnections: [],
+          mcpExplanations: [],
+          notifications: [],
+          discordLink: null,
+          discordLinkCodes: [],
+        },
+      ],
+      notMigrated: {},
+    };
+
+    const report = await migrateRun({ source: minimalSource, db, targetUrl: TARGET, keys });
+    expect(report.ok).toBe(true);
+    const settings = await testDb.pglite.query<{ storage_key: string }>(
+      `SELECT storage_key FROM run_settings WHERE user_id = 'deni-no-store'`,
+    );
+    expect(settings.rows).toEqual([{ storage_key: legacyStorageKey("run-no-store") }]);
+    expect((await verifyMigration({ source: minimalSource, db, targetUrl: TARGET, keys })).ok).toBe(
+      true,
+    );
+  });
+
+  it("ignores sqlite_sequence statements in standalone SQL dumps even without AUTOINCREMENT tables", () => {
+    const dumpPath = join(dir, "d1-sequence.sql");
+    writeFileSync(
+      dumpPath,
+      [
+        "PRAGMA defer_foreign_keys=TRUE;",
+        'CREATE TABLE "sqlite_sequence"(name,seq);',
+        'CREATE TABLE "user" ("id" text PRIMARY KEY NOT NULL, "name" text NOT NULL, "email" text NOT NULL);',
+        `INSERT INTO "user" VALUES('u_seq','Seq User','seq@example.com');`,
+        "DELETE FROM sqlite_sequence;",
+        `INSERT INTO "sqlite_sequence" VALUES('d1_migrations',1);`,
+      ].join("\n"),
+    );
+
+    const parsed = loadSource(dumpPath);
+    expect(parsed.users.map((entry) => entry.user)).toEqual([
+      { id: "u_seq", name: "Seq User", email: "seq@example.com", emailVerified: false },
+    ]);
+  });
+
+  it("loads a D1 SQL dump when child tables with REFERENCES user(id) precede the user table", () => {
+    const dumpPath = join(dir, "d1-child-before-user.sql");
+    writeFileSync(
+      dumpPath,
+      [
+        "PRAGMA defer_foreign_keys=TRUE;",
+        'CREATE TABLE "account" ("id" text PRIMARY KEY NOT NULL, "account_id" text NOT NULL, "provider_id" text NOT NULL, "user_id" text NOT NULL REFERENCES "user"("id") ON DELETE CASCADE);',
+        `INSERT INTO "account" VALUES('acc_1','deni_target_1','deni-ai','run_u_1');`,
+        'CREATE TABLE "user" ("id" text PRIMARY KEY NOT NULL, "name" text NOT NULL, "email" text NOT NULL);',
+        `INSERT INTO "user" VALUES('run_u_1','Order User','order@example.com');`,
+      ].join("\n"),
+    );
+
+    const parsed = loadSource(dumpPath);
+    expect(parsed.users).toHaveLength(1);
+    expect(parsed.users[0]?.user).toEqual({
+      id: "run_u_1",
+      name: "Order User",
+      email: "order@example.com",
+      emailVerified: false,
+    });
+    expect(parsed.users[0]?.deniUserId).toBe("deni_target_1");
+  });
+
+  it("matches unlinked verified-email Run users only to unique verified non-anonymous Deni AI accounts", async () => {
+    const dumpPath = join(dir, "d1-verified-email.sql");
+    writeFileSync(
+      dumpPath,
+      [
+        'CREATE TABLE "user" ("id" text PRIMARY KEY NOT NULL, "name" text NOT NULL, "email" text NOT NULL, "email_verified" integer DEFAULT 0 NOT NULL);',
+        'CREATE TABLE "account" ("id" text PRIMARY KEY NOT NULL, "account_id" text NOT NULL, "provider_id" text NOT NULL, "user_id" text NOT NULL);',
+        'CREATE TABLE "user_stores" ("user_id" text PRIMARY KEY NOT NULL, "data" text NOT NULL, "created_at" integer NOT NULL, "updated_at" integer NOT NULL);',
+        `INSERT INTO "user" VALUES('run_match','Match User','MATCH@example.com',1);`,
+        `INSERT INTO "user" VALUES('run_unverified_src','Unverified Src','unverified-src@example.com',0);`,
+        `INSERT INTO "user" VALUES('run_unverified_dst','Unverified Dst','unverified-dst@example.com',1);`,
+        `INSERT INTO "user" VALUES('run_anon_dst','Anon Dst','anon-dst@example.com',1);`,
+        `INSERT INTO "user" VALUES('run_dup','Dup User','deni-1@example.com',1);`,
+        `INSERT INTO "account" VALUES('acc_dup','deni-1','deni-ai','${FIXTURE.linked.runUserId}');`,
+        `INSERT INTO "user_stores" VALUES('run_match','{"version":1,"config":{"apiKey":"","timezone":"UTC","model":"run","runMode":"default"},"bots":[{"id":"chief","name":"Chief","job":"","instructions":"Matched","accent":"#d4a574","icon":null,"createdAt":"2026-10-01T00:00:00.000Z","updatedAt":"2026-10-01T00:00:00.000Z","memory":[]}],"threads":[{"id":"dm_chief","kind":"dm","title":"Chief","botIds":["chief"],"createdAt":"2026-10-01T00:00:00.000Z","updatedAt":"2026-10-01T00:00:00.000Z","lastPreview":""}],"skills":[],"routines":[],"shells":[],"handoffs":[]}',1,1);`,
+        `INSERT INTO "user_stores" VALUES('run_dup','{"version":1,"config":{"apiKey":"","timezone":"UTC","model":"run","runMode":"default"},"bots":[],"threads":[],"skills":[],"routines":[],"shells":[],"handoffs":[]}',1,1);`,
+      ].join("\n"),
+    );
+
+    await testDb.pglite.query(
+      `INSERT INTO "user" (id, name, email, email_verified, is_anonymous) VALUES
+        ('deni-match', 'Match', 'match@example.com', true, false),
+        ('deni-unv-src', 'Unv Src', 'unverified-src@example.com', true, false),
+        ('deni-unv-dst', 'Unv Dst', 'unverified-dst@example.com', false, false),
+        ('deni-anon-dst', 'Anon Dst', 'anon-dst@example.com', true, true)`,
+    );
+
+    const parsed = loadSource(dumpPath);
+    const report = await migrateRun({
+      source: {
+        ...parsed,
+        users: [
+          ...source.users.filter((u) => u.user.id === FIXTURE.linked.runUserId),
+          ...parsed.users,
+        ],
+      },
+      db,
+      targetUrl: TARGET,
+      keys,
+      matchVerifiedEmail: true,
+    });
+
+    const byRun = Object.fromEntries(report.users.map((item) => [item.runUserId, item]));
+    expect(byRun.run_match).toMatchObject({ link: "verified-email", status: "migrated" });
+    expect(byRun.run_unverified_src).toMatchObject({ link: "none", status: "unlinked" });
+    expect(byRun.run_unverified_dst).toMatchObject({ link: "none", status: "unlinked" });
+    expect(byRun.run_anon_dst).toMatchObject({ link: "none", status: "unlinked" });
+    expect(byRun.run_dup).toMatchObject({ link: "verified-email", status: "duplicate-target" });
+    expect(await count("run_teammates", "deni-match")).toBe(1);
+
+    const verify = await verifyMigration({
+      source: {
+        ...parsed,
+        users: [
+          ...source.users.filter((u) => u.user.id === FIXTURE.linked.runUserId),
+          ...parsed.users,
+        ],
+      },
+      db,
+      targetUrl: TARGET,
+      keys,
+      matchVerifiedEmail: true,
+    });
+    expect(verify.ok).toBe(true);
+    expect(verify.mismatches).toEqual([]);
   });
 });

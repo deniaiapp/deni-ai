@@ -15,7 +15,8 @@
     "format": "oxfmt --write",
     "format:check": "oxfmt --check",
     "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache",
-    "migrate:d1": "tsx scripts/migrate-from-d1.ts"
+    "migrate:d1": "tsx scripts/migrate-from-d1.ts",
+    "email:unlinked-exports": "tsx scripts/email-unlinked-exports.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1168.0",
