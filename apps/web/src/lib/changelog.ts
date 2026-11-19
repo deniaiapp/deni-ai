@@ -3,7 +3,7 @@ export type ChangelogHighlight = {
   body: string;
 };
 
-import { appCodename } from "@/lib/version";
+import { appCodename, appDate } from "@/lib/version";
 
 export type ChangelogEntry = {
   version: string;
@@ -24,9 +24,9 @@ export const changelogEntries: ChangelogEntry[] = [
   {
     version: "8.0",
     codename: appCodename,
-    date: "2026-11-08",
+    date: appDate,
     summary:
-      "A private beta of the next Deni AI: a new design, Deni Run built in, simpler public pages, more reliable message storage, and two-factor sign-in for password accounts.",
+      "The next Deni AI: a new design, Deni Run built in, usage that resets with your billing period, simpler public pages, more reliable message storage, and two-factor sign-in for password accounts.",
     highlights: [
       {
         title: "New design",
@@ -35,6 +35,10 @@ export const changelogEntries: ChangelogEntry[] = [
       {
         title: "Deni Run built in",
         body: "Deni Run now lives inside Deni AI: switch between Chat and Run in the sidebar to work with your teammates, routines and skills without a separate site. Run starts empty here, and spends the same usage pool as chat.",
+      },
+      {
+        title: "Usage follows your billing period",
+        body: "On a paid plan, your usage pool now resets every month on the day your plan started instead of on the 1st, so every payment comes with a full pool. Upgrades take effect right away with a new billing period and a fresh pool. Downgrades take effect when the period you paid for ends.",
       },
       {
         title: "Simpler public pages",
@@ -55,7 +59,7 @@ export const changelogEntries: ChangelogEntry[] = [
     ],
     ja: {
       summary:
-        "次の Deni AI のプライベートベータです。新しいデザイン、Deni Run の統合、シンプルになった公開ページ、より確実なメッセージ保存、パスワードアカウントの 2 段階認証を含みます。",
+        "次の Deni AI です。新しいデザイン、Deni Run の統合、請求期間に合わせてリセットされる使用量プール、シンプルになった公開ページ、より確実なメッセージ保存、パスワードアカウントの 2 段階認証を含みます。",
       highlights: [
         {
           title: "新しいデザイン",
@@ -64,6 +68,10 @@ export const changelogEntries: ChangelogEntry[] = [
         {
           title: "Deni Run を統合",
           body: "Deni Run が Deni AI の中で使えるようになりました。サイドバーでチャットと Run を切り替え、別のサイトに移らずにチームメイト、ルーティン、スキルを使えます。ここでの Run は空の状態から始まり、チャットと同じ使用量プールを消費します。",
+        },
+        {
+          title: "使用量プールが請求期間に連動",
+          body: "有料プランの使用量プールは、毎月 1 日ではなく、プランを始めた日を基準に毎月リセットされるようになりました。お支払いごとに使用量プールをすべて使えます。アップグレードはすぐに反映され、新しい請求期間と新しい使用量プールが始まります。ダウングレードは、お支払い済みの期間が終わったときに反映されます。",
         },
         {
           title: "シンプルになった公開ページ",

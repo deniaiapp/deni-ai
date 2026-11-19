@@ -32,25 +32,50 @@ After the takeover:
 | Stripe webhook              | The endpoint stays `https://deniai.app/api/stripe/webhook`, so nothing changes in Stripe. v8 needs v7's `STRIPE_WEBHOOK_SECRET` and `STRIPE_WEBHOOK_ENABLED` unset (default `true`).                                                                                                  |
 | Scheduled jobs              | `usage-and-meter`, `storage-cleanup`, `guest-cleanup` and `model-health` move to v8 (`CRON_ENABLED` unset). They are safe to run concurrently, so a short overlap with v7 while switching is harmless; a long one is not needed.                                                     |
 | Deni AI as OAuth provider   | Standalone Deni Run (run.deniai.app) keeps `deniai.app` as issuer and redirect target. The OAuth clients, consents and JWKS are rows in the shared database, so they keep working; v8 needs `DENI_RUN_OAUTH_CLIENT_ID` and `DENI_RUN_SERVICE_SECRET` with v7's values.                 |
-| Flixa                       | Unchanged: the production API stays on the old flixa-backend. `services/agent-api` stays undeployed (or `FLIXA_USAGE_ENGINE=shadow`).                                                                                                                                               |
+| Flixa                       | The production API stays the Flixa backend (`deniaiapp/flixa`, `apps/backend`), but it must run a build with the billing-cycle usage period (see Usage period and plan changes below) from the moment v8 serves everyone. `services/agent-api` stays undeployed (or `FLIXA_USAGE_ENGINE=shadow`). |
 | Run mode (`/run`)           | The beta runs with `RUN_ENABLED=false`. Turning it on opens Run to everyone and needs its background work: `RUN_SCHEDULER_IN_PROCESS=true` on the single web instance (plus `RUN_DISCORD_ENABLED=true` for the bot), or `services/run-worker`. The D1 import is a separate step (`docs/run-migration.md`).          |
 | Beta-only UI                | The sidebar "Beta" label and the account menu's "Go to Deni AI v7" item follow `BETA_ACCESS_REQUIRED` (`platformCapabilities.privateBeta`), and "Send feedback" (the help center's v8 form) also `ROLLOUT_SWITCH_ENABLED`, so they disappear with the gate and the Worker. `/private-beta` stays as a route but nothing sends users there.          |
 | Retired pages               | guides, use cases, about and models answer 308 permanent redirects (`apps/web/vite/route-rules.ts`). Canonical URLs already use `https://deniai.app`.                                                                                                                                                   |
 | Google sign-in, Turnstile   | No change: `deniai.app` is already registered.                                                                                                                                                                                                                                      |
 | GitHub sign-in              | Switch back to v7's GitHub OAuth App (callback on `deniai.app`). Accounts are matched by GitHub user id, so links made on beta keep working.                                                                                                                                        |
 
+## Usage period and plan changes
+
+v8 and the Flixa backend reset a paid plan's usage pool with its billing cycle
+(`packages/billing/docs/usage-engine.md`, Usage period); v7 resets every pool on the
+first of the UTC month. All three write the same `usage_quota` and `product_usage`
+rows, so they only agree once v7 is gone:
+
+- **Deploy together**: the v8 web app with that change and the Flixa backend build
+  with the same rule go out with the takeover (the Flixa backend first is fine: its
+  rule only differs for rows v8 has not touched yet). Do not ship the change to v8
+  weeks before the takeover: while v7 still serves some sessions, a paying account
+  that uses both versions gets extra resets at the month's end, and usage recorded
+  through v7 (chat, standalone Deni Run) is keyed by calendar month and is not
+  counted in v8's pool.
+- **One reset for paying accounts**: their quota rows still end on the first of the
+  next month, which no longer matches their billing period, so each starts a new pool
+  the first time it is used after the deploy. Free accounts are unaffected.
+- **Plan changes**: v8 applies an upgrade at once with a new billing cycle and
+  schedules a downgrade for the end of the paid period in a Stripe subscription
+  schedule (`apps/web/SETUP.md`). v7 knows nothing about schedules: Stripe refuses
+  v7's "cancel subscription" on a subscription with a pending downgrade, and v7 never
+  shows or drops the pending change.
+
 ## Before the day
 
 1. **Code for the release** (lands on `canary`, promoted to `master`):
-   - Choose the 8.0 codename and release date in `apps/web/src/lib/version.ts`
-     (`appCodename` is still the `Private Beta` placeholder, `appDate` the beta date).
-   - Rewrite the 8.0 entry in `apps/web/src/lib/changelog.ts` (English and `ja`) as a
-     release instead of a private beta ("Run starts empty here" too, if the D1 import
-     has run by then).
+   - The 8.0 codename and release date are set in `apps/web/src/lib/version.ts`
+     (Crimson Blade, 2026-11-19; the changelog entry reads both). Change `appDate` if
+     the takeover happens on another day.
+   - The 8.0 entry in `apps/web/src/lib/changelog.ts` (English and `ja`) is written as
+     a release. Its Run highlight still says "Run starts empty here": drop that
+     sentence if the D1 import has run by then.
    - Finish or leave out unfinished work; release from a clean, verified `canary`.
-2. **Beta health**: no open Sentry issue on v8 that v7 does not have; testers' usage
-   pool and Max Mode numbers agree between v7 and v8; no `run_jobs` stuck in
-   `running`.
+2. **Beta health**: no open Sentry issue on v8 that v7 does not have; Free testers'
+   usage pool and everyone's Max Mode numbers agree between v7 and v8 (a paid plan's
+   pool differs by design once v8 has the billing-cycle usage period); no `run_jobs`
+   stuck in `running`.
 3. **Run background work**: on the single v8 instance set `RUN_SCHEDULER_IN_PROCESS=true`
    (and `RUN_DISCORD_ENABLED=true` with `DISCORD_BOT_TOKEN` for the bot), or deploy
    `services/run-worker` (`services/run-worker/README.md`), or keep `RUN_ENABLED=false`.
@@ -68,10 +93,13 @@ After the takeover:
    `packages/db/migrations/` (`0081` at the time of writing). Apply missing ones from
    this repository first (`pnpm --filter @deniai/db db:migrate` with the production
    `DATABASE_URL`).
-3. **Save v7's configuration**: copy the `deni-ai` app's Environment, Build-time
+3. **Deploy the Flixa backend** build with the billing-cycle usage period
+   (`deniaiapp/flixa`, `apps/backend`), so it and v8 agree on the usage period from
+   the first request.
+4. **Save v7's configuration**: copy the `deni-ai` app's Environment, Build-time
    Arguments, branch and Dockerfile path somewhere safe. A minidock rollback starts
    the old image with the **current** Environment, so going back to v7 needs them.
-4. **Switch the `deni-ai` app to v8** in the minidock panel: branch `beta/v8` (or
+5. **Switch the `deni-ai` app to v8** in the minidock panel: branch `beta/v8` (or
    `master` once v8 is promoted there), Dockerfile `apps/web/Dockerfile`, the
    Build-time Arguments of `deni-ai-beta` with
    `NEXT_PUBLIC_BETTER_AUTH_URL=https://deniai.app` (and the other `NEXT_PUBLIC_*`
@@ -93,16 +121,21 @@ After the takeover:
 
    Then press **Deploy**. Once the health check passes, `deniai.app` serves v8 and the
    v7 container is gone, so only v8 runs the jobs and receives the webhook.
-5. **Remove the rollout Worker** if it runs: set `V8_PERCENT=0` (everything then
+6. **Remove the rollout Worker** if it runs: set `V8_PERCENT=0` (everything then
    reaches the `deni-ai` app, now v8), then delete the Worker's `deniai.app/*` route.
    Visitors' `deni_variant` cookies are ignored from then on.
-6. **Retire the beta host**: stop the `deni-ai-beta` app and add a Cloudflare
+7. **Retire the beta host**: stop the `deni-ai-beta` app and add a Cloudflare
    redirect rule from `beta.deniai.app/*` to the same path on `deniai.app` (Caddy
    cannot redirect).
-7. **Smoke test** on `deniai.app`:
+8. **Smoke test** on `deniai.app`:
    - An existing v7 session is still signed in; email, Google, GitHub and passkey
      sign-in work; a guest can start a chat.
-   - A chat streams and its usage appears in Settings → Billing.
+   - A chat streams and its usage appears in Settings → Billing. On a paid account
+     the usage card's reset date is the plan's renewal day, not the first of the month,
+     and Flixa (`flixa usage`) reports the same pool and date.
+   - In Stripe test mode or on your own subscription: the change-plan dialog shows
+     the full-price estimate for an upgrade and the effective date for a downgrade,
+     and a scheduled downgrade appears on the plan card with **Keep current plan**.
    - Stripe: send a test webhook from the dashboard (or watch the next real event)
      and check it answers 2xx from v8.
    - Logs show the in-process jobs starting (`usage-and-meter`, `storage-cleanup`,
@@ -111,7 +144,7 @@ After the takeover:
      (`/api/integrations/deni-run/usage`) work; Flixa sign-in works.
    - `/run` creates a job and the worker picks it up (unless Run is off).
    - The sidebar has no "Beta" label and the account menu no "Go to Deni AI v7".
-8. **Watch** for the first days: Sentry, Stripe webhook delivery failures, the
+9. **Watch** for the first days: Sentry, Stripe webhook delivery failures, the
    background job warnings (`Background job ... reported failures` / `is stuck`), and
    E2B / Steel spend.
 
@@ -132,6 +165,15 @@ against the database:
 
 What v7 cannot show: Run mode data, per-account preferred models and the per-chat
 model (`0081`). Accounts that turned on two-factor authentication on v8 keep it on v7.
+
+Usage and plans after a rollback: v7 resets pools by calendar month again, so a paying
+account's row (ending with its billing period) is reset once more at that period's
+end and then follows the month; nothing is lost, usage is only forgiven. Roll the
+Flixa backend back to its calendar-month build as well, or the two disagree. Downgrades
+scheduled on v8 stay in Stripe and still switch the price at the period end, but v7
+does not show them and cannot cancel such a subscription (Stripe refuses it while the
+schedule is attached): release the schedule in the Stripe dashboard for a customer who
+asks.
 
 ## After the takeover
 

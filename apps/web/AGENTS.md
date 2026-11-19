@@ -168,7 +168,7 @@ at the repository root.
   `packages/db` here, stay additive, and v7 must not generate migrations.
   `CRON_ENABLED=false` and `STRIPE_WEBHOOK_ENABLED=false` keep the beta from
   running jobs and webhooks that v7 already runs.
-- `src/lib/version.ts` holds the version and the codename placeholder. Beta-only
+- `src/lib/version.ts` holds the version, the codename and the release date. Beta-only
   UI (the sidebar "Beta" label and the account menu's "Go to Deni AI v7" item)
   follows `platformCapabilities.privateBeta`, which is
   `BETA_ACCESS_REQUIRED`, so turning the gate off at takeover also hides it

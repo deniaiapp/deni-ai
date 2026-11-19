@@ -136,3 +136,7 @@ models, and Run data if Run was on.
 - **Cloudflare cache**: v7 and v8 responses come from different host names, so
   their cache keys never mix, even with HTML caching on.
 - **Two-factor reminder**: password-only accounts see v8's reminder only on v8.
+- **Usage period and plan changes**: v8's billing-cycle usage period and scheduled
+  downgrades do not exist on v7, which shares the usage rows and the Stripe
+  subscriptions. Ship them with the takeover, not during the split
+  (`docs/v8-takeover.md`, Usage period and plan changes).
