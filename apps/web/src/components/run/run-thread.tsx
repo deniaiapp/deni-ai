@@ -1,27 +1,34 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useChat } from "@ai-sdk/react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   DefaultChatTransport,
   generateId,
   lastAssistantMessageIsCompleteWithApprovalResponses,
   type UIMessage,
 } from "ai";
-import { AtSign, Eraser, PanelRight, Send, Square, Trash2 } from "lucide-react";
+import {
+  Loader2Icon,
+  Monitor as MonitorIcon,
+  RotateCcw as RotateCcwIcon,
+  SquareIcon,
+  Trash2Icon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useExtracted } from "use-intl";
+import type { RunMode } from "@deniai/run/agent/model";
+import { isContextReset } from "@deniai/run/chat/messages";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@deniai/ui/components/alert";
 import { Button } from "@deniai/ui/components/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@deniai/ui/components/sheet";
-import { Textarea } from "@deniai/ui/components/textarea";
 import {
   Conversation,
   ConversationContent,
-  ConversationEmptyState,
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 import { DocumentTitle } from "@/components/document-title";
 import { Link, useRouter } from "@/lib/navigation";
+import { cn } from "@/lib/utils";
 import {
   runFetch,
   runKeys,
@@ -34,14 +41,23 @@ import {
   type RunState,
   type Thread,
 } from "./run-api";
+import { RunComposer, useRunMode } from "./run-composer";
 import { useRunErrorText } from "./run-error-text";
-import { messageAuthorOf, RunMessage, type MessageAuthor } from "./run-message";
+import {
+  messageAuthorOf,
+  RunMessage,
+  TeammateEmptyState,
+  TypingIndicator,
+  type MessageAuthor,
+} from "./run-message";
 import { RunLoading, RunPage, takePendingTask } from "./run-page";
-import { RunWorkspacePanel, useJobStatusLabel } from "./run-workspace-panel";
+import { RunWorkspacePanel } from "./run-workspace-panel";
 import { TeammateAvatar } from "./teammate-avatar";
 
+const ACTIVE_JOB = ["queued", "running", "finalizing", "waiting_approval", "waiting_takeover"];
+
 /** The error the Run chat endpoints answered with: a code and, when present, detail text. */
-export function parseChatError(error: Error | undefined) {
+function parseChatError(error: Error | undefined) {
   if (!error) return null;
   try {
     const body = JSON.parse(error.message) as { code?: string; error?: string; metric?: string };
@@ -58,9 +74,9 @@ export function parseChatError(error: Error | undefined) {
 function ChatErrorAlert({ error, onDismiss }: { error: Error; onDismiss: () => void }) {
   const t = useExtracted();
   const parsed = parseChatError(error);
-  let title = t("The teammate could not answer");
+  let title = t("Failed to send");
   let description = parsed?.message ?? t("Something went wrong. Please try again.");
-  let action: React.ReactNode = null;
+  let action: ReactNode = null;
   if (parsed?.code === "llm_unconfigured") {
     title = t("No AI model is configured");
     description = t(
@@ -70,7 +86,7 @@ function ChatErrorAlert({ error, onDismiss }: { error: Error; onDismiss: () => v
     title = t("Usage limit reached");
     description = t("This month's usage is used up. Upgrade your plan to keep going.");
     action = (
-      <Button size="sm" render={<Link href="/settings/billing" />} nativeButton={false}>
+      <Button size="xs" render={<Link href="/settings/billing" />} nativeButton={false}>
         {t("See plans")}
       </Button>
     );
@@ -83,232 +99,11 @@ function ChatErrorAlert({ error, onDismiss }: { error: Error; onDismiss: () => v
       <AlertDescription>{description}</AlertDescription>
       <AlertAction className="flex gap-2">
         {action}
-        <Button size="sm" variant="ghost" onClick={onDismiss}>
+        <Button size="xs" variant="ghost" onClick={onDismiss}>
           {t("Dismiss")}
         </Button>
       </AlertAction>
     </Alert>
-  );
-}
-
-function Composer({
-  placeholder,
-  disabled,
-  busy,
-  onSend,
-  onStop,
-  mentions,
-}: {
-  placeholder: string;
-  disabled?: boolean;
-  busy?: boolean;
-  onSend: (text: string) => void;
-  onStop?: () => void;
-  mentions?: Bot[];
-}) {
-  const t = useExtracted();
-  const [text, setText] = useState("");
-  const send = () => {
-    const value = text.trim();
-    if (!value || disabled || busy) return;
-    onSend(value);
-    setText("");
-  };
-  return (
-    <div className="flex flex-col gap-2 rounded-xl border bg-background p-2">
-      {mentions?.length ? (
-        <div className="flex flex-wrap gap-1">
-          {[{ id: "everyone", name: "everyone" }, ...mentions].map((bot) => (
-            <Button
-              key={bot.id}
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-7"
-              onClick={() =>
-                setText(
-                  (current) =>
-                    `${current}${current && !current.endsWith(" ") ? " " : ""}@${bot.name} `,
-                )
-              }
-            >
-              <AtSign className="size-3" />
-              {bot.id === "everyone" ? t("everyone") : bot.name}
-            </Button>
-          ))}
-        </div>
-      ) : null}
-      <Textarea
-        value={text}
-        rows={2}
-        placeholder={placeholder}
-        className="resize-none border-0 shadow-none focus-visible:ring-0"
-        onChange={(event) => setText(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
-            event.preventDefault();
-            send();
-          }
-        }}
-      />
-      <div className="flex justify-end gap-2">
-        {busy && onStop ? (
-          <Button size="sm" variant="outline" onClick={onStop}>
-            <Square className="size-3" />
-            {t("Stop")}
-          </Button>
-        ) : null}
-        <Button size="sm" onClick={send} disabled={!text.trim() || disabled || busy}>
-          <Send className="size-3" />
-          {t("Send")}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-function ActiveJobBar({ threadId }: { threadId: string }) {
-  const t = useExtracted();
-  const label = useJobStatusLabel();
-  const jobs = useThreadJobs(threadId);
-  const errorText = useRunErrorText();
-  const invalidate = useInvalidateRun();
-  const active = jobs.data?.jobs.find((job) =>
-    ["queued", "running", "finalizing", "waiting_approval", "waiting_takeover"].includes(
-      job.status,
-    ),
-  );
-  const cancel = useMutation({
-    mutationFn: (id: string) => runFetch(`jobs/${id}`, { body: { action: "cancel" } }),
-    onSuccess: () => invalidate(),
-    onError: (error) => toast.error(errorText(error)),
-  });
-  if (!active) return null;
-  const checkpoint = active.checkpoint as { text?: string } | null;
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border bg-muted/40 px-3 py-2 text-sm">
-      <div className="min-w-0">
-        <span className="font-medium">{label(active.status)}</span>
-        {checkpoint?.text ? (
-          <span className="ml-2 truncate text-muted-foreground">{checkpoint.text.slice(-120)}</span>
-        ) : null}
-      </div>
-      <Button
-        size="sm"
-        variant="ghost"
-        disabled={cancel.isPending}
-        onClick={() => cancel.mutate(active.id)}
-      >
-        <Square className="size-3" />
-        {t("Stop task")}
-      </Button>
-    </div>
-  );
-}
-
-function ThreadFrame({
-  state,
-  thread,
-  children,
-}: {
-  state: RunState;
-  thread: Thread;
-  children: React.ReactNode;
-}) {
-  const t = useExtracted();
-  const [panelOpen, setPanelOpen] = useState(false);
-  const members = threadTeammates(state, thread);
-  const invalidate = useInvalidateRun();
-  const queryClient = useQueryClient();
-  const errorText = useRunErrorText();
-  const { push } = useRouter();
-  const clear = useMutation({
-    mutationFn: () => runFetch(`threads/${thread.id}/reset`, { body: { clear: true } }),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: runKeys.thread(thread.id) });
-      await invalidate();
-      window.location.reload();
-    },
-    onError: (error) => toast.error(errorText(error)),
-  });
-  const remove = useMutation({
-    mutationFn: () => runFetch(`threads/${thread.id}`, { method: "DELETE" }),
-    onSuccess: async () => {
-      await invalidate();
-      push("/run");
-    },
-    onError: (error) => toast.error(errorText(error)),
-  });
-  return (
-    <>
-      <DocumentTitle title={thread.title} />
-      <div className="mx-auto flex h-full min-h-0 w-full max-w-3xl flex-1 flex-col gap-3">
-        <header className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="flex -space-x-2">
-              {members.slice(0, 4).map((bot) => (
-                <TeammateAvatar key={bot.id} name={bot.name} icon={bot.icon} accent={bot.accent} />
-              ))}
-            </div>
-            <div className="min-w-0">
-              <h1 className="truncate text-lg font-semibold">{thread.title}</h1>
-              <p className="truncate text-xs text-muted-foreground">
-                {thread.kind === "group"
-                  ? members.map((bot) => bot.name).join(", ")
-                  : members[0]?.job}
-              </p>
-            </div>
-          </div>
-          <div className="flex shrink-0 gap-1">
-            <Button
-              size="sm"
-              variant="ghost"
-              aria-label={t("Clear history")}
-              disabled={clear.isPending}
-              onClick={() => {
-                if (
-                  window.confirm(
-                    t("Delete this conversation's history? The teammate and its files stay."),
-                  )
-                )
-                  clear.mutate();
-              }}
-            >
-              <Eraser className="size-4" />
-            </Button>
-            {thread.kind === "group" ? (
-              <Button
-                size="sm"
-                variant="ghost"
-                aria-label={t("Delete group")}
-                disabled={remove.isPending}
-                onClick={() => {
-                  if (window.confirm(t("Delete this group? Its teammates stay."))) remove.mutate();
-                }}
-              >
-                <Trash2 className="size-4" />
-              </Button>
-            ) : null}
-            <Button size="sm" variant="outline" onClick={() => setPanelOpen(true)}>
-              <PanelRight className="size-4" />
-              {t("Workspace")}
-            </Button>
-          </div>
-        </header>
-        <ActiveJobBar threadId={thread.id} />
-        {children}
-      </div>
-      <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
-        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>{t("Workspace")}</SheetTitle>
-          </SheetHeader>
-          <div className="px-4 pb-4">
-            <RunWorkspacePanel threadId={thread.id} />
-          </div>
-        </SheetContent>
-      </Sheet>
-    </>
   );
 }
 
@@ -323,46 +118,206 @@ function useMarkRead(thread: Thread) {
   }, [thread.id, unread, invalidate]);
 }
 
-function MessageList({
+/** The thread's running background job, if any. */
+function useActiveJob(threadId: string) {
+  const jobs = useThreadJobs(threadId);
+  return jobs.data?.jobs.find((job) => ACTIVE_JOB.includes(job.status));
+}
+
+/**
+ * The frame of a conversation, laid out like Deni Run: a header bar with the teammate and
+ * Stop / Reset / Clear, the messages, and the message box at the bottom.
+ */
+function ThreadLayout({
+  state,
+  thread,
   messages,
-  authorFor,
-  showAuthors,
-  onApprovalResponse,
-  approvalsDisabled,
-  streamingId,
-  emptyText,
+  busy,
+  onStop,
+  onMessagesReplaced,
+  subheader,
+  children,
+  footer,
 }: {
+  state: RunState;
+  thread: Thread;
   messages: UIMessage[];
-  authorFor: (message: UIMessage) => MessageAuthor | null;
-  showAuthors: boolean;
-  onApprovalResponse?: (approvalId: string, approved: boolean, message: UIMessage) => void;
-  approvalsDisabled?: boolean;
-  streamingId?: string | null;
-  emptyText: string;
+  busy: boolean;
+  onStop: () => void;
+  onMessagesReplaced: (messages: UIMessage[]) => void;
+  subheader?: ReactNode;
+  children: ReactNode;
+  footer: ReactNode;
 }) {
+  const t = useExtracted();
+  const [panelOpen, setPanelOpen] = useState(false);
+  const members = threadTeammates(state, thread);
+  const bot = members[0];
+  const group = thread.kind === "group";
+  const invalidate = useInvalidateRun();
+  const errorText = useRunErrorText();
+  const { push } = useRouter();
+  const activeJob = useActiveJob(thread.id);
+  const savingResult = activeJob?.status === "finalizing";
+  const waitingForUser =
+    activeJob?.status === "waiting_approval" || activeJob?.status === "waiting_takeover";
+  const working = busy || Boolean(activeJob);
+  const title = group ? thread.title : (bot?.name ?? thread.title);
+
+  const reset = useMutation({
+    mutationFn: (clear: boolean) =>
+      runFetch<{ messages: UIMessage[] }>(`threads/${thread.id}/reset`, {
+        body: clear ? { clear: true } : {},
+      }),
+    onSuccess: async (result) => {
+      onMessagesReplaced(result.messages);
+      await invalidate();
+    },
+    onError: (error) => toast.error(errorText(error)),
+  });
+  const remove = useMutation({
+    mutationFn: () => runFetch(`threads/${thread.id}`, { method: "DELETE" }),
+    onSuccess: async () => {
+      await invalidate();
+      push("/run");
+    },
+    onError: (error) => toast.error(errorText(error)),
+  });
+  const last = messages.at(-1);
+
   return (
-    <Conversation className="min-h-0 flex-1">
-      <ConversationContent>
-        {messages.length === 0 ? <ConversationEmptyState title={emptyText} /> : null}
-        {messages.map((message) => (
-          <RunMessage
-            key={message.id}
-            message={message}
-            author={authorFor(message)}
-            showAuthor={showAuthors}
-            streaming={message.id === streamingId}
-            approvalsDisabled={approvalsDisabled}
-            onApprovalResponse={
-              onApprovalResponse
-                ? (approvalId, approved) => onApprovalResponse(approvalId, approved, message)
-                : undefined
-            }
+    <>
+      <DocumentTitle title={title} />
+      <section className="-m-3 flex min-h-0 min-w-0 flex-1 flex-col md:-m-5">
+        <header className="flex h-[54px] shrink-0 items-center gap-2.5 border-b px-3 md:px-4">
+          <TeammateAvatar
+            name={title}
+            icon={group ? thread.icon || "👥" : bot?.icon}
+            accent={group ? null : bot?.accent}
           />
-        ))}
-      </ConversationContent>
-      <ConversationScrollButton />
-    </Conversation>
+          <div className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate font-semibold">{title}</span>
+            <span className="truncate text-xs text-muted-foreground">
+              {group ? members.map((item) => item.name).join(" · ") : bot?.job}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-1">
+            {working && savingResult ? (
+              <span className="text-xs text-muted-foreground">{t("Saving result…")}</span>
+            ) : working && waitingForUser ? (
+              <span className="text-xs text-amber-600 dark:text-amber-400">
+                {t("Waiting for your help…")}
+              </span>
+            ) : working ? (
+              <Button
+                type="button"
+                variant="destructive"
+                size="xs"
+                onClick={onStop}
+                className="gap-1"
+              >
+                <SquareIcon className="size-3" />
+                {t("Stop")}
+              </Button>
+            ) : (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="xs"
+                  disabled={
+                    reset.isPending || messages.length === 0 || (last && isContextReset(last))
+                  }
+                  title={t("Earlier messages stay here but are no longer sent to the model.")}
+                  onClick={() => reset.mutate(false)}
+                  className="hidden sm:inline-flex"
+                >
+                  <RotateCcwIcon className="size-3" />
+                  {t("Reset conversation")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-xs"
+                  disabled={reset.isPending || messages.length === 0}
+                  title={t("Clear conversation")}
+                  aria-label={t("Clear conversation")}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        t("Delete this conversation's history? The teammate and its files stay."),
+                      )
+                    )
+                      reset.mutate(true);
+                  }}
+                >
+                  <Trash2Icon />
+                </Button>
+              </>
+            )}
+            {group && !working ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                disabled={remove.isPending}
+                onClick={() => {
+                  if (window.confirm(t("Delete this group? Its teammates stay."))) remove.mutate();
+                }}
+              >
+                {t("Delete group")}
+              </Button>
+            ) : null}
+            <Button type="button" variant="ghost" size="xs" onClick={() => setPanelOpen(true)}>
+              <MonitorIcon className="size-3" />
+              <span className="hidden sm:inline">{t("Computer")}</span>
+            </Button>
+          </div>
+        </header>
+        {subheader}
+        <Conversation className="min-h-0 flex-1">
+          <ConversationContent className="mx-auto min-h-full w-full max-w-3xl gap-5 px-4 py-6 lg:px-5">
+            {children}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
+        <div className="relative mx-auto w-full max-w-3xl shrink-0 px-3 pt-2 pb-4 md:px-4">
+          {footer}
+        </div>
+      </section>
+      <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
+          <SheetHeader>
+            <SheetTitle>{t("Computer")}</SheetTitle>
+          </SheetHeader>
+          <div className="px-4 pb-4">
+            <RunWorkspacePanel threadId={thread.id} />
+          </div>
+        </SheetContent>
+      </Sheet>
+    </>
   );
+}
+
+/** True while the newest reply has no text yet, so the typing dots stand in for it. */
+function awaitingReply(messages: UIMessage[]) {
+  const last = messages.at(-1);
+  if (!last || last.role === "user") return true;
+  return !last.parts.some((part) => part.type === "text" && part.text.trim());
+}
+
+function useCancelJob(threadId: string) {
+  const invalidate = useInvalidateRun();
+  const errorText = useRunErrorText();
+  const activeJob = useActiveJob(threadId);
+  const cancel = useMutation({
+    mutationFn: (id: string) => runFetch(`jobs/${id}`, { body: { action: "cancel" } }),
+    onSuccess: () => invalidate(),
+    onError: (error) => toast.error(errorText(error)),
+  });
+  return () => {
+    if (activeJob) cancel.mutate(activeJob.id);
+  };
 }
 
 /** A direct conversation with one teammate, streamed through `/api/run/chat` (useChat). */
@@ -378,11 +333,18 @@ function DmThread({
   const t = useExtracted();
   const invalidate = useInvalidateRun();
   const bot = threadTeammates(state, thread)[0];
+  const [runMode, setRunMode] = useRunMode(state);
+  const [input, setInput] = useState("");
   const jobs = useThreadJobs(thread.id);
-  const waitingJobRef = useRef<string | undefined>(undefined);
-  waitingJobRef.current = jobs.data?.jobs.find((job) =>
-    ["waiting_approval", "waiting_takeover"].includes(job.status),
-  )?.id;
+  const activeJob = jobs.data?.jobs.find((job) => ACTIVE_JOB.includes(job.status));
+  const cancelJob = useCancelJob(thread.id);
+  const requestRef = useRef<{ jobId?: string; runMode: RunMode }>({ runMode });
+  requestRef.current = {
+    jobId: jobs.data?.jobs.find((job) =>
+      ["waiting_approval", "waiting_takeover"].includes(job.status),
+    )?.id,
+    runMode,
+  };
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -392,26 +354,36 @@ function DmThread({
             threadId: thread.id,
             botId: bot?.id,
             messages: messages.slice(-1),
-            ...(waitingJobRef.current ? { jobId: waitingJobRef.current } : {}),
+            runMode: requestRef.current.runMode,
+            ...(requestRef.current.jobId ? { jobId: requestRef.current.jobId } : {}),
           },
         }),
       }),
     [thread.id, bot?.id],
   );
-  const { messages, sendMessage, status, stop, error, clearError, addToolApprovalResponse } =
-    useChat({
-      id: `run:${thread.id}`,
-      messages: initialMessages,
-      transport,
-      sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
-      onData: (part) => {
-        if (part.type === "data-job-status") void invalidate(runKeys.jobs(thread.id));
-      },
-      onFinish: () => {
-        void invalidate();
-      },
-    });
-  const busy = status === "submitted" || status === "streaming";
+  const {
+    messages,
+    setMessages,
+    sendMessage,
+    status,
+    stop,
+    error,
+    clearError,
+    addToolApprovalResponse,
+  } = useChat({
+    id: `run:${thread.id}`,
+    messages: initialMessages,
+    transport,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+    onData: (part) => {
+      if (part.type === "data-job-status") void invalidate(runKeys.jobs(thread.id));
+    },
+    onFinish: () => {
+      void invalidate();
+    },
+  });
+  const streaming = status === "submitted" || status === "streaming";
+  const working = streaming || activeJob?.status === "queued" || activeJob?.status === "running";
 
   const sentPending = useRef(false);
   useEffect(() => {
@@ -424,29 +396,61 @@ function DmThread({
   const author: MessageAuthor | null = bot
     ? { id: bot.id, name: bot.name, accent: bot.accent, icon: bot.icon }
     : null;
+  const stopAll = () => {
+    void stop();
+    cancelJob();
+  };
+
   return (
-    <>
-      <MessageList
-        messages={messages}
-        authorFor={(message) => messageAuthorOf(message) ?? author}
-        showAuthors={false}
-        streamingId={busy ? messages.at(-1)?.id : null}
-        approvalsDisabled={busy}
-        onApprovalResponse={(id, approved) => void addToolApprovalResponse({ id, approved })}
-        emptyText={t("Send {name} a task to get started.", { name: bot?.name ?? "" })}
-      />
+    <ThreadLayout
+      state={state}
+      thread={thread}
+      messages={messages}
+      busy={streaming}
+      onStop={stopAll}
+      onMessagesReplaced={setMessages}
+      footer={
+        <RunComposer
+          value={input}
+          onValueChange={setInput}
+          onSubmit={(text) => {
+            setInput("");
+            void sendMessage({ text });
+          }}
+          onStop={stopAll}
+          busy={streaming}
+          placeholder={t("Message {name}", { name: bot?.name ?? "" })}
+          runMode={runMode}
+          onRunModeChange={setRunMode}
+        />
+      }
+    >
+      {messages.length === 0 && !working ? (
+        <TeammateEmptyState name={bot?.name ?? thread.title} job={bot?.job} />
+      ) : null}
+      {messages.map((message, index) => (
+        <RunMessage
+          key={message.id || `message-${index}`}
+          message={message}
+          author={messageAuthorOf(message) ?? author}
+          showAuthor={false}
+          streaming={streaming && index === messages.length - 1}
+          approvalsDisabled={streaming}
+          onApprovalResponse={(id, approved) => void addToolApprovalResponse({ id, approved })}
+        />
+      ))}
+      {working && awaitingReply(messages) ? <TypingIndicator /> : null}
       {error ? <ChatErrorAlert error={error} onDismiss={clearError} /> : null}
-      <Composer
-        placeholder={t("Message {name}", { name: bot?.name ?? "" })}
-        busy={busy}
-        onStop={stop}
-        onSend={(text) => void sendMessage({ text })}
-      />
-    </>
+    </ThreadLayout>
   );
 }
 
-type GroupStatus = { author: MessageAuthor; status: string; error?: string };
+type GroupStatus = {
+  author: MessageAuthor;
+  status: string;
+  error?: string;
+  messageId?: string;
+};
 
 function parseFrames(buffer: string) {
   const frames: unknown[] = [];
@@ -471,6 +475,57 @@ function parseFrames(buffer: string) {
   return { frames, rest };
 }
 
+function GroupStatuses({ statuses, bots }: { statuses: GroupStatus[]; bots: Bot[] }) {
+  const t = useExtracted();
+  return (
+    <div className="shrink-0 border-b px-4 py-2">
+      <p className="text-[11px] text-muted-foreground">
+        {t("@everyone to ask everyone · @name to ask a teammate")}
+      </p>
+      {statuses.length ? (
+        <div
+          className="mt-2 flex flex-wrap gap-2"
+          role="status"
+          aria-label={t("Teammate responses")}
+        >
+          {statuses.map((item) => (
+            <div
+              key={item.author.id}
+              title={item.error}
+              className={cn(
+                "flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px]",
+                item.status === "failed"
+                  ? "border-destructive/30 text-destructive"
+                  : "text-muted-foreground",
+              )}
+            >
+              <TeammateAvatar
+                name={item.author.name}
+                accent={item.author.accent}
+                icon={bots.find((bot) => bot.id === item.author.id)?.icon}
+                size="sm"
+                className="size-5"
+              />
+              <span>{item.author.name}</span>
+              {["working", "finalizing"].includes(item.status) ? (
+                <Loader2Icon className="size-3 animate-spin" />
+              ) : (
+                <span>
+                  {item.status === "waiting"
+                    ? t("Needs your help")
+                    : item.status === "failed"
+                      ? t("Failed")
+                      : t("Done")}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 /** A group conversation: `@name` / `@everyone` picks who answers; each reply is attributed. */
 function GroupThread({
   state,
@@ -484,12 +539,14 @@ function GroupThread({
   const t = useExtracted();
   const invalidate = useInvalidateRun();
   const members = threadTeammates(state, thread);
+  const [runMode, setRunMode] = useRunMode(state);
+  const [input, setInput] = useState("");
   const [messages, setMessages] = useState<UIMessage[]>(initialMessages);
   const [statuses, setStatuses] = useState<Record<string, GroupStatus>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<Error | undefined>();
   const abortRef = useRef<AbortController | null>(null);
-  const label = useJobStatusLabel();
+  const cancelJob = useCancelJob(thread.id);
 
   const upsert = (message: UIMessage) =>
     setMessages((current) => {
@@ -541,9 +598,9 @@ function GroupThread({
   };
 
   const send = (text: string) => {
-    const input: UIMessage = { id: generateId(), role: "user", parts: [{ type: "text", text }] };
-    upsert(input);
-    void post(input);
+    const message: UIMessage = { id: generateId(), role: "user", parts: [{ type: "text", text }] };
+    upsert(message);
+    void post(message);
   };
 
   useEffect(() => {
@@ -571,46 +628,62 @@ function GroupThread({
     void post(answered);
   };
 
+  const stopAll = () => {
+    abortRef.current?.abort();
+    cancelJob();
+  };
   const byId = new Map(members.map((bot) => [bot.id, bot]));
+  const statusList = Object.values(statuses);
+  const working = statusList.some((item) => ["working", "finalizing"].includes(item.status));
+
   return (
-    <>
-      <MessageList
-        messages={messages}
-        authorFor={(message) => {
-          const author = messageAuthorOf(message);
-          const bot = author ? byId.get(author.id) : undefined;
-          return author ? { ...author, icon: bot?.icon } : null;
-        }}
-        showAuthors
-        approvalsDisabled={busy}
-        onApprovalResponse={respond}
-        emptyText={t("Message the group. Use @name to pick who answers.")}
-      />
-      {Object.values(statuses).length ? (
-        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-          {Object.values(statuses).map((status) => (
-            <span key={status.author.id} className="rounded-full border px-2 py-0.5">
-              {status.author.name}:{" "}
-              {status.status === "working"
-                ? label("running")
-                : status.status === "failed"
-                  ? label("failed")
-                  : status.status === "completed"
-                    ? label("completed")
-                    : label("waiting_approval")}
-            </span>
-          ))}
-        </div>
+    <ThreadLayout
+      state={state}
+      thread={thread}
+      messages={messages}
+      busy={busy}
+      onStop={stopAll}
+      onMessagesReplaced={setMessages}
+      subheader={<GroupStatuses statuses={statusList} bots={members} />}
+      footer={
+        <RunComposer
+          value={input}
+          onValueChange={setInput}
+          onSubmit={(text) => {
+            setInput("");
+            send(text);
+          }}
+          onStop={stopAll}
+          busy={busy}
+          placeholder={t("Message {name} · @everyone", { name: thread.title })}
+          runMode={runMode}
+          onRunModeChange={setRunMode}
+          mentions={members}
+        />
+      }
+    >
+      {messages.length === 0 ? (
+        <TeammateEmptyState name={thread.title} job={members.map((bot) => bot.name).join(" · ")} />
       ) : null}
+      {messages.map((message, index) => {
+        const author = messageAuthorOf(message);
+        const bot = author ? byId.get(author.id) : undefined;
+        const memberState = author ? statuses[author.id] : undefined;
+        return (
+          <RunMessage
+            key={message.id || `message-${index}`}
+            message={message}
+            author={author ? { ...author, icon: bot?.icon } : null}
+            showAuthor
+            streaming={memberState?.messageId === message.id && memberState.status === "working"}
+            approvalsDisabled={busy}
+            onApprovalResponse={(id, approved) => respond(id, approved, message)}
+          />
+        );
+      })}
+      {busy && !working && awaitingReply(messages) ? <TypingIndicator /> : null}
       {error ? <ChatErrorAlert error={error} onDismiss={() => setError(undefined)} /> : null}
-      <Composer
-        placeholder={t("Message {name}", { name: thread.title })}
-        busy={busy}
-        onStop={() => abortRef.current?.abort()}
-        onSend={send}
-        mentions={members}
-      />
-    </>
+    </ThreadLayout>
   );
 }
 
@@ -648,13 +721,9 @@ function ThreadBody({
   initialMessages: UIMessage[];
 }) {
   useMarkRead(thread);
-  return (
-    <ThreadFrame state={state} thread={thread}>
-      {thread.kind === "group" ? (
-        <GroupThread state={state} thread={thread} initialMessages={initialMessages} />
-      ) : (
-        <DmThread state={state} thread={thread} initialMessages={initialMessages} />
-      )}
-    </ThreadFrame>
+  return thread.kind === "group" ? (
+    <GroupThread state={state} thread={thread} initialMessages={initialMessages} />
+  ) : (
+    <DmThread state={state} thread={thread} initialMessages={initialMessages} />
   );
 }

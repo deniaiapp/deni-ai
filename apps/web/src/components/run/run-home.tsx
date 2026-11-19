@@ -1,15 +1,14 @@
 import { useState } from "react";
-import { Bot, Plus, Send, Users } from "lucide-react";
+import { Bot as BotIcon, ChevronDownIcon, Plus, Users } from "lucide-react";
 import { useExtracted } from "use-intl";
 import { Alert, AlertDescription, AlertTitle } from "@deniai/ui/components/alert";
 import { Button } from "@deniai/ui/components/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@deniai/ui/components/card";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@deniai/ui/components/dropdown-menu";
 import {
   Empty,
   EmptyContent,
@@ -18,11 +17,12 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@deniai/ui/components/empty";
-import { Textarea } from "@deniai/ui/components/textarea";
 import { DocumentTitle } from "@/components/document-title";
 import { Link, useRouter } from "@/lib/navigation";
-import { useRunState, useRunStatus } from "./run-api";
-import { RunLoading, RunPage, setPendingTask } from "./run-page";
+import { cn } from "@/lib/utils";
+import { useRunState, useRunStatus, type Bot } from "./run-api";
+import { RunComposer, useRunMode } from "./run-composer";
+import { RunLoading, setPendingTask } from "./run-page";
 import { TeammateAvatar } from "./teammate-avatar";
 
 /** Shown only while Run is not set up on this server. */
@@ -35,7 +35,7 @@ function RunUnavailable() {
         <Empty>
           <EmptyHeader>
             <EmptyMedia variant="icon">
-              <Bot />
+              <BotIcon />
             </EmptyMedia>
             <EmptyTitle>{t("Deni Run is not configured on this server")}</EmptyTitle>
             <EmptyDescription>
@@ -55,12 +55,112 @@ function RunUnavailable() {
   );
 }
 
-/** Run mode home: hand a task to a teammate, see the team and recent conversations. */
+/** Who gets the task, in the place of the chat model picker. */
+function TeammatePicker({
+  bots,
+  selected,
+  onSelect,
+}: {
+  bots: Bot[];
+  selected: Bot | undefined;
+  onSelect: (id: string) => void;
+}) {
+  const t = useExtracted();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="sm"
+            aria-label={t("Teammate")}
+            className={cn(
+              "h-auto gap-1.5 border-none bg-transparent px-2 py-1.5 font-medium text-muted-foreground shadow-none transition-colors",
+              "hover:bg-accent hover:text-foreground data-popup-open:bg-accent data-popup-open:text-foreground",
+            )}
+          />
+        }
+      >
+        {selected ? (
+          <TeammateAvatar
+            name={selected.name}
+            icon={selected.icon}
+            accent={selected.accent}
+            size="sm"
+            className="size-4 text-[10px] ring-1"
+          />
+        ) : null}
+        <span className="max-w-30 truncate text-sm">{selected?.name ?? t("Teammate")}</span>
+        <ChevronDownIcon className="size-3 shrink-0 opacity-50" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="w-72">
+        {bots.map((bot) => (
+          <DropdownMenuItem
+            key={bot.id}
+            onClick={() => onSelect(bot.id)}
+            className={cn("gap-2 p-2", bot.id === selected?.id && "bg-accent")}
+          >
+            <TeammateAvatar name={bot.name} icon={bot.icon} accent={bot.accent} size="sm" />
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-medium">{bot.name}</span>
+              <span className="truncate text-xs text-muted-foreground">{bot.job}</span>
+            </span>
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuItem render={<Link href="/run/teammates/new" />} className="gap-2 p-2">
+          <Plus className="size-4" />
+          {t("Add teammate")}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function ConversationRow({
+  href,
+  name,
+  icon,
+  accent,
+  preview,
+  unread,
+}: {
+  href: string;
+  name: string;
+  icon?: string | null;
+  accent?: string | null;
+  preview?: string;
+  unread?: boolean;
+}) {
+  const t = useExtracted();
+  return (
+    <li>
+      <Link href={href} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-accent">
+        <TeammateAvatar name={name} icon={icon} accent={accent} />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-2">
+            <span className={cn("truncate text-sm", unread ? "font-semibold" : "font-medium")}>
+              {name}
+            </span>
+            {unread ? (
+              <span className="size-2 shrink-0 rounded-full bg-primary" aria-label={t("Unread")} />
+            ) : null}
+          </span>
+          {preview ? (
+            <span className="block truncate text-xs text-muted-foreground">{preview}</span>
+          ) : null}
+        </span>
+      </Link>
+    </li>
+  );
+}
+
+/** Run mode home: hand a task to a teammate from the same message box as a conversation. */
 export function RunHome() {
   const t = useExtracted();
   const status = useRunStatus();
   const configured = status.data?.configured === true;
   const state = useRunState({ enabled: configured });
+  const [runMode, setRunMode] = useRunMode(state.data);
   const { push } = useRouter();
   const [task, setTask] = useState("");
   const [teammateId, setTeammateId] = useState<string | null>(null);
@@ -77,174 +177,109 @@ export function RunHome() {
     .filter((thread) => thread.kind === "group" && !thread.hidden)
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
-  const start = () => {
-    const text = task.trim();
-    if (!text || !selected) return;
-    const dm = dmFor(selected.id);
+  const start = (text: string) => {
+    const dm = selected ? dmFor(selected.id) : undefined;
     if (!dm) return;
     setPendingTask(dm.id, text);
+    setTask("");
     push(`/run/threads/${dm.id}`);
   };
 
   return (
-    <RunPage
-      title={t("Run")}
-      description={t("Hand work to AI teammates. They finish it on their own computer.")}
-      actions={
-        <Button variant="outline" render={<Link href="/run/teammates/new" />} nativeButton={false}>
-          <Plus className="size-4" />
-          {t("Add teammate")}
-        </Button>
-      }
-    >
-      {data.capabilities && !data.capabilities.llm && !data.ready ? (
-        <Alert>
-          <AlertTitle>{t("No AI model is configured")}</AlertTitle>
-          <AlertDescription>
-            {t(
-              "Teammates cannot answer until an OpenRouter key is configured for Run on this server.",
-            )}
-          </AlertDescription>
-        </Alert>
-      ) : null}
+    <>
+      <DocumentTitle title={t("Run")} />
+      <section className="relative flex min-h-0 flex-1 flex-col items-center overflow-y-auto px-4 py-4 [justify-content:safe_center] md:px-6">
+        <div className="flex w-full max-w-[46rem] flex-col gap-6 py-6 md:gap-8">
+          <h1 className="animate-fade-in-up text-center text-2xl leading-[1.1] font-semibold tracking-[-0.035em] text-balance md:text-3xl">
+            {t("What should your teammates do?")}
+          </h1>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("New task")}</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3">
-          <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={t("Teammate")}>
-            {data.bots.map((bot) => (
-              <Button
-                key={bot.id}
-                type="button"
-                role="radio"
-                aria-checked={selected?.id === bot.id}
-                variant={selected?.id === bot.id ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setTeammateId(bot.id)}
-              >
-                <TeammateAvatar name={bot.name} icon={bot.icon} accent={bot.accent} size="sm" />
-                {bot.name}
-              </Button>
-            ))}
-          </div>
-          <Textarea
+          {data.capabilities && !data.capabilities.llm && !data.ready ? (
+            <Alert>
+              <AlertTitle>{t("No AI model is configured")}</AlertTitle>
+              <AlertDescription>
+                {t(
+                  "Teammates cannot answer until an OpenRouter key is configured for Run on this server.",
+                )}
+              </AlertDescription>
+            </Alert>
+          ) : null}
+
+          <RunComposer
             value={task}
-            onChange={(event) => setTask(event.target.value)}
-            placeholder={t("Research the three best note-taking apps and write a comparison.")}
-            rows={3}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) start();
-            }}
+            onValueChange={setTask}
+            onSubmit={start}
+            disabled={!selected}
+            placeholder={t("Message {name}", { name: selected?.name ?? "" })}
+            runMode={runMode}
+            onRunModeChange={setRunMode}
+            extraTools={
+              <TeammatePicker bots={data.bots} selected={selected} onSelect={setTeammateId} />
+            }
           />
-          <div className="flex justify-end">
-            <Button onClick={start} disabled={!task.trim() || !selected}>
-              <Send className="size-4" />
-              {t("Send to {name}", { name: selected?.name ?? "" })}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{t("Teammates")}</h2>
-          <span
-            className="text-sm tabular-nums text-muted-foreground"
-            title={t("Teammates on your plan")}
-          >
-            {t("{used} / {limit}", {
-              used: String(data.bots.length),
-              limit: String(data.teammateLimit.limit),
-            })}
-          </span>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {data.bots.map((bot) => {
-            const dm = dmFor(bot.id);
-            return (
-              <Card key={bot.id} size="sm">
-                <CardHeader className="flex flex-row items-center gap-3">
-                  <TeammateAvatar name={bot.name} icon={bot.icon} accent={bot.accent} />
-                  <div className="min-w-0 flex-1">
-                    <CardTitle className="flex items-center gap-2 truncate">
-                      {bot.name}
-                      {dm?.unread ? (
-                        <span
-                          className="size-2 shrink-0 rounded-full bg-primary"
-                          aria-label={t("Unread")}
-                        />
-                      ) : null}
-                    </CardTitle>
-                    <CardDescription className="truncate">{bot.job}</CardDescription>
-                  </div>
-                </CardHeader>
-                {dm?.lastPreview ? (
-                  <CardContent>
-                    <p className="truncate text-sm text-muted-foreground">{dm.lastPreview}</p>
-                  </CardContent>
-                ) : null}
-                <CardContent className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    render={<Link href={`/run/threads/dm_${bot.id}`} />}
-                    nativeButton={false}
-                  >
-                    {t("Message")}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    render={<Link href={`/run/teammates/${bot.id}`} />}
-                    nativeButton={false}
-                  >
-                    {t("Edit")}
-                  </Button>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold">{t("Groups")}</h2>
-          <Button
-            size="sm"
-            variant="ghost"
-            render={<Link href="/run/groups/new" />}
-            nativeButton={false}
-          >
-            <Users className="size-4" />
-            {t("New group")}
-          </Button>
-        </div>
-        {groups.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            {t("Put several teammates in one conversation to work together.")}
-          </p>
-        ) : (
-          <ul className="divide-y rounded-lg border">
-            {groups.map((group) => (
-              <li key={group.id}>
-                <Link
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between px-2">
+              <h2 className="text-sm font-medium text-muted-foreground">{t("Teammates")}</h2>
+              <span
+                className="text-xs tabular-nums text-muted-foreground"
+                title={t("Teammates on your plan")}
+              >
+                {t("{used} / {limit}", {
+                  used: String(data.bots.length),
+                  limit: String(data.teammateLimit.limit),
+                })}
+              </span>
+            </div>
+            <ul className="flex flex-col">
+              {data.bots.map((bot) => {
+                const dm = dmFor(bot.id);
+                return (
+                  <ConversationRow
+                    key={bot.id}
+                    href={dm ? `/run/threads/${dm.id}` : `/run/teammates/${bot.id}`}
+                    name={bot.name}
+                    icon={bot.icon}
+                    accent={bot.accent}
+                    preview={dm?.lastPreview || bot.job}
+                    unread={dm?.unread}
+                  />
+                );
+              })}
+              {groups.map((group) => (
+                <ConversationRow
+                  key={group.id}
                   href={`/run/threads/${group.id}`}
-                  className="flex items-center gap-3 px-4 py-3 hover:bg-muted/50"
-                >
-                  <Users className="size-4 shrink-0 text-muted-foreground" />
-                  <div className="min-w-0">
-                    <p className={group.unread ? "font-semibold" : "font-medium"}>{group.title}</p>
-                    <p className="truncate text-sm text-muted-foreground">{group.lastPreview}</p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+                  name={group.title}
+                  icon={group.icon || "👥"}
+                  preview={group.lastPreview}
+                  unread={group.unread}
+                />
+              ))}
+            </ul>
+            <div className="flex gap-1">
+              <Button
+                size="sm"
+                variant="ghost"
+                render={<Link href="/run/teammates/new" />}
+                nativeButton={false}
+              >
+                <Plus className="size-4" />
+                {t("Add teammate")}
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                render={<Link href="/run/groups/new" />}
+                nativeButton={false}
+              >
+                <Users className="size-4" />
+                {t("New group")}
+              </Button>
+            </div>
+          </div>
+        </div>
       </section>
-    </RunPage>
+    </>
   );
 }
