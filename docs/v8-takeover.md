@@ -99,9 +99,8 @@ rows, so they only agree once v7 is gone:
 4. **Save v7's configuration**: copy the `deni-ai` app's Environment, Build-time
    Arguments, branch and Dockerfile path somewhere safe. A minidock rollback starts
    the old image with the **current** Environment, so going back to v7 needs them.
-5. **Switch the `deni-ai` app to v8** in the minidock panel: branch `beta/v8` (or
-   `master` once v8 is promoted there), Dockerfile `apps/web/Dockerfile`, the
-   Build-time Arguments of `deni-ai-beta` with
+5. **Switch the `deni-ai` app to v8** in the minidock panel: branch `master`,
+   Dockerfile `apps/web/Dockerfile`, the Build-time Arguments of `deni-ai-beta` with
    `NEXT_PUBLIC_BETTER_AUTH_URL=https://deniai.app` (and the other `NEXT_PUBLIC_*`
    values as for v7), and v7's production Environment except:
 
