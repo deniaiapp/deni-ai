@@ -135,6 +135,7 @@ export function useTeamSettings() {
   const createPortal = trpc.organization.createTeamPortalSession.useMutation();
   const createTeamCheckout = trpc.organization.createTeamCheckoutSession.useMutation();
   const changeTeamPlan = trpc.organization.changeTeamPlan.useMutation();
+  const cancelTeamPlanChange = trpc.organization.cancelTeamPlanChange.useMutation();
   const cancelSub = trpc.organization.cancelTeamSubscription.useMutation();
   const resumeSub = trpc.organization.resumeTeamSubscription.useMutation();
   const updateTeamMaxMode = trpc.organization.updateTeamMaxModeEnabled.useMutation();
@@ -617,6 +618,18 @@ export function useTeamSettings() {
     setPendingTeamPlanId(planId);
   }
 
+  async function keepCurrentPlan() {
+    if (!activeOrg) return;
+    try {
+      await cancelTeamPlanChange.mutateAsync({ organizationId: activeOrg.id });
+      toast.success(t("The current team plan will renew."));
+      await utils.organization.teamBillingStatus.invalidate({ organizationId: activeOrg.id });
+    } catch (error) {
+      console.error("Failed to cancel the team plan change", error);
+      toast.error(localizeError(error, t("Failed to change team plan.")));
+    }
+  }
+
   function handleChangePlanDialogOpenChange(open: boolean) {
     if (changeTeamPlan.isPending || open) return;
     setPendingTeamPlanId(null);
@@ -626,11 +639,15 @@ export function useTeamSettings() {
   async function confirmChangePlan() {
     if (!activeOrg || !pendingTeamPlanId) return;
     try {
-      await changeTeamPlan.mutateAsync({
+      const result = await changeTeamPlan.mutateAsync({
         organizationId: activeOrg.id,
         planId: pendingTeamPlanId,
       });
-      toast.success(t("Team plan updated."));
+      toast.success(
+        result.pendingPlanChange
+          ? t("The team plan will change when the current billing period ends.")
+          : t("Team plan updated."),
+      );
       await Promise.all([
         utils.organization.teamBillingStatus.invalidate({ organizationId: activeOrg.id }),
         utils.organization.teamPlans.invalidate(),
@@ -923,6 +940,8 @@ export function useTeamSettings() {
     teamPlans,
     createTeamCheckout,
     changeTeamPlan,
+    cancelTeamPlanChange,
+    keepCurrentPlan,
     pendingTeamPlanId,
     teamPlanEstimateQuery,
     isChangePlanDialogOpen,

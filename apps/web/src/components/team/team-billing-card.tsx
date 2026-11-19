@@ -1,5 +1,6 @@
 import { useExtracted } from "use-intl";
 import { useState } from "react";
+import { usePlanIntervalLabel } from "@/components/billing/billing-utils";
 import { PlanHighlights } from "@/components/billing/plan-highlights";
 import { SubscriptionCancelDialog } from "@/components/billing/subscription-cancel-dialog";
 import { Badge } from "@deniai/ui/components/badge";
@@ -13,7 +14,7 @@ import {
 } from "@deniai/ui/components/card";
 import { Spinner } from "@deniai/ui/components/spinner";
 import { Tabs, TabsList, TabsTrigger } from "@deniai/ui/components/tabs";
-import { type TeamPlanId, isTeamPlanId } from "@/lib/billing";
+import { type BillingPlanId, type TeamPlanId, isTeamPlanId } from "@/lib/billing";
 import { useBillingPlanCopy } from "@/lib/billing-plan-copy";
 import type { CancellationFeedback } from "@/lib/cancellation-feedback";
 import { formatCurrency, monthDayFormatter, monthDayYearFormatter } from "./team-utils";
@@ -30,6 +31,8 @@ type BillingStatus = {
   memberCount?: number | null;
   currentPeriodEnd?: Date | string | null;
   cancelAt?: number | null;
+  /** A plan change waiting for the end of the paid period. */
+  pendingPlanChange?: { planId: BillingPlanId; effectiveAt: Date | string } | null;
 };
 
 type TeamPlanInterval = "monthly" | "yearly";
@@ -165,6 +168,8 @@ export function TeamBillingCard({
   resumePending,
   onSubscribe,
   onChangePlan,
+  keepPlanPending,
+  onKeepPlan,
   onManage,
   onCancel,
   onResume,
@@ -181,11 +186,16 @@ export function TeamBillingCard({
   resumePending: boolean;
   onSubscribe: (planId: TeamPlanId) => void;
   onChangePlan: (planId: TeamPlanId) => void;
+  keepPlanPending?: boolean;
+  /** Drops a plan change scheduled for the end of the paid period. */
+  onKeepPlan?: () => void;
   onManage: () => void;
   onCancel: (feedback: CancellationFeedback) => void;
   onResume: () => void;
 }) {
   const t = useExtracted();
+  const getPlanIntervalLabel = usePlanIntervalLabel();
+  const pendingPlanChange = billingStatus?.pendingPlanChange ?? null;
   const hasActivePlan =
     billingStatus?.status &&
     ["active", "trialing", "past_due", "incomplete", "unpaid", "canceled"].includes(
@@ -231,8 +241,29 @@ export function TeamBillingCard({
                   {billingStatus?.currentPeriodEnd &&
                     ` · ${t("Renews")} ${monthDayYearFormatter.format(new Date(billingStatus.currentPeriodEnd))}`}
                 </p>
+                {pendingPlanChange && !isCanceled && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {t("Changes to {plan} on {date}", {
+                      plan: t("Pro for Teams {name}", {
+                        name: getPlanIntervalLabel(pendingPlanChange.planId),
+                      }),
+                      date: monthDayFormatter.format(new Date(pendingPlanChange.effectiveAt)),
+                    })}
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
+                {isOwner && pendingPlanChange && !isCanceled && onKeepPlan && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={onKeepPlan}
+                    disabled={keepPlanPending}
+                  >
+                    {keepPlanPending && <Spinner className="size-3.5" />}
+                    {t("Keep current plan")}
+                  </Button>
+                )}
                 {isOwner && (
                   <Button variant="outline" size="sm" onClick={onManage}>
                     {t("Manage")}

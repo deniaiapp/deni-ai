@@ -26,7 +26,8 @@ export type DeniUsageEntry = z.infer<typeof deniUsageEntrySchema>;
 
 /**
  * The one monthly pool shared by Deni AI chat, Flixa, and Deni Run, in usage
- * units. It resets on the first day of the next month (UTC).
+ * units. It resets at `periodEnd`: with the plan's billing cycle on a paid plan,
+ * on the first day of the next month (UTC) otherwise.
  */
 export const deniUsagePoolSchema = z.object({
   limit: z.number(),

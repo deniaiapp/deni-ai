@@ -5,6 +5,7 @@ import { billing, member, teamUsageAuditLog } from "@/db/schema";
 import { isBillingDisabled } from "@/lib/billing-config";
 import { isTeamPlan } from "@/lib/billing";
 import { stripe } from "@/lib/stripe";
+import { syncScheduledSeatCount } from "@/lib/stripe-plan-change";
 import { getLicensedSubscriptionItem } from "@/lib/stripe-subscriptions";
 import { findTeamBillingRecord, withTeamBillingLock } from "@/lib/team-billing-record";
 
@@ -60,6 +61,8 @@ export async function updateTeamSeatCount(organizationId: string) {
         items: [{ id: item.id, quantity: memberCount }],
         proration_behavior: "always_invoice",
       });
+      // A plan change scheduled for the period end starts with the seats the team has by then.
+      await syncScheduledSeatCount(subscription, memberCount);
     });
   } catch (error) {
     console.error("[team-billing] Failed to update seat count:", error);

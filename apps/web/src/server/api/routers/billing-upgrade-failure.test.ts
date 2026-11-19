@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
   subscription: {} as Record<string, unknown>,
   update: vi.fn(),
   intent: vi.fn(),
+  schedules: { create: vi.fn(), retrieve: vi.fn(), update: vi.fn(), release: vi.fn() },
 }));
 vi.mock("@/db/drizzle", () => ({ db: {} }));
 vi.mock("@/lib/auth", () => ({ auth: { api: { getSession: vi.fn() } } }));
@@ -35,6 +36,7 @@ vi.mock("@/lib/stripe", () => ({
       retrieve: async () => state.subscription,
       update: state.update,
     },
+    subscriptionSchedules: state.schedules,
     paymentIntents: { retrieve: state.intent },
   },
 }));
@@ -127,9 +129,76 @@ test("failed personal upgrade requests restrictive Stripe payment behavior and r
     expect.objectContaining({
       payment_behavior: "error_if_incomplete",
       proration_behavior: "always_invoice",
+      // An upgrade starts a new billing cycle: paid in full, not prorated by the days left.
+      billing_cycle_anchor: { type: "now" },
     }),
   );
   expect(state.record.planId).toBe("plus_monthly");
+});
+test("a downgrade is scheduled for the end of the paid period and changes nothing today", async () => {
+  state.record.planId = "pro_monthly";
+  state.subscription.metadata = { planId: "pro_monthly" };
+  state.subscription.items = {
+    data: [
+      {
+        id: "item",
+        current_period_end: 1_900_000_000,
+        price: { id: "pro-price", lookup_key: "pro_monthly", recurring: { interval: "month" } },
+      },
+    ],
+  };
+  state.schedules.create.mockResolvedValue({
+    id: "schedule",
+    current_phase: { start_date: 1_897_408_000, end_date: 1_900_000_000 },
+    phases: [
+      {
+        start_date: 1_897_408_000,
+        end_date: 1_900_000_000,
+        items: [{ price: "pro-price", quantity: 1 }],
+        discounts: [],
+      },
+    ],
+  });
+
+  const result = await billingRouter.createCaller(context()).changePlan({ planId: "plus_monthly" });
+
+  expect(result).toMatchObject({
+    planId: "pro_monthly",
+    pendingPlanChange: { planId: "plus_monthly", effectiveAt: new Date(1_900_000_000 * 1000) },
+  });
+  // No direct update: no proration credit, no new billing cycle, no usage reset.
+  expect(state.update).not.toHaveBeenCalled();
+  expect(state.schedules.update).toHaveBeenCalledWith(
+    "schedule",
+    expect.objectContaining({ end_behavior: "release", proration_behavior: "none" }),
+  );
+  expect(state.record.planId).toBe("pro_monthly");
+});
+test("a downgrade is refused while the subscription is set to cancel", async () => {
+  state.record.planId = "pro_monthly";
+  state.subscription.cancel_at_period_end = true;
+  state.subscription.items = {
+    data: [
+      {
+        id: "item",
+        price: { id: "pro-price", lookup_key: "pro_monthly", recurring: { interval: "month" } },
+      },
+    ],
+  };
+  await expect(
+    billingRouter.createCaller(context()).changePlan({ planId: "plus_monthly" }),
+  ).rejects.toThrow("Resume your subscription before changing its plan.");
+  expect(state.schedules.create).not.toHaveBeenCalled();
+});
+test("cancelling releases a pending downgrade first", async () => {
+  state.subscription.schedule = "schedule";
+  state.update.mockResolvedValue({ ...state.subscription, cancel_at_period_end: true });
+  await billingRouter.createCaller(context()).cancelSubscription();
+  expect(state.schedules.release).toHaveBeenCalledWith("schedule");
+  expect(state.update).toHaveBeenCalledWith(
+    "sub",
+    expect.objectContaining({ cancel_at_period_end: true }),
+  );
 });
 test("failed team upgrade retains the original team tier", async () => {
   state.record.planId = "pro_team_monthly";

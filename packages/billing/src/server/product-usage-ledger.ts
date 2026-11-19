@@ -1,7 +1,6 @@
 import { sql } from "drizzle-orm";
 import { productUsage } from "@deniai/db";
 
-import { usageMonthStart } from "../usage-period";
 import type { UsageEngineDatabase } from "./database";
 
 export type UsageProduct = "chat" | "flixa" | "run";
@@ -9,9 +8,11 @@ export type UsageProduct = "chat" | "flixa" | "run";
 export type ProductUsageDatabase = Pick<UsageEngineDatabase, "select" | "insert">;
 
 /**
- * Add `amount` to the owner's monthly per-product total (`public.product_usage`).
- * Chat and Flixa record their share of the shared quota here when a reservation
- * settles; Deni Run records its spend (micro-dollars) here directly.
+ * Add `amount` to the owner's per-product total (`public.product_usage`) of the usage
+ * period keyed `periodStart` (`usagePeriodAt(...).start`, or `usagePeriodStart` of a
+ * quota row's `period_end`). Chat and Flixa record their share of the shared quota
+ * here when a reservation settles; Deni Run records its spend (micro-dollars) here
+ * directly.
  */
 export async function recordProductUsage(
   {
@@ -20,14 +21,14 @@ export async function recordProductUsage(
     metric,
     unit,
     amount,
-    at = new Date(),
+    periodStart,
   }: {
     userId: string;
     product: UsageProduct;
     metric: string;
     unit: string;
     amount: number;
-    at?: Date;
+    periodStart: Date;
   },
   database: ProductUsageDatabase,
 ) {
@@ -42,7 +43,7 @@ export async function recordProductUsage(
       product,
       metric,
       unit,
-      periodStart: usageMonthStart(at),
+      periodStart,
       used: amount,
       createdAt: now,
       updatedAt: now,

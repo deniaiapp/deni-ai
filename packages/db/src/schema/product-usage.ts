@@ -12,7 +12,9 @@ import { user } from "./auth-schema";
  * - `run` (Deni Run): `metric` is "model" | "browser" | "computer", `unit` is
  *   "usd_micros". These rows are the Deni Run budget ledger itself.
  *
- * `period_start` is the UTC calendar month, matching the quota reset window.
+ * `period_start` is the key of the owner's usage period (`usagePeriodAt` in
+ * `@deniai/billing`): one month before the period's end, which is the first of the UTC
+ * month without a paid plan and follows the billing cycle with one.
  * Chat and Flixa rows are written when the shared usage engine
  * (`@deniai/billing/server`) settles a reservation; the agent API's legacy path
  * (`FLIXA_USAGE_ENGINE=legacy`/`shadow`) still writes `flixa` rows with raw SQL,

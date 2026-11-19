@@ -453,6 +453,10 @@ export function useLocalizeError() {
           "Stripe did not return a client secret for the verification intent.",
         ),
         ...mapKeys(
+          t("Resume your subscription before changing its plan."),
+          "Resume your subscription before changing its plan.",
+        ),
+        ...mapKeys(
           t("Subscription has no billable items to estimate."),
           "Subscription has no billable items to estimate.",
         ),

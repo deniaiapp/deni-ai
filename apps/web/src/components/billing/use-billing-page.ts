@@ -1,11 +1,12 @@
 import { useRouter } from "@/lib/navigation";
-import { useExtracted } from "use-intl";
+import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { startTransition, useEffect, useState } from "react";
 import { toast } from "sonner";
 import type { BillingPlanId, ClientPlan, IndividualPlanId } from "@/lib/billing";
 import { isIndividualPlanId, isTeamPlan } from "@/lib/billing";
 import type { CancellationFeedback } from "@/lib/cancellation-feedback";
+import { formatAppDate } from "@/lib/format-date";
 import { trpc } from "@/lib/trpc/react";
 import { settingsUsageQueryOptions } from "@/lib/usage-query-options";
 import { ACTIVE_STATUSES, getOfferPercentOff, useBillingReceiptCopy } from "./billing-utils";
@@ -13,6 +14,7 @@ import type { SubscriptionReceiptData } from "./subscription-receipt-data";
 
 export function useBillingPage() {
   const t = useExtracted();
+  const locale = useLocale();
   const localizeError = useLocalizeError();
   const { push } = useRouter();
   const [changeTarget, setChangeTarget] = useState<ClientPlan | null>(null);
@@ -77,8 +79,17 @@ export function useBillingPage() {
   });
 
   const changePlan = trpc.billing.changePlan.useMutation({
-    onSuccess: async () => {
-      toast.success(t("Plan updated."));
+    onSuccess: async (result) => {
+      toast.success(
+        result.pendingPlanChange
+          ? t("Your plan will change on {date}.", {
+              date: formatAppDate(result.pendingPlanChange.effectiveAt, locale, {
+                month: "short",
+                day: "numeric",
+              }),
+            })
+          : t("Plan updated."),
+      );
       await utils.billing.status.invalidate();
       await utils.billing.maxModeStatus.invalidate();
       await utils.billing.usage.invalidate();
@@ -89,6 +100,14 @@ export function useBillingPage() {
       setPendingPlanId(null);
       setHasAgreed(false);
     },
+  });
+
+  const cancelPlanChange = trpc.billing.cancelPlanChange.useMutation({
+    onSuccess: async () => {
+      toast.success(t("Your current plan will renew."));
+      await utils.billing.status.invalidate();
+    },
+    onError: (error) => toast.error(localizeError(error)),
   });
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -285,6 +304,7 @@ export function useBillingPage() {
     cancel,
     cancelFeedback,
     cancelDate,
+    cancelPlanChange,
     cancelReceipt,
     changePlan,
     changeTarget,

@@ -18,7 +18,13 @@ import {
   MAX_MODE_USABLE_STATUSES,
   type PlanFamily,
 } from "../plans";
-import { usageMonthStart } from "../usage-period";
+import {
+  usageMonthEnd,
+  usageMonthStart,
+  usagePeriodAt,
+  usagePeriodStart,
+  type UsageWindow,
+} from "../usage-period";
 import {
   FLAGGED_FREE_POOL_USD,
   type SubscriptionTier,
@@ -106,6 +112,12 @@ export type TierInfo = {
   planId: string | null;
   status: string | null;
   periodEnd: Date | null;
+  /**
+   * End of the current billing period of the paid plan in effect (personal or team):
+   * the usage period follows it (`usagePeriodAt`). Null without a paid plan, whose
+   * usage period is the UTC calendar month.
+   */
+  usageCycleEnd: Date | null;
   maxModeEnabled: boolean;
   maxModeEligible: boolean;
   maxModeMemberEnabled: boolean;
@@ -230,18 +242,28 @@ function getDefaultPeriodEnd(now: Date) {
   return startOfNextMonth;
 }
 
-function resolvePeriodEnd(now: Date) {
-  return getDefaultPeriodEnd(now);
+/** The usage period of the plan in effect: its billing cycle, else the UTC month. */
+function usagePeriodFor(tierInfo: Pick<TierInfo, "usageCycleEnd">, now: Date): UsageWindow {
+  return usagePeriodAt(tierInfo.usageCycleEnd, now);
 }
 
 function isUsageUnit(value: string | null | undefined): value is UsageUnit {
   return value === "units";
 }
 
-/** A quota row's usage in the current window (0 once its period or unit has moved on). */
-function liveUsed(record: UsageRecord | undefined, now: Date, unit: UsageUnit) {
+/** Whether a quota row belongs to the usage period ending at `periodEnd` (and it has not ended). */
+function isInPeriod(record: Pick<UsageRecord, "periodEnd">, now: Date, periodEnd: Date) {
+  return (
+    record.periodEnd != null &&
+    record.periodEnd > now &&
+    record.periodEnd.getTime() === periodEnd.getTime()
+  );
+}
+
+/** A quota row's usage in the current period (0 once its period or unit has moved on). */
+function liveUsed(record: UsageRecord | undefined, now: Date, unit: UsageUnit, periodEnd: Date) {
   if (!record || record.unit !== unit) return 0;
-  if (!record.periodEnd || record.periodEnd <= now) return 0;
+  if (!isInPeriod(record, now, periodEnd)) return 0;
   return Number(record.used);
 }
 
@@ -274,7 +296,9 @@ function buildResetWindowCondition({
     return unitMismatchCondition;
   }
 
-  return sql`(${usageQuota.periodEnd} IS NULL OR ${usageQuota.periodEnd} <= ${asTimestamptz(now)}) OR ${unitMismatchCondition}`;
+  // A row of another period: it ended, or the billing cycle moved (a plan was started
+  // or upgraded, or the account joined or left a team), which starts a new period.
+  return sql`(${usageQuota.periodEnd} IS NULL OR ${usageQuota.periodEnd} <= ${asTimestamptz(now)} OR ${usageQuota.periodEnd} IS DISTINCT FROM ${asTimestamptz(targetPeriodEnd)}) OR ${unitMismatchCondition}`;
 }
 
 async function upsertUsageRecord({
@@ -457,16 +481,15 @@ export function createUsageEngine(deps: UsageEngineDeps) {
   }
 
   /**
-   * This month's per-product ledger: Deni AI chat and Flixa in usage units (their split of
-   * the quota rows) and Deni Run's spend converted from micro-dollars.
+   * The per-product ledger of the usage period keyed `periodStart`: Deni AI chat and
+   * Flixa in usage units (their split of the quota rows) and Deni Run's spend converted
+   * from micro-dollars.
    */
-  async function monthLedger(userId: string, now: Date, database: UsageDatabase) {
+  async function periodLedger(userId: string, periodStart: Date, database: UsageDatabase) {
     const rows = await database
       .select({ product: productUsage.product, unit: productUsage.unit, used: productUsage.used })
       .from(productUsage)
-      .where(
-        and(eq(productUsage.userId, userId), eq(productUsage.periodStart, usageMonthStart(now))),
-      );
+      .where(and(eq(productUsage.userId, userId), eq(productUsage.periodStart, periodStart)));
     const ledger = { chat: 0, flixa: 0, run: 0 };
     for (const row of rows) {
       if (row.product === "run" && row.unit === "usd_micros")
@@ -478,8 +501,8 @@ export function createUsageEngine(deps: UsageEngineDeps) {
     return ledger;
   }
 
-  /** Deni Run's spend this month (its ledger is in micro-dollars), in usage units. */
-  async function runUsageUnits(userId: string, now: Date, database: UsageDatabase) {
+  /** Deni Run's spend in the usage period keyed `periodStart` (a micro-dollar ledger), in usage units. */
+  async function runUsageUnits(userId: string, periodStart: Date, database: UsageDatabase) {
     const [row] = await database
       .select({ total: sql<number | null>`coalesce(sum(${productUsage.used}), 0)` })
       .from(productUsage)
@@ -488,7 +511,7 @@ export function createUsageEngine(deps: UsageEngineDeps) {
           eq(productUsage.userId, userId),
           eq(productUsage.product, "run"),
           eq(productUsage.unit, "usd_micros"),
-          eq(productUsage.periodStart, usageMonthStart(now)),
+          eq(productUsage.periodStart, periodStart),
         ),
       );
     return Math.round(Number(row?.total ?? 0) * USAGE_UNITS_PER_USD_MICRO);
@@ -655,6 +678,7 @@ export function createUsageEngine(deps: UsageEngineDeps) {
         planId: teamPlanId,
         status: teamStatus ?? null,
         periodEnd: teamRecord.currentPeriodEnd ?? null,
+        usageCycleEnd: teamRecord.currentPeriodEnd ?? null,
         maxModeEnabled: maxModeEligible && teamRecord.maxModeEnabled && memberMaxModeEnabled,
         maxModeEligible: maxModeEligible && teamRecord.maxModeEnabled && memberMaxModeEnabled,
         maxModeMemberEnabled: memberMaxModeEnabled,
@@ -681,6 +705,7 @@ export function createUsageEngine(deps: UsageEngineDeps) {
         planId: null,
         status: null,
         periodEnd: getDefaultPeriodEnd(now),
+        usageCycleEnd: null,
         maxModeEnabled: false,
         maxModeEligible: false,
         maxModeMemberEnabled: true,
@@ -709,6 +734,7 @@ export function createUsageEngine(deps: UsageEngineDeps) {
         planId,
         status,
         periodEnd: getDefaultPeriodEnd(now),
+        usageCycleEnd: null,
         maxModeEnabled: false,
         maxModeEligible: false,
         maxModeMemberEnabled: true,
@@ -723,22 +749,25 @@ export function createUsageEngine(deps: UsageEngineDeps) {
 
     const planTier = getPlanTier(planId);
     const maxModeEligible = isMaxModeEligible(planId) && maxModeUsableStatuses.has(status ?? "");
+    const tier: SubscriptionTier =
+      planTier === "pro" || planTier === "team"
+        ? "pro"
+        : planTier === "plus"
+          ? "plus"
+          : planTier === "go"
+            ? "go"
+            : "free";
 
     return {
       billingId: record.id,
       deletionPending: record.deletionPending,
       stripeCustomerId: record.stripeCustomerId,
-      tier:
-        planTier === "pro" || planTier === "team"
-          ? "pro"
-          : planTier === "plus"
-            ? "plus"
-            : planTier === "go"
-              ? "go"
-              : "free",
+      tier,
       planId,
       status: status ?? null,
       periodEnd: record.currentPeriodEnd ?? null,
+      // A plan id this build does not know counts as Free and keeps the calendar month.
+      usageCycleEnd: tier === "free" ? null : (record.currentPeriodEnd ?? null),
       maxModeEnabled: maxModeEligible && record.maxModeEnabled,
       maxModeEligible,
       maxModeMemberEnabled: true,
@@ -781,20 +810,21 @@ export function createUsageEngine(deps: UsageEngineDeps) {
       providedRecords ??
       (await database.select().from(usageQuota).where(eq(usageQuota.userId, userId)));
     const current = records.find((row) => row.category === category);
+    const period = usagePeriodFor(tierInfo, now);
 
     const unit: UsageUnit = "units";
     let limit: number | null;
     if (isAnonymous) {
       limit = GUEST_USAGE_LIMITS[category];
     } else {
-      const runUnits = providedRunUnits ?? (await runUsageUnits(userId, now, database));
+      const runUnits = providedRunUnits ?? (await runUsageUnits(userId, period.start, database));
       const others = records
         .filter((row) => row.category !== category)
-        .reduce((sum, row) => sum + liveUsed(row, now, unit), runUnits);
+        .reduce((sum, row) => sum + liveUsed(row, now, unit, period.end), runUnits);
       limit = Math.max(poolUnitsFor(tierInfo) - others, 0);
     }
 
-    const targetPeriodEnd = isAnonymous ? null : resolvePeriodEnd(now);
+    const targetPeriodEnd = isAnonymous ? null : period.end;
     const storedUnit = isUsageUnit(current?.unit) ? current.unit : null;
     const hasUnitMismatch = Boolean(current) && storedUnit !== unit;
 
@@ -804,7 +834,7 @@ export function createUsageEngine(deps: UsageEngineDeps) {
         ? true
         : isAnonymous
           ? false
-          : !current.periodEnd || current.periodEnd <= now;
+          : !isInPeriod(current, now, period.end);
 
     const used = limit === null ? (current?.used ?? 0) : shouldReset ? 0 : (current?.used ?? 0);
     const periodStart = shouldReset ? now : (current?.periodStart ?? now);
@@ -1034,7 +1064,9 @@ export function createUsageEngine(deps: UsageEngineDeps) {
             ),
           );
       }
-      // The per-product ledger keeps each product's share of the quota chat and Flixa share.
+      // The per-product ledger keeps each product's share of the quota chat and Flixa
+      // share, in the usage period the reservation was made in (its quota row's period;
+      // a guest row has none and stays on the calendar month).
       await recordProductUsage(
         {
           userId,
@@ -1042,7 +1074,9 @@ export function createUsageEngine(deps: UsageEngineDeps) {
           metric: reservation.category,
           unit: period.unit,
           amount,
-          at: reservation.createdAt,
+          periodStart: reservation.periodEnd
+            ? usagePeriodStart(reservation.periodEnd)
+            : usageMonthStart(reservation.createdAt),
         },
         database,
       );
@@ -1153,13 +1187,14 @@ export function createUsageEngine(deps: UsageEngineDeps) {
     isAnonymous?: boolean;
   }): Promise<{ summary: UsageSummary; tierInfo: TierInfo }> {
     const nowDate = now;
-    const [tierInfo, records, ledger] = await Promise.all([
+    const [tierInfo, records] = await Promise.all([
       getTierInfo(userId, nowDate),
       db.select().from(usageQuota).where(eq(usageQuota.userId, userId)),
-      isAnonymous
-        ? Promise.resolve({ chat: 0, flixa: 0, run: 0 })
-        : monthLedger(userId, nowDate, db),
     ]);
+    const period = usagePeriodFor(tierInfo, nowDate);
+    const ledger = isAnonymous
+      ? { chat: 0, flixa: 0, run: 0 }
+      : await periodLedger(userId, period.start, db);
 
     const state = await calculateUsageState({
       userId,
@@ -1173,7 +1208,10 @@ export function createUsageEngine(deps: UsageEngineDeps) {
 
     // Chat and Flixa share the quota rows (rows from before the change may still hold
     // "premium" usage this month); the ledger says how much of it each product spent.
-    const quotaUsed = records.reduce((sum, row) => sum + liveUsed(row, nowDate, "units"), 0);
+    const quotaUsed = records.reduce(
+      (sum, row) => sum + liveUsed(row, nowDate, "units", period.end),
+      0,
+    );
     const ledgerUnits = ledger.chat + ledger.flixa;
     const flixaUsed = ledgerUnits > 0 ? Math.round((quotaUsed * ledger.flixa) / ledgerUnits) : 0;
     const pool = isAnonymous
@@ -1181,7 +1219,7 @@ export function createUsageEngine(deps: UsageEngineDeps) {
       : {
           limit: poolUnitsFor(tierInfo),
           used: { chat: quotaUsed - flixaUsed, flixa: flixaUsed, run: ledger.run },
-          periodEnd: resolvePeriodEnd(nowDate),
+          periodEnd: period.end,
         };
     const poolUsed = pool ? pool.used.chat + pool.used.flixa + pool.used.run : 0;
     const maxModeCredits =
@@ -1269,7 +1307,7 @@ export function createUsageEngine(deps: UsageEngineDeps) {
     const usedUnits = used.chat + used.flixa + used.run;
     return {
       tier: summary.tier,
-      periodEnd: pool?.periodEnd ?? resolvePeriodEnd(now),
+      periodEnd: pool?.periodEnd ?? usageMonthEnd(now),
       limitUsd: usageUnitsToUsd(limitUnits),
       usedUsd: usageUnitsToUsd(usedUnits),
       remainingUsd: usageUnitsToUsd(Math.max(limitUnits - usedUnits, 0)),
@@ -1302,12 +1340,27 @@ export function createUsageEngine(deps: UsageEngineDeps) {
       throw new Error("Cost must be a nonnegative number.");
     const amount = Math.round(costUsd * 1_000_000);
     if (amount === 0) return;
-    await withUsageLock(userId, (database) =>
-      recordProductUsage(
-        { userId, product: "run", metric, unit: "usd_micros", amount, at },
+    await withUsageLock(userId, async (database) => {
+      // Run spends the pool of the period the cost was incurred in.
+      const period = usagePeriodFor(await loadBillingTierInfo(userId, at, database), at);
+      await recordProductUsage(
+        { userId, product: "run", metric, unit: "usd_micros", amount, periodStart: period.start },
         database as ProductUsageDatabase,
-      ),
-    );
+      );
+    });
+  }
+
+  /**
+   * The user's current usage period: when the shared pool resets (`end`) and the
+   * `product_usage.period_start` key of its ledger rows (`start`). Pass the caller's
+   * transaction to read the plan inside it.
+   */
+  async function getUsagePeriod(
+    userId: string,
+    now = clock(),
+    database: UsageDatabase = db,
+  ): Promise<UsageWindow> {
+    return usagePeriodFor(await loadBillingTierInfo(userId, now, database), now);
   }
 
   /** The plan tier a (non-guest) user's limits follow, including team plans. */
@@ -1338,6 +1391,7 @@ export function createUsageEngine(deps: UsageEngineDeps) {
     getUsageSummaryDetails,
     getRunBudget,
     recordRunCost,
+    getUsagePeriod,
     getSubscriptionTier,
     hasEducationGo,
     isFreeAdViewer,

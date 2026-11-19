@@ -6,9 +6,8 @@ import {
   type ProductUsageDatabase,
   recordProductUsage,
   usageMonthEnd,
-  usageMonthStart,
 } from "@/lib/product-usage-ledger";
-import { getUsageSummary, type SubscriptionTier } from "@/lib/usage";
+import { getUsagePeriod, getUsageSummary, type SubscriptionTier } from "@/lib/usage";
 import { usageUnitsToUsd } from "@deniai/billing";
 
 export type { UsageProduct } from "@/lib/product-usage-ledger";
@@ -18,7 +17,9 @@ export const DENI_RUN_METRICS: readonly DeniRunMetric[] = ["model", "browser", "
 
 const USD_MICROS = 1_000_000;
 
-async function currentMonthRows(userId: string, now: Date, database: ProductUsageDatabase = db) {
+/** The ledger rows of the user's current usage period (its billing cycle, else the UTC month). */
+async function currentPeriodRows(userId: string, now: Date, database: ProductUsageDatabase = db) {
+  const period = await getUsagePeriod(userId, now);
   return database
     .select({
       product: productUsage.product,
@@ -27,9 +28,7 @@ async function currentMonthRows(userId: string, now: Date, database: ProductUsag
       used: productUsage.used,
     })
     .from(productUsage)
-    .where(
-      and(eq(productUsage.userId, userId), eq(productUsage.periodStart, usageMonthStart(now))),
-    );
+    .where(and(eq(productUsage.userId, userId), eq(productUsage.periodStart, period.start)));
 }
 
 export type DeniRunUsage = {
@@ -52,7 +51,7 @@ export type DeniRunUsage = {
 export async function getDeniRunUsage(userId: string, now = new Date()): Promise<DeniRunUsage> {
   const [summary, rows] = await Promise.all([
     getUsageSummary({ userId, now }),
-    currentMonthRows(userId, now),
+    currentPeriodRows(userId, now),
   ]);
   const breakdownMicros: Record<DeniRunMetric, number> = { model: 0, browser: 0, computer: 0 };
   for (const row of rows) {
@@ -103,6 +102,6 @@ export async function recordDeniRunUsage({
     metric,
     unit: "usd_micros",
     amount: Math.round(costUsd * USD_MICROS),
-    at,
+    periodStart: (await getUsagePeriod(userId, at)).start,
   });
 }

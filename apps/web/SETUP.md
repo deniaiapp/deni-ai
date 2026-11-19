@@ -172,6 +172,7 @@ Notes:
   - Optionally, once the new code is live, delete the personal rows orphaned in between: `DELETE FROM billing WHERE organization_id IS NULL AND user_id IS NULL;`
   - Optionally, after migrating, clear contacts who left their team before this change: `UPDATE billing SET user_id = NULL WHERE organization_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM member WHERE member.organization_id = billing.organization_id AND member.user_id = billing.user_id);`
 - Personal/team plan changes use Stripe `error_if_incomplete`: a failed upgrade payment must not grant the requested tier. Requests requiring further payment authentication are rejected instead of applying an unpaid upgrade. Both are confirmed in a dialog showing Stripe's invoice preview first (`estimatePlanChange` / `estimateTeamPlanChange`, the team one for every seat), and cancelling either subscription asks for confirmation.
+- Plan changes follow `getPlanChangeKind` (`@deniai/billing`). An upgrade (a higher tier, or yearly instead of monthly) is applied at once with `billing_cycle_anchor: { type: "now" }`: Stripe invoices the new plan in full, less the unused time on the old one, and the new billing cycle starts a new usage pool. A downgrade (a lower tier, or monthly instead of yearly) is a Stripe subscription schedule (`src/lib/stripe-plan-change.ts`): the current phase runs to the end of the paid period, the next phase carries the new price, nothing is charged or credited, and the schedule then releases the subscription. Applied at once, a downgrade would refund time whose pool may already be spent. The pending change is read from the schedule (`status.pendingPlanChange`), shown on the plan card, and dropped by `cancelPlanChange` / `cancelTeamPlanChange`, by an upgrade, and by cancelling the subscription; a team seat change is copied into the schedule's phases.
 - Operator email allowlists require verified, non-anonymous accounts even when email delivery is disabled. Configure a supported mailbox-verification path before relying on these administrator roles.
 - Card verification validates the intent's user, customer, and purpose. The shared card fingerprint is locked and its eligibility plus verification claim committed together before external follow-up, preventing simultaneous free-tier claims above the card limit. Removing a card keeps its fingerprint and sets `billing.card_removed_at`, so the account loses the verified-free boost but the card's slot stays taken. Cards cannot be removed while Stripe still has a live subscription (including one canceling at period end or the Max Mode meter subscription) or draft/unpaid invoices.
 - Purchases are recorded only by the Stripe webhook and the live-subscription sync; there is no client-side checkout confirmation. Every plan is a subscription, so checkout refuses a non-recurring Stripe price and any account whose subscription is still active or set to cancel. A stored open checkout session is reused only for the same plan, price, and flash offer state; otherwise it is expired before a new one is created.
@@ -333,6 +334,20 @@ Anonymous guest sessions cannot use billing endpoints or create Stripe customers
 
 Plan prices are resolved by Stripe `lookup_key` matching `src/lib/billing.ts` (`go_monthly`, `plus_monthly`, `pro_team_yearly`, and so on). The Go plan is monthly only: create a recurring monthly price with lookup key `go_monthly` ($1/month). Team plans (`pro_team_monthly`, `pro_team_yearly`) are licensed per seat. The Max plans (`max_*`, `max_team_*`) were removed; their lookup keys no longer map to a plan, so a remaining Max subscription is treated as Free. Missing team lookup keys are skipped in the team billing UI; checkout still errors if that specific price is missing.
 
+Production prices (Stripe live mode, read on 2026-11-19). Stripe is authoritative: the app never hardcodes an amount, so this table only records what to create in a new Stripe account or in test mode, and what to compare against when a charge looks wrong. Update it when a price changes.
+
+| Lookup key         | Billed            | Default currency | JPY    | USD    |
+| ------------------ | ----------------- | ---------------- | ------ | ------ |
+| `go_monthly`       | monthly           | USD              | ¥150   | $1.00  |
+| `plus_monthly`     | monthly           | JPY              | ¥450   | $4.00  |
+| `plus_yearly`      | yearly            | JPY              | ¥4,000 | $35.00 |
+| `pro_monthly`      | monthly           | JPY              | ¥800   | $8.00  |
+| `pro_yearly`       | yearly            | JPY              | ¥7,500 | $65.00 |
+| `pro_team_monthly` | monthly, per seat | JPY              | ¥750   | $7.50  |
+| `pro_team_yearly`  | yearly, per seat  | JPY              | ¥7,000 | $60.00 |
+
+Every price is a licensed recurring price with both currencies under **Currency options**. Test-mode prices need not match (plan-change maths is easier to check with amounts that differ clearly between plans).
+
 Plan prices on the billing and team billing pages are shown in yen (JPY) to visitors whose Cloudflare `CF-IPCountry` header is `JP`, and in US dollars to everyone else (including deployments not behind Cloudflare). The yen amount comes from the price's JPY currency option, so add a JPY entry under each plan price's **Currency options** in Stripe (multi-currency prices); a price without one keeps showing USD. Checkout charges a customer in Japan that same JPY amount. An amount-off flash offer coupon needs a JPY currency option too, or it is not applied to the yen price shown.
 
 ### Max Mode credits
@@ -352,7 +367,7 @@ Earlier releases billed Max Mode overage through Stripe Billing Meters. No accou
 
 ### Customer Portal
 
-Personal and team billing settings open the Stripe Customer Portal. Plan and seat changes must go through the app (`changePlan` / `changeTeamPlan`): it invoices prorations immediately, rejects incomplete payments, updates subscription metadata, and keeps team seats equal to the member count. The portal must therefore **not** allow subscription updates (switching plans or changing quantities).
+Personal and team billing settings open the Stripe Customer Portal. Plan and seat changes must go through the app (`changePlan` / `changeTeamPlan`): it applies an upgrade at once with a new billing cycle (the new plan in full, less the unused time on the old one), schedules a downgrade for the end of the paid period, rejects incomplete payments, updates subscription metadata, and keeps team seats equal to the member count. The portal must therefore **not** allow subscription updates (switching plans or changing quantities).
 
 Create a dedicated portal configuration (idempotent: a rerun updates the configuration it created, found by its `managed_by=deni-ai` / `purpose=customer_portal` metadata):
 
@@ -391,7 +406,7 @@ The pool is counted in usage units, 1M units = $0.50:
 - **Deni Run** spends its provider cost, recorded in `product_usage` with `product` =
   `run` (`metric` = `model` / `browser` / `computer`, in micro-dollars = 2 units each).
 
-The pool resets at the start of each UTC month; reset credits clear the chat/Flixa rows,
+The pool resets with the plan's billing cycle (`usagePeriodAt` in `@deniai/billing`: every month from the day the plan started, also on yearly plans) and at the start of each UTC month without a paid plan; reset credits clear the chat/Flixa rows,
 not Deni Run's spend. Each reset credit (`reset_credit`) is valid for one calendar month
 from when it is granted. v7's undated counts (`reset_credit_balance`, still granted and
 spent by v7 on the shared database) are moved into dated credits, valid for a month from

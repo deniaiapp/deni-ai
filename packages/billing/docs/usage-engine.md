@@ -18,19 +18,47 @@ agent API's `FLIXA_USAGE_ENGINE` rollout switch.
 
 ## Shared ground (identical in both)
 
-| Aspect                 | Rule                                                                                                                                                                                                                                                                                |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit                   | Usage units (`@deniai/billing`): 1M units = $0.50. Chat and Flixa spend weighted tokens times the model's usage tier multiplier; Deni Run spends provider cost (`product_usage`, product `run`, micro-dollars, 1 micro-dollar = 2 units, `Math.round`).                             |
-| Pool size              | `USAGE_POOL_USD` per tier (Free $10, Go $30, Plus $100, Pro $200); Free with a verified card $15; Free flagged at sign-up (`signup_risk`) $2 until a card is verified.                                                                                                              |
-| Category               | Every request is recorded on the `basic` row (`getModelCategory` in the agent API always returns `basic`); `premium` rows from before 2026-11 still count against the pool.                                                                                                         |
-| Limit of a category    | Pool minus the live use of the other category row minus Deni Run's spend this UTC month, floored at 0.                                                                                                                                                                              |
-| Period                 | UTC calendar month. A quota row resets when `period_end <= now` (`period_end` = first instant of next UTC month) or when its `unit` is not `units`; the new `period_start` is the request time.                                                                                     |
-| Education              | A verified, non-anonymous address on an allowed educational domain lifts Free to Go (paid and team plans take precedence).                                                                                                                                                          |
-| Estimate               | Flixa reserves `UsageEstimate.reservationAmount` (input bytes / 4 plus the forwarded output limit or the model's max output, weighted and multiplied) before the upstream call, in both modes.                                                                                      |
-| Metered amount         | Flixa settles `computeMeteredTokens(usageWithFallback(usage))` times the token multiplier and long-context multiplier, `Math.ceil`, in both modes.                                                                                                                                  |
-| Abort / upstream error | Same route logic in both modes: an upstream rejection before the response refunds the whole hold (settle 0); a client abort or an upstream stream error after the response started charges the observed input and output estimate; a completed stream charges the provider's usage. |
-| Ledger                 | Settling records the settled amount in `product_usage` (metric = category, unit `units`, period = UTC month of the reservation's creation); a zero amount writes nothing.                                                                                                           |
-| Limit response         | Flixa answers HTTP 429 `USAGE_LIMIT_EXCEEDED` with `category`, `tier`, `canVerifyForBoost`, `canUpgrade`, `verifyUrl`, `upgradeUrl` in both modes (`@deniai/flixa-contract`).                                                                                                       |
+| Aspect                 | Rule                                                                                                                                                                                                                                                                                                                                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Unit                   | Usage units (`@deniai/billing`): 1M units = $0.50. Chat and Flixa spend weighted tokens times the model's usage tier multiplier; Deni Run spends provider cost (`product_usage`, product `run`, micro-dollars, 1 micro-dollar = 2 units, `Math.round`).                                                                                                                                        |
+| Pool size              | `USAGE_POOL_USD` per tier (Free $10, Go $30, Plus $100, Pro $200); Free with a verified card $15; Free flagged at sign-up (`signup_risk`) $2 until a card is verified.                                                                                                                                                                                                                         |
+| Category               | Every request is recorded on the `basic` row (`getModelCategory` in the agent API always returns `basic`); `premium` rows from before 2026-11 still count against the pool.                                                                                                                                                                                                                    |
+| Limit of a category    | Pool minus the live use of the other category row minus Deni Run's spend in the usage period, floored at 0.                                                                                                                                                                                                                                                                                    |
+| Period                 | The usage period of the plan in effect (see Usage period below): a paid plan's billing cycle, else the UTC calendar month. A quota row belongs to the current period only while its `period_end` equals the period's end; otherwise (the period ended, the billing cycle moved, or its `unit` is not `units`) the next reservation resets it, with the request time as the new `period_start`. |
+| Education              | A verified, non-anonymous address on an allowed educational domain lifts Free to Go (paid and team plans take precedence).                                                                                                                                                                                                                                                                     |
+| Estimate               | Flixa reserves `UsageEstimate.reservationAmount` (input bytes / 4 plus the forwarded output limit or the model's max output, weighted and multiplied) before the upstream call, in both modes.                                                                                                                                                                                                 |
+| Metered amount         | Flixa settles `computeMeteredTokens(usageWithFallback(usage))` times the token multiplier and long-context multiplier, `Math.ceil`, in both modes.                                                                                                                                                                                                                                             |
+| Abort / upstream error | Same route logic in both modes: an upstream rejection before the response refunds the whole hold (settle 0); a client abort or an upstream stream error after the response started charges the observed input and output estimate; a completed stream charges the provider's usage.                                                                                                            |
+| Ledger                 | Settling records the settled amount in `product_usage` (metric = category, unit `units`, `period_start` = the key of the usage period the reservation was made in, `usagePeriodStart(reservation.period_end)`); a zero amount writes nothing.                                                                                                                                                  |
+| Limit response         | Flixa answers HTTP 429 `USAGE_LIMIT_EXCEEDED` with `category`, `tier`, `canVerifyForBoost`, `canUpgrade`, `verifyUrl`, `upgradeUrl` in both modes (`@deniai/flixa-contract`).                                                                                                                                                                                                                  |
+
+## Usage period
+
+`usagePeriodAt(cycleEnd, now)` in `@deniai/billing` is the one rule, used by the
+engine and by the legacy Flixa path:
+
+- **Paid plan** (personal or team, active or canceled but still in its paid period):
+  the pool follows the billing cycle. `cycleEnd` is `billing.current_period_end`, and
+  the period ends on the first monthly step from it after `now` (day of month kept,
+  clamped to short months). A monthly plan's period is its billing period; a yearly
+  plan gets a pool per month of its billing year; a renewal the webhook has not
+  recorded yet still rolls the pool over.
+- **No paid plan** (Free, education Go, an unknown plan id): the UTC calendar month.
+- Guests have no period (their row never resets).
+
+The period's `end` identifies it. One payment buys one pool: starting a plan,
+upgrading (which restarts the billing cycle, see `getPlanChangeKind`) and joining or
+leaving a team all move `cycleEnd`, so the next reservation starts a new pool, while a
+change that keeps the cycle keeps the usage. `product_usage.period_start` is the
+period's key, always one month before its end (`usagePeriodStart`); for the calendar
+month that is the first of the month, as before. `getUsagePeriod(userId)` returns the
+current period for callers that read or clear the ledger (Deni Run breakdown, reset
+credits).
+
+Rolling this out starts every paying account on a new pool once: their rows still end
+on the first of the next month, which no longer matches their period. v7 (the
+`deni-ai` repository) still resets by calendar month and would reset such a row again
+at the month's end, so retire v7's usage writes before or with this change.
 
 ## Behavioural differences (legacy Flixa vs web engine)
 

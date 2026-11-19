@@ -65,4 +65,5 @@ export const {
   canCompareModels,
   getRunBudget,
   recordRunCost,
+  getUsagePeriod,
 } = engine;

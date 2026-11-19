@@ -50,6 +50,13 @@ import {
 import { planDisplayCurrency, priceInCurrency } from "@/lib/plan-currency";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
 import { stripe } from "@/lib/stripe";
+import {
+  getPendingPlanChange,
+  NEW_BILLING_CYCLE,
+  type PendingPlanChange,
+  releasePlanChangeSchedule,
+  schedulePlanChangeAtPeriodEnd,
+} from "@/lib/stripe-plan-change";
 import { createBillingPortalSession } from "@/lib/stripe-portal";
 import {
   checkoutCardPaymentMethodOptions,
@@ -67,6 +74,7 @@ import {
   pickLicensedSubscription,
 } from "@/lib/stripe-subscriptions";
 import { getUsageSummary, hasEducationGo } from "@/lib/usage";
+import { getPlanChangeKind } from "@deniai/billing";
 import {
   type ProtectedContext,
   protectedProcedure,
@@ -197,6 +205,34 @@ async function getPricesForPlans(plans: BillingPlan[]) {
 
 function getPlanFromPrice(price: Stripe.Price | null | undefined) {
   return findPlanByLookupKey(price?.lookup_key ?? undefined);
+}
+
+/** The plan a subscription is on now: its billed price, else the plan recorded on it. */
+function currentPlanIdOf(subscription: Stripe.Subscription, item: Stripe.SubscriptionItem) {
+  return getPlanFromPrice(item.price)?.id ?? subscription.metadata?.planId;
+}
+
+/** Schedule `pending` again on a subscription whose schedule was released for a failed upgrade. */
+async function restorePendingPlanChange(
+  subscriptionId: string,
+  pending: PendingPlanChange,
+  userId: string,
+) {
+  const plan = findPlanById(pending.planId);
+  if (!plan) return;
+  const [subscription, price] = await Promise.all([
+    stripe.subscriptions.retrieve(subscriptionId, { expand: ["items"] }),
+    getPriceForPlan(plan),
+  ]);
+  const item = getLicensedSubscriptionItem(subscription) ?? subscription.items.data.at(0);
+  if (!item?.id || isMeteredMaxModePrice(item.price)) return;
+  await schedulePlanChangeAtPeriodEnd({
+    subscription,
+    item,
+    price,
+    plan,
+    metadata: { userId, planId: plan.id },
+  });
 }
 
 async function getFlashOfferCoupon() {
@@ -374,7 +410,15 @@ async function ensureBillingRecord(ctx: ProtectedContext, userId: string) {
   });
 }
 
-async function syncSubscription(ctx: ProtectedContext, userId: string) {
+/**
+ * Bring the personal billing row in line with Stripe. `details`, when given, receives
+ * the downgrade scheduled for the end of the paid period (null when there is none).
+ */
+async function syncSubscription(
+  ctx: ProtectedContext,
+  userId: string,
+  details?: { pendingPlanChange: PendingPlanChange | null },
+) {
   const billingRecord = await ensureBillingRecord(ctx, userId);
 
   const subscriptions = await listCustomerSubscriptions(billingRecord.stripeCustomerId, [
@@ -410,10 +454,11 @@ async function syncSubscription(ctx: ProtectedContext, userId: string) {
     return billingRecord;
   }
 
-  const subscription = await stripe.subscriptions.retrieve(bestSub.id);
+  const subscription = await stripe.subscriptions.retrieve(bestSub.id, { expand: ["schedule"] });
   const updates: Partial<BillingRecord> = {};
 
   if (subscription) {
+    if (details) details.pendingPlanChange = getPendingPlanChange(subscription);
     const price = getLicensedPrice(subscription) ?? subscription.items.data.at(0)?.price ?? null;
     // The billed price is authoritative; metadata is not updated by portal plan changes.
     const plan = getPlanFromPrice(price) ?? findPlanById(subscription.metadata?.planId ?? "");
@@ -606,8 +651,9 @@ export const billingRouter = router({
     };
   }),
   status: billingEnabledProcedure.use(stripeRead("status")).query(async ({ ctx }) => {
+    const details: { pendingPlanChange: PendingPlanChange | null } = { pendingPlanChange: null };
     const [subscription, teamRecords] = await Promise.all([
-      syncSubscription(ctx, ctx.userId),
+      syncSubscription(ctx, ctx.userId, details),
       ctx.db
         .select({
           planId: billing.planId,
@@ -651,6 +697,7 @@ export const billingRouter = router({
         currentPeriodEnd: teamRecord.currentPeriodEnd ?? null,
         stripeCustomerId: teamRecord.stripeCustomerId,
         isTeamPlan: true,
+        pendingPlanChange: null,
       };
     }
 
@@ -663,6 +710,8 @@ export const billingRouter = router({
       currentPeriodEnd: subscription.currentPeriodEnd ?? null,
       stripeCustomerId: subscription.stripeCustomerId,
       isTeamPlan: false,
+      /** A downgrade waiting for the end of the paid period. */
+      pendingPlanChange: details.pendingPlanChange,
     };
   }),
   createCheckoutSession: billingEnabledProcedure
@@ -864,7 +913,7 @@ export const billingRouter = router({
 
       const subscription = await stripe.subscriptions.retrieve(
         subscriptionState.stripeSubscriptionId,
-        { expand: ["items"] },
+        { expand: ["items", "schedule"] },
       );
 
       const item = getLicensedSubscriptionItem(subscription) ?? subscription.items.data.at(0);
@@ -875,12 +924,65 @@ export const billingRouter = router({
         });
       }
 
-      const updated = await stripe.subscriptions.update(subscription.id, {
-        items: [{ id: item.id, price: price.id }],
-        metadata: { userId: ctx.userId, planId: plan.id },
-        proration_behavior: "always_invoice",
-        payment_behavior: "error_if_incomplete",
-      });
+      const metadata = { userId: ctx.userId, planId: plan.id };
+      const unchanged = {
+        planId: subscriptionState.planId ?? null,
+        status: subscriptionState.status ?? null,
+        mode: subscriptionState.mode ?? null,
+        currentPeriodEnd: subscriptionState.currentPeriodEnd ?? null,
+      };
+      const kind = getPlanChangeKind(currentPlanIdOf(subscription, item), plan.id);
+
+      // A downgrade waits for the end of the paid period: nothing is charged or
+      // credited now, and the plan (and its usage pool) stays until then.
+      if (kind === "downgrade") {
+        if (subscription.cancel_at_period_end || subscription.cancel_at) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Resume your subscription before changing its plan.",
+          });
+        }
+        const pendingPlanChange = await schedulePlanChangeAtPeriodEnd({
+          subscription,
+          item,
+          price,
+          plan,
+          metadata,
+        });
+        return { ...unchanged, pendingPlanChange };
+      }
+
+      // Staying on, or moving up from, the current plan replaces a pending downgrade.
+      const replaced = getPendingPlanChange(subscription);
+      await releasePlanChangeSchedule(subscription);
+      if (kind === "none") {
+        return { ...unchanged, pendingPlanChange: null };
+      }
+
+      // An upgrade starts a new billing cycle: the new plan in full, less the unused
+      // time on the old one, with a new usage pool (the usage period follows the cycle).
+      let updated: Stripe.Subscription;
+      try {
+        updated = await stripe.subscriptions.update(subscription.id, {
+          items: [{ id: item.id, price: price.id }],
+          metadata,
+          ...NEW_BILLING_CYCLE,
+          payment_behavior: "error_if_incomplete",
+        });
+      } catch (error) {
+        // The upgrade was not paid for: put the downgrade it replaced back.
+        if (replaced) {
+          await restorePendingPlanChange(subscription.id, replaced, ctx.userId).catch(
+            (restoreError: unknown) => {
+              console.error("[billing] Failed to restore a pending plan change", {
+                subscriptionId: subscription.id,
+                error: restoreError,
+              });
+            },
+          );
+        }
+        throw error;
+      }
 
       const updates: Partial<BillingRecord> = {
         planId: plan.id,
@@ -915,7 +1017,24 @@ export const billingRouter = router({
         status: saved.status ?? null,
         mode: saved.mode ?? null,
         currentPeriodEnd: saved.currentPeriodEnd ?? null,
+        pendingPlanChange: null as PendingPlanChange | null,
       };
+    }),
+  /** Drop a downgrade scheduled for the end of the paid period; the current plan renews. */
+  cancelPlanChange: billingEnabledProcedure
+    .use(stripeWrite("cancelPlanChange"))
+    .mutation(async ({ ctx }) => {
+      const subscriptionState = await syncSubscription(ctx, ctx.userId);
+      if (!subscriptionState.stripeSubscriptionId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No active subscription found. Start with checkout instead.",
+        });
+      }
+      const subscription = await stripe.subscriptions.retrieve(
+        subscriptionState.stripeSubscriptionId,
+      );
+      return { released: await releasePlanChangeSchedule(subscription) };
     }),
   cancelSubscription: billingEnabledProcedure
     .use(stripeWrite("cancelSubscription"))
@@ -931,6 +1050,10 @@ export const billingRouter = router({
 
       const feedback = normalizeCancellationFeedback(input?.feedback);
       const cancellationDetails = toStripeCancellationDetails(feedback);
+      // A scheduled downgrade would keep the subscription going past the period end.
+      await releasePlanChangeSchedule(
+        await stripe.subscriptions.retrieve(subscriptionState.stripeSubscriptionId),
+      );
       const canceled = await stripe.subscriptions.update(subscriptionState.stripeSubscriptionId, {
         cancel_at_period_end: true,
         ...(cancellationDetails ? { cancellation_details: cancellationDetails } : {}),
@@ -1084,13 +1207,19 @@ export const billingRouter = router({
         });
       }
 
-      if (item.price?.id === price.id) {
+      const kind = getPlanChangeKind(currentPlanIdOf(subscription, item), plan.id);
+      if (kind !== "upgrade" || item.price?.id === price.id) {
+        // The same plan changes nothing; a downgrade waits for the end of the paid
+        // period (`effectiveAt`) and charges nothing today.
         return {
+          kind: item.price?.id === price.id ? ("none" as const) : kind,
           amountDue: 0,
           currency: item.price?.currency ?? subscription.currency ?? null,
+          effectiveAt: kind === "downgrade" ? getSubscriptionPeriodEndDate(subscription) : null,
         };
       }
 
+      // Same items and billing cycle as changePlan, so the preview is what gets charged.
       const upcoming = await stripe.invoices.createPreview({
         customer: subscription.customer as string,
         subscription: subscription.id,
@@ -1101,13 +1230,15 @@ export const billingRouter = router({
               price: price.id,
             },
           ],
-          proration_behavior: "always_invoice",
+          ...NEW_BILLING_CYCLE,
         },
       });
 
       return {
+        kind,
         amountDue: upcoming.amount_due ?? 0,
         currency: upcoming.currency ?? item.price?.currency ?? null,
+        effectiveAt: null,
         nextPaymentAttempt: upcoming.next_payment_attempt
           ? new Date(upcoming.next_payment_attempt * 1000)
           : null,

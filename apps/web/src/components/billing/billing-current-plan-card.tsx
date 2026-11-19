@@ -23,6 +23,9 @@ export function BillingCurrentPlanCard({
   currentPlan,
   activePlanId,
   cancelDate,
+  pendingPlanChange,
+  keepPlanPending,
+  onKeepPlan,
   currentPeriodEnd,
   stripeCustomerId,
   hasActiveSubscription,
@@ -40,6 +43,10 @@ export function BillingCurrentPlanCard({
   currentPlan: ClientPlan | undefined;
   activePlanId: BillingPlanId | undefined;
   cancelDate: number | null;
+  /** A downgrade waiting for the end of the paid period. */
+  pendingPlanChange?: { planId: BillingPlanId; effectiveAt: Date | string } | null;
+  keepPlanPending?: boolean;
+  onKeepPlan?: () => void;
   currentPeriodEnd?: Date | string | null;
   stripeCustomerId?: string | null;
   hasActiveSubscription: boolean;
@@ -86,6 +93,19 @@ export function BillingCurrentPlanCard({
                 }),
               })}
             </CardDescription>
+          ) : pendingPlanChange ? (
+            <CardDescription>
+              {t("Changes to {plan} on {date}", {
+                plan: t("{tier} {name}", {
+                  tier: getTierLabel(pendingPlanChange.planId),
+                  name: getPlanIntervalLabel(pendingPlanChange.planId),
+                }),
+                date: formatAppDate(pendingPlanChange.effectiveAt, locale, {
+                  month: "short",
+                  day: "numeric",
+                }),
+              })}
+            </CardDescription>
           ) : currentPeriodEnd ? (
             <CardDescription>
               {t("Renews {date}", {
@@ -113,6 +133,12 @@ export function BillingCurrentPlanCard({
                 <Button variant="outline" size="sm" disabled={portalPending} onClick={onPortal}>
                   {portalPending && <Spinner className="size-4 mr-1" />}
                   {t("Manage")}
+                </Button>
+              )}
+              {pendingPlanChange && !cancelDate && onKeepPlan && (
+                <Button variant="outline" size="sm" disabled={keepPlanPending} onClick={onKeepPlan}>
+                  {keepPlanPending && <Spinner className="size-4 mr-1" />}
+                  {t("Keep current plan")}
                 </Button>
               )}
               {hasActiveSubscription && !cancelDate && (

@@ -24,6 +24,8 @@ export function TeamBillingPage() {
     teamPlans,
     createTeamCheckout,
     changeTeamPlan,
+    cancelTeamPlanChange,
+    keepCurrentPlan,
     pendingTeamPlanId,
     teamPlanEstimateQuery,
     isChangePlanDialogOpen,
@@ -106,6 +108,8 @@ export function TeamBillingPage() {
         resumePending={resumeSub.isPending}
         onSubscribe={handleSubscribe}
         onChangePlan={handleChangePlan}
+        keepPlanPending={cancelTeamPlanChange.isPending}
+        onKeepPlan={keepCurrentPlan}
         onManage={handleManage}
         onCancel={handleCancel}
         onResume={handleResume}

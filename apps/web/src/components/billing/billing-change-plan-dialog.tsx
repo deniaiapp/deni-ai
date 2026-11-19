@@ -1,6 +1,7 @@
-import { useExtracted } from "use-intl";
+import { useExtracted, useLocale } from "use-intl";
 import type { ClientPlan, IndividualPlanId } from "@/lib/billing";
-import { useFormatCurrencyMinor, usePlanIntervalLabel } from "./billing-utils";
+import { formatAppDate } from "@/lib/format-date";
+import { useFormatCurrencyMinor, usePlanIntervalLabel, useTierLabel } from "./billing-utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,7 +31,13 @@ export function BillingChangePlanDialog({
   changeTarget: ClientPlan | null;
   estimate: {
     error: { message: string } | null;
-    data?: { amountDue?: number; currency?: string | null } | null;
+    data?: {
+      /** An upgrade applies today; a downgrade waits for the end of the paid period. */
+      kind?: "upgrade" | "downgrade" | "none";
+      amountDue?: number;
+      currency?: string | null;
+      effectiveAt?: Date | string | null;
+    } | null;
   };
   hasAgreed: boolean;
   onHasAgreedChange: (value: boolean) => void;
@@ -38,8 +45,20 @@ export function BillingChangePlanDialog({
   onConfirm: (planId: IndividualPlanId) => void;
 }) {
   const t = useExtracted();
+  const locale = useLocale();
   const getPlanIntervalLabel = usePlanIntervalLabel();
+  const getTierLabel = useTierLabel();
   const formatCurrencyMinor = useFormatCurrencyMinor();
+  const plan = changeTarget
+    ? t("{tier} {name}", {
+        tier: getTierLabel(changeTarget.id),
+        name: getPlanIntervalLabel(changeTarget.id),
+      })
+    : "";
+  const isDowngrade = estimate.data?.kind === "downgrade";
+  const effectiveDate = estimate.data?.effectiveAt
+    ? formatAppDate(estimate.data.effectiveAt, locale, { month: "short", day: "numeric" })
+    : "";
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -48,13 +67,19 @@ export function BillingChangePlanDialog({
           <AlertDialogTitle>{t("Change plan?")}</AlertDialogTitle>
           <AlertDialogDescription render={<div />}>
             <p>
-              {t("You will switch to {plan}. Prorations apply.", {
-                plan: changeTarget ? getPlanIntervalLabel(changeTarget.id) : "",
-              })}
+              {isDowngrade
+                ? t(
+                    "You will switch to {plan} on {date}, when your current billing period ends. Until then you keep your current plan and its usage. Nothing is charged today.",
+                    { plan, date: effectiveDate },
+                  )
+                : t(
+                    "You will switch to {plan} today. A new billing period starts now: you pay the full price of {plan}, less a credit for the unused time on your current plan, and your usage starts over.",
+                    { plan },
+                  )}
             </p>
             {estimate.error ? (
               <span className="block mt-2">{t("Unable to fetch estimate.")}</span>
-            ) : (
+            ) : isDowngrade ? null : (
               <span className="block mt-2">
                 {t("Estimated charge: {amount}", {
                   amount: formatCurrencyMinor(
@@ -74,7 +99,9 @@ export function BillingChangePlanDialog({
             disabled={estimate.error != null}
           />
           <Label htmlFor="agree-plan-change" className="text-sm leading-tight cursor-pointer">
-            {t("I have reviewed the estimated charge and agree to the plan change.")}
+            {isDowngrade
+              ? t("I agree to the plan change.")
+              : t("I have reviewed the estimated charge and agree to the plan change.")}
           </Label>
         </div>
         <AlertDialogFooter>

@@ -24,7 +24,15 @@ import { recordCancellationFeedback } from "@/lib/cancellation-feedback-record";
 import { planDisplayCurrency, priceInCurrency } from "@/lib/plan-currency";
 import { escapeStripeSearchValue } from "@/lib/stripe-search";
 import { stripe } from "@/lib/stripe";
+import {
+  getPendingPlanChange,
+  NEW_BILLING_CYCLE,
+  type PendingPlanChange,
+  releasePlanChangeSchedule,
+  schedulePlanChangeAtPeriodEnd,
+} from "@/lib/stripe-plan-change";
 import { createBillingPortalSession } from "@/lib/stripe-portal";
+import { getPlanChangeKind } from "@deniai/billing";
 import {
   checkoutCardPaymentMethodOptions,
   customCheckoutRequestOptions,
@@ -328,7 +336,24 @@ async function saveTeamSubscriptionSnapshot(
   return saved ?? (await findTeamBillingRecord(ctx.db, snapshot.organizationId!)) ?? snapshot;
 }
 
-async function syncTeamSubscription(ctx: ProtectedContext, userId: string, organizationId: string) {
+/** The team plan a subscription is on now: its billed price, else the plan recorded on it. */
+function teamPlanIdOf(subscription: Stripe.Subscription, item: Stripe.SubscriptionItem) {
+  return (
+    billingPlans.find((plan) => plan.lookupKey === item.price?.lookup_key)?.id ??
+    subscription.metadata?.planId
+  );
+}
+
+/**
+ * Bring the team billing row in line with Stripe. `details`, when given, receives the
+ * plan change scheduled for the end of the paid period (null when there is none).
+ */
+async function syncTeamSubscription(
+  ctx: ProtectedContext,
+  userId: string,
+  organizationId: string,
+  details?: { pendingPlanChange: PendingPlanChange | null },
+) {
   const billingRecord = await ensureTeamBillingRecord(ctx, userId, organizationId);
 
   const subscriptions = await listCustomerSubscriptions(billingRecord.stripeCustomerId, [
@@ -351,10 +376,13 @@ async function syncTeamSubscription(ctx: ProtectedContext, userId: string, organ
     });
   }
 
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ["schedule"],
+  });
   const updates: Partial<BillingRecord> = {};
 
   if (subscription) {
+    if (details) details.pendingPlanChange = getPendingPlanChange(subscription);
     const price = getLicensedPrice(subscription) ?? subscription.items.data.at(0)?.price ?? null;
     // The billed price is authoritative; metadata is not updated by portal plan changes.
     const plan =
@@ -529,8 +557,9 @@ export const organizationRouter = router({
     .input(z.object({ organizationId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
       await verifyOrgOwnerOrAdmin(ctx, input.organizationId);
+      const details: { pendingPlanChange: PendingPlanChange | null } = { pendingPlanChange: null };
       const [subscription, memberCount] = await Promise.all([
-        syncTeamSubscription(ctx, ctx.userId, input.organizationId),
+        syncTeamSubscription(ctx, ctx.userId, input.organizationId, details),
         getOrgMemberCount(input.organizationId),
       ]);
       return {
@@ -542,6 +571,8 @@ export const organizationRouter = router({
         currentPeriodEnd: subscription.currentPeriodEnd ?? null,
         stripeCustomerId: subscription.stripeCustomerId,
         memberCount,
+        /** A plan change waiting for the end of the paid period. */
+        pendingPlanChange: details.pendingPlanChange,
       };
     }),
 
@@ -1112,7 +1143,19 @@ export const organizationRouter = router({
         });
       }
 
-      // Same items and proration as changeTeamPlan, so the preview is what gets charged.
+      const kind = getPlanChangeKind(teamPlanIdOf(subscription, item), plan.id);
+      if (kind === "downgrade") {
+        // Applied when the paid period ends: nothing is charged or credited today.
+        return {
+          kind,
+          amountDue: 0,
+          currency: price.currency ?? null,
+          memberCount,
+          effectiveAt: getSubscriptionPeriodEndDate(subscription),
+        };
+      }
+
+      // Same items and billing cycle as changeTeamPlan, so the preview is what gets charged.
       const preview = await stripe.invoices.createPreview({
         customer:
           typeof subscription.customer === "string"
@@ -1121,14 +1164,16 @@ export const organizationRouter = router({
         subscription: subscription.id,
         subscription_details: {
           items: [{ id: item.id, price: price.id, quantity: memberCount }],
-          proration_behavior: "always_invoice",
+          ...(kind === "upgrade" ? NEW_BILLING_CYCLE : { proration_behavior: "always_invoice" }),
         },
       });
 
       return {
+        kind,
         amountDue: preview.amount_due ?? 0,
         currency: preview.currency ?? price.currency ?? null,
         memberCount,
+        effectiveAt: null,
       };
     }),
 
@@ -1175,16 +1220,61 @@ export const organizationRouter = router({
         });
       }
 
+      const metadata = {
+        userId: ctx.userId,
+        planId: plan.id,
+        organizationId: input.organizationId,
+      };
+      const kind = getPlanChangeKind(teamPlanIdOf(subscription, item), plan.id);
+
+      // Yearly to monthly waits for the end of the paid period: applied at once it would
+      // credit the unused time and restart the billing cycle, and with it every
+      // member's usage pool.
+      if (kind === "downgrade") {
+        if (subscription.cancel_at_period_end || subscription.cancel_at) {
+          throw new TRPCError({
+            code: "BAD_REQUEST",
+            message: "Resume your subscription before changing its plan.",
+          });
+        }
+        const pendingPlanChange = await withTeamBillingLock(
+          ctx.db,
+          input.organizationId,
+          async (tx) =>
+            schedulePlanChangeAtPeriodEnd({
+              subscription,
+              item,
+              price,
+              plan,
+              quantity: await getOrgMemberCount(input.organizationId, tx),
+              metadata,
+            }),
+        );
+        await recordTeamUsageAuditLog({
+          ctx,
+          organizationId: input.organizationId,
+          action: "plan_changed",
+          metadata: {
+            previous: { planId: subscriptionState.planId },
+            next: { planId: plan.id, effectiveAt: pendingPlanChange.effectiveAt.toISOString() },
+          },
+        });
+        return {
+          planId: subscriptionState.planId ?? null,
+          status: subscriptionState.status ?? null,
+          currentPeriodEnd: subscriptionState.currentPeriodEnd ?? null,
+          pendingPlanChange,
+        };
+      }
+
       const updated = await withTeamBillingLock(ctx.db, input.organizationId, async (tx) => {
         const memberCount = await getOrgMemberCount(input.organizationId, tx);
+        // Staying on, or moving up from, the current plan replaces a pending change.
+        await releasePlanChangeSchedule(subscription);
         return stripe.subscriptions.update(subscription.id, {
           items: [{ id: item.id, price: price.id, quantity: memberCount }],
-          metadata: {
-            userId: ctx.userId,
-            planId: plan.id,
-            organizationId: input.organizationId,
-          },
-          proration_behavior: "always_invoice",
+          metadata,
+          ...(kind === "upgrade" ? NEW_BILLING_CYCLE : { proration_behavior: "always_invoice" }),
           payment_behavior: "error_if_incomplete",
         });
       });
@@ -1219,7 +1309,27 @@ export const organizationRouter = router({
         planId: saved.planId ?? null,
         status: saved.status ?? null,
         currentPeriodEnd: saved.currentPeriodEnd ?? null,
+        pendingPlanChange: null as PendingPlanChange | null,
       };
+    }),
+
+  /** Drop a team plan change scheduled for the end of the paid period; the current plan renews. */
+  cancelTeamPlanChange: billingEnabledProcedure
+    .use(stripeWrite("cancelTeamPlanChange"))
+    .input(z.object({ organizationId: z.string().min(1) }))
+    .mutation(async ({ ctx, input }) => {
+      await verifyOrgOwner(ctx, input.organizationId);
+      const subscriptionState = await syncTeamSubscription(ctx, ctx.userId, input.organizationId);
+      if (!subscriptionState.stripeSubscriptionId) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "No active team subscription found.",
+        });
+      }
+      const subscription = await stripe.subscriptions.retrieve(
+        subscriptionState.stripeSubscriptionId,
+      );
+      return { released: await releasePlanChangeSchedule(subscription) };
     }),
 
   cancelTeamSubscription: billingEnabledProcedure
@@ -1243,6 +1353,10 @@ export const organizationRouter = router({
 
       const feedback = normalizeCancellationFeedback(input.feedback);
       const cancellationDetails = toStripeCancellationDetails(feedback);
+      // A scheduled plan change would keep the subscription going past the period end.
+      await releasePlanChangeSchedule(
+        await stripe.subscriptions.retrieve(subscriptionState.stripeSubscriptionId),
+      );
       const canceled = await stripe.subscriptions.update(subscriptionState.stripeSubscriptionId, {
         cancel_at_period_end: true,
         ...(cancellationDetails ? { cancellation_details: cancellationDetails } : {}),

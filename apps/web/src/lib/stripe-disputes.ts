@@ -13,6 +13,7 @@ import { isEmailConfigured, sendEmail } from "@/lib/email";
 import { formatMinorCurrency } from "@/lib/currency";
 import { isMaxModeOnlySubscription } from "@/lib/stripe-subscriptions";
 import { stripe } from "@/lib/stripe";
+import { releasePlanChangeSchedule } from "@/lib/stripe-plan-change";
 
 const EFW_METADATA_KEY = "deni_efw_handled";
 
@@ -194,6 +195,8 @@ async function cancelSubscriptionIfNeeded(
     }
 
     if (!subscription.cancel_at_period_end) {
+      // A scheduled downgrade would keep the subscription going past the period end.
+      await releasePlanChangeSchedule(subscription);
       await stripe.subscriptions.update(subscriptionId, { cancel_at_period_end: true });
       return `Set subscription ${subscriptionId} to cancel at period end.`;
     }

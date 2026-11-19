@@ -313,3 +313,169 @@ describe("dry run", () => {
     expect(await readReservations(testDb.pglite, "user")).toEqual(before.reservations);
   });
 });
+
+describe("usage period", () => {
+  const PLUS_POOL = getUsagePoolUnits("plus");
+  const at = (iso: string) => new Date(iso);
+
+  /** Spend through a settled chat reservation at a given time. */
+  async function spendAt(now: Date, amount: number) {
+    const reservationId = id();
+    await engine.consumeUsage({ userId: "user", category: "basic", reservationId, amount, now });
+    await engine.settleUsage({ userId: "user", reservationId, amount, now });
+  }
+
+  const poolUsed = async (now: Date) => {
+    const { pool } = await engine.getUsageSummary({ userId: "user", now });
+    return { ...pool!.used, periodEnd: pool!.periodEnd };
+  };
+
+  const moveCycleEnd = (currentPeriodEnd: Date, planId: string) =>
+    testDb.pglite.query(
+      `UPDATE billing SET current_period_end = $1, plan_id = $2 WHERE id = 'personal'`,
+      [currentPeriodEnd, planId],
+    );
+
+  test("a paid plan's pool resets with its billing cycle, not with the calendar month", async () => {
+    const cycleEnd = at("2026-12-05T08:00:00Z");
+    await seedBilling(testDb.pglite, {
+      id: "personal",
+      userId: "user",
+      planId: "plus_monthly",
+      currentPeriodEnd: cycleEnd,
+    });
+
+    await spendAt(at("2026-11-20T12:00:00Z"), 100);
+    // The month turns over inside the billing period: the pool carries on.
+    await spendAt(at("2026-12-01T00:00:01Z"), 50);
+    expect(await poolUsed(at("2026-12-01T00:00:02Z"))).toMatchObject({
+      chat: 150,
+      periodEnd: cycleEnd,
+    });
+
+    // The billing period ends (the renewal is not even recorded yet): a new pool.
+    await spendAt(at("2026-12-05T08:00:00Z"), 7);
+    expect(await poolUsed(at("2026-12-05T08:00:01Z"))).toMatchObject({
+      chat: 7,
+      periodEnd: at("2027-01-05T08:00:00Z"),
+    });
+  });
+
+  test("starting a plan starts a new pool, whatever was used on Free that month", async () => {
+    await seedRunSpend(testDb.pglite, "user", 1_000_000);
+    await spend("user", 400);
+    expect((await engine.getUsageSummary({ userId: "user" })).pool!.used).toMatchObject({
+      chat: 400,
+      run: 2_000_000,
+    });
+
+    const cycleEnd = new Date(Date.now() + 30 * 24 * 60 * 60_000);
+    await seedBilling(testDb.pglite, {
+      id: "personal",
+      userId: "user",
+      planId: "plus_monthly",
+      currentPeriodEnd: cycleEnd,
+    });
+    const summary = await engine.getUsageSummary({ userId: "user" });
+    expect(summary.pool).toMatchObject({
+      limit: PLUS_POOL,
+      used: { chat: 0, flixa: 0, run: 0 },
+      periodEnd: cycleEnd,
+    });
+
+    const reserved = await engine.consumeUsage({
+      userId: "user",
+      category: "basic",
+      reservationId: id(),
+      amount: 10,
+    });
+    expect(reserved.remaining).toBe(PLUS_POOL - 10);
+    expect((await readQuota(testDb.pglite, "user"))[0]).toMatchObject({
+      used: 10,
+      planTier: "plus",
+    });
+  });
+
+  test("an upgrade restarts the billing cycle and with it the pool", async () => {
+    await seedBilling(testDb.pglite, {
+      id: "personal",
+      userId: "user",
+      planId: "plus_monthly",
+      currentPeriodEnd: at("2026-12-05T08:00:00Z"),
+    });
+    await spendAt(at("2026-11-20T12:00:00Z"), PLUS_POOL);
+
+    // Upgraded at 13:00: Stripe restarts the cycle, so the period now ends a month later.
+    await moveCycleEnd(at("2026-12-20T13:00:00Z"), "pro_monthly");
+    const reserved = await engine.consumeUsage({
+      userId: "user",
+      category: "basic",
+      reservationId: id(),
+      amount: 25,
+      now: at("2026-11-20T13:00:05Z"),
+    });
+    expect(reserved).toMatchObject({ tier: "pro", remaining: PRO_POOL - 25 });
+    expect(await poolUsed(at("2026-11-20T13:00:06Z"))).toMatchObject({
+      chat: 25,
+      periodEnd: at("2026-12-20T13:00:00Z"),
+    });
+  });
+
+  test("a change that keeps the billing cycle keeps the usage", async () => {
+    const cycleEnd = at("2026-12-05T08:00:00Z");
+    await seedBilling(testDb.pglite, {
+      id: "personal",
+      userId: "user",
+      planId: "pro_monthly",
+      currentPeriodEnd: cycleEnd,
+    });
+    await spendAt(at("2026-11-20T12:00:00Z"), 300);
+    await moveCycleEnd(cycleEnd, "plus_monthly");
+    expect(await poolUsed(at("2026-11-21T00:00:00Z"))).toMatchObject({ chat: 300 });
+  });
+
+  test("a yearly plan gets a pool per month of its billing year", async () => {
+    await seedBilling(testDb.pglite, {
+      id: "personal",
+      userId: "user",
+      planId: "plus_yearly",
+      currentPeriodEnd: at("2027-06-15T00:00:00Z"),
+    });
+    await spendAt(at("2026-11-20T12:00:00Z"), 100);
+    expect(await poolUsed(at("2026-12-14T23:59:59Z"))).toMatchObject({
+      chat: 100,
+      periodEnd: at("2026-12-15T00:00:00Z"),
+    });
+    expect(await poolUsed(at("2026-12-15T00:00:00Z"))).toMatchObject({
+      chat: 0,
+      periodEnd: at("2027-01-15T00:00:00Z"),
+    });
+  });
+
+  test("Deni Run spends the pool of the billing cycle it was incurred in", async () => {
+    await seedBilling(testDb.pglite, {
+      id: "personal",
+      userId: "user",
+      planId: "plus_monthly",
+      currentPeriodEnd: at("2026-12-05T08:00:00Z"),
+    });
+    await engine.recordRunCost({
+      userId: "user",
+      metric: "model",
+      costUsd: 1.5,
+      at: at("2026-11-30T23:00:00Z"),
+    });
+    await engine.recordRunCost({
+      userId: "user",
+      metric: "browser",
+      costUsd: 0.5,
+      at: at("2026-12-02T00:00:00Z"),
+    });
+    expect((await engine.getRunBudget("user", at("2026-12-03T00:00:00Z"))).poolUsd.run).toBe(2);
+    expect((await engine.getRunBudget("user", at("2026-12-05T08:00:00Z"))).poolUsd.run).toBe(0);
+    expect(await engine.getUsagePeriod("user", at("2026-12-03T00:00:00Z"))).toEqual({
+      start: at("2026-11-05T08:00:00Z"),
+      end: at("2026-12-05T08:00:00Z"),
+    });
+  });
+});

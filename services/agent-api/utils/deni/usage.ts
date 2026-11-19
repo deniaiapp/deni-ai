@@ -3,9 +3,11 @@ import {
   isEducationalEmail,
   USAGE_POOL_USD,
   USAGE_UNITS_PER_USD,
-  USAGE_UNITS_PER_USD_MICRO,
+    USAGE_UNITS_PER_USD_MICRO,
+  usagePeriodAt,
   VERIFIED_FREE_POOL_USD,
   type SubscriptionTier,
+  type UsageWindow,
 } from "@deniai/billing";
 import { getDeniPool } from "./db";
 import type { DeniUsageInfo, BillingRow, UsageQuotaRow } from "./types";
@@ -38,6 +40,14 @@ END`;
 
 export const USAGE_UNIT: UsageUnit = "units";
 
+/**
+ * A usage period of the shared pool (@deniai/billing `usagePeriodAt`): a paid plan's
+ * billing cycle, else the UTC calendar month. `end` identifies the period; `start` is
+ * its `product_usage.period_start` key.
+ */
+export type { UsageWindow };
+export { usagePeriodAt };
+
 function getPoolUnits(
   tier: UsageTier,
   hasVerifiedPaymentMethod: boolean,
@@ -60,8 +70,8 @@ interface PoolUsage {
   signupFlagged: boolean;
 }
 
-/** Everything that draws on the shared pool this month, read in one round trip. */
-async function getPoolUsage(userId: string): Promise<PoolUsage> {
+/** Everything that draws on the shared pool in the usage period, read in one round trip. */
+async function getPoolUsage(userId: string, period: UsageWindow): Promise<PoolUsage> {
   const result = await getDeniPool().query<{
     basic: string | number;
     premium: string | number;
@@ -70,15 +80,14 @@ async function getPoolUsage(userId: string): Promise<PoolUsage> {
   }>(
     `SELECT
        COALESCE((SELECT SUM(used) FROM usage_quota WHERE user_id = $1 AND category = 'basic'
-         AND unit = 'units' AND period_end IS NOT NULL AND period_end > NOW()), 0) AS basic,
+         AND unit = 'units' AND period_end > NOW() AND period_end = $2), 0) AS basic,
        COALESCE((SELECT SUM(used) FROM usage_quota WHERE user_id = $1 AND category = 'premium'
-         AND unit = 'units' AND period_end IS NOT NULL AND period_end > NOW()), 0) AS premium,
+         AND unit = 'units' AND period_end > NOW() AND period_end = $2), 0) AS premium,
        COALESCE((SELECT SUM(used) FROM product_usage WHERE user_id = $1 AND product = 'run'
-         AND unit = 'usd_micros'
-         AND period_start = date_trunc('month', NOW() AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'), 0)
+         AND unit = 'usd_micros' AND period_start = $3), 0)
          AS run_micros,
        EXISTS (SELECT 1 FROM signup_risk WHERE user_id = $1) AS flagged`,
-    [userId],
+    [userId, period.end, period.start],
   );
   const row = result.rows[0];
   return {
@@ -92,10 +101,11 @@ async function getPoolUsage(userId: string): Promise<PoolUsage> {
 async function getCategoryLimit(
   userId: string,
   category: ModelCategory,
-  tier: UsageTier,
+    tier: UsageTier,
   hasVerifiedPaymentMethod: boolean,
+  period: UsageWindow,
 ): Promise<number> {
-  const usage = await getPoolUsage(userId);
+  const usage = await getPoolUsage(userId, period);
   const other = category === "basic" ? usage.quota.premium : usage.quota.basic;
   const pool = getPoolUnits(tier, hasVerifiedPaymentMethod, usage.signupFlagged);
   return Math.max(pool - other - usage.run, 0);
@@ -132,22 +142,25 @@ function shouldResetUsageRow(
   quotaRow: Pick<UsageQuotaRow, "period_end" | "plan_tier" | "unit">,
   now: Date,
   tier: UsageTier,
+  period: UsageWindow,
 ): boolean {
+  // A row of another usage period: it ended, or the billing cycle moved.
   const isPeriodExpired =
-    quotaRow.period_end && new Date(quotaRow.period_end) <= now;
+    !quotaRow.period_end ||
+    new Date(quotaRow.period_end) <= now ||
+    new Date(quotaRow.period_end).getTime() !== period.end.getTime();
   const hasTierChanged = quotaRow.plan_tier !== tier;
   const hasUnitChanged = quotaRow.unit !== USAGE_UNIT;
   return Boolean(isPeriodExpired || hasTierChanged || hasUnitChanged);
 }
 
 /**
- * Get the first day of next month in UTC
+ * The end of the billing period the usage period follows: the paid plan in effect
+ * (personal or team); null on Free and education Go, which keep the UTC calendar month.
  */
-function getNextMonthFirstDay(): Date {
-  const now = new Date();
-  return new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0, 0),
-  );
+function getUsageCycleEnd(billing: BillingRow | null, paidTier: UsageTier): Date | null {
+  if (paidTier === "free" || !billing?.current_period_end) return null;
+  return new Date(billing.current_period_end);
 }
 
 /**
@@ -181,8 +194,12 @@ function determineTier(billing: BillingRow | null, isTeam: boolean): UsageTier {
 interface BillingProfile {
   billing: BillingRow | null;
   isTeam: boolean;
-  tier: UsageTier;
+    tier: UsageTier;
   hasVerifiedPaymentMethod: boolean;
+  /** See {@link getUsageCycleEnd}. */
+  usageCycleEnd: Date | null;
+  /** When this profile was read; a quota row started later was written with newer billing data. */
+  fetchedAt: Date;
 }
 
 function getBillingCacheTtlMs(): number {
@@ -221,6 +238,7 @@ async function hasEducationAccess(userId: string): Promise<boolean> {
  */
 async function fetchBillingProfile(userId: string): Promise<BillingProfile> {
   const pool = getDeniPool();
+  const fetchedAt = new Date();
 
   // Fetch the highest-priority team and personal rows in one round trip. The
   // old sequential pair of queries made every billing-cache miss pay two DB
@@ -279,7 +297,8 @@ async function fetchBillingProfile(userId: string): Promise<BillingProfile> {
     billing = personalBilling;
   }
 
-  let tier = determineTier(billing, isTeam);
+    let tier = determineTier(billing, isTeam);
+  const usageCycleEnd = getUsageCycleEnd(billing, tier);
   // A verified educational address lifts Free to Go at no charge (same rule as
   // deni-ai's loadTierInfo); paid and team plans take precedence.
   if (tier === "free" && (await hasEducationAccess(userId))) tier = "go";
@@ -287,7 +306,7 @@ async function fetchBillingProfile(userId: string): Promise<BillingProfile> {
     billing?.payment_method_fingerprint !== null &&
     billing?.payment_method_fingerprint !== undefined;
 
-  return { billing, isTeam, tier, hasVerifiedPaymentMethod };
+    return { billing, isTeam, tier, hasVerifiedPaymentMethod, usageCycleEnd, fetchedAt };
 }
 
 /**
@@ -345,17 +364,20 @@ export async function getDeniBillingProfile(
  */
 export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   const pool = getDeniPool();
-  const [billingProfile, usageResult, poolUsage] = await Promise.all([
-    getDeniBillingProfile(userId),
+    const [billingProfile, usageResult] = await Promise.all([
+        getDeniBillingProfile(userId),
     pool.query<UsageQuotaRow>(
       `SELECT category, plan_tier, limit_amount, unit, used, period_start, period_end
        FROM usage_quota
        WHERE user_id = $1`,
       [userId],
     ),
-    getPoolUsage(userId),
   ]);
   const { billing, isTeam, tier, hasVerifiedPaymentMethod } = billingProfile;
+  const now = new Date();
+  // The pool resets with the plan's billing cycle (the UTC month without a paid plan).
+  const period = usagePeriodAt(billingProfile.usageCycleEnd, now);
+  const poolUsage = await getPoolUsage(userId, period);
   const poolLimit = getPoolUnits(tier, hasVerifiedPaymentMethod, poolUsage.signupFlagged);
 
   // Determine Max Mode eligibility
@@ -364,11 +386,10 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   const maxModeEnabled =
     maxModeEligible && (billing?.max_mode_enabled ?? false);
 
-  // Determine period end
-  const periodEnd: string | null = getNextMonthFirstDay().toISOString();
+    // Determine period end
+  const periodEnd: string | null = period.end.toISOString();
 
-  const now = new Date();
-  const defaultPeriodEnd = getNextMonthFirstDay().toISOString();
+  const defaultPeriodEnd = period.end.toISOString();
   const unit = USAGE_UNIT;
   const usage: DeniUsageInfo["usage"] = [];
 
@@ -376,12 +397,12 @@ export async function getDeniUsageInfo(userId: string): Promise<DeniUsageInfo> {
   // use; the "premium" entry is kept so older extension and CLI versions keep working.
   const quotaUsed = (category: ModelCategory) => {
     const row = usageResult.rows.find((r) => r.category === category);
-    return row && !shouldResetUsageRow(row, now, tier) ? Number(row.used) : 0;
+        return row && !shouldResetUsageRow(row, now, tier, period) ? Number(row.used) : 0;
   };
   const totalUsed = quotaUsed("basic") + quotaUsed("premium") + poolUsage.run;
   for (const category of ["basic", "premium"] as const) {
     const quotaRow = usageResult.rows.find((r) => r.category === category);
-    const current = quotaRow && !shouldResetUsageRow(quotaRow, now, tier);
+        const current = quotaRow && !shouldResetUsageRow(quotaRow, now, tier, period);
     usage.push({
       category,
       unit,
@@ -426,6 +447,14 @@ export interface UsageReservation {
   amount: number;
   userId: string;
   category: ModelCategory;
+  /** The `product_usage.period_start` key of the usage period the reservation was made in. */
+  ledgerPeriodStart?: Date;
+}
+
+/** The billing data a reservation's usage period comes from (see `getDeniBillingProfile`). */
+export interface UsagePeriodSource {
+  usageCycleEnd?: Date | null;
+  fetchedAt?: Date;
 }
 
 /** Legacy path (`FLIXA_USAGE_ENGINE=legacy`/`shadow`): reserve estimated usage units
@@ -438,8 +467,9 @@ export async function reserveUsageQuota(
   userId: string,
   category: ModelCategory,
   tier: UsageTier,
-  hasVerifiedPaymentMethod = false,
+    hasVerifiedPaymentMethod = false,
   amount = 1,
+  periodSource: UsagePeriodSource = {},
 ): Promise<{
   allowed: boolean;
   remaining: number;
@@ -450,12 +480,17 @@ export async function reserveUsageQuota(
   if (!Number.isSafeInteger(amount) || amount <= 0) {
     throw new Error("Usage reservation must be a positive safe integer");
   }
-  const limit = await getCategoryLimit(userId, category, tier, hasVerifiedPaymentMethod);
+    const now = new Date();
+  const period = usagePeriodAt(periodSource.usageCycleEnd, now);
+  const limit = await getCategoryLimit(userId, category, tier, hasVerifiedPaymentMethod, period);
   const unit = USAGE_UNIT;
   if (amount > limit) return { allowed: false, remaining: limit, reserved: false, unit };
   const id = crypto.randomUUID();
-  const now = new Date();
+  // The row belongs to another usage period when it ended or when the billing cycle
+  // moved (a plan was started or upgraded). The billing profile is cached, so a row
+  // started after the profile was read was written with newer billing data and is kept.
   const reset = `(usage_quota.period_end IS NOT NULL AND usage_quota.period_end <= EXCLUDED.period_start)
+    OR (usage_quota.period_end IS DISTINCT FROM EXCLUDED.period_end AND usage_quota.period_start <= $10)
     OR usage_quota.plan_tier IS DISTINCT FROM EXCLUDED.plan_tier
     OR usage_quota.unit IS DISTINCT FROM EXCLUDED.unit`;
   const result = await getDeniPool().query<{ used: string | number }>(
@@ -477,7 +512,18 @@ export async function reserveUsageQuota(
        SELECT $9::uuid, $1::text, $2::text, $3::text, EXTRACT(EPOCH FROM period_start)::text, $6::bigint FROM reserved
        RETURNING id
      ) SELECT used FROM reserved, receipt`,
-    [userId, category, tier, limit, unit, amount, now, getNextMonthFirstDay(), id],
+        [
+      userId,
+      category,
+      tier,
+      limit,
+      unit,
+      amount,
+      now,
+      period.end,
+      id,
+      periodSource.fetchedAt ?? now,
+    ],
   );
   if (!result.rows.length) return { allowed: false, remaining: 0, reserved: false, unit };
   return {
@@ -485,7 +531,7 @@ export async function reserveUsageQuota(
     remaining: Math.max(0, limit - Number(result.rows[0].used)),
     reserved: true,
     unit,
-    reservation: { id, amount, userId, category },
+        reservation: { id, amount, userId, category, ledgerPeriodStart: period.start },
   };
 }
 
@@ -518,13 +564,23 @@ export async function settleUsageQuota(
        RETURNING q.user_id
      )
      INSERT INTO product_usage (user_id, product, metric, unit, period_start, used)
-     SELECT receipt.user_id, 'flixa', receipt.category, 'units',
-            date_trunc('month', receipt.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC',
+          SELECT receipt.user_id, 'flixa', receipt.category, 'units',
+            COALESCE(
+              $5::timestamptz,
+              date_trunc('month', receipt.created_at AT TIME ZONE 'UTC') AT TIME ZONE 'UTC'
+            ),
             $2::bigint
      FROM receipt
      WHERE $2::bigint > 0
      ON CONFLICT (user_id, product, metric, unit, period_start)
      DO UPDATE SET used = product_usage.used + EXCLUDED.used, updated_at = NOW()`,
-    [reservation.id, actualAmount, reservation.userId, reservation.category],
+        [
+      reservation.id,
+      actualAmount,
+      reservation.userId,
+      reservation.category,
+      // The usage period the reservation was made in (the UTC month without one).
+      reservation.ledgerPeriodStart ?? null,
+    ],
   );
 }

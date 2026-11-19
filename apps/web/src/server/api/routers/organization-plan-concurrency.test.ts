@@ -193,12 +193,20 @@ test("the team plan switch estimate previews every seat without changing the pla
     organizationId: "team",
     planId: "pro_team_yearly",
   });
-  expect(estimate).toEqual({ amountDue: 4200, currency: "usd", memberCount: 3 });
+  expect(estimate).toEqual({
+    kind: "upgrade",
+    amountDue: 4200,
+    currency: "usd",
+    memberCount: 3,
+    effectiveAt: null,
+  });
   expect(stripe.invoices.createPreview).toHaveBeenCalledWith(
     expect.objectContaining({
       subscription: "subscription",
       subscription_details: {
         items: [{ id: "licensed", price: "price_pro_team_yearly", quantity: 3 }],
+        // Monthly to yearly starts a new billing cycle, paid in full.
+        billing_cycle_anchor: { type: "now" },
         proration_behavior: "always_invoice",
       },
     }),

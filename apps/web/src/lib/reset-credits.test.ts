@@ -114,6 +114,12 @@ vi.mock("@/db/drizzle", () => ({
   },
 }));
 
+// The usage period comes from the usage engine (the billing cycle, else the UTC month).
+vi.mock("@/lib/usage", async () => {
+  const { usagePeriodAt } = await import("@deniai/billing");
+  return { getUsagePeriod: async () => usagePeriodAt(null, new Date()) };
+});
+
 function addCredit(expiresInDays: number, usedAt: Date | null = null): Credit {
   const credit = {
     id: `credit-${state.nextId++}`,

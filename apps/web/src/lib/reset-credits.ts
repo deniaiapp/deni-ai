@@ -2,6 +2,7 @@ import { and, asc, count, eq, gt, inArray, isNotNull, isNull, like, or, sql } fr
 import { db } from "@/db/drizzle";
 import { billing, member, resetCredit, resetCreditBalance, user } from "@/db/schema";
 import { hasResettableUsage as hasResettableUsageIn, resetUserUsage } from "@deniai/billing/server";
+import { getUsagePeriod } from "@/lib/usage";
 
 export const RESET_CREDIT_PLAN_TIERS = ["free", "go", "plus", "pro"] as const;
 export type ResetCreditPlanTier = (typeof RESET_CREDIT_PLAN_TIERS)[number];
@@ -243,7 +244,8 @@ export async function grantResetCredits({
 
 /** Whether the user has any usage a reset would clear (chat, Flixa, or Deni Run). */
 export async function hasResettableUsage(userId: string) {
-  return hasResettableUsageIn(userId, new Date(), db);
+  const now = new Date();
+  return hasResettableUsageIn(userId, now, await getUsagePeriod(userId, now), db);
 }
 
 export type ConsumeResetCreditResult =
@@ -268,7 +270,8 @@ export async function consumeResetCredit(
 
       // Usage writes do not take the user lock, so this is a best-effort guard
       // against spending a credit on a reset that changes nothing.
-      if (!(await hasResettableUsageIn(userId, now, tx))) {
+      const period = await getUsagePeriod(userId, now, tx);
+      if (!(await hasResettableUsageIn(userId, now, period, tx))) {
         return { status: "no_usage" };
       }
 
@@ -289,7 +292,7 @@ export async function consumeResetCredit(
 
       await tx.update(resetCredit).set({ usedAt: now }).where(eq(resetCredit.id, credit.id));
 
-      await resetUserUsage(userId, now, tx);
+      await resetUserUsage(userId, now, period, tx);
 
       const [remaining] = await tx.select({ count: count() }).from(resetCredit).where(usable);
       return { status: "reset", remaining: remaining?.count ?? 0 };

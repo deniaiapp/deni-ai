@@ -1,4 +1,5 @@
-import { useExtracted } from "use-intl";
+import { useExtracted, useLocale } from "use-intl";
+import { formatAppDate } from "@/lib/format-date";
 import { useFormatCurrencyMinor, usePlanIntervalLabel } from "@/components/billing/billing-utils";
 import {
   AlertDialog,
@@ -32,7 +33,13 @@ export function TeamChangePlanDialog({
   seatCount: number;
   estimate: {
     error: { message: string } | null;
-    data?: { amountDue: number; currency: string | null } | null;
+    data?: {
+      /** An upgrade applies today; a downgrade waits for the end of the paid period. */
+      kind?: "upgrade" | "downgrade" | "none";
+      amountDue: number;
+      currency: string | null;
+      effectiveAt?: Date | string | null;
+    } | null;
   };
   hasAgreed: boolean;
   onHasAgreedChange: (value: boolean) => void;
@@ -44,6 +51,11 @@ export function TeamChangePlanDialog({
   const formatCurrencyMinor = useFormatCurrencyMinor();
   const intervalLabel = planId ? getPlanIntervalLabel(planId) : "";
   const planLabel = t("Pro for Teams {name}", { name: intervalLabel });
+  const locale = useLocale();
+  const isDowngrade = estimate.data?.kind === "downgrade";
+  const effectiveDate = estimate.data?.effectiveAt
+    ? formatAppDate(estimate.data.effectiveAt, locale, { month: "short", day: "numeric" })
+    : "";
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
@@ -52,14 +64,19 @@ export function TeamChangePlanDialog({
           <AlertDialogTitle>{t("Change team plan?")}</AlertDialogTitle>
           <AlertDialogDescription render={<div />}>
             <p>
-              {t(
-                "The team will switch to {plan} for {count, plural, one {# seat} other {# seats}}. The prorated difference is charged to the team's payment method right away.",
-                { plan: planLabel, count: seatCount },
-              )}
+              {isDowngrade
+                ? t(
+                    "The team will switch to {plan} on {date}, when the current billing period ends. Until then the current plan stays. Nothing is charged today.",
+                    { plan: planLabel, date: effectiveDate },
+                  )
+                : t(
+                    "The team will switch to {plan} for {count, plural, one {# seat} other {# seats}} today. A new billing period starts now: the full price is charged to the team's payment method, less a credit for the unused time on the current plan, and every member's usage starts over.",
+                    { plan: planLabel, count: seatCount },
+                  )}
             </p>
             {estimate.error ? (
               <span className="block mt-2">{t("Unable to fetch estimate.")}</span>
-            ) : (
+            ) : isDowngrade ? null : (
               <span className="block mt-2 font-medium text-foreground">
                 {t("Estimated charge: {amount}", {
                   amount: formatCurrencyMinor(
@@ -79,7 +96,9 @@ export function TeamChangePlanDialog({
             disabled={estimate.error != null}
           />
           <Label htmlFor="agree-team-plan-change" className="text-sm leading-tight cursor-pointer">
-            {t("I have reviewed the estimated charge and agree to the plan change.")}
+            {isDowngrade
+              ? t("I agree to the plan change.")
+              : t("I have reviewed the estimated charge and agree to the plan change.")}
           </Label>
         </div>
         <AlertDialogFooter>

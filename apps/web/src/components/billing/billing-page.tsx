@@ -51,6 +51,7 @@ function BillingPageContent() {
     cancel,
     cancelFeedback,
     cancelDate,
+    cancelPlanChange,
     cancelReceipt,
     changePlan,
     changeTarget,
@@ -132,6 +133,9 @@ function BillingPageContent() {
             currentPlan={currentPlan}
             activePlanId={activePlanId}
             cancelDate={cancelDate}
+            pendingPlanChange={statusQuery.data?.pendingPlanChange ?? null}
+            keepPlanPending={cancelPlanChange.isPending}
+            onKeepPlan={() => cancelPlanChange.mutate()}
             currentPeriodEnd={statusQuery.data?.currentPeriodEnd}
             stripeCustomerId={statusQuery.data?.stripeCustomerId}
             hasActiveSubscription={hasActiveSubscription}

@@ -5,6 +5,7 @@ import {
   DEFAULT_TOKEN_USAGE_WEIGHTS,
   extractEmailDomain,
   FLAGGED_FREE_POOL_USD,
+  getPlanChangeKind,
   getUsageTierMultiplier,
   isAllowedEducationalDomain,
   isEducationalEmail,
@@ -135,5 +136,27 @@ describe("education domains", () => {
     expect(extractEmailDomain(" User@Example.COM.. ")).toBe("example.com");
     expect(extractEmailDomain("user@")).toBeNull();
     expect(isAllowedEducationalDomain("edu")).toBe(false);
+  });
+});
+
+describe("plan changes", () => {
+  test("a higher tier, or yearly instead of monthly, is an upgrade", () => {
+    expect(getPlanChangeKind("go_monthly", "plus_monthly")).toBe("upgrade");
+    expect(getPlanChangeKind("plus_yearly", "pro_monthly")).toBe("upgrade");
+    expect(getPlanChangeKind("plus_monthly", "plus_yearly")).toBe("upgrade");
+    expect(getPlanChangeKind("pro_team_monthly", "pro_team_yearly")).toBe("upgrade");
+    // A removed plan counts as below every plan.
+    expect(getPlanChangeKind("max_monthly", "go_monthly")).toBe("upgrade");
+  });
+
+  test("a lower tier, or monthly instead of yearly, is a downgrade", () => {
+    expect(getPlanChangeKind("pro_monthly", "plus_monthly")).toBe("downgrade");
+    expect(getPlanChangeKind("pro_monthly", "plus_yearly")).toBe("downgrade");
+    expect(getPlanChangeKind("plus_yearly", "plus_monthly")).toBe("downgrade");
+    expect(getPlanChangeKind("pro_team_yearly", "pro_team_monthly")).toBe("downgrade");
+  });
+
+  test("the same plan is no change", () => {
+    expect(getPlanChangeKind("pro_monthly", "pro_monthly")).toBe("none");
   });
 });

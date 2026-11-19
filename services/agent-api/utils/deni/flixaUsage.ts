@@ -12,6 +12,7 @@ import {
   reserveUsageQuota,
   settleUsageQuota,
   USAGE_UNIT,
+  type UsagePeriodSource,
   type UsageReservation,
   type UsageTier,
   type UsageUnit,
@@ -42,6 +43,11 @@ export interface FlixaReserveInput {
   hasVerifiedPaymentMethod: boolean;
   /** Estimated usage units to hold (`UsageEstimate.reservationAmount`). */
   amount: number;
+  /**
+   * The cached billing profile's billing cycle, which the legacy path's usage period
+   * follows (the shared engine reads the plan itself).
+   */
+  periodSource?: UsagePeriodSource;
 }
 
 type SharedDecision =
@@ -86,6 +92,7 @@ async function reserveLegacy(input: FlixaReserveInput): Promise<FlixaReserveResu
     input.tier,
     input.hasVerifiedPaymentMethod,
     input.amount,
+    input.periodSource,
   );
   return {
     allowed: result.allowed,
