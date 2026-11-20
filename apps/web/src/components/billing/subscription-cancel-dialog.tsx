@@ -47,7 +47,8 @@ function isCancellationReason(value: unknown): value is CancellationReason {
 }
 
 /**
- * Asks before cancelling, with an optional survey on why. Open the shredder only
+ * Asks before cancelling and why: a reason must be picked, the comment is optional
+ * (the server still accepts a cancellation without feedback). Open the shredder only
  * from `onConfirm`: it cancels the subscription as soon as it mounts.
  */
 export function SubscriptionCancelDialog({
@@ -84,10 +85,11 @@ export function SubscriptionCancelDialog({
         </AlertDialogHeader>
         <FieldSet className="gap-4">
           <FieldLegend variant="label" className="mb-0">
-            {t("Why are you canceling? (optional)")}
+            {t("Why are you canceling?")}
           </FieldLegend>
           <RadioGroup
             className="gap-2.5"
+            required
             value={reason}
             onValueChange={(value) => setReason(isCancellationReason(value) ? value : null)}
           >
@@ -118,6 +120,7 @@ export function SubscriptionCancelDialog({
           <AlertDialogCancel>{t("Keep subscription")}</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
+            disabled={!reason}
             onClick={() => {
               const feedback: CancellationFeedback = {
                 ...(reason ? { reason } : {}),
