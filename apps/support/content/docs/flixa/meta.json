@@ -1,5 +1,5 @@
 {
   "title": "Flixa",
   "icon": "Terminal",
-  "pages": ["vscode", "cli", "external-tools"]
+  "pages": ["vscode", "cli", "external-tools", "api"]
 }

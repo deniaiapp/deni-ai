@@ -167,6 +167,15 @@ function FlixaPage() {
             {t("Set up Flixa in your coding tool")}
           </Link>
         </p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {t("Building your own app? The Flixa API is available on Plus and higher.")}{" "}
+          <Link
+            href={supportUrl(locale, "/flixa/api")}
+            className="font-medium text-primary underline-offset-4 hover:underline"
+          >
+            {t("Read the Flixa API docs")}
+          </Link>
+        </p>
       </section>
     </main>
   );

@@ -1,0 +1,220 @@
+---
+title: 開発者向け Flixa API
+description: OpenAI や Anthropic の API 形式で、自作のアプリから Deni AI Flixa を呼び出す方法です。
+---
+
+Flixa API を使うと、自作のアプリ、スクリプト、サービスから Deni AI Flixa のモデルを呼び出せます。
+OpenAI API（Chat Completions と Responses）と Anthropic Messages API の形式に対応しているので、OpenAI や Anthropic の公式 SDK、AI SDK などの互換ライブラリをそのままお使いいただけます。
+
+<Callout title="Plus 以上のプランが必要です">
+  自作のアプリから Flixa API を呼び出すには、Deni AI の Plus、Pro、Pro for Teams のいずれかのプランが必要です。
+  Free と Go プランでは、Claude Code、Codex、Zed、opencode と Flixa からのみご利用いただけます（[Flixa を外部のコーディングツールで使う](/ja/flixa/external-tools)を参照）。
+</Callout>
+
+## アプリで守っていただくこと
+
+- **API キーは利用者本人のものを使ってください。** アプリはそのアプリを使う人自身の API キーで Flixa API を呼び出し、使用量はその人の Deni AI プランから差し引かれます。
+- **自分のキーを他人に使わせないでください。** 配布するアプリ、Web サイト、拡張機能に自分の API キーを埋め込んだり、自分のアプリやサービスを通して他の人に自分のキーを使わせたりしないでください。
+- **アクセスを転売しないでください。** Flixa API へのアクセスを販売・貸与したり、自社の API として他者に提供したりすることはできません。
+- **キーは安全に保管してください。** OS のキーチェーン、環境変数、サーバー側のシークレット管理などに保存し、ログに出力したり `flixa-api.deniai.app` 以外に送信したりしないでください。
+- **他のクライアントを装わないでください。** Claude Code、Codex、Flixa などに見せかけるヘッダーを送ることは[利用規約](https://deniai.app/ja/legal/terms)に反し、アカウントが Flixa の利用を停止されることがあります。
+
+## API キーを取得する
+
+[設定 › API キー](https://deniai.app/settings/api-keys) でキーを作成します。
+キーは `deni_` で始まり、作成時に一度しか表示されないので、その場でコピーしてください。
+キーは 5 個まで作成でき、いつでも無効にできます。
+
+ゲストアカウントでは API キーを作成できません。
+
+## 認証
+
+次のどちらかのヘッダーでキーを送ります。
+
+```http
+Authorization: Bearer deni_...
+```
+
+```http
+x-api-key: deni_...
+```
+
+## エンドポイント
+
+ベース URL: `https://flixa-api.deniai.app/v1/agent`
+
+| メソッド | パス | 形式 |
+| --- | --- | --- |
+| `POST` | `/chat/completions` | OpenAI Chat Completions |
+| `POST` | `/responses` | OpenAI Responses |
+| `POST` | `/v1/messages` | Anthropic Messages |
+| `GET` | `/models` | モデル一覧 |
+
+プランと残りの使用量は `GET https://flixa-api.deniai.app/v1/deni/usage` で確認できます（[使用量を確認する](#使用量を確認する)を参照）。
+
+どのエンドポイントもストリーミング（`"stream": true`、Server-Sent Events）に対応しています。
+
+## モデル
+
+モデル ID は `openai/gpt-6-sol` や `anthropic/claude-sonnet-5.5` のような `プロバイダー/モデル` の形式です。
+最新の一覧はモデル一覧 API で取得できます。
+
+```bash
+curl https://flixa-api.deniai.app/v1/agent/models \
+  -H "Authorization: Bearer $FLIXA_API_KEY"
+```
+
+各モデルには `tier` があります。`free` のモデルはどのプランでも使え、`plus` と `pro` のモデルはそのプラン以上が必要です。
+`tokenUsageMultiplier` は、標準的なモデルと比べて 1 トークンあたりどれだけ使用量を消費するかを表します。
+
+モデルは随時追加・削除されます。モデル ID をコードに固定せず、一覧から取得してください。
+
+## 使用例
+
+### curl
+
+```bash
+curl https://flixa-api.deniai.app/v1/agent/chat/completions \
+  -H "Authorization: Bearer $FLIXA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "openai/gpt-6-sol",
+    "messages": [{ "role": "user", "content": "こんにちは" }]
+  }'
+```
+
+### OpenAI SDK（TypeScript）
+
+```ts
+import OpenAI from 'openai';
+
+const client = new OpenAI({
+  baseURL: 'https://flixa-api.deniai.app/v1/agent',
+  apiKey: process.env.FLIXA_API_KEY,
+});
+
+const response = await client.responses.create({
+  model: 'openai/gpt-6-sol',
+  input: '海についての俳句を詠んでください。',
+});
+
+console.log(response.output_text);
+```
+
+### OpenAI SDK（Python）
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://flixa-api.deniai.app/v1/agent",
+    api_key=os.environ["FLIXA_API_KEY"],
+)
+
+completion = client.chat.completions.create(
+    model="anthropic/claude-sonnet-5.5",
+    messages=[{"role": "user", "content": "こんにちは"}],
+)
+
+print(completion.choices[0].message.content)
+```
+
+### Anthropic SDK（TypeScript）
+
+Anthropic SDK はベース URL に `/v1/messages` を自動で付け足します。
+
+```ts
+import Anthropic from '@anthropic-ai/sdk';
+
+const client = new Anthropic({
+  baseURL: 'https://flixa-api.deniai.app/v1/agent',
+  apiKey: process.env.FLIXA_API_KEY,
+});
+
+const message = await client.messages.create({
+  model: 'anthropic/claude-sonnet-5.5',
+  max_tokens: 1024,
+  messages: [{ role: 'user', content: 'こんにちは' }],
+});
+
+console.log(message.content);
+```
+
+### AI SDK
+
+```ts
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { generateText } from 'ai';
+
+const flixa = createOpenAICompatible({
+  name: 'flixa',
+  baseURL: 'https://flixa-api.deniai.app/v1/agent',
+  apiKey: process.env.FLIXA_API_KEY,
+});
+
+const { text } = await generateText({
+  model: flixa('google/gemini-3.8-flash'),
+  prompt: 'こんにちは',
+});
+```
+
+## 使用量と制限
+
+### 使用量
+
+リクエストは、キーの持ち主の Deni AI プランに含まれる使用量を消費します。エディターで Deni AI Flixa を使うときと同じ使用量です。
+リクエストの実行前に使用量の見込みを確保し、応答が終わった時点で実際の量を精算します。
+残りの使用量が見込みに足りない場合は `429 USAGE_LIMIT_EXCEEDED` になります。`max_tokens`（または `max_output_tokens`）を小さくすると見込みも小さくなります。
+
+### 使用量を確認する
+
+```bash
+curl https://flixa-api.deniai.app/v1/deni/usage \
+  -H "Authorization: Bearer $FLIXA_API_KEY"
+```
+
+レスポンスには、プラン（`tier`）と、カテゴリー（`basic` と `premium`）ごとの上限（`limit`）、使用済み（`used`）、残り（`remaining`）、期間の終わり（`periodEnd`）が含まれます。
+このエンドポイントは `Authorization: Bearer` ヘッダーにのみ対応しています。
+
+### レート制限
+
+モデルへのリクエスト（`/chat/completions`、`/responses`、`/v1/messages`）は使用量だけで制限されます。
+モデル一覧や使用量など、それ以外のエンドポイントには、アカウントまたは IP アドレスごとに短時間あたりのリクエスト数の制限があります。
+制限に達すると `429 rate_limit_exceeded` と `Retry-After` ヘッダー（秒数）が返ります。その秒数が経ってから再試行してください。
+
+## エラー
+
+エラーは OpenAI のエラー形式で返ります。
+
+```json
+{
+  "error": {
+    "message": "Invalid API key. ...",
+    "type": "authentication_error",
+    "param": null,
+    "code": "invalid_key"
+  }
+}
+```
+
+Anthropic Messages のエンドポイントも同じ形式です。
+
+| ステータス | `code` | 意味と対処 |
+| --- | --- | --- |
+| 400 | `missing_model`、`invalid_parameter` など | リクエストの内容が正しくありません。`param` と `message` を確認してください。 |
+| 401 | `missing_api_key`、`missing_auth_header` | API キーが送られていません。 |
+| 401 | `invalid_key`、`expired_key` | キーが間違っているか、無効化・期限切れになっています。利用者に新しいキーを入力してもらってください。 |
+| 403 | `guest_account` | ゲストアカウントでは Flixa を使えません。 |
+| 403 | `missing_client_signal` | キーのプランが Free または Go のため、このアプリでは使えません（`type: insufficient_plan`）。レスポンスの `upgradeUrl` を案内してください。 |
+| 403 | `tier_restricted` | そのモデルには上位のプランが必要です。プランに含まれる `tier` のモデルを選んでください。 |
+| 403 | `service_unavailable` | このアカウントでは Flixa をご利用いただけません。サポートへの問い合わせを案内してください。 |
+| 404 | `model_not_found` | モデルが存在しません。`/models` で最新の一覧を取得してください。 |
+| 429 | `USAGE_LIMIT_EXCEEDED` | 使用量が足りません（`type: quota_exceeded`）。`upgradeUrl` を案内するか、使用量のリセットを待ってください。 |
+| 429 | `rate_limit_exceeded` | リクエストが多すぎます。`Retry-After` の秒数が経ってから再試行してください。 |
+| 5xx | `db_error` など | Deni AI 側またはモデル提供元の一時的なエラーです。間隔を広げながら再試行してください。 |
+
+## API の変更について
+
+上記のエンドポイント、認証方法、エラー形式は互換性を保って提供します。
+モデル、プランの上限、使用量の消費率は変わることがあり、変更は[更新履歴](https://deniai.app/ja/changelog)でお知らせします。
