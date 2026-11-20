@@ -114,7 +114,9 @@ export type ComputerWorkspaceState = {
 export type AppConfig = {
   apiKey: string;
   timezone: string;
+  /** Unused: the model is part of `runMode` (kept for stores written before that). */
   model: string;
+  /** The catalog model and reasoning effort, `<model>@<effort>` (see agent/model). */
   runMode?: RunMode;
 };
 

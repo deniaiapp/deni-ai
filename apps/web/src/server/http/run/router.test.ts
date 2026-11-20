@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   ),
   createTeammate: vi.fn(),
   finishMcpSignIn: vi.fn(),
+  saveWebAttachment: vi.fn(),
   rateAllowed: true,
   env: {
     NEXT_PUBLIC_BETTER_AUTH_URL: "https://app.example",
@@ -56,8 +57,14 @@ vi.mock("@deniai/run/computer/index", () => ({
   computerForJob: (computer: unknown) => computer,
   lastComputer: () => null,
   withBrowserLive: (_userId: string, computer: unknown) => computer,
+  billLiveBrowser: async () => undefined,
+  screenshot: async () => null,
 }));
+vi.mock("@deniai/run/computer/sandbox", () => ({ billLiveSandbox: async () => undefined }));
 vi.mock("@deniai/run/mcp/index", () => ({ finishMcpSignIn: mocks.finishMcpSignIn }));
+vi.mock("@deniai/run/chat/web-attachments", () => ({
+  saveWebAttachment: mocks.saveWebAttachment,
+}));
 
 const { handleRunApi } = await import("./router");
 
@@ -86,6 +93,46 @@ beforeEach(() => {
   mocks.handleChat.mockClear();
   mocks.createTeammate.mockReset();
   mocks.finishMcpSignIn.mockReset();
+  mocks.saveWebAttachment.mockReset();
+});
+
+function upload(form: FormData) {
+  return handleRunApi(
+    new Request("https://app.example/api/run/attachments", { method: "POST", body: form }),
+    "attachments",
+  );
+}
+
+test("an attached file is saved to the workspace and returned for the message", async () => {
+  const saved = {
+    path: "/inbox/web/20260101T000000-abc123-notes.txt",
+    name: "notes.txt",
+    size: 5,
+    mediaType: "text/plain",
+  };
+  mocks.saveWebAttachment.mockResolvedValue(saved);
+  const form = new FormData();
+  form.set("file", new File(["hello"], "notes.txt", { type: "text/plain" }));
+  const response = await upload(form);
+  expect(response.status).toBe(201);
+  expect(await response.json()).toEqual({ attachment: saved });
+  const [userId, file] = mocks.saveWebAttachment.mock.calls[0]!;
+  expect(userId).toBe("user-1");
+  expect(file).toMatchObject({ name: "notes.txt", mediaType: "text/plain" });
+  expect(new TextDecoder().decode(file.data)).toBe("hello");
+});
+
+test("an upload without a file, or over the size limit, is refused", async () => {
+  const empty = await upload(new FormData());
+  expect(empty.status).toBe(400);
+  expect(await empty.json()).toEqual({ error: "file_required" });
+
+  const form = new FormData();
+  form.set("file", new File([new Uint8Array(10_000_001)], "big.bin"));
+  const large = await upload(form);
+  expect(large.status).toBe(413);
+  expect(await large.json()).toEqual({ error: "file_too_large" });
+  expect(mocks.saveWebAttachment).not.toHaveBeenCalled();
 });
 
 test("RUN_ENABLED=false answers every Run endpoint with 404 run_disabled", async () => {

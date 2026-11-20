@@ -61,7 +61,10 @@ function ComposerAttachments() {
   );
 }
 
-type ComposerProps = Pick<PromptInputProps, "globalDrop" | "multiple"> & {
+type ComposerProps = Pick<
+  PromptInputProps,
+  "globalDrop" | "multiple" | "maxFiles" | "maxFileSize" | "uploadFile"
+> & {
   value: string;
   onValueChange: (value: string) => void;
   onSubmit: (message: PromptInputMessage) => void;
@@ -103,6 +106,9 @@ export function Composer({
   isSubmitDisabled,
   globalDrop,
   multiple,
+  maxFiles,
+  maxFileSize,
+  uploadFile,
   attachmentsEnabled = true,
   compact = false,
 }: ComposerProps) {
@@ -158,11 +164,17 @@ export function Composer({
         onError={(err) => {
           if (err.code === "uploading") {
             toast.info(t("Wait for your attachments to finish uploading, then send again."));
+          } else if (err.code === "max_files") {
+            toast.error(t("Too many files. Some were not added."));
+          } else if (err.code === "max_file_size") {
+            toast.error(t("That file is too large to attach."));
           }
         }}
         globalDrop={globalDrop}
         multiple={multiple}
-        maxFiles={attachmentsEnabled ? undefined : 0}
+        maxFiles={attachmentsEnabled ? maxFiles : 0}
+        maxFileSize={maxFileSize}
+        uploadFile={uploadFile}
       >
         {(!compact || attachmentsEnabled) && (
           <PromptInputHeader className={cn(headerClassName)}>

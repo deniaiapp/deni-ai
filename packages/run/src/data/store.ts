@@ -19,7 +19,7 @@ import {
   runThreads,
 } from "@deniai/db";
 import { db, type RunDatabase } from "../runtime";
-import { DENI_MODEL_ID, parseRunMode } from "../agent/model";
+import { DEFAULT_RUN_MODE, DENI_MODEL_ID, parseRunMode } from "../agent/model";
 import { emptyStore } from "./seed";
 import { nowIso } from "./ids";
 import type {
@@ -56,7 +56,7 @@ async function ensureSeeded(database: Queryable, userId: string) {
   const seed = emptyStore();
   const inserted = await database
     .insert(runSettings)
-    .values({ userId, timezone: seed.config.timezone, runMode: "default" })
+    .values({ userId, timezone: seed.config.timezone, runMode: DEFAULT_RUN_MODE })
     .onConflictDoNothing({ target: runSettings.userId })
     .returning({ userId: runSettings.userId });
   if (!inserted.length) return;

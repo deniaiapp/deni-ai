@@ -7,7 +7,10 @@
   "sideEffects": false,
   "exports": {
     "./models": "./src/models.ts",
+    "./deni-api": "./src/deni-api.ts",
     "./openrouter": "./src/openrouter.ts",
+    "./provider": "./src/provider.ts",
+    "./usage-amount": "./src/usage-amount.ts",
     "./reasoning": "./src/reasoning.ts",
     "./tools/*": "./src/tools/*.ts"
   },
@@ -19,6 +22,7 @@
     "test": "vitest run --fsModuleCachePath node_modules/.vitest-cache"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.117",
     "@deniai/billing": "workspace:*",
     "@openrouter/ai-sdk-provider": "^3.1.0",
     "ai": "^7.0.172",

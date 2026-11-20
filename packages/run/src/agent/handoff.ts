@@ -5,7 +5,7 @@ import { messagesForModel } from "../chat/messages";
 import { loadMessages, mutateStore, readStore, saveMessages } from "../data/store";
 import type { HandoffSnapshot, HandoffStep } from "../types";
 import { translateError, translateMessage, translatorFor } from "../i18n/standalone";
-import { assertCanUseTokens, isUsageLimitError, recordModelUsage } from "../billing/usage";
+import { assertCanUseTokens, beginModelUsage, isUsageLimitError } from "../billing/usage";
 import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "../chat/message-bubbles";
 
 type HandoffRun = HandoffSnapshot & { userId: string; locale?: string };
@@ -168,6 +168,8 @@ async function executeHandoff(run: HandoffRun, messages: UIMessage[]) {
   }
 
   const { model, providerOptions, modelId } = await getDeniModel(run.userId);
+  // The handoff's model usage is a reservation on the shared pool, as a chat request's is.
+  const usage = await beginModelUsage(run.userId, modelId);
   const result = streamText({
     model,
     instructions: `${buildInstructions(
@@ -190,7 +192,7 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
       locale: run.locale,
     }),
     toolApproval: deniHandoffToolApproval(run.locale, undefined, run.userId),
-    stopWhen: isStepCount(16),
+    stopWhen: [isStepCount(16), () => usage.isSpent()],
     timeout: { totalMs: 180_000, stepMs: 45_000 },
     providerOptions,
     onStepStart: () => {
@@ -198,7 +200,7 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
       addStep(run, { kind: "thinking", label: tr("Thinking"), status: "active" });
     },
     onStepEnd: async (step) => {
-      await recordModelUsage(run.userId, step, modelId).catch(() => undefined);
+      usage.add(step);
       if (step.reasoningText?.trim()) {
         addStep(run, {
           kind: "thinking",
@@ -220,7 +222,7 @@ This is a handoff from ${run.fromBotName}. Complete the work and report back con
     },
   });
 
-  const text = await result.text;
+  const text = await Promise.resolve(result.text).finally(() => usage.settle());
   const reply = text.trim() || tr("Finished without a written report.");
   const assistant: UIMessage = {
     id: `${run.id}_assistant`,

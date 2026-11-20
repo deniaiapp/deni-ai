@@ -6,7 +6,7 @@ let testDb: RunTestDb;
 
 beforeAll(async () => {
   testDb = await createRunTestDb();
-  configureRunForTest(testDb, { config: { openrouterApiKey: "test-key" } });
+  configureRunForTest(testDb, { config: { deniApiKey: "test-key" } });
 }, 60_000);
 
 afterAll(async () => {

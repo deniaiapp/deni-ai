@@ -1,4 +1,4 @@
-import { createOpenRouter } from "@openrouter/ai-sdk-provider";
+import { createDeniApi, DENI_API_UTILITY_MODEL_ID } from "@deniai/ai/deni-api";
 import { generateText, Output } from "ai";
 import { z } from "zod";
 import { env } from "@/env";
@@ -27,9 +27,12 @@ export function normalizeAdReview(result: z.infer<typeof reviewSchema>) {
 
 /** Fail closed: without a working review provider, nothing can be purchased or published. */
 export async function reviewAd(ad: z.infer<typeof adCreativeSchema>) {
-  if (!env.OPENROUTER_API_KEY) throw new Error("Ad review is unavailable");
+  const apiKey = env.DENI_API_KEY?.trim();
+  if (!apiKey) throw new Error("Ad review is unavailable");
   const { output } = await generateText({
-    model: createOpenRouter({ apiKey: env.OPENROUTER_API_KEY })("openai/gpt-5.6-luna"),
+    model: createDeniApi({ apiKey, baseURL: env.DENI_API_BASE_URL }).chat(
+      DENI_API_UTILITY_MODEL_ID,
+    ),
     output: Output.object({ schema: reviewSchema }),
     system: `You are a safety filter for short text ads in a general-audience AI chat app, not an editor, fact checker, or marketing reviewer.
 Default to category "none". Block ONLY when the supplied ad text or URL itself contains clear evidence of one of these categories: scam or phishing, impersonation (claiming to be the brand or official provider), malware, illegal goods or services, explicit sexual content, hate or incitement to violence, or dangerous specific medical/financial guarantees.

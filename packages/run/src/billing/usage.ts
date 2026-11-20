@@ -1,4 +1,7 @@
-import { MODEL_PRICES_USD_PER_MTOK } from "../agent/model";
+import { randomUUID } from "node:crypto";
+import { getEffectiveTokenMultiplier } from "@deniai/ai/models";
+import { calculateModelUsageAmount, type ModelTokenUsage } from "@deniai/ai/usage-amount";
+import { usageUnitsToUsd } from "@deniai/billing";
 import { runConfig, runDeps, runLogger, type RunBudget, type RunCostMetric } from "../runtime";
 import {
   TIER_BUDGET_USD,
@@ -18,9 +21,12 @@ export type { UsageSnapshot } from "./plans";
 /**
  * Deni Run spends the monthly pool of the user's Deni AI plan, shared with chat and
  * Flixa. On the platform the shared usage engine (`@deniai/billing/server`) is called
- * directly through the host's {@link RunUsageBinding}: Run checks the remaining budget
- * before work and records model, browser and computer cost in the product ledger
- * (`product_usage`, product `run`, micro-dollars) after it is incurred.
+ * directly through the host's {@link RunUsageBinding}. Model calls spend it exactly like
+ * chat ({@link beginModelUsage}): an estimate is reserved before the call, the real amount
+ * (weighted tokens times the model's usage tier) is settled after it, and what goes past
+ * the pool is paid from Max Mode credits. Browser and computer time is recorded in the
+ * product ledger (`product_usage`, product `run`, micro-dollars) after it is incurred and
+ * stops once the pool is spent; Max Mode credits do not pay for it.
  */
 
 /** USD of Steel browser time (default $0.10 per hour; `RUN_BROWSER_USD_PER_HOUR`). */
@@ -100,7 +106,15 @@ async function assertBudget(userId: string) {
   if (usage.remainingUsd <= 0) throw budgetError(usage.tier as DeniTier);
 }
 
-export const assertCanUseTokens = assertBudget;
+/**
+ * A model call needs the pool or, as in chat, Max Mode credits to continue on. This is the
+ * early check; the reservation of the call ({@link beginModelUsage}) decides.
+ */
+export async function assertCanUseTokens(userId: string) {
+  const usage = await budget(userId);
+  if (usage.remainingUsd <= 0 && !usage.maxModeEnabled) throw budgetError(usage.tier as DeniTier);
+}
+
 export const assertCanStartBrowser = assertBudget;
 export const assertCanStartComputer = assertBudget;
 
@@ -156,60 +170,118 @@ export function recordTimeUsage(userId: string, kind: "browser" | "computer", ms
   return recordCost(userId, kind, kind === "browser" ? browserCostUsd(ms) : computerCostUsd(ms));
 }
 
-type ModelUsage = {
-  inputTokens?: number | undefined;
-  outputTokens?: number | undefined;
-  totalTokens?: number | undefined;
-  /** The provider's own usage object; OpenRouter's says `is_byok`. */
-  raw?: unknown;
-};
+type ModelResult = { usage?: ModelTokenUsage };
 
-type OpenRouterUsage = { cost?: unknown; costDetails?: { upstreamInferenceCost?: unknown } };
-
-function usdAmount(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : undefined;
+/** Catalog id of a model id that may carry the Deni AI API author prefix (`anthropic/...`). */
+function catalogModelId(modelId: string) {
+  return modelId.slice(modelId.lastIndexOf("/") + 1);
 }
 
 /**
- * The cost OpenRouter reported for a model call, else an estimate from list prices. With a
- * provider key on OpenRouter (BYOK), `cost` is only OpenRouter's fee, often 0, and the provider's
- * own charge is reported separately as the upstream inference cost.
+ * What a model call spends, by the chat rules (`@deniai/ai/usage-amount`): weighted tokens
+ * times the model's usage tier and any promotion, in usage units. A model outside the catalog
+ * counts as Tier 1.
  */
-export function modelCostUsd(
-  result: { usage?: ModelUsage; providerMetadata?: unknown },
-  modelId: string,
-) {
-  const usage = (
-    result.providerMetadata as { openrouter?: { usage?: OpenRouterUsage } } | undefined
-  )?.openrouter?.usage;
-  const reported = usdAmount(usage?.cost);
-  const byok = (result.usage?.raw as { is_byok?: unknown } | undefined)?.is_byok === true;
-  const upstream = usdAmount(usage?.costDetails?.upstreamInferenceCost);
-  if (reported !== undefined && !byok) return reported;
-  if (reported !== undefined && upstream !== undefined) return reported + upstream;
-  const price = MODEL_PRICES_USD_PER_MTOK[modelId];
-  if (!price || !result.usage) return 0;
-  const input = result.usage.inputTokens ?? 0;
-  const output = result.usage.outputTokens ?? Math.max(0, (result.usage.totalTokens ?? 0) - input);
-  return (input * price.input + output * price.output) / 1_000_000;
+export function modelUsageUnits(result: ModelResult, modelId: string) {
+  if (!result.usage) return 0;
+  return calculateModelUsageAmount(catalogModelId(modelId), result.usage, runConfig().usageWeights);
 }
 
-export function recordModelUsage(
-  userId: string,
-  result: { usage?: ModelUsage; providerMetadata?: unknown },
-  modelId: string,
-) {
-  return recordCost(userId, "model", modelCostUsd(result, modelId));
+/** {@link modelUsageUnits} in USD, the unit of Run's ledger rows. */
+export function modelCostUsd(result: ModelResult, modelId: string) {
+  return usageUnitsToUsd(modelUsageUnits(result, modelId));
 }
 
-/** Report every step of a finished multi-step call (generateText's `steps`). */
-export function recordModelSteps(
+/** Reserved before a call, as chat reserves its prompt estimate; the settlement corrects it. */
+const MODEL_RESERVATION_TOKENS = 2_048;
+
+/** The model usage of one turn: a reservation on the shared pool, settled with what was spent. */
+export type ModelUsage = {
+  /** Count a finished model step (or a whole call's usage). */
+  add(result: ModelResult): void;
+  /** The pool and the Max Mode credits this turn may spend are used up: stop the loop. */
+  isSpent(): boolean;
+  /** Settle what was spent. Safe to call more than once; never throws. */
+  settle(): Promise<void>;
+};
+
+/**
+ * Reserve usage for the model calls of one turn, the way chat does for a request. Throws
+ * {@link UsageLimitError} when the pool is spent and no Max Mode credits can carry the turn.
+ * Call `add` after each step and `settle` when the turn ends, however it ends; a turn that
+ * never settles is recovered from its last `add` by the usage job.
+ */
+export async function beginModelUsage(userId: string, modelId: string): Promise<ModelUsage> {
+  const binding = runDeps().usage;
+  const reservationId = `run:${randomUUID()}:model`;
+  const estimate = Math.max(
+    1,
+    Math.ceil(MODEL_RESERVATION_TOKENS * getEffectiveTokenMultiplier(catalogModelId(modelId))),
+  );
+  let allowance: number | null;
+  try {
+    ({ allowance } = await binding.reserveUsage({ userId, reservationId, amount: estimate }));
+  } catch (error) {
+    // The engine's own limit error: report it as Run's, with the plan in the message.
+    if ((error as { name?: unknown } | null)?.name === "UsageLimitError") {
+      const usage = await budget(userId).catch(() => null);
+      throw budgetError((usage?.tier ?? "free") as DeniTier);
+    }
+    throw error;
+  }
+  let spent = 0;
+  let settled = false;
+  return {
+    add(result) {
+      spent += modelUsageUnits(result, modelId);
+      if (settled) return;
+      void binding
+        .observeUsage({ userId, reservationId, amount: spent })
+        .catch((error) => runLogger().error("[run] observe model usage", error));
+    },
+    isSpent: () => allowance !== null && spent >= allowance,
+    async settle() {
+      if (settled) return;
+      settled = true;
+      try {
+        await binding.settleUsage({ userId, reservationId, amount: spent });
+      } catch (error) {
+        runLogger().error("[run] settle model usage", error);
+      }
+    },
+  };
+}
+
+/**
+ * Charge model calls that already happened (housekeeping such as summaries): one settled
+ * reservation. With the pool spent and no credits it is still recorded, in the ledger.
+ */
+export async function recordModelSteps(
   userId: string,
-  steps: readonly { usage?: ModelUsage; providerMetadata?: unknown }[],
+  steps: readonly ModelResult[],
   modelId: string,
 ) {
-  const cost = steps.reduce((sum, step) => sum + modelCostUsd(step, modelId), 0);
-  return recordCost(userId, "model", cost);
+  if (!steps.some((step) => modelUsageUnits(step, modelId) > 0)) return;
+  let usage: ModelUsage;
+  try {
+    usage = await beginModelUsage(userId, modelId);
+  } catch (error) {
+    if (!isUsageLimitError(error)) runLogger().error("[run] reserve model usage", error);
+    const cost = steps.reduce((sum, step) => sum + modelCostUsd(step, modelId), 0);
+    return recordCost(userId, "model", cost);
+  }
+  for (const step of steps) usage.add(step);
+  await usage.settle();
+}
+
+export function recordModelUsage(userId: string, result: ModelResult, modelId: string) {
+  return recordModelSteps(userId, [result], modelId);
+}
+
+/** The plan facts that decide which catalog models the account may use. */
+export async function modelAccess(userId: string) {
+  const usage = await budget(userId);
+  return { tier: usage.tier, hasVerifiedPaymentMethod: usage.hasVerifiedPaymentMethod };
 }
 
 export function usageLimitPayload(error: UsageLimitError) {

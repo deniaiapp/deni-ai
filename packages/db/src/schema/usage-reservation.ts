@@ -11,9 +11,10 @@ export const usageReservation = pgTable(
     category: text("category", { enum: ["basic", "premium"] }).notNull(),
     /**
      * The product whose `product_usage` row the settled amount is recorded in:
-     * Deni AI chat or Flixa (services/agent-api through the shared usage engine).
+     * Deni AI chat, Flixa (services/agent-api through the shared usage engine) or the
+     * model calls of Deni Run.
      */
-    product: text("product", { enum: ["chat", "flixa"] })
+    product: text("product", { enum: ["chat", "flixa", "run"] })
       .notNull()
       .default("chat"),
     unit: text("unit", { enum: ["units"] }).notNull(),

@@ -1,18 +1,15 @@
 import { runConfig } from "../runtime";
-import { readStore } from "./store";
-import { decryptSecret } from "./secrets";
 import type { Store } from "../types";
 
+/**
+ * The key Run calls models with: the platform's Deni AI API key. Keys users saved for
+ * OpenRouter before Run moved to the Deni AI API (`config.apiKey`) are no longer used.
+ */
 export async function getApiKey(
-  userId: string,
-  existingStore?: Pick<Store, "config">,
+  _userId: string,
+  _existingStore?: Pick<Store, "config">,
 ): Promise<string> {
-  const platform = runConfig().openrouterApiKey;
-  if (platform) return platform;
-  const store = existingStore ?? (await readStore(userId));
-  const stored = decryptSecret(store.config.apiKey).trim();
-  if (!stored || stored.startsWith("xai-")) return "";
-  return stored;
+  return runConfig().deniApiKey ?? "";
 }
 
 export async function hasApiKey(

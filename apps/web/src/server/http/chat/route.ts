@@ -82,7 +82,7 @@ import {
   isContextOverflowMessage,
 } from "@/lib/chat-request-error";
 import { authorLabels } from "@/lib/model-author-labels";
-import { addOpenRouterCacheControl, ChatRouteError, resolveChatModelContext } from "./_lib/model";
+import { ChatRouteError, resolveChatModelContext } from "./_lib/model";
 import { buildChatSystemPrompt } from "./_lib/prompt";
 import { ChatRequestSchema, setPendingState } from "./_lib/schema";
 import {
@@ -254,19 +254,12 @@ export async function POST(req: Request) {
     return Response.json({ error: GENERIC_CHAT_REQUEST_ERROR }, { status: 500 });
   }
 
-  const { model, providerOptions, usageCategory, usesOpenRouter } = modelContext;
+  const { model, providerOptions, usageCategory } = modelContext;
 
-  // Pro / Fast are available for OpenAI models routed through OpenRouter.
+  // Pro / Fast apply only to models that offer them (none on the Deni AI API yet).
   const modelDef = getModelDefinition(baseModel);
-  const proMode = Boolean(
-    requestedProMode && modelDef?.supportsProMode && modelDef.author === "openai" && usesOpenRouter,
-  );
-  const fastMode = Boolean(
-    requestedFastMode &&
-    modelDef?.supportsFastMode &&
-    modelDef.author === "openai" &&
-    usesOpenRouter,
-  );
+  const proMode = Boolean(requestedProMode && modelDef?.supportsProMode);
+  const fastMode = Boolean(requestedFastMode && modelDef?.supportsFastMode);
 
   const enabledTools = parsedBody.data.enabledTools ?? ["search", "browse"];
   const searchToolEnabled =
@@ -635,14 +628,9 @@ export async function POST(req: Request) {
     visualLayout: isComparison ? undefined : visualLayout,
   });
 
-  let requestMessages: ModelMessage[] = modelMessages;
-  let requestSystem: string | SystemModelMessage = systemPrompt;
-
-  if (usesOpenRouter) {
-    const cachedPrompt = addOpenRouterCacheControl(modelMessages, systemPrompt);
-    requestMessages = cachedPrompt.messages;
-    requestSystem = cachedPrompt.system;
-  }
+  // Prompt caching is requested per model in `createCatalogLanguageModel`.
+  const requestMessages: ModelMessage[] = modelMessages;
+  const requestSystem: string | SystemModelMessage = systemPrompt;
 
   if (!isComparison) {
     // Cross-instance stop check. Untraced: a 1s poll would otherwise add one

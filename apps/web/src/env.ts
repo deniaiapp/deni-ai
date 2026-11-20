@@ -43,10 +43,9 @@ export const env = createEnv({
       .string()
       .refine((value) => parseTwoFactorDeadline(value) !== null, "Use an ISO date, e.g. 2027-01-15")
       .optional(),
-    OPENROUTER_API_KEY: z.string().min(1).optional(),
     /**
-     * OpenAI-compatible Deni AI API. The key is required to expose OpenAI
-     * models; the base URL has a default.
+     * OpenAI-compatible Deni AI API: the upstream of every model (chat, Run, titles,
+     * memory, ad review). Without the key no model is available; the base URL has a default.
      */
     DENI_API_KEY: z.string().min(1).optional(),
     DENI_API_BASE_URL: z.url().default("https://api.deniai.app/v1"),

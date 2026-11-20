@@ -50,8 +50,10 @@ Read these when relevant rather than loading the whole project:
   the app and the package share one instance. `pnpm run auth:generate` reads
   `src/lib/auth.ts` and overwrites `packages/db/src/schema/auth-schema.ts`.
 - Shared code this app imports from workspace packages (read their READMEs):
-  model catalog, plan access and token multipliers `@deniai/ai/models`
-  (`packages/ai`); email templates `@deniai/emails/<template>`
+  model catalog, plan access and token multipliers `@deniai/ai/models`, and the
+  Deni AI API client every model call goes through (`@deniai/ai/deni-api`,
+  `@deniai/ai/provider`; chat titles, memory and ad review use its utility model,
+  Claude Haiku 5.5) (`packages/ai`); email templates `@deniai/emails/<template>`
   (`packages/emails`; sending stays in `src/lib/email.ts`); locales and
   message extraction `@deniai/i18n` (`packages/i18n`; catalogs stay in
   `messages/`); UI components `@deniai/ui`; schema `@deniai/db`; billing rules
@@ -124,7 +126,7 @@ tables of `@deniai/db`, read and written only through `@deniai/run`.
   OAuth callback is `/api/run/mcp/oauth/callback`.
 - Wiring: `src/lib/run/runtime.server.ts` calls `configureRun()` once with this app's
   `db`, the usage engine's `getRunBudget` / `recordRunCost` (`src/lib/usage.ts`) and
-  `loadRunConfig(process.env)`. Optional providers (OpenRouter, Exa, E2B, Steel,
+  `loadRunConfig(process.env)`. Optional providers (the Deni AI API, Exa, E2B, Steel,
   S3/R2, Slack MCP, Discord) are read from env (see `.env.example`); without them the
   UI shows a disabled state instead of failing.
 - Background work: `RUN_SCHEDULER_IN_PROCESS=true` runs the job scheduler inside the
@@ -139,9 +141,15 @@ tables of `@deniai/db`, read and written only through `@deniai/run`.
   redirects `/run/*` to `/chat` in the `/_app` guard and answers `/api/run/*` with
   404 `run_disabled`, and the in-process scheduler does not start. The data stays; stop
   `services/run-worker` separately if one runs.
-- Usage: Run spends the shared pool through the engine (model cost as reported,
-  browser $0.10/h and computer $0.15/h by default); teammates per plan come from
-  `@deniai/run/billing/plans`.
+- Models and usage: Run uses the chat model catalog and plan access rules, and calls the
+  models the way chat does, through the Deni AI API (`@deniai/ai/models`,
+  `@deniai/ai/provider`); the composer renders the chat
+  model picker and reasoning select, and the choice is saved as Run's own mode
+  (`<model>@<effort>`, `@deniai/run/agent/model`), shared with Discord. Run spends the
+  shared pool through the engine: model calls are reserved and settled like a chat
+  request (`@deniai/ai/usage-amount`, Max Mode credits past the pool), browser $0.10/h
+  and computer $0.15/h by default are recorded after the fact;
+  teammates per plan come from `@deniai/run/billing/plans`.
 - Migration from the standalone Deni Run: `docs/run-migration.md` at the repository root.
 
 ## Version

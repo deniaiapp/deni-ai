@@ -397,6 +397,8 @@ export type PromptInputProps = Omit<HTMLAttributes<HTMLFormElement>, "onSubmit" 
   maxFiles?: number;
   // bytes
   maxFileSize?: number;
+  /** Where an added file is uploaded. Defaults to the chat attachment store. */
+  uploadFile?: (file: File) => Promise<UploadedAttachment>;
   onError?: (err: {
     code: "max_files" | "max_file_size" | "accept" | "uploading";
     message: string;
@@ -415,6 +417,7 @@ export const PromptInput = ({
   syncHiddenInput,
   maxFiles,
   maxFileSize,
+  uploadFile = uploadAttachmentFile,
   onError,
   onSubmit,
   children,
@@ -511,7 +514,7 @@ export const PromptInput = ({
       const next = capped.map(createPromptInputFile);
       setItems((prev) => [...prev, ...next]);
       for (const item of next) {
-        void uploadAttachmentFile(item.file as File)
+        void uploadFile(item.file as File)
           .then((uploaded) => {
             const patch = uploadedAttachmentPatch(item, uploaded);
             setItems((current) =>
@@ -534,7 +537,7 @@ export const PromptInput = ({
           });
       }
     },
-    [matchesAccept, maxFiles, maxFileSize, onError],
+    [matchesAccept, maxFiles, maxFileSize, onError, uploadFile],
   );
 
   const removeLocal = useCallback(

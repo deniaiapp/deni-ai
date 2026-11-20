@@ -25,7 +25,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await resetRunTables(testDb.pglite);
   configureRunForTest(testDb, {
-    languageModel: () => mockTextModel("Hello from Chief.", { costUsd: 0.002 }),
+    languageModel: () => mockTextModel("Hello from Chief."),
     computer: { sandbox: null, browser: null },
   });
   await seedTestUser(testDb.pglite, USER);
@@ -77,10 +77,12 @@ describe("handleChat", () => {
     expect((messages[1]?.metadata as { jobId?: string } | undefined)?.jobId).toBe(job?.id);
 
     const ledger = await testDb.pglite.query<{ used: string }>(
-      `SELECT used::text FROM product_usage WHERE user_id = $1 AND product = 'run' AND metric = 'model'`,
+      `SELECT used::text FROM product_usage WHERE user_id = $1 AND product = 'run' AND unit = 'units'`,
       [USER],
     );
-    expect(Number(ledger.rows[0]?.used)).toBe(2_000);
+    // 100 input + 20 output x5 on the default model (Haiku 5.5, Tier 1): 200 usage units,
+    // settled through a reservation like a chat request.
+    expect(Number(ledger.rows[0]?.used)).toBe(200);
   });
 
   it("refuses a resubmitted message while its job exists (409)", async () => {
@@ -105,9 +107,9 @@ describe("handleChat", () => {
     expect(response.status).toBe(404);
   });
 
-  it("answers 503 llm_unconfigured without an OpenRouter key", async () => {
+  it("answers 503 llm_unconfigured without a Deni AI API key", async () => {
     configureRunForTest(testDb, {
-      config: { openrouterApiKey: null },
+      config: { deniApiKey: null },
       computer: { sandbox: null, browser: null },
     });
     const response = await handleChat(

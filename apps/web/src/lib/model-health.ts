@@ -1,8 +1,7 @@
-import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, type LanguageModel } from "ai";
 import { env } from "@/env";
+import { createDeniApi } from "@deniai/ai/deni-api";
 import { models } from "@deniai/ai/models";
-import { createDeniOpenRouter } from "@deniai/ai/openrouter";
 
 const PROBE_TIMEOUT_MS = 30_000;
 const MAX_ERROR_LENGTH = 300;
@@ -16,8 +15,8 @@ const MAX_QUOTA_RETRY_MS = 24 * 60 * 60 * 1000;
 type HealthCheckModel = { value: string; intervalMs?: number };
 
 /**
- * Catalog models probed by the scheduler: OpenAI models on the Deni AI API, others
- * on OpenRouter. Every probe is a real generation request, so it spends the
+ * Catalog models probed by the scheduler, all on the Deni AI API (one per author, since
+ * each author has its own upstream there). Every probe is a real generation request, so it spends the
  * provider's quota. Google AI Studio counts its free-tier quota per model, and
  * Gemini 3.8 Flash gets only 20 requests a day there, shared with users' chats:
  * probing it every 5 minutes used the day's quota soon after each reset. So
@@ -76,21 +75,10 @@ function getProbeProvider(value: string) {
   };
 }
 
-function createProbeModel(provider: string, modelId: string): LanguageModel {
-  if (provider === "deni") {
-    const apiKey = env.DENI_API_KEY?.trim();
-    if (!apiKey) throw new Error("Deni AI API is not configured");
-    return createOpenAI({ apiKey, baseURL: env.DENI_API_BASE_URL }).chat(modelId);
-  }
-
-  const apiKey = env.OPENROUTER_API_KEY?.trim();
-  if (!apiKey) throw new Error("OpenRouter is not configured");
-  return createDeniOpenRouter({ apiKey }).chat(modelId, {
-    provider: {
-      allow_fallbacks: false,
-      only: ["openai", "anthropic", "google-ai-studio"],
-    },
-  });
+function createProbeModel(_provider: string, modelId: string): LanguageModel {
+  const apiKey = env.DENI_API_KEY?.trim();
+  if (!apiKey) throw new Error("Deni AI API is not configured");
+  return createDeniApi({ apiKey, baseURL: env.DENI_API_BASE_URL }).chat(modelId);
 }
 
 function describeError(error: unknown): string {

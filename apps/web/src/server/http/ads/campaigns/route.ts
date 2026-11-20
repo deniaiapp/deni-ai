@@ -109,7 +109,7 @@ export async function POST(request: Request) {
   if (!isAllowedAdOrigin(request)) return new Response(null, { status: 403 });
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session?.session || session.user.isAnonymous) return new Response(null, { status: 401 });
-  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET || !env.OPENROUTER_API_KEY)
+  if (!env.STRIPE_SECRET_KEY || !env.STRIPE_WEBHOOK_SECRET || !env.DENI_API_KEY)
     return Response.json({ error: "Ads are unavailable" }, { status: 503 });
   let body: unknown = null;
   try {

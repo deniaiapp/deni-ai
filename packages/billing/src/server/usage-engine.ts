@@ -55,13 +55,13 @@ export type UsageCategory = "basic" | "premium";
 export const SHARED_USAGE_CATEGORY: UsageCategory = "basic";
 export type { SubscriptionTier };
 /**
- * Quota rows count usage units (@deniai/billing): weighted tokens for chat and Flixa,
- * converted provider cost for Deni Run. Rows stored as "tokens" or "requests" before
+ * Quota rows count usage units (@deniai/billing): weighted tokens for chat, Flixa and
+ * the model calls of Deni Run. Rows stored as "tokens" or "requests" before
  * 2026-11 read as a different unit and reset.
  */
 export type UsageUnit = "units";
 /** The product a reservation's settled amount is recorded for in `product_usage`. */
-export type UsageReservationProduct = "chat" | "flixa";
+export type UsageReservationProduct = "chat" | "flixa" | "run";
 type UsageRecord = typeof usageQuota.$inferSelect;
 type UsageDatabase = UsageQueryDatabase;
 
@@ -73,6 +73,10 @@ export const RUN_COST_METRICS: readonly RunCostMetric[] = ["model", "browser", "
 /** The shared pool in USD, as Deni Run checks it before and while it works. */
 export type RunBudget = {
   tier: SubscriptionTier;
+  /** Max Mode is on with credits left: model calls may continue past the pool on credits. */
+  maxModeEnabled: boolean;
+  /** With the tier, decides which catalog models the account may use (the chat rules). */
+  hasVerifiedPaymentMethod: boolean;
   limitUsd: number;
   usedUsd: number;
   remainingUsd: number;
@@ -481,19 +485,21 @@ export function createUsageEngine(deps: UsageEngineDeps) {
   }
 
   /**
-   * The per-product ledger of the usage period keyed `periodStart`: Deni AI chat and
-   * Flixa in usage units (their split of the quota rows) and Deni Run's spend converted
-   * from micro-dollars.
+   * The per-product ledger of the usage period keyed `periodStart`: Deni AI chat, Flixa
+   * and Deni Run's model calls in usage units (their split of the quota rows, `runQuota`
+   * for Run) and Deni Run's browser and computer time converted from micro-dollars (`run`;
+   * model calls from before Run reserved through the quota rows are in there too).
    */
   async function periodLedger(userId: string, periodStart: Date, database: UsageDatabase) {
     const rows = await database
       .select({ product: productUsage.product, unit: productUsage.unit, used: productUsage.used })
       .from(productUsage)
       .where(and(eq(productUsage.userId, userId), eq(productUsage.periodStart, periodStart)));
-    const ledger = { chat: 0, flixa: 0, run: 0 };
+    const ledger = { chat: 0, flixa: 0, run: 0, runQuota: 0 };
     for (const row of rows) {
       if (row.product === "run" && row.unit === "usd_micros")
         ledger.run += Number(row.used) * USAGE_UNITS_PER_USD_MICRO;
+      else if (row.product === "run" && row.unit === "units") ledger.runQuota += Number(row.used);
       else if ((row.product === "chat" || row.product === "flixa") && row.unit === "units")
         ledger[row.product] += Number(row.used);
     }
@@ -501,7 +507,10 @@ export function createUsageEngine(deps: UsageEngineDeps) {
     return ledger;
   }
 
-  /** Deni Run's spend in the usage period keyed `periodStart` (a micro-dollar ledger), in usage units. */
+  /**
+   * Deni Run's spend outside the quota rows in the usage period keyed `periodStart` (the
+   * micro-dollar ledger: browser and computer time), in usage units.
+   */
   async function runUsageUnits(userId: string, periodStart: Date, database: UsageDatabase) {
     const [row] = await database
       .select({ total: sql<number | null>`coalesce(sum(${productUsage.used}), 0)` })
@@ -1193,7 +1202,7 @@ export function createUsageEngine(deps: UsageEngineDeps) {
     ]);
     const period = usagePeriodFor(tierInfo, nowDate);
     const ledger = isAnonymous
-      ? { chat: 0, flixa: 0, run: 0 }
+      ? { chat: 0, flixa: 0, run: 0, runQuota: 0 }
       : await periodLedger(userId, period.start, db);
 
     const state = await calculateUsageState({
@@ -1206,19 +1215,26 @@ export function createUsageEngine(deps: UsageEngineDeps) {
       tierInfo,
     });
 
-    // Chat and Flixa share the quota rows (rows from before the change may still hold
-    // "premium" usage this month); the ledger says how much of it each product spent.
+    // Chat, Flixa and Run's model calls share the quota rows (rows from before the change
+    // may still hold "premium" usage this month); the ledger says how much of it each
+    // product spent.
     const quotaUsed = records.reduce(
       (sum, row) => sum + liveUsed(row, nowDate, "units", period.end),
       0,
     );
-    const ledgerUnits = ledger.chat + ledger.flixa;
+    const ledgerUnits = ledger.chat + ledger.flixa + ledger.runQuota;
     const flixaUsed = ledgerUnits > 0 ? Math.round((quotaUsed * ledger.flixa) / ledgerUnits) : 0;
+    const runQuotaUsed =
+      ledgerUnits > 0 ? Math.round((quotaUsed * ledger.runQuota) / ledgerUnits) : 0;
     const pool = isAnonymous
       ? null
       : {
           limit: poolUnitsFor(tierInfo),
-          used: { chat: quotaUsed - flixaUsed, flixa: flixaUsed, run: ledger.run },
+          used: {
+            chat: Math.max(quotaUsed - flixaUsed - runQuotaUsed, 0),
+            flixa: flixaUsed,
+            run: ledger.run + runQuotaUsed,
+          },
           periodEnd: period.end,
         };
     const poolUsed = pool ? pool.used.chat + pool.used.flixa + pool.used.run : 0;
@@ -1307,6 +1323,8 @@ export function createUsageEngine(deps: UsageEngineDeps) {
     const usedUnits = used.chat + used.flixa + used.run;
     return {
       tier: summary.tier,
+      maxModeEnabled: summary.maxModeEnabled,
+      hasVerifiedPaymentMethod: summary.hasVerifiedPaymentMethod,
       periodEnd: pool?.periodEnd ?? usageMonthEnd(now),
       limitUsd: usageUnitsToUsd(limitUnits),
       usedUsd: usageUnitsToUsd(usedUnits),
@@ -1320,8 +1338,9 @@ export function createUsageEngine(deps: UsageEngineDeps) {
   }
 
   /**
-   * Record Deni Run's incurred provider cost (model calls at the reported cost, browser
-   * and computer time at their hourly rate) in the product ledger, under the user's
+   * Record Deni Run's incurred cost outside the quota rows (browser and computer time at
+   * their hourly rate; model calls are reserved and settled like chat's, with product
+   * `run`) in the product ledger, under the user's
    * usage lock so it serializes with chat and Flixa reservations. Run is charged after
    * the fact, so the pool may overrun by one step; the next budget check refuses work.
    */

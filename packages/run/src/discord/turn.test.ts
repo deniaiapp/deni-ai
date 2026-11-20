@@ -41,6 +41,7 @@ vi.mock("../agent/llm", () => ({
   getSummaryModel: async () => {
     throw new Error("no summaries in this test");
   },
+  hasLanguageModel: async () => true,
 }));
 vi.mock("../agent/index", () => ({
   buildInstructions: (bot: { id: string }) => {
@@ -68,7 +69,7 @@ let testDb: RunTestDb;
 
 beforeAll(async () => {
   testDb = await createRunTestDb();
-  configureRunForTest(testDb, { config: { openrouterApiKey: "test-key" } });
+  configureRunForTest(testDb, { config: { deniApiKey: "test-key" } });
 }, 60_000);
 
 afterAll(async () => {

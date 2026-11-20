@@ -10,7 +10,7 @@ import {
   syncChatMessageRows,
   syncLastChatMessageRow,
 } from "@/lib/chat-message-rows";
-import { createDeniOpenRouter } from "@deniai/ai/openrouter";
+import { createDeniApi, DENI_API_UTILITY_MODEL_ID } from "@deniai/ai/deni-api";
 
 type ChatUpdateFields = Partial<typeof chats.$inferInsert>;
 
@@ -30,13 +30,15 @@ export async function generateTitle(messages: UIMessage[]): Promise<string> {
     return "New Chat";
   }
 
-  const apiKey = env.OPENROUTER_API_KEY?.trim();
+  const apiKey = env.DENI_API_KEY?.trim();
   if (!apiKey) {
     return "New Chat";
   }
 
   const { text } = await generateText({
-    model: createDeniOpenRouter({ apiKey }).chat("openai/gpt-oss-20b"),
+    model: createDeniApi({ apiKey, baseURL: env.DENI_API_BASE_URL }).chat(
+      DENI_API_UTILITY_MODEL_ID,
+    ),
     system:
       "You are a title generator. Generate a short, concise title (max 50 characters) for the conversation based on the user's first message. Output only the title, nothing else. No quotes, no explanation.",
     prompt: textParts.slice(0, 500),

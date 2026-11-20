@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { resolveTokenUsageWeights, type TokenUsageWeights } from "@deniai/billing";
 import type { LanguageModel } from "ai";
 import type { PgDatabase, PgQueryResultHKT } from "drizzle-orm/pg-core";
 import type { BrowserProvider, SandboxProvider } from "./computer/providers";
@@ -18,8 +19,11 @@ export type RunLogger = Pick<Console, "error" | "warn" | "info">;
 export type RunConfig = {
   /** 32-byte AES-256-GCM key for Run secrets (MCP credentials, BYOK keys). */
   encryptionKey: Buffer;
-  /** Platform OpenRouter key; users may bring their own when unset. */
-  openrouterApiKey: string | null;
+  /** Deni AI API key and base URL: the upstream of every model, as in chat. */
+  deniApiKey: string | null;
+  deniApiBaseUrl: string | null;
+  /** Token weights of the usage amount (`FLIXA_USAGE_WEIGHT_*`), the same as chat's. */
+  usageWeights: TokenUsageWeights;
   exaApiKey: string | null;
   /** OAuth client of the Slack MCP connector (Slack has no dynamic client registration). */
   slackMcp: { clientId: string; clientSecret: string | null } | null;
@@ -55,12 +59,27 @@ export type RunUsageBinding = {
   getRunBudget(userId: string): Promise<RunBudget>;
   /** Add incurred Run cost to the product ledger (`product_usage`, product `run`). */
   recordRunCost(input: { userId: string; metric: RunCostMetric; costUsd: number }): Promise<void>;
+  /**
+   * Model calls spend the pool like chat's: reserve an estimate in usage units before the
+   * call (a `UsageLimitError` of the engine when the pool and the Max Mode credits are
+   * spent), report what is spent so far, and settle the real amount. `allowance` is what the
+   * call may spend in total (null: no limit).
+   */
+  reserveUsage(input: {
+    userId: string;
+    reservationId: string;
+    amount: number;
+  }): Promise<{ allowance: number | null }>;
+  observeUsage(input: { userId: string; reservationId: string; amount: number }): Promise<void>;
+  settleUsage(input: { userId: string; reservationId: string; amount: number }): Promise<void>;
 };
 
 export type RunCostMetric = "model" | "browser" | "computer";
 
 export type RunBudget = {
   tier: "free" | "go" | "plus" | "pro";
+  maxModeEnabled: boolean;
+  hasVerifiedPaymentMethod: boolean;
   limitUsd: number;
   usedUsd: number;
   remainingUsd: number;
@@ -78,7 +97,7 @@ export type RunDeps = {
    * configuration (E2B / Steel keys).
    */
   computer?: { sandbox?: SandboxProvider | null; browser?: BrowserProvider | null };
-  /** Override the language model (tests); default: OpenRouter with the platform or user key. */
+  /** Override the language model (tests); default: the catalog model on the Deni AI API. */
   languageModel?: (modelId: string) => LanguageModel;
   /** Called with every new notification (the worker pushes them to Discord). */
   onNotification?(notification: {
@@ -167,7 +186,9 @@ export function loadRunConfig(env: Env, options?: { localDataDir?: string }): Ru
   const concurrency = positiveNumber(env, "RUN_SCHEDULER_CONCURRENCY", 4) ?? 4;
   return {
     encryptionKey: runEncryptionKey(env),
-    openrouterApiKey: value(env, "OPENROUTER_API_KEY"),
+    deniApiKey: value(env, "DENI_API_KEY"),
+    deniApiBaseUrl: value(env, "DENI_API_BASE_URL"),
+    usageWeights: resolveTokenUsageWeights(env),
     exaApiKey: value(env, "EXA_API_KEY"),
     slackMcp: value(env, "SLACK_MCP_CLIENT_ID")
       ? {
@@ -216,7 +237,7 @@ export function loadRunConfig(env: Env, options?: { localDataDir?: string }): Ru
 /** Which optional providers are configured; the UI shows a disabled state for the rest. */
 export function runCapabilities(config: RunConfig = runConfig()) {
   return {
-    llm: Boolean(config.openrouterApiKey),
+    llm: Boolean(config.deniApiKey),
     webSearch: Boolean(config.exaApiKey),
     sandbox: Boolean(config.e2b),
     browser: Boolean(config.steel),

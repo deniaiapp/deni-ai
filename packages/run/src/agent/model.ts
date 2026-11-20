@@ -1,129 +1,130 @@
-export const DENI_MODEL_ID = "anthropic/claude-sonnet-5.5";
-export const DENI_REASONING_EFFORT = "medium";
-export const DENI_MODEL_LABEL = "Run Default";
+import { DENI_API_UTILITY_MODEL_ID } from "@deniai/ai/deni-api";
+import {
+  defaultModel,
+  getModelDefinition,
+  getPreferredReasoningEffort,
+  isModelAllowedForAccount,
+  models,
+  resolveReasoningEffort,
+  type ModelDefinition,
+  type ReasoningEffort,
+} from "@deniai/ai/models";
 
-/** Summarizes history the model no longer sees. Haiku 5.5 costs 1/20 of Sonnet 5.5 per token. */
-export const SUMMARY_MODEL_ID = "anthropic/claude-haiku-5.5";
+export type { ModelDefinition, ReasoningEffort };
 
 /**
- * USD per million tokens. Only a fallback: usage is billed at the cost OpenRouter
- * reports for each request, and these apply when a response carries none.
+ * Run uses the Deni AI chat model catalog (`@deniai/ai/models`): the same models, plan access
+ * and usage tiers as chat, all called through the Deni AI API.
  */
-export const MODEL_PRICES_USD_PER_MTOK: Record<string, { input: number; output: number }> = {
-  "anthropic/claude-sonnet-5.5": { input: 3, output: 15 },
-  "anthropic/claude-opus-5.5": { input: 6, output: 30 },
-  "anthropic/claude-haiku-5.5": { input: 0.15, output: 0.75 },
+
+/** The model a new account starts on: the chat default (catalog id). */
+export const DENI_MODEL_ID = defaultModel.value;
+export const DENI_REASONING_EFFORT: ReasoningEffort = getPreferredReasoningEffort(
+  defaultModel.efforts,
+);
+
+/** Summarizes history the model no longer sees: the utility model (Haiku 5.5, Deni AI API id). */
+export const SUMMARY_MODEL_ID = DENI_API_UTILITY_MODEL_ID;
+
+/**
+ * The account's Run mode: a catalog model and a reasoning effort, stored and sent as one string
+ * (`<model>@<effort>`, e.g. `claude-sonnet-5.5@high`; `run_settings.run_mode`, job payloads, the
+ * API's `runMode`). Read it with {@link parseRunMode} and {@link splitRunMode}.
+ */
+export type RunMode = string;
+
+export type RunModeParts = {
+  model: string;
+  /** Undefined for a model without reasoning efforts. */
+  reasoningEffort: ReasoningEffort | undefined;
 };
 
-export const RUN_MODE_IDS = [
-  "default",
-  "high",
-  "xhigh",
-  "max",
-  "plus-default",
-  "plus-high",
-  "plus-xhigh",
-  "plus-max",
-] as const;
-export type RunMode = (typeof RUN_MODE_IDS)[number];
-export type ReasoningEffort = "medium" | "high" | "xhigh" | "max";
+const SEPARATOR = "@";
 
-export const RUN_MODES: Record<
-  RunMode,
-  {
-    id: RunMode;
-    modelId: string;
-    label: string;
-    effort: ReasoningEffort;
-    /** Approximate cost of a turn relative to Run Default, shown in the mode picker. */
-    costMultiplier: number;
-    hint: string;
-  }
-> = {
-  default: {
-    id: "default",
-    modelId: DENI_MODEL_ID,
-    label: "Run Default",
-    effort: "medium",
-    costMultiplier: 1,
-    hint: "Default",
-  },
-  high: {
-    id: "high",
-    modelId: DENI_MODEL_ID,
-    label: "Run High",
-    effort: "high",
-    costMultiplier: 1.2,
-    hint: "1.2× cost",
-  },
-  xhigh: {
-    id: "xhigh",
-    modelId: DENI_MODEL_ID,
-    label: "Run xhigh",
-    effort: "xhigh",
-    costMultiplier: 1.4,
-    hint: "1.4× cost",
-  },
-  max: {
-    id: "max",
-    modelId: DENI_MODEL_ID,
-    label: "Run Max",
-    effort: "max",
-    costMultiplier: 1.6,
-    hint: "1.6× cost",
-  },
-  "plus-default": {
-    id: "plus-default",
-    modelId: "anthropic/claude-opus-5.5",
-    label: "Run+ Default",
-    effort: "medium",
-    costMultiplier: 2,
-    hint: "2× cost",
-  },
-  "plus-high": {
-    id: "plus-high",
-    modelId: "anthropic/claude-opus-5.5",
-    label: "Run+ High",
-    effort: "high",
-    costMultiplier: 2.2,
-    hint: "2.2× cost",
-  },
-  "plus-xhigh": {
-    id: "plus-xhigh",
-    modelId: "anthropic/claude-opus-5.5",
-    label: "Run+ xhigh",
-    effort: "xhigh",
-    costMultiplier: 2.4,
-    hint: "2.4× cost",
-  },
-  "plus-max": {
-    id: "plus-max",
-    modelId: "anthropic/claude-opus-5.5",
-    label: "Run+ Max",
-    effort: "max",
-    costMultiplier: 2.6,
-    hint: "2.6× cost",
-  },
+export function joinRunMode(model: string, reasoningEffort?: ReasoningEffort | null): RunMode {
+  const definition = getModelDefinition(model);
+  const effort = definition
+    ? resolveReasoningEffort(definition.efforts, reasoningEffort)
+    : (reasoningEffort ?? undefined);
+  return effort ? `${model}${SEPARATOR}${effort}` : model;
+}
+
+export const DEFAULT_RUN_MODE: RunMode = joinRunMode(DENI_MODEL_ID, DENI_REASONING_EFFORT);
+
+/** Run modes saved before Run used the chat catalog: Run (Sonnet) / Run+ (Opus) and a level. */
+const LEGACY_RUN_MODEL = "claude-sonnet-5.5";
+const LEGACY_RUN_PLUS_MODEL = "claude-opus-5.5";
+const LEGACY_LEVELS: Record<string, ReasoningEffort> = {
+  default: "medium",
+  high: "high",
+  xhigh: "xhigh",
+  max: "max",
 };
 
+function legacyRunMode(value: string): RunMode | null {
+  if (value === "plus") return joinRunMode(LEGACY_RUN_PLUS_MODEL, "max");
+  const plus = value.startsWith("plus-");
+  const effort = LEGACY_LEVELS[plus ? value.slice("plus-".length) : value];
+  return effort ? joinRunMode(plus ? LEGACY_RUN_PLUS_MODEL : LEGACY_RUN_MODEL, effort) : null;
+}
+
+/** A valid Run mode for any stored or client-sent value; unknown values give the default. */
 export function parseRunMode(value: unknown): RunMode {
-  if (value === "plus") return "plus-max"; // Previously saved Run+ selection.
-  if (typeof value === "string" && (RUN_MODE_IDS as readonly string[]).includes(value)) {
-    return value as RunMode;
-  }
-  return "default";
+  if (typeof value !== "string" || !value) return DEFAULT_RUN_MODE;
+  const legacy = legacyRunMode(value);
+  if (legacy) return legacy;
+  const at = value.lastIndexOf(SEPARATOR);
+  const model = at === -1 ? value : value.slice(0, at);
+  if (!getModelDefinition(model)) return DEFAULT_RUN_MODE;
+  return joinRunMode(model, (at === -1 ? undefined : value.slice(at + 1)) as ReasoningEffort);
 }
 
-export const RUN_LEVELS = ["default", "high", "xhigh", "max"] as const;
-export type RunLevel = (typeof RUN_LEVELS)[number];
-
-/** A run mode is a model family (Run or Run+) plus a reasoning level. */
-export function splitRunMode(mode: RunMode): { plus: boolean; level: RunLevel } {
-  return mode.startsWith("plus-")
-    ? { plus: true, level: mode.slice("plus-".length) as RunLevel }
-    : { plus: false, level: mode as RunLevel };
+export function splitRunMode(mode: RunMode): RunModeParts {
+  const parsed = parseRunMode(mode);
+  const at = parsed.lastIndexOf(SEPARATOR);
+  return at === -1
+    ? { model: parsed, reasoningEffort: undefined }
+    : { model: parsed.slice(0, at), reasoningEffort: parsed.slice(at + 1) as ReasoningEffort };
 }
 
-export function joinRunMode(plus: boolean, level: RunLevel): RunMode {
-  return plus ? (`plus-${level}` as RunMode) : level;
+export type RunModelAccess = {
+  tier: "free" | "go" | "plus" | "pro" | null | undefined;
+  hasVerifiedPaymentMethod?: boolean;
+  /** Whether the model can be called on this server (the Deni AI API key is set). */
+  isAvailable?: (model: ModelDefinition) => boolean;
+};
+
+function usable(model: ModelDefinition, access: RunModelAccess) {
+  return (
+    isModelAllowedForAccount(model.value, access.tier, access.hasVerifiedPaymentMethod) &&
+    (access.isAvailable?.(model) ?? true)
+  );
+}
+
+/**
+ * The mode a turn really runs on: the saved one when the plan (the chat rules) and this server
+ * allow its model, else the first usable of the default, the other free models, then the catalog.
+ * A saved model can stop being allowed after a downgrade; background work then keeps running.
+ */
+export function runModeForAccount(mode: RunMode, access: RunModelAccess): RunMode {
+  const { model, reasoningEffort } = splitRunMode(mode);
+  const saved = getModelDefinition(model);
+  if (saved && usable(saved, access)) return parseRunMode(mode);
+  const preferred = [DENI_MODEL_ID, "gpt-6-luna", "gemini-3.8-flash"]
+    .map((id) => getModelDefinition(id))
+    .filter((item): item is ModelDefinition => Boolean(item));
+  const fallback = [...preferred, ...models].find((item) => usable(item, access));
+  if (!fallback) return parseRunMode(mode);
+  return joinRunMode(
+    fallback.value,
+    resolveReasoningEffort(fallback.efforts, reasoningEffort) ??
+      getPreferredReasoningEffort(fallback.efforts),
+  );
+}
+
+/** "Claude Sonnet 5.5 (high)", for places that show the mode as text (Discord). */
+export function runModeLabel(mode: RunMode): string {
+  const { model, reasoningEffort } = splitRunMode(mode);
+  const name = getModelDefinition(model)?.name ?? model;
+  return reasoningEffort ? `${name} (${reasoningEffort})` : name;
 }

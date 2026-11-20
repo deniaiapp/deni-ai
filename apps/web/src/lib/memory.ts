@@ -1,4 +1,4 @@
-import { createOpenAI } from "@ai-sdk/openai";
+import { createDeniApi, DENI_API_UTILITY_MODEL_ID } from "@deniai/ai/deni-api";
 import { generateText, Output, type UIMessage } from "ai";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
@@ -36,10 +36,12 @@ const defaultProfile: PersonalizationProfile = {
   autoMemory: true,
 };
 
-// Memory extraction runs on GPT-6 Luna through the Deni AI API, like chat.
+// Memory extraction runs on the utility model (Claude Haiku 5.5) through the Deni AI API.
 const deniApiKey = env.DENI_API_KEY?.trim();
 const memoryModel = deniApiKey
-  ? createOpenAI({ apiKey: deniApiKey, baseURL: env.DENI_API_BASE_URL }).chat("openai/gpt-6-luna")
+  ? createDeniApi({ apiKey: deniApiKey, baseURL: env.DENI_API_BASE_URL }).chat(
+      DENI_API_UTILITY_MODEL_ID,
+    )
   : null;
 
 export async function getUserMemoryState(userId: string) {

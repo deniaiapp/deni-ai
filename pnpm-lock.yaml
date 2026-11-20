@@ -557,6 +557,9 @@ importers:
 
   packages/ai:
     dependencies:
+      '@ai-sdk/openai':
+        specifier: ^4.0.117
+        version: 4.0.117(zod@4.6.7)
       '@deniai/billing':
         specifier: workspace:*
         version: link:../billing
@@ -752,6 +755,9 @@ importers:
       '@aws-sdk/client-s3':
         specifier: ^3.1168.0
         version: 3.1168.0
+      '@deniai/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@deniai/billing':
         specifier: workspace:*
         version: link:../billing

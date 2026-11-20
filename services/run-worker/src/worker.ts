@@ -25,7 +25,7 @@ async function main() {
   const engine = createUsageEngine({
     db,
     logger,
-    // The web app's usage job recovers unsettled reservations; Run records cost directly.
+    // The web app's usage job recovers unsettled reservations (Run's model calls make them too).
     scheduleRecovery: (at) =>
       logger.warn("[run worker] usage recovery requested", { at: new Date(at).toISOString() }),
   });

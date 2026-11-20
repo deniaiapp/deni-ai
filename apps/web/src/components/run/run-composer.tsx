@@ -1,47 +1,50 @@
 import { useRef, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  BrainIcon,
-  ChevronDownIcon,
-  Zap as ZapIcon,
-  Sparkles as SparklesIcon,
-  UsersIcon,
-} from "lucide-react";
+import { UsersIcon } from "lucide-react";
 import { useExtracted } from "use-intl";
+import { getPreferredReasoningEffort } from "@deniai/ai/models";
+import { joinRunMode, parseRunMode, splitRunMode, type RunMode } from "@deniai/run/agent/model";
 import {
-  RUN_LEVELS,
-  RUN_MODES,
-  joinRunMode,
-  parseRunMode,
-  splitRunMode,
-  type RunLevel,
-  type RunMode,
-} from "@deniai/run/agent/model";
-import { Button } from "@deniai/ui/components/button";
+  WEB_ATTACHMENT_COUNT,
+  WEB_ATTACHMENT_LIMIT,
+  type MessageAttachment,
+} from "@deniai/run/chat/message-attachments";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
-} from "@deniai/ui/components/dropdown-menu";
-import { ChatComposerVoiceInput } from "@/components/chat/chat-composer-controls";
+  ChatComposerReasoningSelect,
+  ChatComposerVoiceInput,
+} from "@/components/chat/chat-composer-controls";
+import { ChatComposerModelPicker } from "@/components/chat/chat-composer-model-picker";
 import { Composer } from "@/components/chat/composer";
+import { useAvailableModels } from "@/hooks/use-available-models";
+import type { UploadedAttachment } from "@/lib/upload-attachment-client";
 import { cn } from "@/lib/utils";
-import { runFetch, runKeys, type Bot, type RunState } from "./run-api";
+import { RunApiError, runFetch, runKeys, type Bot, type RunState } from "./run-api";
+import { useRunErrorText } from "./run-error-text";
 import { TeammateAvatar } from "./teammate-avatar";
 
-type RunModeControlProps = {
-  value: RunMode;
-  onChange: (mode: RunMode) => void;
-};
+/** What the Run message box sends: the text and the files saved in the workspace for it. */
+export type RunComposerMessage = { text: string; attachments: MessageAttachment[] };
 
-/** The account's Run mode (Run / Run+ and the reasoning level), saved as the default on change. */
+/** The `metadata` of a user message that carries these files (undefined without files). */
+export function attachmentMetadata(attachments: MessageAttachment[]) {
+  return attachments.length ? { attachments } : undefined;
+}
+
+/** Saves a file to the teammate's workspace (`POST /api/run/attachments`). */
+async function uploadRunAttachment(file: File): Promise<MessageAttachment> {
+  const body = new FormData();
+  body.set("file", file);
+  const response = await fetch("/api/run/attachments", { method: "POST", body });
+  const payload = (await response.json().catch(() => ({}))) as {
+    attachment?: MessageAttachment;
+    error?: string;
+  };
+  if (!response.ok || !payload.attachment)
+    throw new RunApiError(response.status, payload.error ?? `http_${response.status}`, payload);
+  return payload.attachment;
+}
+
+/** The account's Run mode (a chat catalog model and a reasoning level), saved as the default on change. */
 export function useRunMode(state: RunState | undefined) {
   const queryClient = useQueryClient();
   const saved = parseRunMode(state?.runMode);
@@ -57,172 +60,49 @@ export function useRunMode(state: RunState | undefined) {
   return [runMode, setRunMode] as const;
 }
 
-function useRunLevelLabels(): Record<RunLevel, string> {
+/**
+ * The model and the reasoning level of Run: the chat model picker and reasoning select, over
+ * the models the plan allows in chat. The choice is Run's own setting, shared with Discord.
+ */
+function RunModelControls({
+  value,
+  onChange,
+}: {
+  value: RunMode;
+  onChange: (mode: RunMode) => void;
+}) {
   const t = useExtracted();
-  return { default: t("Default"), high: t("High"), xhigh: t("xhigh"), max: t("Max") };
-}
-
-function isRunLevel(value: unknown): value is RunLevel {
-  return typeof value === "string" && (RUN_LEVELS as readonly string[]).includes(value);
-}
-
-/** Run or Run+, in the place of the chat model picker. */
-function RunFamilyPicker({ value, onChange }: RunModeControlProps) {
-  const t = useExtracted();
-  const { plus, level } = splitRunMode(value);
-  const families = [
-    {
-      plus: false,
-      name: "Run",
-      icon: SparklesIcon,
-      description: t("Fast and capable for everyday work"),
-    },
-    {
-      plus: true,
-      name: "Run+",
-      icon: ZapIcon,
-      description: t("A stronger model for harder, longer tasks · ~{multiplier}× cost", {
-        multiplier: String(RUN_MODES[joinRunMode(true, "default")].costMultiplier),
-      }),
-    },
-  ];
-  const selected = families.find((family) => family.plus === plus) ?? families[0]!;
-  const SelectedIcon = selected.icon;
+  const { availableModels } = useAvailableModels();
+  const { model, reasoningEffort } = splitRunMode(value);
+  const selectedModel = availableModels.find((item) => item.value === model);
+  const efforts = selectedModel?.efforts ?? false;
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={t("Model")}
-            className={cn(
-              "h-auto gap-1.5 border-none bg-transparent px-2 py-1.5 font-medium text-muted-foreground shadow-none transition-colors",
-              "hover:bg-accent hover:text-foreground data-popup-open:bg-accent data-popup-open:text-foreground",
-            )}
-          />
-        }
-      >
-        <SelectedIcon className="size-3.5" aria-hidden="true" />
-        <span className="max-w-30 truncate text-sm">{selected.name}</span>
-        <ChevronDownIcon className="size-3 shrink-0 opacity-50" aria-hidden="true" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" className="w-72">
-        {families.map((family) => {
-          const Icon = family.icon;
-          return (
-            <DropdownMenuItem
-              key={family.name}
-              onClick={() => {
-                if (family.plus !== plus) onChange(joinRunMode(family.plus, level));
-              }}
-              className={cn("flex-col items-start gap-1 p-2", family.plus === plus && "bg-accent")}
-            >
-              <span className="flex items-center gap-1.5 text-sm leading-none font-medium">
-                <Icon className="size-3.5" aria-hidden="true" />
-                {family.name}
-              </span>
-              <span className="pl-5 text-xs leading-snug text-muted-foreground">
-                {family.description}
-              </span>
-            </DropdownMenuItem>
-          );
-        })}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-function RunLevelItems({ value, onChange }: RunModeControlProps) {
-  const t = useExtracted();
-  const labels = useRunLevelLabels();
-  const { plus, level } = splitRunMode(value);
-
-  return (
-    <DropdownMenuRadioGroup
-      value={level}
-      onValueChange={(next) => {
-        if (isRunLevel(next) && next !== level) onChange(joinRunMode(plus, next));
-      }}
-    >
-      {RUN_LEVELS.map((id) => (
-        <DropdownMenuRadioItem key={id} value={id}>
-          <span className="flex min-w-0 flex-col">
-            <span>{labels[id]}</span>
-            <span className="text-[11px] text-muted-foreground">
-              {t("~{multiplier}× cost", {
-                multiplier: String(RUN_MODES[joinRunMode(plus, id)].costMultiplier),
-              })}
-            </span>
-          </span>
-        </DropdownMenuRadioItem>
-      ))}
-    </DropdownMenuRadioGroup>
-  );
-}
-
-/** The reasoning level, in the place of the chat reasoning effort select. */
-function RunLevelSelect({ value, onChange }: RunModeControlProps) {
-  const t = useExtracted();
-  const labels = useRunLevelLabels();
-  const { level } = splitRunMode(value);
-
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label={t("Reasoning level")}
-            className={cn(
-              "gap-1.5 border-none bg-transparent font-medium text-muted-foreground shadow-none transition-colors",
-              "hover:bg-accent hover:text-foreground data-popup-open:bg-accent data-popup-open:text-foreground",
-            )}
-          />
-        }
-      >
-        <BrainIcon className="size-4" aria-hidden="true" />
-        {labels[level]}
-        <ChevronDownIcon className="size-3 shrink-0 opacity-50" aria-hidden="true" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" className="min-w-44">
-        <RunLevelItems value={value} onChange={onChange} />
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-/** Items in the + menu. On narrow screens the reasoning level moves here from the tools row. */
-function RunComposerActionMenu(props: RunModeControlProps) {
-  const t = useExtracted();
-  const labels = useRunLevelLabels();
-
-  return (
-    <div className="md:hidden">
-      <DropdownMenuSeparator />
-      <DropdownMenuSub>
-        <DropdownMenuSubTrigger>
-          <BrainIcon className="size-4" aria-hidden="true" />
-          {t("Reasoning level")}
-          <span className="ml-auto pl-2 text-xs text-muted-foreground">
-            {labels[splitRunMode(props.value).level]}
-          </span>
-        </DropdownMenuSubTrigger>
-        <DropdownMenuSubContent>
-          <RunLevelItems {...props} />
-        </DropdownMenuSubContent>
-      </DropdownMenuSub>
-    </div>
+    <>
+      <ChatComposerModelPicker
+        model={model}
+        // The reasoning level follows the new model: joinRunMode keeps it when supported.
+        onModelChange={(next) => onChange(joinRunMode(next, reasoningEffort))}
+        availableModels={availableModels}
+        selectedModel={selectedModel}
+        ariaLabel={t("Model")}
+      />
+      <ChatComposerReasoningSelect
+        reasoningEffort={reasoningEffort ?? getPreferredReasoningEffort(efforts)}
+        onReasoningEffortChange={(effort) => onChange(joinRunMode(model, effort))}
+        supportedEfforts={efforts}
+        supportsReasoningEffort={efforts !== false}
+      />
+    </>
   );
 }
 
 type MentionOption = { id: string; name: string; accent?: string; icon?: string | null };
 
 /**
- * The Run message box: the Deni AI composer with Run / Run+ in place of the model picker, the
- * reasoning level, voice input and, in groups, `@name` suggestions.
+ * The Run message box: the chat `Composer` (text, attachments, voice input, submit / stop), the
+ * chat model picker and reasoning select and, in groups, `@name` suggestions. Attached files
+ * are saved to the teammate's workspace instead of the chat store.
  */
 export function RunComposer({
   value,
@@ -240,7 +120,7 @@ export function RunComposer({
 }: {
   value: string;
   onValueChange: (value: string) => void;
-  onSubmit: (text: string) => void;
+  onSubmit: (message: RunComposerMessage) => void;
   onStop?: () => void;
   busy?: boolean;
   disabled?: boolean;
@@ -257,6 +137,18 @@ export function RunComposer({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [cursor, setCursor] = useState(-1);
   const [mentionIndex, setMentionIndex] = useState(0);
+  const errorText = useRunErrorText();
+  // Uploaded files by workspace path: the composer hands back file parts, the message needs these.
+  const uploaded = useRef(new Map<string, MessageAttachment>());
+  const uploadFile = async (file: File): Promise<UploadedAttachment> => {
+    try {
+      const attachment = await uploadRunAttachment(file);
+      uploaded.current.set(attachment.path, attachment);
+      return { file, url: attachment.path, mediaType: attachment.mediaType };
+    } catch (error) {
+      throw new Error(errorText(error), { cause: error });
+    }
+  };
 
   const prefix = mentions && cursor >= 0 ? value.slice(0, cursor) : "";
   const mention = mentions ? prefix.match(/(?:^|\s)@([^@\n]{0,48})$/) : null;
@@ -361,26 +253,32 @@ export function RunComposer({
       <Composer
         value={value}
         onValueChange={onValueChange}
-        onSubmit={() => {
+        onSubmit={(message) => {
           const text = value.trim();
           if (!text || busy || disabled) return;
           setCursor(-1);
-          onSubmit(text);
+          const attachments = message.files.flatMap((file) => {
+            const attachment = uploaded.current.get(file.url);
+            return attachment ? [attachment] : [];
+          });
+          uploaded.current.clear();
+          onSubmit({ text, attachments });
         }}
         onStop={onStop}
         status={busy ? "streaming" : "ready"}
         isSubmitDisabled={busy ? false : disabled || !value.trim()}
         placeholder={placeholder}
-        attachmentsEnabled={false}
-        actionMenuItems={<RunComposerActionMenu value={runMode} onChange={onRunModeChange} />}
+        headerClassName="py-0!"
+        globalDrop
+        multiple
+        maxFiles={WEB_ATTACHMENT_COUNT}
+        maxFileSize={WEB_ATTACHMENT_LIMIT}
+        uploadFile={uploadFile}
         voiceInput={<ChatComposerVoiceInput value={value} onValueChange={onValueChange} />}
         tools={
           <>
             {extraTools}
-            <RunFamilyPicker value={runMode} onChange={onRunModeChange} />
-            <div className="hidden md:flex md:items-center md:gap-1">
-              <RunLevelSelect value={runMode} onChange={onRunModeChange} />
-            </div>
+            <RunModelControls value={runMode} onChange={onRunModeChange} />
           </>
         }
       />

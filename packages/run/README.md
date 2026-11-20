@@ -30,26 +30,26 @@ configureRun({
 
 Optional `RunDeps` for tests: `computer: { sandbox, browser }` (inject fake providers,
 `null` turns one off) and `languageModel: (modelId) => LanguageModel` (replaces
-OpenRouter). `@deniai/run/testing` creates a PGlite database with the real `public`
+the Deni AI API). `@deniai/run/testing` creates a PGlite database with the real `public`
 migrations plus the `run_*` tables, configures the runtime with the real usage engine,
 and provides `mockTextModel()`.
 
 ## Environment (`loadRunConfig`)
 
-| Variable                                                                                                                           | Meaning                                                                                                   |
-| ---------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `RUN_ENCRYPTION_KEY`                                                                                                               | 32 bytes, base64: AES-256-GCM key for MCP credentials and BYOK keys. Unset: derived from the next one     |
-| `BETTER_AUTH_SECRET`                                                                                                               | Platform secret the Run key is derived from (`sha256("deni-run:v1:" + secret)`)                           |
-| `OPENROUTER_API_KEY`                                                                                                               | Platform model key. Unset: users may store their own; without either, chat answers 503 `llm_unconfigured` |
-| `EXA_API_KEY`                                                                                                                      | Offers the `webSearch` tool                                                                               |
-| `E2B_API_KEY`, `E2B_SANDBOX_TIMEOUT_MS`, `E2B_SANDBOX_IDLE_MS`                                                                     | Terminal (one paused/resumable sandbox per user). Unset: no `runCommand` tool                             |
-| `STEEL_API_KEY`, `STEEL_BASE_URL`, `STEEL_SESSION_TIMEOUT_MS`, `STEEL_SESSION_IDLE_MS`                                             | Cloud browser (persistent profile per user). Unset: no `browser`/`requestTakeover` tools                  |
-| `RUN_S3_ENDPOINT`, `RUN_S3_REGION`, `RUN_S3_ACCESS_KEY_ID`, `RUN_S3_SECRET_ACCESS_KEY`, `RUN_S3_BUCKET`, `RUN_S3_FORCE_PATH_STYLE` | Workspace files and screenshots (S3/R2). Unset: the local data dir (refused in production)                |
-| `RUN_LOCAL_DATA_DIR`                                                                                                               | Local workspace mirror and screenshots in development (default `.deni`)                                   |
-| `RUN_BROWSER_USD_PER_HOUR`, `RUN_COMPUTER_USD_PER_HOUR`                                                                            | Provider cost charged to the pool (defaults 0.10 and 0.15)                                                |
-| `RUN_SCHEDULER_CONCURRENCY`                                                                                                        | Jobs one scheduler runs at once (default 4, max 16)                                                       |
-| `SLACK_MCP_CLIENT_ID`, `SLACK_MCP_CLIENT_SECRET`                                                                                   | OAuth client of the Slack MCP connector                                                                   |
-| `BETTER_AUTH_URL` / `NEXT_PUBLIC_BETTER_AUTH_URL`                                                                                  | Public origin (links, MCP OAuth redirect `{origin}/api/run/mcp/oauth/callback`)                           |
+| Variable                                                                                                                           | Meaning                                                                                               |
+| ---------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `RUN_ENCRYPTION_KEY`                                                                                                               | 32 bytes, base64: AES-256-GCM key for MCP credentials and BYOK keys. Unset: derived from the next one |
+| `BETTER_AUTH_SECRET`                                                                                                               | Platform secret the Run key is derived from (`sha256("deni-run:v1:" + secret)`)                       |
+| `DENI_API_KEY`, `DENI_API_BASE_URL`                                                                                                | Deni AI API: the upstream of every model. Without the key, chat answers 503 `llm_unconfigured`        |
+| `EXA_API_KEY`                                                                                                                      | Offers the `webSearch` tool                                                                           |
+| `E2B_API_KEY`, `E2B_SANDBOX_TIMEOUT_MS`, `E2B_SANDBOX_IDLE_MS`                                                                     | Terminal (one paused/resumable sandbox per user). Unset: no `runCommand` tool                         |
+| `STEEL_API_KEY`, `STEEL_BASE_URL`, `STEEL_SESSION_TIMEOUT_MS`, `STEEL_SESSION_IDLE_MS`                                             | Cloud browser (persistent profile per user). Unset: no `browser`/`requestTakeover` tools              |
+| `RUN_S3_ENDPOINT`, `RUN_S3_REGION`, `RUN_S3_ACCESS_KEY_ID`, `RUN_S3_SECRET_ACCESS_KEY`, `RUN_S3_BUCKET`, `RUN_S3_FORCE_PATH_STYLE` | Workspace files and screenshots (S3/R2). Unset: the local data dir (refused in production)            |
+| `RUN_LOCAL_DATA_DIR`                                                                                                               | Local workspace mirror and screenshots in development (default `.deni`)                               |
+| `RUN_BROWSER_USD_PER_HOUR`, `RUN_COMPUTER_USD_PER_HOUR`                                                                            | Provider cost charged to the pool (defaults 0.10 and 0.15)                                            |
+| `RUN_SCHEDULER_CONCURRENCY`                                                                                                        | Jobs one scheduler runs at once (default 4, max 16)                                                   |
+| `SLACK_MCP_CLIENT_ID`, `SLACK_MCP_CLIENT_SECRET`                                                                                   | OAuth client of the Slack MCP connector                                                               |
+| `BETTER_AUTH_URL` / `NEXT_PUBLIC_BETTER_AUTH_URL`                                                                                  | Public origin (links, MCP OAuth redirect `{origin}/api/run/mcp/oauth/callback`)                       |
 
 `runCapabilities()` / `computerCapabilities()` say which providers are configured; the
 computer state (`withBrowserLive`) carries `capabilities` so the UI can show a disabled
@@ -76,11 +76,19 @@ computer panel.
 
 ## Usage
 
-Run spends the same monthly pool as Deni AI chat and Flixa. `billing/usage.ts` asks the
-shared engine (`getRunBudget`) before work and records incurred cost with
-`recordRunCost` (product `run`, metrics `model`, `browser`, `computer`, micro-dollars)
-under the user's usage lock. Model calls are charged at the cost OpenRouter reports;
-browser and computer time at the hourly rates above. There is no HTTP integration inside
+Run spends the same monthly pool as Deni AI chat and Flixa, through the shared engine.
+Model calls spend it exactly like chat (`beginModelUsage` in `billing/usage.ts`): an
+estimate is reserved before a turn (refused when the pool and the Max Mode credits are
+spent), the real amount (`modelUsageUnits`: weighted tokens times the model's usage tier,
+`@deniai/ai/usage-amount`) is settled when the turn ends, what goes past the pool is paid
+from Max Mode credits, and the tool loop stops once the turn's allowance is spent.
+Browser and computer time is recorded with `recordRunCost` (product `run`, metrics
+`browser`, `computer`, micro-dollars) at the hourly rates above after it is incurred; it
+stops once the pool is spent and Max Mode credits do not pay for it. The models are the
+chat catalog's (`@deniai/ai/models`), with the chat plan access rules, called through the
+Deni AI API like chat's (`@deniai/ai/provider`): the account's Run mode is `<model>@<effort>` (`agent/model.ts`,
+the chat default model for a new account), and a model the plan or the server does not
+allow falls back (`effectiveRunMode`). There is no HTTP integration inside
 the platform (the legacy `/api/integrations/deni-run/usage` endpoint has been retired).
 
 ## Left in the hosts or dropped

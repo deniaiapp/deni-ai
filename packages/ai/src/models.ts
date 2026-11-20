@@ -158,73 +158,6 @@ export function formatModelDeprecationDate(date: string, locale: string): string
 // most basic usage (GPT-6.x Sol: about $0.67 per 1M quota units).
 const catalogModels: readonly ModelDefinition[] = [
   {
-    name: "GPT-6 Astra",
-    value: "gpt-6-astra",
-    supportsProMode: true,
-    supportsFastMode: true,
-    usageTier: 7,
-    author: "openai",
-    description: "OpenAI flagship for complex reasoning, coding, and agentic work.",
-    paidOnly: true,
-    featured: true,
-    efforts: ["low", "medium", "high", "max"],
-    contextWindow: 1_000_000,
-  },
-  {
-    name: "GPT-6 Sol",
-    value: "gpt-6-sol",
-    usageTier: 4,
-    author: "openai",
-    description: "High-end GPT-6 model for demanding reasoning, coding, and agentic work.",
-    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
-    supportsProMode: true,
-    supportsFastMode: true,
-    contextWindow: 1_050_000,
-  },
-  {
-    name: "GPT-6.1 Sol",
-    value: "gpt-6.1-sol",
-    usageTier: 4,
-    author: "openai",
-    description: "High-end GPT-6.1 model for demanding reasoning, coding, and agentic work.",
-    featured: true,
-    efforts: ["low", "medium", "high", "xhigh", "max"],
-    supportsProMode: true,
-    supportsFastMode: true,
-    contextWindow: 1_050_000,
-  },
-  {
-    name: "GPT-6 Luna",
-    value: "gpt-6-luna",
-    usageTier: 1,
-    author: "openai",
-    description: "Fast, cost-efficient GPT-6 model for high-volume tasks.",
-    featured: true,
-    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
-    supportsProMode: true,
-    supportsFastMode: true,
-    contextWindow: 1_050_000,
-  },
-  {
-    name: "Gemini 3.8 Flash",
-    value: "gemini-3.8-flash",
-    usageTier: 1,
-    author: "google",
-    description: "Best for coding and agentic tasks",
-    featured: true,
-    efforts: ["low", "medium", "high"],
-    contextWindow: 1_000_000,
-  },
-  {
-    name: "Gemini 3.5 Flash Lite",
-    value: "gemini-3.5-flash-lite",
-    usageTier: 1,
-    author: "google",
-    description: "Best for high volume tasks",
-    efforts: ["minimal", "low", "medium", "high"],
-    contextWindow: 1_000_000,
-  },
-  {
     name: "Claude Opus 5.5",
     value: "claude-opus-5.5",
     usageTier: 5,
@@ -305,6 +238,73 @@ const catalogModels: readonly ModelDefinition[] = [
     efforts: ["low", "medium", "high", "xhigh", "max"],
     contextWindow: 1_000_000,
   },
+  {
+    name: "GPT-6 Astra",
+    value: "gpt-6-astra",
+    supportsProMode: true,
+    supportsFastMode: true,
+    usageTier: 7,
+    author: "openai",
+    description: "OpenAI flagship for complex reasoning, coding, and agentic work.",
+    paidOnly: true,
+    featured: true,
+    efforts: ["low", "medium", "high", "max"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "GPT-6 Sol",
+    value: "gpt-6-sol",
+    usageTier: 4,
+    author: "openai",
+    description: "High-end GPT-6 model for demanding reasoning, coding, and agentic work.",
+    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    supportsProMode: true,
+    supportsFastMode: true,
+    contextWindow: 1_050_000,
+  },
+  {
+    name: "GPT-6.1 Sol",
+    value: "gpt-6.1-sol",
+    usageTier: 4,
+    author: "openai",
+    description: "High-end GPT-6.1 model for demanding reasoning, coding, and agentic work.",
+    featured: true,
+    efforts: ["low", "medium", "high", "xhigh", "max"],
+    supportsProMode: true,
+    supportsFastMode: true,
+    contextWindow: 1_050_000,
+  },
+  {
+    name: "GPT-6 Luna",
+    value: "gpt-6-luna",
+    usageTier: 1,
+    author: "openai",
+    description: "Fast, cost-efficient GPT-6 model for high-volume tasks.",
+    featured: true,
+    efforts: ["none", "low", "medium", "high", "xhigh", "max"],
+    supportsProMode: true,
+    supportsFastMode: true,
+    contextWindow: 1_050_000,
+  },
+  {
+    name: "Gemini 3.8 Flash",
+    value: "gemini-3.8-flash",
+    usageTier: 1,
+    author: "google",
+    description: "Best for coding and agentic tasks",
+    featured: true,
+    efforts: ["low", "medium", "high"],
+    contextWindow: 1_000_000,
+  },
+  {
+    name: "Gemini 3.5 Flash Lite",
+    value: "gemini-3.5-flash-lite",
+    usageTier: 1,
+    author: "google",
+    description: "Best for high volume tasks",
+    efforts: ["minimal", "low", "medium", "high"],
+    contextWindow: 1_000_000,
+  },
   // {
   //   name: "Grok 4.5",
   //   value: "grok-4.5",
@@ -349,21 +349,18 @@ const catalogModels: readonly ModelDefinition[] = [
 ];
 
 /**
- * Routes every OpenAI model through the Deni AI API. Pro and Fast modes depend
- * on OpenRouter (`*-pro` slugs, `service_tier`), so they are not offered on the
+ * Routes every model through the Deni AI API. Pro and Fast modes depend on
+ * OpenRouter (`*-pro` slugs, `service_tier`), so they are not offered on the
  * Deni route.
  */
 function withDeniRouting(model: ModelDefinition): ModelDefinition {
-  if (model.author !== "openai") {
-    return model;
-  }
   const { supportsProMode: _pro, supportsFastMode: _fast, ...rest } = model;
   return { ...rest, provider: "deni" };
 }
 
 export const models: readonly ModelDefinition[] = catalogModels.map(withDeniRouting);
 
-export const defaultModel = models.find((model) => model.value === "gpt-6-luna") ?? models[0];
+export const defaultModel = models.find((model) => model.value === "claude-haiku-5.5") ?? models[0];
 
 /**
  * Models available on the Free plan.
@@ -379,8 +376,8 @@ export const FREE_PLAN_MODEL_VALUES = [
 
 const freePlanModelSet = new Set<string>(FREE_PLAN_MODEL_VALUES);
 
-/** Guest sessions are intentionally limited to the default Luna model. */
-export const GUEST_MODEL_VALUES = ["gpt-6-luna"] as const;
+/** Guest sessions are intentionally limited to the default model, Claude Haiku 5.5. */
+export const GUEST_MODEL_VALUES = ["claude-haiku-5.5"] as const;
 
 const guestModelSet = new Set<string>(GUEST_MODEL_VALUES);
 

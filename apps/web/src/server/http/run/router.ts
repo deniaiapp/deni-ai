@@ -39,6 +39,39 @@ const teammateSchema = z.object({
   computerAccess: z.boolean().optional(),
 });
 
+const WORKSPACE_LIST_TIMEOUT_MS = 8_000;
+const SCREEN_CAPTURE_TIMEOUT_MS = 10_000;
+
+async function withTimeout<T>(promise: Promise<T>, milliseconds: number) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("timed out")), milliseconds);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
+function workspacePaths(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string" && item.length > 0)
+    : [];
+}
+
+function fileName(path: string) {
+  return path.replace(/^\/+/, "").split("/").at(-1) || "file";
+}
+
+/** `Content-Disposition` for a download whose name may hold non-ASCII characters. */
+function attachment(name: string) {
+  const ascii = name.replace(/[^A-Za-z0-9._-]+/g, "_");
+  return `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(name)}`;
+}
+
 function usageLimit(error: { message: string; metric?: string }) {
   return runError(402, "usage_limit", { metric: error.metric ?? "budget", message: error.message });
 }
@@ -91,11 +124,16 @@ const handlers: Record<string, Partial<Record<Method, Handler>>> = {
         listJobOverview(userId, 50, true).catch(() => []),
       ]);
       const status = runStatus();
+      // The mode a turn would really use: a saved model the plan no longer includes falls back.
+      const { effectiveRunMode } = await import("@deniai/run/agent/llm");
+      const runMode = await effectiveRunMode(userId, store.config.runMode).catch(
+        () => store.config.runMode,
+      );
       return runJson({
         ready,
         capabilities: status.capabilities,
         timezone: store.config.timezone,
-        runMode: store.config.runMode,
+        runMode,
         bots: store.bots,
         threads: store.threads,
         skills: store.skills,
@@ -306,6 +344,34 @@ const handlers: Record<string, Partial<Record<Method, Handler>>> = {
     },
   },
 
+  // A file attached in the message box (multipart `file`): saved to /inbox/web/ in the
+  // workspace. The client sends the returned record in the message's `metadata.attachments`.
+  attachments: {
+    POST: async ({ request, userId }) => {
+      const limited = await limitRun(userId, "attachments", 40);
+      if (limited) return limited;
+      const { WEB_ATTACHMENT_LIMIT } = await import("@deniai/run/chat/message-attachments");
+      // The multipart envelope adds a little to the file's own size.
+      if (Number(request.headers.get("content-length")) > WEB_ATTACHMENT_LIMIT + 100_000)
+        return runError(413, "file_too_large");
+      const form = await request.formData().catch(() => null);
+      const file = form?.get("file");
+      if (!(file instanceof File) || file.size === 0) return runError(400, "file_required");
+      if (file.size > WEB_ATTACHMENT_LIMIT) return runError(413, "file_too_large");
+      const { saveWebAttachment } = await import("@deniai/run/chat/web-attachments");
+      try {
+        const saved = await saveWebAttachment(userId, {
+          name: file.name,
+          data: new Uint8Array(await file.arrayBuffer()),
+          mediaType: file.type,
+        });
+        return runJson({ attachment: saved }, { status: 201 });
+      } catch (error) {
+        return runError(400, "workspace_error", { message: errorMessage(error) });
+      }
+    },
+  },
+
   jobs: {
     GET: async ({ url, userId }) => {
       const { listJobOverview, listJobs } = await import("@deniai/run/jobs/index");
@@ -481,17 +547,33 @@ const handlers: Record<string, Partial<Record<Method, Handler>>> = {
       const status = runStatus();
       const jobId = url.searchParams.get("jobId") || undefined;
       const { readStore } = await import("@deniai/run/data/store");
-      const { computerForJob, lastComputer, withBrowserLive } =
+      const { billLiveBrowser, computerForJob, lastComputer, screenshot, withBrowserLive } =
         await import("@deniai/run/computer/index");
+      const { billLiveSandbox } = await import("@deniai/run/computer/sandbox");
+      if (url.searchParams.get("refresh") === "1" && status.capabilities?.browser) {
+        // A capture that is temporarily unavailable still answers with the last known state.
+        await withTimeout(screenshot(userId, jobId), SCREEN_CAPTURE_TIMEOUT_MS).catch(() => null);
+      } else {
+        await billLiveBrowser(userId, jobId).catch(() => undefined);
+      }
+      await billLiveSandbox(userId).catch(() => undefined);
       const store = await readStore(userId);
       const computer = withBrowserLive(
         userId,
         computerForJob(lastComputer(userId) ?? store.computer, jobId),
       );
+      let files: unknown[] = [];
+      if (url.searchParams.get("files") === "1") {
+        const { listWorkspace } = await import("@deniai/run/computer/workspace");
+        files = await withTimeout(listWorkspace(userId, ".", 6), WORKSPACE_LIST_TIMEOUT_MS).catch(
+          () => [],
+        );
+      }
       return runJson({
         capabilities: status.capabilities,
         computer,
         liveViewUrl: status.capabilities?.browser ? computer.steelDebugUrl : null,
+        files,
         shells: store.shells ?? [],
       });
     },
@@ -518,6 +600,129 @@ const handlers: Record<string, Partial<Record<Method, Handler>>> = {
         return runJson({ ok: true });
       }
       return runError(400, "unsupported_action");
+    },
+  },
+
+  "computer/input": {
+    POST: async ({ request, userId }) => {
+      const limited = await limitRun(userId, "computer-input", 120);
+      if (limited) return limited;
+      const body = await readJson<{
+        type?: "click" | "type" | "key" | "scroll" | "takeover" | "release";
+        x?: number;
+        y?: number;
+        text?: string;
+        key?: string;
+        dy?: number;
+        jobId?: string;
+      }>(request);
+      if (!body) return runError(400, "invalid_input");
+      const jobId = body.jobId?.trim() || undefined;
+      const computer = await import("@deniai/run/computer/index");
+      if (body.type === "takeover") {
+        if (jobId) {
+          const { claimBrowserTakeover } = await import("@deniai/run/computer/browser-workspaces");
+          const claimed = await claimBrowserTakeover(userId, jobId).catch(() => false);
+          if (!claimed) return runError(409, "computer_busy");
+          // The computer keeps the id of its last job after it finishes. Only a job that is
+          // still running is parked, or taking over a leftover browser would reopen it.
+          const { transitionJob } = await import("@deniai/run/jobs/index");
+          await transitionJob(userId, jobId, "running", { status: "waiting_takeover" }).catch(
+            () => undefined,
+          );
+        }
+        await computer.setComputer(userId, {
+          status: "takeover",
+          workingLabel: "You are in control",
+          ...(jobId ? { jobId } : {}),
+        });
+        return runJson({ ok: true });
+      }
+      if (body.type === "release") {
+        if (jobId) {
+          const { releaseBrowserTakeover } =
+            await import("@deniai/run/computer/browser-workspaces");
+          // Releasing control does not start an executor: the job waits for the next message.
+          await releaseBrowserTakeover(userId, jobId).catch(() => undefined);
+        }
+        await computer.setComputer(userId, {
+          status: "idle",
+          workingLabel: "",
+          ...(jobId ? { jobId } : {}),
+        });
+        return runJson({ ok: true });
+      }
+      try {
+        if (body.type === "click" && typeof body.x === "number" && typeof body.y === "number")
+          await computer.browserClick(userId, { x: body.x, y: body.y, normalized: true }, jobId);
+        else if (body.type === "type" && typeof body.text === "string" && body.text)
+          await computer.browserType(userId, { text: body.text.slice(0, 10_000) }, jobId);
+        else if (body.type === "key" && typeof body.key === "string" && body.key)
+          await computer.browserPress(userId, body.key.slice(0, 80), jobId);
+        else if (body.type === "scroll" && typeof body.dy === "number")
+          await computer.browserScroll(userId, body.dy, jobId);
+        else return runError(400, "invalid_input");
+        return runJson({ ok: true });
+      } catch (error) {
+        return runError(500, "computer_input_failed", { message: errorMessage(error) });
+      }
+    },
+  },
+
+  "computer/files": {
+    GET: async ({ url, userId }) => {
+      const path = url.searchParams.get("path") || ".";
+      const workspace = await import("@deniai/run/computer/workspace");
+      try {
+        if (url.searchParams.get("mode") === "download") {
+          const file = await workspace.readWorkspaceBytes(userId, path);
+          return new Response(new Uint8Array(file.data), {
+            headers: {
+              "Content-Type": "application/octet-stream",
+              "Content-Disposition": attachment(fileName(file.path)),
+              "Cache-Control": "no-store",
+              "X-Content-Type-Options": "nosniff",
+            },
+          });
+        }
+        return runJson(await workspace.readWorkspaceFile(userId, path));
+      } catch (error) {
+        return runError(400, "workspace_error", { message: errorMessage(error) });
+      }
+    },
+    POST: async ({ request, userId }) => {
+      const limited = await limitRun(userId, "computer-zip", 20);
+      if (limited) return limited;
+      const body = await readJson<{ action?: string; paths?: unknown }>(request);
+      if (body?.action !== "zip") return runError(400, "unsupported_action");
+      const paths = workspacePaths(body.paths);
+      const { zipWorkspaceFiles } = await import("@deniai/run/computer/workspace");
+      try {
+        const zip = await zipWorkspaceFiles(userId, paths);
+        if (!zip.ok) return runError(400, `zip_${zip.reason}`);
+        const label = paths.length === 1 ? fileName(paths[0]!) : "workspace";
+        return new Response(new Uint8Array(zip.data), {
+          headers: {
+            "Content-Type": "application/zip",
+            "Content-Disposition": attachment(`${label}.zip`),
+            "Cache-Control": "no-store",
+          },
+        });
+      } catch (error) {
+        return runError(400, "workspace_error", { message: errorMessage(error) });
+      }
+    },
+    DELETE: async ({ request, userId }) => {
+      const body = await readJson<{ paths?: unknown; all?: unknown }>(request);
+      const paths = workspacePaths(body?.paths);
+      const workspace = await import("@deniai/run/computer/workspace");
+      try {
+        if (body?.all === true) return runJson(await workspace.deleteWorkspaceContents(userId));
+        if (paths.length) return runJson(await workspace.deleteWorkspacePaths(userId, paths));
+        return runError(400, "path_required");
+      } catch (error) {
+        return runError(400, "workspace_error", { message: errorMessage(error) });
+      }
     },
   },
 
