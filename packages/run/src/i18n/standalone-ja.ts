@@ -75,8 +75,6 @@ export const ja: Record<string, string> = {
   "Review the requested action in the conversation before continuing.":
     "続行する前に、会話内で求められている操作を確認してください。",
   "Task needs setup": "タスクにセットアップが必要です",
-  "Add an OpenRouter API key before retrying this task.":
-    "このタスクを再試行する前に、OpenRouter の API キーを追加してください。",
   "Task paused by usage limit": "使用量の上限によりタスクが一時停止しました",
   "Task needs review before retry": "再試行の前にタスクの確認が必要です",
   "The worker stopped unexpectedly after a checkpoint. Review external side effects, then retry explicitly.":
@@ -94,7 +92,7 @@ export const ja: Record<string, string> = {
   "Conversation was deleted": "会話が削除されました",
   "Routine was disabled, deleted, or changed before this run started.":
     "この実行が始まる前に、ルーティンが無効化、削除、または変更されました。",
-  "OPENROUTER_API_KEY is missing": "OPENROUTER_API_KEY が設定されていません",
+  "The model provider is not configured": "モデルの接続先が設定されていません",
   "Cancelled by user": "ユーザーがキャンセルしました",
   "Worker lease expired; review this task before retrying to avoid duplicate side effects":
     "ワーカーのリースが期限切れになりました。副作用の重複を避けるため、再試行の前にこのタスクを確認してください",
@@ -239,8 +237,6 @@ export const ja: Record<string, string> = {
     "{name} さんがコンピューター上での操作を必要としています。アプリを開いて手順を終えてから、ここにメッセージを送ってください。",
   "Create a teammate in the app first, then message again.":
     "先にアプリでチームメイトを作成してから、もう一度メッセージを送ってください。",
-  "Add an OpenRouter API key in the app before using Discord.":
-    "Discord を使う前に、アプリで OpenRouter API キーを追加してください。",
   "A task is waiting for your approval in the app.": "アプリでタスクがあなたの承認を待っています。",
   "{name} is still working on your last message.": "{name} さんは直前のメッセージの作業中です。",
   "This approval is no longer pending.": "この承認はすでに保留中ではありません。",
@@ -268,6 +264,8 @@ export const ja: Record<string, string> = {
   "Now using {mode}. {cost}": "{mode} に切り替えました。{cost}",
   "Current setting: {mode}. {cost}": "現在の設定: {mode}。{cost}",
   "~{multiplier}× cost": "コスト 約{multiplier}倍",
+  "This model does not have that reasoning level.": "このモデルでは、その推論の深さを選べません。",
+  "This model is not available on your plan.": "このモデルは現在のプランでは使えません。",
   "{name} is still working or waiting for you. Finish or stop that task, then reset.":
     "{name} さんは作業中か、あなたの対応を待っています。そのタスクを終えるか停止してから、リセットしてください。",
   "The conversation with {name} is already fresh.": "{name} さんとの会話はすでに新しい状態です。",

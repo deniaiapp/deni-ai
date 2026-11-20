@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1168.0",
+    "@deniai/ai": "workspace:*",
     "@deniai/billing": "workspace:*",
     "@deniai/db": "workspace:*",
     "@openrouter/ai-sdk-provider": "^3.1.0",

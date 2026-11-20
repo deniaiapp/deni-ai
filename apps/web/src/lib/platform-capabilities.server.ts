@@ -13,7 +13,6 @@ function hasValue(value: string | undefined): boolean {
  */
 export function getPlatformCapabilities(): PlatformCapabilities {
   const hasDeniApi = hasValue(env.DENI_API_KEY);
-  const hasOpenRouter = hasValue(env.OPENROUTER_API_KEY);
   const hasStripeSecret = hasValue(env.STRIPE_SECRET_KEY);
   const hasStripePublishableKey = hasValue(env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   const billingExplicitlyDisabled = ["1", "true"].includes(
@@ -29,11 +28,12 @@ export function getPlatformCapabilities(): PlatformCapabilities {
   }
 
   return {
+    // Every catalog model is called through the Deni AI API (`provider: "deni"`).
     models: {
-      openai: hasOpenRouter,
-      anthropic: hasOpenRouter,
-      google: hasOpenRouter,
-      xai: hasOpenRouter,
+      openai: hasDeniApi,
+      anthropic: hasDeniApi,
+      google: hasDeniApi,
+      xai: hasDeniApi,
       deni: hasDeniApi,
     },
     features: {

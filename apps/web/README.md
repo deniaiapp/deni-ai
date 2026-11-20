@@ -2,7 +2,7 @@
 
 > **AI Chatbot for Everyone** — access modern AI models in one place
 
-Deni AI is a multi-model AI chat app for people who want strong model choice without juggling many separate subscriptions. It supports OpenAI, Anthropic, Google, xAI, and more through OpenRouter.
+Deni AI is a multi-model AI chat app for people who want strong model choice without juggling many separate subscriptions. It supports OpenAI, Anthropic, and Google models through the Deni AI API.
 
 **Live app:** [https://deniai.app](https://deniai.app)
 
@@ -37,7 +37,7 @@ Deni AI is a multi-model AI chat app for people who want strong model choice wit
 | DB        | PostgreSQL (Neon recommended) + Drizzle ORM                             |
 | Auth      | better-auth                                                             |
 | Billing   | Stripe                                                                  |
-| AI        | Vercel AI SDK + provider SDKs / OpenRouter                              |
+| AI        | Vercel AI SDK + the Deni AI API (OpenAI-compatible)                     |
 
 ## Quick start
 

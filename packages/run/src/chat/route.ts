@@ -13,7 +13,12 @@ import { getDeniModel, hasLanguageModel } from "../agent/llm";
 import { runLogger } from "../runtime";
 import { parseRunMode } from "../agent/model";
 import { loadMessages, mutateStore, readStore, saveMessages } from "../data/store";
-import { assertCanUseTokens, isUsageLimitError, recordModelUsage } from "../billing/usage";
+import {
+  assertCanUseTokens,
+  beginModelUsage,
+  isUsageLimitError,
+  type ModelUsage,
+} from "../billing/usage";
 import { messagesForModel, mergeThreadMessages, workedMsOf } from "../chat/messages";
 import { compactThread } from "../agent/compaction";
 import {
@@ -101,13 +106,13 @@ function includesApprovalResponse(incoming: UIMessage[], persisted: UIMessage[])
  * - `botId`: the teammate that answers (default: the thread's first teammate).
  * - `idempotencyKey`: optional; a resubmitted message with the same key is refused (409).
  * - `jobId`: optional; resume this job after an approval or a takeover.
- * - `runMode`: optional Run mode (`default`, `high`, ... `plus-max`); saved as the default.
+ * - `runMode`: optional Run mode (`<model>@<effort>`, a chat catalog model); saved as the default.
  *
  * Responses: a UI message stream (with transient `data-job-status` parts), 404 for an
  * unknown thread or teammate, 409 (`X-Deni-Job-Id`, `X-Deni-Job-Status`) while a job
  * already runs or waits, 402 JSON `{ error, code: "usage_limit", metric }` with the
- * `x-usage-limit` header, 503 JSON `{ error, code: "llm_unconfigured" }` without an
- * OpenRouter key.
+ * `x-usage-limit` header, 503 JSON `{ error, code: "llm_unconfigured" }` without a
+ * Deni AI API key.
  */
 export async function handleChat(
   req: Request,
@@ -313,6 +318,17 @@ export async function handleChat(
     allowHandoff: thread.kind !== "group",
     locale,
   });
+  // The turn's model usage is a reservation on the shared pool, as a chat request's is.
+  let usage: ModelUsage;
+  try {
+    usage = await beginModelUsage(userId, modelId);
+  } catch (error) {
+    await finishJob(userId, job.id, "failed", { error: translateError(locale, error) }).catch(
+      () => undefined,
+    );
+    if (isUsageLimitError(error)) return usageLimitResponse(userId, error, locale);
+    throw error;
+  }
   let writeRunStatus:
     | ((status: "working" | "finalizing" | "waiting" | "completed" | "failed") => void)
     | undefined;
@@ -412,9 +428,11 @@ export async function handleChat(
     ),
     tools,
     toolApproval: deniToolApproval({ userId, jobId: job.id, locale }),
-    stopWhen: isLoopFinished(),
+    // Like chat, the loop also stops once the pool and the Max Mode credits are spent.
+    stopWhen: [isLoopFinished(), () => usage.isSpent()],
     providerOptions,
     onStepEnd: async (step) => {
+      usage.add(step);
       const stepRecord = step as { stepNumber?: number; text?: string };
       const checkpoint = {
         step: stepRecord.stepNumber,
@@ -429,7 +447,6 @@ export async function handleChat(
       void Promise.allSettled([
         heartbeatJob(userId, job.id),
         checkpointJob(userId, job.id, checkpoint),
-        recordModelUsage(userId, step, modelId),
       ]).then((results) => {
         for (const result of results) {
           if (result.status === "rejected") reportError(result.reason, "persist chat step");
@@ -445,6 +462,7 @@ export async function handleChat(
     },
     onError: async (event) => {
       reportError(event, "chat");
+      await usage.settle();
       if (finalizationPromise) {
         await finalizationPromise.catch(() => undefined);
         return;
@@ -512,6 +530,7 @@ export async function handleChat(
                 }
               : { ...BUBBLE_BREAK_METADATA, author, jobId: job.id },
           onEnd: async ({ messages: next, isAborted }) => {
+            await usage.settle();
             const response = next.find((message) => message.id === assistantId);
             try {
               if (response)

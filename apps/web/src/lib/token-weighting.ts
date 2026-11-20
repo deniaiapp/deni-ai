@@ -16,7 +16,8 @@
  * Caller multiplies by the model-specific `tokenUsageMultiplier`.
  *
  * The weights, their env overrides and the weighted sum are shared with Flixa
- * (services/agent-api) through `@deniai/billing`.
+ * (services/agent-api) through `@deniai/billing`; reading a model's usage into the
+ * breakdown is shared with Deni Run through `@deniai/ai/usage-amount`.
  */
 
 import {
@@ -25,6 +26,11 @@ import {
   type TokenUsageBreakdown,
   type TokenUsageWeights,
 } from "@deniai/billing";
+import {
+  breakdownFromLanguageModelUsage,
+  computeWeightedUsageFromLanguageModelUsage as computeWeightedUsageWith,
+  type ModelTokenUsage,
+} from "@deniai/ai/usage-amount";
 import { env } from "@/env";
 
 export type { TokenUsageBreakdown, TokenUsageWeights };
@@ -38,57 +44,7 @@ export function getTokenUsageWeights(): TokenUsageWeights {
   });
 }
 
-function nonNegative(value: number | null | undefined): number {
-  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : 0;
-}
-
-/**
- * AI SDK `LanguageModelUsage` shape: already normalized across providers. Uses
- * the broken-out `inputTokenDetails` when available; otherwise falls back to
- * `inputTokens` as raw input with no cache breakdown.
- */
-export function breakdownFromLanguageModelUsage(usage: {
-  inputTokens?: number | null;
-  outputTokens?: number | null;
-  inputTokenDetails?: {
-    noCacheTokens?: number | null;
-    cacheReadTokens?: number | null;
-    cacheWriteTokens?: number | null;
-  } | null;
-}): TokenUsageBreakdown {
-  const details = usage.inputTokenDetails;
-  const hasDetails =
-    details &&
-    (details.noCacheTokens != null ||
-      details.cacheReadTokens != null ||
-      details.cacheWriteTokens != null);
-
-  if (hasDetails) {
-    const cacheRead = nonNegative(details?.cacheReadTokens);
-    const cacheWrite = nonNegative(details?.cacheWriteTokens);
-    const noCache = details?.noCacheTokens;
-    let input = nonNegative(noCache);
-    // OpenRouter reports noCache as `prompt - cacheRead`, leaving cache writes
-    // inside it. Never count more uncached input than the reported total leaves.
-    if (typeof usage.inputTokens === "number" && Number.isFinite(usage.inputTokens)) {
-      const uncachedFromTotal = Math.max(0, usage.inputTokens - cacheRead - cacheWrite);
-      input = noCache == null ? uncachedFromTotal : Math.min(input, uncachedFromTotal);
-    }
-    return {
-      input,
-      cacheRead,
-      cacheWrite,
-      output: nonNegative(usage.outputTokens),
-    };
-  }
-
-  return {
-    input: nonNegative(usage.inputTokens),
-    cacheRead: 0,
-    cacheWrite: 0,
-    output: nonNegative(usage.outputTokens),
-  };
-}
+export { breakdownFromLanguageModelUsage };
 
 export function computeWeightedTokens(
   breakdown: TokenUsageBreakdown,
@@ -102,27 +58,9 @@ export function computeWeightedTokens(
  * input/output detail; otherwise falls back to `total_tokens` (un-weighted) to
  * avoid charging zero when a provider returns only the rolled-up count.
  */
-export function computeWeightedUsageFromLanguageModelUsage(usage: {
-  inputTokens?: number | null;
-  outputTokens?: number | null;
-  totalTokens?: number | null;
-  inputTokenDetails?: {
-    noCacheTokens?: number | null;
-    cacheReadTokens?: number | null;
-    cacheWriteTokens?: number | null;
-  } | null;
-}): { weighted: number; breakdown: TokenUsageBreakdown | null } {
-  const hasAnyDetail =
-    usage.inputTokens != null ||
-    usage.outputTokens != null ||
-    usage.inputTokenDetails?.noCacheTokens != null ||
-    usage.inputTokenDetails?.cacheReadTokens != null ||
-    usage.inputTokenDetails?.cacheWriteTokens != null;
-
-  if (hasAnyDetail) {
-    const breakdown = breakdownFromLanguageModelUsage(usage);
-    return { weighted: computeWeightedTokens(breakdown), breakdown };
-  }
-
-  return { weighted: nonNegative(usage.totalTokens), breakdown: null };
+export function computeWeightedUsageFromLanguageModelUsage(usage: ModelTokenUsage): {
+  weighted: number;
+  breakdown: TokenUsageBreakdown | null;
+} {
+  return computeWeightedUsageWith(usage, getTokenUsageWeights());
 }

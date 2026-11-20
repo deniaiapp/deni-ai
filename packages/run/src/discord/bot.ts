@@ -49,7 +49,14 @@ import type { Translate } from "../i18n/standalone";
 import { assertRateLimit, RateLimitError } from "./rate-limit";
 import { reportError } from "./report";
 import { runLogger } from "../runtime";
-import { joinRunMode, parseRunMode, RUN_MODES, splitRunMode, type RunLevel } from "../agent/model";
+import {
+  getModelDefinition,
+  getModelTokenMultiplier,
+  isReasoningEffort,
+  models,
+} from "@deniai/ai/models";
+import { joinRunMode, runModeLabel, splitRunMode, type RunMode } from "../agent/model";
+import { effectiveRunMode } from "../agent/llm";
 import { mutateStore, readStore } from "../data/store";
 
 export { splitForDiscord } from "./ui";
@@ -332,11 +339,13 @@ async function handleApprovalButton(
   await deliver(channel, outcome, link.locale);
 }
 
-function runModeParams(mode: ReturnType<typeof parseRunMode>, tr: Translate) {
-  const { label, costMultiplier, effort } = RUN_MODES[mode];
+function runModeParams(mode: RunMode, tr: Translate) {
   return {
-    mode: `${label} (${effort})`,
-    cost: tr("~{multiplier}× cost", { multiplier: costMultiplier }),
+    mode: runModeLabel(mode),
+    // The model's usage tier multiplier, the same number chat charges by.
+    cost: tr("~{multiplier}× cost", {
+      multiplier: getModelTokenMultiplier(splitRunMode(mode).model),
+    }),
   };
 }
 
@@ -360,13 +369,12 @@ const core: DiscordFeature = {
         .setDescriptionLocalization("ja", "チームメイトの名前")
         .setAutocomplete(true),
     ),
-    dmCommand("model", "Show or choose the model family", "モデルを表示・選択").addStringOption(
-      (option) =>
-        option
-          .setName("family")
-          .setDescription("Run is faster and cheaper, Run+ is stronger")
-          .setDescriptionLocalization("ja", "Run は速く安い、Run+ はより強力")
-          .addChoices({ name: "Run", value: "run" }, { name: "Run+", value: "plus" }),
+    dmCommand("model", "Show or choose the model", "モデルを表示・選択").addStringOption((option) =>
+      option
+        .setName("model")
+        .setDescription("The same models as Deni AI chat")
+        .setDescriptionLocalization("ja", "Deni AI のチャットと同じモデル")
+        .addChoices(...models.map((model) => ({ name: model.name, value: model.value }))),
     ),
     dmCommand(
       "effort",
@@ -378,9 +386,10 @@ const core: DiscordFeature = {
         .setDescription("Reasoning effort")
         .setDescriptionLocalization("ja", "推論の深さ")
         .addChoices(
-          { name: "Default (medium)", value: "default" },
+          { name: "Low", value: "low" },
+          { name: "Medium", value: "medium" },
           { name: "High", value: "high" },
-          { name: "xhigh", value: "xhigh" },
+          { name: "Extra High", value: "xhigh" },
           { name: "Max", value: "max" },
         ),
     ),
@@ -449,21 +458,35 @@ const core: DiscordFeature = {
     if (interaction.commandName === "model" || interaction.commandName === "effort") {
       // The run mode is the account's shared setting, so the web app and Discord stay in step.
       const picked = interaction.options.getString(
-        interaction.commandName === "model" ? "family" : "level",
+        interaction.commandName === "model" ? "model" : "level",
       );
-      const current = splitRunMode(parseRunMode((await readStore(link.userId)).config.runMode));
+      const current = splitRunMode((await readStore(link.userId)).config.runMode ?? "");
       if (picked) {
-        const next = joinRunMode(
-          interaction.commandName === "model" ? picked === "plus" : current.plus,
-          interaction.commandName === "effort" ? (picked as RunLevel) : current.level,
-        );
+        const model = interaction.commandName === "model" ? picked : current.model;
+        const effort =
+          interaction.commandName === "effort" && isReasoningEffort(picked)
+            ? picked
+            : current.reasoningEffort;
+        if (
+          interaction.commandName === "effort" &&
+          !(getModelDefinition(model)?.efforts || []).includes(effort as never)
+        ) {
+          await respond(interaction, tr("This model does not have that reasoning level."));
+          return;
+        }
+        // A model the plan does not include falls back, exactly as a turn would.
+        const next = await effectiveRunMode(link.userId, joinRunMode(model, effort));
+        if (interaction.commandName === "model" && splitRunMode(next).model !== model) {
+          await respond(interaction, tr("This model is not available on your plan."));
+          return;
+        }
         await mutateStore(link.userId, (store) => {
           store.config.runMode = next;
         });
         await respond(interaction, tr("Now using {mode}. {cost}", runModeParams(next, tr)));
         return;
       }
-      const mode = joinRunMode(current.plus, current.level);
+      const mode = await effectiveRunMode(link.userId);
       await respond(interaction, tr("Current setting: {mode}. {cost}", runModeParams(mode, tr)));
     }
   },

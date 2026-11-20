@@ -27,7 +27,7 @@ afterAll(async () => {
 beforeEach(async () => {
   await resetRunTables(testDb.pglite);
   configureRunForTest(testDb, {
-    languageModel: () => mockTextModel("Report saved to /outbox/report.md.", { costUsd: 0.01 }),
+    languageModel: () => mockTextModel("Report saved to /outbox/report.md."),
     computer: { sandbox: null, browser: null },
   });
   await seedTestUser(testDb.pglite, USER);
@@ -74,7 +74,8 @@ describe("background job runner", () => {
       "research",
     );
     // The model's reported cost is charged to the shared pool (micro-dollars).
-    expect(await runLedger()).toEqual([{ metric: "model", used: 10_000 }]);
+    // The mock call on the default model (Haiku 5.5, Tier 1): 200 usage units.
+    expect(await runLedger()).toEqual([{ metric: "basic", used: 200 }]);
     const events = await listJobEvents(USER, job.id);
     expect(events.some((event) => event.kind === "checkpoint")).toBe(true);
     const notifications = await listNotifications(USER);
@@ -96,7 +97,8 @@ describe("background job runner", () => {
     expect((await getJob(USER, job.id))?.attempt).toBe(1);
     const messages = await loadMessages(USER, "dm_research");
     expect(messages.filter((message) => message.role === "assistant")).toHaveLength(1);
-    expect(await runLedger()).toEqual([{ metric: "model", used: 10_000 }]);
+    // The mock call on the default model (Haiku 5.5, Tier 1): 200 usage units.
+    expect(await runLedger()).toEqual([{ metric: "basic", used: 200 }]);
   });
 
   it("stops at the next step when the job is cancelled mid-run", async () => {
@@ -122,7 +124,7 @@ describe("background job runner", () => {
 
   it("fails with a setup notification when no language model is configured", async () => {
     configureRunForTest(testDb, {
-      config: { openrouterApiKey: null },
+      config: { deniApiKey: null },
       computer: { sandbox: null, browser: null },
     });
     const job = await queue("bg-4");

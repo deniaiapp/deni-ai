@@ -94,6 +94,7 @@ export { default as FileWarning } from "lucide-react/dist/esm/icons/file-exclama
 export { default as Film } from "lucide-react/dist/esm/icons/film.mjs";
 export { default as Fingerprint } from "lucide-react/dist/esm/icons/fingerprint-pattern.mjs";
 export { default as FlaskConical } from "lucide-react/dist/esm/icons/flask-conical.mjs";
+export { default as Folder } from "lucide-react/dist/esm/icons/folder.mjs";
 export { default as FolderClosed } from "lucide-react/dist/esm/icons/folder-closed.mjs";
 export { default as FolderKanban } from "lucide-react/dist/esm/icons/folder-kanban.mjs";
 export { default as FolderOpen } from "lucide-react/dist/esm/icons/folder-open.mjs";
@@ -135,6 +136,7 @@ export { default as LogIn } from "lucide-react/dist/esm/icons/log-in.mjs";
 export { default as LogOut } from "lucide-react/dist/esm/icons/log-out.mjs";
 export { default as Mail } from "lucide-react/dist/esm/icons/mail.mjs";
 export { default as MailX } from "lucide-react/dist/esm/icons/mail-x.mjs";
+export { default as Maximize2 } from "lucide-react/dist/esm/icons/maximize-2.mjs";
 export { default as MapPin } from "lucide-react/dist/esm/icons/map-pin.mjs";
 export { default as Menu } from "lucide-react/dist/esm/icons/menu.mjs";
 export { default as Megaphone } from "lucide-react/dist/esm/icons/megaphone.mjs";

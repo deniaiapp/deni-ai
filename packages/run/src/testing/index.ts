@@ -131,15 +131,11 @@ function v4Usage({ inputTokens, outputTokens }: MockUsage) {
 }
 
 /**
- * A language model that answers every call with `text` and reports `costUsd` the way
- * OpenRouter does (`providerMetadata.openrouter.usage.cost`). `onCall` runs before each
- * answer (e.g. to cancel the job mid-run).
+ * A language model that answers every call with `text` and reports 100 input and
+ * 20 output tokens, which Run charges by the chat rules. `onCall` runs before each answer
+ * (e.g. to cancel the job mid-run).
  */
-export function mockTextModel(
-  text: string,
-  options: { costUsd?: number; onCall?: () => Promise<void> | void } = {},
-) {
-  const providerMetadata = { openrouter: { usage: { cost: options.costUsd ?? 0 } } };
+export function mockTextModel(text: string, options: { onCall?: () => Promise<void> | void } = {}) {
   const usage = v4Usage({ inputTokens: 100, outputTokens: 20 });
   return new MockLanguageModelV4({
     doGenerate: async () => {
@@ -148,7 +144,6 @@ export function mockTextModel(
         content: [{ type: "text", text }],
         finishReason: { unified: "stop", raw: "stop" },
         usage,
-        providerMetadata,
         warnings: [],
       };
     },
@@ -164,7 +159,6 @@ export function mockTextModel(
             type: "finish",
             finishReason: { unified: "stop", raw: "stop" },
             usage,
-            providerMetadata,
           },
         ]),
       };

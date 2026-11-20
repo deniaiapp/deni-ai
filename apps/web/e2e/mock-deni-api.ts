@@ -36,8 +36,19 @@ function lastUserText(request: ChatRequest): string {
   return lastUser ? messageText(lastUser).trim() : "";
 }
 
+/** The chat title request (src/lib/chat.ts): answer with the title an untitled chat has. */
+function isTitleRequest(request: ChatRequest): boolean {
+  return Boolean(
+    request.messages?.some(
+      (message) =>
+        message.role === "system" && messageText(message).startsWith("You are a title generator"),
+    ),
+  );
+}
+
 function answerFor(request: ChatRequest): string {
   if (request.response_format) return JSON.stringify({ hasNew: false, memories: [] });
+  if (isTitleRequest(request)) return "New Chat";
   return `Mock reply: ${lastUserText(request)}`;
 }
 
@@ -119,7 +130,7 @@ const server = createServer(async (request, response) => {
     }
     if (request.method === "POST" && url.pathname.endsWith("/chat/completions")) {
       const body = await readJson(request);
-      const model = body.model ?? "openai/gpt-6-luna";
+      const model = body.model ?? "anthropic/claude-haiku-5.5";
       const content = answerFor(body);
       const slow = !body.response_format && lastUserText(body).includes(SLOW_MARKER);
       if (body.stream) {

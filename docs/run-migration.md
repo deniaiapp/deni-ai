@@ -39,7 +39,7 @@ it later makes stored MCP credentials unreadable.
    production (`RUN_ENABLED=false` while preparing, then enable Run mode once migrated).
    Note that v8 has already retired the standalone `/api/integrations/deni-run/usage`
    endpoint along with `DENI_RUN_SERVICE_SECRET`, `DENI_RUN_OAUTH_CLIENT_ID`, and `NEXT_PUBLIC_DENI_RUN_URL`.
-2. Configure the platform: `RUN_ENCRYPTION_KEY`, `OPENROUTER_API_KEY`, `EXA_API_KEY`,
+2. Configure the platform: `RUN_ENCRYPTION_KEY`, `DENI_API_KEY`, `EXA_API_KEY`,
    `E2B_API_KEY`, `STEEL_API_KEY`, `RUN_S3_*` (Run's bucket), `SLACK_MCP_CLIENT_ID` /
    `SLACK_MCP_CLIENT_SECRET` (add `<web origin>/api/run/mcp/oauth/callback` as a Slack
    redirect URL), and on exactly one process `RUN_DISCORD_ENABLED=true` with

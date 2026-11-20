@@ -78,7 +78,7 @@ describe("model access", () => {
   test("guest catalog remains restricted", () => {
     assert.deepEqual(
       getModelsForGuest().map((model) => model.value),
-      ["gpt-6-luna"],
+      ["claude-haiku-5.5"],
     );
   });
 });

@@ -18,7 +18,7 @@ vi.mock("@/lib/auth", () => ({
   },
 }));
 vi.mock("@/env", () => ({
-  env: { STRIPE_SECRET_KEY: "test", STRIPE_WEBHOOK_SECRET: "test", OPENROUTER_API_KEY: "test" },
+  env: { STRIPE_SECRET_KEY: "test", STRIPE_WEBHOOK_SECRET: "test", DENI_API_KEY: "test" },
 }));
 vi.mock("@/lib/ad-review", () => ({ reviewAd: state.review }));
 vi.mock("@/lib/ad-origin", () => ({ isAllowedAdOrigin: () => true }));

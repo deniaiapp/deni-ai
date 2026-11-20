@@ -20,17 +20,12 @@ import {
   type AgentRequest,
   type ResponsesRequest,
   type ResponsesCompactRequest,
-  applyAnthropicNativePromptCaching,
   applyAutomaticPromptCaching,
   getClient,
+  getDeniApiTarget,
+  getModelDefinition,
   isAnthropicModel,
-  convertAnthropicResponseToOpenAI,
-  convertAnthropicStreamEventToOpenAI,
-  convertMessagesToAnthropic,
-  convertToolsToAnthropic,
-  extractAnthropicSystemPrompt,
   convertMessagesToResponsesInput,
-  convertToolsToOpenRouter,
   convertResponsesToChatCompletion,
   convertResponsesStreamEventToChatChunks,
   convertResponsesUsageToChatUsage,
@@ -44,7 +39,6 @@ import {
   rewriteCollaborationNamesInResponsesPayload,
   rewriteCollaborationNamesInSseEventBlock,
   sanitizeReservedCollaborationInResponsesRequest,
-  toDeniResponsesRequest,
   type ResponsesProviderKind,
 } from "../../utils/agent";
 import {
@@ -72,19 +66,6 @@ const router = new Hono<{
 router.get("/agent", (c) => {
   return c.json({ object: "agent", status: "ok" }, 200);
 });
-
-const anthropicFailoverClient = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || "",
-});
-
-const OPENROUTER_MESSAGES_FAILOVER_TTL_MS = 60 * 60 * 1000;
-const openRouterMessagesFailoverCache = new Map<
-  string,
-  {
-    expiresAt: number;
-    status: number;
-  }
->();
 
 // Resolved once at startup so the hot path can skip all debug work
 // (summaries, extra SSE JSON.parse passes) with a single boolean check.
@@ -329,119 +310,29 @@ function collectAnthropicUsageFromSseEvent(
 
 type ResponsesClientResult = Extract<
   ReturnType<typeof getClient>,
-  { type: "openrouter" | "openai" | "deni" }
+  { type: "openai" | "deni" }
 >;
 
 function getResponsesBaseUrl(clientResult: ResponsesClientResult): string {
-  if (clientResult.type === "openrouter") {
-    return "https://openrouter.ai/api/v1/responses";
-  }
-
   return `${clientResult.client.baseURL}/responses`;
 }
 
 function getResponsesHeaders(
   clientResult: ResponsesClientResult,
 ): Record<string, string> {
-  if (clientResult.type === "openrouter") {
-    return {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-      "HTTP-Referer": "https://flixa.deniai.app",
-      "X-OpenRouter-Title": "Deni AI Flixa",
-      "X-OpenRouter-Categories": "cli-agent,ide-extension",
-      "X-OpenRouter-Experimental-Metadata": "enabled",
-    };
-  }
-
   return {
     "Content-Type": "application/json",
     Authorization: `Bearer ${clientResult.client.apiKey ?? ""}`,
   };
 }
 
-function getOpenRouterProviderRouting(
-  model: string,
-): { only: string[] } | undefined {
-  if (isAnthropicModel(model)) {
-    return { only: ["anthropic"] };
-  }
-
-  return undefined;
-}
-
-function hasAnthropicFailoverKey(): boolean {
-  return Boolean(process.env.ANTHROPIC_API_KEY);
-}
-
-function shouldFailoverToAnthropic(status: number, model: string): boolean {
-  return status === 402 && isAnthropicModel(model) && hasAnthropicFailoverKey();
-}
-
-function getOpenRouterMessagesFailoverCacheKey(model: string): string {
-  return model.toLowerCase();
-}
-
-function getOpenRouterMessagesFailoverState(
-  model: string,
-): { expiresAt: number; status: number } | null {
-  const cacheKey = getOpenRouterMessagesFailoverCacheKey(model);
-  const state = openRouterMessagesFailoverCache.get(cacheKey);
-  if (!state) {
-    return null;
-  }
-
-  if (state.expiresAt <= Date.now()) {
-    openRouterMessagesFailoverCache.delete(cacheKey);
-    return null;
-  }
-
-  return state;
-}
-
-function setOpenRouterMessagesFailoverState(
-  model: string,
-  status: number,
-): void {
-  openRouterMessagesFailoverCache.set(
-    getOpenRouterMessagesFailoverCacheKey(model),
-    {
-      expiresAt: Date.now() + OPENROUTER_MESSAGES_FAILOVER_TTL_MS,
-      status,
-    },
-  );
-}
-
-function clearOpenRouterMessagesFailoverState(model: string): void {
-  openRouterMessagesFailoverCache.delete(
-    getOpenRouterMessagesFailoverCacheKey(model),
-  );
-}
-
-function toAnthropicModelName(model: string): string {
-  return model.startsWith("anthropic/")
-    ? model.slice("anthropic/".length)
-    : model;
-}
-
-function getAnthropicHeaders(requestHeaders: Headers): Record<string, string> {
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-api-key": process.env.ANTHROPIC_API_KEY || "",
-    "anthropic-version":
-      requestHeaders.get("anthropic-version") || "2023-06-01",
-  };
-
+/** The client's `anthropic-*` headers (version, betas), forwarded to the Deni AI API. */
+function getAnthropicPassthroughHeaders(requestHeaders: Headers): Record<string, string> {
+  const headers: Record<string, string> = {};
   for (const [key, value] of requestHeaders.entries()) {
     const normalizedKey = key.toLowerCase();
-    if (
-      normalizedKey.startsWith("anthropic-") &&
-      normalizedKey !== "anthropic-version"
-    ) {
-      headers[normalizedKey] = value;
-    }
+    if (normalizedKey.startsWith("anthropic-")) headers[normalizedKey] = value;
   }
-
   return headers;
 }
 
@@ -568,51 +459,6 @@ function normalizeResponsesToolChoice(
   return toolChoice;
 }
 
-function normalizeOpenRouterToolChoice(
-  toolChoice: AgentRequest["tool_choice"],
-  hasToolResult = false,
-): unknown {
-  if (hasToolResult && toolChoice !== undefined && toolChoice !== "none") {
-    return "auto";
-  }
-
-  if (
-    toolChoice === undefined ||
-    toolChoice === "none" ||
-    toolChoice === "auto" ||
-    toolChoice === "required"
-  ) {
-    return toolChoice;
-  }
-
-  if (!toolChoice || typeof toolChoice !== "object") {
-    return undefined;
-  }
-
-  const toolChoiceRecord = toolChoice as unknown as Record<string, unknown>;
-  const functionRecord =
-    toolChoiceRecord.function &&
-    typeof toolChoiceRecord.function === "object" &&
-    !Array.isArray(toolChoiceRecord.function)
-      ? (toolChoiceRecord.function as Record<string, unknown>)
-      : null;
-
-  if (
-    toolChoiceRecord.type === "function" &&
-    functionRecord &&
-    typeof functionRecord.name === "string"
-  ) {
-    return {
-      type: "function",
-      function: {
-        name: functionRecord.name,
-      },
-    };
-  }
-
-  return undefined;
-}
-
 function normalizeOpenAIChatToolChoice(
   toolChoice: AgentRequest["tool_choice"],
   hasToolResult: boolean,
@@ -667,49 +513,6 @@ function normalizeAnthropicToolChoiceAfterToolResult(
   }
 
   return { type: "auto" };
-}
-
-function normalizeAnthropicChatToolChoice(
-  toolChoice: AgentRequest["tool_choice"],
-  hasToolResult: boolean,
-): Anthropic.Messages.MessageCreateParams["tool_choice"] {
-  if (hasToolResult && toolChoice !== undefined && toolChoice !== "none") {
-    return { type: "auto" };
-  }
-
-  if (toolChoice === undefined) {
-    return undefined;
-  }
-
-  if (toolChoice === "none" || toolChoice === "auto") {
-    return { type: toolChoice };
-  }
-
-  if (toolChoice === "required") {
-    return { type: "any" };
-  }
-
-  if (!toolChoice || typeof toolChoice !== "object") {
-    return undefined;
-  }
-
-  const toolChoiceRecord = toolChoice as unknown as Record<string, unknown>;
-  const functionRecord =
-    toolChoiceRecord.function &&
-    typeof toolChoiceRecord.function === "object" &&
-    !Array.isArray(toolChoiceRecord.function)
-      ? (toolChoiceRecord.function as Record<string, unknown>)
-      : null;
-
-  if (
-    toolChoiceRecord.type === "function" &&
-    functionRecord &&
-    typeof functionRecord.name === "string"
-  ) {
-    return { type: "tool", name: functionRecord.name };
-  }
-
-  return undefined;
 }
 
 function hasChatToolTranscript(input: unknown[]): boolean {
@@ -851,6 +654,20 @@ function normalizeResponsesRequest(
 }
 
 /**
+ * The Deni AI API caps the output of its chat-backed models at 1024 tokens when the
+ * request names no limit: default to the model's own maximum.
+ */
+function withDefaultMaxOutputTokens(
+  request: Record<string, unknown>,
+): Record<string, unknown> {
+  if (request.max_output_tokens !== undefined) return request;
+  const maxOutputTokens = getModelDefinition(String(request.model))?.maxOutputTokens;
+  return maxOutputTokens === undefined
+    ? request
+    : { ...request, max_output_tokens: maxOutputTokens };
+}
+
+/**
  * Build a Responses request from a Chat Completions body so OpenAI-style
  * agent traffic can use retained reasoning under the hood.
  */
@@ -981,16 +798,12 @@ async function proxyResponsesUpstream(options: {
   const url = getResponsesBaseUrl(clientResult);
   const headers = getResponsesHeaders(clientResult);
 
-  const upstreamBody: Record<string, unknown> =
-    clientResult.type === "openrouter"
-      ? applyAutomaticPromptCaching(
-          {
-            ...providerRequest,
-            provider: getOpenRouterProviderRouting(model),
-          } as Record<string, unknown>,
-          model,
-        )
-      : providerRequest;
+  // The request goes to the provider as it was built; only Claude models get the
+  // automatic prompt-caching marker (a no-op when the client already set one).
+  const upstreamBody: Record<string, unknown> = applyAutomaticPromptCaching(
+    providerRequest,
+    model,
+  );
 
   // Last-mile guard: Responses input items must be flat even when a provider
   // request was assembled by a compatibility path after normalization.
@@ -1416,35 +1229,6 @@ function collectResponsesUsageFromSseEvent(
   return usageSnapshot;
 }
 
-function collectChatUsageFromSseEvent(
-  eventBlock: string,
-  usageSnapshot: Record<string, number>,
-  auth: AgentAuthContext,
-): Record<string, number> {
-  const payload = eventBlock
-    .split(/\r?\n/)
-    .filter((line) => line.startsWith("data:"))
-    .map((line) => line.slice(5).trimStart())
-    .join("\n");
-
-  if (!payload || payload === "[DONE]") {
-    return usageSnapshot;
-  }
-
-  try {
-    const event = JSON.parse(payload) as { usage?: unknown };
-    auth.usageEstimate?.observe(event);
-
-    if (event.usage) {
-      return mergeUsageSnapshot(usageSnapshot, event.usage);
-    }
-  } catch {
-    return usageSnapshot;
-  }
-
-  return usageSnapshot;
-}
-
 interface ChatStreamDebugSummary {
   chunks: number;
   contentDeltaChars: number;
@@ -1576,346 +1360,6 @@ function summarizeChatCompletionResponse(response: unknown): Record<string, unkn
   };
 }
 
-async function createAnthropicChatFailoverResponse(
-  auth: AgentAuthContext,
-  requestId: string,
-  body: AgentRequest,
-  hasToolResult: boolean,
-): Promise<Response> {
-  // Anthropic API version 2026-10-21 (SDK 1.x) no longer accepts temperature or top_p, so the
-  // failover request drops the client's sampling settings.
-  const {
-    messages,
-    model,
-    stream,
-    max_tokens,
-    tools,
-    tool_choice,
-  } = body;
-  const anthropicModel = toAnthropicModelName(model);
-  const anthropicMessages = convertMessagesToAnthropic(messages);
-  const anthropicTools = convertToolsToAnthropic(tools);
-  const system = extractAnthropicSystemPrompt(messages);
-  const normalizedToolChoice = normalizeAnthropicChatToolChoice(
-    tool_choice,
-    hasToolResult,
-  );
-
-  // The native Anthropic API has no top-level cache_control (unlike
-  // OpenRouter), so add explicit breakpoints to keep prompt caching working
-  // during failover.
-  const requestParams = applyAnthropicNativePromptCaching({
-    model: anthropicModel,
-    messages: anthropicMessages,
-    stream: stream ?? false,
-    max_tokens: max_tokens ?? 4096,
-    system,
-    tools: anthropicTools,
-    tool_choice: normalizedToolChoice,
-  } satisfies Anthropic.Messages.MessageCreateParams);
-
-  agentDebugLog("chat.failover_request", () => ({
-    requestId,
-    provider: "anthropic",
-    model: anthropicModel,
-    stream: requestParams.stream,
-    toolChoice: normalizedToolChoice,
-    tools: summarizeTools(anthropicTools),
-    messages: summarizeChatMessages(anthropicMessages),
-  }));
-
-  if (stream) {
-    const upstreamTimeout = createUpstreamTimeout();
-    let streamResponse: AsyncIterable<Anthropic.MessageStreamEvent>;
-    try {
-      streamResponse = await anthropicFailoverClient.messages.create(
-        {
-          ...requestParams,
-          stream: true,
-        },
-        { signal: upstreamTimeout.signal },
-      );
-      upstreamTimeout.refresh();
-    } catch (error) {
-      upstreamTimeout.dispose();
-      throw error;
-    }
-
-    const encoder = new TextEncoder();
-    let usageSnapshot: Record<string, number> = {};
-    let usageSettled = false;
-    let cancelled = false;
-    const readable = new ReadableStream({
-      async start(controller) {
-        let messageId = `chatcmpl_${requestId}`;
-        const streamDebug = createChatStreamDebugSummary();
-
-        try {
-          for await (const event of streamResponse) {
-            if (cancelled) return;
-            upstreamTimeout.refresh();
-            auth.usageEstimate?.observe(event);
-            if (event.type === "message_start") {
-              messageId = event.message.id;
-              usageSnapshot = mergeUsageSnapshot(
-                usageSnapshot,
-                event.message.usage,
-              );
-            }
-
-            if (event.type === "message_delta" && event.usage) {
-              usageSnapshot = mergeUsageSnapshot(usageSnapshot, event.usage);
-            }
-
-            const chunk = convertAnthropicStreamEventToOpenAI(
-              event,
-              messageId,
-              model,
-            );
-            if (!chunk) {
-              continue;
-            }
-
-            const data = JSON.stringify(chunk);
-            collectChatDebugFromSseEvent(`data: ${data}\n\n`, streamDebug);
-            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
-          }
-
-          if (cancelled) return;
-          usageSettled = true;
-          await finalizeUsage(auth, usageSnapshot, false);
-          upstreamTimeout.dispose();
-          agentDebugLog("chat.failover_stream_complete", {
-            requestId,
-            provider: "anthropic",
-            usage: usageSnapshot,
-            stream: streamDebug,
-          });
-          controller.enqueue(encoder.encode("data: [DONE]\n\n"));
-          controller.close();
-        } catch (error) {
-          if (cancelled) return;
-          upstreamTimeout.dispose();
-          agentDebugLog("chat.failover_stream_error", {
-            requestId,
-            provider: "anthropic",
-            error: error instanceof Error ? error.message : String(error),
-          });
-          console.error("[Stream Error] provider=anthropic failover:", error);
-          if (!usageSettled) {
-            usageSettled = true;
-            await finalizeUsage(auth, usageSnapshot, false);
-          }
-          controller.error(error);
-        }
-      },
-      cancel() {
-        cancelled = true;
-        upstreamTimeout.abort();
-        upstreamTimeout.dispose();
-        // The client disconnected mid-stream; upstream tokens were still
-        // consumed, so meter what we have observed so far.
-        if (!usageSettled) {
-          usageSettled = true;
-          return finalizeUsage(auth, usageSnapshot, false).catch(
-            (error) =>
-              console.error("[Usage] finalize-on-cancel failed:", error),
-          );
-        }
-      },
-    });
-
-    return new Response(readable, {
-      status: 200,
-      headers: {
-        "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
-        Connection: "keep-alive",
-      },
-    });
-  }
-
-  const upstreamTimeout = createUpstreamTimeout();
-  let response: Anthropic.Message;
-  try {
-    response = await anthropicFailoverClient.messages.create(
-      {
-        ...requestParams,
-        stream: false,
-      },
-      { signal: upstreamTimeout.signal },
-    );
-    upstreamTimeout.refresh();
-  } catch (error) {
-    upstreamTimeout.dispose();
-    throw error;
-  }
-  upstreamTimeout.dispose();
-  const openAiResponse = convertAnthropicResponseToOpenAI(response, model);
-
-  await finalizeUsage(auth, response.usage);
-  agentDebugLog("chat.failover_response", () => ({
-    requestId,
-    provider: "anthropic",
-    response: summarizeChatCompletionResponse(openAiResponse),
-  }));
-
-  return new Response(JSON.stringify(openAiResponse), {
-    status: 200,
-    headers: { "Content-Type": "application/json" },
-  });
-}
-
-async function createAnthropicMessagesFailoverResponse(
-  auth: AgentAuthContext,
-  requestHeaders: Headers,
-  body: Anthropic.Messages.MessageCreateParams,
-): Promise<Response> {
-  // The native Anthropic API has no top-level cache_control (unlike
-  // OpenRouter), so add explicit breakpoints to keep prompt caching working
-  // during failover.
-  const anthropicBody = applyAnthropicNativePromptCaching({
-    ...body,
-    model: toAnthropicModelName(body.model),
-    tool_choice: normalizeAnthropicToolChoiceAfterToolResult(body),
-  });
-
-  const upstreamTimeout = createUpstreamTimeout();
-  let response: Response;
-  try {
-    response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: getAnthropicHeaders(requestHeaders),
-      body: JSON.stringify(anthropicBody),
-      signal: upstreamTimeout.signal,
-    });
-    upstreamTimeout.refresh();
-  } catch (error) {
-    upstreamTimeout.dispose();
-    throw error;
-  }
-
-  if (!response.ok) {
-    const errorBody = await response.text();
-    upstreamTimeout.dispose();
-    console.error(
-      "[Anthropic messages failover error]:",
-      response.status,
-      errorBody,
-    );
-    await releaseReservedUsage(auth);
-    return publicUpstreamErrorResponse(response.status, errorBody);
-  }
-
-  if (body.stream && response.body) {
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let usageSnapshot: Record<string, number> = {};
-    let usageSettled = false;
-    let cancelled = false;
-    const readable = new ReadableStream({
-      async start(controller) {
-        let buffer = "";
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (cancelled) return;
-            if (done) break;
-            upstreamTimeout.refresh();
-
-            buffer += decoder.decode(value, { stream: true });
-            const eventBlocks = buffer.split(/\r?\n\r?\n/);
-            buffer = eventBlocks.pop() ?? "";
-            for (const eventBlock of eventBlocks) {
-              usageSnapshot = collectAnthropicUsageFromSseEvent(
-                eventBlock,
-                usageSnapshot,
-                auth,
-              );
-            }
-
-            controller.enqueue(value);
-          }
-
-          buffer += decoder.decode();
-          if (buffer.trim()) {
-            usageSnapshot = collectAnthropicUsageFromSseEvent(
-              buffer,
-              usageSnapshot,
-              auth,
-            );
-          }
-
-          usageSettled = true;
-          await finalizeUsage(auth, usageSnapshot, false);
-          upstreamTimeout.dispose();
-          controller.close();
-        } catch (error) {
-          if (cancelled) return;
-          upstreamTimeout.dispose();
-          console.error(
-            "[Stream Error] provider=anthropic failover (messages):",
-            error,
-          );
-          if (!usageSettled) {
-            usageSettled = true;
-            await finalizeUsage(auth, usageSnapshot, false);
-          }
-          controller.error(error);
-        }
-      },
-      cancel() {
-        cancelled = true;
-        upstreamTimeout.abort();
-        upstreamTimeout.dispose();
-        reader.cancel().catch(() => {});
-        // The client disconnected mid-stream; upstream tokens were still
-        // consumed, so meter what we have observed so far.
-        if (!usageSettled) {
-          usageSettled = true;
-          return finalizeUsage(auth, usageSnapshot, false).catch(
-            (error) =>
-              console.error("[Usage] finalize-on-cancel failed:", error),
-          );
-        }
-      },
-    });
-
-    return new Response(readable, {
-      status: response.status,
-      headers: {
-        "Content-Type":
-          response.headers.get("content-type") || "text/event-stream",
-        "Cache-Control": response.headers.get("cache-control") || "no-cache",
-        Connection: "keep-alive",
-      },
-    });
-  }
-
-  let responseBody: string;
-  try {
-    responseBody = await response.text();
-  } finally {
-    upstreamTimeout.dispose();
-  }
-  let parsedResponse: { usage?: unknown } | null = null;
-
-  try {
-    parsedResponse = JSON.parse(responseBody) as { usage?: unknown };
-  } catch {
-    parsedResponse = null;
-  }
-
-  await finalizeUsage(auth, parsedResponse?.usage);
-  return new Response(responseBody, {
-    status: response.status,
-    headers: {
-      "Content-Type": response.headers.get("content-type") || "application/json",
-    },
-  });
-}
-
 /**
  * POST /v1/agent/chat/completions
  * OpenAI-style agent endpoint using official SDKs
@@ -1978,12 +1422,9 @@ router.post(
 
       // OpenAI recommendation: prefer Responses API (retained reasoning)
       // for OpenAI-family models. Client-facing shape stays Chat Completions.
-      // Deni AI API's /v1/responses drops reasoning settings, so Deni-routed
-      // models stay on its /v1/chat/completions (forwarded as-is) below.
-      if (
-        shouldRouteChatViaResponses(model) &&
-        (clientResult.type === "openrouter" || clientResult.type === "openai")
-      ) {
+      // Deni-routed models stay on the Deni AI API's /v1/chat/completions
+      // (forwarded as-is) below: a chat request is not rebuilt as a Responses one.
+      if (shouldRouteChatViaResponses(model) && clientResult.type === "openai") {
         const provider: ResponsesProviderKind = clientResult.type;
         const responsesBody = buildResponsesRequestFromChat(body, provider);
 
@@ -2003,256 +1444,6 @@ router.post(
           asChatCompletion: true,
           model,
         });
-      }
-
-      // Call OpenRouter Chat Completions directly for OpenRouter models
-      if (clientResult.type === "openrouter") {
-        const providerName = clientResult.providerName;
-        const normalizedToolChoice = normalizeOpenRouterToolChoice(
-          tool_choice,
-          hasToolResult,
-        );
-        const openrouterBody = applyAutomaticPromptCaching({
-          model,
-          provider: getOpenRouterProviderRouting(model),
-          messages,
-          stream: stream ?? false,
-          stream_options: stream ? { include_usage: true } : undefined,
-          temperature: temperature ?? undefined,
-          max_tokens: max_tokens ?? undefined,
-          top_p: top_p ?? undefined,
-          frequency_penalty: frequency_penalty ?? undefined,
-          presence_penalty: presence_penalty ?? undefined,
-          reasoning: reasoning_effort
-            ? { effort: reasoning_effort }
-            : undefined,
-          tools: convertToolsToOpenRouter(tools),
-          tool_choice: normalizedToolChoice,
-        }, model);
-        assertNoReservedCollaborationToolsInUpstreamBody(
-          openrouterBody as unknown as Record<string, unknown>,
-          model,
-        );
-
-        agentDebugLog("chat.upstream_request", () => ({
-          requestId,
-          provider: providerName,
-          model,
-          stream: openrouterBody.stream,
-          toolChoice: summarizeToolChoice(normalizedToolChoice),
-          tools: summarizeTools(openrouterBody.tools),
-          messages: summarizeChatMessages(messages),
-        }));
-
-        const upstreamTimeout = createUpstreamTimeout();
-        let response: Response;
-        try {
-          response = await fetch(
-            "https://openrouter.ai/api/v1/chat/completions",
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-                Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-                "HTTP-Referer": "https://flixa.deniai.app",
-                "X-OpenRouter-Title": "Deni AI Flixa",
-                "X-OpenRouter-Categories": "cli-agent,ide-extension",
-                "X-OpenRouter-Experimental-Metadata": "enabled",
-              },
-              body: JSON.stringify(openrouterBody),
-              signal: upstreamTimeout.signal,
-            },
-          );
-          upstreamTimeout.refresh();
-        } catch (error) {
-          upstreamTimeout.dispose();
-          throw error;
-        }
-
-        if (!response.ok) {
-          const errorBody = await response.text();
-          upstreamTimeout.dispose();
-          agentDebugLog("chat.upstream_error", {
-            requestId,
-            provider: providerName,
-            status: response.status,
-            contentType: response.headers.get("content-type"),
-            bodyLength: errorBody.length,
-          });
-
-          if (shouldFailoverToAnthropic(response.status, model)) {
-            agentDebugLog("chat.failover_start", {
-              requestId,
-              fromProvider: providerName,
-              toProvider: "anthropic",
-              status: response.status,
-            });
-            return await createAnthropicChatFailoverResponse(
-              auth,
-              requestId,
-              body,
-              hasToolResult,
-            );
-          }
-
-          await releaseReservedUsage(auth);
-          return publicUpstreamErrorResponse(response.status, errorBody);
-        }
-
-        if (stream && response.body) {
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          const encoder = new TextEncoder();
-          const streamDebug = createChatStreamDebugSummary();
-          let usageSnapshot: Record<string, number> = {};
-          let usageSettled = false;
-          let cancelled = false;
-
-          const readable = new ReadableStream({
-            async start(controller) {
-              let buffer = "";
-
-              try {
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (cancelled) return;
-                  if (done) break;
-                  upstreamTimeout.refresh();
-
-                  buffer += decoder.decode(value, { stream: true });
-                  const eventBlocks = buffer.split(/\r?\n\r?\n/);
-                  buffer = eventBlocks.pop() ?? "";
-
-                  for (const eventBlock of eventBlocks) {
-                    const clientFacingEvent =
-                      rewriteCollaborationNamesInSseEventBlock(eventBlock);
-                    usageSnapshot = collectChatUsageFromSseEvent(
-                      clientFacingEvent,
-                      usageSnapshot,
-                      auth,
-                    );
-                    collectChatDebugFromSseEvent(
-                      clientFacingEvent,
-                      streamDebug,
-                    );
-                    controller.enqueue(
-                      encoder.encode(`${clientFacingEvent}\n\n`),
-                    );
-                  }
-                }
-
-                if (cancelled) return;
-                buffer += decoder.decode();
-                if (buffer.trim()) {
-                  const clientFacingEvent =
-                    rewriteCollaborationNamesInSseEventBlock(buffer);
-                  usageSnapshot = collectChatUsageFromSseEvent(
-                    clientFacingEvent,
-                    usageSnapshot,
-                    auth,
-                  );
-                  collectChatDebugFromSseEvent(
-                    clientFacingEvent,
-                    streamDebug,
-                  );
-                  controller.enqueue(encoder.encode(clientFacingEvent));
-                }
-
-                usageSettled = true;
-                await finalizeUsage(auth, usageSnapshot, false);
-                upstreamTimeout.dispose();
-                agentDebugLog("chat.stream_complete", {
-                  requestId,
-                  provider: providerName,
-                  usage: usageSnapshot,
-                  stream: streamDebug,
-                });
-                controller.close();
-              } catch (error) {
-                if (cancelled) return;
-                upstreamTimeout.dispose();
-                agentDebugLog("chat.stream_error", {
-                  requestId,
-                  provider: providerName,
-                  error: error instanceof Error ? error.message : String(error),
-                });
-                console.error(
-                  `[Stream Error] provider=${providerName}:`,
-                  error,
-                );
-                if (!usageSettled) {
-                  usageSettled = true;
-                  await finalizeUsage(auth, usageSnapshot, false);
-                }
-                controller.error(error);
-              }
-            },
-            cancel() {
-              cancelled = true;
-              upstreamTimeout.abort();
-              upstreamTimeout.dispose();
-              reader.cancel().catch(() => {});
-              // The client disconnected mid-stream; upstream tokens were
-              // still consumed, so meter what we have observed so far.
-              if (!usageSettled) {
-                usageSettled = true;
-                return finalizeUsage(auth, usageSnapshot, false).catch(
-                  (error) =>
-                    console.error("[Usage] finalize-on-cancel failed:", error),
-                );
-              }
-            },
-          });
-
-          return new Response(readable, {
-            status: response.status,
-            headers: {
-              "Content-Type":
-                response.headers.get("content-type") || "text/event-stream",
-              "Cache-Control":
-                response.headers.get("cache-control") || "no-cache",
-              Connection: "keep-alive",
-            },
-          });
-        }
-
-        let responseBody: string;
-        try {
-          responseBody = await response.text();
-        } finally {
-          upstreamTimeout.dispose();
-        }
-        let parsedResponse: Record<string, unknown> | null = null;
-
-        try {
-          parsedResponse = JSON.parse(responseBody) as Record<string, unknown>;
-        } catch {
-          parsedResponse = null;
-        }
-
-        const clientFacing =
-          parsedResponse !== null
-            ? (rewriteCollaborationNamesInChatPayload(
-                parsedResponse,
-              ) as Record<string, unknown>)
-            : null;
-        await finalizeUsage(auth, clientFacing?.usage ?? parsedResponse?.usage);
-        agentDebugLog("chat.response", () => ({
-          requestId,
-          provider: providerName,
-          status: response.status,
-          response: summarizeChatCompletionResponse(clientFacing ?? parsedResponse),
-        }));
-        return new Response(
-          clientFacing !== null ? JSON.stringify(clientFacing) : responseBody,
-          {
-            status: response.status,
-            headers: {
-              "Content-Type":
-                response.headers.get("content-type") || "application/json",
-            },
-          },
-        );
       }
 
       // Use OpenAI SDK for Deni AI API / voids.top (fallback)
@@ -2515,15 +1706,18 @@ router.post(
         return await proxyResponsesUpstream({
           auth,
           clientResult,
-          providerRequest: toDeniResponsesRequest(
-            normalizeResponsesRequest(body, "openai"),
+          // A real Responses request, not reshaped: the Deni AI API passes it through to
+          // upstreams that speak the Responses API (and reads it itself for the rest). Its
+          // upstreams are stateless, like OpenRouter: no store / previous_response_id.
+          providerRequest: withDefaultMaxOutputTokens(
+            normalizeResponsesRequest(body, "openrouter"),
           ),
           stream: body.stream ?? false,
           model: body.model,
         });
       }
 
-      if (clientResult.type !== "openrouter" && clientResult.type !== "openai") {
+      if (clientResult.type !== "openai") {
         await releaseReservedUsage(auth);
         return c.json(
           {
@@ -2635,40 +1829,10 @@ router.post(
         );
       }
 
-      // Deni AI API has no /v1/responses/compact. 400 (not 5xx) so clients
-      // do not retry and can fall back to local compaction.
-      if (clientResult.type === "deni") {
-        await releaseReservedUsage(auth);
-        return c.json(
-          {
-            error: {
-              message:
-                "Responses compaction is not available for this model. Use client-side compaction.",
-              type: "invalid_request_error",
-              param: "model",
-              code: "unsupported_model",
-            },
-          },
-          400,
-        );
-      }
-
-      if (clientResult.type !== "openrouter" && clientResult.type !== "openai") {
-        await releaseReservedUsage(auth);
-        return c.json(
-          {
-            error: {
-              message: "Internal server error",
-              type: "server_error",
-              param: null,
-              code: "unsupported_provider",
-            },
-          },
-          500,
-        );
-      }
-
-      const provider: ResponsesProviderKind = clientResult.type;
+      // The Deni AI API compacts statelessly (it summarizes the input it is given), like
+      // OpenRouter did: no previous_response_id.
+      const provider: ResponsesProviderKind =
+        clientResult.type === "deni" ? "openrouter" : clientResult.type;
       const compactBody = normalizeCompactRequest(body, provider);
       // Upstream paths are .../responses → .../responses/compact
       const compactUrl = `${getResponsesBaseUrl(clientResult)}/compact`;
@@ -2747,7 +1911,7 @@ router.post(
 /**
  * POST /v1/messages
  * Anthropic-compatible endpoint for Claude Code.
- * Routes through OpenRouter with Anthropic provider routing for BYOK traffic.
+ * Forwards the Anthropic request to the Deni AI API's /v1/messages as it is.
  *
  * Aliases for clients that nest Anthropic paths under an agent base URL:
  *   POST /v1/agent/messages
@@ -2771,7 +1935,8 @@ router.post(
       ) as Anthropic.Messages.MessageCreateParams;
       const { model, stream } = body;
 
-      if (!process.env.OPENROUTER_API_KEY) {
+      const deni = getDeniApiTarget();
+      if (!deni) {
         await releaseReservedUsage(auth);
         return c.json(
           {
@@ -2786,53 +1951,32 @@ router.post(
         );
       }
 
-      // Prefix model with anthropic/ for OpenRouter routing.
-      const openRouterModel = model.startsWith("anthropic/")
-        ? model
-        : `anthropic/${model}`;
+      // The Deni AI API takes author-prefixed ids; bare Claude ids are Anthropic's.
+      const deniModel = model.includes("/") ? model : `anthropic/${model}`;
 
-      const cachedFailoverState =
-        getOpenRouterMessagesFailoverState(openRouterModel);
-      if (
-        cachedFailoverState &&
-        isAnthropicModel(openRouterModel) &&
-        hasAnthropicFailoverKey()
-      ) {
-        agentDebugLog("messages.failover_cache_hit", {
-          provider: "openrouter",
-          model: openRouterModel,
-          status: cachedFailoverState.status,
-          expiresAt: new Date(cachedFailoverState.expiresAt).toISOString(),
-        });
-        return await createAnthropicMessagesFailoverResponse(
-          auth,
-          c.req.raw.headers,
-          body,
-        );
-      }
-
-      // Pass through Anthropic format, but do not keep forcing tool use after a tool result.
-      const openRouterBody = applyAutomaticPromptCaching({
-        ...body,
-        model: openRouterModel,
-        provider: getOpenRouterProviderRouting(openRouterModel),
-        tool_choice: normalizeAnthropicToolChoiceAfterToolResult(body),
-      }, openRouterModel);
+      // The Anthropic request is forwarded as it is (the Deni AI API passes it through to
+      // the model untranslated). Only two things are adjusted: the automatic prompt-caching
+      // marker, and tool use is not kept forced after a tool result.
+      const upstreamBody = applyAutomaticPromptCaching(
+        {
+          ...body,
+          model: deniModel,
+          tool_choice: normalizeAnthropicToolChoiceAfterToolResult(body),
+        },
+        deniModel,
+      );
 
       const upstreamTimeout = createUpstreamTimeout();
       let response: Response;
       try {
-        response = await fetch("https://openrouter.ai/api/v1/messages", {
+        response = await fetch(`${deni.baseUrl}/messages`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
-            "HTTP-Referer": "https://flixa.deniai.app",
-            "X-OpenRouter-Title": "Deni AI Flixa",
-            "X-OpenRouter-Categories": "cli-agent,ide-extension",
-            "X-OpenRouter-Experimental-Metadata": "enabled",
+            Authorization: `Bearer ${deni.apiKey}`,
+            ...getAnthropicPassthroughHeaders(c.req.raw.headers),
           },
-          body: JSON.stringify(openRouterBody),
+          body: JSON.stringify(upstreamBody),
           signal: upstreamTimeout.signal,
         });
         upstreamTimeout.refresh();
@@ -2844,35 +1988,13 @@ router.post(
       if (!response.ok) {
         const errorBody = await response.text();
         upstreamTimeout.dispose();
-        console.error(
-          "[OpenRouter messages error]:",
-          response.status,
-          errorBody,
-        );
-
-        if (shouldFailoverToAnthropic(response.status, openRouterModel)) {
-          setOpenRouterMessagesFailoverState(openRouterModel, response.status);
-          agentDebugLog("messages.failover_cache_set", {
-            provider: "openrouter",
-            model: openRouterModel,
-            status: response.status,
-            ttlMs: OPENROUTER_MESSAGES_FAILOVER_TTL_MS,
-          });
-          return await createAnthropicMessagesFailoverResponse(
-            auth,
-            c.req.raw.headers,
-            body,
-          );
-        }
-
+        console.error("[Deni AI API messages error]:", response.status, errorBody);
         await releaseReservedUsage(auth);
         return publicUpstreamErrorResponse(response.status, errorBody);
       }
 
-      clearOpenRouterMessagesFailoverState(openRouterModel);
-
       if (stream && response.body) {
-        // Pipe the SSE stream directly from OpenRouter to the client.
+        // Pipe the SSE stream directly from the Deni AI API to the client.
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
         let usageSnapshot: Record<string, number> = {};
@@ -2921,7 +2043,7 @@ router.post(
               if (cancelled) return;
               upstreamTimeout.dispose();
               console.error(
-                "[Stream Error] provider=openrouter (messages):",
+                "[Stream Error] provider=deni-ai (messages):",
                 error,
               );
               if (!usageSettled) {

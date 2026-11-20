@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BookOpen, Check, Copy, Key, Plus, Trash2 } from "lucide-react";
+import { BookOpen, Check, Code2, Copy, Key, Plus, Trash2 } from "lucide-react";
 import { useExtracted, useLocale } from "use-intl";
 import { useLocalizeError } from "@/hooks/use-localize-error";
 import { useState } from "react";
@@ -98,15 +98,26 @@ function ApiKeysSettingsPage() {
     <SettingsPageShell
       title={t("API Keys")}
       actions={
-        <Button
-          size="sm"
-          variant="outline"
-          nativeButton={false}
-          render={<Link href={supportUrl(locale, "/flixa/external-tools")} />}
-        >
-          <BookOpen className="size-4" />
-          {t("Setup guide")}
-        </Button>
+        <>
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href={supportUrl(locale, "/flixa/external-tools")} />}
+          >
+            <BookOpen className="size-4" />
+            {t("Setup guide")}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            nativeButton={false}
+            render={<Link href={supportUrl(locale, "/flixa/api")} />}
+          >
+            <Code2 className="size-4" />
+            {t("API docs")}
+          </Button>
+        </>
       }
     >
       <Card>

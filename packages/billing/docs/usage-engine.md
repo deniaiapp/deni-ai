@@ -20,7 +20,7 @@ agent API's `FLIXA_USAGE_ENGINE` rollout switch.
 
 | Aspect                 | Rule                                                                                                                                                                                                                                                                                                                                                                                           |
 | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Unit                   | Usage units (`@deniai/billing`): 1M units = $0.50. Chat and Flixa spend weighted tokens times the model's usage tier multiplier; Deni Run spends provider cost (`product_usage`, product `run`, micro-dollars, 1 micro-dollar = 2 units, `Math.round`).                                                                                                                                        |
+| Unit                   | Usage units (`@deniai/billing`): 1M units = $0.50. Chat, Flixa and Deni Run's model calls spend weighted tokens times the model's usage tier multiplier, through reservations on the quota rows. Deni Run's browser and computer time spends provider cost (`product_usage`, product `run`, micro-dollars, 1 micro-dollar = 2 units, `Math.round`).                                            |
 | Pool size              | `USAGE_POOL_USD` per tier (Free $10, Go $30, Plus $100, Pro $200); Free with a verified card $15; Free flagged at sign-up (`signup_risk`) $2 until a card is verified.                                                                                                                                                                                                                         |
 | Category               | Every request is recorded on the `basic` row (`getModelCategory` in the agent API always returns `basic`); `premium` rows from before 2026-11 still count against the pool.                                                                                                                                                                                                                    |
 | Limit of a category    | Pool minus the live use of the other category row minus Deni Run's spend in the usage period, floored at 0.                                                                                                                                                                                                                                                                                    |
@@ -129,8 +129,21 @@ directly (the legacy standalone `/api/integrations/deni-run/usage` endpoint has 
 retired): `getRunBudget(userId)` returns the shared pool in USD (`tier`, `limit`, `used`, `remaining`, use by product) before work starts, and
 `recordRunCost({ userId, metric, costUsd })` adds model, browser or computer cost to
 `product_usage` (product `run`, micro-dollars) under the user's usage lock, so it
-serializes with chat and Flixa reservations. Run is charged after the cost is
-incurred (it may overrun the pool by one step); the next check refuses work.
+serializes with chat and Flixa reservations. Only browser and computer time is recorded
+this way now: it is charged after it is incurred (it may overrun the pool by one step),
+stops once the pool is spent, and is not paid from Max Mode credits. Ledger rows with
+metric `model` in micro-dollars are model calls from before Run reserved its usage.
+
+Run's model calls go through the reservation path of chat, with `product: "run"`:
+`consumeUsage` reserves an estimate on the `basic` row before a turn (a turn is refused
+when the pool and the Max Mode credits are spent), `recordObservedUsage` follows each
+step, and `settleUsage` records the real amount (`calculateModelUsageAmount` of
+`@deniai/ai/usage-amount`: weighted tokens times the model's usage tier and promotions)
+in `product_usage` (product `run`, metric `basic`, unit `units`) and spends Max Mode
+credits for what went past the pool. The reservation's `allowance` stops a turn's tool
+loop. `getUsageSummary` splits the quota rows between chat, Flixa and Run by these
+ledger rows. Run uses the chat model catalog with the chat plan access rules
+(`getRunBudget` returns `hasVerifiedPaymentMethod` and `maxModeEnabled` for them).
 
 ## `flixa.usage_reservation` (deprecated)
 

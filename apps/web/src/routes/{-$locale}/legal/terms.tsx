@@ -22,7 +22,7 @@ function TermsPage() {
     <main className="min-h-screen bg-background" id="main-content">
       <div className="mx-auto flex max-w-4xl flex-col gap-10 px-4 pb-16 pt-12 sm:px-6 lg:px-8">
         <div className="space-y-3">
-          <p className="text-sm text-muted-foreground">{t("Last updated: 2026-10-30")}</p>
+          <p className="text-sm text-muted-foreground">{t("Last updated: 2026-11-19")}</p>
           <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl">
             {t("Terms of Service")}
           </h1>
@@ -74,6 +74,11 @@ function TermsPage() {
             <li>
               {t(
                 "On the Free and Go plans, Deni AI Flixa may only be used with approved, authenticated clients: Codex, Claude Code, OpenCode, Zed, Flixa, and Flixa CLI. Plus, Pro, and Pro for Teams may use Deni AI Flixa from any client. Disguising a client as an approved one or otherwise circumventing these limits may result in a Flixa ban (including suspension or permanent loss of Flixa access) without prior notice.",
+              )}
+            </li>
+            <li>
+              {t(
+                "When you use the Deni AI Flixa API from your own apps, scripts, or services, each person must use their own API key, and usage counts against that key owner's plan. Do not embed your API key in apps, websites, or extensions you distribute, let others use the Service through your API key, or sell, rent, or resell access to Deni AI Flixa. You are responsible for all activity under your API keys.",
               )}
             </li>
           </ul>

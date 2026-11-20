@@ -20,7 +20,7 @@ import type { RunMode } from "@deniai/run/agent/model";
 import { isContextReset } from "@deniai/run/chat/messages";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@deniai/ui/components/alert";
 import { Button } from "@deniai/ui/components/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@deniai/ui/components/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@deniai/ui/components/sheet";
 import {
   Conversation,
   ConversationContent,
@@ -41,7 +41,14 @@ import {
   type RunState,
   type Thread,
 } from "./run-api";
-import { RunComposer, useRunMode } from "./run-composer";
+import { RunArtifacts } from "./run-artifacts";
+import {
+  attachmentMetadata,
+  RunComposer,
+  useRunMode,
+  type RunComposerMessage,
+} from "./run-composer";
+import { RunComputerPanel, useRunComputer } from "./run-computer-panel";
 import { useRunErrorText } from "./run-error-text";
 import {
   messageAuthorOf,
@@ -51,7 +58,6 @@ import {
   type MessageAuthor,
 } from "./run-message";
 import { RunLoading, RunPage, takePendingTask } from "./run-page";
-import { RunWorkspacePanel } from "./run-workspace-panel";
 import { TeammateAvatar } from "./teammate-avatar";
 
 const ACTIVE_JOB = ["queued", "running", "finalizing", "waiting_approval", "waiting_takeover"];
@@ -80,7 +86,7 @@ function ChatErrorAlert({ error, onDismiss }: { error: Error; onDismiss: () => v
   if (parsed?.code === "llm_unconfigured") {
     title = t("No AI model is configured");
     description = t(
-      "Teammates cannot answer until an OpenRouter key is configured for Run on this server.",
+      "Teammates cannot answer until a language model is configured for Run on this server.",
     );
   } else if (parsed?.code === "usage_limit") {
     title = t("Usage limit reached");
@@ -126,7 +132,8 @@ function useActiveJob(threadId: string) {
 
 /**
  * The frame of a conversation, laid out like Deni Run: a header bar with the teammate and
- * Stop / Reset / Clear, the messages, and the message box at the bottom.
+ * Stop / Reset / Clear, the messages, the message box at the bottom, and the computer docked
+ * on the right (below `xl` it opens from the header instead).
  */
 function ThreadLayout({
   state,
@@ -163,6 +170,19 @@ function ThreadLayout({
     activeJob?.status === "waiting_approval" || activeJob?.status === "waiting_takeover";
   const working = busy || Boolean(activeJob);
   const title = group ? thread.title : (bot?.name ?? thread.title);
+  const computer = useRunComputer({
+    initial: state.computer,
+    jobId: activeJob?.id,
+    busy: working,
+  });
+  const computerPanel = {
+    ...computer,
+    routines: state.routines,
+    capabilities: state.capabilities,
+    botId: group ? undefined : bot?.id,
+    botName: group ? undefined : bot?.name,
+    jobId: activeJob?.id,
+  };
 
   const reset = useMutation({
     mutationFn: (clear: boolean) =>
@@ -188,111 +208,121 @@ function ThreadLayout({
   return (
     <>
       <DocumentTitle title={title} />
-      <section className="-m-3 flex min-h-0 min-w-0 flex-1 flex-col md:-m-5">
-        <header className="flex h-[54px] shrink-0 items-center gap-2.5 border-b px-3 md:px-4">
-          <TeammateAvatar
-            name={title}
-            icon={group ? thread.icon || "👥" : bot?.icon}
-            accent={group ? null : bot?.accent}
-          />
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate font-semibold">{title}</span>
-            <span className="truncate text-xs text-muted-foreground">
-              {group ? members.map((item) => item.name).join(" · ") : bot?.job}
-            </span>
-          </div>
-          <div className="flex shrink-0 items-center gap-1">
-            {working && savingResult ? (
-              <span className="text-xs text-muted-foreground">{t("Saving result…")}</span>
-            ) : working && waitingForUser ? (
-              <span className="text-xs text-amber-600 dark:text-amber-400">
-                {t("Waiting for your help…")}
+      <div className="-m-3 flex min-h-0 min-w-0 flex-1 md:-m-5">
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <header className="flex h-[54px] shrink-0 items-center gap-2.5 border-b px-3 md:px-4">
+            <TeammateAvatar
+              name={title}
+              icon={group ? thread.icon || "👥" : bot?.icon}
+              accent={group ? null : bot?.accent}
+            />
+            <div className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate font-semibold">{title}</span>
+              <span className="truncate text-xs text-muted-foreground">
+                {group ? members.map((item) => item.name).join(" · ") : bot?.job}
               </span>
-            ) : working ? (
-              <Button
-                type="button"
-                variant="destructive"
-                size="xs"
-                onClick={onStop}
-                className="gap-1"
-              >
-                <SquareIcon className="size-3" />
-                {t("Stop")}
-              </Button>
-            ) : (
-              <>
+            </div>
+            <div className="flex shrink-0 items-center gap-1">
+              {working && savingResult ? (
+                <span className="text-xs text-muted-foreground">{t("Saving result…")}</span>
+              ) : working && waitingForUser ? (
+                <span className="text-xs text-amber-600 dark:text-amber-400">
+                  {t("Waiting for your help…")}
+                </span>
+              ) : working ? (
+                <Button
+                  type="button"
+                  variant="destructive"
+                  size="xs"
+                  onClick={onStop}
+                  className="gap-1"
+                >
+                  <SquareIcon className="size-3" />
+                  {t("Stop")}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="xs"
+                    disabled={
+                      reset.isPending || messages.length === 0 || (last && isContextReset(last))
+                    }
+                    title={t("Earlier messages stay here but are no longer sent to the model.")}
+                    onClick={() => reset.mutate(false)}
+                    className="hidden sm:inline-flex"
+                  >
+                    <RotateCcwIcon className="size-3" />
+                    {t("Reset conversation")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-xs"
+                    disabled={reset.isPending || messages.length === 0}
+                    title={t("Clear conversation")}
+                    aria-label={t("Clear conversation")}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          t("Delete this conversation's history? The teammate and its files stay."),
+                        )
+                      )
+                        reset.mutate(true);
+                    }}
+                  >
+                    <Trash2Icon />
+                  </Button>
+                </>
+              )}
+              {group && !working ? (
                 <Button
                   type="button"
                   variant="ghost"
                   size="xs"
-                  disabled={
-                    reset.isPending || messages.length === 0 || (last && isContextReset(last))
-                  }
-                  title={t("Earlier messages stay here but are no longer sent to the model.")}
-                  onClick={() => reset.mutate(false)}
-                  className="hidden sm:inline-flex"
-                >
-                  <RotateCcwIcon className="size-3" />
-                  {t("Reset conversation")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-xs"
-                  disabled={reset.isPending || messages.length === 0}
-                  title={t("Clear conversation")}
-                  aria-label={t("Clear conversation")}
+                  disabled={remove.isPending}
                   onClick={() => {
-                    if (
-                      window.confirm(
-                        t("Delete this conversation's history? The teammate and its files stay."),
-                      )
-                    )
-                      reset.mutate(true);
+                    if (window.confirm(t("Delete this group? Its teammates stay.")))
+                      remove.mutate();
                   }}
                 >
-                  <Trash2Icon />
+                  {t("Delete group")}
                 </Button>
-              </>
-            )}
-            {group && !working ? (
+              ) : null}
               <Button
                 type="button"
                 variant="ghost"
                 size="xs"
-                disabled={remove.isPending}
-                onClick={() => {
-                  if (window.confirm(t("Delete this group? Its teammates stay."))) remove.mutate();
-                }}
+                className="xl:hidden"
+                onClick={() => setPanelOpen(true)}
               >
-                {t("Delete group")}
+                <MonitorIcon className="size-3" />
+                <span className="hidden sm:inline">{t("Computer")}</span>
               </Button>
-            ) : null}
-            <Button type="button" variant="ghost" size="xs" onClick={() => setPanelOpen(true)}>
-              <MonitorIcon className="size-3" />
-              <span className="hidden sm:inline">{t("Computer")}</span>
-            </Button>
+            </div>
+          </header>
+          {subheader}
+          <Conversation className="min-h-0 flex-1">
+            <ConversationContent className="mx-auto min-h-full w-full max-w-3xl gap-5 px-4 py-6 lg:px-5">
+              {children}
+            </ConversationContent>
+            <ConversationScrollButton />
+          </Conversation>
+          <div className="relative mx-auto w-full max-w-3xl shrink-0 px-3 pt-2 pb-4 md:px-4">
+            {footer}
           </div>
-        </header>
-        {subheader}
-        <Conversation className="min-h-0 flex-1">
-          <ConversationContent className="mx-auto min-h-full w-full max-w-3xl gap-5 px-4 py-6 lg:px-5">
-            {children}
-          </ConversationContent>
-          <ConversationScrollButton />
-        </Conversation>
-        <div className="relative mx-auto w-full max-w-3xl shrink-0 px-3 pt-2 pb-4 md:px-4">
-          {footer}
-        </div>
-      </section>
+        </section>
+        <RunComputerPanel {...computerPanel} className="hidden xl:flex" />
+      </div>
       <Sheet open={panelOpen} onOpenChange={setPanelOpen}>
-        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-lg">
-          <SheetHeader>
-            <SheetTitle>{t("Computer")}</SheetTitle>
-          </SheetHeader>
-          <div className="px-4 pb-4">
-            <RunWorkspacePanel threadId={thread.id} />
-          </div>
+        <SheetContent
+          side="right"
+          showCloseButton={false}
+          className="w-auto max-w-none border-l-0 data-[side=right]:w-auto data-[side=right]:sm:max-w-none xl:hidden"
+        >
+          <SheetTitle className="sr-only">{t("Computer")}</SheetTitle>
+          <RunComputerPanel {...computerPanel} />
         </SheetContent>
       </Sheet>
     </>
@@ -390,7 +420,8 @@ function DmThread({
     if (sentPending.current) return;
     sentPending.current = true;
     const pending = takePendingTask(thread.id);
-    if (pending) void sendMessage({ text: pending });
+    if (pending)
+      void sendMessage({ text: pending.text, metadata: attachmentMetadata(pending.attachments) });
   }, [thread.id, sendMessage]);
 
   const author: MessageAuthor | null = bot
@@ -413,9 +444,9 @@ function DmThread({
         <RunComposer
           value={input}
           onValueChange={setInput}
-          onSubmit={(text) => {
+          onSubmit={({ text, attachments }) => {
             setInput("");
-            void sendMessage({ text });
+            void sendMessage({ text, metadata: attachmentMetadata(attachments) });
           }}
           onStop={stopAll}
           busy={streaming}
@@ -440,6 +471,7 @@ function DmThread({
         />
       ))}
       {working && awaitingReply(messages) ? <TypingIndicator /> : null}
+      <RunArtifacts threadId={thread.id} onRevision={setInput} />
       {error ? <ChatErrorAlert error={error} onDismiss={clearError} /> : null}
     </ThreadLayout>
   );
@@ -597,8 +629,13 @@ function GroupThread({
     }
   };
 
-  const send = (text: string) => {
-    const message: UIMessage = { id: generateId(), role: "user", parts: [{ type: "text", text }] };
+  const send = ({ text, attachments }: RunComposerMessage) => {
+    const message: UIMessage = {
+      id: generateId(),
+      role: "user",
+      parts: [{ type: "text", text }],
+      metadata: attachmentMetadata(attachments),
+    };
     upsert(message);
     void post(message);
   };
@@ -649,9 +686,9 @@ function GroupThread({
         <RunComposer
           value={input}
           onValueChange={setInput}
-          onSubmit={(text) => {
+          onSubmit={(message) => {
             setInput("");
-            send(text);
+            send(message);
           }}
           onStop={stopAll}
           busy={busy}
@@ -682,6 +719,7 @@ function GroupThread({
         );
       })}
       {busy && !working && awaitingReply(messages) ? <TypingIndicator /> : null}
+      <RunArtifacts threadId={thread.id} onRevision={setInput} />
       {error ? <ChatErrorAlert error={error} onDismiss={() => setError(undefined)} /> : null}
     </ThreadLayout>
   );

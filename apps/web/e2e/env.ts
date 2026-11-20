@@ -47,7 +47,6 @@ const BLANK_KEYS = [
   "ADMIN_EMAILS",
   "ADMIN_EMAIL_DOMAINS",
   "PASSWORD_2FA_REQUIRED_FROM",
-  "OPENROUTER_API_KEY",
   "EXA_API_KEY",
   "TURNSTILE_SECRET_KEY",
   "CLOUDFLARE_ACCOUNT_ID",
@@ -86,7 +85,7 @@ export function appEnv(): Record<string, string> {
     BETTER_AUTH_SECRET: "e2e-secret-0123456789abcdef0123456789abcdef",
     BETTER_AUTH_URL: BASE_URL,
     NEXT_PUBLIC_BETTER_AUTH_URL: BASE_URL,
-    // Answers come from e2e/mock-deni-api.ts; OpenRouter models stay unavailable.
+    // Every model call goes to the Deni AI API: answers come from e2e/mock-deni-api.ts.
     DENI_API_KEY: "e2e-mock-key",
     DENI_API_BASE_URL: `http://127.0.0.1:${MOCK_DENI_API_PORT}/v1`,
     CLIENT_IP_HEADER,

@@ -1,7 +1,7 @@
 import type { Bot, Store, Thread } from "../types";
 import { createId, nowIso } from "./ids";
 import { defaultTimezone } from "./paths";
-import { DENI_MODEL_ID } from "../agent/model";
+import { DEFAULT_RUN_MODE, DENI_MODEL_ID } from "../agent/model";
 import { characterIcon } from "../teammates/avatar";
 import { DEFAULT_TEAMMATE_CHARACTERS } from "../teammates/copy";
 
@@ -86,7 +86,7 @@ export function emptyStore(): Store {
       apiKey: "",
       timezone: defaultTimezone(),
       model: DENI_MODEL_ID,
-      runMode: "default",
+      runMode: DEFAULT_RUN_MODE,
     },
     bots,
     threads: seedThreads(bots),

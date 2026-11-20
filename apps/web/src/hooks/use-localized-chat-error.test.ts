@@ -24,8 +24,8 @@ test("plan and guest restrictions show their own message", () => {
       httpError("Pro mode is not available on your plan. Upgrade to Plus or higher to use it."),
     ),
   ).toBe("Pro mode is not available on your plan. Upgrade to Plus or higher to use it.");
-  expect(localize(httpError("Only GPT-6 Luna is available for guest sessions."))).toBe(
-    "Only GPT-6 Luna is available for guest sessions. Log in to use more models.",
+  expect(localize(httpError("Only Claude Haiku 5.5 is available for guest sessions."))).toBe(
+    "Only Claude Haiku 5.5 is available for guest sessions. Log in to use more models.",
   );
   expect(localize(httpError("Pro mode is not available for guest sessions."))).toBe(
     "Pro mode is not available for guest sessions. Log in to use it.",

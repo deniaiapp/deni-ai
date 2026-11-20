@@ -6,7 +6,7 @@ import { nowIso } from "../data/ids";
 import { loadMessages, mutateStore, readStore, saveMessages } from "../data/store";
 import { createNotification } from "./notifications";
 import { setComputer } from "../computer";
-import { assertCanUseTokens, isUsageLimitError, recordModelSteps } from "../billing/usage";
+import { assertCanUseTokens, beginModelUsage, isUsageLimitError } from "../billing/usage";
 import { messagesForModel } from "../chat/messages";
 import { compactThread } from "../agent/compaction";
 import { parseRunMode } from "../agent/model";
@@ -65,13 +65,15 @@ export async function runClaimedJob(job: AgentJob): Promise<AgentJob | null> {
     return getJob(userId, job.id);
   }
   if (!(await hasLanguageModel(userId))) {
-    await finishJob(userId, job.id, "failed", { error: tr("OPENROUTER_API_KEY is missing") });
+    await finishJob(userId, job.id, "failed", {
+      error: tr("The model provider is not configured"),
+    });
     await createNotification({
       userId,
       jobId: job.id,
       kind: "failed",
       title: tr("Task needs setup"),
-      body: tr("Add an OpenRouter API key before retrying this task."),
+      body: tr("Run is not connected to a language model on this server yet."),
     }).catch(() => undefined);
     return getJob(userId, job.id);
   }
@@ -106,6 +108,8 @@ export async function runClaimedJob(job: AgentJob): Promise<AgentJob | null> {
       typeof job.payload.runMode === "string" ? parseRunMode(job.payload.runMode) : undefined,
     );
     const modelHistory = await compactThread({ userId, threadId: job.threadId, bot, messages });
+    // The job's model usage is a reservation on the shared pool, as a chat request's is.
+    const usage = await beginModelUsage(userId, modelId);
     const result = await generateText({
       model,
       instructions: buildInstructions(
@@ -133,10 +137,11 @@ export async function runClaimedJob(job: AgentJob): Promise<AgentJob | null> {
         tr("Background tasks cannot wait for approval"),
         userId,
       ),
-      stopWhen: isLoopFinished(),
+      stopWhen: [isLoopFinished(), () => usage.isSpent()],
       providerOptions,
       abortSignal: abort.signal,
       onStepFinish: async (step) => {
+        usage.add(step);
         await heartbeatJob(userId, job.id).catch(() => undefined);
         await checkpointJob(userId, job.id, {
           step: step.stepNumber,
@@ -149,8 +154,7 @@ export async function runClaimedJob(job: AgentJob): Promise<AgentJob | null> {
           throw new Error(tr("Job cancelled or conversation deleted"));
         }
       },
-    });
-    await recordModelSteps(userId, result.steps, modelId);
+    }).finally(() => usage.settle());
     const current = await getJob(userId, job.id);
     if (current?.status === "cancelled") return current;
     const assistant: UIMessage = {

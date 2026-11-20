@@ -31,8 +31,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   if (!isAllowedAdOrigin(request)) return new Response(null, { status: 403 });
   const session = await auth.api.getSession({ headers: request.headers });
   if (!session?.session || session.user.isAnonymous) return new Response(null, { status: 401 });
-  if (!env.OPENROUTER_API_KEY)
-    return Response.json({ error: "Review unavailable" }, { status: 503 });
+  if (!env.DENI_API_KEY) return Response.json({ error: "Review unavailable" }, { status: 503 });
   const { id } = params;
   if (!z.uuid().safeParse(id).success) return new Response(null, { status: 404 });
   let body: unknown = null;

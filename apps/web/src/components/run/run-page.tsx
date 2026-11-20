@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Spinner } from "@deniai/ui/components/spinner";
 import { DocumentTitle } from "@/components/document-title";
+import type { RunComposerMessage } from "./run-composer";
 
 /** The frame of a Run mode page: title, optional description and actions, content. */
 export function RunPage({
@@ -44,22 +45,25 @@ export function RunLoading() {
 /** Hand a first message from the home composer to the thread view (not via the URL). */
 const PENDING_KEY = "deni-run:pending-task";
 
-export function setPendingTask(threadId: string, text: string) {
+export function setPendingTask(threadId: string, message: RunComposerMessage) {
   try {
-    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ threadId, text }));
+    sessionStorage.setItem(PENDING_KEY, JSON.stringify({ threadId, ...message }));
   } catch {
     // Storage unavailable: the user types the task again.
   }
 }
 
-export function takePendingTask(threadId: string): string | null {
+export function takePendingTask(threadId: string): RunComposerMessage | null {
   try {
     const raw = sessionStorage.getItem(PENDING_KEY);
     if (!raw) return null;
-    const value = JSON.parse(raw) as { threadId?: string; text?: string };
+    const value = JSON.parse(raw) as { threadId?: string } & Partial<RunComposerMessage>;
     if (value.threadId !== threadId || !value.text) return null;
     sessionStorage.removeItem(PENDING_KEY);
-    return value.text;
+    return {
+      text: value.text,
+      attachments: Array.isArray(value.attachments) ? value.attachments : [],
+    };
   } catch {
     return null;
   }

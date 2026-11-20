@@ -7,7 +7,13 @@ import {
 } from "@deniai/run";
 import { runUsageBinding } from "@deniai/run/usage-binding";
 import { db } from "@/db/drizzle";
-import { getRunBudget, recordRunCost } from "@/lib/usage";
+import {
+  consumeUsage,
+  getRunBudget,
+  recordObservedUsage,
+  recordRunCost,
+  settleUsage,
+} from "@/lib/usage";
 
 /**
  * Binds `@deniai/run` to this app: its database, the shared usage engine and the
@@ -48,7 +54,13 @@ export function ensureRunConfigured(): RunSetup {
   }
   configureRun({
     db,
-    usage: runUsageBinding({ getRunBudget, recordRunCost }),
+    usage: runUsageBinding({
+      getRunBudget,
+      recordRunCost,
+      consumeUsage,
+      recordObservedUsage,
+      settleUsage,
+    }),
     config,
     logger: console,
     onNotification: globalForRun.deniRunWebNotify,

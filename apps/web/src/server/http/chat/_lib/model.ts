@@ -1,11 +1,4 @@
-import {
-  createOpenAI,
-  type OpenAIChatLanguageModelOptions,
-  type OpenAIResponsesProviderOptions,
-} from "@ai-sdk/openai";
-import type { XaiResponsesProviderOptions } from "@ai-sdk/xai";
-import type { LanguageModel, ModelMessage, SystemModelMessage } from "ai";
-import { streamText } from "ai";
+import type { LanguageModel } from "ai";
 import { env } from "@/env";
 import {
   isGuestModel,
@@ -15,7 +8,13 @@ import {
   models,
   resolveReasoningEffort,
 } from "@deniai/ai/models";
-import { createDeniOpenRouter } from "@deniai/ai/openrouter";
+import {
+  createCatalogLanguageModel,
+  getCatalogModelProviderId,
+  isCatalogProviderUnavailableError,
+  type CatalogLanguageModel,
+  type CatalogProviderOptions,
+} from "@deniai/ai/provider";
 import { isModelProviderAvailable } from "@/lib/platform-capabilities";
 import { platformCapabilities } from "@/lib/platform-capabilities.server";
 import {
@@ -25,9 +24,6 @@ import {
   UsageLimitError,
 } from "@/lib/usage";
 import { capGuestReasoningEffort } from "./usage-estimate";
-
-const openaiEffortOptions = ["none", "minimal", "low", "medium", "high", "xhigh", "max"] as const;
-const googleThinkingLevels = ["minimal", "low", "medium", "high"] as const;
 
 export class ChatRouteError extends Error {
   status: number;
@@ -40,94 +36,24 @@ export class ChatRouteError extends Error {
   }
 }
 
-// Default 5-minute TTL: most chats are short, so 1h writes (2x input) cost more than they save.
-const OPENROUTER_CACHE_CONTROL = {
-  type: "ephemeral",
-} as const;
-
-const MAX_CACHED_MESSAGES = 2;
-
 type ResolveChatModelContextParams = {
   userId: string;
   isAnonymous: boolean;
   baseModel: string;
   reasoningEffort: "none" | "minimal" | "low" | "medium" | "high" | "xhigh" | "max";
-  /** OpenAI Pro model mode, routed through OpenRouter's Pro model alias. */
+  /** OpenAI Pro model mode. No catalog model offers it on the Deni AI API yet. */
   proMode?: boolean;
-  /** OpenAI Fast mode (`service_tier: "fast"`). */
+  /** OpenAI Fast mode. No catalog model offers it on the Deni AI API yet. */
   fastMode?: boolean;
 };
 
-type ChatProviderOptions = NonNullable<Parameters<typeof streamText>[0]["providerOptions"]>;
+type ChatProviderOptions = CatalogProviderOptions;
 
 type ResolvedChatModelContext = {
   model: LanguageModel;
-  usesOpenRouter: boolean;
   usageCategory: UsageCategory;
   providerOptions: ChatProviderOptions;
 };
-
-function mergeProviderOptions(
-  existing: ChatProviderOptions | undefined,
-  additions: ChatProviderOptions,
-): ChatProviderOptions {
-  return {
-    ...existing,
-    ...additions,
-  };
-}
-
-export function addOpenRouterCacheControl(
-  messages: ModelMessage[],
-  system: string,
-): { messages: ModelMessage[]; system: SystemModelMessage } {
-  const cacheProviderOptions = {
-    openrouter: {
-      cacheControl: OPENROUTER_CACHE_CONTROL,
-    },
-  } satisfies ChatProviderOptions;
-
-  // Anthropic allows at most 4 cache breakpoints per request: one on the system
-  // prompt plus the trailing messages, with the last text part of each.
-  const firstCachedIndex = messages.length - MAX_CACHED_MESSAGES;
-
-  return {
-    system: {
-      role: "system",
-      content: system,
-      providerOptions: cacheProviderOptions,
-    },
-    messages: messages.map((message, index) => {
-      if (index < firstCachedIndex) {
-        return message;
-      }
-
-      if (typeof message.content === "string") {
-        return {
-          ...message,
-          providerOptions: mergeProviderOptions(message.providerOptions, cacheProviderOptions),
-        } as ModelMessage;
-      }
-
-      const lastTextIndex = message.content.findLastIndex((part) => part.type === "text");
-      if (lastTextIndex === -1) {
-        return message;
-      }
-
-      return {
-        ...message,
-        content: message.content.map((part, partIndex) =>
-          partIndex === lastTextIndex && part.type === "text"
-            ? {
-                ...part,
-                providerOptions: mergeProviderOptions(part.providerOptions, cacheProviderOptions),
-              }
-            : part,
-        ),
-      } as ModelMessage;
-    }),
-  };
-}
 
 export async function resolveChatModelContext({
   userId,
@@ -145,11 +71,11 @@ export async function resolveChatModelContext({
 
   if (isAnonymous && !isGuestModel(selectedModel.value)) {
     throw new ChatRouteError(403, {
-      error: "Only GPT-6 Luna is available for guest sessions.",
+      error: "Only Claude Haiku 5.5 is available for guest sessions.",
     });
   }
 
-  const providerId = selectedModel.provider ?? selectedModel.author;
+  const providerId = getCatalogModelProviderId(selectedModel);
   const deniApiKey = env.DENI_API_KEY?.trim();
   const deniApiBaseUrl = env.DENI_API_BASE_URL;
 
@@ -163,16 +89,10 @@ export async function resolveChatModelContext({
     });
   }
 
-  // Everything except the Deni AI API provider is routed through OpenRouter.
-  const usesOpenRouter = providerId !== "deni";
-  // OpenRouter exposes Pro models through `*-pro` slugs and supports Fast via
-  // top-level service_tier.
-  const useProMode = Boolean(
-    proMode && selectedModel.supportsProMode && providerId === "openai" && usesOpenRouter,
-  );
-  const useFastMode = Boolean(
-    fastMode && selectedModel.supportsFastMode && providerId === "openai" && usesOpenRouter,
-  );
+  // Pro and Fast need a model that offers them; the catalog marks none on the Deni AI API.
+  const useProMode = Boolean(proMode && selectedModel.supportsProMode);
+  const useFastMode = Boolean(fastMode && selectedModel.supportsFastMode);
+  void useFastMode;
   // Usage is not split by model class: every request spends the one shared pool (the
   // model's usage tier and Pro mode scale the amount), recorded on the "basic" row.
   const usageCategory: UsageCategory = SHARED_USAGE_CATEGORY;
@@ -233,10 +153,6 @@ export async function resolveChatModelContext({
     throw new ChatRouteError(500, { error: "Unable to check usage" });
   }
 
-  // OpenRouter exposes GPT-6 Pro as `*-pro`.
-  const resolvedModelId =
-    useProMode && usesOpenRouter ? `${selectedModel.value}-pro` : selectedModel.value;
-
   // Resolve against the model first, then cap: an unsupported request (such as
   // "minimal") falls back to the model's preferred effort, which may be above
   // the guest limit.
@@ -248,149 +164,25 @@ export async function resolveChatModelContext({
     isAnonymous && supportedReasoningEffort
       ? capGuestReasoningEffort(selectedModel.efforts, supportedReasoningEffort)
       : supportedReasoningEffort;
-  const openaiReasoningEffort =
-    (providerId === "openai" || providerId === "deni") &&
-    resolvedReasoningEffort &&
-    openaiEffortOptions.includes(resolvedReasoningEffort as (typeof openaiEffortOptions)[number])
-      ? (resolvedReasoningEffort as (typeof openaiEffortOptions)[number])
-      : undefined;
-  const googleThinkingLevel =
-    providerId === "google" &&
-    resolvedReasoningEffort &&
-    googleThinkingLevels.includes(resolvedReasoningEffort as (typeof googleThinkingLevels)[number])
-      ? (resolvedReasoningEffort as (typeof googleThinkingLevels)[number])
-      : undefined;
-  const xaiReasoningEffort =
-    providerId === "xai" &&
-    (resolvedReasoningEffort === "low" || resolvedReasoningEffort === "high")
-      ? resolvedReasoningEffort
-      : undefined;
 
-  // OpenRouter uses `x-ai/...` for xAI models (not `xai/...`).
-  const openRouterAuthor = selectedModel.author === "xai" ? "x-ai" : selectedModel.author;
-  const selectedOpenRouterModelId = selectedModel
-    ? resolvedModelId.includes("/")
-      ? resolvedModelId
-      : `${openRouterAuthor}/${resolvedModelId}`
-    : null;
-  const getOpenRouterModel = () => {
-    if (!selectedOpenRouterModelId) {
-      throw new Error("OpenRouter model is not available for the selected model.");
-    }
-    const apiKey = env.OPENROUTER_API_KEY?.trim();
-    if (!apiKey) {
-      throw new ChatRouteError(503, {
-        error: "OpenRouter is not configured in the current environment.",
-      });
-    }
-
-    const openrouter = createDeniOpenRouter({
-      apiKey,
+  // How a catalog model is called on the Deni AI API (id, reasoning, caching) is shared with Run.
+  let resolved: CatalogLanguageModel;
+  try {
+    resolved = createCatalogLanguageModel({
+      model: selectedModel,
+      reasoningEffort: resolvedReasoningEffort,
+      keys: { deniApiKey, deniApiBaseUrl },
     });
-
-    return openrouter.chat(selectedOpenRouterModelId, {
-      provider: {
-        allow_fallbacks: false,
-        only: ["openai", "anthropic", "google-ai-studio", "xai", "groq"],
-      },
-    });
-  };
-  const getDeniModel = () => {
-    if (!deniApiKey) {
-      throw new ChatRouteError(503, {
-        error: "Deni AI API is not configured in the current environment.",
-      });
+  } catch (error) {
+    if (isCatalogProviderUnavailableError(error)) {
+      throw new ChatRouteError(503, { error: error.message });
     }
-
-    const provider = createOpenAI({
-      apiKey: deniApiKey,
-      baseURL: deniApiBaseUrl,
-    });
-    // Deni AI API ids are author-prefixed (e.g. `openai/gpt-6-sol`).
-    return provider.chat(
-      resolvedModelId.includes("/")
-        ? resolvedModelId
-        : `${selectedModel.author}/${resolvedModelId}`,
-    );
-  };
-
-  let model: LanguageModel;
-  switch (providerId) {
-    case "openai":
-    case "anthropic":
-    case "google":
-    case "xai": {
-      model = getOpenRouterModel();
-      break;
-    }
-    case "deni": {
-      model = getDeniModel();
-      break;
-    }
-    default:
-      throw new ChatRouteError(400, { error: "Unknown provider" });
+    throw error;
   }
-
-  // The Deni AI API is called through Chat Completions, which has no reasoning
-  // summary option (the AI SDK warns on every request if it is set).
-  const openaiProviderOptions:
-    | OpenAIResponsesProviderOptions
-    | OpenAIChatLanguageModelOptions
-    | undefined = openaiReasoningEffort
-    ? usesOpenRouter
-      ? {
-          reasoningEffort: openaiReasoningEffort,
-          reasoningSummary: "detailed",
-        }
-      : { reasoningEffort: openaiReasoningEffort }
-    : undefined;
-
-  const directProviderOptions = {
-    ...(openaiProviderOptions
-      ? {
-          openai: openaiProviderOptions,
-        }
-      : {}),
-    ...(googleThinkingLevel
-      ? {
-          google: {
-            thinkingConfig: {
-              thinkingLevel: googleThinkingLevel,
-              includeThoughts: true,
-            },
-          },
-        }
-      : {}),
-    ...(xaiReasoningEffort
-      ? {
-          xai: {
-            reasoningEffort: xaiReasoningEffort,
-          } satisfies XaiResponsesProviderOptions,
-        }
-      : {}),
-  };
-
-  // When routing through OpenRouter, wrap provider-specific options so they are
-  // forwarded in OpenRouter-compatible format.
-  const openRouterBody = usesOpenRouter
-    ? {
-        ...(Object.keys(directProviderOptions).length > 0
-          ? { providerOptions: directProviderOptions }
-          : {}),
-        ...(useFastMode ? { service_tier: "fast" as const } : {}),
-      }
-    : undefined;
-  const providerOptions: ChatProviderOptions = (
-    !usesOpenRouter
-      ? directProviderOptions
-      : openRouterBody && Object.keys(openRouterBody).length > 0
-        ? { openrouter: openRouterBody }
-        : {}
-  ) as ChatProviderOptions;
+  const { model, providerOptions } = resolved;
 
   return {
     model,
-    usesOpenRouter,
     usageCategory,
     providerOptions,
   };

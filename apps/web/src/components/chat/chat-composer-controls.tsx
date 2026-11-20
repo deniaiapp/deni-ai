@@ -55,7 +55,7 @@ function ToolChip({ icon: Icon, label, onRemove }: ToolChipProps) {
   );
 }
 
-function ChatComposerReasoningSelect({
+export function ChatComposerReasoningSelect({
   reasoningEffort,
   onReasoningEffortChange,
   supportedEfforts,

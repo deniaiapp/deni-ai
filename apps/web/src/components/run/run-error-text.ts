@@ -58,6 +58,20 @@ export function useRunErrorText() {
         return t("Discord is not set up on this server.");
       case "browser_unconfigured":
         return t("The browser is not set up on this server.");
+      case "computer_busy":
+        return t("Another task currently owns the computer");
+      case "invalid_input":
+        return t("Invalid input");
+      case "zip_empty":
+        return t("No files to download");
+      case "zip_too_many":
+        return t("Too many files to download at once.");
+      case "zip_too_large":
+        return t("These files are too large to download together.");
+      case "file_required":
+        return t("Choose a file to attach.");
+      case "file_too_large":
+        return t("This file is too large to attach (maximum 10 MB).");
       case "mcp_error":
         return message ?? t("The connector could not be reached.");
       case "name_and_url_required":

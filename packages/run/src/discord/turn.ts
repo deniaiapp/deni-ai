@@ -7,7 +7,6 @@ import {
   type UIMessage,
 } from "ai";
 import { buildInstructions, createDeniTools, deniToolApproval } from "../agent/index";
-import { getApiKey } from "../data/config";
 import { releaseBrowserTakeover } from "../computer/browser-workspaces";
 import { setComputer } from "../computer/index";
 import { hasOpenApproval, hasPendingWorkflowWait } from "../chat/run-state";
@@ -25,7 +24,7 @@ import {
   listJobs,
   transitionJob,
 } from "../jobs/index";
-import { getDeniModel } from "../agent/llm";
+import { getDeniModel, hasLanguageModel } from "../agent/llm";
 import { groupContext, groupRecipients } from "../chat/group-chat";
 import { discordTargetGroup, groupMembers } from "../chat/groups";
 import { messagesForModel, mergeThreadMessages } from "../chat/messages";
@@ -38,7 +37,7 @@ import { reportError } from "./report";
 import { loadMessages, readStore, saveMessages } from "../data/store";
 import { resetThreadContext } from "../agent/thread-context";
 import type { AgentJob, Bot, Store, Thread } from "../types";
-import { assertCanUseTokens, recordModelUsage } from "../billing/usage";
+import { assertCanUseTokens, beginModelUsage, type ModelUsage } from "../billing/usage";
 import { BUBBLE_BREAK_METADATA, withoutBubbleBreaks } from "../chat/message-bubbles";
 
 /** What the Discord layer should show after a turn. It never needs to know about jobs or UI messages. */
@@ -248,8 +247,11 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
     }
   };
 
+  // The turn's model usage is a reservation on the shared pool, as a chat request's is.
+  let usage: ModelUsage | undefined;
   try {
     const { model, providerOptions, modelId } = await getDeniModel(userId, runMode);
+    const turnUsage = (usage = await beginModelUsage(userId, modelId));
     const group = thread.kind === "group";
     const modelHistory = await compactThread({ userId, threadId: thread.id, bot, messages });
     // A new turn starts from a clean slate: an error left by an earlier run would otherwise stay
@@ -279,9 +281,10 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
       ),
       tools,
       toolApproval: deniToolApproval({ userId, jobId: job.id, locale }),
-      stopWhen: isLoopFinished(),
+      stopWhen: [isLoopFinished(), () => turnUsage.isSpent()],
       providerOptions,
       onStepEnd: async (step) => {
+        turnUsage.add(step);
         const stepRecord = step as { stepNumber?: number; text?: string };
         const checkpoint = {
           step: stepRecord.stepNumber,
@@ -293,7 +296,6 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
         void Promise.allSettled([
           heartbeatJob(userId, job.id),
           checkpointJob(userId, job.id, checkpoint),
-          recordModelUsage(userId, step, modelId),
         ]).then((results) => {
           for (const item of results)
             if (item.status === "rejected") console.error("persist discord step", item.reason);
@@ -320,6 +322,7 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
       const { done } = await reader.read();
       if (done) break;
     }
+    await turnUsage.settle();
     if (failure) throw failure;
 
     if (response) {
@@ -376,6 +379,7 @@ async function executeTurn(input: TurnInput): Promise<TurnOutcome> {
     }
     return { kind: "reply", botName: bot.name, text };
   } catch (error) {
+    await usage?.settle();
     await fail(error);
     return { kind: "notice", text: discordErrorText(locale, error) || tr("The model call failed") };
   }
@@ -397,12 +401,12 @@ async function preflight(userId: string, locale: string): Promise<Preflight> {
     throw error;
   }
   const store = await readStore(userId);
-  if (!(await getApiKey(userId)))
+  if (!(await hasLanguageModel(userId)))
     return {
       ok: false,
       outcome: {
         kind: "notice",
-        text: tr("Add an OpenRouter API key in the app before using Discord."),
+        text: tr("Run is not connected to a language model on this server yet."),
       },
     };
   try {

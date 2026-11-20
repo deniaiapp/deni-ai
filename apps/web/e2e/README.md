@@ -35,11 +35,10 @@ CI runs the same command in the `e2e` job of `.github/workflows/ci.yml` against 
   blanks the keys of external services, so a local `.env` or `.env.local`
   (possibly with production values) cannot leak into the test build.
 - **AI answers** come from `e2e/mock-deni-api.ts`, an OpenAI-compatible stand-in
-  for the Deni AI API (`DENI_API_BASE_URL`). It answers `Mock reply: <last user
-  text>`, streams for about ten seconds when the message contains `[slow]`, and
-  returns an empty memory result for structured-output calls. Only models routed
-  through the Deni AI API (the default GPT-6 Luna) work; OpenRouter models are
-  unavailable.
+  for the Deni AI API (`DENI_API_BASE_URL`), the upstream of every model, so every chat
+  model answers from it. It answers `Mock reply: <last user text>`, streams for
+  about ten seconds when the message contains `[slow]`, returns an empty memory result for
+  structured-output calls and `New Chat` for a chat title.
 - **Email** is not configured, so sign-up needs no verification link, and Turnstile
   is off.
 - **Client addresses**: the server trusts `x-e2e-client-ip` (`CLIENT_IP_HEADER`) and

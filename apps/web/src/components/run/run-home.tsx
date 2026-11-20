@@ -21,7 +21,7 @@ import { DocumentTitle } from "@/components/document-title";
 import { Link, useRouter } from "@/lib/navigation";
 import { cn } from "@/lib/utils";
 import { useRunState, useRunStatus, type Bot } from "./run-api";
-import { RunComposer, useRunMode } from "./run-composer";
+import { RunComposer, useRunMode, type RunComposerMessage } from "./run-composer";
 import { RunLoading, setPendingTask } from "./run-page";
 import { TeammateAvatar } from "./teammate-avatar";
 
@@ -177,10 +177,10 @@ export function RunHome() {
     .filter((thread) => thread.kind === "group" && !thread.hidden)
     .toSorted((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
-  const start = (text: string) => {
+  const start = (message: RunComposerMessage) => {
     const dm = selected ? dmFor(selected.id) : undefined;
     if (!dm) return;
-    setPendingTask(dm.id, text);
+    setPendingTask(dm.id, message);
     setTask("");
     push(`/run/threads/${dm.id}`);
   };
@@ -199,7 +199,7 @@ export function RunHome() {
               <AlertTitle>{t("No AI model is configured")}</AlertTitle>
               <AlertDescription>
                 {t(
-                  "Teammates cannot answer until an OpenRouter key is configured for Run on this server.",
+                  "Teammates cannot answer until a language model is configured for Run on this server.",
                 )}
               </AlertDescription>
             </Alert>

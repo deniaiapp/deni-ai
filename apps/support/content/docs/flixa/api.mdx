@@ -1,0 +1,220 @@
+---
+title: Flixa API for developers
+description: Call Deni AI Flixa from your own apps with the OpenAI or Anthropic API format.
+---
+
+The Flixa API lets your own apps, scripts, and services call the models in Deni AI Flixa.
+It accepts the OpenAI API (Chat Completions and Responses) and the Anthropic Messages API, so you can use the official OpenAI and Anthropic SDKs, the AI SDK, and other compatible libraries.
+
+<Callout title="Requires Plus or higher">
+  Calling the Flixa API from your own app needs a Deni AI Plus, Pro, or Pro for Teams plan.
+  The Free and Go plans can use Flixa only from Claude Code, Codex, Zed, opencode, and Flixa (see [Use Flixa with external coding tools](/en/flixa/external-tools)).
+</Callout>
+
+## Rules for apps
+
+- **Each user brings their own API key.** Your app calls the Flixa API with the API key of the person using it, and their usage counts against their own Deni AI plan.
+- **Don't share your key.** Don't embed your API key in an app, website, or extension you distribute, and don't let other people use your key through your app or service.
+- **Don't resell access.** You can't sell or rent out Flixa API access, or offer the Flixa API to others as your own API.
+- **Store keys safely.** Keep the key in the OS keychain, an environment variable, or a server-side secret store. Don't log it or send it anywhere except `flixa-api.deniai.app`.
+- **Don't pretend to be another client.** Sending headers that make your app look like Claude Code, Codex, or Flixa is against the [Terms of Service](https://deniai.app/legal/terms) and can get the account banned from Flixa.
+
+## Get an API key
+
+Create a key in [Settings › API Keys](https://deniai.app/settings/api-keys).
+Keys start with `deni_` and are shown only once, so copy the key right away.
+You can have up to 5 keys and revoke a key at any time.
+
+Guest accounts can't create API keys.
+
+## Authentication
+
+Send the key in one of these headers:
+
+```http
+Authorization: Bearer deni_...
+```
+
+```http
+x-api-key: deni_...
+```
+
+## Endpoints
+
+Base URL: `https://flixa-api.deniai.app/v1/agent`
+
+| Method | Path | Format |
+| --- | --- | --- |
+| `POST` | `/chat/completions` | OpenAI Chat Completions |
+| `POST` | `/responses` | OpenAI Responses |
+| `POST` | `/v1/messages` | Anthropic Messages |
+| `GET` | `/models` | Model list |
+
+Your plan and remaining usage are available at `GET https://flixa-api.deniai.app/v1/deni/usage` (see [Check usage](#check-usage)).
+
+All endpoints support streaming (`"stream": true`, Server-Sent Events).
+
+## Models
+
+Model IDs look like `provider/model`, for example `openai/gpt-6-sol` or `anthropic/claude-sonnet-5.5`.
+Get the current list from the model list API:
+
+```bash
+curl https://flixa-api.deniai.app/v1/agent/models \
+  -H "Authorization: Bearer $FLIXA_API_KEY"
+```
+
+Each model has a `tier`. `free` models work on every plan; `plus` and `pro` models need that plan or higher.
+`tokenUsageMultiplier` shows how much of your usage the model uses per token compared with a standard model.
+
+Models are added and removed over time. Read the list instead of hard-coding model IDs.
+
+## Examples
+
+### curl
+
+```bash
+curl https://flixa-api.deniai.app/v1/agent/chat/completions \
+  -H "Authorization: Bearer $FLIXA_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "openai/gpt-6-sol",
+    "messages": [{ "role": "user", "content": "Hello!" }]
+  }'
+```
+
+### OpenAI SDK (TypeScript)
+
+```ts
+import OpenAI from 'openai';
+
+const client = new OpenAI({
+  baseURL: 'https://flixa-api.deniai.app/v1/agent',
+  apiKey: process.env.FLIXA_API_KEY,
+});
+
+const response = await client.responses.create({
+  model: 'openai/gpt-6-sol',
+  input: 'Write a haiku about the sea.',
+});
+
+console.log(response.output_text);
+```
+
+### OpenAI SDK (Python)
+
+```python
+import os
+from openai import OpenAI
+
+client = OpenAI(
+    base_url="https://flixa-api.deniai.app/v1/agent",
+    api_key=os.environ["FLIXA_API_KEY"],
+)
+
+completion = client.chat.completions.create(
+    model="anthropic/claude-sonnet-5.5",
+    messages=[{"role": "user", "content": "Hello!"}],
+)
+
+print(completion.choices[0].message.content)
+```
+
+### Anthropic SDK (TypeScript)
+
+The Anthropic SDK adds `/v1/messages` to the base URL itself.
+
+```ts
+import Anthropic from '@anthropic-ai/sdk';
+
+const client = new Anthropic({
+  baseURL: 'https://flixa-api.deniai.app/v1/agent',
+  apiKey: process.env.FLIXA_API_KEY,
+});
+
+const message = await client.messages.create({
+  model: 'anthropic/claude-sonnet-5.5',
+  max_tokens: 1024,
+  messages: [{ role: 'user', content: 'Hello!' }],
+});
+
+console.log(message.content);
+```
+
+### AI SDK
+
+```ts
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { generateText } from 'ai';
+
+const flixa = createOpenAICompatible({
+  name: 'flixa',
+  baseURL: 'https://flixa-api.deniai.app/v1/agent',
+  apiKey: process.env.FLIXA_API_KEY,
+});
+
+const { text } = await generateText({
+  model: flixa('google/gemini-3.8-flash'),
+  prompt: 'Hello!',
+});
+```
+
+## Usage and limits
+
+### Usage
+
+Requests use the usage included in the key owner's Deni AI plan, the same usage as Deni AI Flixa in the editor.
+Before a request runs, the API reserves an estimate of its usage and settles the actual amount when the response finishes.
+If the remaining usage can't cover the estimate, the request fails with `429 USAGE_LIMIT_EXCEEDED`. Lowering `max_tokens` (or `max_output_tokens`) lowers the estimate.
+
+### Check usage
+
+```bash
+curl https://flixa-api.deniai.app/v1/deni/usage \
+  -H "Authorization: Bearer $FLIXA_API_KEY"
+```
+
+The response includes the plan (`tier`), and for each category (`basic` and `premium`) the `limit`, `used`, `remaining`, and when the period ends (`periodEnd`).
+This endpoint only accepts the `Authorization: Bearer` header.
+
+### Rate limits
+
+Model requests (`/chat/completions`, `/responses`, `/v1/messages`) are limited by usage only.
+Other endpoints, such as the model list and usage, have short-window request limits per account or per IP address.
+When you hit one, the API returns `429 rate_limit_exceeded` with a `Retry-After` header (seconds). Wait that long before retrying.
+
+## Errors
+
+Errors use the OpenAI error format:
+
+```json
+{
+  "error": {
+    "message": "Invalid API key. ...",
+    "type": "authentication_error",
+    "param": null,
+    "code": "invalid_key"
+  }
+}
+```
+
+The Anthropic Messages endpoint uses the same format.
+
+| Status | `code` | Meaning and what to do |
+| --- | --- | --- |
+| 400 | `missing_model`, `invalid_parameter`, and others | The request is invalid. Check `param` and `message`. |
+| 401 | `missing_api_key`, `missing_auth_header` | No API key was sent. |
+| 401 | `invalid_key`, `expired_key` | The key is wrong, revoked, or expired. Ask the user for a new key. |
+| 403 | `guest_account` | Guest accounts can't use Flixa. |
+| 403 | `missing_client_signal` | The key's plan is Free or Go, which can't use your app (`type: insufficient_plan`). Show the `upgradeUrl` from the response. |
+| 403 | `tier_restricted` | The model needs a higher plan. Pick a model whose `tier` the plan includes. |
+| 403 | `service_unavailable` | Flixa isn't available for this account. Ask the user to contact support. |
+| 404 | `model_not_found` | The model doesn't exist. Get the current list from `/models`. |
+| 429 | `USAGE_LIMIT_EXCEEDED` | Not enough usage left (`type: quota_exceeded`). Show the `upgradeUrl`, or wait for the usage reset. |
+| 429 | `rate_limit_exceeded` | Too many requests. Retry after `Retry-After` seconds. |
+| 5xx | `db_error` and others | A temporary error on our side or with the model provider. Retry with exponential backoff. |
+
+## Changes to the API
+
+We keep the endpoints, authentication, and error format above stable.
+Models, plan limits, and usage rates can change; announcements are posted in the [changelog](https://deniai.app/changelog).

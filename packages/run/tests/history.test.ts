@@ -7,7 +7,7 @@ let testDb: RunTestDb;
 
 beforeAll(async () => {
   testDb = await createRunTestDb();
-  configureRunForTest(testDb, { config: { openrouterApiKey: "test-key" } });
+  configureRunForTest(testDb, { config: { deniApiKey: "test-key" } });
 }, 60_000);
 
 afterAll(async () => {
@@ -137,8 +137,9 @@ it("conversationHistory summarizes, searches and opens hidden history", async ()
   );
   assert(
     ledger.rows.length === 1 &&
-      ledger.rows[0]!.metric === "model" &&
-      Number(ledger.rows[0]!.used) === 4_200,
+      ledger.rows[0]!.metric === "basic" &&
+      // 1,000 input + 200 output x5 on Haiku 5.5 (Tier 1): 2,000 usage units.
+      Number(ledger.rows[0]!.used) === 2_000,
     `ledger ${JSON.stringify(ledger.rows)}`,
   );
 

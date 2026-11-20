@@ -1,24 +1,19 @@
-import {
-  getEffectiveTokenMultiplier,
-  type EffectiveTokenMultiplierOptions,
-} from "@deniai/ai/models";
-import { computeWeightedUsageFromLanguageModelUsage } from "@/lib/token-weighting";
+import type { EffectiveTokenMultiplierOptions } from "@deniai/ai/models";
+import { calculateModelUsageAmount, type ModelTokenUsage } from "@deniai/ai/usage-amount";
+import { getTokenUsageWeights } from "@/lib/token-weighting";
 
-type ModelUsage = Parameters<typeof computeWeightedUsageFromLanguageModelUsage>[0];
+type ModelUsage = ModelTokenUsage;
 
-/** Apply request pricing before adding steps; aggregate input is not a context size. */
+/**
+ * Apply request pricing before adding steps; aggregate input is not a context size.
+ * The formula is shared with Deni Run (`@deniai/ai/usage-amount`).
+ */
 export function calculateChatUsageAmount(
   modelId: string,
   usage: ModelUsage,
   options?: EffectiveTokenMultiplierOptions,
 ): number {
-  const { weighted, breakdown } = computeWeightedUsageFromLanguageModelUsage(usage);
-  const inputTokens = breakdown
-    ? breakdown.input + breakdown.cacheRead + breakdown.cacheWrite
-    : typeof usage.inputTokens === "number" && Number.isFinite(usage.inputTokens)
-      ? Math.max(0, usage.inputTokens)
-      : 0;
-  return Math.ceil(weighted * getEffectiveTokenMultiplier(modelId, inputTokens, options));
+  return calculateModelUsageAmount(modelId, usage, getTokenUsageWeights(), options);
 }
 
 /** Providers without step usage can still report their final rolled-up usage. */

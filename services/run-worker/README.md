@@ -29,7 +29,8 @@ nothing is reported over HTTP.
 | `DATABASE_URL` (or `DENI_DATABASE_URL`)                       | The Deni AI Postgres database (pooled URL is fine; `prepare: false`).                                                                       |
 | `BETTER_AUTH_URL`                                             | Public origin of the web app; links in Discord replies point to `<origin>/run`.                                                             |
 | `RUN_ENCRYPTION_KEY`                                          | 32 bytes, base64: the key of Run secrets (MCP credentials). Unset: derived from `BETTER_AUTH_SECRET` (set the same as the web).             |
-| `OPENROUTER_API_KEY`, `EXA_API_KEY`                           | Model calls and the `webSearch` tool.                                                                                                       |
+| `EXA_API_KEY`                                                 | The `webSearch` tool.                                                                                                                       |
+| `DENI_API_KEY`, `DENI_API_BASE_URL`                           | The Deni AI API: every model call (the same values as the web app).                                                                         |
 | `E2B_API_KEY`, `STEEL_API_KEY` (+ `STEEL_BASE_URL`, timeouts) | Computer providers (terminal sandbox, cloud browser). Unset: the computer is off.                                                           |
 | `RUN_S3_*`                                                    | Workspace and screenshot storage (`RUN_S3_ENDPOINT`, `RUN_S3_REGION`, `RUN_S3_ACCESS_KEY_ID`, `RUN_S3_SECRET_ACCESS_KEY`, `RUN_S3_BUCKET`). |
 | `RUN_BROWSER_USD_PER_HOUR`, `RUN_COMPUTER_USD_PER_HOUR`       | Provider cost of browser and computer time (defaults 0.10 and 0.15).                                                                        |
@@ -53,7 +54,7 @@ Without a separate process, the web app can run the scheduler in-process with
 `RUN_SCHEDULER_IN_PROCESS=true` in `apps/web/.env.local` (see above for production).
 
 `pnpm --filter @deniai/run-worker test` runs the tests on PGlite with the model, tools and
-computer mocked; nothing connects to Discord, OpenRouter, E2B or Steel.
+computer mocked; nothing connects to Discord, the Deni AI API, E2B or Steel.
 
 ## Docker
 
