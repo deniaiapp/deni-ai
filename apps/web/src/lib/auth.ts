@@ -21,6 +21,7 @@ import {
   recordSecurityActivity,
   securityActionForAuthResponse,
 } from "@/lib/security-activity";
+import { recordSignupAttribution } from "@/lib/signup-attribution-record";
 import { checkSignupLimits, recordSignupRisk } from "@/lib/signup-risk";
 import { accountDeletionRunHooks } from "@/lib/run/account-deletion.server";
 import {
@@ -82,6 +83,7 @@ export const auth = createAuth({
     isActiveTeamEmailDomain,
     checkSignupLimits,
     recordSignupRisk,
+    recordSignupAttribution,
     securityActionForAuthResponse,
     recordSecurityActivity,
     isAnonymousUser,

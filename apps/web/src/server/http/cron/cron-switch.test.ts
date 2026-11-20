@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from "vitest";
 const jobs = vi.hoisted(() => ({
   guests: vi.fn(),
   health: vi.fn(),
+  reminders: vi.fn(),
   storage: vi.fn(),
   usage: vi.fn(),
 }));
@@ -10,6 +11,9 @@ vi.mock("@/env", () => ({ env: { CRON_SECRET: "s".repeat(32) } }));
 vi.mock("@/lib/guest-cleanup-job", () => ({ runGuestCleanupJob: jobs.guests }));
 vi.mock("@/lib/model-health", () => ({ checkModelHealth: jobs.health }));
 vi.mock("@/lib/storage-cleanup-job", () => ({ runStorageCleanupJob: jobs.storage }));
+vi.mock("@/lib/subscription-ending-reminder-job", () => ({
+  runSubscriptionEndingReminderJob: jobs.reminders,
+}));
 vi.mock("@/lib/usage-and-meter-job", () => ({
   runUsageAndMeterJob: jobs.usage,
   getUsageAndMeterNextDueAt: vi.fn(async () => null),
@@ -19,6 +23,7 @@ const routes = {
   "guest-cleanup": await import("./guest-cleanup/route"),
   "model-health": await import("./model-health/route"),
   "storage-cleanup": await import("./storage-cleanup/route"),
+  "subscription-ending-reminder": await import("./subscription-ending-reminder/route"),
   "usage-and-meter": await import("./usage-and-meter/route"),
 };
 

@@ -582,6 +582,13 @@
       "when": 1795079973195,
       "tag": "0082_drop_beta_access",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1795177896919,
+      "tag": "0083_signup_attribution_and_cancel_reminder",
+      "breakpoints": true
     }
   ]
 }

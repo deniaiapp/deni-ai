@@ -19,6 +19,7 @@ import { GA_ID } from "@/lib/constants";
 import { getPlatformCapabilitiesFn } from "@/lib/platform-capabilities-functions";
 import { HOME_ALTERNATE_NAMES, HOME_DESCRIPTION, HOME_TITLE, safeJsonLd } from "@/lib/seo";
 import { SIDEBAR_WIDTH_BOOT_SCRIPT } from "@/lib/sidebar-width";
+import { SIGNUP_ATTRIBUTION_BOOT_SCRIPT } from "@/lib/signup-attribution";
 import appCss from "@/styles/globals.css?url";
 import themesCss from "@/styles/themes.css?url";
 
@@ -165,6 +166,8 @@ function RootDocument({ children }: { children: ReactNode }) {
       <body className="font-sans antialiased min-w-full min-h-screen overflow-x-hidden transition-colors duration-500">
         {/* Restores the resized sidebar width before first paint. */}
         <ScriptOnce>{SIDEBAR_WIDTH_BOOT_SCRIPT}</ScriptOnce>
+        {/* Remembers where a first visit came from, for the sign-up that may follow. */}
+        <ScriptOnce>{SIGNUP_ATTRIBUTION_BOOT_SCRIPT}</ScriptOnce>
         <script
           type="application/ld+json"
           // Static module constant: no request data reaches this sink.

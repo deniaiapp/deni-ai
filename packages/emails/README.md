@@ -11,7 +11,9 @@ into HTML and plain text.
 - `@deniai/emails/org-invitation-email-subject` holds the subject builder that
   the auth server uses without loading a template.
 
-Copy is English-only inline text (the templates do not use use-intl). Sending
+Copy is English-only inline text (the templates do not use use-intl), except
+`subscription-ending-email` ("your plan ends soon"), which takes a `locale`
+(`en` or `ja`) and holds both versions. Sending
 (Cloudflare Email Sending, env, placeholder-address filtering) stays in the web
 app: `apps/web/src/lib/email.ts`.
 
