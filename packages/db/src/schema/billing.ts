@@ -29,6 +29,9 @@ export const billing = pgTable(
     priceId: text("price_id"),
     status: text("status").default("inactive"),
     cancelAt: integer("cancel_at"),
+    // The `cancel_at` the "your plan ends soon" email was sent for. A resumed and
+    // re-canceled subscription gets a new `cancel_at`, and so another reminder.
+    cancelReminderSentFor: integer("cancel_reminder_sent_for"),
     mode: text("mode").default("subscription"),
     currentPeriodEnd: timestamp("current_period_end"),
     checkoutSessionId: text("checkout_session_id"),

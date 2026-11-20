@@ -16,6 +16,7 @@ export * from "./project";
 export * from "./reset-credit";
 export * from "./run";
 export * from "./security-activity";
+export * from "./signup-attribution";
 export * from "./signup-risk";
 export * from "./team-domain";
 export * from "./team-usage-policy";

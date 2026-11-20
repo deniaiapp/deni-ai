@@ -23,6 +23,7 @@ vi.mock("@/lib/guest-data-transfer", () => ({ transferGuestData: mocks.transferG
 vi.mock("@/lib/signup-risk", () => ({
   checkSignupLimits: async () => ({ allowed: true }),
   recordSignupRisk: async () => {},
+  recordSignupAttribution: async () => {},
 }));
 vi.mock("@/lib/security-activity", async (importOriginal) => ({
   ...(await importOriginal<typeof import("./security-activity")>()),

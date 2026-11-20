@@ -79,6 +79,11 @@ export interface AuthAppHooks {
     ip: string | undefined;
     userAgent: string | null | undefined;
   }): Promise<unknown>;
+  /** Stores where a new account came from; `headers` are those of the sign-up request. */
+  recordSignupAttribution(input: {
+    userId: string;
+    headers: Headers | undefined;
+  }): Promise<unknown>;
 
   /** Security activity entry for a finished auth request, or null for none. */
   securityActionForAuthResponse(input: {
@@ -854,6 +859,14 @@ export function createAuth(deps: CreateAuthDeps) {
             } catch (error) {
               // The account is already created; a failed assessment must not undo the sign-up.
               console.error("Failed to record sign-up risk", error);
+            }
+            try {
+              await hooks.recordSignupAttribution({
+                userId: user.id,
+                headers: signupHeaders(ctx),
+              });
+            } catch (error) {
+              console.error("Failed to record sign-up attribution", error);
             }
           },
         },

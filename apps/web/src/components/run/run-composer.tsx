@@ -35,12 +35,12 @@ async function uploadRunAttachment(file: File): Promise<MessageAttachment> {
   const body = new FormData();
   body.set("file", file);
   const response = await fetch("/api/run/attachments", { method: "POST", body });
-  const payload = (await response.json().catch(() => ({}))) as {
-    attachment?: MessageAttachment;
-    error?: string;
-  };
-  if (!response.ok || !payload.attachment)
-    throw new RunApiError(response.status, payload.error ?? `http_${response.status}`, payload);
+  if (!response.ok) {
+    const detail = (await response.json().catch(() => ({}))) as { error?: string };
+    throw new RunApiError(response.status, detail.error ?? `http_${response.status}`, detail);
+  }
+  const payload = (await response.json().catch(() => ({}))) as { attachment?: MessageAttachment };
+  if (!payload.attachment) throw new RunApiError(response.status, "invalid_response");
   return payload.attachment;
 }
 

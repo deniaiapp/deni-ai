@@ -27,6 +27,14 @@ vi.mock("@/lib/usage-and-meter-job", () => ({
   getUsageAndMeterNextDueAt: mocks.usageAndMeterNextDueAt,
 }));
 vi.mock("@/lib/storage-cleanup-job", () => ({ runStorageCleanupJob: mocks.storageCleanup }));
+vi.mock("@/lib/subscription-ending-reminder-job", () => ({
+  runSubscriptionEndingReminderJob: vi.fn(async () => ({
+    sent: 0,
+    skipped: 0,
+    failed: 0,
+    healthy: true,
+  })),
+}));
 
 const healthyUsage = {
   recovered: 0,

@@ -1,6 +1,7 @@
 import * as Sentry from "@sentry/tanstackstart-react";
 import { runGuestCleanupJob } from "@/lib/guest-cleanup-job";
 import { runStorageCleanupJob } from "@/lib/storage-cleanup-job";
+import { runSubscriptionEndingReminderJob } from "@/lib/subscription-ending-reminder-job";
 import { getUsageAndMeterNextDueAt, runUsageAndMeterJob } from "@/lib/usage-and-meter-job";
 import {
   beginUsageAndMeterCheck,
@@ -182,11 +183,24 @@ export const guestCleanupJob: BackgroundJob = {
   },
 };
 
+/** "Your plan ends soon" emails every hour (first 3 minutes after boot). */
+export const subscriptionEndingReminderJob: BackgroundJob = {
+  name: "subscription-ending-reminder",
+  firstDelayMs: 3 * 60_000,
+  intervalMs: 60 * 60_000,
+  run: async () => {
+    const result = await runSubscriptionEndingReminderJob();
+    if (result.healthy) return null;
+    return { remindersFailed: result.failed };
+  },
+};
+
 /**
  * Runs the periodic maintenance jobs in-process on a long-running production
  * server (Docker / Dokploy), so they need no external scheduler or
  * `CRON_SECRET`. Every replica runs them; each job is safe to run concurrently
- * (see `runUsageAndMeterJob` and `runStorageCleanupJob`). Their HTTP routes
+ * (see `runUsageAndMeterJob`, `runStorageCleanupJob` and
+ * `runSubscriptionEndingReminderJob`). Their HTTP routes
  * under `/api/cron/` remain for manual or external triggering, and replace
  * this scheduler on Vercel, where `register()` does not start it.
  */
@@ -194,4 +208,5 @@ export function startBackgroundJobScheduler() {
   scheduleBackgroundJob(usageAndMeterJob);
   scheduleBackgroundJob(storageCleanupJob);
   scheduleBackgroundJob(guestCleanupJob);
+  scheduleBackgroundJob(subscriptionEndingReminderJob);
 }

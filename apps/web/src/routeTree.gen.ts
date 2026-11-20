@@ -63,6 +63,7 @@ import { Route as ApiChatStopRouteImport } from './routes/api/chat/stop'
 import { Route as ApiCronGuestCleanupRouteImport } from './routes/api/cron/guest-cleanup'
 import { Route as ApiCronModelHealthRouteImport } from './routes/api/cron/model-health'
 import { Route as ApiCronStorageCleanupRouteImport } from './routes/api/cron/storage-cleanup'
+import { Route as ApiCronSubscriptionEndingReminderRouteImport } from './routes/api/cron/subscription-ending-reminder'
 import { Route as ApiCronUsageAndMeterRouteImport } from './routes/api/cron/usage-and-meter'
 import { Route as ApiRunSplatRouteImport } from './routes/api/run/$'
 import { Route as ApiStatusModelsRouteImport } from './routes/api/status/models'
@@ -369,6 +370,12 @@ const ApiCronStorageCleanupRoute = ApiCronStorageCleanupRouteImport.update({
   path: '/api/cron/storage-cleanup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCronSubscriptionEndingReminderRoute =
+  ApiCronSubscriptionEndingReminderRouteImport.update({
+    id: '/api/cron/subscription-ending-reminder',
+    path: '/api/cron/subscription-ending-reminder',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiCronUsageAndMeterRoute = ApiCronUsageAndMeterRouteImport.update({
   id: '/api/cron/usage-and-meter',
   path: '/api/cron/usage-and-meter',
@@ -576,6 +583,7 @@ export interface FileRoutesByFullPath {
   '/api/cron/guest-cleanup': typeof ApiCronGuestCleanupRoute
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
+  '/api/cron/subscription-ending-reminder': typeof ApiCronSubscriptionEndingReminderRoute
   '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
   '/api/run/$': typeof ApiRunSplatRoute
   '/api/status/models': typeof ApiStatusModelsRoute
@@ -658,6 +666,7 @@ export interface FileRoutesByTo {
   '/api/cron/guest-cleanup': typeof ApiCronGuestCleanupRoute
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
+  '/api/cron/subscription-ending-reminder': typeof ApiCronSubscriptionEndingReminderRoute
   '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
   '/api/run/$': typeof ApiRunSplatRoute
   '/api/status/models': typeof ApiStatusModelsRoute
@@ -743,6 +752,7 @@ export interface FileRoutesById {
   '/api/cron/guest-cleanup': typeof ApiCronGuestCleanupRoute
   '/api/cron/model-health': typeof ApiCronModelHealthRoute
   '/api/cron/storage-cleanup': typeof ApiCronStorageCleanupRoute
+  '/api/cron/subscription-ending-reminder': typeof ApiCronSubscriptionEndingReminderRoute
   '/api/cron/usage-and-meter': typeof ApiCronUsageAndMeterRoute
   '/api/run/$': typeof ApiRunSplatRoute
   '/api/status/models': typeof ApiStatusModelsRoute
@@ -829,6 +839,7 @@ export interface FileRouteTypes {
     | '/api/cron/guest-cleanup'
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
+    | '/api/cron/subscription-ending-reminder'
     | '/api/cron/usage-and-meter'
     | '/api/run/$'
     | '/api/status/models'
@@ -911,6 +922,7 @@ export interface FileRouteTypes {
     | '/api/cron/guest-cleanup'
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
+    | '/api/cron/subscription-ending-reminder'
     | '/api/cron/usage-and-meter'
     | '/api/run/$'
     | '/api/status/models'
@@ -995,6 +1007,7 @@ export interface FileRouteTypes {
     | '/api/cron/guest-cleanup'
     | '/api/cron/model-health'
     | '/api/cron/storage-cleanup'
+    | '/api/cron/subscription-ending-reminder'
     | '/api/cron/usage-and-meter'
     | '/api/run/$'
     | '/api/status/models'
@@ -1054,6 +1067,7 @@ export interface RootRouteChildren {
   ApiCronGuestCleanupRoute: typeof ApiCronGuestCleanupRoute
   ApiCronModelHealthRoute: typeof ApiCronModelHealthRoute
   ApiCronStorageCleanupRoute: typeof ApiCronStorageCleanupRoute
+  ApiCronSubscriptionEndingReminderRoute: typeof ApiCronSubscriptionEndingReminderRoute
   ApiCronUsageAndMeterRoute: typeof ApiCronUsageAndMeterRoute
   ApiRunSplatRoute: typeof ApiRunSplatRoute
   ApiStatusModelsRoute: typeof ApiStatusModelsRoute
@@ -1447,6 +1461,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCronStorageCleanupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/cron/subscription-ending-reminder': {
+      id: '/api/cron/subscription-ending-reminder'
+      path: '/api/cron/subscription-ending-reminder'
+      fullPath: '/api/cron/subscription-ending-reminder'
+      preLoaderRoute: typeof ApiCronSubscriptionEndingReminderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/cron/usage-and-meter': {
       id: '/api/cron/usage-and-meter'
       path: '/api/cron/usage-and-meter'
@@ -1835,6 +1856,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCronGuestCleanupRoute: ApiCronGuestCleanupRoute,
   ApiCronModelHealthRoute: ApiCronModelHealthRoute,
   ApiCronStorageCleanupRoute: ApiCronStorageCleanupRoute,
+  ApiCronSubscriptionEndingReminderRoute:
+    ApiCronSubscriptionEndingReminderRoute,
   ApiCronUsageAndMeterRoute: ApiCronUsageAndMeterRoute,
   ApiRunSplatRoute: ApiRunSplatRoute,
   ApiStatusModelsRoute: ApiStatusModelsRoute,
