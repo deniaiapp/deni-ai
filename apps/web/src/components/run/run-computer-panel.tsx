@@ -306,9 +306,8 @@ export function RunComputerPanel({
     } catch (error) {
       setTakeover(!next);
       toast.error(errorText(error));
-    } finally {
-      setScreenBusy(null);
     }
+    setScreenBusy(null);
   }
 
   async function closeBrowser() {
@@ -320,9 +319,8 @@ export function RunComputerPanel({
       await refresh(false, true);
     } catch (error) {
       toast.error(errorText(error));
-    } finally {
-      setScreenBusy(null);
     }
+    setScreenBusy(null);
   }
 
   async function openFile(path: string) {
@@ -334,9 +332,8 @@ export function RunComputerPanel({
       if (file.content != null) setFileView({ path: file.path, content: file.content });
     } catch (error) {
       toast.error(errorText(error));
-    } finally {
-      setOpeningPath(null);
     }
+    setOpeningPath(null);
   }
 
   const fileNodes = flattenWorkspace(files);
@@ -356,33 +353,17 @@ export function RunComputerPanel({
 
   async function downloadWorkspace(paths: string[]) {
     setFilesBusy(true);
+    const onlyFile =
+      paths.length === 1 && fileNodes.find((node) => node.path === paths[0])?.type === "file";
     try {
-      const onlyFile =
-        paths.length === 1 && fileNodes.find((node) => node.path === paths[0])?.type === "file";
-      const response = onlyFile
-        ? await fetch(`/api/run/computer/files?mode=download&path=${encodeURIComponent(paths[0]!)}`)
-        : await fetch("/api/run/computer/files", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "zip", paths }),
-          });
-      if (!response.ok) {
-        const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-        throw new RunApiError(
-          response.status,
-          typeof body.error === "string" ? body.error : `http_${response.status}`,
-          body,
-        );
-      }
       const name = onlyFile
         ? fileLabel(paths[0]!)
         : `${paths.length === 1 ? fileLabel(paths[0]!) : "workspace"}.zip`;
-      saveBlob(await response.blob(), name);
+      saveBlob(await fetchWorkspaceDownload(paths, onlyFile), name);
     } catch (error) {
       toast.error(errorText(error));
-    } finally {
-      setFilesBusy(false);
     }
+    setFilesBusy(false);
   }
 
   async function confirmDelete() {
@@ -407,9 +388,8 @@ export function RunComputerPanel({
       await refresh(false, true);
     } catch (error) {
       toast.error(errorText(error));
-    } finally {
-      setFilesBusy(false);
     }
+    setFilesBusy(false);
   }
 
   const stamp = computer.screenshotAt ?? "none";
@@ -1103,6 +1083,26 @@ function flattenWorkspace(nodes: WorkspaceNode[]): WorkspaceNode[] {
 
 function fileLabel(path: string) {
   return path.replace(/^\/+/, "").split("/").at(-1) || "file";
+}
+
+/** One file as it is, or several paths as a zip. Throws the Run API error of a refusal. */
+async function fetchWorkspaceDownload(paths: string[], onlyFile: boolean): Promise<Blob> {
+  const response = onlyFile
+    ? await fetch(`/api/run/computer/files?mode=download&path=${encodeURIComponent(paths[0]!)}`)
+    : await fetch("/api/run/computer/files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "zip", paths }),
+      });
+  if (!response.ok) {
+    const body = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+    throw new RunApiError(
+      response.status,
+      typeof body.error === "string" ? body.error : `http_${response.status}`,
+      body,
+    );
+  }
+  return response.blob();
 }
 
 function saveBlob(blob: Blob, name: string) {
