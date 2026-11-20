@@ -1,20 +1,20 @@
 # Flixa Backend
 
-OpenAI API style backend with `/v1/agent/chat/completions` router proxying directly to OpenRouter or an OpenAI-compatible upstream.
+OpenAI API style backend with `/v1/agent/chat/completions` router proxying directly to the Deni AI API (or an OpenAI-compatible upstream for model names without `/`).
 
 Built with **TypeScript**, **Hono**, and **Node.js**.
 
 ## Features
 
 - OpenAI-compatible API structure
-- Direct HTTP proxying to OpenRouter or OpenAI-compatible APIs
+- Direct HTTP proxying to the Deni AI API: requests are forwarded as they are, without format conversion
 - Streaming support (Server-Sent Events)
 - Request validation
 - Error handling in OpenAI format
 - TypeScript for type safety
 - Hono web framework (fast & lightweight)
 - Node.js 26+ runtime (TypeScript run via `tsx`, production bundle via esbuild)
-- Support for all OpenRouter models
+- Every model of the Deni AI API catalog (OpenAI, Anthropic, Google)
 
 ## Prerequisites
 
@@ -31,7 +31,7 @@ pnpm install
 
 #### POST `/v1/agent/chat/completions`
 
-OpenAI-style agent endpoint (OpenRouter or OpenAI-compatible upstream).
+OpenAI-style agent endpoint (Deni AI API upstream).
 
 **Request Body:**
 ```json
@@ -49,7 +49,7 @@ OpenAI-style agent endpoint (OpenRouter or OpenAI-compatible upstream).
 }
 ```
 
-**Note:** The `model` field should use OpenRouter model format (e.g., `openai/gpt-4`, `anthropic/claude-3-opus`, `google/gemini-pro`, etc.). See [OpenRouter Models](https://openrouter.ai/models) for available models.
+**Note:** The `model` field uses the `author/model` format of the Deni AI API (e.g., `openai/gpt-6-sol`, `anthropic/claude-sonnet-5.5`, `google/gemini-3.8-flash`).
 
 #### POST `/v1/messages`
 
@@ -103,11 +103,8 @@ Create a `.env` file:
 PORT=3000
 DENI_AI_API_KEY=deni_your_deni_ai_api_key_here
 # DENI_AI_API_BASE_URL=https://api.deniai.app/v1
-OPENROUTER_API_KEY=your_openrouter_api_key_here
-OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENAI_COMPAT_BASE_URL=https://capi.voids.top/v2
 OPENAI_COMPAT_API_KEY=a
-ANTHROPIC_API_KEY=your_anthropic_api_key_here
 # Optional performance safeguards
 FLIXA_UPSTREAM_TIMEOUT_MS=120000
 FLIXA_USAGE_FINALIZE_ASYNC=false
@@ -119,9 +116,8 @@ CLIENT_SIGNAL_ALLOWED_LOG_ENABLED=false
 # FLIXA_AUTH_DISABLED=true
 ```
 
-Get your OpenRouter API key from [OpenRouter](https://openrouter.ai/keys).
-`DENI_AI_API_KEY` is required for OpenAI models (`openai/...`), which go through Deni AI API: Chat Completions to `/v1/chat/completions` and `/v1/agent/responses` to `/v1/responses`. Deni AI API has no Responses compaction, so `/v1/agent/responses/compact` returns `400` for these models.
-`OPENROUTER_API_KEY` is required when any other `model` includes `/` (OpenRouter format). If you use an OpenAI-compatible model name without `/`, requests go to `OPENAI_COMPAT_BASE_URL`.
+`DENI_AI_API_KEY` is required: every `author/model` id goes through the Deni AI API, forwarded as it is. Chat Completions go to `/v1/chat/completions`, `/v1/agent/responses` to `/v1/responses` (sent as a real Responses request, not reshaped; the Deni AI API passes it through to the upstreams that speak the Responses API), and the Anthropic `/v1/messages` endpoints to `/v1/messages` (a native passthrough for Claude models there, so thinking blocks and `cache_control` are not translated). `/v1/agent/responses/compact` goes to its `/v1/responses/compact`, which returns a compacted window (the user's messages and a `compaction` item holding a summary) for the next `/v1/agent/responses` call.
+An OpenAI-compatible model name without `/` goes to `OPENAI_COMPAT_BASE_URL`.
 
 `FLIXA_UPSTREAM_TIMEOUT_MS` is an upstream connect/idle timeout. Streaming
 requests refresh it whenever a chunk arrives, so a healthy long-running stream
@@ -334,15 +330,11 @@ an internet-facing or production instance. Optionally set
 
 ## Supported Models
 
-This backend supports all models available through OpenRouter, including:
+This backend serves the models of the Deni AI API catalog (`utils/agent/models.ts`):
 
-- OpenAI models (gpt-4, gpt-3.5-turbo, etc.)
-- Anthropic models (claude-3-opus, claude-3-sonnet, etc.)
-- Google models (gemini-pro, etc.)
-- Meta models (llama-2, etc.)
-- And many more...
-
-See the full list at [OpenRouter Models](https://openrouter.ai/models).
+- OpenAI models (`openai/gpt-6-sol`, `openai/gpt-6-luna`, ...)
+- Anthropic models (`anthropic/claude-sonnet-5.5`, `anthropic/claude-haiku-5.5`, ...)
+- Google models (`google/gemini-3.8-flash`, `google/gemini-3.5-flash-lite`)
 
 ## Usage
 

@@ -3,7 +3,6 @@ import { after, before, describe, test } from "node:test";
 import {
   convertResponsesInputContentToChat,
   getClient,
-  toDeniResponsesRequest,
 } from "../utils/agent";
 
 const ENV_KEYS = ["DENI_AI_API_KEY", "DENI_AI_API_BASE_URL"] as const;
@@ -33,27 +32,23 @@ describe("getClient", () => {
     assert.equal(result.client.apiKey, "deni_test_key_0123456789");
   });
 
-  test("requires DENI_AI_API_KEY for OpenAI models", () => {
+  test("requires DENI_AI_API_KEY", () => {
     delete process.env.DENI_AI_API_KEY;
     try {
       assert.deepEqual(getClient("openai/gpt-6-luna"), {
-        error: "DENI_AI_API_KEY is required for OpenAI models",
+        error: "DENI_AI_API_KEY is required",
       });
     } finally {
       process.env.DENI_AI_API_KEY = "deni_test_key_0123456789";
     }
   });
 
-  test("keeps other providers on OpenRouter", () => {
-    const previous = process.env.OPENROUTER_API_KEY;
-    process.env.OPENROUTER_API_KEY = "local-test-key";
-    try {
-      const result = getClient("anthropic/claude-sonnet-5.5");
+  test("routes every other catalog provider to Deni AI API too", () => {
+    for (const model of ["anthropic/claude-sonnet-5.5", "google/gemini-3.8-flash"]) {
+      const result = getClient(model);
       if ("error" in result) throw new Error(result.error);
-      assert.equal(result.type, "openrouter");
-    } finally {
-      if (previous === undefined) delete process.env.OPENROUTER_API_KEY;
-      else process.env.OPENROUTER_API_KEY = previous;
+      assert.equal(result.type, "deni");
+      assert.equal(result.providerName, "deni-ai");
     }
   });
 });
@@ -83,54 +78,4 @@ test("converts Responses content parts to Chat Completions parts", () => {
       { type: "function_call_output", call_id: "call_1", output: "done" },
     ],
   );
-});
-
-describe("toDeniResponsesRequest", () => {
-  test("keeps only fields Deni reads, in Chat-compatible shapes", () => {
-    assert.deepEqual(
-      toDeniResponsesRequest({
-        model: "openai/gpt-6-luna",
-        instructions: "be brief",
-        input: [{ role: "user", content: [{ type: "input_text", text: "hi" }] }],
-        stream: true,
-        reasoning: { effort: "high", context: "all_turns" },
-        include: ["reasoning.encrypted_content"],
-        store: false,
-        prompt_cache_key: "thread-1",
-        tools: [{ type: "function", name: "shell", parameters: { type: "object" } }],
-        tool_choice: { type: "function", name: "shell" },
-      }),
-      {
-        model: "openai/gpt-6-luna",
-        instructions: "be brief",
-        input: [{ role: "user", content: [{ type: "text", text: "hi" }] }],
-        stream: true,
-        max_output_tokens: 128_000,
-        tools: [{ type: "function", name: "shell", parameters: { type: "object" } }],
-        tool_choice: { type: "function", function: { name: "shell" } },
-      },
-    );
-  });
-
-  test("keeps a client max_output_tokens", () => {
-    assert.equal(
-      toDeniResponsesRequest({
-        model: "openai/gpt-6-luna",
-        input: "hi",
-        max_output_tokens: 2048,
-      }).max_output_tokens,
-      2048,
-    );
-  });
-
-  test("drops tool_choice without tools", () => {
-    assert.equal(
-      toDeniResponsesRequest({
-        model: "openai/gpt-6-luna",
-        input: "hi",
-        tool_choice: "auto",
-      }).tool_choice,
-      undefined,
-    );
-  });
 });
